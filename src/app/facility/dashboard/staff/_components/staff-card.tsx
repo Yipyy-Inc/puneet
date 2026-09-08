@@ -39,7 +39,11 @@ import {
   useRelativeTime,
 } from "./staff-shared";
 import { StatusBadge } from "./status-change-dialog";
-import { getLatestStaffAuditEntry } from "@/lib/staff-audit";
+import {
+  getLatestStaffAuditEntry,
+  type StaffAuditAction,
+} from "@/lib/staff-audit";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
 import {
   useOnboardingInstance,
@@ -77,6 +81,25 @@ export function StaffCard({
   onReview,
   onRemind,
 }: StaffCardProps) {
+  const { t, fill } = useStaffText("card");
+
+  /**
+   * An audit action's words.
+   *
+   * Declared here rather than at module scope because it reads `t`. The seven
+   * keys mirror the union in staff-audit.ts; anything outside it degrades to
+   * the humanised slug, so a new action reads as English words rather than as
+   * `payroll_changed`.
+   */
+  const auditActionLabel = (action: StaffAuditAction) => {
+    const key = `audit${action
+      .split("_")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join("")}`;
+    const label = t(key);
+    return label === key ? action.replace(/_/g, " ") : label;
+  };
+
   const relative = useRelativeTime();
   const { viewer } = useFacilityRbac();
   // Table 4 — editing staff requires manage_staff (admin: all-access fallback).
@@ -136,7 +159,7 @@ export function StaffCard({
                 )}
                 <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                   <Clock className="size-3" />
-                  Active {relative(profile.lastActive)}
+                  {t("activePrefix")} {relative(profile.lastActive)}
                 </div>
               </div>
 
@@ -149,7 +172,7 @@ export function StaffCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="size-4" />
-                    <span className="sr-only">Open menu</span>
+                    <span className="sr-only">{t("openMenu")}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -157,39 +180,39 @@ export function StaffCard({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <DropdownMenuItem onClick={() => onView(profile)}>
-                    <Eye className="size-4" /> View details
+                    <Eye className="size-4" /> {t("viewDetails")}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/facility/dashboard/staff/${profile.id}`}>
-                      <ExternalLink className="size-4" /> Open full profile
+                      <ExternalLink className="size-4" /> {t("openProfile")}
                     </Link>
                   </DropdownMenuItem>
                   {canManageStaff && (
                     <DropdownMenuItem onClick={() => onEdit(profile)}>
-                      <Pencil className="size-4" /> Edit profile
+                      <Pencil className="size-4" /> {t("editProfile")}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onStatusChange(profile)}>
-                    <RefreshCw className="size-4" /> Change status
+                    <RefreshCw className="size-4" /> {t("changeStatus")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onInvite(profile)}>
                     <UserPlus className="size-4" />
                     {profile.status === "invited"
-                      ? "Resend invitation"
-                      : "Send invitation link"}
+                      ? t("resendInvitation")
+                      : t("sendInvitation")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onTransfer(profile)}>
                     <ArrowLeftRight className="size-4" />
-                    Transfer appointments
+                    {t("transferAppointments")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => onDelete(profile)}
                   >
-                    <Trash2 className="size-4" /> Delete profile
+                    <Trash2 className="size-4" /> {t("deleteProfile")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -212,7 +235,7 @@ export function StaffCard({
                       className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
                     >
                       <span className="size-1.5 rounded-full bg-amber-400" />
-                      Invited
+                      {t("invited")}
                       {progress.total > 0
                         ? ` · ${progress.done}/${progress.total}`
                         : ""}
@@ -224,10 +247,13 @@ export function StaffCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="text-sm font-medium">
-                      Onboarding progress
+                      {t("onboardingProgress")}
                     </div>
                     <div className="text-muted-foreground mt-0.5 text-xs">
-                      {progress.done} of {progress.total} sections complete
+                      {fill("sectionsComplete", {
+                        done: progress.done,
+                        total: progress.total,
+                      })}
                     </div>
                     <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
                       <div
@@ -240,24 +266,24 @@ export function StaffCard({
                       className="mt-3 w-full gap-1.5"
                       onClick={() => onRemind(profile)}
                     >
-                      <Bell className="size-3.5" /> Remind employee
+                      <Bell className="size-3.5" /> {t("remind")}
                     </Button>
                   </PopoverContent>
                 </Popover>
               )}
               {notStartedAlert && (
                 <span
-                  title={`Invited ${daysInvited} days ago — onboarding not started`}
+                  title={fill("notStartedTitle", { days: daysInvited })}
                   className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400"
                 >
                   <AlertTriangle className="size-3" />
-                  Not started · {daysInvited}d
+                  {fill("notStarted", { days: daysInvited })}
                 </span>
               )}
               {pendingReview && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
-                  Onboarding complete — pending review
+                  {t("pendingReview")}
                 </span>
               )}
             </div>
@@ -271,7 +297,7 @@ export function StaffCard({
                   onReview(profile);
                 }}
               >
-                <CheckCircle2 className="size-4" /> Review &amp; activate
+                <CheckCircle2 className="size-4" /> {t("reviewActivate")}
               </Button>
             )}
           </div>
@@ -297,8 +323,8 @@ export function StaffCard({
           <div className="flex items-center gap-2 truncate">
             <MapPin className="size-3 shrink-0" />
             {locationLabels.length === FACILITY_LOCATIONS.length
-              ? "All locations"
-              : locationLabels.join(" · ") || "No locations"}
+              ? t("allLocations")
+              : locationLabels.join(" · ") || t("noLocations")}
           </div>
         </div>
 
@@ -312,7 +338,9 @@ export function StaffCard({
               <div className="text-sm font-semibold">
                 {profile.upcomingAppointments}
               </div>
-              <div className="text-muted-foreground text-[10px]">Upcoming</div>
+              <div className="text-muted-foreground text-[10px]">
+                {t("upcoming")}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -322,7 +350,7 @@ export function StaffCard({
             <div className="leading-tight">
               <div className="text-sm font-semibold">{profile.openTasks}</div>
               <div className="text-muted-foreground text-[10px]">
-                Open tasks
+                {t("openTasks")}
               </div>
             </div>
           </div>
@@ -337,7 +365,7 @@ export function StaffCard({
                 {latestEntry.actorName.split(" ")[0]}
               </span>
               {" · "}
-              {latestEntry.action.replace(/_/g, " ")}
+              {auditActionLabel(latestEntry.action)}
               {" · "}
               {relative(latestEntry.timestamp)}
             </p>
