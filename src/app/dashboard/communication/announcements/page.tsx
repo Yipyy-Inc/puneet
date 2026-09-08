@@ -606,28 +606,28 @@ export default function AnnouncementsPage() {
         <TabsList className="h-12 max-w-lg">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+            className="data-[state=active]:text-primary gap-2"
           >
             <Megaphone className="size-4" />
             All ({announcementsState.length})
           </TabsTrigger>
           <TabsTrigger
             value="published"
-            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+            className="data-[state=active]:text-primary gap-2"
           >
             <CheckCircle className="size-4" />
             Published ({publishedCount})
           </TabsTrigger>
           <TabsTrigger
             value="drafts"
-            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+            className="data-[state=active]:text-primary gap-2"
           >
             <FileText className="size-4" />
             Drafts ({draftCount})
           </TabsTrigger>
           <TabsTrigger
             value="archived"
-            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
+            className="data-[state=active]:text-primary gap-2"
           >
             <Archive className="size-4" />
             Archived ({archivedCount})
