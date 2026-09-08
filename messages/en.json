@@ -509,6 +509,21 @@
         "signingIn": "Signing in…",
         "signedInAs": "Signed in as",
         "viewingAs": "Viewing as"
+      },
+      "roleMatrix": {
+        "title": "Role access matrix",
+        "help": "What each role sees by default — and when. Individual profiles can override any of these.",
+        "collapse": "Collapse",
+        "expand": "Check permissions",
+        "allRoles": "All roles",
+        "colPermission": "Permission",
+        "legendTitle": "Scope tags",
+        "legendAnytime": "means 24/7",
+        "legendOperating": "restricts to facility open times",
+        "legendShifts": "restricts further to the staff member’s scheduled shifts",
+        "granted": "Granted",
+        "notGranted": "Not granted",
+        "tagsNote": "Tags show when the permission is active."
       }
     }
   },
@@ -4420,7 +4435,10 @@
     "training": "Training",
     "evaluation": "Evaluation",
     "retail": "Retail",
-    "vet": "Vet"
+    "vet": "Vet",
+    "reception": "Reception",
+    "sanitation": "Sanitation",
+    "transport": "Transport"
   },
   "shell": {
     "header": {

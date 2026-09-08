@@ -509,6 +509,21 @@
         "signingIn": "Connexion…",
         "signedInAs": "Connecté en tant que",
         "viewingAs": "Affichage en tant que"
+      },
+      "roleMatrix": {
+        "title": "Matrice des accès par rôle",
+        "help": "Ce que chaque rôle voit par défaut — et quand. Chaque profil peut faire exception.",
+        "collapse": "Réduire",
+        "expand": "Voir les permissions",
+        "allRoles": "Tous les rôles",
+        "colPermission": "Permission",
+        "legendTitle": "Étiquettes de portée",
+        "legendAnytime": "signifie 24 h sur 24, 7 jours sur 7",
+        "legendOperating": "limite à la période d’ouverture de l’établissement",
+        "legendShifts": "limite aux quarts de travail assignés",
+        "granted": "Accordée",
+        "notGranted": "Non accordée",
+        "tagsNote": "Les étiquettes indiquent quand la permission s’applique."
       }
     }
   },
@@ -4420,7 +4435,10 @@
     "training": "Dressage",
     "evaluation": "Évaluation",
     "retail": "Vente au détail",
-    "vet": "Vétérinaire"
+    "vet": "Vétérinaire",
+    "reception": "Réception",
+    "sanitation": "Entretien",
+    "transport": "Transport"
   },
   "shell": {
     "header": {
