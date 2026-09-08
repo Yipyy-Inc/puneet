@@ -450,17 +450,33 @@
     "assignedTasks": "Tâches assignées"
   },
   "staff": {
-    "title": "Gestion du personnel",
-    "addStaff": "Ajouter du personnel",
-    "totalStaff": "Total du personnel",
-    "onDuty": "En service",
-    "offDuty": "Hors service",
-    "searchStaff": "Rechercher du personnel...",
-    "staffDetails": "Détails du personnel",
-    "position": "Poste",
-    "department": "Département",
-    "schedule": "Horaire",
-    "performance": "Performance"
+    "areas": {
+      "directory": {
+        "title": "Gestion du personnel",
+        "addStaff": "Ajouter un membre",
+        "totalStaff": "Total du personnel",
+        "onDuty": "En service",
+        "offDuty": "Hors service",
+        "searchStaff": "Rechercher un membre",
+        "staffDetails": "Détails du membre",
+        "position": "Poste",
+        "department": "Service",
+        "schedule": "Horaire",
+        "performance": "Rendement"
+      },
+      "shell": {
+        "title": "Gestion du personnel",
+        "tabDirectory": "Répertoire",
+        "tabTasks": "Tâches",
+        "tabDocuments": "Documents",
+        "tabWarnings": "Avertissements",
+        "tabPerformance": "Rendement",
+        "tabsLabel": "Onglets",
+        "signingIn": "Connexion…",
+        "signedInAs": "Connecté en tant que",
+        "viewingAs": "Affichage en tant que"
+      }
+    }
   },
   "customerReach": {
     "title": "Portée client",
