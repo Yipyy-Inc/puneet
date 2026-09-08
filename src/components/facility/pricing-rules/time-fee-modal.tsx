@@ -26,6 +26,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Time Fee Modal (Late Pickup / Early Drop-off) ────────────────────
 
@@ -44,6 +45,7 @@ export function TimeFeeModal({
   serviceOptions: ServiceOption[];
   onSave: (fee: LatePickupFee) => void;
 }) {
+  const { t } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     condition: "late_pickup" as "late_pickup" | "early_dropoff",
@@ -113,22 +115,20 @@ export function TimeFeeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Time Fee" : "Add Time Fee"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("tfEdit") : t("tfAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Fee Name</Label>
+            <Label>{t("tfName")}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Late Pickup Fee"
+              placeholder={t("tfNamePlaceholder")}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Condition</Label>
+              <Label>{t("tfCondition")}</Label>
               <Select
                 value={form.condition}
                 onValueChange={(v) =>
@@ -142,13 +142,17 @@ export function TimeFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="late_pickup">Late pickup</SelectItem>
-                  <SelectItem value="early_dropoff">Early drop-off</SelectItem>
+                  <SelectItem value="late_pickup">
+                    {t("rowLatePickup")}
+                  </SelectItem>
+                  <SelectItem value="early_dropoff">
+                    {t("rowEarlyDropoff")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Scope</Label>
+              <Label>{t("scope")}</Label>
               <Select
                 value={form.scope}
                 onValueChange={(v) =>
@@ -162,15 +166,15 @@ export function TimeFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="per_pet">Per pet</SelectItem>
-                  <SelectItem value="per_booking">Per booking</SelectItem>
+                  <SelectItem value="per_pet">{t("perPet")}</SelectItem>
+                  <SelectItem value="per_booking">{t("perBooking")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label>Grace (min)</Label>
+              <Label>{t("tfGrace")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -184,7 +188,7 @@ export function TimeFeeModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Amount ($)</Label>
+              <Label>{t("amount")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -198,13 +202,13 @@ export function TimeFeeModal({
                 }
                 placeholder={
                   form.feeType === "extra_night"
-                    ? "Uses nightly base"
+                    ? t("tfNightlyBase")
                     : undefined
                 }
               />
             </div>
             <div className="space-y-2">
-              <Label>Fee Type</Label>
+              <Label>{t("tfFeeType")}</Label>
               <Select
                 value={form.feeType}
                 onValueChange={(v) =>
@@ -223,12 +227,12 @@ export function TimeFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Flat</SelectItem>
-                  <SelectItem value="per_minute">Per minute</SelectItem>
-                  <SelectItem value="per_30min">Per 30 min</SelectItem>
-                  <SelectItem value="per_hour">Per hour</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
+                  <SelectItem value="per_minute">{t("tfPerMinute")}</SelectItem>
+                  <SelectItem value="per_30min">{t("tfPer30")}</SelectItem>
+                  <SelectItem value="per_hour">{t("tfPerHour")}</SelectItem>
                   <SelectItem value="extra_night">
-                    Charge extra night
+                    {t("tfExtraNight")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -236,7 +240,7 @@ export function TimeFeeModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Max Fee ($)</Label>
+              <Label>{t("tfMaxFee")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -249,11 +253,11 @@ export function TimeFeeModal({
                       : undefined,
                   }))
                 }
-                placeholder="No cap"
+                placeholder={t("noCap")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Based On</Label>
+              <Label>{t("tfBasedOn")}</Label>
               <Select
                 value={form.basedOn}
                 onValueChange={(v) =>
@@ -267,15 +271,19 @@ export function TimeFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="business_hours">Business hours</SelectItem>
-                  <SelectItem value="custom_time">Custom time</SelectItem>
+                  <SelectItem value="business_hours">
+                    {t("tfBusinessHours")}
+                  </SelectItem>
+                  <SelectItem value="custom_time">
+                    {t("tfCustomTime")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           {form.basedOn === "custom_time" && (
             <div className="space-y-2">
-              <Label>Custom Time</Label>
+              <Label>{t("tfCustomTimeHeading")}</Label>
               <Input
                 type="time"
                 value={form.customTime}
@@ -287,7 +295,7 @@ export function TimeFeeModal({
           )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Apply from time</Label>
+              <Label>{t("tfFrom")}</Label>
               <Input
                 type="time"
                 value={form.applyFromTime}
@@ -297,7 +305,7 @@ export function TimeFeeModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Apply until time</Label>
+              <Label>{t("tfUntil")}</Label>
               <Input
                 type="time"
                 value={form.applyUntilTime}
@@ -308,7 +316,7 @@ export function TimeFeeModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tax Rate (%)</Label>
+            <Label>{t("taxRate")}</Label>
             <Input
               type="number"
               min={0}
@@ -322,11 +330,11 @@ export function TimeFeeModal({
                     : undefined,
                 }))
               }
-              placeholder="Uses facility default"
+              placeholder={t("facilityDefault")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -338,7 +346,7 @@ export function TimeFeeModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -379,14 +387,15 @@ export function TimeFeeModal({
               </div>
             </div>
           </div>
-          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px]/relaxed">
-            If more than one time fee could apply, the most recent matching fee
-            is used unless your facility enables fee stacking.
+          {/* White with a hairline — §6 rule 2 tints a metric tile and a
+              status chip, and a note is neither. */}
+          <p className="text-muted-foreground rounded-xl border px-3.5 py-2.5 text-[11px]/relaxed">
+            {t("tfStackingNote")}
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() =>
@@ -412,7 +421,7 @@ export function TimeFeeModal({
               })
             }
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

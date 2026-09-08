@@ -54,12 +54,9 @@ import type {
   ServiceBundleRule,
 } from "@/types/boarding";
 import {
-  CORE_SERVICE_OPTIONS,
   normalizeApplicableServices,
   toggleServiceScope,
   ServiceScopeChips,
-  formatAdjustmentLabel,
-  formatRange,
   latestYearFromIsoDates,
   buildHolidayDateList,
   fetchHolidayCatalog,
@@ -68,6 +65,7 @@ import type {
   ServiceOption,
   HolidayCatalogItem,
 } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 import { MultiPetModal } from "@/components/facility/pricing-rules/multi-pet-modal";
 import { TimeFeeModal } from "@/components/facility/pricing-rules/time-fee-modal";
 import { MultiNightModal } from "@/components/facility/pricing-rules/multi-night-modal";
@@ -130,6 +128,8 @@ export function PricingRulesPanel({
   showSections,
   hideSectionHeader = false,
 }: PricingRulesPanelProps) {
+  const { t, money, percent, adjustment, plural, range, services, country } =
+    usePricingLabels();
   const sections = showSections ?? ALL_SECTIONS;
   const { activeModules } = useCustomServices();
   // The extras this facility sells. Read from localStorage until 2026-09-05,
@@ -137,7 +137,7 @@ export function PricingRulesPanel({
   const { addOns: serviceAddOns } = useServiceAddOns();
 
   const serviceOptions: ServiceOption[] = [
-    ...CORE_SERVICE_OPTIONS,
+    ...services,
     ...activeModules.map((module) => ({
       value: module.slug,
       label: module.name,
@@ -431,11 +431,11 @@ export function PricingRulesPanel({
 
       if (changed) {
         setPeakSurcharges(nextRules);
-        toast.success("Holiday surcharge dates auto-refreshed");
+        toast.success(t("toastHolidayRefreshed"));
       }
 
       if (hadErrors) {
-        toast.error("Some holiday rules could not be auto-refreshed");
+        toast.error(t("toastHolidayRefreshFailed"));
       }
     };
 
@@ -444,18 +444,20 @@ export function PricingRulesPanel({
     return () => {
       cancelled = true;
     };
-  }, [peakSurcharges]);
+  }, [peakSurcharges, t]);
 
   return (
     <div className="space-y-5">
-      {/* ── Section header ── */}
+      {/* ── Section header. White with a hairline — §6 rule 2. ── */}
       {!hideSectionHeader && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-          <h3 className="text-sm font-bold tracking-tight text-slate-800">
-            Pricing rules
+        <div className="bg-card rounded-xl border px-5 py-4">
+          <h3 className="text-sm font-bold tracking-tight">
+            {t("panelTitle")}
           </h3>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            Set up discounts and extra fees for {serviceScopeLabel} bookings
+            {serviceType === "all"
+              ? t("panelIntroAll")
+              : t("panelIntro").replace("{service}", serviceScopeLabel)}
           </p>
         </div>
       )}
@@ -469,7 +471,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
                   <Settings2 className="size-4 text-slate-700" />
                 </div>
-                How Discounts Combine
+                {t("stackTitle")}
               </span>
               <Button
                 size="sm"
@@ -477,27 +479,24 @@ export function PricingRulesPanel({
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => setPreviewOpen(!previewOpen)}
               >
-                Quick Estimate
+                {t("estimateTitle")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-muted-foreground text-xs">
-              If more than one discount matches a booking, choose how they
-              should apply.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("stackIntro")}</p>
             <div className="space-y-2">
               {(
                 [
                   {
                     value: "best_only" as const,
-                    label: "Apply best discount only",
-                    desc: "Customer gets the single largest discount",
+                    label: t("stackBest"),
+                    desc: t("stackBestHelp"),
                   },
                   {
                     value: "apply_all_sequence" as const,
-                    label: "Combine all matching discounts",
-                    desc: "Every matching discount is applied",
+                    label: t("stackCombine"),
+                    desc: t("stackCombineHelp"),
                   },
                 ] as const
               ).map((opt) => (
@@ -507,7 +506,7 @@ export function PricingRulesPanel({
                   onClick={() => setStacking(opt.value)}
                   className={`w-full rounded-lg border p-3 text-left transition-all ${
                     stacking === opt.value
-                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                      ? "border-primary ring-primary ring-2"
                       : "hover:bg-muted"
                   }`}
                 >
@@ -519,13 +518,15 @@ export function PricingRulesPanel({
 
             {/* Preview calculator */}
             {previewOpen && (
-              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                  Quick Estimate
+              <div className="bg-card space-y-3 rounded-xl border p-4">
+                <p className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
+                  {t("estimateTitle")}
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-[10px]">Base rate ($)</Label>
+                    <Label className="text-[10px]">
+                      {t("estimateBaseRate")}
+                    </Label>
                     <Input
                       type="number"
                       min={0}
@@ -537,7 +538,7 @@ export function PricingRulesPanel({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px]">Pets</Label>
+                    <Label className="text-[10px]">{t("estimatePets")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -549,7 +550,7 @@ export function PricingRulesPanel({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px]">Nights</Label>
+                    <Label className="text-[10px]">{t("estimateNights")}</Label>
                     <Input
                       type="number"
                       min={1}
@@ -602,8 +603,10 @@ export function PricingRulesPanel({
                   return (
                     <div className="space-y-1 border-t pt-2">
                       <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>${subtotal.toFixed(2)}</span>
+                        <span className="text-muted-foreground">
+                          {t("estimateSubtotal")}
+                        </span>
+                        <span>{money(subtotal)}</span>
                       </div>
                       {appliedDiscounts.map((d, i) => (
                         <div
@@ -611,21 +614,25 @@ export function PricingRulesPanel({
                           className="flex justify-between text-xs text-emerald-700"
                         >
                           <span>{d.name}</span>
-                          <span>-${d.amount.toFixed(2)}</span>
+                          <span>
+                            {adjustment("discount", "flat", d.amount)}
+                          </span>
                         </div>
                       ))}
                       {discounts.length > 0 &&
                         stacking === "best_only" &&
                         discounts.length > 1 && (
-                          <p className="text-[10px] text-amber-600">
-                            {discounts.length - 1} other discount
-                            {discounts.length > 2 ? "s" : ""} skipped (best
-                            only)
+                          <p className="text-warning text-[10px]">
+                            {plural(
+                              discounts.length - 1,
+                              "estimateSkippedOne",
+                              "estimateSkippedOther",
+                            )}
                           </p>
                         )}
                       <div className="flex justify-between border-t pt-1 text-sm font-semibold">
-                        <span>Total</span>
-                        <span>${Math.max(0, total).toFixed(2)}</span>
+                        <span>{t("estimateTotal")}</span>
+                        <span>{money(Math.max(0, total))}</span>
                       </div>
                     </div>
                   );
@@ -645,7 +652,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
                   <Users className="size-4 text-emerald-700" />
                 </div>
-                Multi-Pet Discounts
+                {t("listMultiPet")}
               </span>
               <Button
                 size="sm"
@@ -657,14 +664,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Rule
+                {t("addRule")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredMultiPet.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No multi-pet discount rules yet for these services
+                {t("listMultiPetEmpty")}
               </p>
             ) : (
               filteredMultiPet.map((rule) => (
@@ -677,24 +684,26 @@ export function PricingRulesPanel({
                       <p className="text-sm font-medium">{rule.name}</p>
                       <Badge variant="outline" className="text-[10px]">
                         {rule.discountType === "per_pet"
-                          ? "Per pet"
-                          : "Additional pet"}
+                          ? t("perPet")
+                          : t("rowAdditionalPet")}
                       </Badge>
                       {rule.sameLodging && (
                         <Badge variant="outline" className="text-[10px]">
-                          Same lodging
+                          {t("rowSameLodging")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {rule.tiers
                         .map(
-                          (t) =>
-                            `${t.petCount}+ pets: -${
+                          (tier) =>
+                            `${range(tier.petCount, null, "pets")}: ${adjustment(
+                              "discount",
                               rule.discountValueType === "percentage"
-                                ? `${t.discountAmount}%`
-                                : `$${t.discountAmount}`
-                            }`,
+                                ? "percentage"
+                                : "flat",
+                              tier.discountAmount,
+                            )}`,
                         )
                         .join(" · ")}
                     </p>
@@ -758,7 +767,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-blue-100">
                   <Moon className="size-4 text-blue-700" />
                 </div>
-                Long-Stay Discounts
+                {t("listMultiNight")}
               </span>
               <Button
                 size="sm"
@@ -770,14 +779,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Rule
+                {t("addRule")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredMultiNight.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No long-stay discount rules yet
+                {t("listMultiNightEmpty")}
               </p>
             ) : (
               filteredMultiNight.map((rule) => (
@@ -788,15 +797,29 @@ export function PricingRulesPanel({
                   <div>
                     <p className="text-sm font-medium">{rule.name}</p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {rule.minNights}
-                      {rule.maxNights ? `–${rule.maxNights}` : "+"} nights ·{" "}
-                      {rule.discountMode === "flat"
-                        ? `$${rule.discountAmount ?? 0} off`
-                        : rule.discountMode === "free_nights"
-                          ? `${rule.freeNights ?? 1} free night${
-                              (rule.freeNights ?? 1) === 1 ? "" : "s"
-                            }`
-                          : `${rule.discountPercent}% off`}
+                      {t("rowNightsRange")
+                        .replace(
+                          "{range}",
+                          range(rule.minNights, rule.maxNights, "nights"),
+                        )
+                        .replace(
+                          "{discount}",
+                          rule.discountMode === "flat"
+                            ? t("rowOffAmount").replace(
+                                "{amount}",
+                                money(rule.discountAmount ?? 0),
+                              )
+                            : rule.discountMode === "free_nights"
+                              ? plural(
+                                  rule.freeNights ?? 1,
+                                  "rowFreeNightsOne",
+                                  "rowFreeNightsOther",
+                                )
+                              : t("rowOffAmount").replace(
+                                  "{amount}",
+                                  percent(rule.discountPercent ?? 0),
+                                ),
+                        )}
                     </p>
                     <ServiceScopeChips
                       applicableServices={rule.applicableServices}
@@ -858,7 +881,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100">
                   <BedDouble className="size-4 text-indigo-700" />
                 </div>
-                Room-Type Pricing
+                {t("listRoomType")}
               </span>
               <Button
                 size="sm"
@@ -870,14 +893,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Rule
+                {t("addRule")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredRoomTypeAdjustments.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No room-type pricing rules yet
+                {t("listRoomTypeEmpty")}
               </p>
             ) : (
               filteredRoomTypeAdjustments.map((rule) => (
@@ -889,7 +912,7 @@ export function PricingRulesPanel({
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{rule.name}</p>
                       <Badge variant="outline" className="text-[10px]">
-                        {formatAdjustmentLabel(
+                        {adjustment(
                           rule.adjustmentKind,
                           rule.adjustmentType,
                           rule.amount,
@@ -897,13 +920,13 @@ export function PricingRulesPanel({
                       </Badge>
                       {rule.sameRoomRequired && (
                         <Badge variant="outline" className="text-[10px]">
-                          Same room required
+                          {t("rowSameRoom")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      Rooms: {rule.roomTypeIds.join(", ")} ·{" "}
-                      {formatRange(rule.minNights, rule.maxNights, "nights")}
+                      {t("rowRooms")} {rule.roomTypeIds.join(", ")} ·{" "}
+                      {range(rule.minNights, rule.maxNights, "nights")}
                     </p>
                     <ServiceScopeChips
                       applicableServices={rule.applicableServices}
@@ -967,7 +990,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
                   <CalendarRange className="size-4 text-amber-700" />
                 </div>
-                Busy-Date Surcharges
+                {t("listPeak")}
               </span>
               <Button
                 size="sm"
@@ -979,14 +1002,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Surcharge
+                {t("addSurcharge")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredPeakSurcharges.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No busy-date surcharges yet
+                {t("listPeakEmpty")}
               </p>
             ) : (
               filteredPeakSurcharges.map((rule) => (
@@ -1004,24 +1027,50 @@ export function PricingRulesPanel({
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">
                         {rule.scope === "first_pet_only"
-                          ? "First pet"
-                          : "Per pet"}
+                          ? t("rowFirstPet")
+                          : t("perPet")}
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {rule.dateMode === "holiday"
-                        ? `Holiday auto-sync${rule.holidayCountryCode ? ` (${rule.holidayCountryCode})` : ""} · ${rule.holidayDates?.length ?? rule.dateRanges?.length ?? 0} dates${
-                            (rule.holidayExtensionDaysBefore ?? 0) > 0 ||
-                            (rule.holidayExtensionDaysAfter ?? 0) > 0
-                              ? ` · window -${rule.holidayExtensionDaysBefore ?? 0}/+${rule.holidayExtensionDaysAfter ?? 0} days`
-                              : ""
-                          }`
-                        : `${rule.startDate} → ${rule.endDate}`}
+                        ? t("rowHolidayDates")
+                            .replace(
+                              "{country}",
+                              rule.holidayCountryCode
+                                ? country(rule.holidayCountryCode)
+                                : "—",
+                            )
+                            .replace(
+                              "{n}",
+                              String(
+                                rule.holidayDates?.length ??
+                                  rule.dateRanges?.length ??
+                                  0,
+                              ),
+                            ) +
+                          ((rule.holidayExtensionDaysBefore ?? 0) > 0 ||
+                          (rule.holidayExtensionDaysAfter ?? 0) > 0
+                            ? t("rowHolidayWindow")
+                                .replace(
+                                  "{before}",
+                                  String(rule.holidayExtensionDaysBefore ?? 0),
+                                )
+                                .replace(
+                                  "{after}",
+                                  String(rule.holidayExtensionDaysAfter ?? 0),
+                                )
+                            : "")
+                        : t("rowDateRange")
+                            .replace("{from}", rule.startDate)
+                            .replace("{to}", rule.endDate)}
                       {` · Applies to ${formatApplicableServices(rule.applicableServices)}`}
                     </p>
                     {rule.dateMode === "holiday" && (
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        Active window: {rule.startDate} → {rule.endDate}
+                        {t("rowActiveWindow")}{" "}
+                        {t("rowDateRange")
+                          .replace("{from}", rule.startDate)
+                          .replace("{to}", rule.endDate)}
                       </p>
                     )}
                   </div>
@@ -1077,7 +1126,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
                   <Clock className="size-4 text-amber-700" />
                 </div>
-                Late Pickup / Early Drop-off Fees
+                {t("listTimeFees")}
               </span>
               <Button
                 size="sm"
@@ -1089,14 +1138,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Fee
+                {t("addFee")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredTimeFees.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No late pickup or early drop-off fees yet
+                {t("listTimeFeesEmpty")}
               </p>
             ) : (
               filteredTimeFees.map((fee) => (
@@ -1109,39 +1158,52 @@ export function PricingRulesPanel({
                       <p className="text-sm font-medium">
                         {fee.name ||
                           (fee.condition === "late_pickup"
-                            ? "Late Pickup"
-                            : "Early Drop-off")}
+                            ? t("rowLatePickup")
+                            : t("rowEarlyDropoff"))}
                       </p>
                       <Badge variant="outline" className="text-[10px]">
                         {fee.condition === "late_pickup"
-                          ? "Late pickup"
-                          : "Early drop-off"}
+                          ? t("rowLatePickup")
+                          : t("rowEarlyDropoff")}
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">
                         {fee.feeType === "extra_night"
-                          ? "Extra night"
-                          : `$${fee.amount}${
+                          ? t("rowExtraNight")
+                          : t(
                               fee.feeType === "per_minute"
-                                ? "/min"
+                                ? "rowPerMin"
                                 : fee.feeType === "per_30min"
-                                  ? "/30 min"
+                                  ? "rowPer30"
                                   : fee.feeType === "per_hour"
-                                    ? "/hr"
-                                    : " flat"
-                            }`}
+                                    ? "rowPerHour"
+                                    : "rowFlatAmount",
+                            ).replace("{amount}", money(fee.amount))}
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">
-                        {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
+                        {fee.scope === "per_pet"
+                          ? t("perPet")
+                          : t("perBooking")}
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {fee.graceMinutes} min grace · Based on{" "}
-                      {fee.basedOn === "business_hours"
-                        ? "business hours"
-                        : `custom time (${fee.customTime})`}
-                      {fee.maxFee ? ` · Max $${fee.maxFee}` : ""}
+                      {t("rowGraceBasedOn")
+                        .replace("{n}", String(fee.graceMinutes))
+                        .replace(
+                          "{basis}",
+                          fee.basedOn === "business_hours"
+                            ? t("rowBasisHours")
+                            : t("rowBasedOnCustom").replace(
+                                "{time}",
+                                fee.customTime ?? "",
+                              ),
+                        )}
+                      {fee.maxFee
+                        ? t("rowMaxFee").replace("{amount}", money(fee.maxFee))
+                        : ""}
                       {(fee.applyFromTime || fee.applyUntilTime) &&
-                        ` · Window ${fee.applyFromTime ?? "00:00"} - ${fee.applyUntilTime ?? "23:59"}`}
+                        t("rowWindow")
+                          .replace("{from}", fee.applyFromTime ?? "00:00")
+                          .replace("{to}", fee.applyUntilTime ?? "23:59")}
                       {` · Applies to ${formatApplicableServices(fee.applicableServices)}`}
                     </p>
                   </div>
@@ -1175,7 +1237,7 @@ export function PricingRulesPanel({
                         setTimeFees((prev) =>
                           prev.filter((f) => f.id !== fee.id),
                         );
-                        toast.success("Fee deleted");
+                        toast.success(t("toastFeeDeleted"));
                       }}
                     >
                       <Trash2 className="size-3.5" />
@@ -1197,7 +1259,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-pink-100">
                   <Scissors className="size-4 text-pink-700" />
                 </div>
-                Pet-Spec Condition Fees
+                {t("listConditions")}
               </span>
               <Button
                 size="sm"
@@ -1209,38 +1271,53 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Rule
+                {t("addRule")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredGroomingConditionAdjustments.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No pet-spec condition adjustment rules yet
+                {t("listConditionsEmpty")}
               </p>
             ) : (
               filteredGroomingConditionAdjustments.map((rule) => {
                 const conditions: string[] = [];
                 if (rule.hairTypes?.length) {
-                  conditions.push(`${rule.hairTypes.length} hair type(s)`);
+                  conditions.push(
+                    t("rowHairTypes").replace(
+                      "{n}",
+                      String(rule.hairTypes.length),
+                    ),
+                  );
                 }
                 if (rule.breeds?.length) {
-                  conditions.push(`${rule.breeds.length} breed(s)`);
+                  conditions.push(
+                    t("rowBreeds").replace("{n}", String(rule.breeds.length)),
+                  );
                 }
                 if (rule.sexes?.length) {
-                  conditions.push(`Sex: ${rule.sexes.join(", ")}`);
+                  conditions.push(`${t("rowSex")} ${rule.sexes.join(", ")}`);
                 }
                 if (rule.petStatuses?.length) {
-                  conditions.push(`Status: ${rule.petStatuses.join(", ")}`);
+                  conditions.push(
+                    `${t("rowStatus")} ${rule.petStatuses.join(", ")}`,
+                  );
                 }
                 if (rule.ageMinYears != null || rule.ageMaxYears != null) {
                   conditions.push(
-                    `Age ${formatRange(rule.ageMinYears, rule.ageMaxYears, "years")}`,
+                    t("rowAgeRange").replace(
+                      "{range}",
+                      range(rule.ageMinYears, rule.ageMaxYears, "years"),
+                    ),
                   );
                 }
                 if (rule.weightMinKg != null || rule.weightMaxKg != null) {
                   conditions.push(
-                    `Weight ${formatRange(rule.weightMinKg, rule.weightMaxKg, "kg")}`,
+                    t("rowWeightRange").replace(
+                      "{range}",
+                      range(rule.weightMinKg, rule.weightMaxKg, "kg"),
+                    ),
                   );
                 }
                 if (
@@ -1248,12 +1325,21 @@ export function PricingRulesPanel({
                   rule.durationMinutesMax != null
                 ) {
                   conditions.push(
-                    `Duration ${formatRange(rule.durationMinutesMin, rule.durationMinutesMax, "min")}`,
+                    t("rowDurationRange").replace(
+                      "{range}",
+                      range(
+                        rule.durationMinutesMin,
+                        rule.durationMinutesMax,
+                        "minutes",
+                      ),
+                    ),
                   );
                 }
                 if (rule.appointmentWindowStart || rule.appointmentWindowEnd) {
                   conditions.push(
-                    `Time ${rule.appointmentWindowStart ?? "00:00"} - ${rule.appointmentWindowEnd ?? "23:59"}`,
+                    t("rowTimeWindow")
+                      .replace("{from}", rule.appointmentWindowStart ?? "00:00")
+                      .replace("{to}", rule.appointmentWindowEnd ?? "23:59"),
                   );
                 }
 
@@ -1266,7 +1352,7 @@ export function PricingRulesPanel({
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium">{rule.name}</p>
                         <Badge variant="outline" className="text-[10px]">
-                          {formatAdjustmentLabel(
+                          {adjustment(
                             rule.adjustmentKind,
                             rule.adjustmentType,
                             rule.amount,
@@ -1274,17 +1360,26 @@ export function PricingRulesPanel({
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
                           {rule.billingMode === "per_unit"
-                            ? `Per ${rule.unitType ?? "sessions"}`
-                            : "One-time"}
+                            ? t("rowPerUnit").replace(
+                                "{unit}",
+                                t(
+                                  rule.unitType === "days"
+                                    ? "unitDays"
+                                    : rule.unitType === "nights"
+                                      ? "unitNights"
+                                      : "unitSessions",
+                                ),
+                              )
+                            : t("gcOneTime")}
                         </Badge>
                       </div>
                       <p className="text-muted-foreground mt-0.5 text-xs">
                         {conditions.length > 0
                           ? conditions.join(" · ")
-                          : "No conditions set"}
+                          : t("rowNoConditions")}
                       </p>
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        Applies to:{" "}
+                        {t("rowAppliesTo")}{" "}
                         {formatApplicableServices(rule.applicableServices)}
                       </p>
                     </div>
@@ -1344,7 +1439,7 @@ export function PricingRulesPanel({
                   <div className="flex size-8 items-center justify-center rounded-lg bg-rose-100">
                     <AlertTriangle className="size-4 text-rose-700" />
                   </div>
-                  Over 24-Hour Stay Fee
+                  {t("listExceed24")}
                 </span>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -1367,9 +1462,11 @@ export function PricingRulesPanel({
             {exceed24h.enabled && (
               <CardContent className="space-y-1">
                 <p className="text-sm">
-                  <span className="font-medium">${exceed24h.amount}</span>{" "}
+                  <span className="font-medium">{money(exceed24h.amount)}</span>{" "}
                   <span className="text-muted-foreground">
-                    {exceed24h.scope === "per_pet" ? "per pet" : "per booking"}
+                    {exceed24h.scope === "per_pet"
+                      ? t("perPet")
+                      : t("perBooking")}
                   </span>
                 </p>
                 {exceed24h.description && (
@@ -1391,7 +1488,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-sky-100">
                   <DollarSign className="size-4 text-sky-700" />
                 </div>
-                Custom Fees
+                {t("listCustomFees")}
               </span>
               <Button
                 size="sm"
@@ -1403,14 +1500,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Fee
+                {t("addFee")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredCustomFees.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No custom fees yet
+                {t("listCustomFeesEmpty")}
               </p>
             ) : (
               filteredCustomFees.map((fee) => (
@@ -1426,25 +1523,29 @@ export function PricingRulesPanel({
                           ? "-"
                           : "+"}
                         {fee.feeType === "flat"
-                          ? `$${fee.amount}`
-                          : `${fee.amount}%`}
+                          ? money(fee.amount)
+                          : percent(fee.amount)}
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">
-                        {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
+                        {fee.scope === "per_pet"
+                          ? t("perPet")
+                          : t("perBooking")}
                       </Badge>
                       {fee.autoApply !== "none" && (
                         <Badge className="bg-blue-100 text-[10px] text-blue-700">
-                          {fee.autoApply === "at_checkout"
-                            ? "Auto at checkout"
-                            : fee.autoApply === "by_care_type"
-                              ? "Auto by care type"
-                              : fee.autoApply === "new_customer"
-                                ? "Auto for new customer"
-                                : fee.autoApply === "new_pet"
-                                  ? "Auto for new pet"
-                                  : fee.autoApply === "customer_segment"
-                                    ? "Auto by customer segment"
-                                    : "Auto by add-on purchase"}
+                          {t(
+                            fee.autoApply === "at_checkout"
+                              ? "rowAutoCheckout"
+                              : fee.autoApply === "by_care_type"
+                                ? "rowAutoCareType"
+                                : fee.autoApply === "new_customer"
+                                  ? "rowAutoNewCustomer"
+                                  : fee.autoApply === "new_pet"
+                                    ? "rowAutoNewPet"
+                                    : fee.autoApply === "customer_segment"
+                                      ? "rowSegmentAuto"
+                                      : "rowAddOnAuto",
+                          )}
                         </Badge>
                       )}
                     </div>
@@ -1454,30 +1555,48 @@ export function PricingRulesPanel({
                       </p>
                     )}
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      Applies to:{" "}
+                      {t("rowAppliesTo")}{" "}
                       {formatApplicableServices(fee.applicableServices)}
                     </p>
                     {fee.autoApply === "customer_segment" && (
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        Segment:{" "}
+                        {t("rowSegment")}{" "}
                         {fee.customerStatuses?.length
-                          ? `status ${fee.customerStatuses.join(", ")}`
-                          : "any status"}
+                          ? t("rowSegmentStatus").replace(
+                              "{list}",
+                              fee.customerStatuses.join(", "),
+                            )
+                          : t("rowSegmentAnyStatus")}
                         {fee.membershipPlans?.length
-                          ? ` · plans ${fee.membershipPlans.join(", ")}`
+                          ? t("rowSegmentPlans").replace(
+                              "{list}",
+                              fee.membershipPlans.join(", "),
+                            )
                           : ""}
                         {fee.requireMembershipActive
-                          ? " · active membership"
+                          ? t("rowSegmentMembership")
                           : ""}
-                        {fee.requirePrepaidBalance ? " · prepaid balance" : ""}
+                        {fee.requirePrepaidBalance
+                          ? t("rowSegmentPrepaid")
+                          : ""}
                       </p>
                     )}
                     {fee.autoApply === "addon_purchase" && (
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        Trigger add-ons: {fee.triggerAddOnIds?.length ?? 0} ·
-                        Waived add-ons: {fee.waivedAddOnIds?.length ?? 0}
+                        {t("rowTriggerWaived")
+                          .replace(
+                            "{trigger}",
+                            String(fee.triggerAddOnIds?.length ?? 0),
+                          )
+                          .replace(
+                            "{waived}",
+                            String(fee.waivedAddOnIds?.length ?? 0),
+                          )}
                         {fee.waivePercentage != null
-                          ? ` · Waive ${fee.waivePercentage}%`
+                          ? t("rowWaivePercent").replace(
+                              "{pct}",
+                              percent(fee.waivePercentage),
+                            )
                           : ""}
                       </p>
                     )}
@@ -1534,7 +1653,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
                   <Link2 className="size-4 text-emerald-700" />
                 </div>
-                Service Bundles
+                {t("listBundles")}
               </span>
               <Button
                 size="sm"
@@ -1546,14 +1665,14 @@ export function PricingRulesPanel({
                 }}
               >
                 <Plus className="size-3" />
-                Add Bundle
+                {t("addBundle")}
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {filteredServiceBundles.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No service bundle rules yet
+                {t("listBundlesEmpty")}
               </p>
             ) : (
               filteredServiceBundles.map((rule) => {
@@ -1565,10 +1684,19 @@ export function PricingRulesPanel({
                   rule.pricingMode === "included"
                     ? "Included"
                     : rule.pricingMode === "discount_percentage"
-                      ? `${rule.pricingValue ?? 0}% off`
+                      ? t("rowOffAmount").replace(
+                          "{amount}",
+                          percent(rule.pricingValue ?? 0),
+                        )
                       : rule.pricingMode === "discount_flat"
-                        ? `$${rule.pricingValue ?? 0} off`
-                        : `Fixed $${rule.pricingValue ?? 0}`;
+                        ? t("rowOffAmount").replace(
+                            "{amount}",
+                            money(rule.pricingValue ?? 0),
+                          )
+                        : t("rowFixedPrice").replace(
+                            "{amount}",
+                            money(rule.pricingValue ?? 0),
+                          );
 
                 return (
                   <div
@@ -1580,8 +1708,8 @@ export function PricingRulesPanel({
                         <p className="text-sm font-medium">{rule.name}</p>
                         <Badge variant="outline" className="text-[10px]">
                           {rule.bundleMode === "mandatory"
-                            ? "Mandatory"
-                            : "Optional"}
+                            ? t("rowMandatory")
+                            : t("rowOptional")}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
                           {pricingLabel}
@@ -1589,17 +1717,16 @@ export function PricingRulesPanel({
                       </div>
                       <p className="text-muted-foreground mt-0.5 text-xs">
                         {triggerLabel}{" "}
-                        {formatRange(
-                          rule.minUnits,
-                          rule.maxUnits,
-                          rule.triggerUnit,
-                        )}{" "}
+                        {range(rule.minUnits, rule.maxUnits, rule.triggerUnit)}{" "}
                         to {rule.bundledServiceLabel} ({bundledServiceLabel})
                       </p>
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        {rule.requireSamePet ? "Same pet" : "Any pet"}
-                        {rule.requireSameRoom ? " · Same room" : ""}
-                        {` · Applies to ${formatApplicableServices(rule.applicableServices)}`}
+                        {rule.requireSamePet ? t("rowSamePet") : t("rowAnyPet")}
+                        {rule.requireSameRoom ? t("rowSameRoomSuffix") : ""}
+                        {t("rowAppliesToSuffix").replace(
+                          "{list}",
+                          formatApplicableServices(rule.applicableServices),
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1666,7 +1793,9 @@ export function PricingRulesPanel({
             setMultiPet((prev) => [...prev, rule]);
           }
           setMpModal(false);
-          toast.success(editingMp ? "Rule updated" : "Rule created");
+          toast.success(
+            editingMp ? t("toastRuleUpdated") : t("toastRuleCreated"),
+          );
         }}
       />
 
@@ -1686,7 +1815,9 @@ export function PricingRulesPanel({
             setTimeFees((prev) => [...prev, fee]);
           }
           setTfModal(false);
-          toast.success(editingTf ? "Fee updated" : "Fee created");
+          toast.success(
+            editingTf ? t("toastFeeUpdated") : t("toastFeeCreated"),
+          );
         }}
       />
 
@@ -1694,22 +1825,22 @@ export function PricingRulesPanel({
       <Dialog open={e24Modal} onOpenChange={setE24Modal}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Exceed 24-hour fee</DialogTitle>
+            <DialogTitle>{t("exceedDialogTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Fee Name</Label>
+              <Label>{t("exceedFeeName")}</Label>
               <Input
                 value={exceed24h.name ?? ""}
                 onChange={(e) =>
                   setExceed24h((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder="e.g. 24-Hour Overflow"
+                placeholder={t("exceedNamePlaceholder")}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Amount ($)</Label>
+                <Label>{t("amount")}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -1723,7 +1854,7 @@ export function PricingRulesPanel({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Scope</Label>
+                <Label>{t("scope")}</Label>
                 <Select
                   value={exceed24h.scope}
                   onValueChange={(v) =>
@@ -1737,14 +1868,16 @@ export function PricingRulesPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="per_pet">Per pet</SelectItem>
-                    <SelectItem value="per_booking">Per booking</SelectItem>
+                    <SelectItem value="per_pet">{t("perPet")}</SelectItem>
+                    <SelectItem value="per_booking">
+                      {t("perBooking")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Tax Rate (%)</Label>
+              <Label>{t("taxRate")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -1758,11 +1891,11 @@ export function PricingRulesPanel({
                       : undefined,
                   }))
                 }
-                placeholder="Uses facility default"
+                placeholder={t("facilityDefault")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label>{t("exceedDescription")}</Label>
               <Textarea
                 value={exceed24h.description ?? ""}
                 onChange={(e) =>
@@ -1777,15 +1910,15 @@ export function PricingRulesPanel({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setE24Modal(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={() => {
                 setE24Modal(false);
-                toast.success("Saved");
+                toast.success(t("saved"));
               }}
             >
-              Save
+              {t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1808,7 +1941,9 @@ export function PricingRulesPanel({
             setCustomFees((prev) => [...prev, fee]);
           }
           setCfModal(false);
-          toast.success(editingCf ? "Fee updated" : "Fee created");
+          toast.success(
+            editingCf ? t("toastFeeUpdated") : t("toastFeeCreated"),
+          );
         }}
       />
 
@@ -1828,7 +1963,9 @@ export function PricingRulesPanel({
             setMultiNight((prev) => [...prev, rule]);
           }
           setMnModal(false);
-          toast.success(editingMn ? "Rule updated" : "Rule created");
+          toast.success(
+            editingMn ? t("toastRuleUpdated") : t("toastRuleCreated"),
+          );
         }}
       />
 
@@ -1848,7 +1985,9 @@ export function PricingRulesPanel({
             setRoomTypeAdjustments((prev) => [...prev, rule]);
           }
           setRtaModal(false);
-          toast.success(editingRta ? "Rule updated" : "Rule created");
+          toast.success(
+            editingRta ? t("toastRuleUpdated") : t("toastRuleCreated"),
+          );
         }}
       />
 
@@ -1868,7 +2007,9 @@ export function PricingRulesPanel({
             setPeakSurcharges((prev) => [...prev, rule]);
           }
           setPdModal(false);
-          toast.success(editingPd ? "Surcharge updated" : "Surcharge created");
+          toast.success(
+            editingPd ? t("toastSurchargeUpdated") : t("toastSurchargeCreated"),
+          );
         }}
       />
 
@@ -1888,7 +2029,9 @@ export function PricingRulesPanel({
             setGroomingConditionAdjustments((prev) => [...prev, rule]);
           }
           setGcaModal(false);
-          toast.success(editingGca ? "Rule updated" : "Rule created");
+          toast.success(
+            editingGca ? t("toastRuleUpdated") : t("toastRuleCreated"),
+          );
         }}
       />
 
@@ -1908,7 +2051,9 @@ export function PricingRulesPanel({
             setServiceBundles((prev) => [...prev, rule]);
           }
           setBundleModal(false);
-          toast.success(editingBundle ? "Bundle updated" : "Bundle created");
+          toast.success(
+            editingBundle ? t("toastBundleUpdated") : t("toastBundleCreated"),
+          );
         }}
       />
     </div>

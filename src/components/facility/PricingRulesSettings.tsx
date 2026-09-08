@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 import { PricingRulesPanel } from "./PricingRulesPanel";
 import { type StoredPricingRules } from "@/lib/pricing-rules";
 
@@ -37,9 +38,10 @@ import { type StoredPricingRules } from "@/lib/pricing-rules";
 
 interface CategoryDef {
   id: string;
+  /** Stable — it buckets and orders the rail. Never rendered directly. */
   group: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descKey: string;
   icon: React.ElementType;
   iconBg: string;
   iconColor: string;
@@ -50,10 +52,9 @@ interface CategoryDef {
 const CATEGORIES: CategoryDef[] = [
   {
     id: "stacking_mode",
-    group: "Discounts",
-    title: "How discounts combine",
-    description:
-      "Choose whether customers get the best single discount or all matching discounts",
+    group: "grpDiscounts",
+    titleKey: "catStackingTitle",
+    descKey: "catStackingDesc",
     icon: Settings2,
     iconBg: "bg-slate-100",
     iconColor: "text-slate-700",
@@ -62,10 +63,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "multi_pet",
-    group: "Discounts",
-    title: "Multi-pet discounts",
-    description:
-      "Give a discount when two or more pets from one household are booked together",
+    group: "grpDiscounts",
+    titleKey: "catMultiPetTitle",
+    descKey: "catMultiPetDesc",
     icon: Users,
     iconBg: "bg-violet-50",
     iconColor: "text-violet-600",
@@ -74,10 +74,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "multi_night",
-    group: "Discounts",
-    title: "Long-stay discounts",
-    description:
-      "Give a discount when a stay reaches your selected number of nights or days",
+    group: "grpDiscounts",
+    titleKey: "catMultiNightTitle",
+    descKey: "catMultiNightDesc",
     icon: Moon,
     iconBg: "bg-blue-50",
     iconColor: "text-blue-600",
@@ -86,9 +85,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "room_type",
-    group: "Discounts",
-    title: "Room-type pricing",
-    description: "Add discounts or surcharges for specific boarding room types",
+    group: "grpDiscounts",
+    titleKey: "catRoomTypeTitle",
+    descKey: "catRoomTypeDesc",
     icon: BedDouble,
     iconBg: "bg-indigo-50",
     iconColor: "text-indigo-600",
@@ -97,9 +96,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "peak",
-    group: "Demand pricing",
-    title: "Busy-date surcharges",
-    description: "Add a surcharge during high-demand dates such as holidays",
+    group: "grpDemand",
+    titleKey: "catPeakTitle",
+    descKey: "catPeakDesc",
     icon: CalendarRange,
     iconBg: "bg-amber-50",
     iconColor: "text-amber-600",
@@ -108,10 +107,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "time_fees",
-    group: "Surcharges",
-    title: "Late pickup / early drop-off fees",
-    description:
-      "Add a fee for pickups or drop-offs outside your normal operating hours",
+    group: "grpSurcharges",
+    titleKey: "catTimeFeesTitle",
+    descKey: "catTimeFeesDesc",
     icon: Clock,
     iconBg: "bg-red-50",
     iconColor: "text-red-600",
@@ -120,10 +118,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "grooming_conditions",
-    group: "Surcharges",
-    title: "Pet-spec condition fees",
-    description:
-      "Adjust pricing by pet age, breed, sex, status, coat, weight, duration, and appointment window",
+    group: "grpSurcharges",
+    titleKey: "catConditionsTitle",
+    descKey: "catConditionsDesc",
     icon: Scissors,
     iconBg: "bg-pink-50",
     iconColor: "text-pink-600",
@@ -132,9 +129,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "exceed_24h",
-    group: "Surcharges",
-    title: "Over 24-hour stay fee",
-    description: "Add a fee when a stay goes beyond a full 24-hour period",
+    group: "grpSurcharges",
+    titleKey: "catExceed24Title",
+    descKey: "catExceed24Desc",
     icon: Timer,
     iconBg: "bg-orange-50",
     iconColor: "text-orange-600",
@@ -143,9 +140,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "custom_fees",
-    group: "Extra fees",
-    title: "Custom fees",
-    description: "Create your own fee rules for special situations",
+    group: "grpExtraFees",
+    titleKey: "catCustomFeesTitle",
+    descKey: "catCustomFeesDesc",
     icon: Receipt,
     iconBg: "bg-slate-100",
     iconColor: "text-slate-600",
@@ -154,10 +151,9 @@ const CATEGORIES: CategoryDef[] = [
   },
   {
     id: "service_bundles",
-    group: "Bundles",
-    title: "Service bundles",
-    description:
-      "Auto-add combined services with mandatory or discounted bundle pricing",
+    group: "grpBundles",
+    titleKey: "catBundlesTitle",
+    descKey: "catBundlesDesc",
     icon: Link2,
     iconBg: "bg-emerald-50",
     iconColor: "text-emerald-700",
@@ -276,6 +272,7 @@ type CategoryWithStats = CategoryDef & {
 // ============================================================================
 
 export function PricingRulesSettings() {
+  const { t, plural, services } = usePricingLabels();
   const { rules, configured, isPending } = usePricingRules();
   const saveSetting = useSaveFacilitySetting();
 
@@ -292,15 +289,13 @@ export function PricingRulesSettings() {
           {
             onError: (error) =>
               toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Those pricing rules were not saved.",
+                error instanceof Error ? error.message : t("saveFailed"),
               ),
           },
         );
       }, 600);
     },
-    [saveSetting],
+    [saveSetting, t],
   );
 
   useEffect(
@@ -336,13 +331,10 @@ export function PricingRulesSettings() {
 
   const allServices = useMemo(
     () => [
-      { value: "boarding", label: "Boarding" },
-      { value: "daycare", label: "Daycare" },
-      { value: "grooming", label: "Grooming" },
-      { value: "training", label: "Training" },
+      ...services,
       ...activeModules.map((m) => ({ value: m.slug, label: m.name })),
     ],
-    [activeModules],
+    [activeModules, services],
   );
   const serviceValues = useMemo(
     () => allServices.map((s) => s.value),
@@ -386,9 +378,9 @@ export function PricingRulesSettings() {
       (acc, [groupName, categories]) => {
         const nextCategories = categories.filter((category) => {
           return (
-            category.title.toLowerCase().includes(normalizedSearch) ||
-            category.description.toLowerCase().includes(normalizedSearch) ||
-            category.group.toLowerCase().includes(normalizedSearch) ||
+            t(category.titleKey).toLowerCase().includes(normalizedSearch) ||
+            t(category.descKey).toLowerCase().includes(normalizedSearch) ||
+            t(category.group).toLowerCase().includes(normalizedSearch) ||
             // Match individual rule names/labels across every category, so a
             // search for a specific rule surfaces the category that holds it.
             category.searchText.includes(normalizedSearch)
@@ -403,7 +395,7 @@ export function PricingRulesSettings() {
       },
       {} as Record<string, CategoryWithStats[]>,
     );
-  }, [groups, normalizedSearch]);
+  }, [groups, normalizedSearch, t]);
 
   const totalActiveRules = useMemo(() => {
     return categoriesWithCounts.reduce(
@@ -475,14 +467,12 @@ export function PricingRulesSettings() {
           them is a decision. The fallback is empty on purpose — inheriting the
           fixture's $10 late fee would charge customers a number nobody at this
           business agreed to. */}
+      {/* A hairline of the warning ink rather than a wash, and no `dark:`
+          in a product with no dark mode (§6 rule 2). */}
       {!configured && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-          <p className="text-sm/relaxed text-amber-900 dark:text-amber-200">
-            No pricing rules have been set up for this facility yet, so no
-            surcharges or discounts are being applied. Anything you change here
-            is saved for everyone, on every device.
-          </p>
+        <div className="border-warning/40 bg-card flex items-start gap-2 rounded-lg border p-3">
+          <TriangleAlert className="text-warning mt-0.5 size-4 shrink-0" />
+          <p className="text-sm/relaxed">{t("notConfigured")}</p>
         </div>
       )}
       <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
@@ -490,23 +480,32 @@ export function PricingRulesSettings() {
           <Card className="border-slate-200/90 shadow-sm">
             <CardContent className="space-y-3 p-3.5">
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                <p className="text-sm font-semibold text-slate-900">
-                  Pricing Rules
-                </p>
+                <p className="text-sm font-semibold">{t("title")}</p>
                 <p className="text-muted-foreground mt-1 text-xs/relaxed">
-                  Configure discounts, surcharges, and bundles with clear,
-                  category-based controls.
+                  {t("intro")}
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="outline" className="bg-white text-[10px]">
-                    {uniqueCategories.length} categories
+                    {plural(
+                      uniqueCategories.length,
+                      "countCategoriesOne",
+                      "countCategoriesOther",
+                    )}
                   </Badge>
                   <Badge variant="outline" className="bg-white text-[10px]">
-                    {totalActiveRules} active
+                    {plural(
+                      totalActiveRules,
+                      "countActiveOne",
+                      "countActiveOther",
+                    )}
                   </Badge>
                   <Badge variant="outline" className="bg-white text-[10px]">
-                    {allServices.length} services
+                    {plural(
+                      allServices.length,
+                      "countServicesOne",
+                      "countServicesOther",
+                    )}
                   </Badge>
                 </div>
 
@@ -516,7 +515,7 @@ export function PricingRulesSettings() {
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     className="h-8 border-slate-200 bg-white pl-8 text-xs"
-                    placeholder="Search rules or categories"
+                    placeholder={t("searchPlaceholder")}
                   />
                 </div>
               </div>
@@ -525,7 +524,7 @@ export function PricingRulesSettings() {
                 {Object.entries(filteredGroups).length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
                     <p className="text-muted-foreground text-xs">
-                      No categories match your search.
+                      {t("noSearchMatch")}
                     </p>
                   </div>
                 ) : (
@@ -539,7 +538,7 @@ export function PricingRulesSettings() {
                         <div key={groupName}>
                           <div className="flex items-center gap-1.5 px-2 pb-1">
                             <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                              {groupName}
+                              {t(groupName)}
                             </p>
                             {groupWarnings > 0 && (
                               <Badge className="gap-0.5 border border-amber-200 bg-amber-50 text-[9px] text-amber-700">
@@ -561,10 +560,10 @@ export function PricingRulesSettings() {
                                     : "bg-slate-300";
                               const dotTitle =
                                 category.status === "warning"
-                                  ? "Warning — a rule targets a removed service"
+                                  ? t("statusWarning")
                                   : category.status === "active"
-                                    ? "Active"
-                                    : "Inactive";
+                                    ? t("statusActive")
+                                    : t("statusInactive");
 
                               return (
                                 <button
@@ -579,15 +578,16 @@ export function PricingRulesSettings() {
                                   }
                                   className={cn(
                                     "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
+                                    // §6 rule 1 and rule 2, both on this one
+                                    // element: a 4px accent pinned to the left
+                                    // edge of a rounded, filled card, over a
+                                    // tint of the primary. The sanctioned
+                                    // signal is a full 2px ring.
                                     isActive
-                                      ? "border-primary/45 bg-primary/8 shadow-sm"
-                                      : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
+                                      ? "border-primary ring-primary bg-card shadow-sm ring-2"
+                                      : "bg-card hover:border-foreground/20 hover:-translate-y-0.5 hover:shadow-sm",
                                   )}
                                 >
-                                  {isActive && (
-                                    <span className="bg-primary absolute top-0 left-0 h-full w-1" />
-                                  )}
-
                                   <div
                                     className={cn(
                                       "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
@@ -612,7 +612,7 @@ export function PricingRulesSettings() {
                                         title={dotTitle}
                                       />
                                       <p className="text-sm font-medium">
-                                        {category.title}
+                                        {t(category.titleKey)}
                                       </p>
                                       {category.activeCount > 0 && (
                                         <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
@@ -621,7 +621,7 @@ export function PricingRulesSettings() {
                                       )}
                                     </div>
                                     <p className="text-muted-foreground mt-0.5 text-[11px]/relaxed">
-                                      {category.description}
+                                      {t(category.descKey)}
                                     </p>
                                   </div>
 
@@ -654,13 +654,13 @@ export function PricingRulesSettings() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-                    {activeCategory.group}
+                    {t(activeCategory.group)}
                   </p>
                   <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-                    {activeCategory.title}
+                    {t(activeCategory.titleKey)}
                   </h3>
                   <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-                    {activeCategory.description}
+                    {t(activeCategory.descKey)}
                   </p>
                 </div>
 
@@ -668,13 +668,17 @@ export function PricingRulesSettings() {
                   variant="outline"
                   className="border-slate-300 bg-white text-[11px]"
                 >
-                  {activeCategory.activeCount} active
+                  {plural(
+                    activeCategory.activeCount,
+                    "ruleCountOne",
+                    "ruleCountOther",
+                  )}
                 </Badge>
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-                  Available for
+                  {t("availableFor")}
                 </span>
                 {allServices.slice(0, 8).map((service) => (
                   <Badge
@@ -687,7 +691,10 @@ export function PricingRulesSettings() {
                 ))}
                 {allServices.length > 8 && (
                   <Badge variant="outline" className="bg-white text-[10px]">
-                    +{allServices.length - 8} more
+                    {t("andMore").replace(
+                      "{n}",
+                      String(allServices.length - 8),
+                    )}
                   </Badge>
                 )}
               </div>

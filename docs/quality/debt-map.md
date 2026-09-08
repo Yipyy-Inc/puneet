@@ -9451,3 +9451,221 @@ the fix is the same: derive the list. The spec can import the gate's baseline,
 or a check can compare the two files. Left undone here because it wants the
 gate to export its baseline, which is a change to a gate and belongs in its own
 commit rather than in a translation one.
+
+## The pricing-rules panel was 5,822 lines, and splitting it was the cheap part
+
+Recorded on 2026-09-07 as the reason the last settings section had no French.
+Resolved 2026-09-08 in two commits: a **pure move** (the eight modals into
+their own files, proven line-identical by a script that strips imports and the
+added `export` keyword and compares bodies), then the translation.
+
+**What the move actually bought, beyond the file sizes:** the eight modals turn
+out to have been written from one template and then to have drifted. Converting
+them exposed the drift immediately, because a shared replacement with a
+required occurrence count fails loudly on a file that does not match:
+
+- `time-fee-modal` has **no name-required guard** at all. Every other dialog
+  refuses to save a nameless rule; this one saves it.
+- `peak-surcharge-modal` and the panel import two types, so their shared import
+  is multi-line, and the single-line anchor the other seven share does not
+  exist in them.
+
+The first is a real behavioural inconsistency and is still there — fixing it
+changes what a save does, which is not a translation commit's business.
+
+## `Intl.DisplayNames` replaced thirty-four hand-written country names
+
+`HOLIDAY_COUNTRIES` was a table of ISO codes beside English labels — "United
+States", "Czechia", "South Korea" — feeding the holiday-sync picker. Putting
+those thirty-four strings in the catalogue would have been the obvious move and
+the wrong one.
+
+```
+new Intl.DisplayNames(["fr-CA"], { type: "region" }).of("US")   // États-Unis
+```
+
+Measured against all thirty-four codes in both en-CA and fr-CA before relying
+on it: **every one resolves, none falls back to the raw code.** It also sorts
+properly — `localeCompare` puts _Afrique du Sud_ first in French, where the
+hand-ordered array had South Africa last, which no static array can do for two
+languages at once.
+
+**The general rule, worth applying before the next catalogue grows:** §5q says
+"always `Intl`, never a format string". The same argument one level up says
+never a hand-written TABLE for something `Intl` already knows — regions,
+languages, currencies, scripts, weekday and month names. Check
+`Intl.DisplayNames` and `Intl.DateTimeFormat` before adding a list of proper
+nouns to `messages/*.json`.
+
+## A hook that rebuilds its arrays makes the React Compiler give up
+
+`usePricingLabels()` returned freshly-built `services`, `rooms`, `coats` and
+`countries` arrays on every render. The consequence was not slowness — it was a
+LINT ERROR two files away:
+
+```
+PricingRulesSettings.tsx:284  error  Compilation Skipped: Existing memoization
+                                     could not be preserved
+```
+
+A caller's `useMemo(…, [services])` can never hold when `services` is new each
+time, and this repo treats that compiler message as an error rather than a
+warning. Memoising the hook on `[locale, section]` fixed it, and had two more
+effects worth knowing:
+
+- `t` became **stable**, so four `react-hooks/exhaustive-deps` warnings could be
+  answered by naming `t` in the dependency array instead of suppressed. Before
+  the memo, naming it would have re-run those effects every render.
+- The country list stopped doing thirty-four `Intl.DisplayNames` lookups and a
+  `localeCompare` sort **on every keystroke in the search box**.
+
+**The shape to remember:** a hook that returns a fresh object or array is a
+memoisation barrier for everything downstream, and in this codebase that
+surfaces as an error in a file you did not touch. Every `use*Labels` hook here
+now returns memoised values; a new one should too.
+
+## Search compared the English, so a French user could not find what they saw
+
+The pricing-rules rail filters nine categories by title, description and group.
+It compared `category.title.toLowerCase()` — the raw English — while rendering
+the French. A French user typing _rabais_, looking straight at the word
+**Rabais** on screen, got "no categories match your search".
+
+Fixed by comparing the RENDERED strings, `t(category.titleKey)`. The category's
+`group` stays an English key, because it also buckets and orders the rail —
+the same split as `UNCATEGORIZED` in the add-ons list, and the third time this
+map has recorded it: **the key never travels through the locale layer; only the
+label does. And anything the user can search must be compared as the label.**
+
+`rg "toLowerCase\(\)\.includes" src` finds thirty-one more search filters. Any
+of them comparing a constant rather than a rendered string has this bug.
+
+## Eighteen prices built by hand in one file
+
+`PricingRulesPanel.tsx` assembled money, percentages and ranges as template
+literals in eighteen places — `$${fee.amount}`, `-${amount}%`,
+`${subtotal.toFixed(2)}`, `${min}-${max} nights`, `Fixed $${value}`. Every one
+is an English shape twice over: the sign leads where fr-CA trails it, and
+`toFixed` writes a decimal POINT where fr-CA writes a comma.
+
+This is the figure a facility checks its own pricing against, and the customer-
+facing consequence of getting it wrong is a price that reads as a hundredth of
+itself. All eighteen go through `formatMoney` / `formatPercent` now, and the
+ranges through one whole catalogue sentence each rather than a number glued to
+a unit.
+
+**The grep, and its measurement**, because a number nobody ran is how this
+file's own guidance says an entry ages into folklore:
+
+```
+rg '[$][$][{]' src | wc -l       # 433 occurrences
+rg -l '[$][$][{]' src | wc -l    # across 197 files
+```
+
+Not all 433 are money — the pattern also catches a `$` that is genuinely part
+of a template's text. But every money defect found so far has had this shape,
+in four screens running: Yipyy Pay, retail, add-ons, and now pricing rules. It
+belongs in CLAUDE.md's guardrail list, read the way the orange and tint-fill
+greps are read — as "this file has not been through the redesign yet", not as
+a violation count.
+
+## The static gate said pricing-rules was finished; the browser said `grpDiscounts`
+
+`check:ui-french` reported **0 strings** across all fifty settings sections.
+The Playwright spec, on the same commit, failed on the first load:
+
+```
+raw catalogue keys on pricing-rules
++ Array [ "grpDiscounts" ]
+```
+
+One render site still read `{activeCategory.group}` instead of
+`{t(activeCategory.group)}`. The gate cannot see it and never could: the value
+is an EXPRESSION, so there is no English literal in the source to find — and
+because the group field had just become a key rather than a label, the screen
+printed the key itself.
+
+**This is the exact pair the two checks exist to be.** The gate proves a
+surface has not gone backwards in the SOURCE; the spec proves what reaches the
+SCREEN. Neither is sufficient, and this is now the second time the spec has
+caught a raw key the gate certified as clean — the first was `nav-dashboard` in
+the roles studio on 2026-09-07, which is why the spec learned kebab-case.
+
+**The pattern that produces it:** converting a field from a label to a key
+changes what a missed render site DISPLAYS — from English, which a reader might
+tolerate, to an identifier, which is plainly broken. Every conversion of that
+shape should be followed by a grep for the field's remaining uses:
+`rg "\.group\b" src/components/facility/PricingRulesSettings.tsx` would have
+found it in four lines.
+
+## `check:edge-accents` cannot see an accent bar drawn as a positioned element
+
+The pricing-rules category rail marked its selected row like this:
+
+```tsx
+{
+  isActive && <span className="bg-primary absolute top-0 left-0 h-full w-1" />;
+}
+```
+
+A 4px primary bar pinned to the left edge of a rounded, filled card. That is
+§6 rule 1 exactly — and `bun run check:edge-accents` passes it, because the
+gate looks for one-sided BORDER utilities (`border-l-4`, `border-b-2`) and this
+is an absolutely-positioned `<span>`. Same pixels, different mechanism,
+invisible to the check.
+
+Found by looking at a screenshot, not by any gate.
+
+**Measured, so the size of the hole is known rather than guessed:**
+
+```
+rg 'absolute (top-0 left-0|inset-y-0 left-0|left-0 top-0)[^"]*w-(0\.5|1|1\.5|2)\b' src -g '*.tsx' | wc -l   # 3
+rg 'absolute[^"]*(inset-x-0 bottom-0|bottom-0 left-0)[^"]*h-(0\.5|1|1\.5|2)\b' src -g '*.tsx' | wc -l       # 6
+```
+
+Nine candidates, one of which was this. **Not all nine are violations** — the
+bottom-edge ones may be legal tab strips, which rule 1 sanctions, and the test
+for that is mechanical: a bottom rule that rests transparent on something with
+no radius and no fill is a tab strip and passes. Someone has to look at the
+other eight.
+
+**Extending the gate is the real fix**, and it is a change to a gate, so it
+belongs in its own commit rather than in a translation one. The shape it needs
+to match: an absolutely-positioned element pinned to one edge, sized 1–2 in the
+perpendicular axis, carrying a background that is not a neutral hairline —
+then apply rule 1's existing radius-or-fill test to its PARENT.
+
+## `test:unit` can exit 1 while reporting `0 fail`, and CI gates on it
+
+Observed twice on 2026-09-08:
+
+```
+ 226 pass
+ 0 fail
+ 2136 expect() calls
+error: script "test:unit" exited with code 1
+```
+
+Three consecutive re-runs then exited 0. The tell is in the output of
+`tests/unit/calling-provider.test.ts`:
+
+```
+[calling] sendSms failed: warn: getaddrinfo ENOTFOUND
+```
+
+That test drives the Twilio provider against a fake account id, and one of its
+paths makes a **real DNS lookup**. The assertions still pass — the code under
+test handles the failure — but when the lookup fails a particular way the
+rejection escapes the test's frame and bun exits non-zero with nothing marked
+failed.
+
+**Why it matters:** `unit` is in `image`'s `needs:` in ci.yml, so it stands
+between a push and production. A DNS blip on a GitHub runner fails the build
+with a report that says nothing failed — which is the most confusing possible
+shape for an on-call person to read.
+
+**Not fixed here** because it is a test-infrastructure change and this was a
+translation commit. The fix is to stub the network at the boundary rather than
+let the provider reach for a hostname: the file already fakes the account id,
+so it is halfway there. `rg "getaddrinfo|fetch\(" tests/unit/calling-provider.test.ts`
+is where to start.

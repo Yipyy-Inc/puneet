@@ -19,6 +19,7 @@
  */
 
 import { cn } from "@/lib/utils";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -28,11 +29,6 @@ export function makeId(prefix: string) {
 
 export interface ServiceOption {
   value: string;
-  label: string;
-}
-
-export interface HolidayCountryOption {
-  code: string;
   label: string;
 }
 
@@ -47,68 +43,7 @@ export interface HolidayCatalogItem {
   dates: string[];
 }
 
-export const HOLIDAY_COUNTRIES: HolidayCountryOption[] = [
-  { code: "US", label: "United States" },
-  { code: "CA", label: "Canada" },
-  { code: "GB", label: "United Kingdom" },
-  { code: "AU", label: "Australia" },
-  { code: "NZ", label: "New Zealand" },
-  { code: "FR", label: "France" },
-  { code: "DE", label: "Germany" },
-  { code: "IT", label: "Italy" },
-  { code: "ES", label: "Spain" },
-  { code: "PT", label: "Portugal" },
-  { code: "NL", label: "Netherlands" },
-  { code: "BE", label: "Belgium" },
-  { code: "CH", label: "Switzerland" },
-  { code: "AT", label: "Austria" },
-  { code: "SE", label: "Sweden" },
-  { code: "NO", label: "Norway" },
-  { code: "DK", label: "Denmark" },
-  { code: "FI", label: "Finland" },
-  { code: "IE", label: "Ireland" },
-  { code: "PL", label: "Poland" },
-  { code: "CZ", label: "Czechia" },
-  { code: "HU", label: "Hungary" },
-  { code: "RO", label: "Romania" },
-  { code: "GR", label: "Greece" },
-  { code: "TR", label: "Turkey" },
-  { code: "MX", label: "Mexico" },
-  { code: "BR", label: "Brazil" },
-  { code: "AR", label: "Argentina" },
-  { code: "CL", label: "Chile" },
-  { code: "JP", label: "Japan" },
-  { code: "KR", label: "South Korea" },
-  { code: "IN", label: "India" },
-  { code: "SG", label: "Singapore" },
-  { code: "ZA", label: "South Africa" },
-];
-
 export const HOLIDAY_SYNC_YEAR_OPTIONS = [1, 2, 3, 5] as const;
-
-export const CORE_SERVICE_OPTIONS: ServiceOption[] = [
-  { value: "boarding", label: "Boarding" },
-  { value: "daycare", label: "Daycare" },
-  { value: "grooming", label: "Grooming" },
-  { value: "training", label: "Training" },
-];
-
-export const BOARDING_ROOM_OPTIONS: ServiceOption[] = [
-  { value: "standard", label: "Standard" },
-  { value: "deluxe", label: "Deluxe" },
-  { value: "vip", label: "VIP" },
-  { value: "cat-suite", label: "Cat Suite" },
-];
-
-export const GROOMING_HAIR_TYPE_OPTIONS: ServiceOption[] = [
-  { value: "short", label: "Short coat" },
-  { value: "medium", label: "Medium coat" },
-  { value: "long", label: "Long coat" },
-  { value: "double_coat", label: "Double coat" },
-  { value: "curly", label: "Curly coat" },
-  { value: "wire", label: "Wire coat" },
-  { value: "matted", label: "Matted coat" },
-];
 
 export function normalizeApplicableServices(applicableServices?: string[]) {
   if (!applicableServices || applicableServices.length === 0) return ["all"];
@@ -146,11 +81,14 @@ export function ServiceScopeChips({
   serviceOptions: ServiceOption[];
   onToggle: (service: string) => void;
 }) {
+  const { t } = usePricingLabels();
   const normalized = normalizeApplicableServices(applicableServices);
   const allSelected = normalized.includes("all");
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1">
-      <span className="text-muted-foreground text-[10px]">Available for:</span>
+      <span className="text-muted-foreground text-[10px]">
+        {t("scopeAvailableFor")}
+      </span>
       {serviceOptions.map((opt) => {
         const selected = allSelected || normalized.includes(opt.value);
         return (
@@ -162,7 +100,7 @@ export function ServiceScopeChips({
             className={cn(
               "rounded-full border px-2 py-0.5 text-[10px] transition-colors",
               selected
-                ? "border-primary/30 bg-primary/10 text-primary"
+                ? "border-primary text-primary font-semibold"
                 : "text-muted-foreground hover:text-foreground border-dashed hover:border-solid",
             )}
           >
@@ -172,30 +110,6 @@ export function ServiceScopeChips({
       })}
     </div>
   );
-}
-
-export function formatAdjustmentLabel(
-  kind: "discount" | "surcharge",
-  type: "flat" | "percentage",
-  amount: number,
-) {
-  if (type === "percentage") {
-    return kind === "discount" ? `-${amount}%` : `+${amount}%`;
-  }
-  return kind === "discount" ? `-$${amount}` : `+$${amount}`;
-}
-
-export function formatRange(
-  min?: number | null,
-  max?: number | null,
-  unit = "units",
-) {
-  const hasMin = min != null;
-  const hasMax = max != null;
-  if (hasMin && hasMax) return `${min}-${max} ${unit}`;
-  if (hasMin) return `${min}+ ${unit}`;
-  if (hasMax) return `Up to ${max} ${unit}`;
-  return `Any ${unit}`;
 }
 
 export function shiftIsoDate(dateIso: string, dayOffset: number) {

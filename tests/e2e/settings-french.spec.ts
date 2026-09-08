@@ -71,6 +71,7 @@ const CONVERTED = [
   "evaluations",
   "addons",
   "training",
+  "pricing-rules",
 ] as const;
 
 test("a converted settings section renders no English, no key and no hole", async ({

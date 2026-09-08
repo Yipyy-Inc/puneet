@@ -28,6 +28,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Custom Fee Modal ─────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export function CustomFeeModal({
   addOnOptions: Array<{ id: string; name: string }>;
   onSave: (fee: CustomFee) => void;
 }) {
+  const { t } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -131,33 +133,31 @@ export function CustomFeeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Custom Fee" : "Add Custom Fee"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("cfEdit") : t("cfAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Fee Name</Label>
+            <Label>{t("cfName")}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="e.g. Medication Administration"
+              placeholder={t("cfNamePlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>{t("cfDescription")}</Label>
             <Textarea
               value={form.description}
               onChange={(e) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              placeholder="When does this fee apply?"
+              placeholder={t("cfWhenApplies")}
               rows={2}
             />
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="space-y-2">
-              <Label>Amount</Label>
+              <Label>{t("amount")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -171,7 +171,7 @@ export function CustomFeeModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t("kind")}</Label>
               <Select
                 value={form.feeType}
                 onValueChange={(v) =>
@@ -185,13 +185,13 @@ export function CustomFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Flat ($)</SelectItem>
-                  <SelectItem value="percentage">Percent (%)</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
+                  <SelectItem value="percentage">{t("percent")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Effect</Label>
+              <Label>{t("cfEffect")}</Label>
               <Select
                 value={form.adjustmentKind}
                 onValueChange={(value) =>
@@ -205,13 +205,15 @@ export function CustomFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fee">Add fee</SelectItem>
-                  <SelectItem value="discount">Apply discount</SelectItem>
+                  <SelectItem value="fee">{t("cfAddFee")}</SelectItem>
+                  <SelectItem value="discount">
+                    {t("cfApplyDiscount")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Scope</Label>
+              <Label>{t("scope")}</Label>
               <Select
                 value={form.scope}
                 onValueChange={(v) =>
@@ -225,14 +227,14 @@ export function CustomFeeModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="per_pet">Per pet</SelectItem>
-                  <SelectItem value="per_booking">Per booking</SelectItem>
+                  <SelectItem value="per_pet">{t("perPet")}</SelectItem>
+                  <SelectItem value="per_booking">{t("perBooking")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tax Rate (%)</Label>
+            <Label>{t("taxRate")}</Label>
             <Input
               type="number"
               min={0}
@@ -246,11 +248,11 @@ export function CustomFeeModal({
                     : undefined,
                 }))
               }
-              placeholder="Uses facility default"
+              placeholder={t("facilityDefault")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -262,7 +264,7 @@ export function CustomFeeModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -304,44 +306,44 @@ export function CustomFeeModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>When to apply automatically</Label>
+            <Label>{t("cfAutoHeading")}</Label>
             <div className="space-y-1.5">
               {(
                 [
                   {
                     value: "none",
-                    label: "Add manually at checkout",
-                    desc: "Staff chooses when to add this fee",
+                    label: t("cfManual"),
+                    desc: t("cfManualDesc"),
                   },
                   {
                     value: "at_checkout",
-                    label: "Always add at checkout",
-                    desc: "Fee is automatically added every time",
+                    label: t("cfAlways"),
+                    desc: t("cfAlwaysDesc"),
                   },
                   {
                     value: "by_care_type",
-                    label: "Add only for selected services",
-                    desc: "Fee is added only when selected services are booked",
+                    label: t("cfSelectedServices"),
+                    desc: t("cfSelectedServicesDesc"),
                   },
                   {
                     value: "new_customer",
-                    label: "Add only for new customers",
-                    desc: "Fee is added on the first booking for a customer",
+                    label: t("cfNewCustomers"),
+                    desc: t("cfNewCustomersDesc"),
                   },
                   {
                     value: "new_pet",
-                    label: "Add for each new pet",
-                    desc: "Fee is added for pets making their first booking",
+                    label: t("cfEachNewPet"),
+                    desc: t("cfEachNewPetDesc"),
                   },
                   {
                     value: "customer_segment",
-                    label: "Apply for customer segments",
-                    desc: "Trigger by customer status, membership plan, or prepaid balance",
+                    label: t("cfSegments"),
+                    desc: t("cfSegmentsDesc"),
                   },
                   {
                     value: "addon_purchase",
-                    label: "Apply from add-on purchase",
-                    desc: "Trigger when selected add-ons are in cart and optionally waive add-on fees",
+                    label: t("cfAddOnPurchase"),
+                    desc: t("cfAddOnPurchaseDesc"),
                   },
                 ] as const
               ).map((opt) => (
@@ -366,7 +368,7 @@ export function CustomFeeModal({
             </div>
             {form.autoApply === "by_care_type" && (
               <div className="space-y-1.5 rounded-lg border p-3">
-                <Label className="text-xs">Select services</Label>
+                <Label className="text-xs">{t("cfSelectServices")}</Label>
                 <div className="flex flex-wrap gap-2">
                   {serviceOptions.map((service) => (
                     <label
@@ -399,12 +401,10 @@ export function CustomFeeModal({
             )}
             {form.autoApply === "customer_segment" && (
               <div className="space-y-3 rounded-lg border p-3">
-                <Label className="text-xs">Customer segment filters</Label>
+                <Label className="text-xs">{t("cfSegmentFilters")}</Label>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">
-                      Customer statuses (comma separated)
-                    </Label>
+                    <Label className="text-xs">{t("cfStatuses")}</Label>
                     <Input
                       value={form.customerStatuses.join(", ")}
                       onChange={(e) =>
@@ -416,13 +416,11 @@ export function CustomFeeModal({
                             .filter((value) => value.length > 0),
                         }))
                       }
-                      placeholder="vip, military, active"
+                      placeholder={t("cfStatusesPlaceholder")}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">
-                      Membership plans (comma separated)
-                    </Label>
+                    <Label className="text-xs">{t("cfPlans")}</Label>
                     <Input
                       value={form.membershipPlans.join(", ")}
                       onChange={(e) =>
@@ -434,7 +432,7 @@ export function CustomFeeModal({
                             .filter((value) => value.length > 0),
                         }))
                       }
-                      placeholder="gold, vip, platinum"
+                      placeholder={t("cfPlansPlaceholder")}
                     />
                   </div>
                 </div>
@@ -449,7 +447,7 @@ export function CustomFeeModal({
                         }))
                       }
                     />
-                    <span className="text-xs">Require active membership</span>
+                    <span className="text-xs">{t("cfRequireMembership")}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <Checkbox
@@ -461,19 +459,17 @@ export function CustomFeeModal({
                         }))
                       }
                     />
-                    <span className="text-xs">
-                      Require prepaid balance/package
-                    </span>
+                    <span className="text-xs">{t("cfRequirePrepaid")}</span>
                   </label>
                 </div>
               </div>
             )}
             {form.autoApply === "addon_purchase" && (
               <div className="space-y-3 rounded-lg border p-3">
-                <Label className="text-xs">Add-on purchase trigger</Label>
+                <Label className="text-xs">{t("cfAddOnHeading")}</Label>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Trigger add-ons</Label>
+                    <Label className="text-xs">{t("cfTriggerAddOns")}</Label>
                     <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
                       {addOnOptions.map((addOn) => (
                         <label
@@ -502,7 +498,7 @@ export function CustomFeeModal({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Waive these add-ons</Label>
+                    <Label className="text-xs">{t("cfWaiveAddOns")}</Label>
                     <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
                       {addOnOptions.map((addOn) => (
                         <label
@@ -532,7 +528,7 @@ export function CustomFeeModal({
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Waive percentage</Label>
+                  <Label className="text-xs">{t("cfWaivePercent")}</Label>
                   <Input
                     type="number"
                     min={0}
@@ -552,19 +548,19 @@ export function CustomFeeModal({
               </div>
             )}
           </div>
-          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px]/relaxed">
-            Rules can add fees or apply discounts. Add-on trigger rules can
-            waive selected add-on charges automatically.
+          {/* White with a hairline — §6 rule 2. */}
+          <p className="text-muted-foreground rounded-xl border px-3.5 py-2.5 text-[11px]/relaxed">
+            {t("cfFooterNote")}
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
 
@@ -575,7 +571,7 @@ export function CustomFeeModal({
                 !form.requireMembershipActive &&
                 !form.requirePrepaidBalance
               ) {
-                toast.error("Add at least one customer segment filter");
+                toast.error(t("cfSegmentRequired"));
                 return;
               }
 
@@ -583,7 +579,7 @@ export function CustomFeeModal({
                 form.autoApply === "addon_purchase" &&
                 form.triggerAddOnIds.length === 0
               ) {
-                toast.error("Select at least one trigger add-on");
+                toast.error(t("cfTriggerRequired"));
                 return;
               }
 
@@ -636,7 +632,7 @@ export function CustomFeeModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

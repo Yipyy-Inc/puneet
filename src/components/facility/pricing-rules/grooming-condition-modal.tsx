@@ -24,10 +24,10 @@ import { toast } from "sonner";
 import type { GroomingConditionAdjustment } from "@/types/boarding";
 import {
   makeId,
-  GROOMING_HAIR_TYPE_OPTIONS,
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Grooming Condition Adjustment Modal ─────────────────────────────
 
@@ -46,6 +46,7 @@ export function GroomingConditionAdjustmentModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: GroomingConditionAdjustment) => void;
 }) {
+  const { t, coats } = usePricingLabels();
   const [form, setForm] = useState({
     name: "",
     hairTypes: [] as string[],
@@ -128,26 +129,24 @@ export function GroomingConditionAdjustmentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Pet Condition Rule" : "Add Pet Condition Rule"}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("gcEdit") : t("gcAdd")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule Name</Label>
+            <Label>{t("mpName")}</Label>
             <Input
               value={form.name}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
-              placeholder="e.g. Senior large-breed handling surcharge"
+              placeholder={t("gcNamePlaceholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Hair type conditions</Label>
+            <Label>{t("gcHairTypes")}</Label>
             <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-              {GROOMING_HAIR_TYPE_OPTIONS.map((hairType) => (
+              {coats.map((hairType) => (
                 <label key={hairType.value} className="flex items-center gap-2">
                   <Checkbox
                     checked={form.hairTypes.includes(hairType.value)}
@@ -172,7 +171,7 @@ export function GroomingConditionAdjustmentModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Breeds (comma separated)</Label>
+            <Label>{t("gcBreeds")}</Label>
             <Input
               value={form.breeds.join(", ")}
               onChange={(e) =>
@@ -184,13 +183,13 @@ export function GroomingConditionAdjustmentModal({
                     .filter((value) => value.length > 0),
                 }))
               }
-              placeholder="golden retriever, poodle"
+              placeholder={t("gcBreedsPlaceholder")}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min age (years)</Label>
+              <Label>{t("gcMinAge")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -201,11 +200,11 @@ export function GroomingConditionAdjustmentModal({
                     ageMinYears: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Max age (years)</Label>
+              <Label>{t("gcMaxAge")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -216,20 +215,20 @@ export function GroomingConditionAdjustmentModal({
                     ageMaxYears: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Sex and pet status</Label>
+            <Label>{t("gcSexAndStatus")}</Label>
             <div className="grid grid-cols-2 gap-3 rounded-lg border p-3">
               <div className="space-y-2">
-                <Label className="text-xs">Sex</Label>
+                <Label className="text-xs">{t("gcSex")}</Label>
                 {(
                   [
-                    { value: "male", label: "Male" },
-                    { value: "female", label: "Female" },
+                    { value: "male", label: t("gcMale") },
+                    { value: "female", label: t("gcFemale") },
                   ] as const
                 ).map((sexOption) => (
                   <label
@@ -257,12 +256,12 @@ export function GroomingConditionAdjustmentModal({
                 ))}
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Pet status</Label>
+                <Label className="text-xs">{t("gcPetStatus")}</Label>
                 {(
                   [
-                    { value: "active", label: "Active" },
-                    { value: "inactive", label: "Inactive" },
-                    { value: "deceased", label: "Deceased" },
+                    { value: "active", label: t("gcStatusActive") },
+                    { value: "inactive", label: t("gcStatusInactive") },
+                    { value: "deceased", label: t("gcStatusDeceased") },
                   ] as const
                 ).map((statusOption) => (
                   <label
@@ -294,7 +293,7 @@ export function GroomingConditionAdjustmentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min weight (kg)</Label>
+              <Label>{t("gcMinWeight")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -305,11 +304,11 @@ export function GroomingConditionAdjustmentModal({
                     weightMinKg: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Max weight (kg)</Label>
+              <Label>{t("gcMaxWeight")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -320,14 +319,14 @@ export function GroomingConditionAdjustmentModal({
                     weightMaxKg: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Min duration (min)</Label>
+              <Label>{t("gcMinDuration")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -340,11 +339,11 @@ export function GroomingConditionAdjustmentModal({
                       : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Max duration (min)</Label>
+              <Label>{t("gcMaxDuration")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -357,14 +356,14 @@ export function GroomingConditionAdjustmentModal({
                       : null,
                   }))
                 }
-                placeholder="Any"
+                placeholder={t("anyValue")}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Appointment window start</Label>
+              <Label>{t("gcWindowStart")}</Label>
               <Input
                 type="time"
                 value={form.appointmentWindowStart}
@@ -377,7 +376,7 @@ export function GroomingConditionAdjustmentModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Appointment window end</Label>
+              <Label>{t("gcWindowEnd")}</Label>
               <Input
                 type="time"
                 value={form.appointmentWindowEnd}
@@ -393,7 +392,7 @@ export function GroomingConditionAdjustmentModal({
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>{t("kind")}</Label>
               <Select
                 value={form.adjustmentKind}
                 onValueChange={(value) =>
@@ -407,13 +406,13 @@ export function GroomingConditionAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="surcharge">Surcharge</SelectItem>
-                  <SelectItem value="discount">Discount</SelectItem>
+                  <SelectItem value="surcharge">{t("surcharge")}</SelectItem>
+                  <SelectItem value="discount">{t("discount")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Format</Label>
+              <Label>{t("format")}</Label>
               <Select
                 value={form.adjustmentType}
                 onValueChange={(value) =>
@@ -427,13 +426,13 @@ export function GroomingConditionAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Flat</SelectItem>
-                  <SelectItem value="percentage">Percent</SelectItem>
+                  <SelectItem value="flat">{t("flat")}</SelectItem>
+                  <SelectItem value="percentage">{t("percent")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{form.adjustmentType === "percentage" ? "%" : "$"}</Label>
+              <Label>{t("amount")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -450,7 +449,7 @@ export function GroomingConditionAdjustmentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Billing mode</Label>
+              <Label>{t("gcBillingMode")}</Label>
               <Select
                 value={form.billingMode}
                 onValueChange={(value) =>
@@ -464,13 +463,13 @@ export function GroomingConditionAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="one_time">One-time</SelectItem>
-                  <SelectItem value="per_unit">Per unit</SelectItem>
+                  <SelectItem value="one_time">{t("gcOneTime")}</SelectItem>
+                  <SelectItem value="per_unit">{t("gcPerUnit")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Unit type</Label>
+              <Label>{t("gcUnitType")}</Label>
               <Select
                 value={form.unitType}
                 disabled={form.billingMode !== "per_unit"}
@@ -485,16 +484,18 @@ export function GroomingConditionAdjustmentModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sessions">Sessions</SelectItem>
-                  <SelectItem value="days">Days</SelectItem>
-                  <SelectItem value="nights">Nights</SelectItem>
+                  <SelectItem value="sessions">
+                    {t("gcUnitSessions")}
+                  </SelectItem>
+                  <SelectItem value="days">{t("gcUnitDays")}</SelectItem>
+                  <SelectItem value="nights">{t("gcUnitNights")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Where this applies</Label>
+            <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
                 <Checkbox
@@ -506,7 +507,7 @@ export function GroomingConditionAdjustmentModal({
                     }))
                   }
                 />
-                <span className="text-sm font-medium">All services</span>
+                <span className="text-sm font-medium">{t("allServices")}</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {serviceOptions.map((service) => (
@@ -550,12 +551,12 @@ export function GroomingConditionAdjustmentModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
               if (!form.name.trim()) {
-                toast.error("Name is required");
+                toast.error(t("nameRequired"));
                 return;
               }
 
@@ -574,9 +575,7 @@ export function GroomingConditionAdjustmentModal({
                 Boolean(form.appointmentWindowEnd);
 
               if (!hasAnyCondition) {
-                toast.error(
-                  "Add at least one pet condition (age, breed, sex, status, weight, duration, or time)",
-                );
+                toast.error(t("gcConditionRequired"));
                 return;
               }
 
@@ -609,7 +608,7 @@ export function GroomingConditionAdjustmentModal({
               });
             }}
           >
-            {editing ? "Save" : "Create"}
+            {editing ? t("save") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
