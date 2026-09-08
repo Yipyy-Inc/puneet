@@ -40,8 +40,8 @@ export function RateColorPicker({
                   type="button"
                   onClick={() => onChange(color.hex)}
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-lg transition-all duration-200",
-                    "ring-1 hover:scale-110 active:scale-95",
+                    "flex size-7 items-center justify-center rounded-lg transition-all duration-200 max-lg:size-12",
+                    "ring-1",
                     value === color.hex
                       ? "shadow-md ring-2 ring-slate-900 ring-offset-2"
                       : "shadow-sm ring-slate-200/60 hover:shadow-md hover:ring-slate-300",
@@ -49,7 +49,7 @@ export function RateColorPicker({
                   style={{ backgroundColor: color.hex }}
                 >
                   {value === color.hex && (
-                    <Check className="size-3.5 text-white drop-shadow-md" />
+                    <Check className="size-3.5 text-white drop-shadow-md max-lg:size-5" />
                   )}
                 </button>
               </TooltipTrigger>

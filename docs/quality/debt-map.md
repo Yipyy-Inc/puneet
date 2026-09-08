@@ -9929,3 +9929,58 @@ kennel and called the variable `free` without consulting `occupied` at all. That
 is a real latent bug of a different kind — it flaked once in this run and passed
 on retry — and the fix is to match what the file's own other two tests already
 do. It is **not** the fix for `:154`, and nothing here claims it is.
+
+## 2026-09-08 — the 599px pass, and why the first number was wrong by 16 sections
+
+**Severity: 🟡 medium.** §5m says test at 599px; §6 rule 7 sets the floor at
+48px, "44 is the seated floor, not ours — floor staff are standing and holding
+an animal". Neither had been measured on a rendered page.
+
+A throwaway Playwright pass over all 51 settings sections at 599×960 reported
+**35 of 51 sections** with tap targets under 44px. That number was nonsense, and
+the way it was nonsense is the point.
+
+**`getBoundingClientRect()` does not see a pseudo-element.** `Switch` is
+deliberately 20px to look at and carries a 48px centred `::before` below `lg`
+— rule 7 implemented properly: the control stays small, the target does not.
+Measuring the box alone flagged every toggle in settings. Counting
+`max(box, ::before, ::after)` instead:
+
+```
+35 of 51 sections   →   19 of 51 · 1,007 controls
+```
+
+Sixteen sections were that one false positive repeated. Acting on the first
+number would have meant inflating every switch in settings to 48px — deleting a
+deliberate piece of the design system and making the screens worse. Three of the
+sections it named (`my-notifications`, `staff-notifications`, `notifications`)
+have **no** real finding at all.
+
+**What was real, and fixed:**
+
+|                                                                     | before    | after   |
+| ------------------------------------------------------------------- | --------- | ------- |
+| `pet-breeds` — 3 row actions × 257 breeds at `p-1`/`size-3`         | 722       | 2       |
+| `RateColorPicker` `size-7` swatches — boarding · daycare · grooming | 26 each   | 0       |
+| **total**                                                           | **1,007** | **183** |
+
+The swatches did NOT get the `Switch` treatment, and that is worth recording:
+they sit 6px apart in a wrap grid, so 48px pseudo hit areas would OVERLAP and
+each tap would be a coin toss between two colours — worse than a small target
+and silently so. The square grows below `lg` instead. Same rule, opposite
+mechanism, decided by the spacing.
+
+**Horizontal overflow: zero, across all 51 sections**, before and after. The
+rule most likely to be broken is the one that holds.
+
+**Still open — 183 across 16 sections**, no longer dominated by one component:
+`training` 93 (27px nav links, 26px filter chips), `roles-permissions` 32 (31px
+permission-group buttons), `retail` 16 (12px icon buttons), `evaluations` 9
+(36px duration chips), `report-card-template` 8, and a tail of 42px tab strips
+in `tags-notes` and `vaccination-requirements`. The three `1px <input>` in
+`hours` are almost certainly hidden inputs behind switches — that file's own
+comment describes one — and should be confirmed before being counted.
+
+**The method is the reusable part.** A grep found eleven fixed heights by class
+name; the rendered pass found a thousand controls, and 82% of them came from two
+components a class-name search could never have connected.
