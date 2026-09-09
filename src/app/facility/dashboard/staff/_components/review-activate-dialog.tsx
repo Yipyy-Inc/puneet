@@ -32,6 +32,8 @@ import { useOnboardingTemplates } from "@/lib/api/staff-onboarding";
 import { fullNameOf } from "./staff-shared";
 import { SubmittedData } from "./onboarding-submission-view";
 import { notifyStaffLifecycle } from "@/lib/staff-notifications";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
 export function ReviewActivateDialog({
   profile,
@@ -44,6 +46,7 @@ export function ReviewActivateDialog({
   onOpenChange: (v: boolean) => void;
   onActivated: (profile: StaffProfile) => void;
 }) {
+  const { t, fill, locale } = useStaffText("onboardingReview");
   const instance = useOnboardingInstance(profile?.id);
   const templates = useOnboardingTemplates();
   const checklist = useOnboarding(profile?.id);
@@ -88,6 +91,8 @@ export function ReviewActivateDialog({
               staffId: profile.id,
               staffName: fullNameOf(profile),
               to: profile.email,
+              // french-ok: the manager's locale is not the reader's — see the
+              // debt map on server-side composition
               subject: "Action needed on your onboarding",
               body: `${
                 task.type === "document_upload" || task.type === "document_sign"
@@ -96,15 +101,13 @@ export function ReviewActivateDialog({
               }: ${message}`,
             },
           });
-          toast.success(`Change requested — sent back to ${profile.firstName}`);
+          toast.success(fill("changeSent", { name: profile.firstName }));
           setChangeFor(null);
           setNote("");
         },
         onError: (error) =>
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not request that change.",
+            error instanceof Error ? error.message : t("changeFailed"),
           ),
       },
     );
@@ -123,21 +126,20 @@ export function ReviewActivateDialog({
             staffId: profile.id,
             staffName: fullNameOf(profile),
             to: profile.email,
+            // french-ok: sent to the employee, composed in the manager's
+            // browser — see the debt map
             subject: "Your account is active!",
+            // french-ok: the same email's body
             body: "Your account is active! You can now log in.",
           },
         });
         onActivated({ ...profile, status: "active" });
-        toast.success(
-          `Account activated — ${profile.firstName} can now log in`,
-        );
+        toast.success(fill("activated", { name: profile.firstName }));
         onOpenChange(false);
       },
       onError: (error) =>
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not activate that account.",
+          error instanceof Error ? error.message : t("activateFailed"),
         ),
     });
   };
@@ -147,11 +149,10 @@ export function ReviewActivateDialog({
       <DialogContent className="flex max-h-[92vh] flex-col sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Review &amp; activate — {fullNameOf(profile)}
+            {fill("reviewTitle", { name: fullNameOf(profile) })}
           </DialogTitle>
           <DialogDescription>
-            Everything {profile.firstName} submitted. Request a fix on any item,
-            or activate their account.
+            {fill("reviewDescription", { name: profile.firstName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -166,12 +167,17 @@ export function ReviewActivateDialog({
                     : "text-muted-foreground/40 size-4"
                 }
               />
-              Account
+              {t("accountHeading")}
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
               {instance?.account
-                ? `Password set ${new Date(instance.account.passwordSetAt).toLocaleString()}`
-                : "Not set"}
+                ? fill("passwordSet", {
+                    when: formatDateLong(
+                      new Date(instance.account.passwordSetAt),
+                      locale,
+                    ),
+                  })
+                : t("notSet")}
             </p>
           </div>
 
@@ -191,7 +197,7 @@ export function ReviewActivateDialog({
                   </span>
                   {flagged ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                      Change requested
+                      {t("changeRequested")}
                     </span>
                   ) : (
                     <Button
@@ -202,7 +208,8 @@ export function ReviewActivateDialog({
                         setChangeFor(changeFor === task.id ? null : task.id)
                       }
                     >
-                      <MessageSquarePlus className="size-3.5" /> Request change
+                      <MessageSquarePlus className="size-3.5" />{" "}
+                      {t("requestChange")}
                     </Button>
                   )}
                 </div>
@@ -220,7 +227,7 @@ export function ReviewActivateDialog({
                     <Textarea
                       rows={2}
                       value={note}
-                      placeholder="e.g. Please re-upload your grooming certificate — unreadable"
+                      placeholder={t("notePlaceholder")}
                       onChange={(e) => setNote(e.target.value)}
                     />
                     <div className="flex justify-end gap-2">
@@ -232,7 +239,7 @@ export function ReviewActivateDialog({
                           setNote("");
                         }}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button
                         size="sm"
@@ -240,8 +247,8 @@ export function ReviewActivateDialog({
                         onClick={() => submitChange(task)}
                       >
                         {requesting
-                          ? "Sending…"
-                          : `Send to ${profile.firstName}`}
+                          ? t("sending")
+                          : fill("sendTo", { name: profile.firstName })}
                       </Button>
                     </div>
                   </div>
@@ -255,17 +262,17 @@ export function ReviewActivateDialog({
           <div className="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
             <span>
-              You have {incompleteMgr.length} manager task
-              {incompleteMgr.length === 1 ? "" : "s"} incomplete for{" "}
-              {profile.firstName}. You can still activate — they stay in your
-              task list.
+              {fill("managerTasksPending", {
+                count: incompleteMgr.length,
+                name: profile.firstName,
+              })}
             </span>
           </div>
         )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {t("close")}
           </Button>
           <Button
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -274,10 +281,10 @@ export function ReviewActivateDialog({
           >
             <CheckCircle2 className="size-4" />
             {activating
-              ? "Activating…"
+              ? t("activating")
               : confirmActivate && incompleteMgr.length > 0
-                ? "Activate anyway"
-                : "Activate account"}
+                ? t("activateAnyway")
+                : t("activateAccount")}
           </Button>
         </DialogFooter>
       </DialogContent>

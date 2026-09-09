@@ -23,6 +23,8 @@ import {
   resolveTemplateForRole,
 } from "@/lib/api/staff-onboarding";
 import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding-invite-email";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateShort } from "@/lib/i18n/format";
 
 /**
  * Send / resend the onboarding invite for an invited staff member.
@@ -65,6 +67,7 @@ export function ResendInviteDialog({
   // Above the early return, with the other hooks: hooks run in the same order
   // every render or they run wrong, and `if (!profile) return null` below is an
   // early return this must not sit after.
+  const { t, fill, locale } = useStaffText("invite");
   const [sending, setSending] = useState(false);
   // The freshly-minted link, held only for this dialog session. See the header.
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null);
@@ -101,21 +104,17 @@ export function ResendInviteDialog({
       } | null;
 
       if (result?.sent) {
-        toast.success(`Onboarding email sent to ${profile.email}`);
+        toast.success(fill("emailSent", { email: profile.email }));
       } else if (result?.reason === "not_configured") {
         // Not an error and not a success. The account is real; the delivery is
         // the manager's to make. Saying "sent" here would be the exact lie the
         // admin-invite route was written to avoid.
-        toast.warning(result.message ?? "Email service not configured.", {
-          description: result.setupUrl
-            ? "Copy the link below to share it."
-            : undefined,
+        toast.warning(result.message ?? t("notConfigured"), {
+          description: result.setupUrl ? t("copyLinkBelow") : undefined,
           duration: 8000,
         });
       } else {
-        toast.error(
-          result?.message ?? result?.error ?? "Could not send the invitation.",
-        );
+        toast.error(result?.message ?? result?.error ?? t("sendFailed"));
         return;
       }
 
@@ -126,7 +125,7 @@ export function ResendInviteDialog({
       void queryClient.invalidateQueries({ queryKey: ["staff"] });
       onSent?.(profile);
     } catch {
-      toast.error("Could not reach the server. Nothing was sent.");
+      toast.error(t("unreachable"));
     } finally {
       setSending(false);
     }
@@ -135,7 +134,7 @@ export function ResendInviteDialog({
   const copy = () => {
     if (!path) return;
     navigator.clipboard?.writeText(`${origin}${path}`);
-    toast.success("Onboarding link copied");
+    toast.success(t("linkCopied"));
   };
 
   return (
@@ -143,12 +142,12 @@ export function ResendInviteDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {instance ? "Resend onboarding invite" : "Send onboarding invite"}
+            {instance ? t("resendTitle") : t("sendTitle")}
           </DialogTitle>
           <DialogDescription>
             {instance
-              ? `Reissue ${profile.email}'s onboarding link — this invalidates the old one.`
-              : `Send ${profile.email} their onboarding link to get started.`}
+              ? fill("resendDescription", { email: profile.email })
+              : fill("sendDescription", { email: profile.email })}
           </DialogDescription>
         </DialogHeader>
 
@@ -167,36 +166,38 @@ export function ResendInviteDialog({
                 className="gap-1.5"
                 onClick={copy}
               >
-                <Copy className="size-3.5" /> Copy
+                <Copy className="size-3.5" /> {t("copy")}
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">
-              This link is shown once. Close this dialog and it cannot be
-              retrieved — only a hash of it is stored. Resend to issue a new
-              one.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("shownOnce")}</p>
           </div>
         ) : instance ? (
           <div className="text-muted-foreground rounded-md border border-dashed px-4 py-6 text-center text-sm">
-            An invite is outstanding
+            {t("outstanding")}
             {instance.invitedAt
-              ? `, sent ${new Date(instance.invitedAt).toLocaleDateString()}`
+              ? fill("outstandingSent", {
+                  date: formatDateShort(new Date(instance.invitedAt), locale),
+                })
               : ""}
             {instance.tokenExpiresAt
-              ? `, expiring ${new Date(instance.tokenExpiresAt).toLocaleDateString()}`
+              ? fill("outstandingExpiring", {
+                  date: formatDateShort(
+                    new Date(instance.tokenExpiresAt),
+                    locale,
+                  ),
+                })
               : ""}
-            . The link itself is not stored and cannot be shown again — resend
-            to issue a new one, which invalidates the old.
+            {t("outstandingRest")}
           </div>
         ) : (
           <div className="text-muted-foreground rounded-md border border-dashed px-4 py-6 text-center text-sm">
-            No onboarding link yet. Send one to generate it.
+            {t("noLinkYet")}
           </div>
         )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {t("close")}
           </Button>
           <Button
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -205,11 +206,11 @@ export function ResendInviteDialog({
           >
             {instance ? (
               <>
-                <RefreshCw className="size-4" /> Resend (new link)
+                <RefreshCw className="size-4" /> {t("resend")}
               </>
             ) : (
               <>
-                <Send className="size-4" /> Send invite
+                <Send className="size-4" /> {t("sendInvite")}
               </>
             )}
           </Button>

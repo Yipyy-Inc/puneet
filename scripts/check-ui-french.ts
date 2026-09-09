@@ -779,14 +779,6 @@ const BASELINE: Record<string, Map<string, number>> = {
   // change that sharpens it — otherwise the only way to widen a gate is to
   // convert every file it newly sees, and nobody widens it.
   staff: new Map([
-    [
-      "src/app/facility/dashboard/staff/_components/resend-invite-dialog.tsx",
-      16,
-    ],
-    [
-      "src/app/facility/dashboard/staff/_components/review-activate-dialog.tsx",
-      17,
-    ],
     ["src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx", 9],
     [
       "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",

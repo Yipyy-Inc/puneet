@@ -1236,7 +1236,18 @@
         "cancel": "Cancel",
         "sendTo": "Send to {name}",
         "changeSent": "Change requested — sent back to {name}",
-        "changeFailed": "Could not request that change."
+        "changeFailed": "Could not request that change.",
+        "reviewTitle": "Review and activate — {name}",
+        "reviewDescription": "Everything {name} submitted. Request a fix on any item, or activate their account.",
+        "requestChange": "Request a change",
+        "sending": "Sending…",
+        "managerTasksPending": "You have {count} manager tasks incomplete for {name}. You can still activate — they stay in your task list.",
+        "close": "Close",
+        "activating": "Activating…",
+        "activateAnyway": "Activate anyway",
+        "activateAccount": "Activate account",
+        "activated": "Account activated — {name} can now log in",
+        "activateFailed": "Could not activate that account."
       },
       "statusChange": {
         "title": "Change employee status",
@@ -1277,6 +1288,28 @@
         "createAndAssign": "Create and assign role",
         "nameRequired": "A role name is required",
         "created": "{name} role created and assigned"
+      },
+      "invite": {
+        "resendTitle": "Resend onboarding invite",
+        "sendTitle": "Send onboarding invite",
+        "resendDescription": "Reissue {email}’s onboarding link — this invalidates the old one.",
+        "sendDescription": "Send {email} their onboarding link to get started.",
+        "copy": "Copy link",
+        "shownOnce": "This link is shown once. Close this dialog and it cannot be retrieved — only a hash of it is stored. Resend to issue a new one.",
+        "outstanding": "An invite is outstanding",
+        "outstandingSent": ", sent {date}",
+        "outstandingExpiring": ", expiring {date}",
+        "outstandingRest": ". The link itself is not stored and cannot be shown again — resend to issue a new one, which invalidates the old.",
+        "noLinkYet": "No onboarding link yet. Send one to generate it.",
+        "close": "Close",
+        "resend": "Resend (new link)",
+        "sendInvite": "Send invite",
+        "emailSent": "Onboarding email sent to {email}",
+        "notConfigured": "Email service not configured.",
+        "copyLinkBelow": "Copy the link below to share it.",
+        "sendFailed": "Could not send the invitation.",
+        "unreachable": "Could not reach the server. Nothing was sent.",
+        "linkCopied": "Onboarding link copied"
       }
     }
   },
