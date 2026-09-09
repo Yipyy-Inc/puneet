@@ -5801,7 +5801,21 @@
       "yourName": "Votre nom",
       "registering": "Inscription…",
       "registerHere": "S'inscrire à cet établissement",
-      "creditsAvailable": "{count} crédits disponibles"
+      "creditsAvailable": "{count} crédits disponibles",
+      "callFacility": "Appeler l’établissement",
+      "contactFacility": "Joindre l’établissement",
+      "contactTitle": "Joindre {facility}",
+      "contactHow": "Choisissez comment nous joindre",
+      "sendAMessage": "Envoyer un message",
+      "callNumber": "Appeler le {phone}",
+      "emailAddress": "Écrire à {email}",
+      "notifications": "Notifications",
+      "markAllRead": "Tout marquer comme lu",
+      "noNotifications": "Aucune notification",
+      "viewAllNotifications": "Voir toutes les notifications",
+      "switchFacility": "Changer d’établissement",
+      "selectFacility": "Choisir un établissement",
+      "bookAService": "Réserver un service"
     },
     "employee": {
       "calling": "Appels",

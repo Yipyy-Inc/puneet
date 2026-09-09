@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText } from "@/lib/shell/use-shell-text";
+
 import { useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
@@ -13,6 +15,7 @@ import { Building2, Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function FacilitySwitcher() {
+  const t = useShellText("customer");
   const { selectedFacility, availableFacilities, setSelectedFacility } =
     useCustomerFacility();
   const [isOpen, setIsOpen] = useState(false);
@@ -26,12 +29,12 @@ export function FacilitySwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          aria-label="Switch facility"
+          aria-label={t("switchFacility")}
           className="border-muted-foreground/20 hover:bg-accent gap-2"
         >
           <Building2 className="size-4" />
           <span className="hidden max-w-[200px] truncate xl:inline">
-            {selectedFacility?.name ?? "Select Facility"}
+            {selectedFacility?.name ?? t("selectFacility")}
           </span>
           <ChevronDown className="hidden size-4 opacity-50 xl:block" />
         </Button>
