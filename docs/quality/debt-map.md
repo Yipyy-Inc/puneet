@@ -11074,3 +11074,65 @@ Two reasons, and only the first is about cost.
 `<Button>` or on anything with an `onClick`, and exempt a `<Badge>` or a
 status pill, where a solid status ink is exactly what rule 2 asks for. Start it
 as a ratchet at 248 like the others.
+
+## 2026-09-09 — "at zero" is a claim about the DEPTH, not about the chrome
+
+`check:ui-french` derives each surface by walking imports from a root, and
+stops after N hops. N was never measured against anything — it was copied from
+the settings walk, where a section is a wrapper, its screen is one down and its
+cards are two or three.
+
+Measured for the first time today:
+
+| surface        | depth | files | strings |
+| -------------- | ----- | ----- | ------- |
+| staff          | 3     | 7     | 41      |
+| staff          | 5     | 11    | 204     |
+| facility shell | 2     | 0     | 0       |
+| facility shell | 3     | 3     | **246** |
+| employee shell | 2     | 0     | 0       |
+| employee shell | 3     | 4     | **259** |
+| customer shell | 2     | 0     | 0       |
+| customer shell | 3     | 5     | 19      |
+
+**The staff walk is fixed** (3 → 5, and the 163 it found are baselined). The
+four shells are not, and that is the entry: they are quoted in AGENTS.md and
+CLAUDE.md as being **at zero**, and 524 strings sit one hop past where anyone
+looked.
+
+### What is actually in there
+
+The staff deepening reached `employee-dashboard-widgets.tsx` — the EMPLOYEE
+PORTAL HOME. Its quick-action catalogue ("Start next grooming appointment",
+"Log kennel round", "Check in next arrival"), its quick-access cards, its
+schedule and task widgets. Read by every member of floor staff at the start of
+every shift, and outside every measured surface until today.
+
+That is what a shell at depth 3 is likely to hold too, and 524 says so.
+
+### Why it is not fixed in the same change
+
+Adding 524 to the shells means giving them a BASELINE, and the gate's own
+header calls their having none "the strongest form of this check". That is a
+real trade and it should be made deliberately rather than as a side effect of a
+staff conversion. The number is written down here so the decision is informed
+either way.
+
+**The general form, and it is the third time this session:** a boundary you
+draw yourself is a boundary that agrees with you. It was a file LIST for the
+shells, an attribute LIST for `hint=`, and here a NUMBER — which is the
+easiest of the three to copy without thinking and just as arbitrary.
+
+### One entry is misfiled on purpose
+
+`CreateClientModal` (125 of the 163) is baselined under `staff`, and it is not
+staff's. The walk reaches it like this:
+
+    staff/page → staff-profile-sheet → StaffPreviewDialog
+      → EmployeeHeader → FacilityHeader → CreateClientModal
+
+The preview dialog renders a whole portal shell inside a manager's modal, so
+the walk falls through it into the global header. The strings are real and a
+manager really does reach them, so they are recorded rather than excluded —
+but they belong to the facility shell, and they move there the day that walk
+gets deeper.
