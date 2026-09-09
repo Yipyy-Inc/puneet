@@ -34,6 +34,7 @@ import {
   managerRecipient,
 } from "@/lib/staff-notifications";
 import { fullNameOf } from "./staff-shared";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 type StaffStatus = "active" | "inactive" | "terminated";
 
@@ -399,6 +400,7 @@ export function StatusChangeDialog({
 }
 
 export function StatusBadge({ status }: { status: StaffStatus }) {
+  const { t } = useStaffText("status");
   const meta = STATUS_META[status];
   return (
     <span
@@ -408,7 +410,9 @@ export function StatusBadge({ status }: { status: StaffStatus }) {
       )}
     >
       <span className={cn("size-1.5 rounded-full", meta.dot)} />
-      {meta.label}
+      {/* The catalogue key is the status itself; `meta.label` is the fallback
+          so a fifth status reads as English words, not as a raw key. */}
+      {t(status) === status ? meta.label : t(status)}
     </span>
   );
 }

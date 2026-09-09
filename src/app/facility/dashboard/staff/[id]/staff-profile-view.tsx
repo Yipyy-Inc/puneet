@@ -58,48 +58,54 @@ import { StaffDocumentsTab } from "../_components/staff-documents-tab";
 import { StaffTasksSection } from "../_components/staff-tasks-section";
 import { OffboardingTab } from "../_components/offboarding-tab";
 import { OnboardingTab, PerformanceTab } from "./staff-profile-tabs";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
 // Table 4 tab set. `require` is the minimum permission to see the tab.
-const TAB_DEFS: { id: string; label: string; require: PermissionKey }[] = [
-  { id: "profile", label: "Profile", require: "view_staff" },
-  { id: "roles", label: "Roles & positions", require: "manage_roles" },
-  { id: "locations", label: "Locations", require: "manage_staff" },
-  { id: "onboarding", label: "Onboarding", require: "manage_onboarding" },
-  { id: "access", label: "Access & overrides", require: "manage_roles" },
-  { id: "availability", label: "Availability", require: "scheduling_view_all" },
-  { id: "notifications", label: "Notifications", require: "manage_staff" },
-  { id: "payroll", label: "Payroll", require: "view_payroll" },
-  { id: "documents", label: "Documents", require: "manage_staff" },
+const TAB_DEFS: { id: string; key: string; require: PermissionKey }[] = [
+  { id: "profile", key: "tabProfile", require: "view_staff" },
+  { id: "roles", key: "tabRoles", require: "manage_roles" },
+  { id: "locations", key: "tabLocations", require: "manage_staff" },
+  { id: "onboarding", key: "tabOnboarding", require: "manage_onboarding" },
+  { id: "access", key: "tabAccess", require: "manage_roles" },
+  {
+    id: "availability",
+    key: "tabAvailability",
+    require: "scheduling_view_all",
+  },
+  { id: "notifications", key: "tabNotifications", require: "manage_staff" },
+  { id: "payroll", key: "tabPayroll", require: "view_payroll" },
+  { id: "documents", key: "tabDocuments", require: "manage_staff" },
   {
     id: "performance",
-    label: "Performance",
+    key: "tabPerformance",
     require: "view_staff_performance",
   },
   // Offboarding — only surfaced for terminated staff (see visibleTabs filter).
-  { id: "offboarding", label: "Offboarding", require: "manage_onboarding" },
+  { id: "offboarding", key: "tabOffboarding", require: "manage_onboarding" },
 ];
 
 const STATUS_META: Record<
   StaffProfile["status"],
-  { label: string; cls: string; dot: string }
+  { key: string; cls: string; dot: string }
 > = {
   active: {
-    label: "Active",
+    key: "statusActive",
     cls: "border-emerald-200 text-emerald-700 dark:text-emerald-300",
     dot: "bg-emerald-500",
   },
   invited: {
-    label: "Invited",
+    key: "statusInvited",
     cls: "border-amber-200 text-amber-700 dark:text-amber-300",
     dot: "bg-amber-500",
   },
   inactive: {
-    label: "On leave",
+    key: "statusOnLeave",
     cls: "border-zinc-200 text-zinc-600 dark:text-zinc-300",
     dot: "bg-zinc-400",
   },
   terminated: {
-    label: "Former employee",
+    key: "statusFormer",
     cls: "border-rose-200 text-rose-700 dark:text-rose-300",
     dot: "bg-rose-500",
   },
@@ -113,6 +119,7 @@ export function StaffProfileView({ staffId }: { staffId: string }) {
 }
 
 function StaffProfileInner({ staffId }: { staffId: string }) {
+  const { t, fill, locale } = useStaffText("profile");
   const relative = useRelativeTime();
   const staff = facilityStaff.find((s) => s.id === staffId);
 
@@ -187,9 +194,9 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     return (
       <div className="text-muted-foreground flex h-60 flex-col items-center justify-center gap-2 text-sm">
         <ShieldAlert className="size-8" />
-        Staff member not found.
+        {t("notFound")}
         <Button asChild variant="outline" size="sm" className="mt-2">
-          <Link href="/facility/dashboard/staff">Back to staff</Link>
+          <Link href="/facility/dashboard/staff">{t("back")}</Link>
         </Button>
       </div>
     );
@@ -199,7 +206,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     return (
       <div className="text-muted-foreground flex h-60 flex-col items-center justify-center gap-2 text-sm">
         <ShieldAlert className="size-8" />
-        You don&apos;t have permission to view staff profiles.
+        {t("noPermission")}
       </div>
     );
   }
@@ -261,7 +268,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     <div className="space-y-5">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link href="/facility/dashboard/staff">
-          <ArrowLeft className="size-4" /> Back to staff
+          <ArrowLeft className="size-4" /> {t("back")}
         </Link>
       </Button>
 
@@ -291,7 +298,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
                   )}
                 >
                   <span className={cn("size-1.5 rounded-full", status.dot)} />
-                  {status.label}
+                  {t(status.key)}
                 </span>
               </div>
               <div className="text-muted-foreground mt-3 grid gap-1.5 text-xs sm:grid-cols-2">
@@ -300,13 +307,13 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
                 </span>
                 <span className="flex items-center gap-2 truncate">
                   <Phone className="size-3.5 shrink-0" />{" "}
-                  {staff.phone || "No phone"}
+                  {staff.phone || t("noPhone")}
                 </span>
                 <span className="flex items-center gap-2 truncate sm:col-span-2">
                   <MapPin className="size-3.5 shrink-0" />
                   {locationLabels.length === FACILITY_LOCATIONS.length
-                    ? "All locations"
-                    : locationLabels.join(" · ") || "No locations"}
+                    ? t("allLocations")
+                    : locationLabels.join(" · ") || t("noLocations")}
                 </span>
               </div>
             </div>
@@ -316,27 +323,29 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
           <div className="grid grid-cols-3 gap-3 sm:w-auto">
             <QuickStat
               icon={CalendarClock}
-              label="Upcoming shifts"
+              label={t("upcomingShifts")}
               value={staff.upcomingAppointments}
             />
             <QuickStat
               icon={ClipboardList}
-              label="Open tasks"
+              label={t("openTasks")}
               value={staff.openTasks}
             />
             <QuickStat
               icon={CheckCircle2}
-              label="Onboarding"
+              label={t("onboarding")}
               value={`${onboardingPct}%`}
             />
           </div>
         </div>
         <p className="text-muted-foreground mt-4 text-[11px]">
-          Last active {relative(staff.lastActive)} · Started{" "}
-          {new Date(staff.employment.hireDate + "T00:00:00").toLocaleDateString(
-            "en-US",
-            { year: "numeric", month: "short", day: "numeric" },
-          )}
+          {fill("lastActiveStarted", {
+            when: relative(staff.lastActive),
+            started: formatDateLong(
+              new Date(staff.employment.hireDate + "T00:00:00"),
+              locale,
+            ),
+          })}
         </p>
       </div>
 
@@ -345,16 +354,14 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="size-4 text-emerald-600" />
-            <span className="font-medium">
-              Onboarding complete — pending review
-            </span>
+            <span className="font-medium">{t("pendingReview")}</span>
           </div>
           <Button
             size="sm"
             className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={() => setReviewOpen(true)}
           >
-            Review &amp; activate
+            {t("reviewActivate")}
           </Button>
         </div>
       )}
@@ -373,9 +380,9 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
       {/* Tabs */}
       <Tabs value={active} onValueChange={setActive}>
         <TabsList className="flex-wrap">
-          {visibleTabs.map((t) => (
-            <TabsTrigger key={t.id} value={t.id}>
-              {t.label}
+          {visibleTabs.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {t(tab.key)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -457,18 +464,18 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
       {dirty && (
         <div className="bg-card sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-lg">
           <span className="text-muted-foreground text-sm">
-            You have unsaved changes to {staff.firstName}&apos;s profile.
+            {fill("unsaved", { name: staff.firstName })}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={discard}>
-              Discard
+              {t("discard")}
             </Button>
             <Button
               size="sm"
               className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={saveProfile}
             >
-              <Save className="size-4" /> Save changes
+              <Save className="size-4" /> {t("saveChanges")}
             </Button>
           </div>
         </div>
