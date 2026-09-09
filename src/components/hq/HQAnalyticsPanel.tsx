@@ -203,7 +203,10 @@ export function HQAnalyticsPanel() {
       total,
       color: serviceColor(service),
     }));
-  }, [scopedMixRows]);
+    // `serviceLabel` is a NEW FUNCTION after hydration — every text hook in
+    // this repo returns English until then, so a memo that omits it serves
+    // the pre-hydration words forever. `check:frozen-translator` found this.
+  }, [scopedMixRows, serviceLabel]);
   const topService = serviceMixSlices.length
     ? serviceMixSlices.reduce((top, s) => (s.total > top.total ? s : top))
     : null;

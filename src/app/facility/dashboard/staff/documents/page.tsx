@@ -271,9 +271,9 @@ function ComplianceDashboard({
       const bUrgent = b.docs.filter(
         (d) => isExpired(d.expiresAt) || isExpiringSoon(d.expiresAt),
       ).length;
-      return bUrgent - aUrgent || a.name.localeCompare(b.name);
+      return bUrgent - aUrgent || a.name.localeCompare(b.name, locale);
     });
-  }, [filtered]);
+  }, [filtered, roleLabel, t, locale]);
 
   const groupedByType = useMemo(() => {
     const map = new Map<EmployeeDocType, EmployeeDocument[]>();
@@ -296,11 +296,16 @@ function ComplianceDashboard({
             </p>
             <p className="mt-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
               {stats.expired > 0 &&
-                `${stats.expired} document${stats.expired !== 1 ? "s" : ""} have expired`}
+                fill(
+                  stats.expired === 1
+                    ? "bannerExpiredOne"
+                    : "bannerExpiredOther",
+                  { count: stats.expired },
+                )}
               {stats.expired > 0 && stats.expiring > 0 && " · "}
               {stats.expiring > 0 &&
-                `${stats.expiring} expiring within 90 days`}
-              . Open the employee profile to upload renewed versions.
+                fill("bannerExpiring", { count: stats.expiring })}
+              {t("bannerAction")}
             </p>
           </div>
         </div>
@@ -374,13 +379,13 @@ function ComplianceDashboard({
                 key={s}
                 onClick={() => setStatusFilter(s)}
                 className={cn(
-                  "inline-flex items-center rounded-sm px-3 py-1 text-xs font-medium capitalize transition-colors",
+                  "inline-flex items-center rounded-sm px-3 py-1 text-xs font-medium transition-colors",
                   statusFilter === s
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {s}
+                {t(`filter${s[0].toUpperCase()}${s.slice(1)}`)}
               </button>
             ),
           )}
@@ -437,13 +442,23 @@ function ComplianceDashboard({
                           {expiredCount > 0 && (
                             <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
                               <AlertTriangle className="mr-0.5 size-2.5" />{" "}
-                              {fill("countExpired", { count: expiredCount })}
+                              {fill(
+                                expiredCount === 1
+                                  ? "countExpiredOne"
+                                  : "countExpiredOther",
+                                { count: expiredCount },
+                              )}
                             </Badge>
                           )}
                           {expiringCount > 0 && (
                             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
                               <Clock className="mr-0.5 size-2.5" />{" "}
-                              {fill("countExpiring", { count: expiringCount })}
+                              {fill(
+                                expiringCount === 1
+                                  ? "countExpiringOne"
+                                  : "countExpiringOther",
+                                { count: expiringCount },
+                              )}
                             </Badge>
                           )}
                         </div>
@@ -518,12 +533,22 @@ function ComplianceDashboard({
                       </Badge>
                       {expiredInType > 0 && (
                         <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
-                          {fill("countExpired", { count: expiredInType })}
+                          {fill(
+                            expiredInType === 1
+                              ? "countExpiredOne"
+                              : "countExpiredOther",
+                            { count: expiredInType },
+                          )}
                         </Badge>
                       )}
                       {expiringInType > 0 && (
                         <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
-                          {fill("countExpiring", { count: expiringInType })}
+                          {fill(
+                            expiringInType === 1
+                              ? "countExpiringOne"
+                              : "countExpiringOther",
+                            { count: expiringInType },
+                          )}
                         </Badge>
                       )}
                     </div>

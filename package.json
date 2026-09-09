@@ -65,6 +65,7 @@
     "check:hover-actions": "bun scripts/check-hover-actions.ts",
     "check:edge-accents": "bun scripts/check-edge-accents.ts",
     "check:control-heights": "bun scripts/check-control-heights.ts",
+    "check:frozen-translator": "bun scripts/check-frozen-translator.ts",
     "check:all": "bun scripts/check-all.ts"
   },
   "dependencies": {

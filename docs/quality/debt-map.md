@@ -10739,3 +10739,73 @@ a facility-editable termination reason (`StaffHrConfig.terminationReasons`), so
 `capitalize` is still doing what `notification-settings-card` records as a
 defect: title-casing an identifier and calling it a label. Left as-is because
 the value is data; noted because the styling implies it is not.
+
+## 2026-09-09 — a memo froze on the pre-hydration translator, and a screenshot was the only thing that could see it
+
+`staff/documents/page.tsx` rendered every role in English — "Boarding
+attendant", "Groomer", "Manager" — while the rest of the page was French, and
+`check:ui-french` reported the file at ZERO.
+
+Both were true. There is no English literal in that file. The English arrives at
+RUNTIME, through a stale closure:
+
+```
+roleLabel: staff ? roleLabel(staff.primaryRole) : t("roleFallback"),
+…
+}, [filtered]);
+```
+
+Every text hook in this repo returns English until hydration —
+`const effective: AppLocale = hydrated ? locale : "en"` — because the locale
+lives in a cookie the client reads, and rendering French on the server and
+English on the client is a hydration mismatch on every label at once. That
+means **the translator is a different function before and after hydration.** A
+memo that calls it without listing it runs once, inside the English window, and
+never runs again.
+
+### Why this earned a gate rather than a note
+
+`check:ui-french` is structurally incapable of seeing it — a scanner reading
+JSX text is looking at the wrong thing. It was found by looking at a screenshot,
+and there are 22 staff files left plus the rest of the product.
+
+`bun run check:frozen-translator` walks every `useMemo`/`useCallback`, and fails
+when the body CALLS a known translator (`t`, `fill`, `roleLabel`, `typeLabel`,
+`docTypeLabel`, `serviceLabel`) that the dependency array does not mention.
+
+**It found one more on its first run**, in a file this session never touched:
+`HQAnalyticsPanel.tsx` built its service-mix chart labels through
+`serviceLabel(service)` inside a memo keyed only on the rows, so an HQ owner's
+chart legend stayed English.
+
+### Two bugs in the gate itself, both worth remembering
+
+**It reported three findings and two were misattributed.** The first version
+looked for a line matching `}, [ … ])`, which only exists on a BLOCK-bodied
+memo. An expression-bodied one — `useMemo(() => rows.filter(…), [mix])` — never
+matches, so the scan window ran on into the NEXT memo and reported that one's
+dependency array against this one's line number. Counting parens from the
+hook's own opening paren is the only thing correct for both shapes. **A gate
+that misattributes is worse than no gate: it sends somebody to read the wrong
+function.**
+
+**And it accused the hook it exists to protect.** `use-staff-text.ts` returns
+`{ t, fill }` from its own memo, so `fill` appears as an object PROPERTY —
+`fill: (key, values) => …` — which is a definition, not a captured value. The
+"already declared inside" test only knew about `const`/`let`/`function`.
+
+### The other three the screenshot found in the same pass
+
+All in `staff/documents/page.tsx`, all invisible to the French gate:
+
+- **"1 expirés"** — one string with a plural ending. English hides this (the
+  count reads the same either way); French does not. Now `countExpiredOne` /
+  `countExpiredOther`, and the same for expiring, in both files.
+- **The status filter rendered its own enum** — `{s}` under CSS `capitalize`,
+  the same defect `notification-settings-card` records. A stylesheet is not a
+  translator.
+- **The compliance banner's body** was a template string the gate's JSX-text
+  reader never saw.
+
+**The lesson that generalises: `check:ui-french` at zero means "no English
+literal left in the file", not "this screen is French."** Look at it.
