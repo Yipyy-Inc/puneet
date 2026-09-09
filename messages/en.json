@@ -1310,6 +1310,27 @@
         "sendFailed": "Could not send the invitation.",
         "unreachable": "Could not reach the server. Nothing was sent.",
         "linkCopied": "Onboarding link copied"
+      },
+      "employeeDashboard": {
+        "greetingMorning": "Good morning",
+        "greetingAfternoon": "Good afternoon",
+        "greetingEvening": "Good evening",
+        "oneLocation": "1 location",
+        "locations": "{count} locations",
+        "onboardingComplete": "Onboarding complete",
+        "onboardingCongrats": "Onboarding complete — welcome to the team!",
+        "upcoming": "Upcoming",
+        "appointments": "appointments",
+        "openTasks": "Open tasks",
+        "toComplete": "to complete",
+        "employment": "Employment",
+        "since": "Since {year}",
+        "services": "Services",
+        "assigned": "{count} assigned",
+        "quickAccess": "Quick access",
+        "testingRole": "Testing a different role?",
+        "testingRoleHelp": "Switch to another employee account to explore their view.",
+        "switchEmployee": "Switch employee"
       }
     }
   },

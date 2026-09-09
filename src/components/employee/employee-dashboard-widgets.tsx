@@ -49,10 +49,20 @@ export function isOnboarded(staff: StaffProfile): boolean {
   return staff.status !== "invited";
 }
 
-export function timeOfDayGreeting(hour: number): string {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+/**
+ * WHICH greeting, not the greeting itself.
+ *
+ * It used to return the English — `return "Good morning"` — which is a bare
+ * return of prose and so invisible to every pattern `check:ui-french` has: not
+ * JSX text, not an attribute, not a toast, not a template. A key travels; the
+ * caller has the translator.
+ */
+export function timeOfDayGreetingKey(
+  hour: number,
+): "greetingMorning" | "greetingAfternoon" | "greetingEvening" {
+  if (hour < 12) return "greetingMorning";
+  if (hour < 17) return "greetingAfternoon";
+  return "greetingEvening";
 }
 
 // ============================================================================

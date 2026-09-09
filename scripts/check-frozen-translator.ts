@@ -40,8 +40,25 @@
  *
  * A `useMemo(` or `useMemo<T>(` whose body calls one of the known translator
  * identifiers, and whose dependency array does not mention it. `useCallback`
- * is included for the same reason. Anything else — a plain function, an
- * effect — is out of scope, because only a memo can serve a stale value.
+ * is included for the same reason.
+ *
+ * ── AND `useEffect`, ADDED 2026-09-09 ────────────────────────────────────
+ *
+ * This said "an effect is out of scope, because only a memo can serve a stale
+ * value", and that was wrong. An effect does not SERVE a value, but it CAPTURES
+ * one: it re-runs only when its deps change, so it fires with the translator
+ * from whichever render last changed them. If that render was pre-hydration —
+ * and every text hook here does `hydrated ? locale : "en"` — the toast it
+ * fires is English, in French, forever.
+ *
+ * Found by lint, not by this gate: `react-hooks/exhaustive-deps` warned on an
+ * effect calling `t("onboardingCongrats")` without `t` in its deps. Which is
+ * the whole reason this gate exists — that rule is a WARNING among 273 others,
+ * so a new one is invisible, and this turns the one class that silently
+ * corrupts language into a hard failure.
+ *
+ * The measured cost of widening was ZERO: after fixing the one that prompted
+ * it, no effect in `src` calls a translator it does not depend on.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -93,11 +110,11 @@ const findings: Finding[] = [];
 
 for (const file of walk("src")) {
   const source = readFileSync(file, "utf8");
-  if (!/use(Memo|Callback)\s*[<(]/.test(source)) continue;
+  if (!/use(Memo|Callback|Effect)\s*[<(]/.test(source)) continue;
 
   const lines = source.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    if (!/\buse(Memo|Callback)\s*[<(]/.test(lines[i])) continue;
+    if (!/\buse(Memo|Callback|Effect)\s*[<(]/.test(lines[i])) continue;
 
     // ── FIND THE MATCHING CLOSE BY COUNTING, NOT BY SHAPE ──────────────
     //
@@ -111,7 +128,10 @@ for (const file of walk("src")) {
     //
     // Counting parens from the hook's own opening one is the only thing that
     // is right for both shapes.
-    const open = lines[i].indexOf("(", lines[i].search(/\buse(Memo|Callback)/));
+    const open = lines[i].indexOf(
+      "(",
+      lines[i].search(/\buse(Memo|Callback|Effect)/),
+    );
     if (open === -1) continue;
 
     let depth = 0;

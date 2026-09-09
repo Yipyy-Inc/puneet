@@ -28,7 +28,7 @@ import {
 import type { StaffProfile, FacilityStaffRole } from "@/types/facility-staff";
 import {
   isOnboarded,
-  timeOfDayGreeting,
+  timeOfDayGreetingKey,
   TodaySummary,
   MyScheduleWidget,
   MyTasksWidget,
@@ -43,39 +43,11 @@ import {
   initOnboarding,
 } from "@/data/staff-onboarding";
 import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
-
-const ROLE_LABEL: Record<FacilityStaffRole, string> = {
-  owner: "Owner / Admin",
-  admin: "Admin",
-  manager: "Manager",
-  supervisor: "Supervisor",
-  reception: "Reception / Front Desk",
-  groomer: "Groomer",
-  trainer: "Trainer",
-  caretaker: "Caretaker",
-  daycare_attendant: "Daycare Attendant",
-  boarding_attendant: "Boarding / Back of House",
-  retail: "Retail Associate",
-  accountant: "Accountant",
-  sanitation: "Sanitation",
-};
-
-const ROLE_DESCRIPTION: Record<FacilityStaffRole, string> = {
-  owner:
-    "Full facility access — configuration, financials, and team management.",
-  admin: "Administrative access — configuration, financials, and team.",
-  manager: "Operational oversight — bookings, staff, and reports.",
-  supervisor: "Shift lead — floor oversight, swaps, and approvals.",
-  reception: "Client-facing operations — check-in/out, bookings, payments.",
-  groomer: "Grooming appointments and notes for your assigned pets.",
-  trainer: "Training sessions and progress tracking for enrolled pets.",
-  caretaker: "General animal care across boarding and daycare.",
-  daycare_attendant: "Daycare check-in, feeding rounds, and play logs.",
-  boarding_attendant: "Overnight kennel care, medications, and health checks.",
-  retail: "Point of sale, products, returns, and stock.",
-  accountant: "Financials, invoices, and reporting — no floor operations.",
-  sanitation: "Facility cleaning tasks and sanitation log.",
-};
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import {
+  useStaffRoleLabel,
+  useStaffRoleTagline,
+} from "@/lib/settings/use-staff-role-label";
 
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {
   owner: UserCog,
@@ -114,7 +86,10 @@ function getInitials(firstName: string, lastName: string) {
 }
 
 export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
+  const { t, fill } = useStaffText("employeeDashboard");
   const employmentTypeLabel = useEmploymentTypeLabel();
+  const roleLabel = useStaffRoleLabel();
+  const roleTagline = useStaffRoleTagline();
   const role = staff.primaryRole;
   // Section 4C — Quick Access is derived from the viewer's permissions, never
   // hardcoded per role. Every shortcut is filtered by the same key(s) that gate
@@ -122,7 +97,10 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
   const actions = useQuickAccess(role);
   const RoleIcon = ROLE_ICON[role];
   // Read the clock once at mount (purity: no argless Date in render body).
-  const [greeting] = useState(() => timeOfDayGreeting(new Date().getHours()));
+  const [greetingKey] = useState(() =>
+    timeOfDayGreetingKey(new Date().getHours()),
+  );
+  const greeting = t(greetingKey);
 
   // Onboarding checklist (store-backed, Area F). Seed a role-appropriate default
   // for a new hire who doesn't have one yet.
@@ -144,10 +122,15 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
   const prevComplete = useRef(onboardingComplete);
   useEffect(() => {
     if (!prevComplete.current && onboardingComplete && onboardingTotal > 0) {
-      toast.success("🎉 Onboarding complete — welcome to the team!");
+      toast.success(t("onboardingCongrats"));
     }
     prevComplete.current = onboardingComplete;
-  }, [onboardingComplete, onboardingTotal]);
+    // `t` is in the deps because the effect READS it. Left out, the memo it
+    // comes from is the pre-hydration English one forever — the same defect
+    // `check:frozen-translator` catches in useMemo/useCallback, in the hook it
+    // does not walk. Re-firing on a locale change is harmless: the ref guard
+    // above already means the toast fires once.
+  }, [onboardingComplete, onboardingTotal, t]);
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -179,7 +162,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                 className="border-white/20 bg-white/20 text-white hover:bg-white/30"
               >
                 <RoleIcon className="mr-1 size-3" />
-                {ROLE_LABEL[role]}
+                {roleLabel(role)}
               </Badge>
               {staff.additionalRoles.map((r) => (
                 <Badge
@@ -187,7 +170,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                   variant="secondary"
                   className="border-white/10 bg-white/10 text-xs text-white/80"
                 >
-                  +{r.replace(/_/g, " ")}
+                  +{roleLabel(r)}
                 </Badge>
               ))}
               {onboardingComplete && (
@@ -195,7 +178,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                   variant="secondary"
                   className="border-white/20 bg-white/20 text-xs text-white"
                 >
-                  Onboarding complete ✓
+                  {t("onboardingComplete")} ✓
                 </Badge>
               )}
             </div>
@@ -204,13 +187,15 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
             <p>{staff.email}</p>
             <p className="mt-0.5">
               {staff.assignedLocations.length === 1
-                ? "1 location"
-                : `${staff.assignedLocations.length} locations`}
+                ? t("oneLocation")
+                : fill("locations", {
+                    count: staff.assignedLocations.length,
+                  })}
             </p>
           </div>
         </div>
         <p className="mt-3 max-w-xl text-sm text-white/80">
-          {ROLE_DESCRIPTION[role]}
+          {roleTagline(role)}
         </p>
         {/* decorative */}
         <div className="pointer-events-none absolute -top-8 -right-8 size-40 rounded-full bg-white/5" />
@@ -237,36 +222,38 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs">Upcoming</p>
+            <p className="text-muted-foreground text-xs">{t("upcoming")}</p>
             <p className="mt-1 text-2xl font-bold">
               {staff.upcomingAppointments}
             </p>
-            <p className="text-muted-foreground text-xs">appointments</p>
+            <p className="text-muted-foreground text-xs">{t("appointments")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs">Open Tasks</p>
+            <p className="text-muted-foreground text-xs">{t("openTasks")}</p>
             <p className="mt-1 text-2xl font-bold">{staff.openTasks}</p>
-            <p className="text-muted-foreground text-xs">to complete</p>
+            <p className="text-muted-foreground text-xs">{t("toComplete")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs">Employment</p>
+            <p className="text-muted-foreground text-xs">{t("employment")}</p>
             <p className="mt-1 text-sm font-semibold">
               {employmentTypeLabel(staff.employment.employmentType)}
             </p>
             <p className="text-muted-foreground text-xs">
-              Since {new Date(staff.employment.hireDate).getFullYear()}
+              {fill("since", {
+                year: new Date(staff.employment.hireDate).getFullYear(),
+              })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-muted-foreground text-xs">Services</p>
+            <p className="text-muted-foreground text-xs">{t("services")}</p>
             <p className="mt-1 text-sm font-semibold">
-              {staff.serviceAssignments.length} assigned
+              {fill("assigned", { count: staff.serviceAssignments.length })}
             </p>
             <p className="text-muted-foreground truncate text-xs">
               {staff.serviceAssignments.join(", ")}
@@ -277,7 +264,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
 
       {/* Quick-access cards */}
       <div>
-        <h2 className="mb-3 font-semibold">Quick Access</h2>
+        <h2 className="mb-3 font-semibold">{t("quickAccess")}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {actions.map((action) => {
             const Icon = action.icon;
@@ -313,9 +300,9 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
       <div className="rounded-xl border border-dashed p-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium">Testing a different role?</p>
+            <p className="text-sm font-medium">{t("testingRole")}</p>
             <p className="text-muted-foreground text-xs">
-              Switch to another employee account to explore their view.
+              {t("testingRoleHelp")}
             </p>
           </div>
           <Button
@@ -326,7 +313,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
           >
             <Link href="/employee/select">
               <RefreshCw className="size-3.5" />
-              Switch Employee
+              {t("switchEmployee")}
             </Link>
           </Button>
         </div>

@@ -786,7 +786,6 @@ const BASELINE: Record<string, Map<string, number>> = {
     ],
     ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 4],
     ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
-    ["src/components/employee/EmployeeDashboard.tsx", 14],
     ["src/components/facility/DepartmentSettings.tsx", 7],
     ["src/components/facility/StaffPreviewDialog.tsx", 3],
     ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],

@@ -16,29 +16,15 @@ import {
 } from "lucide-react";
 import type { FacilityStaffRole } from "@/types/facility-staff";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { timeOfDayGreeting } from "./employee-dashboard-widgets";
+import { timeOfDayGreetingKey } from "./employee-dashboard-widgets";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 
 // The one genuinely employee-only touch above the shared facility dashboard: a
 // personal "Good morning, [name]" welcome. Everything below it on the page is
 // the SAME DashboardShell the facility admin sees (spec 5A parity), so this
 // header deliberately carries only the greeting + who's signed in — no stats,
 // no widgets, which the dashboard now owns.
-
-const ROLE_LABEL: Record<FacilityStaffRole, string> = {
-  owner: "Owner / Admin",
-  admin: "Admin",
-  manager: "Manager",
-  supervisor: "Supervisor",
-  reception: "Reception / Front Desk",
-  groomer: "Groomer",
-  trainer: "Trainer",
-  caretaker: "Caretaker",
-  daycare_attendant: "Daycare Attendant",
-  boarding_attendant: "Boarding / Back of House",
-  retail: "Retail Associate",
-  accountant: "Accountant",
-  sanitation: "Sanitation",
-};
 
 const ROLE_ICON: Record<FacilityStaffRole, React.ElementType> = {
   owner: UserCog,
@@ -94,11 +80,16 @@ export function EmployeeGreetingHeader() {
   // `viewerResolved` is false while the roster is still loading; the banner
   // simply does not render until it can name someone, which is right for a
   // one-time welcome — better absent than addressed to a stranger.
+  const { t, fill } = useStaffText("employeeDashboard");
+  const roleLabel = useStaffRoleLabel();
   const { viewer: staff, viewerResolved } = useFacilityViewer();
   const role = staff.primaryRole;
   const RoleIcon = ROLE_ICON[role];
   // Read the clock once at mount (purity: no argless Date in the render body).
-  const [greeting] = useState(() => timeOfDayGreeting(new Date().getHours()));
+  const [greetingKey] = useState(() =>
+    timeOfDayGreetingKey(new Date().getHours()),
+  );
+  const greeting = t(greetingKey);
 
   // The banner is a one-time welcome: it mounts, animates in, holds for a few
   // seconds, then smoothly collapses away — but ONLY right after a fresh login
@@ -187,7 +178,7 @@ export function EmployeeGreetingHeader() {
                 className="border-white/20 bg-white/20 text-white hover:bg-white/30"
               >
                 <RoleIcon className="mr-1 size-3" />
-                {ROLE_LABEL[role]}
+                {roleLabel(role)}
               </Badge>
               {staff.additionalRoles.map((r) => (
                 <Badge
@@ -195,7 +186,7 @@ export function EmployeeGreetingHeader() {
                   variant="secondary"
                   className="border-white/10 bg-white/10 text-xs text-white/80"
                 >
-                  +{r.replace(/_/g, " ")}
+                  +{roleLabel(r)}
                 </Badge>
               ))}
             </div>
@@ -204,8 +195,10 @@ export function EmployeeGreetingHeader() {
             <p>{staff.email}</p>
             <p className="mt-0.5">
               {staff.assignedLocations.length === 1
-                ? "1 location"
-                : `${staff.assignedLocations.length} locations`}
+                ? t("oneLocation")
+                : fill("locations", {
+                    count: staff.assignedLocations.length,
+                  })}
             </p>
           </div>
         </div>
