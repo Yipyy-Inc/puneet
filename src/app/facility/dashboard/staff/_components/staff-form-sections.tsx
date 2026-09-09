@@ -56,6 +56,7 @@ import { AdditionalRolesGrid } from "./additional-roles-grid";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { CustomRoleQuickCreateDialog } from "./custom-role-quick-create-dialog";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 /** The generic field-updater shared by every section. */
 export type SectionUpdate = <K extends keyof StaffProfile>(
@@ -105,12 +106,12 @@ const SERVICE_ORDER: ServiceModule[] = [
 
 /** Section catalog — shared between the hire modal and the profile edit tabs. */
 export const STAFF_SECTIONS = [
-  { id: "profile", label: "Profile", icon: UserIcon },
-  { id: "role", label: "Role & services", icon: Sparkles },
-  { id: "locations", label: "Locations", icon: MapPin },
-  { id: "access", label: "Access & overrides", icon: ShieldCheck },
-  { id: "notifications", label: "Notifications", icon: Bell },
-  { id: "payroll", label: "Payroll", icon: Wallet },
+  { id: "profile", key: "secProfile", icon: UserIcon },
+  { id: "role", key: "secRole", icon: Sparkles },
+  { id: "locations", key: "secLocations", icon: MapPin },
+  { id: "access", key: "secAccess", icon: ShieldCheck },
+  { id: "notifications", key: "secNotifications", icon: Bell },
+  { id: "payroll", key: "secPayroll", icon: Wallet },
 ] as const;
 
 export type StaffSectionId = (typeof STAFF_SECTIONS)[number]["id"];
@@ -126,6 +127,8 @@ export function ProfileSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  const { t } = useStaffText("formSections");
+  const permissionText = usePermissionText();
   const { employmentTypes } = useStaffHrConfig();
   // Keep the current value selectable even if it's a legacy / removed type.
   const empTypeOptions = employmentTypes.includes(
@@ -136,34 +139,34 @@ export function ProfileSection({
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="Basic information" />
+      <SectionHeader title={t("basicInfo")} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <FieldRow label="First name" required>
+        <FieldRow label={t("firstName")} required>
           <Input
             value={draft.firstName}
             onChange={(e) => update("firstName", e.target.value)}
+            // french-ok: a sample NAME, and a Quebec one — §5q says a name
+            // never passes through the locale layer, and it reads the same in
+            // both languages anyway.
             placeholder="Émilie"
           />
         </FieldRow>
-        <FieldRow label="Last name" required>
+        <FieldRow label={t("lastName")} required>
           <Input
             value={draft.lastName}
             onChange={(e) => update("lastName", e.target.value)}
+            // french-ok: a sample name, as above
             placeholder="Laurent"
           />
         </FieldRow>
-        <FieldRow
-          label="Email"
-          required
-          hint="An invitation is sent here. Shown on their app login."
-        >
+        <FieldRow label={t("email")} required hint={t("hintEmail")}>
           <Input
             type="email"
             value={draft.email}
             onChange={(e) => update("email", e.target.value)}
           />
         </FieldRow>
-        <FieldRow label="Phone">
+        <FieldRow label={t("phone")}>
           <Input
             value={draft.phone}
             onChange={(e) => update("phone", e.target.value)}
@@ -171,18 +174,15 @@ export function ProfileSection({
         </FieldRow>
       </div>
 
-      <FieldRow
-        label="Job title"
-        hint="Shown alongside the role on their card."
-      >
+      <FieldRow label={t("jobTitle")} hint={t("hintJobTitle")}>
         <Input
           value={draft.jobTitle ?? ""}
           onChange={(e) => update("jobTitle", e.target.value)}
-          placeholder="e.g. Lead Bather, Senior Trainer"
+          placeholder={t("jobTitlePlaceholder")}
         />
       </FieldRow>
 
-      <FieldRow label="Color code" hint="Used on calendar and mobile map pins.">
+      <FieldRow label={t("colorCode")} hint={t("hintColor")}>
         <div className="flex flex-wrap gap-1.5">
           {PRESET_COLORS.map((c) => (
             <button
@@ -209,9 +209,9 @@ export function ProfileSection({
       </FieldRow>
 
       <Separator />
-      <SectionHeader title="Employment" />
+      <SectionHeader title={t("employment")} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <FieldRow label="Hire date">
+        <FieldRow label={t("hireDate")}>
           <Input
             type="date"
             value={draft.employment.hireDate}
@@ -223,7 +223,7 @@ export function ProfileSection({
             }
           />
         </FieldRow>
-        <FieldRow label="Employment type">
+        <FieldRow label={t("employmentType")}>
           <Select
             value={draft.employment.employmentType}
             onValueChange={(v) =>
@@ -234,7 +234,7 @@ export function ProfileSection({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a type…" />
+              <SelectValue placeholder={t("selectType")} />
             </SelectTrigger>
             <SelectContent>
               {empTypeOptions.map((type) => (
@@ -246,12 +246,11 @@ export function ProfileSection({
           </Select>
         </FieldRow>
       </div>
-      <FieldRow
-        label="Internal notes"
-        hint="Visible to managers and owners only."
-      >
+      <FieldRow label={t("internalNotes")} hint={t("hintNotes")}>
         {draft.employment.notes === undefined ? (
-          <WithheldNotice permission="Manage staff" />
+          <WithheldNotice
+            permission={permissionText.permission("manage_staff")}
+          />
         ) : (
           <Textarea
             rows={3}
@@ -262,7 +261,7 @@ export function ProfileSection({
                 notes: e.target.value,
               })
             }
-            placeholder="e.g. Overnight shifts only, handles hand stripping."
+            placeholder={t("notesPlaceholder")}
           />
         )}
       </FieldRow>
@@ -283,6 +282,8 @@ export function RoleSection({
   update: SectionUpdate;
   onRoleChange: (r: FacilityStaffRole) => void;
 }) {
+  const { t } = useStaffText("formSections");
+  const permissionText = usePermissionText();
   const settingsPath = useSettingsHref();
   const { customRoles } = useFacilityRbac();
   const customList = Object.values(customRoles);
@@ -320,10 +321,7 @@ export function RoleSection({
   return (
     <div className="space-y-6">
       <div>
-        <SectionHeader
-          title="Primary role"
-          hint="Drives the default permission set. Additional roles layer on top."
-        />
+        <SectionHeader title={t("primaryRole")} hint={t("hintPrimaryRole")} />
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {ROLE_ORDER.map((role) => {
             const meta = ROLE_META[role];
@@ -365,8 +363,8 @@ export function RoleSection({
 
       <div>
         <SectionHeader
-          title="Additional roles (optional)"
-          hint="Layer preset roles on top of the primary. Permissions and services are the union. The primary role still drives the dashboard default view — additional roles only add nav/access."
+          title={t("additionalRoles")}
+          hint={t("hintAdditionalRoles")}
         />
         <div className="mt-3">
           <AdditionalRolesGrid
@@ -379,10 +377,7 @@ export function RoleSection({
 
       <div>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <SectionHeader
-            title="Custom roles"
-            hint="Facility-defined roles — like “Runner”, “Helper”, or “Shift Lead”. Layer any number on top of the primary role; permissions union."
-          />
+          <SectionHeader title={t("customRoles")} hint={t("hintCustomRoles")} />
           <Button
             type="button"
             variant="outline"
@@ -390,7 +385,7 @@ export function RoleSection({
             onClick={() => setCreateRoleOpen(true)}
             className="h-8"
           >
-            <Plus className="size-3.5" /> Create custom role
+            <Plus className="size-3.5" /> {t("createCustomRole")}
           </Button>
         </div>
 
@@ -402,11 +397,11 @@ export function RoleSection({
           >
             <Sparkles className="text-primary size-4" />
             <span>
-              No custom roles yet —{" "}
+              {t("noCustomRolesBefore")}{" "}
               <span className="text-primary underline underline-offset-2">
-                create one
+                {t("createOne")}
               </span>{" "}
-              tailored to your facility
+              {t("noCustomRolesAfter")}
             </span>
           </button>
         ) : (
@@ -446,12 +441,12 @@ export function RoleSection({
         )}
 
         <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[11px]">
-          <span>Need to edit permissions on an existing custom role?</span>
+          <span>{t("editExisting")}</span>
           <Link
             href={settingsPath("roles-permissions")}
             className="text-primary inline-flex items-center gap-0.5 hover:underline"
           >
-            Open Roles Studio <ExternalLink className="size-3" />
+            {t("openRolesStudio")} <ExternalLink className="size-3" />
           </Link>
         </div>
       </div>
@@ -468,8 +463,8 @@ export function RoleSection({
 
       <div>
         <SectionHeader
-          title="Service assignments"
-          hint="Which operational areas this staff can see. Defaults come from roles."
+          title={t("serviceAssignments")}
+          hint={t("hintServices")}
         />
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {SERVICE_ORDER.map((svc) => {
@@ -528,12 +523,10 @@ export function LocationsSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  const { t } = useStaffText("formSections");
   return (
     <div className="space-y-4">
-      <SectionHeader
-        title="Working locations"
-        hint="Staff only see calendars, clients, and pets at assigned locations."
-      />
+      <SectionHeader title={t("workingLocations")} hint={t("hintLocations")} />
       <div className="grid gap-2">
         {FACILITY_LOCATIONS.map((loc) => {
           const active = draft.assignedLocations.includes(loc.id);
@@ -579,6 +572,7 @@ export function AccessSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  const { t, fill } = useStaffText("formSections");
   const permissionText = usePermissionText();
   const groupedPerms = useMemo(
     () => PERMISSION_GROUPS.filter((g) => g.id !== "core"),
@@ -609,12 +603,12 @@ export function AccessSection({
   return (
     <div className="space-y-6">
       <div>
-        <SectionHeader title="Calendar" />
+        <SectionHeader title={t("calendar")} />
         <div className="mt-3 space-y-3">
           <ToggleRow
             icon={Eye}
-            title="Show on calendar"
-            description="Appears as a bookable resource. Turn off for admin / back-office."
+            title={t("showOnCalendar")}
+            description={t("showOnCalendarHelp")}
             checked={draft.showOnCalendar}
             onToggle={(v) => update("showOnCalendar", v)}
           />
@@ -622,10 +616,10 @@ export function AccessSection({
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">
-                  Access other staff calendars
+                  {t("otherCalendars")}
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  Who they can view on the shared calendar.
+                  {t("otherCalendarsHelp")}
                 </div>
               </div>
               <Select
@@ -645,11 +639,11 @@ export function AccessSection({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">
-                    All working-business staff
+                  <SelectItem value="all">{t("allWorkingStaff")}</SelectItem>
+                  <SelectItem value="selected">
+                    {t("selectedStaffOnly")}
                   </SelectItem>
-                  <SelectItem value="selected">Selected staff only</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="none">{t("none")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -658,12 +652,12 @@ export function AccessSection({
       </div>
 
       <div>
-        <SectionHeader title="Clock in / out" />
+        <SectionHeader title={t("clockInOut")} />
         <div className="mt-3">
           <ToggleRow
             icon={KeyRound}
-            title="Require access code"
-            description="For shared devices at the front desk — prevents accidental clock-ins."
+            title={t("requireCode")}
+            description={t("requireCodeHelp")}
             checked={draft.clockIn.requireAccessCode}
             onToggle={(v) =>
               update(
@@ -684,7 +678,9 @@ export function AccessSection({
                   // A code is required but was not sent — withheld, not blank.
                   // An empty box would look like "no code set" and saving it
                   // would replace this person's real code with nothing.
-                  <WithheldNotice permission="Manage staff" />
+                  <WithheldNotice
+                    permission={permissionText.permission("manage_staff")}
+                  />
                 ) : (
                   <Input
                     inputMode="numeric"
@@ -710,12 +706,14 @@ export function AccessSection({
 
       <div>
         <SectionHeader
-          title="Permission overrides"
-          hint="Fine-grained per-permission. Scope controls when access is active."
+          title={t("permissionOverrides")}
+          hint={t("hintOverrides")}
         />
         {!draft.permissionOverrides && (
           <div className="mt-2">
-            <WithheldNotice permission="View staff permissions" />
+            <WithheldNotice
+              permission={permissionText.permission("view_staff_permissions")}
+            />
           </div>
         )}
         <div className="mt-2 space-y-4" hidden={!draft.permissionOverrides}>
@@ -763,20 +761,24 @@ export function AccessSection({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="anytime">Anytime</SelectItem>
+                            <SelectItem value="anytime">
+                              {permissionText.scope("anytime")}
+                            </SelectItem>
                             <SelectItem value="operating_hours">
-                              Operating hours
+                              {permissionText.scope("operating_hours")}
                             </SelectItem>
                             <SelectItem value="assigned_shifts">
-                              Assigned shifts
+                              {permissionText.scope("assigned_shifts")}
                             </SelectItem>
-                            <SelectItem value="none">No access</SelectItem>
+                            <SelectItem value="none">
+                              {permissionText.scope("none")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         {draft.permissionOverrides?.[p.key] && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                             <Sparkles className="size-3" />
-                            override
+                            {t("override")}
                           </span>
                         )}
                       </div>
@@ -794,11 +796,18 @@ export function AccessSection({
           <Lock className="text-primary size-3.5 shrink-0" />
           <div>
             <span className="text-foreground font-medium">
-              Always-on permissions:
+              {t("alwaysOnLabel")}
             </span>{" "}
-            every account has{" "}
-            {ALWAYS_ON_PERMISSIONS.map((p) => p.replace(/_/g, " ")).join(", ")}.
-            These can&apos;t be disabled.
+            {/* The permission NAMES go through the shared catalogue rather
+                than a regex over their slugs — `p.replace(/_/g, " ")`
+                capitalises an identifier and calls it a label, which is the
+                defect this area has now hit a dozen times. */}
+            {fill("alwaysOnBody", {
+              list: ALWAYS_ON_PERMISSIONS.map((p) =>
+                permissionText.permission(p),
+              ).join(", "),
+            })}
+            {t("cannotDisable")}
           </div>
         </div>
       </div>
@@ -817,6 +826,25 @@ export function NotificationsSection({
   draft: StaffProfile;
   update: SectionUpdate;
 }) {
+  const { t } = useStaffText("formSections");
+
+  /** An event's words, keyed off its slug; the constant is the fallback. */
+  const eventLabel = (event: NotificationEvent) => {
+    const key = `ev${event
+      .split("_")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join("")}`;
+    const label = t(key);
+    return label === key ? NOTIFICATION_EVENT_META[event].label : label;
+  };
+
+  /** And a group's, the same way. */
+  const groupLabel = (group: string) => {
+    const key = `grp${group.replace(/\s+/g, "")}`;
+    const label = t(key);
+    return label === key ? group : label;
+  };
+
   const grouped = useMemo(() => {
     const byGroup = new Map<string, NotificationEvent[]>();
     for (const [key, meta] of Object.entries(NOTIFICATION_EVENT_META)) {
@@ -832,14 +860,11 @@ export function NotificationsSection({
 
   return (
     <div className="space-y-5">
-      <SectionHeader
-        title="Notify them when…"
-        hint="Control what shows up in their Notification Center."
-      />
+      <SectionHeader title={t("notifyWhen")} hint={t("hintNotifications")} />
       {grouped.map(([group, events]) => (
         <div key={group}>
           <div className="text-muted-foreground mb-2 text-xs font-medium">
-            {group}
+            {groupLabel(group)}
           </div>
           <div className="space-y-1.5">
             {events.map((event) => (
@@ -847,9 +872,7 @@ export function NotificationsSection({
                 key={event}
                 className="border-border/60 bg-card flex items-center justify-between rounded-md border px-3 py-2"
               >
-                <span className="text-sm">
-                  {NOTIFICATION_EVENT_META[event].label}
-                </span>
+                <span className="text-sm">{eventLabel(event)}</span>
                 <Select
                   value={draft.notifications[event]}
                   onValueChange={(v) => setScope(event, v as NotificationScope)}
@@ -859,12 +882,14 @@ export function NotificationsSection({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="related_to_them">
-                      Related to them
+                      {t("scopeRelated")}
                     </SelectItem>
                     <SelectItem value="at_working_business">
-                      At working business
+                      {t("scopeAtBusiness")}
                     </SelectItem>
-                    <SelectItem value="do_not_notify">Do not notify</SelectItem>
+                    <SelectItem value="do_not_notify">
+                      {t("scopeDoNot")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -890,6 +915,9 @@ export function PayrollSection({
   // No inputs at all when the figures were withheld.
   //
   // Rendering them with zeroes would be worse than useless: the draft is what
+  const { t } = useStaffText("formSections");
+  const permissionText = usePermissionText();
+
   // Save writes back, so an editor without `view_payroll` would silently reset
   // this person's real hourly rate and commission to nothing. Absent has to
   // stay absent all the way through the form.
@@ -897,23 +925,19 @@ export function PayrollSection({
   if (!payroll) {
     return (
       <div className="space-y-5">
-        <SectionHeader
-          title="Compensation"
-          hint="Drives payroll reports and commission tracking."
+        <SectionHeader title={t("compensation")} hint={t("hintPayroll")} />
+        <WithheldNotice
+          permission={permissionText.permission("view_payroll")}
         />
-        <WithheldNotice permission="View payroll" />
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <SectionHeader
-        title="Compensation"
-        hint="Drives payroll reports and commission tracking."
-      />
+      <SectionHeader title={t("compensation")} hint={t("hintPayroll")} />
       <div className="grid gap-3 sm:grid-cols-3">
-        <FieldRow label="Service commission (%)">
+        <FieldRow label={t("serviceCommission")}>
           <Input
             type="number"
             min={0}
@@ -927,7 +951,7 @@ export function PayrollSection({
             }
           />
         </FieldRow>
-        <FieldRow label="Hourly rate ($)">
+        <FieldRow label={t("hourlyRate")}>
           <Input
             type="number"
             min={0}
@@ -940,7 +964,7 @@ export function PayrollSection({
             }
           />
         </FieldRow>
-        <FieldRow label="Tips retained (%)">
+        <FieldRow label={t("tipsRetained")}>
           <Input
             type="number"
             min={0}
@@ -957,11 +981,7 @@ export function PayrollSection({
       </div>
       <div className="text-muted-foreground border-border/60 flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs">
         <Clock className="text-primary mt-0.5 size-3.5 shrink-0" />
-        <div>
-          Commission applies on collected service + add-on revenue. Hourly
-          calculates from clock in/out. Tips are passed through from assigned
-          appointments.
-        </div>
+        <div>{t("compensationHelp")}</div>
       </div>
     </div>
   );
@@ -980,9 +1000,10 @@ export function PayrollSection({
  * nothing.
  */
 export function WithheldNotice({ permission }: { permission: string }) {
+  const { fill } = useStaffText("formSections");
   return (
     <div className="text-muted-foreground border-border/60 rounded-lg border border-dashed px-3 py-2.5 text-xs">
-      Hidden — requires the “{permission}” permission.
+      {fill("withheld", { permission })}
     </div>
   );
 }

@@ -10885,3 +10885,24 @@ been correct about everything it could see, and blind to the most common way of
 writing the thing it exists to ban. Both the French gate and this one failed the
 same way in one session, for the same reason: they match a SHAPE, and the
 codebase writes the shape more than one way.
+
+### `hint=` was not in the French gate's attribute list
+
+`check:ui-french` reads JSX text plus a named list of attributes —
+`placeholder`, `title`, `aria-label`, `label`, `description`, `helperText` and a
+few more. **`hint` was not among them**, and this codebase uses it for the
+sentence under a field label: seventeen in the staff area alone.
+
+Found by looking at the hire form in French and reading three English sentences
+the gate had just declared absent.
+
+Adding it lit up **three strings in `yipyy-pay`, a settings section at ZERO** —
+which the first measurement said would not happen, because that grep only
+covered `src/app/facility/dashboard/settings/` and the section's component
+lives under `src/components/facility/`. The file already had
+`useSettingsText().section("yipyy-pay")` in it; the hints were simply never
+converted, because nothing could see them.
+
+**Both halves of that are the lesson.** A gate that matches a list of
+attributes is only as good as the list, and a measurement scoped to the wrong
+directory is not a measurement. Settings is back at zero.

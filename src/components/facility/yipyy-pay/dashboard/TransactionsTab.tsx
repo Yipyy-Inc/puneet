@@ -194,14 +194,14 @@ export function TransactionsTab() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Breakdown
             title={t("byService")}
-            hint="What the money was for. Clover cannot answer this — the booking can."
+            hint={t("byServiceHint")}
             rows={takings.byService}
             nameOf={(row) => label(SERVICE_LABELS, row.service)}
             total={takings.net}
           />
           <Breakdown
             title={t("howTaken")}
-            hint="Card present, online, or neither."
+            hint={t("howTakenHint")}
             rows={takings.byChannel}
             nameOf={(row) => label(CHANNEL_LABELS, row.channel)}
             total={takings.net}
@@ -305,7 +305,7 @@ function TakingsRow({
       <KpiTile
         label={t("tips")}
         value={formatCurrency(takings.tips)}
-        hint="After refunds"
+        hint={t("afterRefunds")}
         icon={Coins}
         tone="indigo"
       />
