@@ -25,6 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { WARNING_TYPE_META } from "@/types/facility-warnings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useWarningTypeLabel } from "@/lib/staff/use-warning-type-label";
 import type {
   WarningTemplate,
   WarningTemplateField,
@@ -38,11 +40,11 @@ interface Props {
   existing?: WarningTemplate;
 }
 
-const FIELD_TYPE_LABELS = {
-  text: "Short text",
-  textarea: "Long text",
-  date: "Date",
-  checkbox: "Checkbox",
+const FIELD_TYPE_KEYS = {
+  text: "typeText",
+  textarea: "typeTextarea",
+  date: "typeDate",
+  checkbox: "typeCheckbox",
 } as const;
 
 export function WarningTemplateBuilder({
@@ -51,6 +53,8 @@ export function WarningTemplateBuilder({
   onSave,
   existing,
 }: Props) {
+  const { t, fill } = useStaffText("warningTemplate");
+  const warningTypeLabel = useWarningTypeLabel();
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
@@ -112,15 +116,15 @@ export function WarningTemplateBuilder({
       <DialogContent className="flex max-h-[92vh] flex-col overflow-hidden sm:max-w-2xl">
         <DialogHeader className="shrink-0">
           <DialogTitle>
-            {existing ? "Edit Warning Template" : "Build Warning Template"}
+            {existing ? t("editTitle") : t("buildTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="template" className="flex min-h-0 flex-1 flex-col">
           <TabsList className="mx-0 shrink-0 justify-start">
-            <TabsTrigger value="template">Template Info</TabsTrigger>
-            <TabsTrigger value="fields">Custom Fields</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="template">{t("tabTemplate")}</TabsTrigger>
+            <TabsTrigger value="fields">{t("tabFields")}</TabsTrigger>
+            <TabsTrigger value="preview">{t("tabPreview")}</TabsTrigger>
           </TabsList>
 
           {/* ── Tab 1: template info ── */}
@@ -129,26 +133,26 @@ export function WarningTemplateBuilder({
             className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
           >
             <div className="space-y-1.5">
-              <Label>Template Title *</Label>
+              <Label>{t("templateTitle")} *</Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Attendance & Punctuality Violation"
+                placeholder={t("templateTitlePlaceholder")}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Internal Description</Label>
+              <Label>{t("internalDescription")}</Label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief summary for managers when selecting templates"
+                placeholder={t("internalDescriptionPlaceholder")}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Default Warning Type</Label>
+                <Label>{t("defaultType")}</Label>
                 <Select
                   value={defaultType}
                   onValueChange={(v) => setDefaultType(v as WarningType)}
@@ -157,9 +161,9 @@ export function WarningTemplateBuilder({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(WARNING_TYPE_META).map(([k, v]) => (
+                    {Object.keys(WARNING_TYPE_META).map((k) => (
                       <SelectItem key={k} value={k}>
-                        {v.label}
+                        {warningTypeLabel(k as WarningType)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -168,16 +172,14 @@ export function WarningTemplateBuilder({
 
               <div className="flex items-end gap-3 pb-0.5">
                 <div className="flex flex-1 flex-col gap-1.5">
-                  <Label>Requires Employee Signature</Label>
+                  <Label>{t("requiresSignature")}</Label>
                   <div className="flex items-center gap-2 pt-1">
                     <Switch
                       checked={requiresSignature}
                       onCheckedChange={setRequiresSignature}
                     />
                     <span className="text-muted-foreground text-sm">
-                      {requiresSignature
-                        ? "Yes — signature required"
-                        : "No signature"}
+                      {requiresSignature ? t("signatureYes") : t("signatureNo")}
                     </span>
                   </div>
                 </div>
@@ -185,15 +187,14 @@ export function WarningTemplateBuilder({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Warning Document Body *</Label>
+              <Label>{t("documentBody")} *</Label>
               <p className="text-muted-foreground text-xs">
-                This is the full text of the warning that will be shown to the
-                employee before they sign.
+                {t("documentBodyHelp")}
               </p>
               <Textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Write the complete warning document text here…"
+                placeholder={t("documentBodyPlaceholder")}
                 rows={12}
                 className="font-mono text-sm"
               />
@@ -205,20 +206,13 @@ export function WarningTemplateBuilder({
             value="fields"
             className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
           >
-            <p className="text-muted-foreground text-sm">
-              Add fields that managers must fill in when issuing this warning
-              (e.g., incident dates, a description). These values are stored
-              with the signed record.
-            </p>
+            <p className="text-muted-foreground text-sm">{t("fieldsHelp")}</p>
 
             {fields.length === 0 && (
               <div className="border-border/60 rounded-xl border border-dashed p-6 text-center">
-                <p className="text-muted-foreground text-sm">
-                  No custom fields yet.
-                </p>
+                <p className="text-muted-foreground text-sm">{t("noFields")}</p>
                 <p className="text-muted-foreground text-xs">
-                  Click &quot;Add Field&quot; to collect specific information
-                  when issuing this warning.
+                  {t("noFieldsHelp")}
                 </p>
               </div>
             )}
@@ -232,18 +226,20 @@ export function WarningTemplateBuilder({
                   <GripVertical className="text-muted-foreground mt-2.5 size-4 shrink-0" />
                   <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Label</Label>
+                      <Label className="text-xs">{t("fieldLabel")}</Label>
                       <Input
                         value={field.label}
                         onChange={(e) =>
                           updateField(field.id, { label: e.target.value })
                         }
-                        placeholder={`Field ${idx + 1} label`}
+                        placeholder={fill("fieldLabelPlaceholder", {
+                          n: idx + 1,
+                        })}
                         className="h-8 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Type</Label>
+                      <Label className="text-xs">{t("fieldType")}</Label>
                       <Select
                         value={field.type}
                         onValueChange={(v) =>
@@ -256,22 +252,22 @@ export function WarningTemplateBuilder({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(FIELD_TYPE_LABELS).map(([k, v]) => (
+                          {Object.entries(FIELD_TYPE_KEYS).map(([k, key]) => (
                             <SelectItem key={k} value={k} className="text-sm">
-                              {v}
+                              {t(key)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Placeholder (optional)</Label>
+                      <Label className="text-xs">{t("fieldPlaceholder")}</Label>
                       <Input
                         value={field.placeholder ?? ""}
                         onChange={(e) =>
                           updateField(field.id, { placeholder: e.target.value })
                         }
-                        placeholder="Help text shown inside the field"
+                        placeholder={t("fieldPlaceholderHelp")}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -287,7 +283,7 @@ export function WarningTemplateBuilder({
                         htmlFor={`req-${field.id}`}
                         className="text-xs font-normal"
                       >
-                        Required field
+                        {t("fieldRequired")}
                       </Label>
                     </div>
                   </div>
@@ -310,7 +306,7 @@ export function WarningTemplateBuilder({
               size="sm"
               onClick={addField}
             >
-              <Plus className="mr-1.5 size-3.5" /> Add Field
+              <Plus className="mr-1.5 size-3.5" /> {t("addField")}
             </Button>
           </TabsContent>
 
@@ -323,14 +319,14 @@ export function WarningTemplateBuilder({
               <div className="border-border/60 rounded-xl border border-dashed p-8 text-center">
                 <FileText className="text-muted-foreground mx-auto mb-2 size-8 opacity-30" />
                 <p className="text-muted-foreground text-sm">
-                  Fill in the template info first to see a preview.
+                  {t("previewEmpty")}
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-lg font-bold">
-                    {title || "Untitled Template"}
+                    {title || t("untitled")}
                   </span>
                   <Badge
                     className={cn(
@@ -339,11 +335,11 @@ export function WarningTemplateBuilder({
                       typeMeta.text,
                     )}
                   >
-                    {typeMeta.label}
+                    {warningTypeLabel(defaultType)}
                   </Badge>
                   {requiresSignature && (
                     <Badge variant="outline" className="text-[10px]">
-                      Requires signature
+                      {t("requiresSignatureBadge")}
                     </Badge>
                   )}
                 </div>
@@ -355,7 +351,7 @@ export function WarningTemplateBuilder({
                 {fields.length > 0 && (
                   <div className="border-border/60 space-y-2 rounded-xl border p-4">
                     <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                      Manager fills in
+                      {t("managerFillsIn")}
                     </p>
                     {fields.map((f) => (
                       <div
@@ -363,14 +359,14 @@ export function WarningTemplateBuilder({
                         className="flex items-center gap-2 text-sm"
                       >
                         <span className="font-medium">
-                          {f.label || "Unnamed field"}
+                          {f.label || t("unnamedField")}
                         </span>
                         <Badge variant="secondary" className="text-[10px]">
-                          {FIELD_TYPE_LABELS[f.type]}
+                          {t(FIELD_TYPE_KEYS[f.type])}
                         </Badge>
                         {f.required && (
                           <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600">
-                            required
+                            {t("required")}
                           </Badge>
                         )}
                       </div>
@@ -380,10 +376,10 @@ export function WarningTemplateBuilder({
 
                 <div className="bg-muted/20 rounded-xl border p-5">
                   <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                    Warning document text
+                    {t("documentText")}
                   </p>
                   <pre className="font-sans text-sm/relaxed whitespace-pre-wrap">
-                    {body || "No body text written yet."}
+                    {body || t("noBody")}
                   </pre>
                 </div>
               </div>
@@ -393,10 +389,10 @@ export function WarningTemplateBuilder({
 
         <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!title.trim() || !body.trim()}>
-            {existing ? "Save Changes" : "Create Template"}
+            {existing ? t("saveTemplate") : t("createTemplate")}
           </Button>
         </DialogFooter>
       </DialogContent>
