@@ -26,63 +26,55 @@ import type {
 
 const COLOR_CONFIG: Record<
   RoomCategoryColor,
-  { bg: string; text: string; bar: string; badge: string; border: string }
+  { bg: string; text: string; bar: string; badge: string }
 > = {
   amber: {
     bg: "bg-amber-100",
     text: "text-amber-700",
     bar: "bg-amber-400",
     badge: "bg-amber-100 text-amber-800 border-amber-200",
-    border: "border-l-amber-400",
   },
   violet: {
     bg: "bg-violet-100",
     text: "text-violet-700",
     bar: "bg-violet-500",
     badge: "bg-violet-100 text-violet-800 border-violet-200",
-    border: "border-l-violet-400",
   },
   blue: {
     bg: "bg-blue-100",
     text: "text-blue-700",
     bar: "bg-blue-500",
     badge: "bg-blue-100 text-blue-800 border-blue-200",
-    border: "border-l-blue-400",
   },
   emerald: {
     bg: "bg-emerald-100",
     text: "text-emerald-700",
     bar: "bg-emerald-500",
     badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    border: "border-l-emerald-400",
   },
   rose: {
     bg: "bg-rose-100",
     text: "text-rose-700",
     bar: "bg-rose-500",
     badge: "bg-rose-100 text-rose-800 border-rose-200",
-    border: "border-l-rose-400",
   },
   orange: {
     bg: "bg-orange-100",
     text: "text-orange-700",
     bar: "bg-orange-400",
     badge: "bg-orange-100 text-orange-800 border-orange-200",
-    border: "border-l-orange-400",
   },
   indigo: {
     bg: "bg-indigo-100",
     text: "text-indigo-700",
     bar: "bg-indigo-500",
     badge: "bg-indigo-100 text-indigo-800 border-indigo-200",
-    border: "border-l-indigo-400",
   },
   slate: {
     bg: "bg-slate-100",
     text: "text-slate-700",
     bar: "bg-slate-400",
     badge: "bg-slate-100 text-slate-800 border-slate-200",
-    border: "border-l-slate-400",
   },
 };
 

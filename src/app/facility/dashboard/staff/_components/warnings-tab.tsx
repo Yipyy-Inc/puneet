@@ -52,16 +52,6 @@ import type { StaffProfile } from "@/types/facility-staff";
 import { fullNameOf } from "./staff-shared";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 
-// Left-border accent per warning severity
-const TYPE_BORDER: Record<WarningType, string> = {
-  verbal: "border-l-amber-400",
-  written: "border-l-orange-400",
-  final: "border-l-red-500",
-  suspension: "border-l-red-600",
-  termination: "border-l-red-900",
-  custom: "border-l-slate-400",
-};
-
 // Subtle background tint per severity
 const TYPE_BG: Record<WarningType, string> = {
   verbal: "bg-amber-50/60 dark:bg-amber-950/20",
@@ -237,7 +227,6 @@ function WarningCard({
     <div
       className={cn(
         "overflow-hidden rounded-xl border",
-        TYPE_BORDER[w.type],
         TYPE_BG[w.type],
         "border-border/50",
       )}

@@ -87,7 +87,6 @@ const FIELD_TYPE_OPTIONS: {
   desc: string;
   badgeBg: string;
   badgeText: string;
-  accent: string;
 }[] = [
   {
     value: "yes_no",
@@ -95,7 +94,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Toggle question",
     badgeBg: "bg-emerald-50",
     badgeText: "text-emerald-700",
-    accent: "border-l-emerald-400",
   },
   {
     value: "scale",
@@ -103,7 +101,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Three-point scale",
     badgeBg: "bg-amber-50",
     badgeText: "text-amber-700",
-    accent: "border-l-amber-400",
   },
   {
     value: "single_select",
@@ -111,7 +108,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Pick one option",
     badgeBg: "bg-sky-50",
     badgeText: "text-sky-700",
-    accent: "border-l-sky-400",
   },
   {
     value: "multi_select",
@@ -119,7 +115,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Pick multiple",
     badgeBg: "bg-violet-50",
     badgeText: "text-violet-700",
-    accent: "border-l-violet-400",
   },
   {
     value: "text",
@@ -127,7 +122,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Open-ended answer",
     badgeBg: "bg-slate-100",
     badgeText: "text-slate-600",
-    accent: "border-l-slate-400",
   },
   {
     value: "number",
@@ -135,7 +129,6 @@ const FIELD_TYPE_OPTIONS: {
     desc: "Numeric input",
     badgeBg: "bg-rose-50",
     badgeText: "text-rose-700",
-    accent: "border-l-rose-400",
   },
 ];
 

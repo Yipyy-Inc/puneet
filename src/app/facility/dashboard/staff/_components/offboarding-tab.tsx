@@ -229,16 +229,7 @@ function OffboardingTaskRow({
   const overdue = !complete && !!task.dueDate && task.dueDate < today;
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border p-3",
-        complete
-          ? "border-l-emerald-400"
-          : overdue
-            ? "border-l-rose-400"
-            : "border-l-amber-400",
-      )}
-    >
+    <div className={cn("rounded-xl border p-3")}>
       <div className="flex items-start gap-2.5">
         <div className="mt-0.5 shrink-0">
           {complete ? (

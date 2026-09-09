@@ -49,7 +49,7 @@ function HubInner() {
                 className={cn(
                   "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                   active
-                    ? "border-b-blue-600 bg-blue-50/50 text-blue-700"
+                    ? "border-b-primary text-primary"
                     : "border-b-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700",
                 )}
               >
