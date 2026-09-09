@@ -822,23 +822,16 @@ const BASELINE: Record<string, Map<string, number>> = {
   // convert every file it newly sees, and nobody widens it.
   staff: new Map([
     ["src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx", 9],
-    [
-      "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
-      11,
-    ],
-    ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 4],
-    ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
     ["src/components/facility/DepartmentSettings.tsx", 7],
-    ["src/components/facility/StaffPreviewDialog.tsx", 3],
     ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
-    // ── FOUND BY THE DEPTH 3 → 5 CHANGE, 2026-09-09 ───────────────────
+    // ── THE LAST ONE THE DEPTH 3 → 5 CHANGE FOUND, 2026-09-09 ─────────
     //
-    // Four files the walk could not previously reach. None of them is
-    // obscure: the first is the employee portal's own home screen.
-    ["src/components/facility/NotificationRowMenu.tsx", 4],
-    // The facility HEADER's, reached through the preview dialog's embedded
-    // portal shell — see the note on staffSurface(). Baselined here because
-    // nothing else measures it yet, not because it is staff's.
+    // The other three it found (`employee-dashboard-widgets`, `ClockConfirm`,
+    // `NotificationRowMenu`) were converted the same day and are gone from
+    // this list. This one is the facility HEADER's, reached through the
+    // preview dialog's embedded portal shell — see the note on
+    // staffSurface(). Baselined here because nothing else measures it yet,
+    // not because it is staff's.
     ["src/components/clients/CreateClientModal.tsx", 125],
   ]),
   "shell:facility": new Map<string, number>(),

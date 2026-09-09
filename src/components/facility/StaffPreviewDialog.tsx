@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { EmployeeSidebar } from "@/components/employee/EmployeeSidebar";
 import { EmployeeHeader } from "@/components/employee/EmployeeHeader";
 import { EmployeeDashboard } from "@/components/employee/EmployeeDashboard";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { facilityStaff } from "@/data/facility-staff";
 import { fullNameOf } from "@/app/facility/dashboard/staff/_components/staff-shared";
 
@@ -77,13 +78,14 @@ export function StaffPreviewDialog({
 }
 
 function PreviewBanner({ onClose }: { onClose: () => void }) {
+  const { t, fill } = useStaffText("preview");
   const preview = useStaffPreview();
   return (
     <div className="flex shrink-0 items-center justify-between gap-3 border border-amber-300 bg-amber-100 px-4 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200">
       <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
         <Eye className="size-4 shrink-0" />
         <span className="truncate">
-          Previewing as {preview?.name} — read only
+          {fill("previewingAs", { name: preview?.name ?? "" })}
         </span>
       </div>
       <Button
@@ -92,7 +94,7 @@ function PreviewBanner({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         className="bg-background/80 shrink-0"
       >
-        <X className="size-3.5" /> Exit preview
+        <X className="size-3.5" /> {t("exitPreview")}
       </Button>
     </div>
   );

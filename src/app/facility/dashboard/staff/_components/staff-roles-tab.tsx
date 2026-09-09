@@ -14,6 +14,7 @@ import {
 } from "@/types/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { RoleSection, type SectionUpdate } from "./staff-form-sections";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 /**
  * Roles & positions — primary + additional + custom roles (editable via the
@@ -29,6 +30,7 @@ export function StaffRolesTab({
   update: SectionUpdate;
   onRoleChange: (r: FacilityStaffRole) => void;
 }) {
+  const { t, fill } = useStaffText("rolesTab");
   const permissionText = usePermissionText();
   const { customRoles, presetOverrides } = useFacilityRbac();
   const effective = useMemo(
@@ -53,18 +55,18 @@ export function StaffRolesTab({
         <div className="flex items-center gap-2">
           <ShieldCheck className="text-primary size-4" />
           <h3 className="text-sm font-semibold tracking-tight">
-            Resulting permissions
+            {t("resultingPermissions")}
           </h3>
         </div>
         <p className="text-muted-foreground mt-0.5 text-xs">
           <span className="text-foreground font-medium">
-            {grantedCount} permissions granted
-          </span>{" "}
-          — the union of the primary role, additional roles, custom roles
+            {fill("grantedCount", { count: grantedCount })}
+          </span>
+          {t("unionOf")}
           {overrideCount > 0
-            ? `, and ${overrideCount} per-permission override${overrideCount === 1 ? "" : "s"}`
+            ? fill("plusOverrides", { count: overrideCount })
             : ""}
-          . Edit individual scopes in the Access &amp; overrides tab.
+          {t("editScopes")}
         </p>
 
         <div className="mt-3 space-y-2">

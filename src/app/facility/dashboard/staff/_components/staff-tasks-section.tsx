@@ -12,6 +12,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
+import type { AppLocale } from "@/lib/language-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateShort } from "@/lib/i18n/format";
 import {
   getOpenTasksForStaff,
   type StaffTaskSource,
@@ -20,20 +23,20 @@ import {
 
 const SOURCE_META: Record<
   StaffTaskSource,
-  { label: string; icon: React.ElementType; tone: string }
+  { labelKey: string; icon: React.ElementType; tone: string }
 > = {
   shift: {
-    label: "Shift task",
+    labelKey: "sourceShift",
     icon: CalendarClock,
     tone: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   },
   standalone: {
-    label: "Assigned task",
+    labelKey: "sourceStandalone",
     icon: ClipboardList,
     tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
   incident: {
-    label: "Incident follow-up",
+    labelKey: "sourceIncident",
     icon: AlertTriangle,
     tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
   },
@@ -46,11 +49,11 @@ const PRIORITY_TONE: Record<StaffTaskPriority, string> = {
   low: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
 };
 
-function formatDue(due?: string) {
+function formatDue(due: string | undefined, locale: AppLocale) {
   if (!due) return null;
   const d = new Date(due.length <= 10 ? `${due}T00:00:00` : due);
   if (Number.isNaN(d.getTime())) return due;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return formatDateShort(d, locale);
 }
 
 /**
@@ -59,6 +62,7 @@ function formatDue(due?: string) {
  * tasks, and incident follow-ups, so the manager has context in one place.
  */
 export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("tasksSection");
   const tasks = useMemo(() => getOpenTasksForStaff(staff), [staff]);
 
   return (
@@ -66,29 +70,31 @@ export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ListChecks className="text-primary size-4" />
-          <h2 className="text-sm font-semibold tracking-tight">Tasks</h2>
+          <h2 className="text-sm font-semibold tracking-tight">
+            {t("heading")}
+          </h2>
           <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px] font-medium">
-            {tasks.length} open
+            {fill("openCount", { count: tasks.length })}
           </span>
         </div>
         <Link
           href="/facility/dashboard/tasks"
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
         >
-          Task board <ExternalLink className="size-3" />
+          {t("taskBoard")} <ExternalLink className="size-3" />
         </Link>
       </div>
 
       {tasks.length === 0 ? (
         <div className="border-border/60 text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-          No open tasks assigned to {staff.firstName}.
+          {fill("noTasks", { name: staff.firstName })}
         </div>
       ) : (
         <ul className="space-y-2">
           {tasks.map((task) => {
             const meta = SOURCE_META[task.source];
             const Icon = meta.icon;
-            const due = formatDue(task.dueDate);
+            const due = formatDue(task.dueDate, locale);
             return (
               <li
                 key={task.id}
@@ -105,11 +111,13 @@ export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
                     {task.priority && (
                       <span
                         className={cn(
-                          "rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize",
+                          "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
                           PRIORITY_TONE[task.priority],
                         )}
                       >
-                        {task.priority}
+                        {t(
+                          `priority${task.priority.charAt(0).toUpperCase()}${task.priority.slice(1)}`,
+                        )}
                       </span>
                     )}
                   </div>
@@ -120,12 +128,13 @@ export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
                   )}
                   <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
                     <span className={cn("rounded-sm px-1.5 py-0.5", meta.tone)}>
-                      {meta.label}
+                      {t(meta.labelKey)}
                     </span>
                     {task.context && <span>{task.context}</span>}
                     {due && (
                       <span className="inline-flex items-center gap-1">
-                        <Clock className="size-3" /> Due {due}
+                        <Clock className="size-3" />{" "}
+                        {fill("due", { date: due })}
                       </span>
                     )}
                   </div>

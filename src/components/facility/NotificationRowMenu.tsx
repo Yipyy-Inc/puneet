@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MoreHorizontal, MailOpen, Mail, ArrowUpRight } from "lucide-react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,26 +27,19 @@ import type { FacilityNotification } from "@/types/facility";
  * derived rows (booking requests, announcements) can't persist a read flip, so
  * their menu shows just "Navigate to …".
  */
-const NAVIGATE_LABEL: Record<string, string> = {
-  customers: "Customers",
-  boarding: "Boarding",
-  daycare: "Daycare",
-  grooming: "Grooming",
-  training: "Training",
-  forms: "Forms",
-  yipyygo: "Express Check-in",
-  schedule: "Schedule",
-  tasks: "Tasks",
-  system: "Announcements",
+/** Category → catalogue key. The words live in the catalogue. */
+const NAVIGATE_KEY: Record<string, string> = {
+  customers: "navCustomers",
+  boarding: "navBoarding",
+  daycare: "navDaycare",
+  grooming: "navGrooming",
+  training: "navTraining",
+  forms: "navForms",
+  yipyygo: "navYipyygo",
+  schedule: "navSchedule",
+  tasks: "navTasks",
+  system: "navSystem",
 };
-
-function navigateLabel(category?: string): string {
-  if (!category) return "details";
-  return (
-    NAVIGATE_LABEL[category] ??
-    category.charAt(0).toUpperCase() + category.slice(1)
-  );
-}
 
 export function NotificationRowMenu({
   notification,
@@ -56,6 +50,19 @@ export function NotificationRowMenu({
   canToggleRead: boolean;
   onNavigate?: () => void;
 }) {
+  const { t, fill } = useStaffText("notificationMenu");
+
+  /**
+   * A category's words. An unknown one falls through to the capitalised slug
+   * — which cannot translate, but at least reads as words.
+   */
+  const navigateLabel = (category?: string) => {
+    if (!category) return t("details");
+    const key = NAVIGATE_KEY[category];
+    if (key) return t(key);
+    return category.charAt(0).toUpperCase() + category.slice(1);
+  };
+
   // The row is wrapped in a <Link> (and, in the bell, inside another menu), so
   // every interaction here must stop the click from bubbling into navigation.
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -66,7 +73,7 @@ export function NotificationRowMenu({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Notification options"
+          aria-label={t("options")}
           className="text-muted-foreground hover:text-foreground size-7 shrink-0 self-center"
           onClick={(e) => {
             e.preventDefault();
@@ -87,21 +94,23 @@ export function NotificationRowMenu({
               onSelect={() => markFacilityNotificationUnread(notification.id)}
             >
               <Mail className="size-4" />
-              Mark as unread
+              {t("markUnread")}
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem
               onSelect={() => markFacilityNotificationRead(notification.id)}
             >
               <MailOpen className="size-4" />
-              Mark as read
+              {t("markRead")}
             </DropdownMenuItem>
           ))}
         {notification.link && (
           <DropdownMenuItem asChild>
             <Link href={notification.link} onClick={() => onNavigate?.()}>
               <ArrowUpRight className="size-4" />
-              Navigate to {navigateLabel(notification.category)}
+              {fill("navigateTo", {
+                where: navigateLabel(notification.category),
+              })}
             </Link>
           </DropdownMenuItem>
         )}
