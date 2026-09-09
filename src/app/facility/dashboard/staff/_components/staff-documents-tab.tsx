@@ -8,6 +8,8 @@ import { useOnboardingTemplates } from "@/lib/api/staff-onboarding";
 import { isOffboardingDoc, useStaffDocuments } from "@/lib/api/staff-documents";
 import { EmployeeFilesTab } from "./employee-files-tab";
 import { WriteUpsTab } from "./write-ups-tab";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateShort } from "@/lib/i18n/format";
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
@@ -37,6 +39,7 @@ function DocSection({
  * write-ups, and (for departed staff) final offboarding documents.
  */
 export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("documentsTab");
   const onboarding = useOnboardingInstance(staff.id);
   const templates = useOnboardingTemplates();
   // Final documents are ordinary staff_documents rows with a departure
@@ -56,13 +59,10 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
   return (
     <div className="space-y-8">
       {/* Onboarding documents */}
-      <DocSection
-        title="Onboarding documents"
-        hint="Uploads and signed policies from the self-serve onboarding flow."
-      >
+      <DocSection title={t("onboardingDocs")} hint={t("onboardingDocsHint")}>
         {docSections.length === 0 ? (
           <div className="border-border/60 text-muted-foreground rounded-lg border border-dashed py-6 text-center text-xs">
-            No onboarding documents yet.
+            {t("noOnboardingDocs")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -93,14 +93,14 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
                     {section.type === "document_sign" ? (
                       signature ? (
                         <p className="text-muted-foreground text-[11px]">
-                          Signed by {signature}
+                          {fill("signedBy", { who: signature })}
                           {data.signedAt
-                            ? ` · ${new Date(str(data.signedAt)).toLocaleDateString()}`
+                            ? ` · ${formatDateShort(new Date(str(data.signedAt)), locale)}`
                             : ""}
                         </p>
                       ) : (
                         <p className="text-muted-foreground text-[11px]">
-                          Not signed
+                          {t("notSigned")}
                         </p>
                       )
                     ) : file?.name ? (
@@ -112,12 +112,12 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
                       >
                         {file.name}
                         {file.uploadedAt
-                          ? ` · ${new Date(file.uploadedAt).toLocaleDateString()}`
+                          ? ` · ${formatDateShort(new Date(file.uploadedAt), locale)}`
                           : ""}
                       </a>
                     ) : (
                       <p className="text-muted-foreground text-[11px]">
-                        Not uploaded
+                        {t("notUploaded")}
                       </p>
                     )}
                   </div>
@@ -129,27 +129,18 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
       </DocSection>
 
       {/* Employee files & certifications — full CRUD, reused */}
-      <DocSection
-        title="Employee files & certifications"
-        hint="Work permits, certifications, contracts, tax forms, and other HR files."
-      >
+      <DocSection title={t("employeeFiles")} hint={t("employeeFilesHint")}>
         <EmployeeFilesTab profile={staff} />
       </DocSection>
 
       {/* Write-ups & reviews */}
-      <DocSection
-        title="Write-ups & reviews"
-        hint="Disciplinary records, recognitions, and performance notes."
-      >
+      <DocSection title={t("writeUps")} hint={t("writeUpsHint")}>
         <WriteUpsTab profile={staff} />
       </DocSection>
 
       {/* Offboarding final documents (terminated only) */}
       {finalDocs.length > 0 && (
-        <DocSection
-          title="Final documents"
-          hint="Permanent departure records (ROE, termination letter, settlement)."
-        >
+        <DocSection title={t("finalDocs")} hint={t("finalDocsHint")}>
           <div className="space-y-2">
             {finalDocs.map((doc) => (
               <div
@@ -161,8 +152,8 @@ export function StaffDocumentsTab({ staff }: { staff: StaffProfile }) {
                   <div className="text-sm font-medium">{doc.name}</div>
                   {doc.retainUntil && (
                     <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
-                      <Lock className="size-2.5" /> Retained until{" "}
-                      {doc.retainUntil}
+                      <Lock className="size-2.5" />{" "}
+                      {fill("retainedUntil", { date: doc.retainUntil })}
                     </p>
                   )}
                 </div>

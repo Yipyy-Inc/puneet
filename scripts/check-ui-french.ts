@@ -167,7 +167,7 @@ const TYPE_IMPORT = /\bimport\s+type\s+[\s\S]{0,400}?from\s+["'][^"']+["']/g;
 
 /** Attributes whose literal value is read by a person, not by a machine. */
 const VISIBLE_ATTR =
-  /\b(?:placeholder|title|aria-label|label|description|emptyMessage|emptyLabel|helperText|tooltip|heading|subtitle|confirmLabel|cancelLabel|submitLabel)\s*=\s*"([^"]{2,})"/g;
+  /\b(?:placeholder|title|aria-label|label|description|emptyMessage|emptyLabel|helperText|hint|tooltip|heading|subtitle|confirmLabel|cancelLabel|submitLabel)\s*=\s*"([^"]{2,})"/g;
 
 /** The sentence after a save. `toast.success("Saved")` and friends. */
 const TOAST = /toast(?:\.\w+)?\(\s*"([^"]{2,})"/g;
@@ -746,11 +746,6 @@ const BASELINE: Record<string, Map<string, number>> = {
     [
       "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
       10,
-    ],
-    ["src/app/facility/dashboard/staff/_components/staff-documents-tab.tsx", 9],
-    [
-      "src/app/facility/dashboard/staff/_components/staff-form-sections.tsx",
-      56,
     ],
     [
       "src/app/facility/dashboard/staff/_components/staff-profile-sheet.tsx",

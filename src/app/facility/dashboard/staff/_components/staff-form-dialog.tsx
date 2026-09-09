@@ -142,6 +142,9 @@ function StaffFormDialogBody({
   const [section, setSection] = useState<StaffSectionId>("profile");
   const [reviewing, setReviewing] = useState(false);
   const { t, fill } = useStaffText("form");
+  // The six section labels live in `staff-form-sections`, so they are in that
+  // area rather than this one — the array is shared with the profile tabs.
+  const { t: sectionText } = useStaffText("formSections");
   const [draft, setDraft] = useState<StaffProfile>(
     () => editing ?? emptyProfile(),
   );
@@ -278,7 +281,7 @@ function StaffFormDialogBody({
                     )}
                   >
                     <Icon className="size-4" />
-                    {s.label}
+                    {sectionText(s.key)}
                   </button>
                 );
               })}
@@ -296,7 +299,7 @@ function StaffFormDialogBody({
                   <SelectContent>
                     {visibleSections.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        {s.label}
+                        {sectionText(s.key)}
                       </SelectItem>
                     ))}
                   </SelectContent>
