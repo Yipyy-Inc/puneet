@@ -1,4 +1,5 @@
 import React from "react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Package } from "lucide-react";
@@ -21,13 +22,13 @@ export function PackagePromptWizardContent({
   onApply,
   onSkip,
 }: PackagePromptWizardContentProps) {
+  const t = useShellText("booking");
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Active Packages Detected</h3>
+        <h3 className="text-lg font-semibold">{t("activePackages")}</h3>
         <p className="text-muted-foreground text-sm">
-          This client has active packages that cover the selected service. Would
-          you like to redeem a pass?
+          {t("activePackagesHelp")}
         </p>
       </div>
 
@@ -43,7 +44,9 @@ export function PackagePromptWizardContent({
                   <div>
                     <p className="font-semibold text-emerald-950">{pkg.name}</p>
                     <p className="text-sm text-emerald-700">
-                      {pkg.passesLeft} of {pkg.totalPasses} passes remaining
+                      {t("passesOf")
+                        .replace("{left}", String(pkg.passesLeft))
+                        .replace("{total}", String(pkg.totalPasses))}
                     </p>
                   </div>
                 </div>
@@ -51,7 +54,7 @@ export function PackagePromptWizardContent({
                   onClick={() => onApply(pkg.id)}
                   className="bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  Apply Pass
+                  {t("applyPass")}
                 </Button>
               </div>
             </CardContent>
@@ -61,7 +64,7 @@ export function PackagePromptWizardContent({
 
       <div className="flex justify-end pt-4">
         <Button variant="ghost" onClick={onSkip}>
-          Skip and proceed to payment
+          {t("skipToPayment")}
         </Button>
       </div>
     </div>

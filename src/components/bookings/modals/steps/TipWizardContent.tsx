@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Heart, PawPrint, Sparkles, Users, ShieldCheck } from "lucide-react";
@@ -70,6 +72,8 @@ export function TipWizardContent({
   contextTitle,
   contextSubtitle,
 }: TipWizardContentProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const tier = useMemo(() => {
     if (tipConfig.mode === "smart") {
       return subtotal < tipConfig.smart.thresholdAmount
@@ -155,14 +159,24 @@ export function TipWizardContent({
             <h3 className="text-[17px] leading-tight font-bold tracking-tight">
               {contextTitle ??
                 (petName
-                  ? `${petName} will be in great hands! 🐾`
-                  : "Your pet will be in great hands! 🐾")}
+                  ? t("petGreatHands").replace("{pet}", petName)
+                  : t("yourPetGreatHands"))}
             </h3>
             <p className="text-muted-foreground text-[13px] leading-snug">
               {contextSubtitle ??
                 (petName
-                  ? `Show your appreciation for the team that will care for ${petName}${serviceLabel ? ` during ${serviceLabel.toLowerCase()}` : ""}.`
-                  : "Show your appreciation for the team that will provide care.")}
+                  ? t("tipIntroPet")
+                      .replace("{pet}", petName)
+                      .replace(
+                        "{service}",
+                        serviceLabel
+                          ? t("tipDuring").replace(
+                              "{service}",
+                              serviceLabel.toLowerCase(),
+                            )
+                          : "",
+                      )
+                  : t("tipIntroGeneric"))}
             </p>
           </div>
 
@@ -192,33 +206,29 @@ export function TipWizardContent({
             </div>
             <div className="text-micro/tight flex-1 text-left">
               <p className="font-medium">
-                Cared for by{" "}
-                {staffList
-                  .slice(0, 3)
-                  .map((s) => s.name)
-                  .join(", ")}
-                {staffCount > 3 ? ` +${staffCount - 3}` : ""}
+                {t("caredForByNames").replace(
+                  "{names}",
+                  staffList
+                    .slice(0, 3)
+                    .map((member) => member.name)
+                    .join(", ") + (staffCount > 3 ? ` +${staffCount - 3}` : ""),
+                )}
               </p>
-              <p className="text-muted-foreground">
-                100% of your tip is split evenly among the team
-              </p>
+              <p className="text-muted-foreground">{t("tipSplitEvenly")}</p>
             </div>
           </div>
 
           {/* Trust line */}
           <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
             <ShieldCheck className="size-3.5 shrink-0" />
-            <span>
-              Tips are 100% optional and go directly to the staff. Never to the
-              facility.
-            </span>
+            <span>{t("tipsOptional")}</span>
           </div>
         </div>
 
         {/* ── Right panel: tip selection ── */}
         <div className="flex flex-1 flex-col justify-center gap-4 px-8 py-10">
           <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
-            Choose an amount
+            {t("chooseAnAmount")}
           </p>
 
           {/* 2×2 tip options grid */}
@@ -247,13 +257,13 @@ export function TipWizardContent({
                 >
                   {isPreferred && (
                     <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase shadow-sm">
-                      <Sparkles className="size-2.5" /> Most popular
+                      <Sparkles className="size-2.5" /> {t("mostPopular")}
                     </span>
                   )}
                   <span className="text-lg font-bold">
                     {opt.type === "percentage"
-                      ? `${opt.value}%`
-                      : `$${opt.value.toFixed(0)}`}
+                      ? formatPercent(opt.value, locale)
+                      : formatMoney(opt.value, locale, { whole: true })}
                   </span>
                   <span
                     className={cn(
@@ -262,8 +272,8 @@ export function TipWizardContent({
                     )}
                   >
                     {opt.type === "percentage"
-                      ? `$${amount.toFixed(2)}`
-                      : opt.label || "Thank the team"}
+                      ? formatMoney(amount, locale)
+                      : opt.label || t("thankTheTeam")}
                   </span>
                   {opt.type === "percentage" && opt.label && (
                     <span className="text-[10px] opacity-70">{opt.label}</span>
@@ -286,9 +296,9 @@ export function TipWizardContent({
                   : "bg-background/50 hover:border-primary/40 hover:bg-background/80 border-transparent",
               )}
             >
-              <span className="text-sm font-bold">Custom</span>
+              <span className="text-sm font-bold">{t("custom")}</span>
               <span className="text-muted-foreground text-[11px]">
-                Pick your own
+                {t("pickYourOwn")}
               </span>
             </button>
           </div>
@@ -318,7 +328,7 @@ export function TipWizardContent({
                 onClick={handleCustomApply}
                 className="h-10"
               >
-                Apply
+                {t("apply")}
               </Button>
             </div>
           )}
@@ -331,13 +341,16 @@ export function TipWizardContent({
               className="border-primary/30 bg-background/50 hover:bg-background/80 flex w-full items-center justify-between rounded-xl border border-dashed px-3 py-2 text-left text-[12px] transition-colors"
             >
               <span className="text-muted-foreground">
-                ✨ Round up to{" "}
-                <span className="text-foreground font-semibold">
-                  ${roundTarget.toFixed(2)}
-                </span>
+                {t("roundUpTo").replace(
+                  "{amount}",
+                  formatMoney(roundTarget, locale),
+                )}
               </span>
               <span className="text-primary font-medium">
-                Add ${(roundUpAmount - localTip).toFixed(2)}
+                {t("addAmount").replace(
+                  "{amount}",
+                  formatMoney(roundUpAmount - localTip, locale),
+                )}
               </span>
             </button>
           )}
@@ -347,12 +360,14 @@ export function TipWizardContent({
             <div className="bg-background/50 border-primary/15 flex items-center gap-2 rounded-xl border p-3 text-[12px]">
               <Users className="text-primary size-4 shrink-0" />
               <p>
-                <span className="font-semibold">${localTip.toFixed(2)}</span>{" "}
-                goes to the team — about{" "}
                 <span className="font-semibold">
-                  ${perStaffShare.toFixed(2)}
+                  {formatMoney(localTip, locale)}
                 </span>{" "}
-                per caregiver.
+                {t("goesToTeam")}{" "}
+                <span className="font-semibold">
+                  {formatMoney(perStaffShare, locale)}
+                </span>{" "}
+                {t("perCaregiver")}
               </p>
             </div>
           )}
@@ -363,7 +378,7 @@ export function TipWizardContent({
             onClick={handleSkip}
             className="text-muted-foreground hover:text-foreground mt-2 w-full text-center text-[11px] underline-offset-4 transition-colors hover:underline"
           >
-            {localTip > 0 ? "Remove tip — no tip this time" : "Maybe next time"}
+            {localTip > 0 ? t("removeTip") : t("maybeNextTime")}
           </button>
         </div>
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { useState } from "react";
 import { CreditCard, Banknote, Smartphone, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,8 @@ export function BookingDepositPrompt({
   value,
   onChange,
 }: BookingDepositPromptProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const required = computeDepositAmount(rule, bookingTotal);
   const [customMode, setCustomMode] = useState(false);
 
@@ -48,7 +52,7 @@ export function BookingDepositPrompt({
         <div className="flex-1">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-emerald-950">
-              Deposit required
+              {t("depositRequired")}
             </p>
             <Badge
               variant="outline"
@@ -58,11 +62,11 @@ export function BookingDepositPrompt({
             </Badge>
           </div>
           <p className="mt-0.5 text-[11px] text-emerald-800/80">
-            Per facility rules, this booking needs a{" "}
+            {t("depositRuleBefore")}{" "}
             <span className="font-[tabular-nums] font-semibold">
-              ${required.toFixed(2)}
+              {formatMoney(required, locale)}
             </span>{" "}
-            deposit before it can be confirmed.
+            {t("depositRuleAfter")}
           </p>
         </div>
       </div>
@@ -71,10 +75,10 @@ export function BookingDepositPrompt({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-emerald-950">
-              Collect deposit now
+              {t("collectDepositNow")}
             </p>
             <p className="text-[11px] text-emerald-800/70">
-              Toggle off to skip — staff can charge later from the booking page
+              {t("collectDepositHelp")}
             </p>
           </div>
           <Switch
@@ -94,7 +98,7 @@ export function BookingDepositPrompt({
           <>
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200/80 bg-white px-3 py-2">
               <span className="text-[10px] font-semibold tracking-wider text-emerald-900/70 uppercase">
-                Amount
+                {t("amount")}
               </span>
               <button
                 type="button"
@@ -109,7 +113,10 @@ export function BookingDepositPrompt({
                     : "border-transparent text-emerald-900/70 hover:bg-emerald-50",
                 )}
               >
-                Use rule (${required.toFixed(2)})
+                {t("useRule").replace(
+                  "{amount}",
+                  formatMoney(required, locale),
+                )}
               </button>
               <button
                 type="button"
@@ -121,7 +128,7 @@ export function BookingDepositPrompt({
                     : "border-transparent text-emerald-900/70 hover:bg-emerald-50",
                 )}
               >
-                Custom
+                {t("custom")}
               </button>
               {customMode && (
                 <Input
@@ -143,7 +150,7 @@ export function BookingDepositPrompt({
 
             <div>
               <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-emerald-900/70 uppercase">
-                Payment method
+                {t("paymentMethod")}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {METHODS.map(({ value: m, label, Icon }) => (

@@ -224,7 +224,7 @@ function ContactCard({
               type="email"
               value={contact.email ?? ""}
               onChange={(e) => onUpdate({ email: e.target.value })}
-              placeholder="contact@example.com"
+              placeholder={t("acEmailPlaceholder")}
             />
           </div>
         </div>
@@ -337,7 +337,7 @@ function TagPicker({
     <div className="space-y-1.5">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
         <Tag className="size-3" />
-        Tags
+        {t("acTags")}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {ADDITIONAL_CONTACT_TAGS.map((tag) => {

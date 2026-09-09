@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, AlertCircle } from "lucide-react";
@@ -27,6 +29,10 @@ export function MembershipCreditPanel({
   service: string;
   onClose: () => void;
 }) {
+  // Above the two early returns below: hooks run in the same order every
+  // render or they run wrong.
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const [dismissed, setDismissed] = useState(false);
 
   const membership = memberships.find(
@@ -52,9 +58,16 @@ export function MembershipCreditPanel({
       <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
         <Sparkles className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <p className="text-emerald-900 dark:text-emerald-200">
-          Your {plan.name} membership credit will be applied.{" "}
-          <span className="font-semibold">Cost to you: $0</span>
-          {!unlimited && ` (${used} of ${total} credits used this cycle)`}.
+          {t("membershipYour")} {plan.name} {t("membershipApplied")}{" "}
+          <span className="font-semibold">
+            {t("costToYou").replace("{amount}", formatMoney(0, locale))}
+          </span>
+          {!unlimited &&
+            " " +
+              t("creditsUsedThisCycle")
+                .replace("{used}", String(used))
+                .replace("{total}", String(total))}
+          .
         </p>
       </div>
     );
@@ -67,21 +80,19 @@ export function MembershipCreditPanel({
       <div className="flex items-start gap-2">
         <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
         <p className="text-amber-900 dark:text-amber-200">
-          You&apos;ve used all {total} credits for this month. Your next credits
-          refresh on{" "}
+          {t("usedAllCredits")} {total} {t("creditsRefreshOn")}{" "}
           <span className="font-semibold">
             {formatDate(membership.nextBillingDate)}
           </span>
-          . Book now and pay the regular rate, or wait for your credits to
-          refresh.
+          . {t("bookNowOrWait")}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => setDismissed(true)}>
-          Book anyway
+          {t("bookAnyway")}
         </Button>
         <Button size="sm" variant="outline" onClick={onClose}>
-          Wait for renewal
+          {t("waitForRenewal")}
         </Button>
       </div>
     </div>
