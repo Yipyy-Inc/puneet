@@ -10694,3 +10694,17 @@ intermittent red here teaches people to re-run rather than to read.
 Not chased down in the French pass. Whoever picks it up: find the case that
 runs outside `stubFetch`, and fail the test on an unstubbed fetch rather than
 letting it escape.
+
+### `StatusBadge` exists twice, character for character
+
+Found while translating the warnings surfaces. `warnings-tab.tsx` and
+`warnings/page.tsx` each define a private `StatusBadge({ status })` over
+`IssuedWarning["status"]` — same four branches, same class strings, same
+glyphs. Both had to be translated, separately, in the same change.
+
+Left duplicated on purpose: extracting it is a refactor, and doing refactors
+inside a translation pass is how a translation pass stops being reviewable.
+Whoever picks it up, it belongs beside the other shared staff bits in
+`_components/staff-shared.tsx`, which already owns `RolePill`, `ServiceChip`
+and the OTHER `StatusBadge` (the one over `StaffProfile["status"]` — note the
+name collision before moving either).

@@ -40,6 +40,9 @@ import {
   issuedWarnings as allWarnings,
   warningTemplates,
 } from "@/data/facility-warnings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useWarningTypeLabel } from "@/lib/staff/use-warning-type-label";
+import { formatDateLong, formatDateShort, formatTime } from "@/lib/i18n/format";
 import {
   WARNING_TYPE_META,
   type IssuedWarning,
@@ -76,6 +79,7 @@ function SignaturePad({
 }: {
   onChange: (dataUrl: string | null) => void;
 }) {
+  const { t } = useStaffText("warnings");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -129,14 +133,14 @@ function SignaturePad({
       />
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-[11px]">
-          Draw your signature above
+          {t("drawSignature")}
         </p>
         <button
           type="button"
           onClick={clear}
           className="text-muted-foreground hover:text-foreground text-[11px] underline"
         >
-          Clear
+          {t("clear")}
         </button>
       </div>
     </div>
@@ -146,27 +150,28 @@ function SignaturePad({
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: IssuedWarning["status"] }) {
+  const { t } = useStaffText("warnings");
   if (status === "signed")
     return (
       <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-400">
-        <CheckCircle2 className="mr-0.5 size-2.5" /> Signed
+        <CheckCircle2 className="mr-0.5 size-2.5" /> {t("statusSigned")}
       </Badge>
     );
   if (status === "pending_signature")
     return (
       <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-        <Clock className="mr-0.5 size-2.5" /> Pending signature
+        <Clock className="mr-0.5 size-2.5" /> {t("statusPending")}
       </Badge>
     );
   if (status === "appealed")
     return (
       <Badge className="border-0 bg-violet-500/10 text-[10px] text-violet-700 dark:text-violet-400">
-        Appealed
+        {t("statusAppealed")}
       </Badge>
     );
   return (
     <Badge className="border-0 bg-slate-500/10 text-[10px] text-slate-700 dark:text-slate-400">
-      Resolved
+      {t("statusResolved")}
     </Badge>
   );
 }
@@ -174,6 +179,7 @@ function StatusBadge({ status }: { status: IssuedWarning["status"] }) {
 // ── Type distribution strip ───────────────────────────────────────────────────
 
 function TypeDistribution({ warnings }: { warnings: IssuedWarning[] }) {
+  const typeLabel = useWarningTypeLabel();
   const counts = useMemo(() => {
     const map = new Map<WarningType, number>();
     for (const w of warnings) map.set(w.type, (map.get(w.type) ?? 0) + 1);
@@ -192,19 +198,19 @@ function TypeDistribution({ warnings }: { warnings: IssuedWarning[] }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {order
-        .filter((t) => counts.has(t))
-        .map((t) => {
-          const meta = WARNING_TYPE_META[t];
+        .filter((type) => counts.has(type))
+        .map((type) => {
+          const meta = WARNING_TYPE_META[type];
           return (
             <span
-              key={t}
+              key={type}
               className={cn(
                 "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
                 meta.bg,
                 meta.text,
               )}
             >
-              {counts.get(t)}× {meta.label}
+              {counts.get(type)}× {typeLabel(type)}
             </span>
           );
         })}
@@ -223,6 +229,8 @@ function WarningCard({
   isManager: boolean;
   onSign: (w: IssuedWarning) => void;
 }) {
+  const { t, fill, locale } = useStaffText("warnings");
+  const typeLabel = useWarningTypeLabel();
   const meta = WARNING_TYPE_META[w.type];
 
   return (
@@ -239,7 +247,7 @@ function WarningCard({
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="text-xs font-semibold">{w.templateTitle}</span>
           <Badge className={cn("border-0 text-[10px]", meta.bg, meta.text)}>
-            {meta.label}
+            {typeLabel(w.type)}
           </Badge>
           <StatusBadge status={w.status} />
         </div>
@@ -253,9 +261,7 @@ function WarningCard({
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px]">
           <span className="flex items-center gap-1">
             <Calendar className="size-2.5" />
-            {new Date(w.issuedAt).toLocaleDateString("en-CA", {
-              dateStyle: "medium",
-            })}
+            {formatDateShort(new Date(w.issuedAt), locale)}
           </span>
           <span className="flex items-center gap-1">
             <User className="size-2.5" />
@@ -264,7 +270,7 @@ function WarningCard({
           {w.witnessName && (
             <span className="flex items-center gap-1">
               <User className="size-2.5" />
-              Witness: {w.witnessName}
+              {fill("witness", { name: w.witnessName })}
             </span>
           )}
         </div>
@@ -273,7 +279,7 @@ function WarningCard({
         {w.managerNotes && (
           <div className="bg-muted/40 rounded-md px-2 py-1.5">
             <p className="text-muted-foreground mb-0.5 flex items-center gap-1 text-[9px] font-semibold tracking-wide uppercase">
-              <MessageSquare className="size-2.5" /> Manager notes
+              <MessageSquare className="size-2.5" /> {t("managerNotes")}
             </p>
             <p className="text-[11px] leading-snug">{w.managerNotes}</p>
           </div>
@@ -284,10 +290,8 @@ function WarningCard({
           <div className="border-border/50 rounded-md border px-2 py-1.5 text-[10px]">
             <p className="flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="size-2.5" />
-              Signed{" "}
-              {new Date(w.signedAt).toLocaleString("en-CA", {
-                dateStyle: "medium",
-                timeStyle: "short",
+              {fill("signedAt", {
+                when: `${formatDateLong(new Date(w.signedAt), locale)} ${formatTime(new Date(w.signedAt), locale)}`,
               })}
               {w.ipAddress && (
                 <span className="text-muted-foreground ml-1 font-normal">
@@ -305,7 +309,7 @@ function WarningCard({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={w.signatureData}
-                  alt="Employee signature"
+                  alt={t("signatureAlt")}
                   className="max-h-8 object-contain"
                 />
               </div>
@@ -321,7 +325,7 @@ function WarningCard({
             className="h-7 w-full text-[11px]"
             onClick={() => onSign(w)}
           >
-            <PenLine className="mr-1 size-3" /> Get Employee Signature
+            <PenLine className="mr-1 size-3" /> {t("getSignature")}
           </Button>
         )}
       </div>
@@ -336,6 +340,7 @@ interface WarningsTabProps {
 }
 
 export function WarningsTab({ profile }: WarningsTabProps) {
+  const { t, fill } = useStaffText("warnings");
   const fullName = fullNameOf(profile);
   const { can, viewerId } = useFacilityRbac();
   const isManager = can("manage_staff");
@@ -374,12 +379,9 @@ export function WarningsTab({ profile }: WarningsTabProps) {
         <div className="bg-muted mb-3 flex size-11 items-center justify-center rounded-full">
           <LockKeyhole className="text-muted-foreground size-5" />
         </div>
-        <p className="text-sm font-semibold">
-          Disciplinary records are private
-        </p>
+        <p className="text-sm font-semibold">{t("privateTitle")}</p>
         <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-          You can only view your own disciplinary history, not a
-          colleague&#39;s.
+          {t("privateBody")}
         </p>
       </div>
     );
@@ -468,7 +470,7 @@ export function WarningsTab({ profile }: WarningsTabProps) {
         {isManager && (
           <div className="flex justify-end">
             <Button size="sm" variant="outline" onClick={openIssue}>
-              <Plus className="mr-1.5 size-3.5" /> Issue Warning
+              <Plus className="mr-1.5 size-3.5" /> {t("issue")}
             </Button>
           </div>
         )}
@@ -476,11 +478,13 @@ export function WarningsTab({ profile }: WarningsTabProps) {
           <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-emerald-500/10">
             <CheckCircle2 className="size-6 text-emerald-600" />
           </div>
-          <p className="font-semibold">Clean disciplinary record</p>
+          <p className="font-semibold">{t("cleanTitle")}</p>
           <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-            {isManager
-              ? "No warnings have been issued to this staff member."
-              : "You have no warnings on record. Keep up the great work!"}
+            {/* "Keep up the great work!" went with the translation. §5q bans
+                nothing about praise, but the sentence was doing two jobs and
+                only one of them is this surface's — it reports a record, and a
+                clean one needs no exclamation mark to be good news. */}
+            {isManager ? t("cleanManager") : t("cleanEmployee")}
           </p>
         </div>
         {isManager && (
@@ -520,12 +524,10 @@ export function WarningsTab({ profile }: WarningsTabProps) {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
           <div>
             <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-              {warnings.length} warnings on record — review termination protocol
+              {fill("escalationTitle", { count: warnings.length })}
             </p>
             <p className="mt-0.5 text-xs text-red-600/80 dark:text-red-400/70">
-              Policy requires a formal HR review before further action. Consult
-              management before issuing additional warnings or initiating
-              termination.
+              {t("escalationBody")}
             </p>
           </div>
         </div>
@@ -537,12 +539,10 @@ export function WarningsTab({ profile }: WarningsTabProps) {
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
           <div>
             <p className="text-sm font-semibold text-sky-700 dark:text-sky-400">
-              Your disciplinary record
+              {t("employeeNoticeTitle")}
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              Signing a warning acknowledges receipt — not necessarily
-              agreement. Contact your manager if you believe a record is
-              inaccurate.
+              {t("employeeNoticeBody")}
             </p>
           </div>
         </div>
@@ -554,12 +554,13 @@ export function WarningsTab({ profile }: WarningsTabProps) {
         <div className="flex items-center gap-2">
           {pending > 0 && (
             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-              <Clock className="mr-0.5 size-2.5" /> {pending} pending signature
+              <Clock className="mr-0.5 size-2.5" />{" "}
+              {fill("pendingCount", { count: pending })}
             </Badge>
           )}
           {isManager && (
             <Button size="sm" variant="outline" onClick={openIssue}>
-              <Plus className="mr-1.5 size-3.5" /> Issue Warning
+              <Plus className="mr-1.5 size-3.5" /> {t("issue")}
             </Button>
           )}
         </div>
@@ -613,7 +614,7 @@ export function WarningsTab({ profile }: WarningsTabProps) {
         <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
-              <PenLine className="size-4" /> Employee Signature
+              <PenLine className="size-4" /> {t("signatureTitle")}
             </DialogTitle>
           </DialogHeader>
           {signingWarning && (
@@ -622,7 +623,7 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                 <div className="space-y-4 pr-2">
                   <div className="bg-muted/20 rounded-xl border p-4">
                     <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                      Warning document
+                      {t("document")}
                     </p>
                     <pre className="font-sans text-xs/relaxed whitespace-pre-wrap">
                       {signingWarning.body}
@@ -631,7 +632,7 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                   {Object.keys(signingWarning.fieldValues).length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                        Incident details
+                        {t("incidentDetails")}
                       </p>
                       {Object.entries(signingWarning.fieldValues).map(
                         ([k, v]) => (
@@ -652,12 +653,12 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                   )}
                   <div className="space-y-1.5">
                     <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                      Employee signature
+                      {t("signatureTitle")}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      By signing below, {signingWarning.employeeName}{" "}
-                      acknowledges receipt of this warning. Signing does not
-                      necessarily indicate agreement.
+                      {fill("signatureIntro", {
+                        name: signingWarning.employeeName,
+                      })}
                     </p>
                     <SignaturePad onChange={setSignatureData} />
                   </div>
@@ -668,14 +669,15 @@ export function WarningsTab({ profile }: WarningsTabProps) {
                   variant="outline"
                   onClick={() => setSigningWarning(null)}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleSign}
                   disabled={!signatureData}
                   className="bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  <CheckCircle2 className="mr-1.5 size-3.5" /> Confirm Signature
+                  <CheckCircle2 className="mr-1.5 size-3.5" />{" "}
+                  {t("confirmSignature")}
                 </Button>
               </DialogFooter>
             </>
@@ -731,18 +733,22 @@ function IssueWarningDialog({
   onIssue,
   employeeName,
 }: IssueDialogProps) {
+  const { t, fill } = useStaffText("warnings");
+  const typeLabel = useWarningTypeLabel();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Issue Warning — {employeeName}</DialogTitle>
+          <DialogTitle>
+            {fill("issueTitle", { name: employeeName })}
+          </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-4 pr-2">
             {/* Template selection */}
             <div className="space-y-1.5">
-              <Label>Warning Template</Label>
+              <Label>{t("template")}</Label>
               <Select value={templateId} onValueChange={onTemplateChange}>
                 <SelectTrigger>
                   <SelectValue />
@@ -750,7 +756,7 @@ function IssueWarningDialog({
                 <SelectContent>
                   <SelectItem value="ad-hoc">
                     <span className="flex items-center gap-2">
-                      <FileText className="size-3.5" /> Ad-hoc (no template)
+                      <FileText className="size-3.5" /> {t("adHoc")}
                     </span>
                   </SelectItem>
                   {warningTemplates
@@ -771,7 +777,7 @@ function IssueWarningDialog({
 
             {/* Warning type */}
             <div className="space-y-1.5">
-              <Label>Warning Type</Label>
+              <Label>{t("type")}</Label>
               <Select
                 value={formType}
                 onValueChange={(v) => setFormType(v as WarningType)}
@@ -780,9 +786,9 @@ function IssueWarningDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(WARNING_TYPE_META).map(([k, v]) => (
+                  {Object.keys(WARNING_TYPE_META).map((k) => (
                     <SelectItem key={k} value={k}>
-                      {v.label}
+                      {typeLabel(k as WarningType)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -791,11 +797,13 @@ function IssueWarningDialog({
 
             {/* Reason */}
             <div className="space-y-1.5">
-              <Label>Reason *</Label>
+              <Label>
+                {t("reason")} <span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={formReason}
                 onChange={(e) => setFormReason(e.target.value)}
-                placeholder="e.g., Repeated tardiness, safety protocol breach"
+                placeholder={t("reasonPlaceholder")}
               />
             </div>
 
@@ -803,7 +811,7 @@ function IssueWarningDialog({
             {selectedTemplate && selectedTemplate.fields.length > 0 && (
               <div className="space-y-3">
                 <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Template fields
+                  {t("templateFields")}
                 </p>
                 {selectedTemplate.fields.map((f) => (
                   <div key={f.id} className="space-y-1.5">
@@ -845,11 +853,11 @@ function IssueWarningDialog({
 
             {/* Warning body */}
             <div className="space-y-1.5">
-              <Label>Warning Document Body</Label>
+              <Label>{t("body")}</Label>
               <Textarea
                 value={formBody}
                 onChange={(e) => setFormBody(e.target.value)}
-                placeholder="The full warning text shown to the employee before signing…"
+                placeholder={t("bodyPlaceholder")}
                 rows={6}
                 className="text-sm"
               />
@@ -857,22 +865,22 @@ function IssueWarningDialog({
 
             {/* Manager notes */}
             <div className="space-y-1.5">
-              <Label>Manager Notes (internal)</Label>
+              <Label>{t("notes")}</Label>
               <Textarea
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="Context, follow-up actions, prior conversations…"
+                placeholder={t("notesPlaceholder")}
                 rows={2}
               />
             </div>
 
             {/* Witness */}
             <div className="space-y-1.5">
-              <Label>Witness Name (optional)</Label>
+              <Label>{t("witnessName")}</Label>
               <Input
                 value={formWitness}
                 onChange={(e) => setFormWitness(e.target.value)}
-                placeholder="Name of witness present"
+                placeholder={t("witnessPlaceholder")}
               />
             </div>
           </div>
@@ -880,14 +888,14 @@ function IssueWarningDialog({
 
         <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={onIssue}
             disabled={!formReason.trim()}
             className="bg-orange-600 text-white hover:bg-orange-700"
           >
-            <ShieldAlert className="mr-1.5 size-3.5" /> Issue Warning
+            <ShieldAlert className="mr-1.5 size-3.5" /> {t("issue")}
           </Button>
         </DialogFooter>
       </DialogContent>
