@@ -5,7 +5,8 @@ import { Bell } from "lucide-react";
 
 import { lastMessage, useSupportInbox } from "@/hooks/use-support-inbox";
 import { Button } from "@/components/ui/button";
-import { useShellText } from "@/lib/shell/use-shell-text";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatRelative } from "@/lib/i18n/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,15 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
+// Same reimplementation as the facility notifications dropdown, down to the
+// "d ago" that never expires into a date. `formatRelative` replaces it.
 
 /**
  * Agent notification bell for incoming support messages. Derives from the
@@ -32,6 +26,8 @@ function timeAgo(iso: string): string {
  */
 export function SupportNotificationBell() {
   const t = useShellText("admin");
+  const locale = useShellLocale();
+  const relative = (iso: string) => formatRelative(iso, locale);
   const conversations = useSupportInbox();
   const unread = conversations
     .filter((c) => c.unreadCount > 0)
@@ -85,7 +81,7 @@ export function SupportNotificationBell() {
                       {c.facilityName}
                     </span>
                     <span className="text-muted-foreground shrink-0 text-[10px]">
-                      {m ? timeAgo(m.at) : ""}
+                      {m ? relative(m.at) : ""}
                     </span>
                   </div>
                   <span className="text-muted-foreground line-clamp-1 text-xs">

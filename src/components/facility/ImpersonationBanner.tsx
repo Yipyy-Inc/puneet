@@ -66,6 +66,7 @@ export function ImpersonationBanner() {
     // french-ok: an audit-log record, not interface
     logImpersonationAction(session, `Viewed ${pathname}`, {
       category: "System",
+      // french-ok: the audit record's own sentence, stored not rendered
       description: `${session.adminName} viewed ${pathname} while impersonating ${session.facilityName}.`,
     });
   }, [pathname, session]);

@@ -307,6 +307,9 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
         staffName: fullName,
         to: profile.email,
         subject: "A document was added to your HR file",
+        // The email is SENT to the employee; this screen is the manager. Server-side
+        // composition in the recipient's language is the real fix — see the debt map.
+        // french-ok: the manager's locale is not the reader's
         body: `${newDoc.name} was added to your records.`,
       },
     });

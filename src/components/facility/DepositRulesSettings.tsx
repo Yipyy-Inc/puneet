@@ -84,6 +84,7 @@ function formatRuleLabel(rule: DepositRule): string {
   if (rule.scope === "service") {
     // french-ok: stored, not rendered — see the note on this function
     const service = SERVICE_LABELS[rule.serviceType ?? ""] ?? "Service";
+    // french-ok: stored in `rule.label`, not rendered — see the note above
     if (!rule.enabled || rule.amount <= 0) return `${service} — no deposit`;
     return rule.amountType === "percentage"
       ? `${service} — ${rule.amount}% deposit`
@@ -481,7 +482,12 @@ function ServiceRuleRow({
           onChange={(e) =>
             onChange({ amount: parseFloat(e.target.value) || 0 })
           }
-          onBlur={() => onCommit({}, `${serviceLabel} deposit updated`)}
+          onBlur={() =>
+            onCommit(
+              {},
+              t("toastServiceAmountUpdated").replace("{service}", serviceLabel),
+            )
+          }
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}

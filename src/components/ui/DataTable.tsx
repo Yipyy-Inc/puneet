@@ -367,7 +367,9 @@ export function DataTable<T extends object>({
           there is something to say, so nothing is announced on first paint. */}
       <p aria-live="polite" className="sr-only">
         {searchTerm.trim() || appliedFilters.length > 0
-          ? `${sortedData.length} of ${data.length} shown`
+          ? t("shownOfTotal")
+              .replace("{shown}", String(sortedData.length))
+              .replace("{total}", String(data.length))
           : ""}
       </p>
       {/* ── The filter band. §5b pattern 03. ────────────────────────────────

@@ -41,7 +41,8 @@ import {
 } from "@/lib/express-checkin-reminder";
 import { NotificationRowMenu } from "@/components/facility/NotificationRowMenu";
 import { cn } from "@/lib/utils";
-import { useShellText } from "@/lib/shell/use-shell-text";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatRelative } from "@/lib/i18n/format";
 
 interface FacilityNotificationsDropdownProps {
   facilityId?: number;
@@ -73,15 +74,10 @@ function categoryLabel(c: string): string {
   return CATEGORY_LABEL[c] ?? c.charAt(0).toUpperCase() + c.slice(1);
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  if (diff < 60_000) return "Just now";
-  if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`;
-  return d.toLocaleDateString();
-}
+// Was a local reimplementation of `Intl.RelativeTimeFormat` — "Just now",
+// "5m ago", "3h ago", then a bare `toLocaleDateString()` with no locale at
+// all. `formatRelative` does all four correctly, including the 24-hour expiry
+// §5q asks for and the fallback to a real date after it.
 
 function NotificationRow({
   n,
@@ -98,6 +94,8 @@ function NotificationRow({
 }) {
   // Shift-swap rows resolve in place with Approve/Decline (spec Table 33) and
   // task rows with "Mark Complete" (spec Table 34) instead of a "Mark read" link.
+  const locale = useShellLocale();
+  const relative = (iso: string) => formatRelative(iso, locale);
   const swapId = swapIdFromNotification(n);
   const taskId = taskIdFromNotification(n);
   const content = (
@@ -114,7 +112,7 @@ function NotificationRow({
         <p className="text-sm font-medium">{n.title}</p>
         <p className="text-muted-foreground text-xs">{n.message}</p>
         <p className="text-muted-foreground mt-1 text-[10px]">
-          {formatTime(n.timestamp)}
+          {relative(n.timestamp)}
         </p>
         {swapId && (
           <div className="mt-2">

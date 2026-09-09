@@ -87,7 +87,14 @@
  *             neither
  *   template  copy has an UPPERCASE LETTER; a Tailwind class list does not.
  *             Enumerating the character set of a Tailwind token was tried
- *             first and let `data-[state=open]:animate-in` straight through
+ *             first and let `data-[state=open]:animate-in` straight through.
+ *             WIDENED 2026-09-09: also two or more plain words, because copy
+ *             does not always have a capital. `` `${x} of ${y} shown` `` is the
+ *             filtered-count announcement DataTable puts on ~88 screens, read
+ *             aloud in English to a French screen-reader user, and no
+ *             screenshot could ever have shown it. One Tailwind-shaped token
+ *             (hyphen, colon, bracket, slash) disqualifies the string — without
+ *             that guard `relative flex cursor-default …` reads as prose
  *
  * It still cannot see everything — a string assembled at runtime, or one
  * living in a `src/data` fixture, will not appear. Treat a green run as proof
@@ -517,11 +524,28 @@ function hits(file: string, objectCopy = false): Hit[] {
     }
   }
   for (const m of stripped.matchAll(TEMPLATE)) {
-    // An uppercase letter is what separates copy from a class list. The
-    // interpolations are blanked first so `${foo}` cannot supply the capital.
+    // An uppercase letter separates copy from a class list — but only when the
+    // copy HAS one. `` `${done} of ${total} sections` `` has none, and sat in
+    // the middle of the onboarding row counting as zero; so did
+    // `` `${x} of ${y} shown` ``, the pagination line DataTable puts on ~88
+    // screens.
+    //
+    // So a second admission: two or more plain WORDS. A Tailwind token carries
+    // a hyphen, colon, bracket or slash (`text-xs`, `data-[state=open]:…`,
+    // `w-1/2`); an English or French phrase does not. Blank the interpolations
+    // first, so `${foo}` supplies neither the capital nor a word.
     const words = m[1].replace(/\$\{[^}]*\}/g, " ");
-    if (!/[A-Z]/.test(words)) continue;
     if (!words.includes(" ")) continue;
+    const tokens = words.trim().split(/\s+/);
+    const plain = tokens.filter((w) =>
+      /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’.,!?;]*$/.test(w),
+    );
+    // ONE Tailwind-shaped token disqualifies the whole string. Without this,
+    // `relative flex cursor-default items-center …` supplies "relative" and
+    // "flex" as two plain words and a 400-character class list reads as prose
+    // — measured, on `dropdown-menu.tsx`, before the guard was added.
+    const classy = tokens.some((w) => /[-:[\]/]/.test(w));
+    if (!/[A-Z]/.test(words) && (classy || plain.length < 2)) continue;
     record(words, m.index ?? 0);
   }
   // A JSX text node cannot exist in a file with no JSX.
@@ -757,7 +781,7 @@ const BASELINE: Record<string, Map<string, number>> = {
   staff: new Map([
     [
       "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
-      15,
+      16,
     ],
     [
       "src/app/facility/dashboard/staff/_components/resend-invite-dialog.tsx",
@@ -776,10 +800,10 @@ const BASELINE: Record<string, Map<string, number>> = {
     ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
     [
       "src/app/facility/dashboard/staff/_components/status-change-dialog.tsx",
-      19,
+      21,
     ],
     ["src/components/employee/EmployeeDashboard.tsx", 14],
-    ["src/components/facility/DepartmentSettings.tsx", 6],
+    ["src/components/facility/DepartmentSettings.tsx", 7],
     ["src/components/facility/StaffPreviewDialog.tsx", 3],
     ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
   ]),

@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/yipyy-pay-transactions";
 import { TransactionsTable } from "./TransactionsTable";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { formatPercent } from "@/lib/i18n/format";
 
 // ============================================================================
 // What the facility took, and every transaction behind it.
@@ -339,7 +340,10 @@ function TakingsRow({
         alert={
           takings.failed > 0
             ? {
-                label: `${takings.failed} declined or failed`,
+                label: t("declinedOrFailed").replace(
+                  "{count}",
+                  String(takings.failed),
+                ),
                 tone: "amber",
               }
             : undefined
@@ -362,7 +366,9 @@ function Breakdown({
   nameOf: (row: TakingsBreakdown) => string;
   total: number;
 }) {
-  const t = useSettingsText().section("yipyy-pay");
+  const settings = useSettingsText();
+  const t = settings.section("yipyy-pay");
+  const locale = settings.locale;
   // Bars are drawn against the largest ROW, not the total: at four services the
   // biggest would otherwise fill a third of its track and every other line
   // would be a stub.
@@ -419,7 +425,10 @@ function Breakdown({
                     {row.net < 0
                       ? "refunded more than taken"
                       : share > 0
-                        ? `${share.toFixed(0)}% of takings`
+                        ? t("shareOfTakings").replace(
+                            "{percent}",
+                            formatPercent(share, locale),
+                          )
                         : "—"}
                   </p>
                 </li>
