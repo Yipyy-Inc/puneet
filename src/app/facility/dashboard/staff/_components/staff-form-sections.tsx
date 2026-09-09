@@ -33,6 +33,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { useNotificationEventLabel } from "@/lib/staff/use-notification-event-label";
+import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
 import {
   ROLE_META,
   SERVICE_MODULE_META,
@@ -63,9 +65,6 @@ export type SectionUpdate = <K extends keyof StaffProfile>(
   key: K,
   value: StaffProfile[K],
 ) => void;
-
-export const humanizeType = (v: string) =>
-  v.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export const PRESET_COLORS = [
   "#B45309",
@@ -129,6 +128,7 @@ export function ProfileSection({
 }) {
   const { t } = useStaffText("formSections");
   const permissionText = usePermissionText();
+  const employmentTypeLabel = useEmploymentTypeLabel();
   const { employmentTypes } = useStaffHrConfig();
   // Keep the current value selectable even if it's a legacy / removed type.
   const empTypeOptions = employmentTypes.includes(
@@ -239,7 +239,7 @@ export function ProfileSection({
             <SelectContent>
               {empTypeOptions.map((type) => (
                 <SelectItem key={type} value={type}>
-                  {humanizeType(type)}
+                  {employmentTypeLabel(type)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -283,7 +283,6 @@ export function RoleSection({
   onRoleChange: (r: FacilityStaffRole) => void;
 }) {
   const { t } = useStaffText("formSections");
-  const permissionText = usePermissionText();
   const settingsPath = useSettingsHref();
   const { customRoles } = useFacilityRbac();
   const customList = Object.values(customRoles);
@@ -827,23 +826,7 @@ export function NotificationsSection({
   update: SectionUpdate;
 }) {
   const { t } = useStaffText("formSections");
-
-  /** An event's words, keyed off its slug; the constant is the fallback. */
-  const eventLabel = (event: NotificationEvent) => {
-    const key = `ev${event
-      .split("_")
-      .map((w) => w[0].toUpperCase() + w.slice(1))
-      .join("")}`;
-    const label = t(key);
-    return label === key ? NOTIFICATION_EVENT_META[event].label : label;
-  };
-
-  /** And a group's, the same way. */
-  const groupLabel = (group: string) => {
-    const key = `grp${group.replace(/\s+/g, "")}`;
-    const label = t(key);
-    return label === key ? group : label;
-  };
+  const notif = useNotificationEventLabel();
 
   const grouped = useMemo(() => {
     const byGroup = new Map<string, NotificationEvent[]>();
@@ -864,7 +847,7 @@ export function NotificationsSection({
       {grouped.map(([group, events]) => (
         <div key={group}>
           <div className="text-muted-foreground mb-2 text-xs font-medium">
-            {groupLabel(group)}
+            {notif.group(group)}
           </div>
           <div className="space-y-1.5">
             {events.map((event) => (
@@ -872,7 +855,7 @@ export function NotificationsSection({
                 key={event}
                 className="border-border/60 bg-card flex items-center justify-between rounded-md border px-3 py-2"
               >
-                <span className="text-sm">{eventLabel(event)}</span>
+                <span className="text-sm">{notif.event(event)}</span>
                 <Select
                   value={draft.notifications[event]}
                   onValueChange={(v) => setScope(event, v as NotificationScope)}

@@ -42,6 +42,7 @@ import {
   getOnboarding,
   initOnboarding,
 } from "@/data/staff-onboarding";
+import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
 
 const ROLE_LABEL: Record<FacilityStaffRole, string> = {
   owner: "Owner / Admin",
@@ -113,6 +114,7 @@ function getInitials(firstName: string, lastName: string) {
 }
 
 export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
+  const employmentTypeLabel = useEmploymentTypeLabel();
   const role = staff.primaryRole;
   // Section 4C — Quick Access is derived from the viewer's permissions, never
   // hardcoded per role. Every shortcut is filtered by the same key(s) that gate
@@ -252,8 +254,8 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
         <Card>
           <CardContent className="p-4">
             <p className="text-muted-foreground text-xs">Employment</p>
-            <p className="mt-1 text-sm font-semibold capitalize">
-              {staff.employment.employmentType.replace(/_/g, " ")}
+            <p className="mt-1 text-sm font-semibold">
+              {employmentTypeLabel(staff.employment.employmentType)}
             </p>
             <p className="text-muted-foreground text-xs">
               Since {new Date(staff.employment.hireDate).getFullYear()}

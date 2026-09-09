@@ -21,6 +21,7 @@ import {
 } from "@/lib/staff-audit";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { ROLE_META } from "@/types/facility-staff";
+import { useStatusReasonLabel } from "@/lib/staff/use-status-reason-label";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -99,16 +100,6 @@ const STATUS_TONE: Record<string, string> = {
   inactive: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
   terminated: "bg-rose-500/10 text-rose-700 dark:text-rose-400",
   invited: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-};
-
-const REASON_LABEL: Record<string, string> = {
-  vacation: "Vacation",
-  medical_leave: "Medical leave",
-  resigned: "Resigned voluntarily",
-  terminated_cause: "Terminated for cause",
-  performance: "Performance-based",
-  rehired: "Returned from leave",
-  other: "Other",
 };
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -196,14 +187,15 @@ function StatusChangeDescription({ entry }: { entry: StaffAuditEntry }) {
   const prev = String(entry.metadata?.previousStatus ?? "");
   const next = String(entry.metadata?.newStatus ?? "");
   const reason = String(entry.metadata?.reason ?? "");
+  const reasonLabel = useStatusReasonLabel();
 
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
       {prev && <StatusPill status={prev} />}
       <span className="text-muted-foreground">→</span>
       {next && <StatusPill status={next} />}
-      {reason && REASON_LABEL[reason] && (
-        <span className="text-muted-foreground">· {REASON_LABEL[reason]}</span>
+      {reason && (
+        <span className="text-muted-foreground">· {reasonLabel(reason)}</span>
       )}
     </div>
   );

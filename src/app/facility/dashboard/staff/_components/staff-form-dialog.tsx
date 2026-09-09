@@ -22,6 +22,7 @@ import {
 import { ArrowLeft, Mail, Send } from "lucide-react";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
 import {
   ROLE_PRESETS,
   buildDefaultNotifications,
@@ -43,7 +44,6 @@ import {
   NotificationsSection,
   PayrollSection,
   SectionHeader,
-  humanizeType,
   PRESET_COLORS,
 } from "./staff-form-sections";
 import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding-invite-email";
@@ -417,6 +417,7 @@ function ReviewScreen({
 }) {
   const { t, fill } = useStaffText("form");
   const roleLabel = useStaffRoleLabel();
+  const employmentTypeLabel = useEmploymentTypeLabel();
   const fullName =
     `${draft.firstName} ${draft.lastName}`.trim() || t("newHire");
   const roleLabels = [draft.primaryRole, ...draft.additionalRoles]
@@ -437,11 +438,7 @@ function ReviewScreen({
     { label: t("rowHireDate"), value: draft.employment.hireDate || "—" },
     {
       label: t("rowEmploymentType"),
-      // humanizeType() is a regex over an English identifier — it capitalises
-      // and cannot translate. Left as-is here rather than half-fixed: the
-      // employment types have their own catalogue block in settings, and
-      // wiring this to it is its own change. Recorded in the debt map.
-      value: humanizeType(draft.employment.employmentType),
+      value: employmentTypeLabel(draft.employment.employmentType),
     },
   ];
 

@@ -63,16 +63,12 @@ import {
   useRelativeTime,
 } from "./staff-shared";
 import { StatusBadge } from "./status-change-dialog";
-
-const STATUS_REASON_LABELS: Record<string, string> = {
-  vacation: "Vacation",
-  medical_leave: "Medical leave",
-  resigned: "Resigned voluntarily",
-  terminated_cause: "Terminated for cause",
-  performance: "Performance-based termination",
-  rehired: "Returned from leave",
-  other: "Other",
-};
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStatusReasonLabel } from "@/lib/staff/use-status-reason-label";
+import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
+import { useNotificationEventLabel } from "@/lib/staff/use-notification-event-label";
+import { usePermissionText } from "@/lib/settings/use-permission-text";
+import { formatDateShort, formatMoney, formatPercent } from "@/lib/i18n/format";
 
 interface StaffProfileSheetProps {
   profile: StaffProfile | null;
@@ -92,6 +88,7 @@ export function StaffProfileSheet({
   onTransfer,
   onUpdate,
 }: StaffProfileSheetProps) {
+  const { t } = useStaffText("profileSheet");
   const { can, viewer } = useFacilityRbac();
   const canSeeAccess = can("view_staff_permissions");
   const canSeePayroll = can("view_payroll");
@@ -123,21 +120,31 @@ export function StaffProfileSheet({
               <div className="px-6 pb-6">
                 <Tabs defaultValue="overview">
                   <ScrollableTabsBar>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="overview">
+                      {t("tabOverview")}
+                    </TabsTrigger>
                     {canSeeAccess && (
-                      <TabsTrigger value="access">Access</TabsTrigger>
+                      <TabsTrigger value="access">{t("tabAccess")}</TabsTrigger>
                     )}
-                    <TabsTrigger value="services">Services</TabsTrigger>
-                    <TabsTrigger value="documents">Documents</TabsTrigger>
-                    <TabsTrigger value="warnings">Warnings</TabsTrigger>
+                    <TabsTrigger value="services">
+                      {t("tabServices")}
+                    </TabsTrigger>
+                    <TabsTrigger value="documents">
+                      {t("tabDocuments")}
+                    </TabsTrigger>
+                    <TabsTrigger value="warnings">
+                      {t("tabWarnings")}
+                    </TabsTrigger>
                     <TabsTrigger value="notifications">
-                      Notifications
+                      {t("tabNotifications")}
                     </TabsTrigger>
                     {canSeePayroll && (
-                      <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                      <TabsTrigger value="payroll">
+                        {t("tabPayroll")}
+                      </TabsTrigger>
                     )}
                     {canSeeAudit && (
-                      <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                      <TabsTrigger value="audit">{t("tabAudit")}</TabsTrigger>
                     )}
                   </ScrollableTabsBar>
 
@@ -175,8 +182,8 @@ export function StaffProfileSheet({
               </div>
             </div>
 
-            <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
-              <div className="flex gap-2">
+            <div className="bg-background/80 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -184,8 +191,8 @@ export function StaffProfileSheet({
                 >
                   <UserPlus className="size-4" />
                   {profile.status === "invited"
-                    ? "Resend invite"
-                    : "Send invite"}
+                    ? t("resendInvite")
+                    : t("sendInvite")}
                 </Button>
                 <Button
                   variant="outline"
@@ -193,7 +200,7 @@ export function StaffProfileSheet({
                   onClick={() => onTransfer(profile)}
                 >
                   <ArrowLeftRight className="size-4" />
-                  Transfer appts
+                  {t("transferAppts")}
                 </Button>
                 {/* Verify the new hire's granted access before they log in —
                   renders their /employee portal as they'd see it. */}
@@ -204,7 +211,7 @@ export function StaffProfileSheet({
                     onClick={() => setPreviewOpen(true)}
                   >
                     <Eye className="size-4" />
-                    Preview as employee
+                    {t("previewAsEmployee")}
                   </Button>
                 )}
               </div>
@@ -212,7 +219,7 @@ export function StaffProfileSheet({
               {can("manage_staff") && (
                 <Button size="sm" onClick={() => onEdit(profile)}>
                   <Pencil className="size-4" />
-                  Edit profile
+                  {t("editProfile")}
                 </Button>
               )}
             </div>
@@ -230,6 +237,7 @@ export function StaffProfileSheet({
 }
 
 function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
+  const { t } = useStaffText("profileSheet");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -265,7 +273,7 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
       {/* Left arrow */}
       <button
         type="button"
-        aria-label="Scroll tabs left"
+        aria-label={t("scrollLeft")}
         onClick={() => scroll("left")}
         className={cn(
           "bg-background text-muted-foreground hover:text-foreground absolute top-1/2 left-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
@@ -280,7 +288,7 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
       {/* Right arrow */}
       <button
         type="button"
-        aria-label="Scroll tabs right"
+        aria-label={t("scrollRight")}
         onClick={() => scroll("right")}
         className={cn(
           "bg-background text-muted-foreground hover:text-foreground absolute top-1/2 right-1.5 z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
@@ -318,6 +326,8 @@ function ScrollableTabsBar({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ profile }: { profile: StaffProfile }) {
+  const { fill } = useStaffText("profileSheet");
+  const reasonLabel = useStatusReasonLabel();
   const relative = useRelativeTime();
   const meta = ROLE_META[profile.primaryRole];
   return (
@@ -338,18 +348,16 @@ function Header({ profile }: { profile: StaffProfile }) {
           )}
           <DialogDescription className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <Clock className="size-3" />
-            {profile.status === "active" || profile.status === "invited" ? (
-              <>Active {relative(profile.lastActive)}</>
-            ) : (
-              <>Last active {relative(profile.lastActive)}</>
-            )}
+            {profile.status === "active" || profile.status === "invited"
+              ? fill("activeSince", { when: relative(profile.lastActive) })
+              : fill("lastActive", { when: relative(profile.lastActive) })}
             {(profile.status === "inactive" ||
               profile.status === "terminated") && (
               <>
                 <span>·</span>
                 <StatusBadge status={profile.status} />
                 {profile.statusReason && (
-                  <span>{STATUS_REASON_LABELS[profile.statusReason]}</span>
+                  <span>{reasonLabel(profile.statusReason)}</span>
                 )}
               </>
             )}
@@ -367,6 +375,9 @@ function Header({ profile }: { profile: StaffProfile }) {
 }
 
 function OverviewTab({ profile }: { profile: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("profileSheet");
+  const reasonLabel = useStatusReasonLabel();
+  const employmentTypeLabel = useEmploymentTypeLabel();
   const locationLabels = profile.assignedLocations
     .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
     .filter(Boolean) as string[];
@@ -393,7 +404,12 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
                     : "text-rose-700 dark:text-rose-400",
                 )}
               >
-                since {new Date(profile.statusChangedAt).toLocaleDateString()}
+                {fill("changedSince", {
+                  date: formatDateShort(
+                    new Date(profile.statusChangedAt),
+                    locale,
+                  ),
+                })}
               </span>
             )}
           </div>
@@ -406,8 +422,7 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
                   : "text-rose-800 dark:text-rose-300",
               )}
             >
-              {STATUS_REASON_LABELS[profile.statusReason] ??
-                profile.statusReason}
+              {reasonLabel(profile.statusReason)}
             </div>
           )}
           {profile.statusNote && (
@@ -426,40 +441,46 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <InfoTile icon={Mail} label="Email" value={profile.email} />
-        <InfoTile icon={Phone} label="Phone" value={profile.phone} />
+        <InfoTile icon={Mail} label={t("email")} value={profile.email} />
+        <InfoTile icon={Phone} label={t("phone")} value={profile.phone} />
         <InfoTile
           icon={CalendarDays}
-          label="Hired"
+          label={t("hired")}
           value={profile.employment.hireDate}
-          sub={profile.employment.employmentType.replace("_", " ")}
+          // `.replace("_", " ")` — no `/g`, so only the FIRST underscore went.
+          // Four call sites, four different regexes over the same slug; the
+          // catalogue is now the one answer.
+          sub={employmentTypeLabel(profile.employment.employmentType)}
         />
         <InfoTile
           icon={MapPin}
-          label="Locations"
+          label={t("locations")}
           value={locationLabels.join(", ") || "—"}
           sub={
             locationLabels.length === FACILITY_LOCATIONS.length
-              ? "Access to all locations"
-              : `${locationLabels.length} of ${FACILITY_LOCATIONS.length}`
+              ? t("allLocations")
+              : fill("someLocations", {
+                  count: locationLabels.length,
+                  total: FACILITY_LOCATIONS.length,
+                })
           }
         />
         <HomeLocationTile staffId={profile.id} />
       </div>
 
       <div className="bg-muted/40 border-border/60 rounded-xl border p-4">
-        <div className="mb-1 text-xs font-medium">Internal notes</div>
+        <div className="mb-1 text-xs font-medium">{t("internalNotes")}</div>
         <p className="text-muted-foreground text-sm/relaxed">
-          {profile.employment.notes || "No notes yet."}
+          {profile.employment.notes || t("noNotes")}
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        <StatBlock label="Upcoming" value={profile.upcomingAppointments} />
-        <StatBlock label="Open tasks" value={profile.openTasks} />
+        <StatBlock label={t("upcoming")} value={profile.upcomingAppointments} />
+        <StatBlock label={t("openTasks")} value={profile.openTasks} />
         <StatBlock
-          label="On calendar"
-          value={profile.showOnCalendar ? "Yes" : "No"}
+          label={t("onCalendar")}
+          value={profile.showOnCalendar ? t("yes") : t("no")}
         />
       </div>
     </div>
@@ -477,6 +498,7 @@ const UNASSIGNED = "__unassigned__";
  * single-location facility: there is nothing to choose.
  */
 function HomeLocationTile({ staffId }: { staffId: string }) {
+  const { t } = useStaffText("profileSheet");
   const { locations, isMultiLocation } = useLocationContext();
   const { can } = useFacilityRbac();
   const canEdit = can("scheduling_view_all");
@@ -491,17 +513,17 @@ function HomeLocationTile({ staffId }: { staffId: string }) {
     <div className="border-border/60 bg-card rounded-xl border p-3">
       <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
         <Building2 className="size-3" />
-        Home location
+        {t("homeLocation")}
       </div>
       {isPending ? (
         <div className="mt-1 text-sm">…</div>
       ) : !data?.claimed ? (
         <div className="mt-1 truncate text-sm font-semibold">
-          Pending invite
+          {t("pendingInvite")}
         </div>
       ) : !canEdit ? (
         <div className="mt-1 truncate text-sm font-semibold">
-          {current?.name ?? "Not set"}
+          {current?.name ?? t("notSet")}
         </div>
       ) : (
         <Select
@@ -512,17 +534,17 @@ function HomeLocationTile({ staffId }: { staffId: string }) {
             update.mutate(
               { staffId, homeLocationId },
               {
-                onSuccess: () => toast.success("Home location saved"),
+                onSuccess: () => toast.success(t("homeLocationSaved")),
                 onError: (error: Error) => toast.error(error.message),
               },
             );
           }}
         >
           <SelectTrigger className="mt-1 h-7 w-full border-0 bg-transparent p-0 text-sm font-semibold shadow-none">
-            <SelectValue placeholder="Not set" />
+            <SelectValue placeholder={t("notSet")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={UNASSIGNED}>Not set</SelectItem>
+            <SelectItem value={UNASSIGNED}>{t("notSet")}</SelectItem>
             {locations.map((loc) => (
               <SelectItem key={loc.id} value={loc.id}>
                 {loc.name}
@@ -536,21 +558,18 @@ function HomeLocationTile({ staffId }: { staffId: string }) {
 }
 
 function ServicesTab({ profile }: { profile: StaffProfile }) {
+  const { t } = useStaffText("profileSheet");
   if (profile.serviceAssignments.length === 0) {
     return (
       <div className="border-border/60 text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
-        No services assigned. This staff member won&apos;t see service-specific
-        operations.
+        {t("noServices")}
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm">
-        Services determine which operational areas this staff member can access
-        and contribute to (feedings, grooming queue, training queue, etc.).
-      </p>
+      <p className="text-muted-foreground text-sm">{t("servicesHelp")}</p>
       <div className="grid grid-cols-2 gap-2">
         {profile.serviceAssignments.map((s) => (
           <div
@@ -559,8 +578,7 @@ function ServicesTab({ profile }: { profile: StaffProfile }) {
           >
             <ServiceChip module={s} size="md" />
             <p className="text-muted-foreground mt-2 text-[11px]/relaxed">
-              Access follows the scope on each action — defaults come from the
-              staff&apos;s role, overrides apply per-permission.
+              {t("serviceScopeHelp")}
             </p>
           </div>
         ))}
@@ -570,6 +588,7 @@ function ServicesTab({ profile }: { profile: StaffProfile }) {
 }
 
 function NotificationsTab({ profile }: { profile: StaffProfile }) {
+  const notif = useNotificationEventLabel();
   const groups = useMemo(() => {
     const byGroup = new Map<
       string,
@@ -579,13 +598,13 @@ function NotificationsTab({ profile }: { profile: StaffProfile }) {
       if (!byGroup.has(meta.group)) byGroup.set(meta.group, []);
       byGroup.get(meta.group)!.push({
         event,
-        label: meta.label,
+        label: notif.event(event),
         scope:
           profile.notifications[event as keyof typeof profile.notifications],
       });
     }
     return Array.from(byGroup.entries());
-  }, [profile]);
+  }, [profile, notif]);
 
   return (
     <div className="space-y-4">
@@ -593,7 +612,7 @@ function NotificationsTab({ profile }: { profile: StaffProfile }) {
         <div key={group}>
           <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-medium">
             <Bell className="size-3" />
-            {group}
+            {notif.group(group)}
           </div>
           <div className="space-y-1">
             {items.map((item) => (
@@ -613,6 +632,8 @@ function NotificationsTab({ profile }: { profile: StaffProfile }) {
 }
 
 function PayrollTab({ profile }: { profile: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("profileSheet");
+  const permissionText = usePermissionText();
   // Withheld, not empty. The server drops `payroll` for anyone without
   // `view_payroll` on someone else's record, and "—" in the cards below would
   // read as "unpaid" rather than "not yours to see".
@@ -620,9 +641,11 @@ function PayrollTab({ profile }: { profile: StaffProfile }) {
   if (!payroll) {
     return (
       <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
-        Pay details are hidden.
+        {t("payrollHidden")}
         <div className="mt-1 text-xs">
-          Requires the “View payroll” permission.
+          {fill("payrollRequires", {
+            permission: permissionText.permission("view_payroll"),
+          })}
         </div>
       </div>
     );
@@ -633,35 +656,45 @@ function PayrollTab({ profile }: { profile: StaffProfile }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <PayCard
           icon={Wallet}
-          label="Service commission"
+          label={t("serviceCommission")}
           value={
             payroll.generalServiceCommission > 0
-              ? `${payroll.generalServiceCommission}%`
+              ? formatPercent(payroll.generalServiceCommission, locale)
               : "—"
           }
-          sub="On collected service + add-on revenue"
+          sub={t("commissionSub")}
         />
         <PayCard
           icon={Clock}
-          label="Hourly rate"
-          value={payroll.hourlyRate > 0 ? `$${payroll.hourlyRate}/hr` : "—"}
-          sub="Calculated from clock in/out"
+          label={t("hourlyRate")}
+          value={
+            payroll.hourlyRate > 0
+              ? fill("perHour", {
+                  amount: formatMoney(payroll.hourlyRate, locale),
+                })
+              : "—"
+          }
+          sub={t("hourlySub")}
         />
         <PayCard
           icon={BadgeCheck}
-          label="Tips"
+          label={t("tips")}
           value={
             payroll.tipsRate > 0
-              ? `${payroll.tipsRate}% retained`
-              : "No tips collected"
+              ? fill("tipsRetained", {
+                  percent: formatPercent(payroll.tipsRate, locale),
+                })
+              : t("noTips")
           }
-          sub="From assigned appointments"
+          sub={t("tipsSub")}
         />
       </div>
 
       {payroll.overrides.length > 0 && (
         <div>
-          <div className="mb-2 text-sm font-semibold">Service overrides</div>
+          <div className="mb-2 text-sm font-semibold">
+            {t("serviceOverrides")}
+          </div>
           <div className="space-y-1.5">
             {payroll.overrides.map((o) => (
               <div
@@ -669,7 +702,9 @@ function PayrollTab({ profile }: { profile: StaffProfile }) {
                 className="border-border/60 flex items-center justify-between rounded-md border px-3 py-2 text-sm"
               >
                 <ServiceChip module={o.serviceModule} />
-                <span className="font-medium">{o.commission}%</span>
+                <span className="font-medium">
+                  {formatPercent(o.commission, locale)}
+                </span>
               </div>
             ))}
           </div>
@@ -702,31 +737,30 @@ function InfoTile({
       </div>
       <div className="mt-1 truncate text-sm font-semibold">{value}</div>
       {sub && (
-        <div className="text-muted-foreground mt-0.5 text-[11px] capitalize">
-          {sub}
-        </div>
+        <div className="text-muted-foreground mt-0.5 text-[11px]">{sub}</div>
       )}
     </div>
   );
 }
 
 function NotificationBadge({ scope }: { scope: string }) {
+  const { t } = useStaffText("profileSheet");
   const map: Record<
     string,
     { label: string; tone: string; icon: React.ReactNode }
   > = {
     related_to_them: {
-      label: "Related to them",
+      label: t("scopeRelated"),
       tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
       icon: <LockKeyhole className="size-3" />,
     },
     at_working_business: {
-      label: "At working business",
+      label: t("scopeAtBusiness"),
       tone: "bg-sky-500/10 text-sky-700 dark:text-sky-400",
       icon: <MapPin className="size-3" />,
     },
     do_not_notify: {
-      label: "Off",
+      label: t("scopeDoNot"),
       tone: "bg-muted text-muted-foreground",
       icon: null,
     },
