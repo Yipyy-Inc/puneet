@@ -1386,6 +1386,22 @@
         "typeMeetTheTeam": "Meet the team",
         "typeFacilityTour": "Facility tour",
         "typeCustom": "Custom"
+      },
+      "clock": {
+        "clockOutSubject": "Clock {name} out?",
+        "endYourShift": "End your shift?",
+        "clockInSubject": "Clock {name} in?",
+        "startYourShift": "Start your shift?",
+        "clockOutSubjectHelp": "This will clock {name} out. Only confirm if the shift is actually ending.",
+        "clockOutSelfHelp": "This will clock you out. Only confirm if you are actually ending your shift.",
+        "clockInSubjectHelp": "{name} will be clocked in as of {time}.",
+        "clockInSelfHelp": "You will be clocked in as of {time}.",
+        "onTheClockSince": "On the clock since {time}",
+        "onTheClockFor": "{elapsed} on the clock",
+        "yesClockOut": "Yes, clock out",
+        "cancel": "Cancel",
+        "cancelStayClockedIn": "Cancel — stay clocked in",
+        "confirmClockIn": "Confirm clock in"
       }
     }
   },
@@ -5626,7 +5642,8 @@
       "previewingAs": "Previewing as {role} — this is what a staff member with this role sees.",
       "registerStillOpen": "It’s past closing time and the register is still open. Count and close the drawer to reconcile the day.",
       "registerStillOpenAt": "It’s past closing time ({time}) and the register is still open. Count and close the drawer to reconcile the day.",
-      "copyright": "© 2026 Yipyy · Employee portal"
+      "copyright": "© 2026 Yipyy · Employee portal",
+      "workedSuffix": " · {elapsed} worked"
     },
     "admin": {
       "supportNotifications": "Support notifications",

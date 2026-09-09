@@ -12,6 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatTime, formatDuration } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 // Shared clock in/out confirmation UI, used by every surface that can start or
 // end a shift (the employee header's ClockInOut and the scheduling TimeClock),
@@ -19,25 +22,26 @@ import {
 // direction you don't want to trigger by accident — always requires the
 // explicit "Yes, clock out" confirm and shows elapsed-time context.
 
-/** "3:42 PM" — falls back to the current moment when no ISO is given. */
-export function formatClockTime(iso: string | undefined): string {
-  const d = iso ? new Date(iso) : new Date();
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+/** `3:42 PM` · `15 h 42` — the current moment when no ISO is given. */
+export function formatClockTime(
+  iso: string | undefined,
+  locale: AppLocale,
+): string {
+  return formatTime(iso ? new Date(iso) : new Date(), locale);
 }
 
-/** "6h 32m" / "12m" elapsed since `iso` (empty when `iso` is missing). */
+/** `6h 32m` · `6 h 32` elapsed since `iso` (empty when `iso` is missing). */
 export function clockElapsedLabel(
   iso: string | undefined,
   nowMs: number,
+  locale: AppLocale,
 ): string {
   if (!iso) return "";
   const mins = Math.max(
     0,
     Math.round((nowMs - new Date(iso).getTime()) / 60_000),
   );
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return formatDuration(mins, locale);
 }
 
 export interface ClockConfirmProps {
@@ -61,6 +65,7 @@ export function ClockConfirm({
   subjectName,
   onConfirm,
 }: ClockConfirmProps) {
+  const { t, fill, locale } = useStaffText("clock");
   const [now, setNow] = useState(() => Date.now());
 
   // Keep the elapsed time current while the clock-out dialog is open (an
@@ -79,19 +84,24 @@ export function ClockConfirm({
 
   const title = clockedIn
     ? subjectName
-      ? `Clock out ${subjectName}?`
-      : "End your shift?"
+      ? fill("clockOutSubject", { name: subjectName })
+      : t("endYourShift")
     : subjectName
-      ? `Clock in ${subjectName}?`
-      : "Start your shift?";
+      ? fill("clockInSubject", { name: subjectName })
+      : t("startYourShift");
 
   const description = clockedIn
     ? subjectName
-      ? `This will clock ${subjectName} out. Only confirm if the shift is actually ending.`
-      : "This will clock you out. Only confirm if you're actually ending your shift."
+      ? fill("clockOutSubjectHelp", { name: subjectName })
+      : t("clockOutSelfHelp")
     : subjectName
-      ? `${subjectName} will be clocked in as of ${formatClockTime(undefined)}.`
-      : `You'll be clocked in as of ${formatClockTime(undefined)}.`;
+      ? fill("clockInSubjectHelp", {
+          name: subjectName,
+          time: formatClockTime(undefined, locale),
+        })
+      : fill("clockInSelfHelp", {
+          time: formatClockTime(undefined, locale),
+        });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -113,10 +123,14 @@ export function ClockConfirm({
         {clockedIn && (
           <div className="rounded-md border border-red-200 bg-red-50 p-4 text-center dark:border-red-900/50 dark:bg-red-950/30">
             <p className="text-muted-foreground text-sm">
-              On the clock since {formatClockTime(clockedInAt)}
+              {fill("onTheClockSince", {
+                time: formatClockTime(clockedInAt, locale),
+              })}
             </p>
             <p className="text-2xl font-bold text-red-700 dark:text-red-400">
-              {clockElapsedLabel(clockedInAt, now)} on the clock
+              {fill("onTheClockFor", {
+                elapsed: clockElapsedLabel(clockedInAt, now, locale),
+              })}
             </p>
           </div>
         )}
@@ -127,20 +141,20 @@ export function ClockConfirm({
               onClick={onConfirm}
               className="h-9 bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600"
             >
-              Yes, clock out
+              {t("yesClockOut")}
             </AlertDialogAction>
             <AlertDialogCancel className="mt-0 h-11 font-semibold sm:min-w-40">
-              {subjectName ? "Cancel" : "Cancel — stay clocked in"}
+              {subjectName ? t("cancel") : t("cancelStayClockedIn")}
             </AlertDialogCancel>
           </AlertDialogFooter>
         ) : (
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirm}
               className="bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600"
             >
-              Confirm clock in
+              {t("confirmClockIn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         )}

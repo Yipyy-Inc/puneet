@@ -24,7 +24,7 @@ import {
 } from "@/lib/cash-register-store";
 import { resolveRegisterContext } from "@/lib/employee/register-context";
 import { shouldPromptCloseOnExit } from "@/lib/register-hours";
-import { useShellText } from "@/lib/shell/use-shell-text";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 
 // Core staff action — works on all viewports (large tap target). The button
 // NEVER toggles on the first click: it opens the shared ClockConfirm step, and
@@ -33,6 +33,7 @@ import { useShellText } from "@/lib/shell/use-shell-text";
 // on the clock-out toast.
 export function ClockInOut() {
   const t = useShellText("employee");
+  const locale = useShellLocale();
   // The register context is resolved from the acting viewer, not a bare id —
   // see src/lib/employee/register-context.ts.
   const { viewer, viewerResolved } = useFacilityViewer();
@@ -86,7 +87,7 @@ export function ClockInOut() {
           toast.success(
             t("clockedInAt").replace(
               "{time}",
-              formatClockTime(entry.clockedInAt),
+              formatClockTime(entry.clockedInAt, locale),
             ),
           );
         },
@@ -128,13 +129,20 @@ export function ClockInOut() {
           // each round it their own way.
           const worked =
             entry.minutesWorked != null && entry.clockedOutAt
-              ? ` · ${clockElapsedLabel(startedAt, new Date(entry.clockedOutAt).getTime())} worked`
+              ? t("workedSuffix").replace(
+                  "{elapsed}",
+                  clockElapsedLabel(
+                    startedAt,
+                    new Date(entry.clockedOutAt).getTime(),
+                    locale,
+                  ),
+                )
               : "";
 
           toast.success(
             t("clockedOutAt").replace(
               "{time}",
-              formatClockTime(entry.clockedOutAt),
+              formatClockTime(entry.clockedOutAt, locale),
             ) + worked,
             {
               duration: 10_000,
