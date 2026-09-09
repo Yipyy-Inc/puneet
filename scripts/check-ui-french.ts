@@ -705,10 +705,46 @@ function routeRoots(dir: string): string[] {
   return out.sort();
 }
 
-/** staff — one entry per file, so a file can be cleared on its own. */
+/**
+ * staff — one entry per file, so a file can be cleared on its own.
+ *
+ * ── DEPTH 5, NOT 3, SINCE 2026-09-09 ─────────────────────────────────────
+ *
+ * Three was copied from the settings walk, where a section is a wrapper, its
+ * screen is one down and its cards are two or three. The staff tree is deeper
+ * than that and nobody checked: at 3 the surface measured 41 strings in 7
+ * files, and at 5 it measures 204 in 11.
+ *
+ * The 163 it could not reach are not obscure. `employee-dashboard-widgets` is
+ * the EMPLOYEE PORTAL HOME — the quick-action catalogue, the quick-access
+ * cards, the schedule and task widgets — read by every member of floor staff
+ * at the start of every shift, and it sat one level past the edge of the only
+ * thing measuring it.
+ *
+ * Same lesson as SHELL_ROOTS, one dimension over: a boundary you draw yourself
+ * is a boundary that agrees with you. There the boundary was a file LIST; here
+ * it was a NUMBER, which is easier to copy and just as arbitrary.
+ *
+ * ── ONE ENTRY HERE IS REALLY THE SHELL'S ─────────────────────────────────
+ *
+ * `CreateClientModal` (125 of the 163) arrives by this path:
+ *
+ *   staff/page → staff-profile-sheet → StaffPreviewDialog
+ *     → EmployeeHeader → FacilityHeader → CreateClientModal
+ *
+ * The preview dialog renders a whole portal shell inside a manager's modal, so
+ * the walk falls through it into the global header. The strings are real and a
+ * manager really does reach them, so they are baselined rather than excluded —
+ * but they belong to the FACILITY SHELL, and the day a deeper shell walk
+ * exists this entry moves there.
+ *
+ * That deeper walk is worth knowing about now: the four shells are measured at
+ * depth 2, and at depth 3 they hold 524 strings between them. "At zero" is a
+ * claim about the depth, not about the chrome. Recorded in the debt map.
+ */
 function staffSurface(): Offender[] {
   const seen = new Set<string>();
-  for (const root of routeRoots(STAFF)) walk(root, 3, seen, true);
+  for (const root of routeRoots(STAFF)) walk(root, 5, seen, true);
   return [...seen]
     .filter(
       (file) =>
@@ -789,6 +825,17 @@ const BASELINE: Record<string, Map<string, number>> = {
     ["src/components/facility/DepartmentSettings.tsx", 7],
     ["src/components/facility/StaffPreviewDialog.tsx", 3],
     ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
+    // ── FOUND BY THE DEPTH 3 → 5 CHANGE, 2026-09-09 ───────────────────
+    //
+    // Four files the walk could not previously reach. None of them is
+    // obscure: the first is the employee portal's own home screen.
+    ["src/components/employee/employee-dashboard-widgets.tsx", 21],
+    ["src/components/employee/ClockConfirm.tsx", 13],
+    ["src/components/facility/NotificationRowMenu.tsx", 4],
+    // The facility HEADER's, reached through the preview dialog's embedded
+    // portal shell — see the note on staffSurface(). Baselined here because
+    // nothing else measures it yet, not because it is staff's.
+    ["src/components/clients/CreateClientModal.tsx", 125],
   ]),
   "shell:facility": new Map<string, number>(),
   "shell:customer": new Map<string, number>(),
