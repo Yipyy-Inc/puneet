@@ -15,6 +15,7 @@ import { Plus, Trash2, Building2, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { departments, staffSkills } from "@/data/shifts";
 
 const COLOR_OPTIONS = [
@@ -38,11 +39,13 @@ export function DepartmentSettings() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("blue");
 
+  const { t, fill } = useStaffText("departments");
+
   const handleSave = () => {
     // Update the global departments array
     departments.length = 0;
     departments.push(...depts);
-    toast.success("Departments saved");
+    toast.success(t("saved"));
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -50,10 +53,7 @@ export function DepartmentSettings() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Shield className="text-muted-foreground size-5" />
-          <p className="text-muted-foreground text-sm">
-            Department settings are only accessible to facility owners and
-            managers.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("restricted")}</p>
         </CardContent>
       </Card>
     );
@@ -65,7 +65,7 @@ export function DepartmentSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <Building2 className="size-4" />
-            Facility Departments
+            {t("heading")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -98,7 +98,7 @@ export function DepartmentSettings() {
                     next[idx] = { ...dept, description: e.target.value };
                     setDepts(next);
                   }}
-                  placeholder="Description..."
+                  placeholder={t("descriptionPlaceholder")}
                   className="text-muted-foreground h-7 flex-1 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
                 />
                 <div className="flex shrink-0 items-center gap-3 pl-2">
@@ -146,7 +146,10 @@ export function DepartmentSettings() {
                     onClick={() => {
                       if (staffCount > 0) {
                         toast.error(
-                          `${dept.name} has ${staffCount} staff — reassign them first`,
+                          fill("hasStaff", {
+                            name: dept.name,
+                            count: staffCount,
+                          }),
                         );
                         return;
                       }
@@ -163,7 +166,7 @@ export function DepartmentSettings() {
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="New department name..."
+              placeholder={t("newNamePlaceholder")}
               className="h-8 flex-1 text-sm"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newName.trim()) {
@@ -229,7 +232,7 @@ export function DepartmentSettings() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} className="gap-1.5">
-          Save Departments
+          {t("save")}
         </Button>
       </div>
     </div>

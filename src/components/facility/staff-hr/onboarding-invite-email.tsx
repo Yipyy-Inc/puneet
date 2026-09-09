@@ -30,6 +30,18 @@ export function OnboardingInviteEmail({
         { month: "long", day: "numeric", year: "numeric" },
       )
     : "—";
+  // ── THIS WHOLE COMPONENT IS DELIBERATELY ENGLISH ──────────────────────
+  //
+  // `staffInviteCopy()` has no locale parameter and is shared with the SENT
+  // email, so the heading, body, CTA, expiry and footer are English wherever
+  // this renders. The two field labels beside them stay English for the same
+  // reason: a preview whose labels are French and whose body is English tells
+  // the manager something untrue about what the employee will receive.
+  //
+  // The real fix is composing the email server-side in the RECIPIENT's
+  // language — recorded in the debt map, and the same fix the other four
+  // outbound messages in this area are waiting on.
+  //
   // The words come from staff-invite-copy.ts, which the SENT email
   // (src/lib/staff-invite-email.ts) also imports — so this preview shows what
   // actually goes out rather than an approximation that drifts.
@@ -73,10 +85,12 @@ export function OnboardingInviteEmail({
 
         <dl className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-xs dark:bg-slate-900">
           <div>
+            {/* french-ok: a preview of an English email — see the note above */}
             <dt className="text-slate-500">Role</dt>
             <dd className="font-medium">{roleLabel}</dd>
           </div>
           <div>
+            {/* french-ok: as above */}
             <dt className="text-slate-500">Start date</dt>
             <dd className="font-medium">{startDate}</dd>
           </div>

@@ -21,15 +21,18 @@ import {
   type AdditionalContact,
   type AdditionalContactTag,
 } from "@/types/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
-const RELATIONSHIP_OPTIONS = [
-  "Spouse",
-  "Partner",
-  "Parent",
-  "Sibling",
-  "Child",
-  "Friend",
-  "Roommate",
+/** value → catalogue key. The value is STORED on the contact; only the words
+ *  are translated. */
+const RELATIONSHIP_OPTIONS: [string, string][] = [
+  ["Spouse", "relSpouse"],
+  ["Partner", "relPartner"],
+  ["Parent", "relParent"],
+  ["Sibling", "relSibling"],
+  ["Child", "relChild"],
+  ["Friend", "relFriend"],
+  ["Roommate", "relRoommate"],
 ];
 
 const OTHER_VALUE = "__other__";
@@ -65,9 +68,15 @@ export function AdditionalContactsManager({
   disabled = false,
   hideAddButton = false,
   className,
-  heading = "Additional Contacts",
-  description = "Add people who can be contacted for emergencies, pickup, or drop-off.",
+  heading,
+  description,
 }: AdditionalContactsManagerProps) {
+  const { t } = useStaffText("createClient");
+  // The defaults were English literals in the signature. Two callers pass
+  // neither and rely on them, so they move to the catalogue rather than away.
+  const headingText = heading ?? t("additionalContacts");
+  const descriptionText = description ?? t("acDefaultDescription");
+
   const updateContact = (id: string, patch: Partial<AdditionalContact>) => {
     onChange(value.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   };
@@ -93,20 +102,20 @@ export function AdditionalContactsManager({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {(heading || description) && (
+      {(headingText || descriptionText) && (
         <div className="space-y-1">
-          {heading && (
-            <Label className="text-base font-semibold">{heading}</Label>
+          {headingText && (
+            <Label className="text-base font-semibold">{headingText}</Label>
           )}
-          {description && (
-            <p className="text-muted-foreground text-sm">{description}</p>
+          {descriptionText && (
+            <p className="text-muted-foreground text-sm">{descriptionText}</p>
           )}
         </div>
       )}
 
       {value.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-sm">
-          No additional contacts on file.
+          {t("acNone")}
         </p>
       ) : (
         <div className="space-y-3">
@@ -133,7 +142,7 @@ export function AdditionalContactsManager({
           className="gap-2"
         >
           <Plus className="size-4" />
-          Add contact
+          {t("acAdd")}
         </Button>
       )}
     </div>
@@ -159,11 +168,12 @@ function ContactCard({
 }: ContactCardProps) {
   const idBase = `contact-${contact.id}`;
 
+  const { t, fill } = useStaffText("createClient");
   return (
     <div className="bg-muted/30 space-y-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-          Contact {index + 1}
+          {fill("acContactN", { n: index + 1 })}
         </p>
         {!disabled && (
           <Button
@@ -174,7 +184,7 @@ function ContactCard({
             className="text-destructive hover:text-destructive h-7 gap-1"
           >
             <Trash2 className="size-3.5" />
-            Remove
+            {t("acRemove")}
           </Button>
         )}
       </div>
@@ -184,12 +194,12 @@ function ContactCard({
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-name`}>Name</Label>
+            <Label htmlFor={`${idBase}-name`}>{t("acName")}</Label>
             <Input
               id={`${idBase}-name`}
               value={contact.name}
               onChange={(e) => onUpdate({ name: e.target.value })}
-              placeholder="Full name"
+              placeholder={t("acFullName")}
             />
           </div>
           <RelationshipField
@@ -198,7 +208,7 @@ function ContactCard({
             onChange={(v) => onUpdate({ relationship: v })}
           />
           <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-phone`}>Phone</Label>
+            <Label htmlFor={`${idBase}-phone`}>{t("acPhone")}</Label>
             <Input
               id={`${idBase}-phone`}
               type="tel"
@@ -208,7 +218,7 @@ function ContactCard({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor={`${idBase}-email`}>Email (optional)</Label>
+            <Label htmlFor={`${idBase}-email`}>{t("acEmailOptional")}</Label>
             <Input
               id={`${idBase}-email`}
               type="email"
@@ -238,7 +248,8 @@ function RelationshipField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const isPredefined = RELATIONSHIP_OPTIONS.includes(value);
+  const { t } = useStaffText("createClient");
+  const isPredefined = RELATIONSHIP_OPTIONS.some(([o]) => o === value);
   const [isCustom, setIsCustom] = useState(value !== "" && !isPredefined);
 
   const selectValue = isCustom ? OTHER_VALUE : value || undefined;
@@ -255,26 +266,26 @@ function RelationshipField({
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`${idBase}-relationship`}>Relationship</Label>
+      <Label htmlFor={`${idBase}-relationship`}>{t("acRelationship")}</Label>
       <Select value={selectValue} onValueChange={handleSelectChange}>
         <SelectTrigger id={`${idBase}-relationship`}>
-          <SelectValue placeholder="Select relationship" />
+          <SelectValue placeholder={t("acSelectRelationship")} />
         </SelectTrigger>
         <SelectContent>
-          {RELATIONSHIP_OPTIONS.map((option) => (
+          {RELATIONSHIP_OPTIONS.map(([option, key]) => (
             <SelectItem key={option} value={option}>
-              {option}
+              {t(key)}
             </SelectItem>
           ))}
-          <SelectItem value={OTHER_VALUE}>Other</SelectItem>
+          <SelectItem value={OTHER_VALUE}>{t("acOther")}</SelectItem>
         </SelectContent>
       </Select>
       {isCustom && (
         <Input
-          aria-label="Custom relationship"
+          aria-label={t("acCustomRelationship")}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Specify relationship"
+          placeholder={t("acSpecifyRelationship")}
         />
       )}
     </div>
@@ -282,12 +293,13 @@ function RelationshipField({
 }
 
 function ContactReadOnly({ contact }: { contact: AdditionalContact }) {
+  const { t } = useStaffText("createClient");
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <User className="text-muted-foreground size-4" />
         <span className="text-sm font-medium">
-          {contact.name || "Unnamed contact"}
+          {contact.name || t("acUnnamed")}
         </span>
         {contact.relationship && (
           <span className="text-muted-foreground text-xs">
@@ -320,6 +332,7 @@ function TagPicker({
   disabled: boolean;
   onToggle: (tag: AdditionalContactTag) => void;
 }) {
+  const { t } = useStaffText("createClient");
   return (
     <div className="space-y-1.5">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
@@ -353,7 +366,7 @@ function TagPicker({
           );
         })}
         {disabled && tags.length === 0 && (
-          <span className="text-muted-foreground text-xs">No tags</span>
+          <span className="text-muted-foreground text-xs">{t("acNoTags")}</span>
         )}
       </div>
     </div>

@@ -820,20 +820,27 @@ const BASELINE: Record<string, Map<string, number>> = {
   // itself gets sharper the numbers have to be allowed up, once, in the same
   // change that sharpens it — otherwise the only way to widen a gate is to
   // convert every file it newly sees, and nobody widens it.
-  staff: new Map([
-    ["src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx", 9],
-    ["src/components/facility/DepartmentSettings.tsx", 7],
-    ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
-    // ── THE LAST ONE THE DEPTH 3 → 5 CHANGE FOUND, 2026-09-09 ─────────
-    //
-    // The other three it found (`employee-dashboard-widgets`, `ClockConfirm`,
-    // `NotificationRowMenu`) were converted the same day and are gone from
-    // this list. This one is the facility HEADER's, reached through the
-    // preview dialog's embedded portal shell — see the note on
-    // staffSurface(). Baselined here because nothing else measures it yet,
-    // not because it is staff's.
-    ["src/components/clients/CreateClientModal.tsx", 125],
-  ]),
+  //
+  // ── AND ON 2026-09-09 IT REACHED ZERO ──────────────────────────────────
+  //
+  // 725 → 0, and the number moved in both directions on the way: the gate was
+  // widened four times during the conversion (a `hint=` attribute it could not
+  // read, a leading symbol it discarded, an all-lowercase template literal, and
+  // a walk that stopped two hops short), so the count rose four times before it
+  // finished falling.
+  //
+  // WHAT AN EMPTY MAP MEANS, EXACTLY: no file on the staff surface contains a
+  // string this gate can see. It does NOT mean the area is finished. Twenty-two
+  // separate label tables were found in module constants during the conversion
+  // — none of them visible here — along with weekday arrays, bare
+  // `toLocaleDateString()` calls, a `return "Good morning"`, and CSS
+  // `capitalize` title-casing translated French. Every one of those was found by
+  // reading the screen, not by this file going green.
+  //
+  // So: an empty baseline is the floor, not the ceiling. `check:hardcoded-locale`
+  // still carries 526 + 432, and the four shells are measured only two hops
+  // deep — see the note on staffSurface() and the debt map.
+  staff: new Map<string, number>(),
   "shell:facility": new Map<string, number>(),
   "shell:customer": new Map<string, number>(),
   "shell:employee": new Map<string, number>(),
