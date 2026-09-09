@@ -88,9 +88,10 @@ export function ImpersonationBanner() {
       <span className="flex items-center gap-2 text-sm">
         <ShieldAlert className="size-4 shrink-0" />
         <span>
-          <span className="font-semibold">{t("adminMode")}</span> — You are
-          viewing <strong>{session.facilityName}</strong> as{" "}
-          <strong>{session.adminName}</strong>.
+          <span className="font-semibold">{t("adminMode")}</span>{" "}
+          {t("impersonationViewing")
+            .replace("{facility}", session.facilityName)
+            .replace("{admin}", session.adminName)}
         </span>
       </span>
       <Button

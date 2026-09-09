@@ -1,4 +1,5 @@
 import { isStaging } from "@/lib/deployment";
+import { StagingNotice } from "@/components/staging-notice";
 
 // ============================================================================
 // "This is staging, and it is writing to the real database."
@@ -40,22 +41,9 @@ import { isStaging } from "@/lib/deployment";
 // ============================================================================
 
 export function StagingBanner() {
+  // `YIPYY_DEPLOYMENT` is not a NEXT_PUBLIC_ variable, so only the server can
+  // answer this. The words are a client child, because the reader's language
+  // is only knowable there.
   if (!isStaging()) return null;
-
-  return (
-    <div
-      // `print:hidden`: on paper this is neither true nor useful, and §5u drops
-      // every colour but the mark anyway.
-      className="pointer-events-none fixed inset-x-0 top-0 z-9999 flex justify-center print:hidden"
-      // Announced once, not on every navigation. A live region here would read
-      // the whole sentence out again each time the route changes, which is the
-      // fastest way to make somebody turn the screen reader off.
-      role="note"
-      aria-label="Staging environment"
-    >
-      <p className="rounded-b-md bg-[#8A5115] px-3 py-1 text-[11px] leading-none font-bold tracking-[0.06em] text-white uppercase">
-        Staging · writes to the live database
-      </p>
-    </div>
-  );
+  return <StagingNotice />;
 }

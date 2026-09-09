@@ -1063,7 +1063,10 @@ export function PricingRulesPanel({
                         : t("rowDateRange")
                             .replace("{from}", rule.startDate)
                             .replace("{to}", rule.endDate)}
-                      {` · Applies to ${formatApplicableServices(rule.applicableServices)}`}
+                      {t("rowAppliesToSuffix").replace(
+                        "{list}",
+                        formatApplicableServices(rule.applicableServices),
+                      )}
                     </p>
                     {rule.dateMode === "holiday" && (
                       <p className="text-muted-foreground mt-0.5 text-xs">
@@ -1204,7 +1207,10 @@ export function PricingRulesPanel({
                         t("rowWindow")
                           .replace("{from}", fee.applyFromTime ?? "00:00")
                           .replace("{to}", fee.applyUntilTime ?? "23:59")}
-                      {` · Applies to ${formatApplicableServices(fee.applicableServices)}`}
+                      {t("rowAppliesToSuffix").replace(
+                        "{list}",
+                        formatApplicableServices(fee.applicableServices),
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

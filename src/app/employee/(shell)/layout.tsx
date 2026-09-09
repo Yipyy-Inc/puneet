@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ShellFooter } from "@/components/layout/shell-footer";
 import { resolveEmployeeIdentity } from "@/lib/auth/employee-identity";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { EmployeeRbacBoundary } from "@/components/employee/EmployeeRbacBoundary";
@@ -89,9 +90,10 @@ export default async function EmployeeShellLayout({
                         <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
                           {children}
                         </main>
-                        <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3">
-                          © 2026 Yipyy · Employee Portal
-                        </footer>
+                        <ShellFooter
+                          group="employee"
+                          className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 pb-20 text-xs md:pb-3"
+                        />
                       </SidebarInset>
                       <EmployeeBottomNav staffId={staffId} />
                       {/* Close reminder: pops the count-and-close flow when an

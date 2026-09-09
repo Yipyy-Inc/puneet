@@ -2439,7 +2439,8 @@
         "whatYipyyCollects": "Yipyy recueille vos pièces d’identité, vos numéros d’identité et votre numéro de compte bancaire, les chiffre et les transmet au fournisseur qui ouvre votre compte marchand. Seuls vous et l’administrateur Yipyy qui traite votre demande peuvent les ouvrir, et ils sont supprimés une fois le compte ouvert. Seuls les quatre derniers chiffres de tout numéro vous sont montrés en retour.",
         "byServiceHint": "À quoi l’argent correspondait. Clover ne peut pas le dire — la réservation, oui.",
         "howTakenHint": "Carte présente, en ligne, ou ni l’un ni l’autre.",
-        "afterRefunds": "Après remboursements"
+        "afterRefunds": "Après remboursements",
+        "setupResumeBody": "— vous êtes à l’étape {step} sur 3. Rien de ce que vous avez fait n’est perdu."
       },
       "payroll-rules": {
         "ownerOnly": "Seul un propriétaire ou un gestionnaire peut modifier ce que l’établissement paie.",
@@ -5192,7 +5193,12 @@
       "dismiss": "Masquer",
       "onboardingTitle": "Terminez la configuration",
       "impersonationNotice": "Avis d'emprunt d'identité envoyé par courriel à {email}.",
-      "dismissLocked": "Complétez au moins {count} étapes pour masquer"
+      "dismissLocked": "Complétez au moins {count} étapes pour masquer",
+      "copyright": "© 2026 Yipyy. Tous droits réservés.",
+      "poweredBy": "Propulsé par Yipyy",
+      "stagingLabel": "Environnement de préproduction",
+      "stagingNotice": "Préproduction · écrit dans la base de données de production",
+      "impersonationViewing": "Vous consultez {facility} en tant que {admin}."
     },
     "search": {
       "placeholder": "Rechercher animaux, clients, réservations, estimations, factures...",
@@ -5385,7 +5391,8 @@
       "undo": "Annuler",
       "previewingAs": "Aperçu en tant que {role} — voici ce qu’un membre du personnel ayant ce rôle voit.",
       "registerStillOpen": "L’heure de fermeture est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée.",
-      "registerStillOpenAt": "L’heure de fermeture ({time}) est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée."
+      "registerStillOpenAt": "L’heure de fermeture ({time}) est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée.",
+      "copyright": "© 2026 Yipyy · Portail des employés"
     },
     "admin": {
       "supportNotifications": "Notifications d'assistance",
@@ -5395,7 +5402,8 @@
       "searching": "Recherche…",
       "messages": "Messages d’assistance",
       "unreadCount": "{count} non lus",
-      "noResultsFor": "Aucun résultat pour « {term} »."
+      "noResultsFor": "Aucun résultat pour « {term} ».",
+      "copyright": "© 2026 Yipyy. Tous droits réservés."
     }
   }
 }

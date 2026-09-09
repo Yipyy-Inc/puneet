@@ -1,3 +1,4 @@
+import { ShellFooter } from "@/components/layout/shell-footer";
 import {
   canAccessAdminPortal,
   canManageFacilityAccount,
@@ -64,9 +65,10 @@ export default async function DashboardLayout({
         <main className="flex-1">
           <SettingsProviderWrapper>{children}</SettingsProviderWrapper>
         </main>
-        <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs">
-          © 2026 Yipyy. All rights reserved.
-        </footer>
+        <ShellFooter
+          group="admin"
+          className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs"
+        />
       </SidebarInset>
     </SidebarProvider>
   );

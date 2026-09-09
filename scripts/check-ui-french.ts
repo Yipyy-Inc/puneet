@@ -139,6 +139,7 @@ const SECTIONS = SETTINGS + "_sections";
  * surface list is only as honest as its roots.
  */
 const SHELL_ROOTS: [string, string][] = [
+  ["root", "src/app/layout.tsx"],
   ["facility", "src/app/facility/layout.tsx"],
   ["customer", "src/app/customer/layout.tsx"],
   ["employee", "src/app/employee/(shell)/layout.tsx"],
@@ -425,7 +426,25 @@ function resolveSpec(spec: string, from: string): string | null {
 function isProse(text: string): boolean {
   const t = text.trim();
   if (t.length < 2) return false;
-  if (!/^[A-Za-z0-9]/.test(t)) return false; // ", VariantProps" — a generic
+  // A LEADING SYMBOL is not always a reason to skip. This was
+  // `!/^[A-Za-z0-9]/`, written to reject ", VariantProps" — a fragment of a
+  // generic — and it rejected "© 2026 Yipyy. All rights reserved." for exactly
+  // the same reason. That is the line every one of the 266 routes renders, and
+  // it sat in English with all four shell surfaces reporting zero, alongside
+  // the super-admin and employee portals' own copies of it.
+  //
+  // Still an ALLOWLIST, because the reject-list version was tried first and
+  // let through thirty code fragments starting with `(`, `}`, `"` and `{`. The
+  // widening is only the handful of characters real copy begins with: a
+  // copyright sign, the separators this product writes sentences around, a
+  // currency sign, and an emoji.
+  if (!/^[A-Za-z0-9©·—–•«»→✓★$#%\u{1F300}-\u{1FAFF}]/u.test(t)) return false;
+  // A STRAIGHT DOUBLE QUOTE means the matcher crossed a string boundary and is
+  // holding half of one literal and half of the next. Real copy in this
+  // codebase never contains one — §5q's own examples use the typographic pair,
+  // as in `Requires the “View payroll” permission`. Two of the three remaining
+  // false positives after the widening above were exactly this.
+  if (t.includes('"')) return false;
   if (!/[a-z]{2}/.test(t)) return false; // needs real lowercase letters
   // Already French, so not a defect. The test is ACCENTED LETTERS, not
   // "non-ASCII": requiring pure ASCII also threw away English carrying
@@ -721,6 +740,20 @@ const BASELINE: Record<string, Map<string, number>> = {
   // The permission catalogue itself is already done; this is the copy AROUND
   // it — the headings, the filters, the empty states, the dialogs, and
   // `SERVICE_MODULE_META`, a label table with no hook of its own.
+  //
+  // ── FOUR OF THESE NUMBERS WENT UP ON 2026-09-09, AND THAT IS NOT A
+  //    REGRESSION ────────────────────────────────────────────────────────
+  //
+  // `staff-availability-tab` 10→11, `staff-roles-tab` 3→4,
+  // `EmployeeDashboard` 13→14, `StaffPreviewDialog` 2→3. Not one line of
+  // those files changed. `isProse()` stopped throwing away every string that
+  // starts with a symbol, so it can now see "— the hours they can work" and
+  // "🎉 Onboarding complete" — sentences that were always there.
+  //
+  // A ratchet that only ever goes down is measuring the CODE. When the gate
+  // itself gets sharper the numbers have to be allowed up, once, in the same
+  // change that sharpens it — otherwise the only way to widen a gate is to
+  // convert every file it newly sees, and nobody widens it.
   staff: new Map([
     [
       "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
@@ -745,9 +778,9 @@ const BASELINE: Record<string, Map<string, number>> = {
     ["src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx", 9],
     [
       "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
-      10,
+      11,
     ],
-    ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 3],
+    ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 4],
     ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
     [
       "src/app/facility/dashboard/staff/_components/status-change-dialog.tsx",
@@ -757,9 +790,9 @@ const BASELINE: Record<string, Map<string, number>> = {
       "src/app/facility/dashboard/staff/_components/warning-template-builder.tsx",
       36,
     ],
-    ["src/components/employee/EmployeeDashboard.tsx", 13],
+    ["src/components/employee/EmployeeDashboard.tsx", 14],
     ["src/components/facility/DepartmentSettings.tsx", 6],
-    ["src/components/facility/StaffPreviewDialog.tsx", 2],
+    ["src/components/facility/StaffPreviewDialog.tsx", 3],
     ["src/components/facility/staff-hr/onboarding-invite-email.tsx", 2],
   ]),
   "shell:facility": new Map<string, number>(),
