@@ -10850,3 +10850,71 @@ than it saved.
 
 `check:all` deliberately does NOT include lint, typecheck, format or the unit
 tier — it is the 35 project checks, and the sequence is the sequence.
+
+## 2026-09-09 — the edge-accent gate read zero for days while forty stripes shipped
+
+`check:edge-accents` was written for the TWO-UTILITY form of a coloured edge:
+
+```
+border-l border-violet-400        ← SIDE finds the edge, HUED finds the colour
+```
+
+Tailwind also allows both in one class, and then neither pattern fires:
+
+```
+border-l-violet-400               ← SIDE matches `border-l` inside it;
+                                    HUED's lookahead rejects anything
+                                    beginning `border-l`
+```
+
+So the gate concluded "a side with no colour" — a neutral divider — and passed
+it. **Forty of them, across nine files, while the gate reported zero and
+AGENTS.md said "At zero".**
+
+Found by reading `employee-files-tab.tsx` during the French pass: a
+`TYPE_BORDER` map of eight, applied to a card carrying `rounded-xl`. That is
+rule 1's own mechanical test for when the ban applies — "give it a radius or a
+background and the ban applies again" — failing silently.
+
+### The stripes did not work either, and that decided the fix
+
+Stage 1 remapped Tailwind's palette in `@theme`, so the gradients these were
+drawn to express **do not exist on screen**. In `warnings-tab.tsx`:
+
+| severity    | class                 | renders     |
+| ----------- | --------------------- | ----------- |
+| verbal      | `border-l-amber-400`  | `--warning` |
+| written     | `border-l-orange-400` | `--warning` |
+| final       | `border-l-red-500`    | `--error`   |
+| suspension  | `border-l-red-600`    | `--error`   |
+| termination | `border-l-red-900`    | `--error`   |
+
+Six severities, three colours. The stripe distinguished nothing a reader could
+act on, and every one of these cards already carried a BADGE naming the thing
+in words — which is the channel §3 asks for and the stripe never was. So they
+are DELETED rather than restyled: that removes decoration, not information.
+
+Three of the nine files did not even render theirs. `PlayAreaCard`,
+`RoomCategoryCard` and `EvaluationFormBuilder` each defined a `border` /
+`accent` field on a tone map that **nothing read** — the markup lost the stripe
+at some point and the token stayed, so twenty-two of the forty were dead
+weight.
+
+Two were different and are worth naming:
+
+- **`modal.tsx`** put `border-b-blue-200` under a modal header. A divider is
+  structure, so it takes the neutral hairline.
+- **`CommunicationHub.tsx`** is a genuine tab strip — rule 1's one sanctioned
+  exception — but its active branch carried `bg-blue-50/50`, and a background
+  is precisely what the spec's test says disqualifies a rail. Post-stage-1 that
+  class compiles to `var(--card)`, so it painted WHITE on a white page: it was
+  doing nothing except failing the test. Gone, and the line is `--primary`,
+  which §1 says owns the active nav item.
+
+### The lesson
+
+**A gate at zero is a claim about the gate, not about the code.** This one had
+been correct about everything it could see, and blind to the most common way of
+writing the thing it exists to ban. Both the French gate and this one failed the
+same way in one session, for the same reason: they match a SHAPE, and the
+codebase writes the shape more than one way.

@@ -20,25 +20,22 @@ import {
 
 const SOURCE_META: Record<
   StaffTaskSource,
-  { label: string; icon: React.ElementType; tone: string; border: string }
+  { label: string; icon: React.ElementType; tone: string }
 > = {
   shift: {
     label: "Shift task",
     icon: CalendarClock,
     tone: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    border: "border-l-blue-400",
   },
   standalone: {
     label: "Assigned task",
     icon: ClipboardList,
     tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    border: "border-l-emerald-400",
   },
   incident: {
     label: "Incident follow-up",
     icon: AlertTriangle,
     tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-    border: "border-l-rose-400",
   },
 };
 
@@ -97,7 +94,6 @@ export function StaffTasksSection({ staff }: { staff: StaffProfile }) {
                 key={task.id}
                 className={cn(
                   "border-border/50 flex items-start gap-3 rounded-xl border p-3",
-                  meta.border,
                 )}
               >
                 <div className={cn("mt-0.5 rounded-md p-1.5", meta.tone)}>

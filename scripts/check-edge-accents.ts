@@ -100,6 +100,32 @@ const NEUTRAL =
   /\bborder-(border|line|sidebar-border|muted|input|transparent|card|white|black|gray-\d+|grey-\d+|slate-\d+|zinc-\d+|neutral-\d+|stone-\d+)(\/\d+)?\b/;
 
 /**
+ * A one-sided border with the COLOUR FUSED INTO THE SAME UTILITY —
+ * `border-l-violet-400`, `border-b-blue-600`.
+ *
+ * ── WHY THIS WAS ADDED, MEASURED 2026-09-09 ─────────────────────────────
+ *
+ * The gate reported ZERO for days while 48 of these shipped, because it was
+ * written for the two-utility form — `border-l border-violet-400` — where
+ * `SIDE` finds the edge and `HUED` finds the colour. Tailwind also lets you
+ * write both in one class, and then neither pattern fires: `SIDE` matches
+ * `border-l` inside it, but `HUED`'s lookahead rejects anything beginning
+ * `border-l`, so the gate concluded "a side with no colour" — a neutral
+ * divider — and passed it.
+ *
+ * Found by reading `employee-files-tab.tsx`, which had a `TYPE_BORDER` map of
+ * eight, applied to a card carrying `rounded-xl`. That is rule 1's own
+ * mechanical test for when the ban applies, failing silently.
+ *
+ * The neutral exemption is unchanged and applies here too: `slate`, `gray`,
+ * `zinc`, `neutral`, `stone`, `white` and `black` say nothing, so a
+ * `border-l-slate-400` is a divider drawn awkwardly, not a stripe. That is
+ * the leftover-palette grep's business, not rule 1's.
+ */
+const FUSED =
+  /\bborder-([lrtb])-(?!\d)(?!transparent\b)(?!current\b)(?!white\b)(?!black\b)(?!gray-)(?!grey-)(?!slate-)(?!zinc-)(?!neutral-)(?!stone-)(?!border\b)(?!line\b)(?!muted\b)(?!input\b)(?!card\b)[a-z][a-z0-9]*-\d{2,3}(?:\/\d+)?\b/g;
+
+/**
  * A border COLOUR utility — anything after `border-` that is not a side, a
  * width, a style keyword or a neutral token.
  */
@@ -224,7 +250,13 @@ for (const file of tsxFiles("src")) {
     if (/\banimate-spin\b/.test(value)) continue;
     if (isTabStrip(value)) continue;
     const visible = value.replace(/\bborder-[lrtb]-transparent\b/g, "");
-    if (!SIDE.test(visible) && !/\bborder-[lrtb]-\d/.test(visible)) continue;
+    if (
+      !SIDE.test(visible) &&
+      !/\bborder-[lrtb]-\d/.test(visible) &&
+      !FUSED.test(visible)
+    )
+      continue;
+    FUSED.lastIndex = 0;
 
     const thick = [...value.matchAll(THICK)].filter(([, , w]) => Number(w) > 1);
     const sides = thick.map(([, s]) => s);
@@ -244,6 +276,13 @@ for (const file of tsxFiles("src")) {
         if (onPaper && (s === "t" || s === "b")) continue;
         offending.push(`border-${s} carrying a colour`);
       }
+    }
+
+    // The fused form. Same rule, same paper exemption — a horizontal hairline
+    // is rule 10's header rule, and only the vertical ones are stripes there.
+    for (const [, s] of value.matchAll(FUSED)) {
+      if (onPaper && (s === "t" || s === "b")) continue;
+      offending.push(`border-${s}-<colour> fused`);
     }
 
     if (!offending.length) continue;

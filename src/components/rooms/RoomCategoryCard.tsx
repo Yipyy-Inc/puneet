@@ -25,10 +25,9 @@ type ColorKey = RoomCategory["color"];
 
 const COLOR_CONFIG: Record<
   ColorKey,
-  { border: string; headerBg: string; badge: string; dot: string }
+  { headerBg: string; badge: string; dot: string }
 > = {
   amber: {
-    border: "border-l-amber-400",
     headerBg:
       "bg-gradient-to-r from-amber-50/80  to-orange-50/30  dark:from-amber-950/30  dark:to-orange-950/10",
     badge:
@@ -36,7 +35,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-amber-400",
   },
   violet: {
-    border: "border-l-violet-400",
     headerBg:
       "bg-gradient-to-r from-violet-50/80 to-purple-50/30  dark:from-violet-950/30 dark:to-purple-950/10",
     badge:
@@ -44,7 +42,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-violet-400",
   },
   blue: {
-    border: "border-l-blue-400",
     headerBg:
       "bg-gradient-to-r from-blue-50/80   to-sky-50/30     dark:from-blue-950/30   dark:to-sky-950/10",
     badge:
@@ -52,7 +49,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-blue-400",
   },
   emerald: {
-    border: "border-l-emerald-400",
     headerBg:
       "bg-gradient-to-r from-emerald-50/80 to-green-50/30 dark:from-emerald-950/30 dark:to-green-950/10",
     badge:
@@ -60,7 +56,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-emerald-400",
   },
   rose: {
-    border: "border-l-rose-400",
     headerBg:
       "bg-gradient-to-r from-rose-50/80   to-pink-50/30    dark:from-rose-950/30   dark:to-pink-950/10",
     badge:
@@ -68,7 +63,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-rose-400",
   },
   orange: {
-    border: "border-l-orange-400",
     headerBg:
       "bg-gradient-to-r from-orange-50/80 to-amber-50/30  dark:from-orange-950/30 dark:to-amber-950/10",
     badge:
@@ -76,7 +70,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-orange-400",
   },
   indigo: {
-    border: "border-l-indigo-400",
     headerBg:
       "bg-gradient-to-r from-indigo-50/80 to-blue-50/30   dark:from-indigo-950/30 dark:to-blue-950/10",
     badge:
@@ -84,7 +77,6 @@ const COLOR_CONFIG: Record<
     dot: "bg-indigo-400",
   },
   slate: {
-    border: "border-l-slate-400",
     headerBg:
       "bg-gradient-to-r from-slate-50/80  to-gray-50/30   dark:from-slate-950/30  dark:to-gray-950/10",
     badge:

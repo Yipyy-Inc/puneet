@@ -98,18 +98,6 @@ const TYPE_META: Record<
   },
 };
 
-// Left-border accent per document type
-const TYPE_BORDER: Record<EmployeeDocType, string> = {
-  work_permit: "border-l-violet-400",
-  id_document: "border-l-blue-400",
-  certification: "border-l-emerald-400",
-  contract: "border-l-indigo-400",
-  tax_form: "border-l-amber-400",
-  emergency_contact: "border-l-rose-400",
-  health_record: "border-l-pink-400",
-  other: "border-l-slate-400",
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isExpired(date?: string): boolean {
@@ -146,12 +134,7 @@ function DocumentCard({
   const expiring = isExpiringSoon(doc.expiresAt);
 
   return (
-    <div
-      className={cn(
-        "border-border/50 overflow-hidden rounded-xl border",
-        TYPE_BORDER[doc.type],
-      )}
-    >
+    <div className={cn("border-border/50 overflow-hidden rounded-xl border")}>
       <div className="space-y-2 p-3">
         {/* Header row */}
         <div className="flex min-w-0 items-start gap-2.5">

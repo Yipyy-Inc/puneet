@@ -73,10 +73,10 @@ const typeStyles: Record<
   { container?: string; header?: string }
 > = {
   confirmation: {
-    header: "border-b-blue-200 dark:border-b-blue-800",
+    header: "border-b",
   },
   warning: {
-    header: "border-b-amber-200 dark:border-b-amber-800",
+    header: "border-b",
   },
   details: {},
   form: {},
