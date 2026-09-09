@@ -45,6 +45,7 @@ import {
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import Image from "next/image";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { useNavText } from "@/lib/nav/use-nav-text";
 
 function SidebarLogo() {
   const t = useShellText("admin");
@@ -73,27 +74,36 @@ function SidebarLogo() {
 
 export function AppSidebar() {
   const signOutEverywhere = useSignOutEverywhere();
+  const navText = useNavText();
   // 8-section platform-admin architecture. Canonical routes only — the legacy
   // /analytics, /subscriptions, /financial, /communication, /facility-config
   // duplicates are intentionally consolidated into the sections below.
   const menuSections: MenuSection[] = [
     {
-      label: "Home Dashboard",
+      label: navText.section("admin-home", "Home Dashboard"),
       items: [
-        { title: "Dashboard", url: "/dashboard", icon: Home, disabled: false },
+        {
+          title: navText.item("/dashboard", "Dashboard"),
+          url: "/dashboard",
+          icon: Home,
+          disabled: false,
+        },
       ],
     },
     {
-      label: "Tenant Management",
+      label: navText.section("admin-tenants", "Tenant Management"),
       items: [
         {
-          title: "Facilities",
+          title: navText.item("/dashboard/facilities", "Facilities"),
           url: "/dashboard/facilities",
           icon: Building,
           disabled: false,
         },
         {
-          title: "Facility Requests",
+          title: navText.item(
+            "/dashboard/facilities/requests",
+            "Facility Requests",
+          ),
           url: "/dashboard/facilities/requests",
           icon: Inbox,
           disabled: false,
@@ -101,40 +111,43 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Commercial & Billing",
+      label: navText.section("admin-commercial", "Commercial & Billing"),
       items: [
         {
-          title: "Subscriptions",
+          title: navText.item(
+            "/dashboard/commercial/subscriptions",
+            "Subscriptions",
+          ),
           url: "/dashboard/commercial/subscriptions",
           icon: Repeat,
           disabled: false,
         },
         {
-          title: "Tiers & Pricing",
+          title: navText.item("/dashboard/commercial/tiers", "Tiers & Pricing"),
           url: "/dashboard/commercial/tiers",
           icon: Layers,
           disabled: false,
         },
         {
-          title: "Invoices",
+          title: navText.item("/dashboard/commercial/invoices", "Invoices"),
           url: "/dashboard/commercial/invoices",
           icon: Receipt,
           disabled: false,
         },
         {
-          title: "Credits",
+          title: navText.item("/dashboard/commercial/credits", "Credits"),
           url: "/dashboard/commercial/credits",
           icon: Gift,
           disabled: false,
         },
         {
-          title: "Trials",
+          title: navText.item("/dashboard/commercial/trials", "Trials"),
           url: "/dashboard/commercial/trials",
           icon: Hourglass,
           disabled: false,
         },
         {
-          title: "Dunning",
+          title: navText.item("/dashboard/commercial/dunning", "Dunning"),
           url: "/dashboard/commercial/dunning",
           icon: BellRing,
           disabled: false,
@@ -146,7 +159,10 @@ export function AppSidebar() {
           // "Merchant Applications" truncated to "Merchant Applicatio…" once
           // the active-item chevron appeared beside it. Shorter, and it names
           // the product a facility is applying for rather than the paperwork.
-          title: "Pay Applications",
+          title: navText.item(
+            "/dashboard/commercial/merchant-applications",
+            "Pay Applications",
+          ),
           url: "/dashboard/commercial/merchant-applications",
           icon: ClipboardCheck,
           disabled: false,
@@ -154,16 +170,16 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Platform Control",
+      label: navText.section("admin-platform", "Platform Control"),
       items: [
         {
-          title: "Feature Flags",
+          title: navText.item("/dashboard/platform/flags", "Feature Flags"),
           url: "/dashboard/platform/flags",
           icon: Flag,
           disabled: false,
         },
         {
-          title: "Data Import",
+          title: navText.item("/dashboard/platform/import", "Data Import"),
           url: "/dashboard/platform/import",
           icon: Upload,
           disabled: false,
@@ -171,46 +187,58 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Support Operations",
+      label: navText.section("admin-support", "Support Operations"),
       items: [
         {
-          title: "Tickets",
+          title: navText.item("/dashboard/support/tickets", "Tickets"),
           url: "/dashboard/support/tickets",
           icon: Ticket,
           disabled: false,
         },
         {
-          title: "Chat",
+          title: navText.item("/dashboard/support/chat", "Chat"),
           url: "/dashboard/support/chat",
           icon: MessagesSquare,
           disabled: false,
         },
         {
-          title: "Calling",
+          title: navText.item("/dashboard/support/calling", "Calling"),
           url: "/dashboard/support/calling",
           icon: PhoneCall,
           disabled: false,
         },
         {
-          title: "Announcements",
+          title: navText.item(
+            "/dashboard/support/announcements",
+            "Announcements",
+          ),
           url: "/dashboard/support/announcements",
           icon: Megaphone,
           disabled: false,
         },
         {
-          title: "Email Templates",
+          title: navText.item(
+            "/dashboard/support/email-templates",
+            "Email Templates",
+          ),
           url: "/dashboard/support/email-templates",
           icon: Mail,
           disabled: false,
         },
         {
-          title: "Agreements & Waivers",
+          title: navText.item(
+            "/dashboard/support/agreements",
+            "Agreements & Waivers",
+          ),
           url: "/dashboard/support/agreements",
           icon: FileSignature,
           disabled: false,
         },
         {
-          title: "Knowledge Base",
+          title: navText.item(
+            "/dashboard/support/knowledge-base",
+            "Knowledge Base",
+          ),
           url: "/dashboard/support/knowledge-base",
           icon: BookOpen,
           disabled: false,
@@ -218,22 +246,28 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Team & Access",
+      label: navText.section("admin-team", "Team & Access"),
       items: [
         {
-          title: "Platform team",
+          title: navText.item("/dashboard/user-management", "Platform team"),
           url: "/dashboard/user-management",
           icon: UserCog,
           disabled: false,
         },
         {
-          title: "Platform roles",
+          title: navText.item(
+            "/dashboard/user-management/roles",
+            "Platform roles",
+          ),
           url: "/dashboard/user-management/roles",
           icon: KeyRound,
           disabled: false,
         },
         {
-          title: "Audit trail",
+          title: navText.item(
+            "/dashboard/user-management/activity",
+            "Audit trail",
+          ),
           url: "/dashboard/user-management/activity",
           icon: Activity,
           disabled: false,
@@ -241,52 +275,61 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Reports & Analytics",
+      label: navText.section("admin-reports", "Reports & Analytics"),
       items: [
         {
-          title: "Business Report",
+          title: navText.item("/dashboard/reports/business", "Business Report"),
           url: "/dashboard/reports/business",
           icon: LineChart,
           disabled: false,
         },
         {
-          title: "Financial Report",
+          title: navText.item(
+            "/dashboard/reports/financial",
+            "Financial Report",
+          ),
           url: "/dashboard/reports/financial",
           icon: DollarSign,
           disabled: false,
         },
         {
-          title: "Churn & Retention",
+          title: navText.item("/dashboard/reports/churn", "Churn & Retention"),
           url: "/dashboard/reports/churn",
           icon: BarChart2,
           disabled: false,
         },
         {
-          title: "Usage Report",
+          title: navText.item("/dashboard/reports/usage", "Usage Report"),
           url: "/dashboard/reports/usage",
           icon: Activity,
           disabled: false,
         },
         {
-          title: "Support Report",
+          title: navText.item("/dashboard/reports/support", "Support Report"),
           url: "/dashboard/reports/support",
           icon: Headphones,
           disabled: false,
         },
         {
-          title: "Facilities Report",
+          title: navText.item(
+            "/dashboard/reports/facilities",
+            "Facilities Report",
+          ),
           url: "/dashboard/reports/facilities",
           icon: Building2,
           disabled: false,
         },
         {
-          title: "Agreements Report",
+          title: navText.item(
+            "/dashboard/reports/agreements",
+            "Agreements Report",
+          ),
           url: "/dashboard/reports/agreements",
           icon: FileSignature,
           disabled: false,
         },
         {
-          title: "Custom Reports",
+          title: navText.item("/dashboard/reports/custom", "Custom Reports"),
           url: "/dashboard/reports/custom",
           icon: FileText,
           disabled: false,
@@ -294,64 +337,94 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "System & Security",
+      label: navText.section("admin-system", "System & Security"),
       items: [
         {
-          title: "Global Settings",
+          title: navText.item(
+            "/dashboard/system-admin/global-settings",
+            "Global Settings",
+          ),
           url: "/dashboard/system-admin/global-settings",
           icon: Globe,
           disabled: false,
         },
         {
-          title: "AI Settings",
+          title: navText.item(
+            "/dashboard/system-admin/ai-settings",
+            "AI Settings",
+          ),
           url: "/dashboard/system-admin/ai-settings",
           icon: Sparkles,
           disabled: false,
         },
         {
-          title: "System Configuration",
+          title: navText.item(
+            "/dashboard/system-admin/system-config",
+            "System Configuration",
+          ),
           url: "/dashboard/system-admin/system-config",
           icon: Settings,
           disabled: false,
         },
         {
-          title: "Integrations",
+          title: navText.item(
+            "/dashboard/system-admin/integrations",
+            "Integrations",
+          ),
           url: "/dashboard/system-admin/integrations",
           icon: Plug,
           disabled: false,
         },
         {
-          title: "Data Management",
+          title: navText.item(
+            "/dashboard/system-admin/data-management",
+            "Data Management",
+          ),
           url: "/dashboard/system-admin/data-management",
           icon: Database,
           disabled: false,
         },
         {
-          title: "Audit Logs",
+          title: navText.item(
+            "/dashboard/system-admin/audit-logs",
+            "Audit Logs",
+          ),
           url: "/dashboard/system-admin/audit-logs",
           icon: Shield,
           disabled: false,
         },
         {
-          title: "System Status",
+          title: navText.item(
+            "/dashboard/system-health/system-status",
+            "System Status",
+          ),
           url: "/dashboard/system-health/system-status",
           icon: Gauge,
           disabled: false,
         },
         {
-          title: "Alerts & Notifications",
+          title: navText.item(
+            "/dashboard/system-health/alerts-notifications",
+            "Alerts & Notifications",
+          ),
           url: "/dashboard/system-health/alerts-notifications",
           icon: AlertTriangle,
           disabled: false,
         },
         {
-          title: "Security Management",
+          title: navText.item(
+            "/dashboard/security-compliance/security-management",
+            "Security Management",
+          ),
           url: "/dashboard/security-compliance/security-management",
           icon: ShieldCheck,
           disabled: false,
         },
         {
-          title: "Compliance Tools",
+          title: navText.item(
+            "/dashboard/security-compliance/compliance-tools",
+            "Compliance Tools",
+          ),
           url: "/dashboard/security-compliance/compliance-tools",
           icon: CheckSquare,
           disabled: false,

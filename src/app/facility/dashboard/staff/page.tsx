@@ -242,9 +242,7 @@ export default function FacilityStaffPage() {
         upsertFacilityStaff(saved);
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not save the profile.",
+          error instanceof Error ? error.message : t("couldNotSaveProfile"),
         );
       }
     })();
@@ -366,9 +364,7 @@ export default function FacilityStaffPage() {
         setViewing((v) => (v && v.id === profileId ? saved : v));
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not change the status.",
+          error instanceof Error ? error.message : t("couldNotChangeStatus"),
         );
       }
     })();
@@ -672,7 +668,7 @@ export default function FacilityStaffPage() {
               toast.error(
                 error instanceof Error
                   ? error.message
-                  : "Could not save that change.",
+                  : t("couldNotSaveChange"),
               );
             }
           })();
@@ -839,7 +835,7 @@ export default function FacilityStaffPage() {
               toast.error(
                 error instanceof Error
                   ? error.message
-                  : "Could not activate that account.",
+                  : t("couldNotActivateAccount"),
               );
             }
           })();

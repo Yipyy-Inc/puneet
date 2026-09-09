@@ -57,6 +57,7 @@ import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { getUnreadMessagesCount } from "@/lib/messaging-unread";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { useNavText } from "@/lib/nav/use-nav-text";
 
 // ============================================================================
 // Employee top bar — the SAME header the facility admin sees (search, "+ New",
@@ -86,21 +87,29 @@ function getInitials(firstName: string, lastName: string) {
 // personal items) they now live in the avatar dropdown. Clock in/out and the
 // notification bell are the two personal actions that stay as header buttons.
 const MY_WORKSPACE_LINKS = [
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: "/employee/schedule", label: "My Schedule", icon: Calendar },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: "/employee/tasks", label: "My Tasks", icon: CheckSquare },
   {
     href: "/employee/availability",
+    // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
     label: "Availability",
     icon: CalendarClock,
   },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: "/employee/documents", label: "My Documents", icon: FolderOpen },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: "/employee/performance", label: "My Performance", icon: TrendingUp },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: "/employee/write-ups", label: "My Write-ups", icon: FileText },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { href: settingsIndexHref("employee"), label: "Settings", icon: Settings },
 ] as const;
 
 export function EmployeeHeader({ staffId }: { staffId: string }) {
   const t = useShellText("employee");
+  const navText = useNavText();
   const signOutEverywhere = useSignOutEverywhere();
   // The acting person comes from the shell's RBAC boundary — the same viewer
   // every permission decision in this tree resolves against.
@@ -293,7 +302,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
               >
                 <Link href={link.href}>
                   <link.icon className="size-4" />
-                  {link.label}
+                  {navText.item(link.href, link.label)}
                 </Link>
               </DropdownMenuItem>
             ))}

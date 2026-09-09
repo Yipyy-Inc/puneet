@@ -474,12 +474,19 @@ export function BookingModal({
 
   // Staff options for assignment
   const staffOptions = [
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Mike Chen", label: "Mike Chen" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Emily Davis", label: "Emily Davis" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "David Wilson", label: "David Wilson" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Lisa Rodriguez", label: "Lisa Rodriguez" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Tom Anderson", label: "Tom Anderson" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Manager One", label: "Manager One" },
+    // french-ok: a person's name — §5q keeps one out of the locale layer
     { value: "Admin User", label: "Admin User" },
   ];
 
@@ -1771,7 +1778,7 @@ export function BookingModal({
       totalDiscount += passDiscount;
       adjustments.push({
         id: "package_redemption",
-        label: "Package pass applied",
+        label: t("packagePassApplied"),
         amount: -passDiscount,
         source: "custom_fee",
       });
@@ -2967,7 +2974,7 @@ export function BookingModal({
         bookingId: booking.id,
         petId,
         type: "walking",
-        title: "Walk Schedule",
+        title: t("walkScheduleTask"),
         time: null,
         details: booking.walkSchedule,
         assignedStaff: taskAssignments["walk-schedule"] || undefined,

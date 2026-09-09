@@ -7,6 +7,8 @@ import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
 import { StagingBanner } from "@/components/staging-banner";
 import { RootFooter } from "@/components/layout/root-footer";
+import { shellText } from "@/lib/shell/text";
+import type { AppLocale } from "@/lib/language-settings";
 import "./globals.css";
 
 // Inter was loaded here and used by exactly one component
@@ -21,13 +23,28 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700", "800"],
 });
 
-export const metadata: Metadata = {
-  title: "Yipyy - Pet Services",
-  description: "Manage your pet care business with ease",
-  icons: {
-    icon: "/yipyy-white.png",
-  },
-};
+/**
+ * The browser tab, in the reader's language.
+ *
+ * A static `metadata` export cannot be: it is evaluated once, at build time,
+ * with no request and therefore no locale. `generateMetadata` runs per
+ * request, so `getLocale()` can reach the `NEXT_LOCALE` cookie through
+ * `i18n/request.ts`.
+ *
+ * "Yipyy" does not pass through the locale layer — §5q keeps a product name
+ * out of it, the same rule that protects a pet's name and an invoice number.
+ * Only the words after it are translated.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const locale: AppLocale = (await getLocale()) === "fr" ? "fr" : "en";
+  return {
+    title: shellText(locale, "meta", "rootTitle"),
+    description: shellText(locale, "meta", "rootDescription"),
+    icons: {
+      icon: "/yipyy-white.png",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

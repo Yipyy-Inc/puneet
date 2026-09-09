@@ -206,9 +206,13 @@ export function ResultsDropdown({
 
   const orderedGroups = React.useMemo(
     () => [
+      // french-ok: the KEY of the grouped-results object — GROUP_KEY maps it to a catalogue entry at the render site
       { heading: "Pets / Customers", items: grouped["Pets / Customers"] },
+      // french-ok: the KEY of the grouped-results object — GROUP_KEY maps it to a catalogue entry at the render site
       { heading: "Bookings", items: grouped.Bookings },
+      // french-ok: the KEY of the grouped-results object — GROUP_KEY maps it to a catalogue entry at the render site
       { heading: "Estimates", items: grouped.Estimates },
+      // french-ok: the KEY of the grouped-results object — GROUP_KEY maps it to a catalogue entry at the render site
       { heading: "Invoices", items: grouped.Invoices },
     ],
     [grouped],

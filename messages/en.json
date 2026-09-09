@@ -500,7 +500,11 @@
         "invitedRelative": "invited {when}",
         "sectionsDone": "{done} of {total} sections",
         "submitted": "Submitted",
-        "remind": "Remind"
+        "remind": "Remind",
+        "couldNotSaveProfile": "Could not save the profile.",
+        "couldNotChangeStatus": "Could not change the status.",
+        "couldNotSaveChange": "Could not save that change.",
+        "couldNotActivateAccount": "Could not activate that account."
       },
       "shell": {
         "title": "Staff management",
@@ -775,7 +779,9 @@
         "cancel": "Cancel",
         "addToRecord": "Add to record",
         "uploading": "Uploading…",
-        "documentAdded": "Document added to the permanent record"
+        "documentAdded": "Document added to the permanent record",
+        "couldNotUpdateTask": "Could not update that task.",
+        "couldNotUploadFile": "Could not upload that file."
       },
       "documents": {
         "typeWorkPermit": "Work permit",
@@ -982,7 +988,15 @@
         "last7": "Last 7 days",
         "last30": "Last 30 days",
         "last90": "Last 90 days",
-        "completionLabel": "completion"
+        "completionLabel": "completion",
+        "colStaffMember": "Staff member",
+        "colAssigned": "Assigned",
+        "colCompleted": "Completed",
+        "colSkipped": "Skipped",
+        "colCompletionRate": "Completion rate",
+        "colAvgTime": "Average time",
+        "colOnTime": "On time",
+        "colPhotoCompliance": "Photo compliance"
       },
       "formSections": {
         "basicInfo": "Basic information",
@@ -1488,7 +1502,16 @@
         "newNamePlaceholder": "New department name…",
         "hasStaff": "{name} has {count} staff — reassign them first",
         "saved": "Departments saved",
-        "save": "Save departments"
+        "save": "Save departments",
+        "colourBlue": "Blue",
+        "colourGreen": "Green",
+        "colourPurple": "Purple",
+        "colourAmber": "Amber",
+        "colourOrange": "Orange",
+        "colourRed": "Red",
+        "colourTeal": "Teal",
+        "colourPink": "Pink",
+        "colourGray": "Gray"
       },
       "createClient": {
         "stepClient": "Client",
@@ -5488,7 +5511,7 @@
       }
     }
   },
-  "facilityNav": {
+  "nav": {
     "sections": {
       "calendars": "Calendars",
       "communication": "Communication",
@@ -5497,7 +5520,20 @@
       "financial": "Financial",
       "reports": "Reports",
       "marketing": "Marketing",
-      "management": "Management"
+      "management": "Management",
+      "customer-overview": "Overview",
+      "customer-pets-stays": "Pets & Stays",
+      "customer-communication": "Communication",
+      "customer-live-view": "Live View",
+      "customer-account": "Account",
+      "admin-home": "Home Dashboard",
+      "admin-tenants": "Tenant Management",
+      "admin-commercial": "Commercial & Billing",
+      "admin-platform": "Platform Control",
+      "admin-support": "Support Operations",
+      "admin-team": "Team & Access",
+      "admin-reports": "Reports & Analytics",
+      "admin-system": "System & Security"
     },
     "items": {
       "/facility/dashboard": "Dashboard",
@@ -5535,7 +5571,73 @@
       "/facility/dashboard/incidents": "Incidents",
       "/facility/dashboard/waivers": "Digital Waivers",
       "/facility/dashboard/forms": "Intake Forms",
-      "/facility/dashboard/settings": "Settings"
+      "/facility/dashboard/settings": "Settings",
+      "/customer/dashboard": "Dashboard",
+      "/customer/pets": "My Pets",
+      "/customer/bookings": "Bookings",
+      "/customer/estimates": "Estimates",
+      "/customer/packages": "Packages & Memberships",
+      "/customer/training": "Training",
+      "/customer/report-cards": "Report Cards",
+      "/customer/messages": "Messages",
+      "/customer/cameras": "Live Cameras",
+      "/customer/billing": "Billing & Payments",
+      "/customer/wallet": "My Wallet",
+      "/customer/gift-cards": "Gift Cards",
+      "/customer/rewards": "Loyalty & Rewards",
+      "/customer/refer": "Refer a Friend",
+      "/customer/documents": "Documents & Agreements",
+      "/customer/settings": "Settings",
+      "/dashboard": "Dashboard",
+      "/dashboard/facilities": "Facilities",
+      "/dashboard/facilities/requests": "Facility Requests",
+      "/dashboard/commercial/subscriptions": "Subscriptions",
+      "/dashboard/commercial/tiers": "Tiers & Pricing",
+      "/dashboard/commercial/invoices": "Invoices",
+      "/dashboard/commercial/credits": "Credits",
+      "/dashboard/commercial/trials": "Trials",
+      "/dashboard/commercial/dunning": "Dunning",
+      "/dashboard/commercial/merchant-applications": "Pay Applications",
+      "/dashboard/platform/flags": "Feature Flags",
+      "/dashboard/platform/import": "Data Import",
+      "/dashboard/support/tickets": "Tickets",
+      "/dashboard/support/chat": "Chat",
+      "/dashboard/support/calling": "Calling",
+      "/dashboard/support/announcements": "Announcements",
+      "/dashboard/support/email-templates": "Email Templates",
+      "/dashboard/support/agreements": "Agreements & Waivers",
+      "/dashboard/support/knowledge-base": "Knowledge Base",
+      "/dashboard/user-management": "Platform team",
+      "/dashboard/user-management/roles": "Platform roles",
+      "/dashboard/user-management/activity": "Audit trail",
+      "/dashboard/reports/business": "Business Report",
+      "/dashboard/reports/financial": "Financial Report",
+      "/dashboard/reports/churn": "Churn & Retention",
+      "/dashboard/reports/usage": "Usage Report",
+      "/dashboard/reports/support": "Support Report",
+      "/dashboard/reports/facilities": "Facilities Report",
+      "/dashboard/reports/agreements": "Agreements Report",
+      "/dashboard/reports/custom": "Custom Reports",
+      "/dashboard/system-admin/global-settings": "Global Settings",
+      "/dashboard/system-admin/ai-settings": "AI Settings",
+      "/dashboard/system-admin/system-config": "System Configuration",
+      "/dashboard/system-admin/integrations": "Integrations",
+      "/dashboard/system-admin/data-management": "Data Management",
+      "/dashboard/system-admin/audit-logs": "Audit Logs",
+      "/dashboard/system-health/system-status": "System Status",
+      "/dashboard/system-health/alerts-notifications": "Alerts & Notifications",
+      "/dashboard/security-compliance/security-management": "Security Management",
+      "/dashboard/security-compliance/compliance-tools": "Compliance Tools",
+      "/employee": "Home",
+      "/employee/schedule": "Schedule",
+      "/employee/tasks": "Tasks",
+      "/employee/clients": "Customer",
+      "/employee/availability": "Availability",
+      "/employee/notifications": "Notifications",
+      "/employee/documents": "My Documents",
+      "/employee/performance": "My Performance",
+      "/employee/write-ups": "My HR Records",
+      "/employee/settings": "Settings"
     },
     "bottomBar": {
       "/facility/dashboard": "Dashboard",
@@ -5907,7 +6009,12 @@
       "messages": "Support messages",
       "unreadCount": "{count} unread",
       "noResultsFor": "No results for “{term}”.",
-      "copyright": "© 2026 Yipyy. All rights reserved."
+      "copyright": "© 2026 Yipyy. All rights reserved.",
+      "searchFacilities": "Facilities",
+      "searchInvoices": "Invoices",
+      "searchTickets": "Support Tickets",
+      "searchTeam": "Team Members",
+      "searchAnnouncements": "Announcements"
     },
     "booking": {
       "savedPricingFor": "Saved pricing for {pet}",
@@ -6322,7 +6429,16 @@
       "resumeBooking": "Resume the booking",
       "resumeBookingHelp": "We restored the details you entered earlier — pick up where you left off.",
       "newBookingHelp": "Choose a service and book for your pets",
-      "wizardUnavailable": "We couldn’t load the booking wizard. Try again."
+      "wizardUnavailable": "We couldn’t load the booking wizard. Try again.",
+      "methodCardOnFile": "Card on file",
+      "methodCash": "Cash",
+      "methodTerminal": "Terminal",
+      "walkScheduleTask": "Walk schedule"
+    },
+    "meta": {
+      "rootTitle": "Yipyy - Pet Services",
+      "rootDescription": "Run your pet care business with ease",
+      "adminTitle": "Yipyy - Admin Dashboard"
     }
   }
 }

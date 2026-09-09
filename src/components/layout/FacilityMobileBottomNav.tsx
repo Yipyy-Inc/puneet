@@ -8,21 +8,25 @@ import { useNavText } from "@/lib/nav/use-nav-text";
 
 const NAV_ITEMS = [
   {
+    // french-ok: the fallback beside navText.bottomBar(href, label) — the href is the key
     label: "Dashboard",
     href: "/facility/dashboard",
     icon: Home,
   },
   {
+    // french-ok: the fallback beside navText.bottomBar(href, label) — the href is the key
     label: "Occupancy",
     href: "/facility/dashboard/kennel-view",
     icon: Grid3X3,
   },
   {
+    // french-ok: the fallback beside navText.bottomBar(href, label) — the href is the key
     label: "Calendar",
     href: "/facility/dashboard/calendar",
     icon: CalendarDays,
   },
   {
+    // french-ok: the fallback beside navText.bottomBar(href, label) — the href is the key
     label: "Tasks",
     href: "/facility/dashboard/tasks",
     icon: ClipboardList,

@@ -39,6 +39,7 @@ import {
 } from "@/data/camera-integration";
 import { memberships } from "@/data/services-pricing";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { useNavText } from "@/lib/nav/use-nav-text";
 import type {
   CameraRuleSet,
   CameraServiceType,
@@ -62,6 +63,7 @@ import type {
 
 export function CustomerSidebar() {
   const t = useShellText("customer");
+  const navText = useNavText();
   const signOutEverywhere = useSignOutEverywhere();
   const { selectedFacility } = useCustomerFacility();
   const { config: mobileApp, isPending: mobileAppPending } =
@@ -227,46 +229,46 @@ export function CustomerSidebar() {
   const menuSections: MenuSection[] = useMemo(() => {
     const sections: MenuSection[] = [
       {
-        label: "Overview",
+        label: navText.section("customer-overview", "Overview"),
         items: [
           {
-            title: "Dashboard",
+            title: navText.item("/customer/dashboard", "Dashboard"),
             url: "/customer/dashboard",
             icon: Home,
           },
         ],
       },
       {
-        label: "Pets & Stays",
+        label: navText.section("customer-pets-stays", "Pets & Stays"),
         items: [
           {
-            title: "My Pets",
+            title: navText.item("/customer/pets", "My Pets"),
             url: "/customer/pets",
             icon: Dog,
           },
           {
-            title: "Bookings",
+            title: navText.item("/customer/bookings", "Bookings"),
             url: "/customer/bookings",
             icon: Calendar,
           },
           {
-            title: "Estimates",
+            title: navText.item("/customer/estimates", "Estimates"),
             url: "/customer/estimates",
             icon: FileText,
             count: awaitingEstimateCount,
           },
           {
-            title: "Packages & Memberships",
+            title: navText.item("/customer/packages", "Packages & Memberships"),
             url: "/customer/packages",
             icon: Package,
           },
           {
-            title: "Training",
+            title: navText.item("/customer/training", "Training"),
             url: "/customer/training",
             icon: GraduationCap,
           },
           {
-            title: "Report Cards",
+            title: navText.item("/customer/report-cards", "Report Cards"),
             url: "/customer/report-cards",
             icon: FileText,
             count: unreadReportCardCount,
@@ -274,10 +276,10 @@ export function CustomerSidebar() {
         ],
       },
       {
-        label: "Communication",
+        label: navText.section("customer-communication", "Communication"),
         items: [
           {
-            title: "Messages",
+            title: navText.item("/customer/messages", "Messages"),
             url: "/customer/messages",
             icon: MessageSquare,
           },
@@ -288,10 +290,10 @@ export function CustomerSidebar() {
     // Only add cameras section if enabled (only after mount to avoid hydration issues)
     if (isMounted && camerasEnabled) {
       sections.push({
-        label: "Live View",
+        label: navText.section("customer-live-view", "Live View"),
         items: [
           {
-            title: "Live Cameras",
+            title: navText.item("/customer/cameras", "Live Cameras"),
             url: "/customer/cameras",
             icon: Camera,
           },
@@ -300,40 +302,40 @@ export function CustomerSidebar() {
     }
 
     sections.push({
-      label: "Account",
+      label: navText.section("customer-account", "Account"),
       items: [
         {
-          title: "Billing & Payments",
+          title: navText.item("/customer/billing", "Billing & Payments"),
           url: "/customer/billing",
           icon: CreditCard,
         },
         {
-          title: "My Wallet",
+          title: navText.item("/customer/wallet", "My Wallet"),
           url: "/customer/wallet",
           icon: Wallet,
         },
         {
-          title: "Gift Cards",
+          title: navText.item("/customer/gift-cards", "Gift Cards"),
           url: "/customer/gift-cards",
           icon: Gift,
         },
         {
-          title: "Loyalty & Rewards",
+          title: navText.item("/customer/rewards", "Loyalty & Rewards"),
           url: "/customer/rewards",
           icon: Ticket,
         },
         {
-          title: "Refer a Friend",
+          title: navText.item("/customer/refer", "Refer a Friend"),
           url: "/customer/refer",
           icon: UserPlus,
         },
         {
-          title: "Documents & Agreements",
+          title: navText.item("/customer/documents", "Documents & Agreements"),
           url: "/customer/documents",
           icon: FileText,
         },
         {
-          title: "Settings",
+          title: navText.item("/customer/settings", "Settings"),
           url: "/customer/settings",
           icon: Settings,
         },
@@ -345,7 +347,13 @@ export function CustomerSidebar() {
     // constants, so they belong here. Without them the badges render once with
     // the loading value and never update when the customer resolves — the
     // conversion would have had no visible effect at all.
-  }, [camerasEnabled, isMounted, awaitingEstimateCount, unreadReportCardCount]);
+  }, [
+    camerasEnabled,
+    isMounted,
+    awaitingEstimateCount,
+    unreadReportCardCount,
+    navText,
+  ]);
 
   const header = (
     <div className="flex flex-col gap-0.5">

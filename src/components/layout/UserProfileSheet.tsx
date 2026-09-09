@@ -87,7 +87,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
     return [
       {
         id: "1",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "New Facility Request",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "HealthFirst Clinic has requested to join the platform",
         type: "info",
         read: false,
@@ -96,7 +98,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "2",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "Subscription Renewed",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "FitLife Gym subscription has been renewed",
         type: "success",
         read: false,
@@ -105,7 +109,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "3",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "SLA Warning",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "Ticket #TKT-003 is approaching SLA deadline",
         type: "warning",
         read: false,
@@ -114,7 +120,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "4",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "System Update Complete",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "Platform has been updated to version 2.1.0",
         type: "success",
         read: true,
@@ -126,7 +134,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
     return [
       {
         id: "1",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "New Booking Request",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "Sarah Johnson requested an appointment for her dog Max",
         type: "info",
         read: false,
@@ -135,7 +145,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "2",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "Staff Schedule Updated",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "Dr. Smith's schedule has been updated for tomorrow",
         type: "success",
         read: false,
@@ -144,7 +156,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "3",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "Inventory Alert",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "Dog food inventory is running low (5 items remaining)",
         type: "warning",
         read: false,
@@ -153,7 +167,9 @@ const getInitialNotifications = (isSuperAdmin: boolean): Notification[] => {
       },
       {
         id: "4",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         title: "Customer Feedback",
+        // french-ok: invented demo notifications — translating them would dress a placeholder up as real
         message: "New 5-star review from Happy Paws customer",
         type: "success",
         read: true,

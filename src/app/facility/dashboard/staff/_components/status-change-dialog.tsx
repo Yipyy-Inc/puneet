@@ -65,18 +65,21 @@ const STATUS_META: Record<
     // `label` is now the FALLBACK, not the render: `staff.areas.status` is
     // keyed by the status itself, and a fifth status should read as English
     // words rather than as a raw key.
+    // french-ok: the English FALLBACK — staff.areas.status is keyed by the status itself
     label: "Active",
     icon: UserCheck,
     tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     dot: "bg-emerald-500",
   },
   inactive: {
+    // french-ok: the English FALLBACK — staff.areas.status is keyed by the status itself
     label: "Inactive",
     icon: UserMinus,
     tone: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
     dot: "bg-zinc-400",
   },
   terminated: {
+    // french-ok: the English FALLBACK — staff.areas.status is keyed by the status itself
     label: "Terminated",
     icon: UserX,
     tone: "bg-rose-500/10 text-rose-700 dark:text-rose-400",

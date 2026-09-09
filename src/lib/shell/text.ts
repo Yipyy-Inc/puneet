@@ -54,6 +54,17 @@ type ShellCatalogue = {
   /** The booking modal, which THREE shells reach — customer, facility and
    *  employee — so its words belong to none of them individually. */
   booking: Record<string, string>;
+  /**
+   * Page `metadata` — the browser tab, the bookmark, the shared link.
+   *
+   * Its own group because it is the one part of the chrome resolved on the
+   * SERVER: `generateMetadata` runs before any client code, so it cannot use
+   * `useShellText` and reads `getLocale()` instead. That resolves through
+   * `i18n/request.ts`, which reads the `NEXT_LOCALE` cookie `use-settings`
+   * writes on every load — so the tab is English for exactly one page view on
+   * a brand-new browser, and correct after that.
+   */
+  meta: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */
