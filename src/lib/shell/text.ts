@@ -51,6 +51,9 @@ type ShellCatalogue = {
   customer: Record<string, string>;
   employee: Record<string, string>;
   admin: Record<string, string>;
+  /** The booking modal, which THREE shells reach — customer, facility and
+   *  employee — so its words belong to none of them individually. */
+  booking: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */
