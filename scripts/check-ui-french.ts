@@ -786,10 +786,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       "src/app/facility/dashboard/staff/_components/status-change-dialog.tsx",
       19,
     ],
-    [
-      "src/app/facility/dashboard/staff/_components/warning-template-builder.tsx",
-      36,
-    ],
     ["src/components/employee/EmployeeDashboard.tsx", 14],
     ["src/components/facility/DepartmentSettings.tsx", 6],
     ["src/components/facility/StaffPreviewDialog.tsx", 3],
