@@ -1310,6 +1310,27 @@
         "sendFailed": "Impossible d’envoyer l’invitation.",
         "unreachable": "Impossible de joindre le serveur. Rien n’a été envoyé.",
         "linkCopied": "Lien d’intégration copié"
+      },
+      "employeeDashboard": {
+        "greetingMorning": "Bonjour",
+        "greetingAfternoon": "Bon après-midi",
+        "greetingEvening": "Bonsoir",
+        "oneLocation": "1 emplacement",
+        "locations": "{count} emplacements",
+        "onboardingComplete": "Intégration terminée",
+        "onboardingCongrats": "Intégration terminée — bienvenue dans l’équipe !",
+        "upcoming": "À venir",
+        "appointments": "rendez-vous",
+        "openTasks": "Tâches ouvertes",
+        "toComplete": "à faire",
+        "employment": "Emploi",
+        "since": "Depuis {year}",
+        "services": "Services",
+        "assigned": "{count} attribués",
+        "quickAccess": "Accès rapide",
+        "testingRole": "Vous essayez un autre rôle ?",
+        "testingRoleHelp": "Passez à un autre compte d’employé pour voir sa vue.",
+        "switchEmployee": "Changer d’employé"
       }
     }
   },

@@ -65,8 +65,17 @@ export default async function RootLayout({
   // `x-pathname` is stamped by proxy.ts on every request and is already what
   // portal-gate.ts reads; using it here beats a route group, which would mean
   // moving 266 routes to opt ONE of them out.
+  // TWO PORTALS RENDER THEIR OWN, and both were stacking a second copyright
+  // line under it — the employee portal and the super-admin one. It went
+  // unnoticed while one line read "© 2026 Yipyy · Employee Portal" and the
+  // other "© 2026 Yipyy. All rights reserved.": two different sentences look
+  // like a footer and a legal line. Translating both is what made them read
+  // alike and the duplication obvious.
+  const pathname = headerBag.get("x-pathname") ?? "";
   const ownsItsFooter =
-    headerBag.get("x-pathname")?.startsWith("/coming-soon") ?? false;
+    pathname.startsWith("/coming-soon") ||
+    pathname.startsWith("/employee") ||
+    pathname.startsWith("/dashboard");
 
   return (
     <html
