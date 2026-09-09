@@ -6,6 +6,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
 import { StagingBanner } from "@/components/staging-banner";
+import { RootFooter } from "@/components/layout/root-footer";
 import "./globals.css";
 
 // Inter was loaded here and used by exactly one component
@@ -174,11 +175,10 @@ export default async function RootLayout({
                 page. Extra bottom padding on phones clears the facility mobile
                 bottom-nav (fixed, md:hidden); removed at md where no nav exists. */}
             {!ownsItsFooter && (
-              <footer className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4">
-                {onFacilityHost
-                  ? "Powered by Yipyy"
-                  : "© 2026 Yipyy. All rights reserved."}
-              </footer>
+              <RootFooter
+                onFacilityHost={onFacilityHost}
+                className="bg-background text-muted-foreground flex items-center justify-center border-t px-4 py-4 pb-20 text-xs md:pb-4"
+              />
             )}
           </div>
           <Toaster />

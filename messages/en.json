@@ -2439,7 +2439,8 @@
         "whatYipyyCollects": "Yipyy collects your identity documents, identity numbers and bank account number, encrypts them, and passes them to the provider who opens your merchant account. Only you and the Yipyy administrator handling your application can open them, and they are deleted once the account is open. Only the last four digits of any number are ever shown back to you.",
         "byServiceHint": "What the money was for. Clover cannot answer this — the booking can.",
         "howTakenHint": "Card present, online, or neither.",
-        "afterRefunds": "After refunds"
+        "afterRefunds": "After refunds",
+        "setupResumeBody": "— you are on step {step} of 3. Nothing you have done is lost."
       },
       "payroll-rules": {
         "ownerOnly": "Only an owner or a manager can change what the facility pays.",
@@ -5192,7 +5193,12 @@
       "dismiss": "Dismiss",
       "onboardingTitle": "Finish setting up your facility",
       "impersonationNotice": "Impersonation notice emailed to {email}.",
-      "dismissLocked": "Complete at least {count} steps to dismiss"
+      "dismissLocked": "Complete at least {count} steps to dismiss",
+      "copyright": "© 2026 Yipyy. All rights reserved.",
+      "poweredBy": "Powered by Yipyy",
+      "stagingLabel": "Staging environment",
+      "stagingNotice": "Staging · writes to the live database",
+      "impersonationViewing": "You are viewing {facility} as {admin}."
     },
     "search": {
       "placeholder": "Search pets, customers, bookings, estimates, invoices...",
@@ -5385,7 +5391,8 @@
       "undo": "Undo",
       "previewingAs": "Previewing as {role} — this is what a staff member with this role sees.",
       "registerStillOpen": "It’s past closing time and the register is still open. Count and close the drawer to reconcile the day.",
-      "registerStillOpenAt": "It’s past closing time ({time}) and the register is still open. Count and close the drawer to reconcile the day."
+      "registerStillOpenAt": "It’s past closing time ({time}) and the register is still open. Count and close the drawer to reconcile the day.",
+      "copyright": "© 2026 Yipyy · Employee portal"
     },
     "admin": {
       "supportNotifications": "Support notifications",
@@ -5395,7 +5402,8 @@
       "searching": "Searching…",
       "messages": "Support messages",
       "unreadCount": "{count} unread",
-      "noResultsFor": "No results for “{term}”."
+      "noResultsFor": "No results for “{term}”.",
+      "copyright": "© 2026 Yipyy. All rights reserved."
     }
   }
 }

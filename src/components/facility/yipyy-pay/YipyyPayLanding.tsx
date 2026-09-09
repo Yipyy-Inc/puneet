@@ -254,8 +254,8 @@ function SetupResumeNotice({ step }: { step: number }) {
       <CardContent className="flex flex-wrap items-center gap-3 p-4">
         <CircleDashed className="size-5 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="min-w-0 flex-1 text-sm/relaxed">
-          <span className="font-semibold">{t("setupInProgress")}</span> — you
-          are on step {step} of 3. Nothing you have done is lost.
+          <span className="font-semibold">{t("setupInProgress")}</span>{" "}
+          {t("setupResumeBody").replace("{step}", String(step))}
         </p>
       </CardContent>
     </Card>
