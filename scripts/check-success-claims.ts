@@ -175,7 +175,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-notes.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-report-cards.tsx",
-  "src/app/facility/dashboard/staff/[id]/staff-profile-tabs.tsx",
   "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
   "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
   "src/app/facility/documents/_components/facility-documents-client.tsx",
