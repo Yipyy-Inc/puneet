@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
-import { ROLE_META, type StaffProfile } from "@/types/facility-staff";
+import type { StaffProfile } from "@/types/facility-staff";
 import {
   useOnboardingInstance,
   onboardingProgress,
 } from "@/data/staff-onboarding";
-import { StaffAvatar, fullNameOf } from "./staff-shared";
+import { StaffAvatar, fullNameOf, useRelativeTime } from "./staff-shared";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+import { formatPercent } from "@/lib/i18n/format";
 
 /**
  * "Onboarding in progress" tab — every Invited / in-progress hire with a live
@@ -53,18 +56,13 @@ function OnboardingRow({
   onRemind: (p: StaffProfile) => void;
   onView: (p: StaffProfile) => void;
 }) {
+  const { t, fill, locale } = useStaffText("directory");
+  const roleLabel = useStaffRoleLabel();
+  const relative = useRelativeTime();
   const instance = useOnboardingInstance(profile.id);
   const { done, total } = onboardingProgress(instance);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const pendingReview = Boolean(instance?.submittedAt) && !instance?.reviewedAt;
-  const daysSince =
-    now && instance?.invitedAt
-      ? Math.max(
-          0,
-          Math.floor((now - new Date(instance.invitedAt).getTime()) / 86400000),
-        )
-      : null;
-
   return (
     <div className="hover:bg-muted/30 flex flex-wrap items-center gap-3 p-3">
       <StaffAvatar profile={profile} size="sm" />
@@ -76,18 +74,25 @@ function OnboardingRow({
           {fullNameOf(profile)}
         </div>
         <div className="text-muted-foreground truncate text-xs">
-          {ROLE_META[profile.primaryRole].label}
-          {daysSince != null &&
-            ` · invited ${daysSince === 0 ? "today" : `${daysSince}d ago`}`}
+          {roleLabel(profile.primaryRole)}
+          {now != null &&
+            instance?.invitedAt &&
+            ` · ${fill("invitedRelative", {
+              when: relative(instance.invitedAt),
+            })}`}
         </div>
       </button>
 
       <div className="w-40 shrink-0">
         <div className="mb-1 flex items-center justify-between text-[11px]">
           <span className="font-medium">
-            {pendingReview ? "Submitted" : `${done} of ${total} sections`}
+            {pendingReview
+              ? t("submitted")
+              : fill("sectionsDone", { done, total })}
           </span>
-          <span className="text-muted-foreground">{pct}%</span>
+          <span className="text-muted-foreground">
+            {formatPercent(pct, locale)}
+          </span>
         </div>
         <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
           <div
@@ -103,7 +108,7 @@ function OnboardingRow({
         className="gap-1.5"
         onClick={() => onRemind(profile)}
       >
-        <Bell className="size-3.5" /> Remind
+        <Bell className="size-3.5" /> {t("remind")}
       </Button>
     </div>
   );

@@ -59,7 +59,7 @@ import { StaffTasksSection } from "../_components/staff-tasks-section";
 import { OffboardingTab } from "../_components/offboarding-tab";
 import { OnboardingTab, PerformanceTab } from "./staff-profile-tabs";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { formatDateLong } from "@/lib/i18n/format";
+import { formatDateLong, formatPercent } from "@/lib/i18n/format";
 
 // Table 4 tab set. `require` is the minimum permission to see the tab.
 const TAB_DEFS: { id: string; key: string; require: PermissionKey }[] = [
@@ -334,7 +334,7 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
             <QuickStat
               icon={CheckCircle2}
               label={t("onboarding")}
-              value={`${onboardingPct}%`}
+              value={formatPercent(onboardingPct, locale)}
             />
           </div>
         </div>

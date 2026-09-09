@@ -760,14 +760,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       15,
     ],
     [
-      "src/app/facility/dashboard/staff/_components/onboarding-progress-list.tsx",
-      1,
-    ],
-    [
-      "src/app/facility/dashboard/staff/_components/onboarding-submission-view.tsx",
-      31,
-    ],
-    [
       "src/app/facility/dashboard/staff/_components/resend-invite-dialog.tsx",
       16,
     ],

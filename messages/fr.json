@@ -496,7 +496,11 @@
         "reminderFailed": "Impossible d’envoyer le rappel.",
         "reminderCopyLink": "Ouvrez la fenêtre de renvoi pour copier le nouveau lien.",
         "networkFailed": "Impossible de joindre le serveur. Rien n’a été envoyé.",
-        "neverSignedIn": "Jamais connecté"
+        "neverSignedIn": "Jamais connecté",
+        "invitedRelative": "invité {when}",
+        "sectionsDone": "{done} sur {total} sections",
+        "submitted": "Soumis",
+        "remind": "Rappeler"
       },
       "shell": {
         "title": "Gestion du personnel",
@@ -1199,6 +1203,40 @@
         "cancel": "Annuler",
         "saveTemplate": "Enregistrer le modèle",
         "createTemplate": "Créer le modèle"
+      },
+      "onboardingReview": {
+        "legalName": "Nom légal",
+        "dateOfBirth": "Date de naissance",
+        "taxId": "NAS / SSN",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "name": "Nom",
+        "relationship": "Lien",
+        "maskedPayrollOnly": "Masqué — paie seulement",
+        "institution": "Institution",
+        "transit": "Transit",
+        "account": "Compte",
+        "voidCheque": "Chèque annulé",
+        "notUploaded": "Non téléversé",
+        "signedBy": "Signé par {who}",
+        "notSigned": "Non signé",
+        "noDaysSet": "Aucune journée définie",
+        "shirtSize": "Taille de chandail",
+        "notes": "Notes",
+        "noSubmission": "Aucune soumission en libre-service pour l’instant. Elle apparaîtra ici dès que {name} ouvrira son lien d’intégration.",
+        "heading": "Soumission en libre-service",
+        "submittedOn": "Soumis le {date}",
+        "inProgress": "En cours",
+        "accountHeading": "Compte",
+        "passwordSet": "Mot de passe défini le {when}",
+        "notSet": "Non défini",
+        "changeRequested": "Modification demandée",
+        "requestReupload": "Demander un nouveau téléversement",
+        "notePlaceholder": "p. ex. Téléversez de nouveau votre certificat de toilettage — celui-ci est illisible",
+        "cancel": "Annuler",
+        "sendTo": "Envoyer à {name}",
+        "changeSent": "Modification demandée — renvoyée à {name}",
+        "changeFailed": "Impossible de demander cette modification."
       }
     }
   },

@@ -10963,3 +10963,66 @@ the thing that was wrong.
 
 **The general form: a green check on a surface you never actually entered is
 worth less than no check, because it is spent.**
+
+## 2026-09-09 — eight files spell the weekdays in English, and no gate can see it
+
+`check:ui-french` reads JSX text and a list of attributes. A weekday name in a
+module-level array is neither, so this is worth zero to it:
+
+```ts
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+```
+
+§5q is flat about it — **"Always `Intl`, never a format string"** — and an
+array of day names is a format string with extra steps.
+
+`formatWeekday(index, locale, style)` now exists in `src/lib/i18n/format.ts`
+with unit tests, and `onboarding-submission-view` reads it. **Seven call sites
+still carry their own array:**
+
+- `src/app/facility/dashboard/services/grooming/stylists/page.tsx` — three
+  separate copies in ONE file (lines ~359, ~581, ~2037)
+- `src/app/facility/dashboard/services/scheduling/availability-changes/page.tsx`
+- `src/app/facility/dashboard/services/scheduling/templates/page.tsx`
+- `src/app/facility/dashboard/tasks/NewTaskGroupDialog.tsx`
+- `src/app/dashboard/support/calling/_components/settings-utils.ts` — keyed by
+  name (`monday: "Mon"`) rather than index, so it needs a map first
+
+None is on a measured surface yet, which is exactly why they are written down
+rather than left to be rediscovered when scheduling is converted.
+
+### The unit test earns its place on the off-by-one
+
+The reference week must be built AND read in UTC. `new Date(2024, 0, 7 + i)`
+builds a LOCAL midnight; formatting that in a negative-offset zone lands on the
+previous day, so Monday renders as Sunday for everyone in Toronto while CI,
+running in UTC, stays green. Same failure as `formatDateISO(0)` returning
+1969-12-31, found in this repo three days earlier.
+
+## 2026-09-09 — `HH:MM` times reach French screens as `09:00`
+
+Separate from the above and not yet fixed anywhere. Times of day are carried
+through this codebase as plain `"HH:MM"` strings — deliberately, so a facility's
+own clock never drifts through a timezone conversion (see
+`mappers/schedule-template.ts`). They are then rendered **raw**:
+
+```tsx
+{session.startTime}–{session.endTime}
+{formatDateLong(apt.date)} · {apt.startTime}–{apt.endTime}
+```
+
+French-Canadian time is `9 h 00` — spaces around the h. CLAUDE.md calls
+`14h30` and `14:30` "the single most common French-Canadian formatting error
+in software", and this is that error, on every screen that shows a shift, a
+session or an appointment window.
+
+`formatTime()` cannot help: it takes a `Date`, and `new Date("09:00")` is
+Invalid Date. What is needed is a `formatTimeOfDay("09:00", locale)` that
+parses the two fields itself and never constructs a `Date` at all — because
+constructing one would reintroduce exactly the timezone drift the string
+representation exists to avoid.
+
+Known call sites: `session-view-client.tsx`, `appointment-detail-page.tsx`
+(two), `grooming/stylists/page.tsx`, `onboarding-submission-view.tsx`. Not a
+complete list — nothing measures this yet, which is the first thing to fix
+about it.
