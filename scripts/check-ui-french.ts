@@ -780,10 +780,6 @@ const BASELINE: Record<string, Map<string, number>> = {
   // convert every file it newly sees, and nobody widens it.
   staff: new Map([
     [
-      "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
-      16,
-    ],
-    [
       "src/app/facility/dashboard/staff/_components/resend-invite-dialog.tsx",
       16,
     ],
@@ -798,10 +794,6 @@ const BASELINE: Record<string, Map<string, number>> = {
     ],
     ["src/app/facility/dashboard/staff/_components/staff-roles-tab.tsx", 4],
     ["src/app/facility/dashboard/staff/_components/staff-tasks-section.tsx", 5],
-    [
-      "src/app/facility/dashboard/staff/_components/status-change-dialog.tsx",
-      21,
-    ],
     ["src/components/employee/EmployeeDashboard.tsx", 14],
     ["src/components/facility/DepartmentSettings.tsx", 7],
     ["src/components/facility/StaffPreviewDialog.tsx", 3],

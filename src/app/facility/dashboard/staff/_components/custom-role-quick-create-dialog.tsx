@@ -35,6 +35,8 @@ import {
   PermissionsGrid,
 } from "@/components/facility/FacilityRolesStudio";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   ALWAYS_ON_PERMISSIONS,
   PERMISSION_GROUPS,
@@ -53,13 +55,12 @@ interface CustomRoleQuickCreateDialogProps {
   onCreated: (role: CustomFacilityRole) => void;
 }
 
-import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
-
 export function CustomRoleQuickCreateDialog({
   open,
   onOpenChange,
   onCreated,
 }: CustomRoleQuickCreateDialogProps) {
+  const { t, fill } = useStaffText("customRole");
   const roleLabel = useStaffRoleLabel();
   const { createCustomRole } = useFacilityRbac();
   const [label, setLabel] = useState("");
@@ -104,7 +105,7 @@ export function CustomRoleQuickCreateDialog({
   function submit() {
     const trimmed = label.trim();
     if (!trimmed) {
-      toast.error("Role name is required");
+      toast.error(t("nameRequired"));
       return;
     }
     const created = createCustomRole({
@@ -115,7 +116,7 @@ export function CustomRoleQuickCreateDialog({
       icon: "Sparkles",
       permissions,
     });
-    toast.success(`${trimmed} role created and assigned`);
+    toast.success(fill("created", { name: trimmed }));
     onCreated(created);
     onOpenChange(false);
     reset();
@@ -144,28 +145,24 @@ export function CustomRoleQuickCreateDialog({
             <span className="bg-background flex size-7 items-center justify-center rounded-lg border shadow-sm">
               <Sparkles className="size-4" />
             </span>
-            Create a custom role
+            {t("title")}
           </DialogTitle>
-          <DialogDescription>
-            Build a role tailored to your facility — like &ldquo;Runner&rdquo;,
-            &ldquo;Helper&rdquo;, or &ldquo;Shift Lead&rdquo;. Start from a
-            preset or blank, then mix and match permissions.
-          </DialogDescription>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label className="text-xs">Role name</Label>
+              <Label className="text-xs">{t("roleName")}</Label>
               <Input
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g. Runner, Shift Lead, Senior Groomer"
+                placeholder={t("roleNamePlaceholder")}
                 autoFocus
               />
             </div>
             <div>
-              <Label className="text-xs">Start from</Label>
+              <Label className="text-xs">{t("startFrom")}</Label>
               <Select
                 value={copyFrom}
                 onValueChange={(v) =>
@@ -178,14 +175,14 @@ export function CustomRoleQuickCreateDialog({
                 <SelectContent>
                   <SelectItem value="blank">
                     <span className="inline-flex items-center gap-1.5">
-                      <Sparkles className="size-3" /> Blank (core permissions
-                      only)
+                      <Sparkles className="size-3" /> {t("blank")}
                     </span>
                   </SelectItem>
                   {(Object.keys(ROLE_META) as FacilityStaffRole[]).map((r) => (
                     <SelectItem key={r} value={r}>
                       <span className="inline-flex items-center gap-1.5">
-                        <Users className="size-3" /> Copy from {roleLabel(r)}
+                        <Users className="size-3" />{" "}
+                        {fill("copyFrom", { role: roleLabel(r) })}
                       </span>
                     </SelectItem>
                   ))}
@@ -195,17 +192,17 @@ export function CustomRoleQuickCreateDialog({
           </div>
 
           <div>
-            <Label className="text-xs">Description</Label>
+            <Label className="text-xs">{t("descriptionLabel")}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="What does this role do? e.g. Helps reception with checkouts and assists kennel team with feedings."
+              placeholder={t("descriptionPlaceholder")}
             />
           </div>
 
           <div>
-            <Label className="text-xs">Accent color</Label>
+            <Label className="text-xs">{t("accentColor")}</Label>
             <AccentPicker
               accent={accent}
               onChange={(a, r) => {
@@ -228,12 +225,14 @@ export function CustomRoleQuickCreateDialog({
                   <SlidersHorizontal className="size-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold">
-                    Fine-tune permissions
-                  </div>
+                  <div className="text-sm font-semibold">{t("fineTune")}</div>
+                  {/* "Click to mix and match" was §6 rule 7's problem as well
+                      as §5q's — floor staff are on tablets and do not click. */}
                   <div className="text-muted-foreground text-[11px]">
-                    {grantedCount} of {totalPerms} permissions granted · Click
-                    to mix and match
+                    {fill("grantedOf", {
+                      granted: grantedCount,
+                      total: totalPerms,
+                    })}
                   </div>
                 </div>
               </div>
@@ -269,10 +268,10 @@ export function CustomRoleQuickCreateDialog({
 
         <DialogFooter className="border-t px-6 py-3">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={submit}>
-            <Plus className="size-3.5" /> Create &amp; assign
+            <Plus className="size-3.5" /> {t("createAndAssign")}
           </Button>
         </DialogFooter>
       </DialogContent>
