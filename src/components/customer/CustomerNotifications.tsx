@@ -1,5 +1,8 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatRelative } from "@/lib/i18n/format";
+
 import { useState, useSyncExternalStore } from "react";
 import { customerNotificationsStore } from "@/data/customer-notifications";
 import { Button } from "@/components/ui/button";
@@ -12,23 +15,10 @@ import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-// Helper function to format time ago
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  }
-  if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  }
-  const days = Math.floor(diffInSeconds / 86400);
-  return `${days} day${days > 1 ? "s" : ""} ago`;
-}
+// Was a third local reimplementation of `Intl.RelativeTimeFormat` — after the
+// facility notifications dropdown and the support bell, all three found this
+// week. `formatRelative` does the thresholds, the wording, the 24-hour expiry
+// §5q asks for, and the French.
 import Link from "next/link";
 
 export interface Notification {
@@ -62,6 +52,9 @@ const notificationIcons: Record<Notification["type"], string> = {
 };
 
 export function CustomerNotifications() {
+  const t = useShellText("customer");
+  const locale = useShellLocale();
+  const formatTimeAgo = (date: Date) => formatRelative(date, locale);
   const notifications = useSyncExternalStore(
     customerNotificationsStore.subscribe,
     customerNotificationsStore.getSnapshot,
@@ -100,12 +93,12 @@ export function CustomerNotifications() {
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
-          <span className="sr-only">Notifications</span>
+          <span className="sr-only">{t("notifications")}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-sm font-semibold">Notifications</h3>
+          <h3 className="text-sm font-semibold">{t("notifications")}</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -113,14 +106,14 @@ export function CustomerNotifications() {
               className="h-7 text-xs"
               onClick={markAllAsRead}
             >
-              Mark all as read
+              {t("markAllRead")}
             </Button>
           )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
             <div className="text-muted-foreground p-4 text-center text-sm">
-              No notifications
+              {t("noNotifications")}
             </div>
           ) : (
             <div className="p-2">
@@ -210,7 +203,7 @@ export function CustomerNotifications() {
                 asChild
               >
                 <Link href="/customer/notifications">
-                  View all notifications
+                  {t("viewAllNotifications")}
                 </Link>
               </Button>
             </div>

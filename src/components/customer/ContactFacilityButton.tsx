@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText } from "@/lib/shell/use-shell-text";
+
 import { useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import Link from "next/link";
 
 export function ContactFacilityButton() {
+  const t = useShellText("customer");
   const { selectedFacility } = useCustomerFacility();
   const [open, setOpen] = useState(false);
   const hydrated = useHydrated();
@@ -34,16 +37,16 @@ export function ContactFacilityButton() {
     <>
       <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
         <MessageSquare className="size-5" />
-        <span className="sr-only">Contact Facility</span>
+        <span className="sr-only">{t("contactFacility")}</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contact {selectedFacility.name}</DialogTitle>
-            <DialogDescription>
-              Choose how you&apos;d like to reach us
-            </DialogDescription>
+            <DialogTitle>
+              {t("contactTitle").replace("{facility}", selectedFacility.name)}
+            </DialogTitle>
+            <DialogDescription>{t("contactHow")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {hasChat && (
@@ -54,7 +57,7 @@ export function ContactFacilityButton() {
               >
                 <Link href="/customer/messages">
                   <MessageSquare className="mr-2 size-4" />
-                  Send a Message
+                  {t("sendAMessage")}
                 </Link>
               </Button>
             )}
@@ -67,7 +70,7 @@ export function ContactFacilityButton() {
                 }}
               >
                 <Phone className="mr-2 size-4" />
-                Call {contact.phone}
+                {t("callNumber").replace("{phone}", contact.phone ?? "")}
               </Button>
             )}
             {hasEmail && (
@@ -79,7 +82,7 @@ export function ContactFacilityButton() {
                 }}
               >
                 <Mail className="mr-2 size-4" />
-                Email {contact.email}
+                {t("emailAddress").replace("{email}", contact.email ?? "")}
               </Button>
             )}
           </div>

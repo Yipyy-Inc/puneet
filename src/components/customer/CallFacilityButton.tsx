@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText } from "@/lib/shell/use-shell-text";
+
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
@@ -11,13 +13,14 @@ export function CallFacilityButton() {
 
   const phone = selectedFacility?.contact?.phone;
 
+  const t = useShellText("customer");
   if (!hydrated || !phone) return null;
 
   return (
     <Button variant="outline" size="icon" asChild>
       <a href={`tel:${phone}`}>
         <Phone className="size-4" />
-        <span className="sr-only">Call facility</span>
+        <span className="sr-only">{t("callFacility")}</span>
       </a>
     </Button>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText } from "@/lib/shell/use-shell-text";
+
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
@@ -7,6 +9,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 
 export function QuickBookButton() {
+  const t = useShellText("customer");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -33,10 +36,10 @@ export function QuickBookButton() {
       className="gap-2"
       onClick={handleOpenBookingWizard}
       disabled={!selectedFacility || !customer}
-      aria-label="Book a Service"
+      aria-label={t("bookAService")}
     >
       <Calendar className="size-4" />
-      <span className="hidden xl:inline">Book a Service</span>
+      <span className="hidden xl:inline">{t("bookAService")}</span>
     </Button>
   );
 }

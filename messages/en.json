@@ -5801,7 +5801,21 @@
       "yourName": "Your name",
       "registering": "Registering…",
       "registerHere": "Register at this facility",
-      "creditsAvailable": "{count} credits available"
+      "creditsAvailable": "{count} credits available",
+      "callFacility": "Call facility",
+      "contactFacility": "Contact facility",
+      "contactTitle": "Contact {facility}",
+      "contactHow": "Choose how you would like to reach us",
+      "sendAMessage": "Send a message",
+      "callNumber": "Call {phone}",
+      "emailAddress": "Email {email}",
+      "notifications": "Notifications",
+      "markAllRead": "Mark all as read",
+      "noNotifications": "No notifications",
+      "viewAllNotifications": "View all notifications",
+      "switchFacility": "Switch facility",
+      "selectFacility": "Select facility",
+      "bookAService": "Book a service"
     },
     "employee": {
       "calling": "Calling",
