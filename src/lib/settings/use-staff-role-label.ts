@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+
 import { ROLE_META, type FacilityStaffRole } from "@/types/facility-staff";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
@@ -20,11 +22,14 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 export function useStaffRoleLabel(): (role: string) => string {
   const t = useSettingsText().section("staff-roles");
 
-  return (role: string) => {
-    const label = t(role);
-    if (label !== role) return label;
-    return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  };
+  return useCallback(
+    (role: string) => {
+      const label = t(role);
+      if (label !== role) return label;
+      return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    },
+    [t],
+  );
 }
 
 /**
@@ -39,12 +44,15 @@ export function useStaffRoleLabel(): (role: string) => string {
 export function useFacilityRoleLabel(): (role: string) => string {
   const t = useSettingsText().section("staff-roles");
 
-  return (role: string) => {
-    const key = `access_${role}`;
-    const label = t(key);
-    if (label !== key) return label;
-    return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  };
+  return useCallback(
+    (role: string) => {
+      const key = `access_${role}`;
+      const label = t(key);
+      if (label !== key) return label;
+      return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    },
+    [t],
+  );
 }
 
 /**
@@ -58,11 +66,14 @@ export function useFacilityRoleLabel(): (role: string) => string {
 export function useStaffRoleTagline(): (role: string) => string {
   const t = useSettingsText().section("staff-roles");
 
-  return (role: string) => {
-    const key = `tagline_${role}`;
-    const tagline = t(key);
-    return tagline === key
-      ? (ROLE_META[role as FacilityStaffRole]?.tagline ?? "")
-      : tagline;
-  };
+  return useCallback(
+    (role: string) => {
+      const key = `tagline_${role}`;
+      const tagline = t(key);
+      return tagline === key
+        ? (ROLE_META[role as FacilityStaffRole]?.tagline ?? "")
+        : tagline;
+    },
+    [t],
+  );
 }
