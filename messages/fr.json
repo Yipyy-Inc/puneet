@@ -1236,7 +1236,18 @@
         "cancel": "Annuler",
         "sendTo": "Envoyer à {name}",
         "changeSent": "Modification demandée — renvoyée à {name}",
-        "changeFailed": "Impossible de demander cette modification."
+        "changeFailed": "Impossible de demander cette modification.",
+        "reviewTitle": "Réviser et activer — {name}",
+        "reviewDescription": "Tout ce que {name} a soumis. Demandez une correction sur un élément, ou activez son compte.",
+        "requestChange": "Demander une modification",
+        "sending": "Envoi…",
+        "managerTasksPending": "Il vous reste {count} tâches de gestionnaire à faire pour {name}. Vous pouvez tout de même activer — elles restent dans votre liste.",
+        "close": "Fermer",
+        "activating": "Activation…",
+        "activateAnyway": "Activer quand même",
+        "activateAccount": "Activer le compte",
+        "activated": "Compte activé — {name} peut maintenant se connecter",
+        "activateFailed": "Impossible d’activer ce compte."
       },
       "statusChange": {
         "title": "Changer le statut de l’employé",
@@ -1277,6 +1288,28 @@
         "createAndAssign": "Créer et attribuer le rôle",
         "nameRequired": "Un nom de rôle est exigé",
         "created": "Rôle {name} créé et attribué"
+      },
+      "invite": {
+        "resendTitle": "Renvoyer l’invitation d’intégration",
+        "sendTitle": "Envoyer l’invitation d’intégration",
+        "resendDescription": "Réémettre le lien d’intégration de {email} — cela invalide l’ancien.",
+        "sendDescription": "Envoyez à {email} son lien d’intégration pour commencer.",
+        "copy": "Copier le lien",
+        "shownOnce": "Ce lien n’est montré qu’une fois. Fermez cette fenêtre et il ne pourra plus être récupéré — seule son empreinte est conservée. Renvoyez pour en émettre un nouveau.",
+        "outstanding": "Une invitation est en cours",
+        "outstandingSent": ", envoyée le {date}",
+        "outstandingExpiring": ", expirant le {date}",
+        "outstandingRest": ". Le lien lui-même n’est pas conservé et ne peut plus être affiché — renvoyez pour en émettre un nouveau, ce qui invalide l’ancien.",
+        "noLinkYet": "Aucun lien d’intégration pour l’instant. Envoyez-en un.",
+        "close": "Fermer",
+        "resend": "Renvoyer (nouveau lien)",
+        "sendInvite": "Envoyer l’invitation",
+        "emailSent": "Courriel d’intégration envoyé à {email}",
+        "notConfigured": "Service de courriel non configuré.",
+        "copyLinkBelow": "Copiez le lien ci-dessous pour le partager.",
+        "sendFailed": "Impossible d’envoyer l’invitation.",
+        "unreachable": "Impossible de joindre le serveur. Rien n’a été envoyé.",
+        "linkCopied": "Lien d’intégration copié"
       }
     }
   },

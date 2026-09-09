@@ -11026,3 +11026,51 @@ Known call sites: `session-view-client.tsx`, `appointment-detail-page.tsx`
 (two), `grooming/stylists/page.tsx`, `onboarding-submission-view.tsx`. Not a
 complete list — nothing measures this yet, which is the first thing to fix
 about it.
+
+## 2026-09-09 — 248 buttons are green, and §2 says there is no second action colour
+
+Found while translating two staff dialogs, not while looking for it:
+
+```tsx
+<Button className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700">
+  Activate account
+</Button>
+```
+
+`rg "bg-emerald-600 text-white" src` returns **248 hits**. Stage 1 remapped
+Tailwind's `emerald-*` to `--success` in `@theme`, so these render `#0F7A52`
+— the success ink — as a solid fill with white on top.
+
+**§2 is not ambiguous.** Primary `#1668E3` does "every button, link, focus
+ring, active nav item, first chart series", and the row ends "**There is no
+second action colour**". A green "Activate account" and a green "Send invite"
+are actions, not statuses, and they are the second action colour on 248
+surfaces.
+
+### Why this is not just untidy
+
+The status inks say what a RECORD is. Making one of them mean "press here"
+collapses the distinction the palette is built on: a green button and a green
+"Active" chip on the same screen now mean two unrelated things in the same
+hue. §3's rule that colour is never the only channel assumes each colour has
+one job, which is the whole point of the CLAUDE.md table's "The one job it
+does" column.
+
+### Why it is recorded rather than fixed here
+
+Two reasons, and only the first is about cost.
+
+1. 248 sites across every portal, and some of them are genuinely a
+   CONFIRMATION of something good — the pattern is not always wrong in
+   intent, only in colour. A sweep needs a decision per site about whether
+   the button is an action or a status, which is a design pass, not a
+   find-and-replace.
+2. **No gate measures it.** `check:edge-accents` covers rule 1, `badge-glyph`
+   covers §3, and nothing covers §2's one-action-colour rule at all. Sweeping
+   248 without a gate means the 249th lands the week after. The gate comes
+   first, the way `check:hover-actions` preceded clearing its 41.
+
+**The shape a gate would take:** flag a `bg-<status>-<600..900>` on a
+`<Button>` or on anything with an `onClick`, and exempt a `<Badge>` or a
+status pill, where a solid status ink is exactly what rule 2 asks for. Start it
+as a ratchet at 248 like the others.
