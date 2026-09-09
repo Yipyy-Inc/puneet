@@ -44,6 +44,7 @@ import {
 } from "@/data/staff-onboarding";
 import { useEmploymentTypeLabel } from "@/lib/staff/use-employment-type-label";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useServiceTypeLabel } from "@/lib/settings/use-service-types";
 import {
   useStaffRoleLabel,
   useStaffRoleTagline,
@@ -90,6 +91,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
   const employmentTypeLabel = useEmploymentTypeLabel();
   const roleLabel = useStaffRoleLabel();
   const roleTagline = useStaffRoleTagline();
+  const serviceLabel = useServiceTypeLabel();
   const role = staff.primaryRole;
   // Section 4C — Quick Access is derived from the viewer's permissions, never
   // hardcoded per role. Every shortcut is filtered by the same key(s) that gate
@@ -270,7 +272,7 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
             const Icon = action.icon;
             return (
               <Link
-                key={action.href + action.title}
+                key={action.href + action.titleKey}
                 href={action.href}
                 className="group block"
               >
@@ -284,9 +286,13 @@ export function EmployeeDashboard({ staff }: { staff: StaffProfile }) {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 pb-4">
-                    <CardTitle className="text-base">{action.title}</CardTitle>
+                    <CardTitle className="text-base">
+                      {action.moduleId
+                        ? serviceLabel(action.moduleId, t(action.titleKey))
+                        : t(action.titleKey)}
+                    </CardTitle>
                     <CardDescription className="mt-0.5 text-xs">
-                      {action.description}
+                      {t(action.descriptionKey)}
                     </CardDescription>
                   </CardContent>
                 </Card>

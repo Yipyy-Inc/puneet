@@ -38,11 +38,11 @@ import {
   addOnboardingTask,
   removeOnboardingTask,
   setOnboardingTaskComplete,
-  ONBOARDING_TYPE_LABEL,
 } from "@/data/staff-onboarding";
 import { OnboardingSubmissionReview } from "../_components/onboarding-submission-view";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { formatPercent } from "@/lib/i18n/format";
+import { useOnboardingTypeLabel } from "@/lib/staff/use-onboarding-type-label";
 
 // Local editable models — this is a mock with no fs-* shift/task/rating join, so
 // these tabs are genuine admin-editable state rather than fabricated read-only
@@ -182,23 +182,9 @@ const STALLED_OVERDUE_MIN = 1; // any overdue incomplete task flags the checklis
 export function OnboardingTab({ staff }: { staff: StaffProfile }) {
   const { t, fill } = useStaffText("profileTabs");
 
-  /**
-   * An onboarding task type's words.
-   *
-   * `ONBOARDING_TYPE_LABEL` is a module constant in data/staff-onboarding.ts,
-   * so `check:ui-french` cannot see it and its nine English labels counted as
-   * zero while a French manager read "Shadow shift" on every task row. Keyed
-   * off the union; an unknown type falls back to the constant's own English
-   * rather than to a raw key.
-   */
-  const typeLabel = (type: keyof typeof ONBOARDING_TYPE_LABEL) => {
-    const key = `type${type
-      .split("_")
-      .map((w) => w[0].toUpperCase() + w.slice(1))
-      .join("")}`;
-    const label = t(key);
-    return label === key ? ONBOARDING_TYPE_LABEL[type] : label;
-  };
+  // The nine type names moved to `useOnboardingTypeLabel()` when the
+  // employee's own onboarding card turned out to render the same set.
+  const typeLabel = useOnboardingTypeLabel();
 
   const tasks = useOnboarding(staff.id);
   const [today] = useState(() => new Date().toISOString().split("T")[0]);

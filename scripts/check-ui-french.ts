@@ -715,11 +715,17 @@ function routeRoots(dir: string): string[] {
  * than that and nobody checked: at 3 the surface measured 41 strings in 7
  * files, and at 5 it measures 204 in 11.
  *
- * The 163 it could not reach are not obscure. `employee-dashboard-widgets` is
- * the EMPLOYEE PORTAL HOME — the quick-action catalogue, the quick-access
- * cards, the schedule and task widgets — read by every member of floor staff
- * at the start of every shift, and it sat one level past the edge of the only
- * thing measuring it.
+ * The 163 it could not reach are not obscure. `employee-dashboard-widgets`
+ * holds the quick-action catalogue, the quick-access cards, and the schedule,
+ * task and alert widgets — about 30 strings of employee-facing copy that sat
+ * one level past the edge of the only thing measuring it.
+ *
+ * (It was described here as "the employee portal home" on the day the depth
+ * changed, and that was wrong. `EmployeeDashboard` and these widgets are
+ * reached ONLY through the manager's read-only preview dialog;
+ * `employee/(shell)/page.tsx` renders `WeatherWidget` + `DashboardShell`
+ * instead. The strings still matter — a manager previewing in French should
+ * see French — but nobody starts a shift on them.)
  *
  * Same lesson as SHELL_ROOTS, one dimension over: a boundary you draw yourself
  * is a boundary that agrees with you. There the boundary was a file LIST; here
@@ -829,7 +835,6 @@ const BASELINE: Record<string, Map<string, number>> = {
     //
     // Four files the walk could not previously reach. None of them is
     // obscure: the first is the employee portal's own home screen.
-    ["src/components/employee/employee-dashboard-widgets.tsx", 21],
     ["src/components/employee/ClockConfirm.tsx", 13],
     ["src/components/facility/NotificationRowMenu.tsx", 4],
     // The facility HEADER's, reached through the preview dialog's embedded
