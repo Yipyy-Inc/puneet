@@ -10,6 +10,7 @@ import {
   formatPercent,
   formatPhone,
   formatRelative,
+  formatWeekday,
   formatTime,
   formatWeight,
 } from "@/lib/i18n/format";
@@ -240,5 +241,44 @@ describe("a date that will not parse renders, it does not throw", () => {
     const epochLocal = new Date(1970, 0, 1);
     expect(formatDateISO(epochLocal.getTime())).toBe("1970-01-01");
     expect(formatDateISO(new Date(2026, 8, 1))).toBe("2026-09-01");
+  });
+});
+
+// ============================================================================
+// WEEKDAY NAMES, WHICH EIGHT FILES SPELL OUT IN ENGLISH
+//
+// `["Sun", "Mon", …]` is a format string with extra steps, and §5q's rule is
+// flat: always `Intl`. The index→name mapping is worth a test rather than a
+// screenshot because the failure is silent and off-by-one — the reference week
+// has to be built AND read in UTC, or a negative-offset zone shifts every name
+// back a day and Monday renders as Sunday for everyone in Toronto while CI,
+// running in UTC, stays green.
+// ============================================================================
+
+describe("a weekday index becomes a weekday name", () => {
+  test("0 is Sunday and 6 is Saturday, in both languages", () => {
+    expect(formatWeekday(0, "en")).toBe("Sun");
+    expect(formatWeekday(6, "en")).toBe("Sat");
+    // fr-CA abbreviates with a trailing period.
+    expect(formatWeekday(0, "fr")).toBe("dim.");
+    expect(formatWeekday(6, "fr")).toBe("sam.");
+  });
+
+  test("every index maps to a distinct name, so none has shifted", () => {
+    for (const locale of ["en", "fr"] as const) {
+      const names = [0, 1, 2, 3, 4, 5, 6].map((i) => formatWeekday(i, locale));
+      expect(new Set(names).size).toBe(7);
+    }
+  });
+
+  test("the long form is the whole word", () => {
+    expect(formatWeekday(1, "en", "long")).toBe("Monday");
+    expect(formatWeekday(1, "fr", "long")).toBe("lundi");
+  });
+
+  test("an index off the week is the em dash, not a wrong day", () => {
+    for (const bad of [-1, 7, 1.5, Number.NaN]) {
+      expect(formatWeekday(bad, "en")).toBe("—");
+    }
   });
 });

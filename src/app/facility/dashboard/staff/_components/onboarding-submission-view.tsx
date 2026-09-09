@@ -24,21 +24,18 @@ import {
 } from "@/data/staff-onboarding";
 import { fullNameOf } from "./staff-shared";
 import { notifyStaffLifecycle } from "@/lib/staff-notifications";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import {
+  formatDateShort,
+  formatDateLong,
+  formatTime,
+  formatWeekday,
+} from "@/lib/i18n/format";
 
 type Data = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 const mask = (v: string, keep = 3) =>
   v.length > keep ? `•••• ${v.slice(-keep)}` : v ? "••••" : "—";
-
-const DAY_LABEL: Record<number, string> = {
-  0: "Sun",
-  1: "Mon",
-  2: "Tue",
-  3: "Wed",
-  4: "Thu",
-  5: "Fri",
-  6: "Sat",
-};
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -58,6 +55,7 @@ export function SubmittedData({
   task: EmployeeOnboardingTask;
   data: Data;
 }) {
+  const { t, fill, locale } = useStaffText("onboardingReview");
   const v = (k: string) => str(data[k]);
   const file = data.file as
     | { name: string; url: string; uploadedAt?: string }
@@ -67,38 +65,38 @@ export function SubmittedData({
     case "personal_info":
       return (
         <dl className="text-sm">
-          <Row label="Legal name" value={v("legalName")} />
-          <Row label="Date of birth" value={v("dateOfBirth")} />
-          <Row label="SIN / SSN" value={mask(v("taxId"))} />
+          <Row label={t("legalName")} value={v("legalName")} />
+          <Row label={t("dateOfBirth")} value={v("dateOfBirth")} />
+          <Row label={t("taxId")} value={mask(v("taxId"))} />
         </dl>
       );
     case "contact_details":
       return (
         <dl className="text-sm">
-          <Row label="Phone" value={v("phone")} />
-          <Row label="Address" value={v("address")} />
+          <Row label={t("phone")} value={v("phone")} />
+          <Row label={t("address")} value={v("address")} />
         </dl>
       );
     case "emergency_contact":
       return (
         <dl className="text-sm">
-          <Row label="Name" value={v("name")} />
-          <Row label="Relationship" value={v("relationship")} />
-          <Row label="Phone" value={v("phone")} />
+          <Row label={t("name")} value={v("name")} />
+          <Row label={t("relationship")} value={v("relationship")} />
+          <Row label={t("phone")} value={v("phone")} />
         </dl>
       );
     case "banking":
       return (
         <dl className="text-sm">
           <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
-            <Lock className="size-3" /> Masked — payroll only
+            <Lock className="size-3" /> {t("maskedPayrollOnly")}
           </div>
-          <Row label="Institution" value={mask(v("institution"), 2)} />
-          <Row label="Transit" value={mask(v("transit"), 2)} />
-          <Row label="Account" value={mask(v("account"))} />
+          <Row label={t("institution")} value={mask(v("institution"), 2)} />
+          <Row label={t("transit")} value={mask(v("transit"), 2)} />
+          <Row label={t("account")} value={mask(v("account"))} />
           {file?.name && (
             <Row
-              label="Void cheque"
+              label={t("voidCheque")}
               value={
                 <a
                   href={file.url}
@@ -124,25 +122,29 @@ export function SubmittedData({
           <FileText className="size-4" /> {file.name}
           {file.uploadedAt && (
             <span className="text-muted-foreground text-xs">
-              · {new Date(file.uploadedAt).toLocaleDateString()}
+              · {formatDateShort(new Date(file.uploadedAt), locale)}
             </span>
           )}
         </a>
       ) : (
-        <span className="text-muted-foreground text-sm">Not uploaded</span>
+        <span className="text-muted-foreground text-sm">
+          {t("notUploaded")}
+        </span>
       );
     case "document_sign":
       return v("signature") ? (
         <p className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
-          <ShieldCheck className="size-4" /> Signed by {v("signature")}
+          <ShieldCheck className="size-4" />{" "}
+          {fill("signedBy", { who: v("signature") })}
           {data.signedAt ? (
             <span className="text-muted-foreground text-xs">
-              · {new Date(str(data.signedAt)).toLocaleString()}
+              · {formatDateLong(new Date(str(data.signedAt)), locale)}{" "}
+              {formatTime(new Date(str(data.signedAt)), locale)}
             </span>
           ) : null}
         </p>
       ) : (
-        <span className="text-muted-foreground text-sm">Not signed</span>
+        <span className="text-muted-foreground text-sm">{t("notSigned")}</span>
       );
     case "availability": {
       const days = Array.isArray(data.days)
@@ -159,7 +161,7 @@ export function SubmittedData({
           {on.map((d) => (
             <li key={d.dayOfWeek} className="flex justify-between">
               <span className="text-muted-foreground">
-                {DAY_LABEL[d.dayOfWeek]}
+                {formatWeekday(d.dayOfWeek, locale)}
               </span>
               <span className="font-medium">
                 {d.startTime}–{d.endTime}
@@ -168,14 +170,14 @@ export function SubmittedData({
           ))}
         </ul>
       ) : (
-        <span className="text-muted-foreground text-sm">No days set</span>
+        <span className="text-muted-foreground text-sm">{t("noDaysSet")}</span>
       );
     }
     case "uniform_prefs":
       return (
         <dl className="text-sm">
-          <Row label="Shirt size" value={v("shirtSize")} />
-          {v("notes") && <Row label="Notes" value={v("notes")} />}
+          <Row label={t("shirtSize")} value={v("shirtSize")} />
+          {v("notes") && <Row label={t("notes")} value={v("notes")} />}
         </dl>
       );
     case "custom_question":
@@ -207,6 +209,7 @@ export function OnboardingSubmissionReview({
 }: {
   profile: StaffProfile;
 }) {
+  const { t, fill, locale } = useStaffText("onboardingReview");
   const instance = useOnboardingInstance(profile.id);
   const templates = useOnboardingTemplates();
   const { mutate: requestChange } = useRequestChange();
@@ -217,10 +220,7 @@ export function OnboardingSubmissionReview({
     return (
       <div className="border-border/60 text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed py-8 text-center text-sm">
         <Inbox className="size-6" />
-        No self-serve submission yet. It appears here once {
-          profile.firstName
-        }{" "}
-        starts their onboarding link.
+        {fill("noSubmission", { name: profile.firstName })}
       </div>
     );
   }
@@ -252,6 +252,10 @@ export function OnboardingSubmissionReview({
               staffId: profile.id,
               staffName: fullNameOf(profile),
               to: profile.email,
+              // french-ok: composed here, SENT to the employee — this
+              // screen's locale is the manager's, not the reader's. Server-side
+              // composition in the recipient's language is the real fix and is
+              // recorded in the debt map.
               subject: "Action needed on your onboarding",
               body: `${
                 task.type === "document_upload" || task.type === "document_sign"
@@ -260,15 +264,13 @@ export function OnboardingSubmissionReview({
               }: ${message}`,
             },
           });
-          toast.success(`Change requested — sent back to ${profile.firstName}`);
+          toast.success(fill("changeSent", { name: profile.firstName }));
           setChangeFor(null);
           setNote("");
         },
         onError: (error) =>
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not request that change.",
+            error instanceof Error ? error.message : t("changeFailed"),
           ),
       },
     );
@@ -277,14 +279,18 @@ export function OnboardingSubmissionReview({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Self-serve submission</h3>
+        <h3 className="text-sm font-semibold">{t("heading")}</h3>
         {instance.submittedAt ? (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-3.5" /> Submitted{" "}
-            {new Date(instance.submittedAt).toLocaleDateString()}
+            <CheckCircle2 className="size-3.5" />{" "}
+            {fill("submittedOn", {
+              date: formatDateShort(new Date(instance.submittedAt), locale),
+            })}
           </span>
         ) : (
-          <span className="text-muted-foreground text-[11px]">In progress</span>
+          <span className="text-muted-foreground text-[11px]">
+            {t("inProgress")}
+          </span>
         )}
       </div>
 
@@ -298,12 +304,17 @@ export function OnboardingSubmissionReview({
                 : "text-muted-foreground/40 size-4"
             }
           />
-          Account
+          {t("accountHeading")}
         </div>
         <p className="text-muted-foreground mt-1 text-xs">
           {instance.account
-            ? `Password set ${new Date(instance.account.passwordSetAt).toLocaleString()}`
-            : "Not set"}
+            ? fill("passwordSet", {
+                when: formatDateLong(
+                  new Date(instance.account.passwordSetAt),
+                  locale,
+                ),
+              })
+            : t("notSet")}
         </p>
       </div>
 
@@ -322,7 +333,7 @@ export function OnboardingSubmissionReview({
               <span className="text-sm font-medium">{label}</span>
               {flagged ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                  Change requested
+                  {t("changeRequested")}
                 </span>
               ) : (
                 <Button
@@ -333,7 +344,8 @@ export function OnboardingSubmissionReview({
                     setChangeFor(changeFor === task.id ? null : task.id)
                   }
                 >
-                  <MessageSquarePlus className="size-3.5" /> Request re-upload
+                  <MessageSquarePlus className="size-3.5" />{" "}
+                  {t("requestReupload")}
                 </Button>
               )}
             </div>
@@ -351,7 +363,7 @@ export function OnboardingSubmissionReview({
                 <Textarea
                   rows={2}
                   value={note}
-                  placeholder="e.g. Please re-upload your grooming certificate — unreadable"
+                  placeholder={t("notePlaceholder")}
                   onChange={(e) => setNote(e.target.value)}
                 />
                 <div className="flex justify-end gap-2">
@@ -363,14 +375,14 @@ export function OnboardingSubmissionReview({
                       setNote("");
                     }}
                   >
-                    Cancel
+                    {t("cancel")}
                   </Button>
                   <Button
                     size="sm"
                     disabled={!note.trim()}
                     onClick={() => submitChange(task)}
                   >
-                    Send to {profile.firstName}
+                    {fill("sendTo", { name: profile.firstName })}
                   </Button>
                 </div>
               </div>

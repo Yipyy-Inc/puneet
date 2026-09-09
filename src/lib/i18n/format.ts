@@ -166,6 +166,35 @@ export function formatDateISO(value: Date | string | number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/**
+ * `Sun`…`Sat` · `dim.`…`sam.` — a weekday from its index, 0 = Sunday.
+ *
+ * EIGHT files in this repo carry their own `["Sun", "Mon", …]`, and every one
+ * of them is English on a French screen. §5q's rule is flat — "Always `Intl`,
+ * never a format string" — and a hardcoded array of day names is a format
+ * string with extra steps. The other seven are outside the surfaces measured
+ * so far and are recorded in the debt map; this exists so the fix is a call,
+ * not a ninth array.
+ *
+ * The reference week is pinned in UTC and read back in UTC. `new Date(2024, 0,
+ * 7 + i)` builds a LOCAL midnight, and formatting that in a negative-offset
+ * zone lands on the previous day — the same off-by-one that made
+ * `formatDateISO(0)` return 1969-12-31 in a unit test earlier this week.
+ */
+export function formatWeekday(
+  index: number,
+  locale: AppLocale,
+  style: "short" | "long" | "narrow" = "short",
+): string {
+  if (!Number.isInteger(index) || index < 0 || index > 6) return NO_DATE;
+  // 2024-01-07 was a Sunday.
+  const d = new Date(Date.UTC(2024, 0, 7 + index));
+  return dateFmt(locale, `wd-${style}`, {
+    weekday: style,
+    timeZone: "UTC",
+  }).format(d);
+}
+
 // ── TIME ───────────────────────────────────────────────────────────────────
 
 /**

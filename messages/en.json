@@ -496,7 +496,11 @@
         "reminderCopyLink": "Open the resend dialog to copy the new link.",
         "reminderFailed": "Could not send the reminder.",
         "networkFailed": "Could not reach the server. Nothing was sent.",
-        "neverSignedIn": "Never signed in"
+        "neverSignedIn": "Never signed in",
+        "invitedRelative": "invited {when}",
+        "sectionsDone": "{done} of {total} sections",
+        "submitted": "Submitted",
+        "remind": "Remind"
       },
       "shell": {
         "title": "Staff management",
@@ -1199,6 +1203,40 @@
         "cancel": "Cancel",
         "saveTemplate": "Save template",
         "createTemplate": "Create template"
+      },
+      "onboardingReview": {
+        "legalName": "Legal name",
+        "dateOfBirth": "Date of birth",
+        "taxId": "SIN / SSN",
+        "phone": "Phone",
+        "address": "Address",
+        "name": "Name",
+        "relationship": "Relationship",
+        "maskedPayrollOnly": "Masked — payroll only",
+        "institution": "Institution",
+        "transit": "Transit",
+        "account": "Account",
+        "voidCheque": "Void cheque",
+        "notUploaded": "Not uploaded",
+        "signedBy": "Signed by {who}",
+        "notSigned": "Not signed",
+        "noDaysSet": "No days set",
+        "shirtSize": "Shirt size",
+        "notes": "Notes",
+        "noSubmission": "No self-serve submission yet. It appears here once {name} starts their onboarding link.",
+        "heading": "Self-serve submission",
+        "submittedOn": "Submitted {date}",
+        "inProgress": "In progress",
+        "accountHeading": "Account",
+        "passwordSet": "Password set {when}",
+        "notSet": "Not set",
+        "changeRequested": "Change requested",
+        "requestReupload": "Request re-upload",
+        "notePlaceholder": "e.g. Re-upload your grooming certificate — this one is unreadable",
+        "cancel": "Cancel",
+        "sendTo": "Send to {name}",
+        "changeSent": "Change requested — sent back to {name}",
+        "changeFailed": "Could not request that change."
       }
     }
   },

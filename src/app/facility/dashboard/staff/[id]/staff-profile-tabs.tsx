@@ -42,6 +42,7 @@ import {
 } from "@/data/staff-onboarding";
 import { OnboardingSubmissionReview } from "../_components/onboarding-submission-view";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatPercent } from "@/lib/i18n/format";
 
 // Local editable models — this is a mock with no fs-* shift/task/rating join, so
 // these tabs are genuine admin-editable state rather than fabricated read-only
@@ -504,7 +505,7 @@ export function PerformanceTab({
   profile: StaffProfile;
   onboardingPct: number;
 }) {
-  const { t, fill } = useStaffText("profileTabs");
+  const { t, fill, locale } = useStaffText("profileTabs");
   const shared = usePerformanceVisibility(profile.id);
   return (
     <div className="space-y-4">
@@ -544,7 +545,7 @@ export function PerformanceTab({
         <MetricCard
           icon={CheckCircle2}
           label={t("onboarding")}
-          value={`${onboardingPct}%`}
+          value={formatPercent(onboardingPct, locale)}
           tone="text-emerald-600 dark:text-emerald-400"
         />
       </div>
