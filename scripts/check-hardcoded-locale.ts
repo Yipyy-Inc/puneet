@@ -51,7 +51,7 @@ const ANSI = {
 };
 
 /** The count on the day the rule got a gate (stage 11, 2026-09-04). */
-const BASELINE = 533;
+const BASELINE = 532;
 
 /**
  * A literal BCP-47 tag handed straight to a formatter. Matching the call

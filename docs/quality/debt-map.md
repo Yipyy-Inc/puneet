@@ -10609,3 +10609,88 @@ whichever box it is in. A French help line wraps to two lines where the English
 fits on one, which had one box's switches sitting 20px above its neighbour's.
 Stretching the box alone would have fixed the outline and left the switches
 ragged, which is the half-fix.
+
+## 2026-09-09 — four staff states, two vocabularies, and five sets of labels no gate can see
+
+Found while converting the staff area to French. Neither is a French problem —
+translation is just what made them visible.
+
+### Two names for the same four states
+
+`StaffProfile["status"]` has four values, and the product describes them twice:
+
+| value        | `status-change-dialog.tsx` | `[id]/staff-profile-view.tsx` | the directory's tabs   |
+| ------------ | -------------------------- | ----------------------------- | ---------------------- |
+| `active`     | Active                     | Active                        | Active employees       |
+| `invited`    | Invited                    | Invited                       | Onboarding in progress |
+| `inactive`   | **Inactive**               | **On leave**                  | On leave               |
+| `terminated` | **Terminated**             | **Former employee**           | Former employees       |
+
+Two of the three agree with each other and not with the dialog. A manager who
+moves somebody to "Inactive" in the dialog then sees "On leave" on the profile
+and "On leave" in the tab — the same record, named differently by the screen
+that changed it.
+
+**Not unified here on purpose.** "Terminated" may be the deliberate formal
+register for the control that performs it, while "Former employee" is the right
+word for a badge. Picking one is a copy decision, and doing it silently inside a
+translation pass would bury it. Each keeps its own keys; both are correct French
+now; somebody chooses on purpose later.
+
+### Five label sets `check:ui-french` structurally cannot see
+
+The gate reads JSX text and specific attributes. A module-level constant is
+none of those, so its labels count as **zero** while rendering English on every
+screen that draws them:
+
+| where                           | count | now                     |
+| ------------------------------- | ----- | ----------------------- |
+| `staffTabs` in the staff layout | 5     | keyed                   |
+| `ROLE_FILTERS` in the directory | 9     | `useStaffRoleLabel()`   |
+| `SERVICE_MODULE_META`           | 8     | `useServiceTypeLabel()` |
+| `ONBOARDING_TYPE_LABEL`         | 9     | keyed                   |
+| `TAB_DEFS` in the profile       | 11    | keyed                   |
+| `STATUS_META` ×2                | 8     | keyed                   |
+| `action.replace(/_/g, " ")`     | 7     | keyed                   |
+
+**57 strings, none of them in the 725 the ratchet started from.** So the
+number is a floor, not a total, and "the file is at zero" means "no JSX text
+left", not "this screen is French". Every file converted from here on gets read
+for constants before it is called done.
+
+The `replace(/_/g, " ")` case is worth naming separately: a regex over an
+English identifier is not a formatter. It capitalises, it cannot translate, and
+it renders whatever the enum happens to be called. `useStaffRoleLabel`'s own
+docblock records four settings sections each having written their own
+`humanizeRole()` for exactly this reason.
+
+### While in there
+
+`staff-profile-view.tsx` rendered the hire date through
+`toLocaleDateString("en-US", …)` — a hardcoded locale (one of the 534 the
+ratchet holds, now 532) AND an American month-day order on a product whose §6
+rule 8 exists because "Canada reads all three orders and the wrong month is a
+dog in the wrong week". It uses `formatDateLong(…, locale)` now.
+
+That file also has a hand-rolled sticky save bar — `z-10` rather than
+`z-[var(--z-sticky)]`, and its own Discard/Save rather than the `SaveBar`
+promoted to `components/ui/` on 2026-09-08. Left alone: swapping it changes
+loading and discard semantics, which is not a translation. Recorded so the one
+save model can reach it deliberately.
+
+### A unit test that depends on DNS
+
+Noticed three times in one session: `bun run test:unit` fails intermittently
+with `[calling] sendSms failed: warn: getaddrinfo ENOTFOUND`, then passes on an
+immediate re-run with 228/228.
+
+`calling-provider.test.ts` stubs `globalThis.fetch` and restores it in
+`afterEach`, so at least one path reaches the REAL network — the DNS lookup in
+that message is genuine. AGENTS.md keeps this tier for "pure logic, no browser,
+no database" precisely so it can be trusted in under a second; a test whose
+outcome depends on name resolution is neither fast nor deterministic, and an
+intermittent red here teaches people to re-run rather than to read.
+
+Not chased down in the French pass. Whoever picks it up: find the case that
+runs outside `stubFetch`, and fail the test on an unstubbed fetch rather than
+letting it escape.

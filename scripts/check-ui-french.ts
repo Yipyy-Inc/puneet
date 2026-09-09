@@ -722,7 +722,6 @@ const BASELINE: Record<string, Map<string, number>> = {
   // it — the headings, the filters, the empty states, the dialogs, and
   // `SERVICE_MODULE_META`, a label table with no hook of its own.
   staff: new Map([
-    ["src/app/facility/dashboard/staff/[id]/staff-profile-view.tsx", 14],
     ["src/app/facility/dashboard/staff/_components/access-tab.tsx", 29],
     [
       "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
