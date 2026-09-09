@@ -224,6 +224,40 @@ export function formatTime(
   return out.replace(/\ba\.m\./i, "AM").replace(/\bp\.m\./i, "PM");
 }
 
+/**
+ * `9:00 AM` · `09 h 00` — from an "HH:MM" FIELD, with no date around it.
+ *
+ * Opening hours, a feeding time, a dose time and an arrival window are all
+ * stored as two numbers and a colon. Every call site that wanted to show one
+ * reached for `new Date(\`2000-01-01T${t}\`)` and then a format string, and
+ * both halves were wrong: the constructed date is a LOCAL midnight, so the
+ * hour it reports moves with the machine's zone, and a format string renders
+ * `14:30` where §5q wants `14 h 30`.
+ *
+ * So: parse the two fields here, pin them to UTC, and read them back in UTC.
+ * The date is scaffolding `Intl` needs and nothing else — it never reaches a
+ * caller, and no zone can shift it.
+ *
+ * An unparseable value comes back UNCHANGED rather than as `—`. A time field
+ * is often a half-typed `9:` on its way to `9:30`, and blanking what someone
+ * is in the middle of typing is worse than showing it back to them.
+ */
+export function formatTimeOfDay(value: string, locale: AppLocale): string {
+  const m = /^\s*(\d{1,2}):(\d{2})/.exec(value ?? "");
+  if (!m) return value;
+  const hour = Number(m[1]);
+  const minute = Number(m[2]);
+  if (hour > 23 || minute > 59) return value;
+  const d = new Date(Date.UTC(2000, 0, 1, hour, minute));
+  const out = dateFmt(locale, "tod", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(d);
+  if (locale === "fr") return out;
+  return out.replace(/\ba\.m\./i, "AM").replace(/\bp\.m\./i, "PM");
+}
+
 // ── MONEY, NUMBERS, PERCENT ────────────────────────────────────────────────
 
 /** `$42.50` · `42,50 $` — Canadian dollars, with the French NBSP. */

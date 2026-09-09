@@ -12,6 +12,7 @@ import {
   formatRelative,
   formatWeekday,
   formatTime,
+  formatTimeOfDay,
   formatWeight,
 } from "@/lib/i18n/format";
 
@@ -279,6 +280,52 @@ describe("a weekday index becomes a weekday name", () => {
   test("an index off the week is the em dash, not a wrong day", () => {
     for (const bad of [-1, 7, 1.5, Number.NaN]) {
       expect(formatWeekday(bad, "en")).toBe("—");
+    }
+  });
+});
+
+// ============================================================================
+// A TIME FIELD IS TWO NUMBERS AND A COLON — NOT A DATE.
+//
+// `ConfirmStep` built `new Date(\`2000-01-01${t}\`)` and formatted it as
+// `en-US`, which is two defects in one line: American formatting for a French
+// reader, and an hour that moves with the MACHINE's zone because the
+// constructed date is a local midnight. These pin the fix — the zone
+// assertion is the one that would have failed before it.
+// ============================================================================
+
+describe("a bare HH:MM field becomes a time of day", () => {
+  test("the afternoon reads 2:30 PM and 14 h 30", () => {
+    expect(formatTimeOfDay("14:30", "en")).toBe("2:30 PM");
+    expect(formatTimeOfDay("14:30", "fr")).toBe("14 h 30");
+  });
+
+  test("the morning keeps AM, and French drops the meridiem entirely", () => {
+    expect(formatTimeOfDay("09:05", "en")).toBe("9:05 AM");
+    expect(formatTimeOfDay("09:05", "fr")).toBe("9 h 05");
+  });
+
+  test("midnight and noon do not swap", () => {
+    expect(formatTimeOfDay("00:00", "en")).toBe("12:00 AM");
+    expect(formatTimeOfDay("12:00", "en")).toBe("12:00 PM");
+  });
+
+  test("the hour does not move with the machine's time zone", () => {
+    // The bug this replaces: a LOCAL date built from "23:30" formats as the
+    // 23rd hour of a day the local zone may not agree about. Pinned to UTC on
+    // both sides, the digits are the digits whatever TZ is set.
+    for (const t of ["00:30", "12:00", "23:30"]) {
+      expect(formatTimeOfDay(t, "en")).toContain(
+        t === "00:30" ? "12:30" : t === "12:00" ? "12:00" : "11:30",
+      );
+    }
+  });
+
+  test("a half-typed field comes back as typed, not as an em dash", () => {
+    // Someone on their way to 9:30 has typed "9:" — blanking it mid-keystroke
+    // is worse than showing it back.
+    for (const bad of ["", "9:", "abc", "25:00", "10:75"]) {
+      expect(formatTimeOfDay(bad, "en")).toBe(bad);
     }
   });
 });

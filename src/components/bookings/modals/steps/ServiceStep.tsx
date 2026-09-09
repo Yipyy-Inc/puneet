@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -63,6 +65,8 @@ export function ServiceStep({
   onBookService,
   onPickTrainingCourse,
 }: ServiceStepProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // The FACILITY's evaluation settings — name, description, duration and
   // PRICE. Read from the fixture until now, so every facility offered the
   // same evaluation, described the same way, at the same price, regardless
@@ -272,15 +276,16 @@ export function ServiceStep({
         <div className="mb-3 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-blue-900">
           <Info className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
           <p className="text-xs">
-            Showing services applicable to your{" "}
-            {selectedPets.length === 1 ? "pet" : "pets"}.
+            {selectedPets.length === 1
+              ? t("eligibilityFilterOne")
+              : t("eligibilityFilterMany")}
           </p>
         </div>
       )}
       {/* #8 — radiogroup role for screen readers */}
       <div
         role="radiogroup"
-        aria-label="Select a service"
+        aria-label={t("selectAService")}
         className="grid grid-cols-2 gap-3 pr-1 pb-1"
       >
         {visibleServices.map((service, idx) => {
@@ -325,7 +330,13 @@ export function ServiceStep({
             : isTraining
               ? (trainingFromPrice ?? config?.basePrice ?? service.basePrice)
               : (config?.basePrice ?? service.basePrice);
-          const displayPrice = rawPrice === 0 ? "Free" : `From $${rawPrice}`;
+          const displayPrice =
+            rawPrice === 0
+              ? t("priceFree")
+              : t("priceFrom").replace(
+                  "{amount}",
+                  formatMoney(rawPrice, locale, { whole: true }),
+                );
 
           const bannerImg = config?.bannerImage ?? service.image ?? null;
           // #7 — only skip optimization for external URLs
@@ -409,7 +420,7 @@ export function ServiceStep({
                   <div className="absolute top-2 left-2">
                     <span className="flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
                       <Sparkles className="size-3" />
-                      Start here
+                      {t("startHere")}
                     </span>
                   </div>
                 )}
@@ -420,7 +431,7 @@ export function ServiceStep({
                     <div className="bg-destructive/10 border-destructive/20 flex items-center gap-1.5 rounded-full border px-3 py-1.5">
                       <Lock className="text-destructive size-3.5" />
                       <span className="text-destructive text-xs font-semibold">
-                        Evaluation required
+                        {t("evaluationRequired")}
                       </span>
                     </div>
                   </div>
@@ -477,7 +488,7 @@ export function ServiceStep({
                   {isLockedByEvaluation ? (
                     <span className="text-destructive flex items-center gap-1 text-xs font-medium">
                       <Lock className="size-3" />
-                      Locked — needs evaluation
+                      {t("lockedNeedsEvaluation")}
                     </span>
                   ) : isDisabled && config?.status.reason ? (
                     <span className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -520,7 +531,7 @@ export function ServiceStep({
                       {allIncludedItems.length > 0 && (
                         <div className="mb-3">
                           <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
-                            What&rsquo;s included
+                            {t("whatsIncluded")}
                           </p>
                           <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                             {allIncludedItems.map((item) => (
@@ -544,7 +555,7 @@ export function ServiceStep({
                       {applicableAddOns.length > 0 && (
                         <div className="mb-3">
                           <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wide uppercase">
-                            Optional add-ons
+                            {t("optionalAddOns")}
                           </p>
                           <ul className="space-y-1">
                             {applicableAddOns.slice(0, 6).map((addon) => (
@@ -559,17 +570,21 @@ export function ServiceStep({
                                     accent.price,
                                   )}
                                 >
-                                  ${addon.price}
+                                  {formatMoney(addon.price, locale, {
+                                    whole: true,
+                                  })}
                                   <span className="text-muted-foreground ml-0.5 text-[10px] font-normal">
-                                    /{addon.unitLabel || "ea"}
+                                    /{addon.unitLabel || t("unitEach")}
                                   </span>
                                 </span>
                               </li>
                             ))}
                             {applicableAddOns.length > 6 && (
                               <li className="text-muted-foreground/80 text-[10px]">
-                                +{applicableAddOns.length - 6} more available at
-                                booking
+                                {t("moreAvailableAtBooking").replace(
+                                  "{count}",
+                                  String(applicableAddOns.length - 6),
+                                )}
                               </li>
                             )}
                           </ul>
@@ -586,7 +601,7 @@ export function ServiceStep({
                             onBookService();
                           }}
                         >
-                          Book this service
+                          {t("bookThisService")}
                           <ChevronRight className="size-4" />
                         </Button>
                       )}
@@ -620,16 +635,15 @@ function TrainingCourseQuickPicks({
   onPick?: (courseTypeId: string) => void;
   onBrowseAll?: () => void;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const accent = SERVICE_ACCENTS.training;
   const active = courseTypes.filter((c) => c.isActive);
 
   if (active.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="text-muted-foreground text-xs">
-          No course types yet. Add them in the Course Catalog — the booking flow
-          pulls training options from there.
-        </p>
+        <p className="text-muted-foreground text-xs">{t("noCourseTypes")}</p>
         {onBrowseAll && (
           <Button
             type="button"
@@ -640,7 +654,7 @@ function TrainingCourseQuickPicks({
               onBrowseAll();
             }}
           >
-            Continue
+            {t("continueToTraining")}
             <ChevronRight className="size-4" />
           </Button>
         )}
@@ -651,7 +665,7 @@ function TrainingCourseQuickPicks({
   return (
     <div className="space-y-2.5">
       <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-        Choose a course type
+        {t("chooseCourseType")}
       </p>
       <div className="space-y-1.5">
         {active.map((ct) => {
@@ -685,7 +699,12 @@ function TrainingCourseQuickPicks({
                   accent.price,
                 )}
               >
-                {from !== undefined ? `From $${from}` : "Per series"}
+                {from !== undefined
+                  ? t("priceFrom").replace(
+                      "{amount}",
+                      formatMoney(from, locale, { whole: true }),
+                    )
+                  : t("perSeries")}
               </span>
               <ChevronRight className="text-muted-foreground size-4 shrink-0 transition-transform group-hover/ct:translate-x-0.5" />
             </button>
@@ -702,7 +721,7 @@ function TrainingCourseQuickPicks({
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[11px]"
         >
           <GraduationCap className="size-3" />
-          Not sure yet? Browse all in the next step.
+          {t("browseAllNextStep")}
         </button>
       )}
     </div>

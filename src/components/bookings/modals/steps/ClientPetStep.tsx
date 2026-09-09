@@ -1,4 +1,6 @@
 import React from "react";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatWeight } from "@/lib/i18n/format";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,6 +132,8 @@ export function ClientPetStep({
   onAddClient,
   onAddPet,
 }: ClientPetStepProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // ── Quick-create state ────────────────────────────────────────────────
   // Adding a new client (inline form, replaces the search/list area).
   const [isAddingNewClient, setIsAddingNewClient] = React.useState(false);
@@ -350,7 +354,7 @@ export function ClientPetStep({
       return (
         <Badge variant="destructive" className="text-xs">
           <FileWarning className="mr-1 size-3" />
-          Evaluation Expired
+          {t("evalExpired")}
         </Badge>
       );
     }
@@ -361,7 +365,7 @@ export function ClientPetStep({
           className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
         >
           <FileWarning className="mr-1 size-3" />
-          Evaluation Failed
+          {t("evalFailed")}
         </Badge>
       );
     }
@@ -372,7 +376,7 @@ export function ClientPetStep({
           className="bg-green-100 text-xs text-green-800 hover:bg-green-100"
         >
           <Check className="mr-1 size-3" />
-          Evaluation Passed
+          {t("evalPassed")}
         </Badge>
       );
     }
@@ -382,7 +386,7 @@ export function ClientPetStep({
           variant="secondary"
           className="bg-blue-100 text-xs text-blue-800 hover:bg-blue-100"
         >
-          Can be evaluated
+          {t("evalCanBe")}
         </Badge>
       );
     }
@@ -392,7 +396,7 @@ export function ClientPetStep({
           variant="secondary"
           className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
         >
-          Evaluation Required
+          {t("evaluationRequired")}
         </Badge>
       );
     }
@@ -403,7 +407,7 @@ export function ClientPetStep({
           className="bg-yellow-100 text-xs text-yellow-800 hover:bg-yellow-100"
         >
           <FileWarning className="mr-1 size-3" />
-          No Evaluation
+          {t("evalNone")}
         </Badge>
       );
     }
@@ -481,12 +485,9 @@ export function ClientPetStep({
       {petEvalIssues.length > 0 && (
         <Alert variant="destructive">
           <FileWarning className="size-4" />
-          <AlertTitle>Evaluation issues</AlertTitle>
+          <AlertTitle>{t("evalIssues")}</AlertTitle>
           <AlertDescription>
-            <p>
-              The following pets cannot access this service until their
-              evaluation status is resolved:
-            </p>
+            <p>{t("evalIssuesHelp")}</p>
             <ul className="mt-2 space-y-1">
               {petEvalIssues.map(({ pet, reason }) => (
                 <li key={pet.id} className="flex items-center gap-2">
@@ -494,17 +495,15 @@ export function ClientPetStep({
                   <span>
                     {pet.name} ({pet.type}) —{" "}
                     {reason === "expired"
-                      ? "evaluation expired"
+                      ? t("evalReasonExpired")
                       : reason === "failed"
-                        ? "evaluation not passed"
-                        : "no evaluation on file"}
+                        ? t("evalReasonFailed")
+                        : t("evalReasonNone")}
                   </span>
                 </li>
               ))}
             </ul>
-            <p className="mt-2">
-              Please book an evaluation first or select different pets.
-            </p>
+            <p className="mt-2">{t("evalIssuesFix")}</p>
           </AlertDescription>
         </Alert>
       )}
@@ -536,9 +535,9 @@ export function ClientPetStep({
               />
             </div>
             <div>
-              <p className="text-sm font-semibold">Existing Client</p>
+              <p className="text-sm font-semibold">{t("existingClient")}</p>
               <p className="text-muted-foreground text-[11px]">
-                Search your database
+                {t("existingClientHelp")}
               </p>
             </div>
           </button>
@@ -566,9 +565,9 @@ export function ClientPetStep({
               />
             </div>
             <div>
-              <p className="text-sm font-semibold">New Inquiry</p>
+              <p className="text-sm font-semibold">{t("newInquiryTitle")}</p>
               <p className="text-muted-foreground text-[11px]">
-                No account yet
+                {t("newInquiryHelp")}
               </p>
             </div>
           </button>
@@ -578,37 +577,39 @@ export function ClientPetStep({
       {/* Guest estimate contact form */}
       {isEstimateMode && isGuestEstimate && setGuestName && setGuestEmail && (
         <div className="space-y-5">
-          <h3 className="text-lg font-semibold">New Inquiry</h3>
+          <h3 className="text-lg font-semibold">{t("newInquiryTitle")}</h3>
 
           <div className="space-y-4 rounded-xl border bg-slate-50/40 p-4">
-            <h4 className="text-base font-semibold">Contact Information</h4>
+            <h4 className="text-base font-semibold">
+              {t("contactInformation")}
+            </h4>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-sm font-medium">
-                  <User className="size-3.5" /> Name *
+                  <User className="size-3.5" /> {t("nameRequired")}
                 </label>
                 <Input
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Customer name"
+                  placeholder={t("customerNamePlaceholder")}
                   className="bg-white"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-sm font-medium">
-                  <Mail className="size-3.5" /> Email *
+                  <Mail className="size-3.5" /> {t("emailRequired")}
                 </label>
                 <Input
                   type="email"
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
-                  placeholder="email@example.com"
+                  placeholder={t("guestEmailPlaceholder")}
                   className="bg-white"
                 />
               </div>
               <div className="space-y-1.5 md:col-span-2">
                 <label className="flex items-center gap-1.5 text-sm font-medium">
-                  <Phone className="size-3.5" /> Phone
+                  <Phone className="size-3.5" /> {t("phone")}
                 </label>
                 <Input
                   value={guestPhone}
@@ -624,12 +625,11 @@ export function ClientPetStep({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="flex items-center gap-1.5 text-base font-semibold">
-                  <PawPrint className="size-4" /> Pet Information{" "}
+                  <PawPrint className="size-4" /> {t("petInformation")}{" "}
                   <span className="text-destructive text-sm">*</span>
                 </h4>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  Name and weight are required so the right room category can be
-                  quoted.
+                  {t("petInformationHelp")}
                 </p>
               </div>
               <Button
@@ -640,7 +640,7 @@ export function ClientPetStep({
                 onClick={addGuestPetField}
               >
                 <Plus className="size-3" />
-                Add pet
+                {t("addPet")}
               </Button>
             </div>
 
@@ -662,8 +662,8 @@ export function ClientPetStep({
                       }
                       placeholder={
                         index === 0
-                          ? "Pet name (e.g. Buddy)"
-                          : `Pet ${index + 1} name`
+                          ? t("petNameExample")
+                          : t("petNumberName").replace("{n}", String(index + 1))
                       }
                       className="bg-white"
                     />
@@ -674,8 +674,11 @@ export function ClientPetStep({
                           handleGuestPetWeightChange(index, e.target.value)
                         }
                         inputMode="decimal"
-                        placeholder="Weight"
-                        aria-label={`Pet ${index + 1} weight in pounds`}
+                        placeholder={t("weight")}
+                        aria-label={t("petNumberWeight").replace(
+                          "{n}",
+                          String(index + 1),
+                        )}
                         aria-invalid={weightMissing}
                         className={cn(
                           "w-28 bg-white pr-9",
@@ -683,7 +686,7 @@ export function ClientPetStep({
                         )}
                       />
                       <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs">
-                        lbs
+                        {t("unitLbs")}
                       </span>
                     </div>
                     <Button
@@ -695,7 +698,7 @@ export function ClientPetStep({
                       onClick={() => removeGuestPetField(index)}
                     >
                       <Trash2 className="size-4" />
-                      <span className="sr-only">Remove pet</span>
+                      <span className="sr-only">{t("removePet")}</span>
                     </Button>
                   </div>
                 );
@@ -710,7 +713,7 @@ export function ClientPetStep({
         <>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Select Client</h3>
+              <h3 className="text-lg font-semibold">{t("selectClient")}</h3>
               {onAddClient && !isAddingNewClient && (
                 <Button
                   type="button"
@@ -720,7 +723,7 @@ export function ClientPetStep({
                   onClick={() => setIsAddingNewClient(true)}
                 >
                   <UserPlus className="size-3.5" />
-                  Add new client
+                  {t("addNewClient")}
                 </Button>
               )}
             </div>
@@ -731,7 +734,7 @@ export function ClientPetStep({
                 <div className="flex items-center justify-between">
                   <h4 className="flex items-center gap-1.5 text-sm font-semibold">
                     <UserPlus className="size-4 text-blue-600" />
-                    New client
+                    {t("newClient")}
                   </h4>
                   <button
                     type="button"
@@ -739,14 +742,15 @@ export function ClientPetStep({
                     className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
                   >
                     <ArrowLeft className="size-3" />
-                    Search instead
+                    {t("searchInstead")}
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 sm:col-span-1">
                     <Label className="flex items-center gap-1.5 text-xs">
                       <User className="size-3" />
-                      Full name <span className="text-destructive">*</span>
+                      {t("fullName")}{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       autoFocus
@@ -757,14 +761,14 @@ export function ClientPetStep({
                           name: e.target.value,
                         }))
                       }
-                      placeholder="e.g. Jane Doe"
+                      placeholder={t("fullNamePlaceholder")}
                       className="mt-1 bg-white"
                     />
                   </div>
                   <div>
                     <Label className="flex items-center gap-1.5 text-xs">
                       <Phone className="size-3" />
-                      Phone
+                      {t("phone")}
                     </Label>
                     <Input
                       value={newClientDraft.phone}
@@ -781,7 +785,7 @@ export function ClientPetStep({
                   <div className="col-span-2">
                     <Label className="flex items-center gap-1.5 text-xs">
                       <Mail className="size-3" />
-                      Email <span className="text-destructive">*</span>
+                      {t("email")} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       type="email"
@@ -792,7 +796,7 @@ export function ClientPetStep({
                           email: e.target.value,
                         }))
                       }
-                      placeholder="owner@email.com"
+                      placeholder={t("ownerEmailPlaceholder")}
                       className="mt-1 bg-white"
                     />
                   </div>
@@ -804,7 +808,7 @@ export function ClientPetStep({
                     size="sm"
                     onClick={handleCancelNewClient}
                   >
-                    Cancel
+                    {t("cancel")}
                   </Button>
                   <Button
                     type="button"
@@ -815,7 +819,7 @@ export function ClientPetStep({
                       !newClientDraft.email.trim()
                     }
                   >
-                    Add client
+                    {t("addClient")}
                   </Button>
                 </div>
               </div>
@@ -825,7 +829,7 @@ export function ClientPetStep({
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
-                placeholder="Search by name, email, or phone..."
+                placeholder={t("searchClientsPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -837,7 +841,7 @@ export function ClientPetStep({
               <div className="p-2">
                 {filteredClients.length === 0 ? (
                   <p className="text-muted-foreground py-4 text-center text-sm">
-                    No clients found
+                    {t("noClientsFound")}
                   </p>
                 ) : (
                   // One column on phones: at 2 columns each card was ~180px, so
@@ -906,21 +910,31 @@ export function ClientPetStep({
                                   variant="outline"
                                   className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
                                 >
-                                  {bookingCounts[client.id]} visits
+                                  {t("visitsCount").replace(
+                                    "{count}",
+                                    String(bookingCounts[client.id]),
+                                  )}
                                 </Badge>
                               )}
                               <Badge
                                 variant={isSelected ? "secondary" : "outline"}
                               >
-                                {client.pets.length} pet
-                                {client.pets.length !== 1 ? "s" : ""}
+                                {(client.pets.length === 1
+                                  ? t("petsCountOne")
+                                  : t("petsCountMany")
+                                ).replace(
+                                  "{count}",
+                                  String(client.pets.length),
+                                )}
                               </Badge>
                             </div>
                           </div>
                           {isSelected && (
                             <div className="border-border mt-3 border-t pt-3">
                               <div className="text-sm">
-                                <p className="text-muted-foreground">Status</p>
+                                <p className="text-muted-foreground">
+                                  {t("status")}
+                                </p>
                                 <p className="font-medium capitalize">
                                   {client.status}
                                 </p>
@@ -945,7 +959,7 @@ export function ClientPetStep({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <h3 className="text-lg font-semibold">Select Pet(s)</h3>
+              <h3 className="text-lg font-semibold">{t("selectPets")}</h3>
               {serviceRequiresEvaluation && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -953,9 +967,9 @@ export function ClientPetStep({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      Evaluation is enabled and{" "}
-                      {isEvaluationOptional ? "optional" : "required"} for this
-                      service.
+                      {isEvaluationOptional
+                        ? t("evaluationOptionalHere")
+                        : t("evaluationRequiredHere")}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -973,20 +987,22 @@ export function ClientPetStep({
                   {allSelected ? (
                     <>
                       <XCircle className="size-3" />
-                      Deselect all
+                      {t("deselectAll")}
                     </>
                   ) : (
                     <>
                       <CheckCheck className="size-3" />
-                      Select all
+                      {t("selectAll")}
                     </>
                   )}
                 </Button>
               )}
               {selectedClient && (
                 <Badge variant="secondary">
-                  {selectedPetIds.length} pet
-                  {selectedPetIds.length !== 1 ? "s" : ""} selected
+                  {(selectedPetIds.length === 1
+                    ? t("petsSelectedOne")
+                    : t("petsSelectedMany")
+                  ).replace("{count}", String(selectedPetIds.length))}
                 </Badge>
               )}
             </div>
@@ -999,7 +1015,7 @@ export function ClientPetStep({
                   <div className="flex items-center justify-between">
                     <h4 className="flex items-center gap-1.5 text-sm font-semibold">
                       <PawPrint className="size-4 text-violet-600" />
-                      New pet for {selectedClient.name}
+                      {t("newPetFor").replace("{client}", selectedClient.name)}
                     </h4>
                     <button
                       type="button"
@@ -1007,13 +1023,14 @@ export function ClientPetStep({
                       className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
                     >
                       <ArrowLeft className="size-3" />
-                      Cancel
+                      {t("cancel")}
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs">
-                        Pet name <span className="text-destructive">*</span>
+                        {t("petName")}{" "}
+                        <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         autoFocus
@@ -1024,12 +1041,12 @@ export function ClientPetStep({
                             name: e.target.value,
                           }))
                         }
-                        placeholder="e.g. Buddy"
+                        placeholder={t("petNamePlaceholder")}
                         className="mt-1 bg-white"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Breed</Label>
+                      <Label className="text-xs">{t("breed")}</Label>
                       <Input
                         value={newPetDraft.breed}
                         onChange={(e) =>
@@ -1038,13 +1055,13 @@ export function ClientPetStep({
                             breed: e.target.value,
                           }))
                         }
-                        placeholder="e.g. Golden Retriever"
+                        placeholder={t("breedPlaceholder")}
                         className="mt-1 bg-white"
                       />
                     </div>
                     <div>
                       <Label className="text-xs">
-                        Size <span className="text-destructive">*</span>
+                        {t("size")} <span className="text-destructive">*</span>
                       </Label>
                       <Select
                         value={newPetDraft.size}
@@ -1053,24 +1070,26 @@ export function ClientPetStep({
                         }
                       >
                         <SelectTrigger className="mt-1 bg-white">
-                          <SelectValue placeholder="Select size" />
+                          <SelectValue placeholder={t("selectSize")} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="small">
-                            Small — under 15 lbs
+                            {t("sizeSmall")}
                           </SelectItem>
                           <SelectItem value="medium">
-                            Medium — 15–40 lbs
+                            {t("sizeMedium")}
                           </SelectItem>
                           <SelectItem value="large">
-                            Large — 40–70 lbs
+                            {t("sizeLarge")}
                           </SelectItem>
-                          <SelectItem value="giant">Giant — 70+ lbs</SelectItem>
+                          <SelectItem value="giant">
+                            {t("sizeGiant")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs">Coat type</Label>
+                      <Label className="text-xs">{t("coatType")}</Label>
                       <Select
                         value={newPetDraft.coatType}
                         onValueChange={(v) =>
@@ -1078,7 +1097,7 @@ export function ClientPetStep({
                         }
                       >
                         <SelectTrigger className="mt-1 bg-white">
-                          <SelectValue placeholder="Select coat" />
+                          <SelectValue placeholder={t("selectCoat")} />
                         </SelectTrigger>
                         <SelectContent>
                           {(
@@ -1091,19 +1110,17 @@ export function ClientPetStep({
                               "double",
                             ] as const
                           ).map((c) => (
-                            <SelectItem
-                              key={c}
-                              value={c}
-                              className="capitalize"
-                            >
-                              {c.charAt(0).toUpperCase() + c.slice(1)}
+                            <SelectItem key={c} value={c}>
+                              {t(
+                                `coat${c.charAt(0).toUpperCase()}${c.slice(1)}`,
+                              )}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-xs">Age (months)</Label>
+                      <Label className="text-xs">{t("ageMonths")}</Label>
                       <Input
                         type="number"
                         min={0}
@@ -1119,7 +1136,7 @@ export function ClientPetStep({
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Weight (lbs)</Label>
+                      <Label className="text-xs">{t("weightLbs")}</Label>
                       <Input
                         type="number"
                         min={0}
@@ -1143,7 +1160,7 @@ export function ClientPetStep({
                       size="sm"
                       onClick={handleCancelNewPet}
                     >
-                      Cancel
+                      {t("cancel")}
                     </Button>
                     <Button
                       type="button"
@@ -1151,7 +1168,7 @@ export function ClientPetStep({
                       onClick={handleSubmitNewPet}
                       disabled={!newPetDraft.name.trim() || !newPetDraft.size}
                     >
-                      Add pet
+                      {t("addPet")}
                     </Button>
                   </div>
                 </div>
@@ -1235,8 +1252,11 @@ export function ClientPetStep({
                                     {pet.type} • {pet.breed}
                                   </p>
                                   <p className="text-muted-foreground text-xs">
-                                    {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
-                                    {pet.weight}kg
+                                    {(pet.age === 1
+                                      ? t("ageYearsOne")
+                                      : t("ageYearsMany")
+                                    ).replace("{count}", String(pet.age))}{" "}
+                                    • {formatWeight(pet.weight, locale)}
                                   </p>
                                   {/* #1 — only render wrapper when badge exists */}
                                   {evalBadge && (
@@ -1246,11 +1266,11 @@ export function ClientPetStep({
                                     <div className="mt-1 inline-flex items-start gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px]/snug text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                                       <FileWarning className="mt-0.5 size-3 shrink-0" />
                                       <span>
-                                        Needs to complete{" "}
+                                        {t("needsToComplete")}{" "}
                                         <span className="font-semibold">
                                           {missingPrereqs.join(", ")}
                                         </span>{" "}
-                                        first
+                                        {t("needsToCompleteSuffix")}
                                       </span>
                                     </div>
                                   )}
@@ -1264,7 +1284,7 @@ export function ClientPetStep({
                                       variant="outline"
                                       className="shrink-0 text-xs"
                                     >
-                                      Already Evaluated
+                                      {t("alreadyEvaluated")}
                                     </Badge>
                                   )}
                                 {isDisabled && missingPrereqs.length > 0 && (
@@ -1273,7 +1293,7 @@ export function ClientPetStep({
                                     className="shrink-0 gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-800"
                                   >
                                     <Lock className="size-3" />
-                                    Prereq
+                                    {t("prereq")}
                                   </Badge>
                                 )}
                               </div>
@@ -1289,7 +1309,7 @@ export function ClientPetStep({
                         className="hover:border-primary/50 hover:bg-muted/40 flex min-h-[96px] items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium text-violet-700 dark:text-violet-300"
                       >
                         <Plus className="size-4" />
-                        Add new pet
+                        {t("addNewPet")}
                       </button>
                     )}
                   </div>
@@ -1297,7 +1317,7 @@ export function ClientPetStep({
               ) : (
                 <div className="bg-muted rounded-lg p-4 text-center">
                   <p className="text-muted-foreground text-sm">
-                    This client has no pets registered.
+                    {t("clientHasNoPets")}
                   </p>
                   {onAddPet && !isAddingNewPet && (
                     <Button
@@ -1308,7 +1328,7 @@ export function ClientPetStep({
                       onClick={() => setIsAddingNewPet(true)}
                     >
                       <Plus className="size-3.5" />
-                      Add a pet
+                      {t("addAPet")}
                     </Button>
                   )}
                 </div>
@@ -1317,7 +1337,7 @@ export function ClientPetStep({
           ) : (
             <div className="bg-muted rounded-lg p-4 text-center">
               <p className="text-muted-foreground text-sm">
-                Please select a client first
+                {t("selectAClientFirst")}
               </p>
             </div>
           )}

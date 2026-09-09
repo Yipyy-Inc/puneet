@@ -47,6 +47,17 @@ const SAME_IN_BOTH = new Set([
   // Placeholders and a separator, with no words of its own — identical by
   // construction rather than by oversight.
   "booking.clientAndPets", // {client} · {pets}
+  // Two of the six coat types are spelled the same in French. "Long" is the
+  // French word too, and a double coat is "double" — changing either to make
+  // this list shorter would make the French wrong, which is the same reason
+  // the two tag colours below are here.
+  "booking.coatLong", // Long / Long
+  "booking.coatDouble", // Double / Double
+  // The confirmation screen's own borrowings and bare units.
+  "booking.client", // Client / Client
+  "booking.total", // Total / Total
+  "booking.date", // Date / Date
+  "booking.minutesShort", // {count} min — "min" is the abbreviation in both
   // Two of the six tag-colour names are the same word in French. Both are
   // spelled identically and mean the same thing; changing either to make this
   // list shorter would make the French wrong.

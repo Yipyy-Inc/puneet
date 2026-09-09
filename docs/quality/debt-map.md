@@ -11027,6 +11027,14 @@ Known call sites: `session-view-client.tsx`, `appointment-detail-page.tsx`
 complete list — nothing measures this yet, which is the first thing to fix
 about it.
 
+**The helper landed 2026-09-09 as `formatTimeOfDay(value, locale)`** in
+`src/lib/i18n/format.ts`, with five unit tests, and `ConfirmStep` is its first
+caller — it had built `new Date(\`2000-01-01T${t}\`)`and formatted it as`en-US`, which is both defects at once. One assertion is specifically the zone:
+a LOCAL date built from `"23:30"`reports an hour the machine's offset can
+move, so the reference date is pinned to UTC and read back in UTC, the same way`formatWeekday` pins its reference week. **The call sites above are still
+unconverted** — what changed is that the fix is now a call rather than a
+design decision.
+
 ## 2026-09-09 — 248 buttons are green, and §2 says there is no second action colour
 
 Found while translating two staff dialogs, not while looking for it:
@@ -11154,3 +11162,81 @@ the walk falls through it into the global header. The strings are real and a
 manager really does reach them, so they are recorded rather than excluded —
 but they belong to the facility shell, and they move there the day that walk
 gets deeper.
+
+## 2026-09-09 — the wizard's own rail was English, in a file the gate cannot walk
+
+`check:ui-french` reached zero on all eight surfaces at shell depth 5, which
+covers `ClientPetStep`, `ConfirmStep` and `ServiceStep` — 155 strings, the
+last hop of the booking wizard. Then the verification harness opened the screen
+in French and the LEFT RAIL still read:
+
+    Client & Pet · Choose service · Details · Service info · Confirm
+
+Seven arrays in [src/components/bookings/modals/constants.ts](../../src/components/bookings/modals/constants.ts)
+— `STEPS` and six `*_SUB_STEPS` — held the wizard's entire step rail as
+English prose:
+
+```ts
+export const STEPS: Step[] = [
+  { id: "client-pet", title: "Client & Pet", description: "Select or create" },
+  …
+];
+```
+
+**Two independent reasons no gate could see it, and both are general.**
+
+1. **The walk keeps only `.tsx`.** `shellSurface()` filters to
+   `file.endsWith(".tsx")`, and the reason is sound as far as it goes — a JSX
+   text node cannot exist anywhere else. But a LABEL can, and a `.ts` file full
+   of labels is exactly where a label table ends up once someone decides the
+   component file is too long.
+2. **No scanner covers an object-literal property.** The five that exist are
+   FALLBACK (`?? "x"`), TERNARY, TEMPLATE, JSX_TEXT and VISIBLE_ATTR. A bare
+   `title: "Client & Pet"` matches none of them, in a `.tsx` file either.
+
+The fix here was local: the seven arrays now carry `titleKey`/`descriptionKey`
+against a new `WizardStepDef`, so the mistake is unrepeatable IN THIS FILE —
+`titleKey` cannot be filled in with a sentence and still work. **The gate hole
+is not fixed**, and the shape it wants is a sixth scanner: an object property
+named `title`, `label`, `description`, `name`, `heading` or `placeholder`
+whose value is a prose string literal, run over `.ts` as well as `.tsx`. That
+would also find whatever else is sitting in the other 20 tables in this same
+file, and it is the twenty-fifth label table this conversion has found by
+reading a screen rather than by running a check.
+
+### Two more the same screenshot found, outside the wizard
+
+**The customer sidebar reads half-English**, and the mechanism is the one
+`tests/unit/shell-i18n.test.ts` was written to end.
+[generic-sidebar.tsx](../../src/components/ui/generic-sidebar.tsx) renders
+`{t(item.title)}` where `t` comes from `useUiText()` — an English→French map
+that **returns its input on a miss**. So "Mes animaux", "Réservations",
+"Dressage" and "Paramètres" translate, while "Pets & Stays", "Packages &
+Memberships", "My Wallet", "Loyalty & Rewards", "Refer a Friend" and "Documents
+& Agreements" render English, and the call site looks identical in both cases.
+Adding the missing entries is the cheap fix and the WRONG-SHAPED one: it
+perpetuates a translator whose miss is invisible. All three sidebars
+(`CustomerSidebar`, `facility-admin-sidebar`, `super-admin-sidebar`) feed the
+same component, so this is one job, and it wants `useShellText` with real keys.
+
+**The service accent colours the wizard's primary action.** On step 2 the
+active step chip and the "Suivant" button both render the daycare accent — a
+brown — where step 1 renders `#1668E3`. `SERVICE_ACCENTS[service].btnBg` is
+being applied to buttons in `ServiceStep` and to the rail. §2 is flat: "There
+is no second action colour." Same family as the 248 emerald buttons recorded
+above, and worse, because a warm accent on an action also runs at §2b, where
+orange is the animal and never a control. Recorded with the 248 rather than
+fixed here, for the reason given there: the gate comes first.
+
+**And `ClientPetStep`'s pet avatars carry no orange ring.** §2b: "a 2px
+`#F08A3C` ring on EVERY pet avatar (clients and staff never get one)." Four
+pets on the screenshot, four plain rounded images. Stage 8 put the ring on
+every pet it reached; this component was not one of them.
+
+### What the harness is worth, restated
+
+The three step files were converted, measured at zero, typechecked, linted and
+unit-tested before any of the four findings above existed. Every one of them
+came from opening the screen in French and looking at it. That is now the
+fourth time in two days, and the ratio is not improving: **a gate at zero is a
+claim about the gate.**
