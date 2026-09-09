@@ -47,57 +47,51 @@ import type { StaffProfile } from "@/types/facility-staff";
 import { fullNameOf } from "./staff-shared";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { notifyStaffLifecycle } from "@/lib/staff-notifications";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useEmployeeDocTypeLabel } from "@/lib/staff/use-employee-doc-type-label";
 
 // ── Type metadata ─────────────────────────────────────────────────────────────
 
 const TYPE_META: Record<
   EmployeeDocType,
-  { label: string; icon: React.ElementType; bg: string; text: string }
+  { icon: React.ElementType; bg: string; text: string }
 > = {
   work_permit: {
-    label: "Work Permit",
     icon: Shield,
     bg: "bg-violet-500/10",
     text: "text-violet-600 dark:text-violet-400",
   },
   id_document: {
-    label: "ID Document",
     icon: CreditCard,
     bg: "bg-blue-500/10",
     text: "text-blue-600 dark:text-blue-400",
   },
   certification: {
-    label: "Certification",
     icon: Award,
     bg: "bg-emerald-500/10",
     text: "text-emerald-600 dark:text-emerald-400",
   },
   contract: {
-    label: "Contract",
     icon: FileText,
     bg: "bg-indigo-500/10",
     text: "text-indigo-600 dark:text-indigo-400",
   },
   tax_form: {
-    label: "Tax Form",
     icon: File,
     bg: "bg-amber-500/10",
     text: "text-amber-600 dark:text-amber-400",
   },
   emergency_contact: {
-    label: "Emergency Contact",
     icon: UserCheck,
     bg: "bg-rose-500/10",
     text: "text-rose-600 dark:text-rose-400",
   },
   health_record: {
-    label: "Health Record",
     icon: Heart,
     bg: "bg-pink-500/10",
     text: "text-pink-600 dark:text-pink-400",
   },
   other: {
-    label: "Other",
     icon: File,
     bg: "bg-slate-500/10",
     text: "text-slate-600 dark:text-slate-400",
@@ -144,6 +138,8 @@ function DocumentCard({
   onToggleVisibility: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t, fill } = useStaffText("documents");
+  const docTypeLabel = useEmployeeDocTypeLabel();
   const meta = TYPE_META[doc.type];
   const Icon = meta.icon;
   const expired = isExpired(doc.expiresAt);
@@ -172,23 +168,26 @@ function DocumentCard({
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-sm font-semibold">{doc.name}</span>
               <Badge className={cn("border-0 text-[10px]", meta.bg, meta.text)}>
-                {meta.label}
+                {docTypeLabel(doc.type)}
               </Badge>
               {expired && (
                 <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
-                  <AlertTriangle className="mr-0.5 size-2.5" /> Expired
+                  <AlertTriangle className="mr-0.5 size-2.5" />{" "}
+                  {t("statusExpired")}
                 </Badge>
               )}
               {expiring && !expired && (
                 <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
-                  <Clock className="mr-0.5 size-2.5" /> Expiring soon
+                  <Clock className="mr-0.5 size-2.5" />{" "}
+                  {t("statusExpiringSoon")}
                 </Badge>
               )}
             </div>
 
             <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px]">
               <span className="flex items-center gap-1">
-                <Calendar className="size-2.5" /> Uploaded {doc.uploadedAt}
+                <Calendar className="size-2.5" />{" "}
+                {fill("uploadedOn", { date: doc.uploadedAt })}
               </span>
               {doc.expiresAt && (
                 <span
@@ -200,7 +199,7 @@ function DocumentCard({
                       "text-amber-500 dark:text-amber-400",
                   )}
                 >
-                  Expires {doc.expiresAt}
+                  {fill("expiresOn", { date: doc.expiresAt })}
                 </span>
               )}
             </div>
@@ -222,11 +221,11 @@ function DocumentCard({
             >
               {doc.visibleToEmployee ? (
                 <>
-                  <Eye className="size-3" /> Visible to employee
+                  <Eye className="size-3" /> {t("visibleToEmployee")}
                 </>
               ) : (
                 <>
-                  <EyeOff className="size-3" /> Hidden from employee
+                  <EyeOff className="size-3" /> {t("hiddenFromEmployee")}
                 </>
               )}
             </button>
@@ -235,7 +234,7 @@ function DocumentCard({
               type="button"
               onClick={() => onDelete(doc.id)}
               className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
-              aria-label="Delete document"
+              aria-label={t("deleteDocument")}
             >
               <Trash2 className="size-3.5" />
             </button>
@@ -253,6 +252,7 @@ interface EmployeeFilesTabProps {
 }
 
 export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
+  const { t, fill } = useStaffText("documents");
   const fullName = fullNameOf(profile);
   const { can, viewerId } = useFacilityRbac();
   const isManager = can("manage_staff");
@@ -285,9 +285,9 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
         <div className="bg-muted mb-3 flex size-11 items-center justify-center rounded-full">
           <LockKeyhole className="text-muted-foreground size-5" />
         </div>
-        <p className="text-sm font-semibold">Employee files are private</p>
+        <p className="text-sm font-semibold">{t("privateTitle")}</p>
         <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-          You can only view your own file history, not a colleague&apos;s.
+          {t("privateBody")}
         </p>
       </div>
     );
@@ -350,7 +350,7 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
         {isManager && (
           <div className="flex justify-end">
             <Button size="sm" variant="outline" onClick={openUpload}>
-              <Plus className="mr-1.5 size-3.5" /> Upload Document
+              <Plus className="mr-1.5 size-3.5" /> {t("uploadDocument")}
             </Button>
           </div>
         )}
@@ -358,11 +358,9 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
           <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-full">
             <FolderOpen className="text-muted-foreground size-6 opacity-60" />
           </div>
-          <p className="font-semibold">No documents on file</p>
+          <p className="font-semibold">{t("onFileEmptyTitle")}</p>
           <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-            {isManager
-              ? "Upload work permits, certifications, contracts, and other employee documents."
-              : "No documents have been shared with you yet."}
+            {isManager ? t("onFileEmptyManager") : t("onFileEmptyEmployee")}
           </p>
         </div>
         {isManager && (
@@ -395,14 +393,17 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div>
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-              {stats.expired > 0 && `${stats.expired} expired`}
+              {stats.expired > 0 &&
+                fill(
+                  stats.expired === 1 ? "countExpiredOne" : "countExpiredOther",
+                  { count: stats.expired },
+                )}
               {stats.expired > 0 && stats.expiring > 0 && " · "}
               {stats.expiring > 0 &&
-                `${stats.expiring} expiring within 90 days`}
+                fill("expiringWithin90", { count: stats.expiring })}
             </p>
             <p className="mt-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
-              Review and renew documents to keep this employee&apos;s file up to
-              date.
+              {t("reviewRenew")}
             </p>
           </div>
         </div>
@@ -414,11 +415,14 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
           <Eye className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
           <div>
             <p className="text-sm font-semibold text-sky-700 dark:text-sky-400">
-              Your employee files
+              {t("myFilesTitle")}
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              These are documents your employer has shared with you. Contact
-              your manager if you believe a document is missing or incorrect.
+              {/* Deliberately the SAME string the documents page uses. The two
+                  screens said almost the same sentence in two slightly
+                  different ways, which is a translation cost and a review cost
+                  for no reader benefit. */}
+              {t("myFilesHelp")}
             </p>
           </div>
         </div>
@@ -428,24 +432,35 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-muted-foreground text-xs">
-            {stats.total} document{stats.total !== 1 ? "s" : ""}
+            {fill(
+              stats.total === 1 ? "countDocumentsOne" : "countDocumentsOther",
+              { count: stats.total },
+            )}
           </span>
           {stats.expired > 0 && (
             <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
-              <AlertTriangle className="mr-0.5 size-2.5" /> {stats.expired}{" "}
-              expired
+              <AlertTriangle className="mr-0.5 size-2.5" />{" "}
+              {fill(
+                stats.expired === 1 ? "countExpiredOne" : "countExpiredOther",
+                { count: stats.expired },
+              )}
             </Badge>
           )}
           {stats.expiring > 0 && (
             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
-              <Clock className="mr-0.5 size-2.5" /> {stats.expiring} expiring
-              soon
+              <Clock className="mr-0.5 size-2.5" />{" "}
+              {fill(
+                stats.expiring === 1
+                  ? "countExpiringSoonOne"
+                  : "countExpiringSoonOther",
+                { count: stats.expiring },
+              )}
             </Badge>
           )}
         </div>
         {isManager && (
           <Button size="sm" variant="outline" onClick={openUpload}>
-            <Upload className="mr-1.5 size-3.5" /> Upload Document
+            <Upload className="mr-1.5 size-3.5" /> {t("uploadDocument")}
           </Button>
         )}
       </div>
@@ -467,8 +482,8 @@ export function EmployeeFilesTab({ profile }: EmployeeFilesTabProps) {
       {isManager && (
         <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
           <CheckCircle2 className="size-3 text-emerald-500" />
-          Documents marked <strong>Visible</strong> are shown to the employee in
-          their own profile view.
+          {t("visibleNoteBefore")} <strong>{t("visibleNoteMark")}</strong>{" "}
+          {t("visibleNoteAfter")}
         </p>
       )}
 
@@ -524,25 +539,31 @@ function UploadDialog({
   onUpload,
   employeeName,
 }: UploadDialogProps) {
+  const { t, fill } = useStaffText("documents");
+  const docTypeLabel = useEmployeeDocTypeLabel();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle>Upload Document — {employeeName}</DialogTitle>
+          <DialogTitle>
+            {fill("uploadTitle", { name: employeeName })}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label>Document Name *</Label>
+            <Label>
+              {t("documentName")} <span className="text-red-500">*</span>
+            </Label>
             <Input
               value={docName}
               onChange={(e) => setDocName(e.target.value)}
-              placeholder="e.g., Work Permit, First Aid Certificate"
+              placeholder={t("namePlaceholder")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Document Type</Label>
+            <Label>{t("documentType")}</Label>
             <Select
               value={docType}
               onValueChange={(v) => setDocType(v as EmployeeDocType)}
@@ -553,7 +574,7 @@ function UploadDialog({
               <SelectContent>
                 {(Object.keys(TYPE_META) as EmployeeDocType[]).map((k) => (
                   <SelectItem key={k} value={k}>
-                    {TYPE_META[k].label}
+                    {docTypeLabel(k)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -561,7 +582,7 @@ function UploadDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Expiry Date (optional)</Label>
+            <Label>{t("expiryDate")}</Label>
             <Input
               type="date"
               value={docExpires}
@@ -576,7 +597,7 @@ function UploadDialog({
               onCheckedChange={setDocVisible}
             />
             <Label htmlFor="visible-toggle" className="cursor-pointer text-sm">
-              Visible to employee
+              {t("visibleToEmployee")}
             </Label>
           </div>
 
@@ -584,7 +605,7 @@ function UploadDialog({
           <div className="rounded-xl border border-dashed p-6 text-center">
             <Upload className="text-muted-foreground mx-auto mb-2 size-8 opacity-50" />
             <p className="text-muted-foreground text-sm font-medium">
-              Click or drag file to upload
+              {t("dropzone")}
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
               PDF, JPG, PNG — max 10 MB
@@ -594,10 +615,10 @@ function UploadDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={onUpload} disabled={!docName.trim()}>
-            <Upload className="mr-1.5 size-3.5" /> Upload
+            <Upload className="mr-1.5 size-3.5" /> {t("upload")}
           </Button>
         </DialogFooter>
       </DialogContent>
