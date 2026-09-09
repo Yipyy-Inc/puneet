@@ -1,4 +1,13 @@
 import { useState } from "react";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatMoney,
+  formatPercent,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import Image from "next/image";
 import {
   PawPrint,
@@ -44,20 +53,32 @@ import {
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { ServiceAddOn, TipConfig } from "@/types/facility";
 
-function formatAddonUnit(addon: ServiceAddOn): string {
+/**
+ * The unit an add-on is priced by — `/day`, `/hr`, `% of booking`.
+ *
+ * Every arm returned English, and none of them could be seen by a gate: a
+ * string starting with `/` or `%` is not prose by any test worth having, and
+ * a bare `return` is not a rendered node. `unitLabel` is what the FACILITY
+ * typed and stays out of the locale layer (§5q); only the fallback and the
+ * percentage phrase are translated.
+ */
+function formatAddonUnit(
+  addon: ServiceAddOn,
+  t: (key: string) => string,
+): string {
   switch (addon.pricingType) {
     case "flat":
       return "";
     case "per_day":
-      return `/${addon.unitLabel || "day"}`;
+      return `/${addon.unitLabel || t("unitDay")}`;
     case "per_session":
-      return `/${addon.unitLabel || "session"}`;
+      return `/${addon.unitLabel || t("unitSession")}`;
     case "per_hour":
-      return `/${addon.unitLabel || "hr"}`;
+      return `/${addon.unitLabel || t("unitHour")}`;
     case "per_item":
-      return `/${addon.unitLabel || "item"}`;
+      return `/${addon.unitLabel || t("unitItem")}`;
     case "percentage_of_booking":
-      return "% of booking";
+      return t("unitPercentOfBooking");
   }
 }
 import type { Pet } from "@/types/pet";
@@ -149,46 +170,44 @@ interface ConfirmStepProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtTime(t: string) {
-  try {
-    return new Date(`2000-01-01T${t}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return t;
-  }
-}
+const fmtTime = formatTimeOfDay;
 
-function formatFoodUnitLabel(unit: string): string {
+/**
+ * A feeding unit as a WORD, in the reader's language.
+ *
+ * The switch used to return "Scoop" and "Tbsp" outright, which is the
+ * twenty-fourth module-level label table this conversion has found: no gate
+ * can see it, because a bare `return "Cup"` is a return of prose from a
+ * function, not a string in a rendered tree. It takes the translator rather
+ * than reading one, so it stays a pure function callable from the render.
+ *
+ * An unrecognised unit comes back UNCHANGED — it is whatever the facility
+ * typed, and §5q keeps a value a person typed out of the locale layer.
+ */
+function formatFoodUnitLabel(unit: string, t: (key: string) => string): string {
   switch (unit.trim().toLowerCase()) {
     case "scoop":
-      return "Scoop";
+      return t("unitScoop");
     case "cup":
     case "cups":
-      return "Cup";
+      return t("unitCup");
     case "oz":
-      return "Oz";
+      return t("unitOz");
     case "tbsp":
-      return "Tbsp";
+      return t("unitTbsp");
     case "gram":
     case "grams":
-      return "Grams";
+      return t("unitGrams");
     case "other":
-      return "Other";
+      return t("unitOther");
     default:
       return unit;
   }
 }
 
-function fmtDateLong(d: Date | string) {
+function fmtDateLong(d: Date | string, locale: AppLocale) {
   const date = typeof d === "string" ? new Date(d + "T00:00:00") : d;
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "long",
-    day: "numeric",
-  });
+  return formatDateLong(date, locale);
 }
 
 function nightsBetween(start: Date, end: Date) {
@@ -207,6 +226,7 @@ function SectionHeader({
   label: string;
   onEdit?: () => void;
 }) {
+  const t = useShellText("booking");
   return (
     <div className="mb-3 flex items-center justify-between">
       <div className="flex items-center gap-1.5">
@@ -222,7 +242,7 @@ function SectionHeader({
           className="text-muted-foreground hover:text-primary flex items-center gap-1 text-[10px] font-medium transition-colors"
         >
           <Pencil className="size-2.5" />
-          Edit
+          {t("edit")}
         </button>
       )}
     </div>
@@ -290,6 +310,8 @@ export function ConfirmStep({
   // to be this browser's localStorage, so a confirmation screen could price an
   // extra the booking screen had never offered.
   const resolvedAddOns = addOnsCatalog ?? facilityAddOns;
+  const t = useShellText("booking");
+  const locale = useShellLocale();
 
   // Pending waivers for this service type
   const [signingWaiver, setSigningWaiver] = useState<
@@ -325,9 +347,9 @@ export function ConfirmStep({
   // Time display
   const timeDisplay =
     selectedService === "boarding" && boardingDateTimes.length > 0
-      ? `${fmtTime(boardingDateTimes[0]?.checkInTime || checkInTime)} — ${fmtTime(boardingDateTimes[boardingDateTimes.length - 1]?.checkOutTime || checkOutTime)}`
+      ? `${fmtTime(boardingDateTimes[0]?.checkInTime || checkInTime, locale)} — ${fmtTime(boardingDateTimes[boardingDateTimes.length - 1]?.checkOutTime || checkOutTime, locale)}`
       : checkInTime
-        ? `${fmtTime(checkInTime)}${checkOutTime ? ` — ${fmtTime(checkOutTime)}` : ""}`
+        ? `${fmtTime(checkInTime, locale)}${checkOutTime ? ` — ${fmtTime(checkOutTime, locale)}` : ""}`
         : "";
 
   // Step index helpers for edit jumps (step ids: client-pet=0, service=1, details=2, confirm=3)
@@ -342,7 +364,7 @@ export function ConfirmStep({
           <ServiceIcon className="text-primary size-6" />
         </div>
         <div>
-          <h2 className="text-lg font-bold">Review Your Booking</h2>
+          <h2 className="text-lg font-bold">{t("reviewYourBooking")}</h2>
           <p className="text-muted-foreground text-sm">
             {serviceInfo?.name}
             {(() => {
@@ -363,12 +385,12 @@ export function ConfirmStep({
         <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
           <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium">This service requires approval</p>
+            <p className="font-medium">{t("requiresApproval")}</p>
             <p className="mt-0.5 text-blue-700">
-              Your booking will be submitted as a request and our team will
-              review it within {getEstimatedResponseTime(selectedService)}{" "}
-              hours. You&apos;ll receive a notification once it&apos;s been
-              reviewed.
+              {t("requiresApprovalHelp").replace(
+                "{hours}",
+                String(getEstimatedResponseTime(selectedService)),
+              )}
             </p>
           </div>
         </div>
@@ -379,16 +401,20 @@ export function ConfirmStep({
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
           <AlertTriangle className="size-4 shrink-0 text-amber-600" />
           <p className="text-xs font-medium text-amber-800">
-            {selectedPets.length - roomAssignments.length} pet
-            {selectedPets.length - roomAssignments.length > 1 ? "s" : ""} not
-            assigned to a room.{" "}
+            {(selectedPets.length - roomAssignments.length === 1
+              ? t("petsWithoutRoomOne")
+              : t("petsWithoutRoomMany")
+            ).replace(
+              "{count}",
+              String(selectedPets.length - roomAssignments.length),
+            )}{" "}
             {onEditStep && (
               <button
                 type="button"
                 onClick={() => onEditStep(detailsStepIdx, 1)}
                 className="font-semibold underline"
               >
-                Assign now
+                {t("assignNow")}
               </button>
             )}
           </p>
@@ -405,7 +431,7 @@ export function ConfirmStep({
         <div className="rounded-2xl border p-4">
           <SectionHeader
             icon={User}
-            label="Client"
+            label={t("client")}
             onEdit={onEditStep ? () => onEditStep(clientPetStepIdx) : undefined}
           />
           <p className="text-sm font-semibold">{selectedClient?.name ?? "—"}</p>
@@ -424,7 +450,7 @@ export function ConfirmStep({
         <div className="rounded-2xl border p-4">
           <SectionHeader
             icon={PawPrint}
-            label={`Pet${selectedPets.length > 1 ? "s" : ""}`}
+            label={selectedPets.length > 1 ? t("petsLabel") : t("petLabel")}
             onEdit={onEditStep ? () => onEditStep(clientPetStepIdx) : undefined}
           />
           {selectedPets.length === 1 ? (
@@ -489,7 +515,7 @@ export function ConfirmStep({
       {/* ── #4 — Evaluation info card ───────────────────────────── */}
       {isEvaluation && (
         <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4">
-          <SectionHeader icon={ClipboardCheck} label="Evaluation Details" />
+          <SectionHeader icon={ClipboardCheck} label={t("evaluationDetails")} />
           <p className="text-sm font-semibold">
             {evaluationConfig.customerName}
           </p>
@@ -499,17 +525,22 @@ export function ConfirmStep({
           <div className="mt-2 flex items-center gap-4">
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Duration
+                {t("duration")}
               </p>
               <p className="text-xs font-semibold">
-                {evaluationConfig.schedule.defaultDurationMinutes} min
+                {t("minutesShort").replace(
+                  "{count}",
+                  String(evaluationConfig.schedule.defaultDurationMinutes),
+                )}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Price
+                {t("price")}
               </p>
-              <p className="text-xs font-semibold text-emerald-600">Free</p>
+              <p className="text-xs font-semibold text-emerald-600">
+                {t("priceFree")}
+              </p>
             </div>
           </div>
         </div>
@@ -529,10 +560,10 @@ export function ConfirmStep({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">
-                  Package with remaining sessions
+                  {t("packageWithSessions")}
                 </p>
                 <p className="text-muted-foreground text-[11px]">
-                  Apply a session now to skip the separate redemption step.
+                  {t("packageWithSessionsHelp")}
                 </p>
               </div>
             </div>
@@ -551,16 +582,15 @@ export function ConfirmStep({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{pkg.name}</p>
                       <p className="text-muted-foreground text-[11px]">
-                        {pkg.remainingCredits} session
-                        {pkg.remainingCredits === 1 ? "" : "s"} remaining
+                        {(pkg.remainingCredits === 1
+                          ? t("sessionsRemainingOne")
+                          : t("sessionsRemainingMany")
+                        ).replace("{count}", String(pkg.remainingCredits))}
                         {pkg.expiryDate
-                          ? ` · expires ${new Date(
-                              pkg.expiryDate,
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}`
+                          ? ` · ${t("expiresOn").replace(
+                              "{date}",
+                              formatDateLong(pkg.expiryDate, locale),
+                            )}`
                           : ""}
                       </p>
                     </div>
@@ -568,7 +598,7 @@ export function ConfirmStep({
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
                           <CheckCircle2 className="size-3" />
-                          Applied
+                          {t("applied")}
                         </span>
                         <Button
                           type="button"
@@ -577,7 +607,7 @@ export function ConfirmStep({
                           className="h-7 px-2 text-[11px]"
                           onClick={() => setRedeemedPackageId(null)}
                         >
-                          Remove
+                          {t("remove")}
                         </Button>
                       </div>
                     ) : (
@@ -588,7 +618,7 @@ export function ConfirmStep({
                         onClick={() => setRedeemedPackageId(pkg.id)}
                       >
                         <Gift className="size-3" />
-                        Redeem 1 session
+                        {t("redeemOneSession")}
                       </Button>
                     )}
                   </div>
@@ -621,19 +651,20 @@ export function ConfirmStep({
 
         const roleLabel =
           serviceModule === "grooming"
-            ? "Groomer"
+            ? t("roleGroomer")
             : serviceModule === "training"
-              ? "Trainer"
-              : "Attendant";
+              ? t("roleTrainer")
+              : t("roleAttendant");
         const selected = eligible.find((s) => s.id === selectedStaffId);
 
         return (
           <div className="rounded-2xl border p-4">
-            <SectionHeader icon={Users} label={`${roleLabel} Assignment`} />
+            <SectionHeader
+              icon={Users}
+              label={t("roleAssignment").replace("{role}", roleLabel)}
+            />
             <p className="text-muted-foreground mb-3 text-[11px]">
-              Choose who&rsquo;s responsible — the appointment will land in
-              their calendar column. Leave unassigned to drop into the shared
-              queue.
+              {t("roleAssignmentHelp")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -647,7 +678,7 @@ export function ConfirmStep({
                 )}
               >
                 <User className="size-3" />
-                Unassigned
+                {t("unassigned")}
               </button>
               {eligible.map((s) => {
                 const active = selectedStaffId === s.id;
@@ -684,8 +715,7 @@ export function ConfirmStep({
             </div>
             {selected && (
               <p className="text-muted-foreground mt-2 text-[11px]">
-                Booking will appear on {selected.firstName}&rsquo;s calendar
-                column.
+                {t("bookingAppearsOn").replace("{name}", selected.firstName)}
               </p>
             )}
           </div>
@@ -696,14 +726,14 @@ export function ConfirmStep({
       <div className="rounded-2xl border p-4">
         <SectionHeader
           icon={CalendarDays}
-          label="Schedule"
+          label={t("schedule")}
           onEdit={onEditStep ? () => onEditStep(detailsStepIdx, 0) : undefined}
         />
 
         <div className="flex flex-wrap gap-x-8 gap-y-2">
           <div>
             <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-              Date
+              {t("date")}
             </p>
             {selectedService === "daycare" &&
             daycareSelectedDates.length > 0 ? (
@@ -713,10 +743,7 @@ export function ConfirmStep({
                     key={idx}
                     className="bg-muted rounded-md px-2 py-0.5 text-xs font-medium"
                   >
-                    {date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {formatDateShort(date, locale)}
                   </span>
                 ))}
               </div>
@@ -724,18 +751,18 @@ export function ConfirmStep({
               boardingRangeStart &&
               boardingRangeEnd ? (
               <p className="text-sm font-semibold">
-                {fmtDateLong(boardingRangeStart)} →{" "}
-                {fmtDateLong(boardingRangeEnd)}
+                {fmtDateLong(boardingRangeStart, locale)} →{" "}
+                {fmtDateLong(boardingRangeEnd, locale)}
               </p>
             ) : startDate ? (
               <p className="text-sm font-semibold">
-                {fmtDateLong(startDate)}
+                {fmtDateLong(startDate, locale)}
                 {endDate && endDate !== startDate && (
-                  <> → {fmtDateLong(endDate)}</>
+                  <> → {fmtDateLong(endDate, locale)}</>
                 )}
               </p>
             ) : (
-              <p className="text-muted-foreground text-sm">Not set</p>
+              <p className="text-muted-foreground text-sm">{t("notSet")}</p>
             )}
           </div>
 
@@ -743,11 +770,14 @@ export function ConfirmStep({
           {selectedService === "boarding" && boardingNights > 0 && (
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Duration
+                {t("duration")}
               </p>
               <p className="flex items-center gap-1 text-sm font-semibold">
                 <Moon className="text-muted-foreground size-3" />
-                {boardingNights} night{boardingNights !== 1 ? "s" : ""}
+                {(boardingNights === 1
+                  ? t("nightsCountOne")
+                  : t("nightsCountMany")
+                ).replace("{count}", String(boardingNights))}
               </p>
             </div>
           )}
@@ -756,8 +786,8 @@ export function ConfirmStep({
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                 {selectedService === "grooming" && isMobileGrooming
-                  ? "Arrival window"
-                  : "Time"}
+                  ? t("arrivalWindow")
+                  : t("timeLabel")}
               </p>
               <p className="flex items-center gap-1 text-sm font-semibold">
                 <Clock className="text-muted-foreground size-3" />
@@ -765,7 +795,7 @@ export function ConfirmStep({
               </p>
               {selectedService === "grooming" && isMobileGrooming && (
                 <p className="text-muted-foreground mt-0.5 text-[10px]">
-                  We&rsquo;ll text you when we&rsquo;re ~15 min away.
+                  {t("textWhenNearby")}
                 </p>
               )}
             </div>
@@ -774,10 +804,12 @@ export function ConfirmStep({
           {selectedService === "grooming" && (
             <div>
               <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                Service mode
+                {t("serviceMode")}
               </p>
               <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-pink-100 px-2 py-0.5 text-xs font-semibold text-pink-800">
-                {isMobileGrooming ? "Mobile (van)" : "Salon"}
+                {isMobileGrooming
+                  ? t("serviceModeMobile")
+                  : t("serviceModeSalon")}
               </p>
             </div>
           )}
@@ -789,7 +821,7 @@ export function ConfirmStep({
         <div className="rounded-2xl border p-4">
           <SectionHeader
             icon={DoorOpen}
-            label="Room Assignments"
+            label={t("roomAssignments")}
             onEdit={
               onEditStep ? () => onEditStep(detailsStepIdx, 1) : undefined
             }
@@ -817,7 +849,7 @@ export function ConfirmStep({
             </div>
           ) : (
             <p className="text-muted-foreground text-xs">
-              No rooms assigned yet
+              {t("noRoomsAssigned")}
             </p>
           )}
         </div>
@@ -830,7 +862,7 @@ export function ConfirmStep({
             <div className="rounded-2xl border p-4">
               <SectionHeader
                 icon={Sparkles}
-                label="Add-ons"
+                label={t("addOnsLabel")}
                 onEdit={
                   onEditStep ? () => onEditStep(detailsStepIdx, 2) : undefined
                 }
@@ -863,7 +895,7 @@ export function ConfirmStep({
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <span className="text-muted-foreground">
-                          ${unitPrice.toFixed(2)}
+                          {formatMoney(unitPrice, locale)}
                           {formatAddonUnit(
                             addon ??
                               ({
@@ -871,11 +903,12 @@ export function ConfirmStep({
                                 price: 0,
                                 unitLabel: "",
                               } as ServiceAddOn),
+                            t,
                           )}{" "}
                           × {es.quantity}
                         </span>
                         <span className="font-[tabular-nums] font-semibold">
-                          ${lineTotal.toFixed(2)}
+                          {formatMoney(lineTotal, locale)}
                         </span>
                       </div>
                     </div>
@@ -893,7 +926,7 @@ export function ConfirmStep({
           <div className="rounded-2xl border p-4">
             <SectionHeader
               icon={Utensils}
-              label="Feeding"
+              label={t("feeding")}
               onEdit={
                 onEditStep ? () => onEditStep(detailsStepIdx, 3) : undefined
               }
@@ -905,7 +938,7 @@ export function ConfirmStep({
                     item.occasions.reduce<string[]>((labels, occasion) => {
                       const unit = occasion.components[0]?.unit;
                       if (unit) {
-                        labels.push(formatFoodUnitLabel(unit));
+                        labels.push(formatFoodUnitLabel(unit, t));
                       }
                       return labels;
                     }, []),
@@ -915,7 +948,7 @@ export function ConfirmStep({
                   unitsFromOccasions.length > 0
                     ? unitsFromOccasions
                     : item.feedingUnit
-                      ? [formatFoodUnitLabel(item.feedingUnit)]
+                      ? [formatFoodUnitLabel(item.feedingUnit, t)]
                       : [];
 
                 return (
@@ -927,7 +960,7 @@ export function ConfirmStep({
                             key={occ.id}
                             className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700"
                           >
-                            {occ.label} · {fmtTime(occ.time)}
+                            {occ.label} · {fmtTime(occ.time, locale)}
                           </span>
                         ))}
                       </div>
@@ -951,7 +984,7 @@ export function ConfirmStep({
                     )}
                     {item.allergies && item.allergies.length > 0 && (
                       <p className="text-[11px] text-red-600">
-                        Allergies: {item.allergies.join(", ")}
+                        {t("allergiesLabel")} {item.allergies.join(", ")}
                       </p>
                     )}
                     {item.notes && (
@@ -966,7 +999,7 @@ export function ConfirmStep({
               /* #1 — empty state */
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Info className="size-3 shrink-0" />
-                No feeding instructions added
+                {t("noFeedingInstructions")}
               </p>
             )}
           </div>
@@ -975,7 +1008,7 @@ export function ConfirmStep({
           <div className="rounded-2xl border p-4">
             <SectionHeader
               icon={Pill}
-              label="Medications"
+              label={t("medications")}
               onEdit={
                 onEditStep ? () => onEditStep(detailsStepIdx, 3) : undefined
               }
@@ -986,11 +1019,12 @@ export function ConfirmStep({
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-semibold">
-                        {med.name || `Medication ${idx + 1}`}
+                        {med.name ||
+                          t("medicationNumber").replace("{n}", String(idx + 1))}
                       </p>
                       {med.isHighRisk && (
                         <span className="rounded-sm bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
-                          HIGH RISK
+                          {t("highRisk")}
                         </span>
                       )}
                     </div>
@@ -999,16 +1033,16 @@ export function ConfirmStep({
                       {med.strength ? ` (${med.strength})` : ""} ·{" "}
                       {med.form.replace(/_/g, " ")}
                       {med.times.length > 0 &&
-                        ` · ${med.times.map(fmtTime).join(", ")}`}
+                        ` · ${med.times.map((x) => fmtTime(x, locale)).join(", ")}`}
                     </p>
                     {med.drugAllergies && med.drugAllergies.length > 0 && (
                       <p className="text-[11px] text-red-600">
-                        Drug allergies: {med.drugAllergies.join(", ")}
+                        {t("drugAllergiesLabel")} {med.drugAllergies.join(", ")}
                       </p>
                     )}
                     {med.givenWith && (
                       <p className="text-[11px] text-emerald-700">
-                        Given with:{" "}
+                        {t("givenWithLabel")}{" "}
                         {facilityConfig.serviceFees.givenWithOptions.find(
                           (o) => o.value === med.givenWith,
                         )?.label ?? med.givenWith.replace(/_/g, " ")}
@@ -1017,7 +1051,7 @@ export function ConfirmStep({
                     )}
                     {med.facilityProvidesMedAid && med.facilityMedAidItem && (
                       <p className="text-[11px] text-blue-600">
-                        Facility provides:{" "}
+                        {t("facilityProvidesLabel")}{" "}
                         {facilityConfig.serviceFees.medication.facilityProvides.items.find(
                           (i) => i.id === med.facilityMedAidItem,
                         )?.name ?? med.facilityMedAidItem}
@@ -1025,7 +1059,10 @@ export function ConfirmStep({
                     )}
                     {med.supplyCount != null && (
                       <p className="text-muted-foreground text-[11px]">
-                        Supply: {med.supplyCount} doses
+                        {t("supplyDoses").replace(
+                          "{count}",
+                          String(med.supplyCount),
+                        )}
                       </p>
                     )}
                     {med.notes && (
@@ -1040,7 +1077,7 @@ export function ConfirmStep({
               /* #1 — empty state */
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Info className="size-3 shrink-0" />
-                No medications added
+                {t("noMedications")}
               </p>
             )}
           </div>
@@ -1049,10 +1086,9 @@ export function ConfirmStep({
 
       {/* ── Notifications ───────────────────────────────────────── */}
       <div className="rounded-2xl border p-4">
-        <SectionHeader icon={Mail} label="Notifications" />
+        <SectionHeader icon={Mail} label={t("notifications")} />
         <p className="text-muted-foreground mb-3 text-[11px]">
-          Defaults are set per service in Settings → Notifications. Toggle off
-          to skip for this booking.
+          {t("notificationsHelp")}
         </p>
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -1062,10 +1098,10 @@ export function ConfirmStep({
             >
               <Mail className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium">Email confirmation</p>
+                <p className="text-sm font-medium">{t("emailConfirmation")}</p>
                 {/* #6 — explanation */}
                 <p className="text-muted-foreground text-[11px]">
-                  Booking confirmation with date, time, and care instructions
+                  {t("emailConfirmationHelp")}
                 </p>
               </div>
             </Label>
@@ -1082,10 +1118,10 @@ export function ConfirmStep({
             >
               <Smartphone className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium">SMS notification</p>
+                <p className="text-sm font-medium">{t("smsNotification")}</p>
                 {/* #6 — explanation */}
                 <p className="text-muted-foreground text-[11px]">
-                  Short booking reminder sent before the visit
+                  {t("smsNotificationHelp")}
                 </p>
               </div>
             </Label>
@@ -1102,13 +1138,11 @@ export function ConfirmStep({
             >
               <Send className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
               <div>
-                <p className="text-sm font-medium">
-                  Send Express Check-In form
-                </p>
+                <p className="text-sm font-medium">{t("sendExpressForm")}</p>
                 <p className="text-muted-foreground text-[11px]">
                   {expressCheckInEnabled
-                    ? "Form will be auto-sent right after the booking is created."
-                    : "Skipped for this booking — staff will collect details on arrival."}
+                    ? t("sendExpressFormOn")
+                    : t("sendExpressFormOff")}
                 </p>
               </div>
             </Label>
@@ -1129,10 +1163,13 @@ export function ConfirmStep({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              Tip added · ${tipAmount.toFixed(2)}
+              {t("tipAdded").replace(
+                "{amount}",
+                formatMoney(tipAmount, locale),
+              )}
             </p>
             <p className="text-muted-foreground text-[12px]">
-              100% goes to the care team — thank you!
+              {t("tipAllToTeam")}
             </p>
           </div>
         </div>
@@ -1141,7 +1178,7 @@ export function ConfirmStep({
       {/* ── Pending Waivers ───────────────────────────────────── */}
       {pendingWaivers.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
-          <SectionHeader icon={FileSignature} label="Agreements Required" />
+          <SectionHeader icon={FileSignature} label={t("agreementsRequired")} />
           <div className="space-y-2">
             {pendingWaivers.map((waiver) => (
               <div
@@ -1161,13 +1198,13 @@ export function ConfirmStep({
                   onClick={() => setSigningWaiver(waiver)}
                 >
                   <Pen className="size-3" />
-                  Sign
+                  {t("signAgreement")}
                 </Button>
               </div>
             ))}
           </div>
           <p className="text-muted-foreground mt-2 text-[11px]">
-            These agreements must be signed before the booking can be confirmed.
+            {t("agreementsRequiredHelp")}
           </p>
         </div>
       )}
@@ -1184,7 +1221,7 @@ export function ConfirmStep({
           <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">
             <CheckCircle className="size-4 text-green-600" />
             <p className="text-xs font-medium text-green-800">
-              All required agreements are signed
+              {t("agreementsAllSigned")}
             </p>
           </div>
         )}
@@ -1224,14 +1261,14 @@ export function ConfirmStep({
                 return ` (${serviceType.replace(/_/g, " ")})`;
               })()}
               {selectedService === "daycare" && daycareSelectedDates.length > 1
-                ? ` × ${daycareSelectedDates.length} days`
+                ? ` × ${t("daysCount").replace("{count}", String(daycareSelectedDates.length))}`
                 : ""}
               {selectedService === "boarding" && boardingNights > 0
-                ? ` × ${boardingNights} nights`
+                ? ` × ${t("nightsCountMany").replace("{count}", String(boardingNights))}`
                 : ""}
             </span>
             <span className="font-[tabular-nums] font-medium">
-              ${calculatePrice.basePrice.toFixed(2)}
+              {formatMoney(calculatePrice.basePrice, locale)}
             </span>
           </div>
           {/* Grooming rate-engine trace — one indented line per pet showing
@@ -1271,17 +1308,17 @@ export function ConfirmStep({
                           {addon?.name ?? es.serviceId} × {es.quantity}
                         </span>
                         <span className="font-[tabular-nums]">
-                          ${lineTotal.toFixed(2)}
+                          {formatMoney(lineTotal, locale)}
                         </span>
                       </div>
                     );
                   })}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground font-medium">
-                      Add-ons subtotal
+                      {t("addOnsSubtotal")}
                     </span>
                     <span className="font-[tabular-nums] font-medium">
-                      ${addonsTotal.toFixed(2)}
+                      {formatMoney(addonsTotal, locale)}
                     </span>
                   </div>
                 </div>
@@ -1303,8 +1340,8 @@ export function ConfirmStep({
                     adjustment.amount < 0 && "text-emerald-600",
                   )}
                 >
-                  {adjustment.amount < 0 ? "-" : "+"}$
-                  {Math.abs(adjustment.amount).toFixed(2)}
+                  {adjustment.amount < 0 ? "−" : "+"}
+                  {formatMoney(Math.abs(adjustment.amount), locale)}
                 </span>
               </div>
             ))}
@@ -1316,7 +1353,7 @@ export function ConfirmStep({
               >
                 <span className="text-muted-foreground">{fee.label}</span>
                 <span className="font-[tabular-nums] font-medium">
-                  +${fee.amount.toFixed(2)}
+                  +{formatMoney(fee.amount, locale)}
                 </span>
               </div>
             ))}
@@ -1334,10 +1371,10 @@ export function ConfirmStep({
                     className="flex items-center justify-between text-sm"
                   >
                     <span className="text-muted-foreground">
-                      {tax.name} ({pct}%)
+                      {tax.name} ({formatPercent(pct, locale, 2)})
                     </span>
                     <span className="font-[tabular-nums] font-medium">
-                      +${taxAmt.toFixed(2)}
+                      +{formatMoney(taxAmt, locale)}
                     </span>
                   </div>
                 );
@@ -1345,22 +1382,27 @@ export function ConfirmStep({
             ) : (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Tax (
-                  {parseFloat(((calculatePrice.taxRate ?? 0) * 100).toFixed(4))}
-                  %)
+                  {t("taxWithRate").replace(
+                    "{rate}",
+                    formatPercent(
+                      (calculatePrice.taxRate ?? 0) * 100,
+                      locale,
+                      2,
+                    ),
+                  )}
                 </span>
                 <span className="font-[tabular-nums] font-medium">
-                  +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
+                  +{formatMoney(calculatePrice.taxAmount ?? 0, locale)}
                 </span>
               </div>
             ))}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
-                <Star className="size-3" /> Tip
+                <Star className="size-3" /> {t("tip")}
               </span>
               <span className="font-[tabular-nums] font-medium">
-                +${tipAmount.toFixed(2)}
+                +{formatMoney(tipAmount, locale)}
               </span>
             </div>
           )}
@@ -1370,15 +1412,15 @@ export function ConfirmStep({
         <div className="bg-primary/5 flex items-center justify-between border-t px-5 py-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="text-primary size-5" />
-            <span className="text-sm font-bold">Total</span>
+            <span className="text-sm font-bold">{t("total")}</span>
           </div>
           <span className="text-primary font-[tabular-nums] text-xl font-bold">
             {redeemedPackageId && calculatePrice.total + tipAmount === 0 ? (
               <span className="text-sm text-emerald-600">
-                Package pass applied
+                {t("packagePassApplied")}
               </span>
             ) : (
-              `$${(calculatePrice.total + tipAmount).toFixed(2)}`
+              formatMoney(calculatePrice.total + tipAmount, locale)
             )}
           </span>
         </div>

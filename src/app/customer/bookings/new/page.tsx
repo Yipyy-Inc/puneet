@@ -7,6 +7,7 @@ import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { ChevronLeft } from "lucide-react";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { buildResumePreselection } from "@/lib/resume-booking";
@@ -16,6 +17,7 @@ import { toast } from "sonner";
 import type { NewBooking } from "@/types/booking";
 
 export default function NewBookingPage() {
+  const t = useShellText("booking");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -53,24 +55,24 @@ export default function NewBookingPage() {
               className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
             >
               <ChevronLeft className="size-4" />
-              Back to bookings
+              {t("backToBookings")}
             </Link>
-            <h1 className="mt-1 text-xl font-semibold">New booking</h1>
+            <h1 className="mt-1 text-xl font-semibold">{t("newBooking")}</h1>
           </div>
         </div>
         <div className="mx-auto max-w-5xl p-4">
           <p className="text-muted-foreground text-sm">
-            Unable to load booking wizard. Please try again.
+            {t("wizardUnavailable")}
           </p>
         </div>
       </div>
     );
   }
 
-  const heading = resumePreselection ? "Resume booking" : "New booking";
+  const heading = resumePreselection ? t("resumeBooking") : t("newBooking");
   const subheading = resumePreselection
-    ? "We've restored the details you entered earlier — pick up where you left off."
-    : "Select a service and book for your pets";
+    ? t("resumeBookingHelp")
+    : t("newBookingHelp");
 
   return (
     <div className="bg-background min-h-screen">
@@ -81,7 +83,7 @@ export default function NewBookingPage() {
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
           >
             <ChevronLeft className="size-4" />
-            Back to bookings
+            {t("backToBookings")}
           </Link>
           <h1 className="mt-1 text-xl font-semibold">{heading}</h1>
           <p className="text-muted-foreground text-sm">{subheading}</p>

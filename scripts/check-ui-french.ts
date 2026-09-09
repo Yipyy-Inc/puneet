@@ -27,10 +27,11 @@
  * ── SEVEN SURFACES, BECAUSE A CURATED LIST HIDES WORK ────────────────────
  *
  *   settings    one entry per section, DERIVED from _sections/, three deep
- *   shell × 5   DERIVED from each portal's layout.tsx, FOUR deep since
+ *   shell × 5   DERIVED from each portal's layout.tsx, FIVE deep since
  *               2026-09-09. At TWO it reported zero while 136 strings sat one
- *               hop out (117 of them the booking modal) and 68 more sat two.
- *               The depth was raised 2 → 3 → 4 in one day, converting at each
+ *               hop out (117 of them the booking modal), 68 more sat two, and
+ *               155 — the booking wizard's own three step bodies — sat three.
+ *               The depth went 2 → 3 → 4 → 5 in a day, converting at each
  *               step, so it has never needed a baseline — which is the point:
  *               deepen and clear together, or the number stops meaning zero
  *   staff       DERIVED from the staff route tree, three deep
@@ -338,6 +339,12 @@ function looksLikeCode(t: string): boolean {
   // ends at an `=`. A sentence never does. This one test removed ~300 false
   // hits across the shadcn primitives.
   if (t.endsWith("=")) return true;
+  // An IMPORT or EXPORT statement. A `}` closing a helper, then
+  // `import type ` up to the next `{`, is a run of two plain words with no
+  // semicolon between them — `ConfirmStep` declares a helper ABOVE its
+  // import block, so the shape is rare but real. A module keyword is never
+  // copy, at any depth.
+  if (/^(?:import|export)\b/.test(t)) return true;
   if (/=\s*"/.test(t)) return true; // `className="x" onClick=` mid-run
   // A template literal's interior, or a cva class string. Both carry a
   // backtick or a statement terminator; JSX text carries neither, because
@@ -550,6 +557,13 @@ function hits(file: string, objectCopy = false): Hit[] {
     // "flex" as two plain words and a 400-character class list reads as prose
     // — measured, on `dropdown-menu.tsx`, before the guard was added.
     const classy = tokens.some((w) => /[-:[\]/]/.test(w));
+    // A LEFTOVER `${` says the backtick PAIR was wrong. TEMPLATE matches
+    // between ADJACENT backticks, so a nested template pairs the outer
+    // OPEN with the inner OPEN and hands back `${b ? `, whose camelCase
+    // supplies the capital this test is looking for. The blanking above
+    // removed every COMPLETE interpolation, so one still standing means the
+    // slice cut through the middle of one.
+    if (words.includes("${")) continue;
     if (!/[A-Z]/.test(words) && (classy || plain.length < 2)) continue;
     record(words, m.index ?? 0);
   }
@@ -657,7 +671,7 @@ function settingsSurface(): Offender[] {
 /** One portal's chrome, derived from its layout. One entry per file. */
 function shellSurface(root: string): Offender[] {
   const seen = new Set<string>();
-  walk(root, 4, seen, true);
+  walk(root, 5, seen, true);
   return [...seen]
     .filter(
       (file) =>
@@ -749,9 +763,8 @@ function routeRoots(dir: string): string[] {
  * but they belong to the FACILITY SHELL, and the day a deeper shell walk
  * exists this entry moves there.
  *
- * That deeper walk is worth knowing about now: the four shells are measured at
- * depth 2, and at depth 3 they hold 524 strings between them. "At zero" is a
- * claim about the depth, not about the chrome. Recorded in the debt map.
+ * That deeper walk arrived the same day: the shells now run five hops, this
+ * entry's strings were converted with the rest, and the map below is empty.
  */
 function staffSurface(): Offender[] {
   const seen = new Set<string>();
@@ -843,8 +856,28 @@ const BASELINE: Record<string, Map<string, number>> = {
   // reading the screen, not by this file going green.
   //
   // So: an empty baseline is the floor, not the ceiling. `check:hardcoded-locale`
-  // still carries 526 + 432, and the four shells are measured only two hops
-  // deep — see the note on staffSurface() and the debt map.
+  // still carries 521 + 432.
+  //
+  // ── AND THE SHELLS REACHED ZERO AT FIVE HOPS, WITH THE RAIL STILL ENGLISH ──
+  //
+  // Worth writing down because it is the sharpest version of the lesson above.
+  // All eight surfaces read zero at depth 5, the three booking-wizard step
+  // bodies having just been converted — and the wizard's LEFT RAIL still said
+  // "Client & Pet · Choose service · Details · Confirm" to a French reader.
+  // Seven arrays in modals/constants.ts held it, and this file cannot see them
+  // for two independent reasons, both general:
+  //
+  //   1. `walk` keeps only `.tsx`. Sound as far as it goes — a JSX text node
+  //      cannot exist elsewhere — but a LABEL can, and a `.ts` file full of
+  //      labels is where a label table lands once a component gets long.
+  //   2. No scanner covers an object-literal PROPERTY. The five here are
+  //      FALLBACK, TERNARY, TEMPLATE, JSX_TEXT and VISIBLE_ATTR;
+  //      `title: "Client & Pet"` matches none of them, in a `.tsx` file either.
+  //
+  // The sixth scanner this wants — a prose string under a `title`/`label`/
+  // `description`/`name`/`placeholder` key, over `.ts` as well as `.tsx` — is
+  // written up in the debt map. Until it exists, read a zero here as "no string
+  // this file can SEE", and go and look at the screen.
   staff: new Map<string, number>(),
   "shell:facility": new Map<string, number>(),
   "shell:customer": new Map<string, number>(),

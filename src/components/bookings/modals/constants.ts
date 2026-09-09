@@ -1,5 +1,4 @@
 import { Sun, Bed, Scissors, GraduationCap, CheckCircle } from "lucide-react";
-import { type Step } from "@/components/ui/stepper";
 
 export const SERVICE_CATEGORIES = [
   {
@@ -413,49 +412,81 @@ export const GROOMING_PACKAGES: GroomingPackage[] = [
   },
 ];
 
-export const STEPS: Step[] = [
-  { id: "client-pet", title: "Client & Pet", description: "Select or create" },
-  { id: "service", title: "Service", description: "Choose service" },
-  { id: "details", title: "Details", description: "Service info" },
-  { id: "confirm", title: "Confirm", description: "Review booking" },
+/**
+ * A wizard step, named by CATALOGUE KEY rather than by prose.
+ *
+ * ── WHY THIS IS NOT `Step` FROM `ui/stepper` ───────────────────────────────
+ *
+ * That type's `title` is a DISPLAY string, and these seven tables held display
+ * strings in English — the wizard's whole left rail, in a `.ts` file, which is
+ * why `check:ui-french` never saw a word of it: its walk keeps only `.tsx`,
+ * because a JSX text node cannot exist anywhere else. A French user reading
+ * "Client & Pet · Choose service · Details · Confirm" beside a fully French
+ * wizard body is what this cost, and it was found by opening the screen.
+ *
+ * Keys instead of prose makes the mistake unrepeatable here: `titleKey` cannot
+ * be filled in with a sentence and still work.
+ */
+export interface WizardStepDef {
+  id: string;
+  titleKey: string;
+  descriptionKey: string;
+}
+
+/** Same, for a sub-step — whose `id` is its position in the service's flow. */
+export interface WizardSubStepDef {
+  id: number;
+  titleKey: string;
+  descriptionKey: string;
+}
+
+export const STEPS: WizardStepDef[] = [
+  {
+    id: "client-pet",
+    titleKey: "stepClientPet",
+    descriptionKey: "stepClientPetHelp",
+  },
+  { id: "service", titleKey: "service", descriptionKey: "selectAService" },
+  { id: "details", titleKey: "details", descriptionKey: "stepDetailsHelp" },
+  { id: "confirm", titleKey: "stepConfirm", descriptionKey: "stepConfirmHelp" },
 ];
 
-export const DAYCARE_SUB_STEPS = [
-  { id: 0, title: "Schedule", description: "Select dates and times" },
-  { id: 1, title: "Room Assignment", description: "Assign to room" },
-  { id: 2, title: "Add-ons", description: "Add-on services" },
-  { id: 3, title: "Feeding", description: "Feeding schedule" },
-  { id: 4, title: "Medication", description: "Medication details" },
+export const DAYCARE_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "schedule", descriptionKey: "subDatesAndTimes" },
+  { id: 1, titleKey: "subRoomAssignment", descriptionKey: "subAssignToRoom" },
+  { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
+  { id: 3, titleKey: "feeding", descriptionKey: "subFeedingSchedule" },
+  { id: 4, titleKey: "subMedication", descriptionKey: "subMedicationDetails" },
 ];
 
-export const BOARDING_SUB_STEPS = [
-  { id: 0, title: "Schedule", description: "Select dates" },
-  { id: 1, title: "Room Type", description: "Choose room" },
-  { id: 2, title: "Add-ons", description: "Add-on services" },
-  { id: 3, title: "Feeding", description: "Feeding schedule" },
-  { id: 4, title: "Medication", description: "Medication details" },
+export const BOARDING_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "schedule", descriptionKey: "subDates" },
+  { id: 1, titleKey: "subRoomType", descriptionKey: "subChooseRoom" },
+  { id: 2, titleKey: "addOnsLabel", descriptionKey: "subAddOnServices" },
+  { id: 3, titleKey: "feeding", descriptionKey: "subFeedingSchedule" },
+  { id: 4, titleKey: "subMedication", descriptionKey: "subMedicationDetails" },
 ];
 
-export const EVALUATION_SUB_STEPS = [
-  { id: 0, title: "Schedule", description: "Select date and time slot" },
-  { id: 1, title: "Add-ons", description: "Optional extras" },
+export const EVALUATION_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "schedule", descriptionKey: "subDateAndSlot" },
+  { id: 1, titleKey: "addOnsLabel", descriptionKey: "subOptionalExtras" },
 ];
 
-export const GROOMING_SUB_STEPS = [
-  { id: 0, title: "Service", description: "Choose your grooming" },
-  { id: 1, title: "Add-ons", description: "Optional extras" },
-  { id: 2, title: "Schedule", description: "Select date and time" },
+export const GROOMING_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "service", descriptionKey: "subChooseGrooming" },
+  { id: 1, titleKey: "addOnsLabel", descriptionKey: "subOptionalExtras" },
+  { id: 2, titleKey: "schedule", descriptionKey: "subDateAndTime" },
 ];
 
-export const CUSTOM_SERVICE_SUB_STEPS = [
-  { id: 0, title: "Schedule", description: "Select date and time" },
+export const CUSTOM_SERVICE_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "schedule", descriptionKey: "subDateAndTime" },
 ];
 
 // Training sessions run at a fixed scheduled time on a fixed day — the
 // owner is enrolling in a series, not picking arrival/departure windows.
 // Keep the sub-step label specific so the sidebar makes the purpose clear.
-export const TRAINING_SUB_STEPS = [
-  { id: 0, title: "Select Series", description: "Pick a class to enroll in" },
+export const TRAINING_SUB_STEPS: WizardSubStepDef[] = [
+  { id: 0, titleKey: "subSelectSeries", descriptionKey: "subPickAClass" },
 ];
 
 // ── Per-service accent colors ────────────────────────────────────────────────

@@ -3619,7 +3619,7 @@ export function BookingModal({
                       return isEstimateMode
                         ? t("reviewAndSend")
                         : t("reviewAndCreate");
-                    return step.description;
+                    return t(step.descriptionKey);
                   })();
 
                   return (
@@ -3689,7 +3689,7 @@ export function BookingModal({
                                   "text-muted-foreground",
                               )}
                             >
-                              {step.title}
+                              {t(step.titleKey)}
                             </p>
                             <p
                               className={cn(
@@ -3803,7 +3803,7 @@ export function BookingModal({
                                     )}
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <span>{subStep.title}</span>
+                                    <span>{t(subStep.titleKey)}</span>
                                     {subSummary && (
                                       <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
                                         {subSummary}
@@ -3851,10 +3851,10 @@ export function BookingModal({
               </div>
               <h2 className="text-lg font-semibold">
                 {showingPackagePromptStep
-                  ? "Apply Package Pass"
+                  ? t("applyPackagePass")
                   : showingTipStep
-                    ? "Show Your Appreciation"
-                    : displayedSteps[currentStep]?.title}
+                    ? t("showYourAppreciation")
+                    : t(displayedSteps[currentStep]?.titleKey ?? "")}
               </h2>
               {!showingPackagePromptStep &&
                 !showingTipStep &&
@@ -3863,7 +3863,7 @@ export function BookingModal({
                   selectedService === "boarding" ||
                   selectedService === "evaluation") && (
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {currentSubSteps[currentSubStep]?.title}
+                    {t(currentSubSteps[currentSubStep]?.titleKey ?? "")}
                   </p>
                 )}
             </div>
