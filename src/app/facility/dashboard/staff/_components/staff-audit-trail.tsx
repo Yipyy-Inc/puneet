@@ -20,80 +20,79 @@ import {
   type StaffAuditEntry,
 } from "@/lib/staff-audit";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import { ROLE_META } from "@/types/facility-staff";
 import { useStatusReasonLabel } from "@/lib/staff/use-status-reason-label";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
+import {
+  formatDateLong,
+  formatTime as formatTimeI18n,
+} from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ACTION_META: Record<
   StaffAuditAction,
   {
-    label: string;
+    labelKey: string;
     Icon: React.ElementType;
     iconTone: string;
     bgTone: string;
   }
 > = {
   staff_created: {
-    label: "Profile created",
+    labelKey: "actionStaffCreated",
     Icon: UserPlus,
     iconTone: "text-emerald-600 dark:text-emerald-400",
     bgTone: "bg-emerald-500/10",
   },
   staff_updated: {
-    label: "Profile updated",
+    labelKey: "actionStaffUpdated",
     Icon: Pencil,
     iconTone: "text-blue-600 dark:text-blue-400",
     bgTone: "bg-blue-500/10",
   },
   staff_deleted: {
-    label: "Profile deleted",
+    labelKey: "actionStaffDeleted",
     Icon: Trash2,
     iconTone: "text-rose-600 dark:text-rose-400",
     bgTone: "bg-rose-500/10",
   },
   status_changed: {
-    label: "Status changed",
+    labelKey: "actionStatusChanged",
     Icon: RefreshCw,
     iconTone: "text-amber-600 dark:text-amber-400",
     bgTone: "bg-amber-500/10",
   },
   permissions_changed: {
-    label: "Permissions updated",
+    labelKey: "actionPermissionsChanged",
     Icon: ShieldCheck,
     iconTone: "text-violet-600 dark:text-violet-400",
     bgTone: "bg-violet-500/10",
   },
   payroll_changed: {
-    label: "Payroll updated",
+    labelKey: "actionPayrollChanged",
     Icon: Wallet,
     iconTone: "text-emerald-600 dark:text-emerald-400",
     bgTone: "bg-emerald-500/10",
   },
   invitation_sent: {
-    label: "Invitation sent",
+    labelKey: "actionInvitationSent",
     Icon: Mail,
     iconTone: "text-sky-600 dark:text-sky-400",
     bgTone: "bg-sky-500/10",
   },
 };
 
-const FILTER_OPTIONS: { value: StaffAuditAction | "all"; label: string }[] = [
-  { value: "all", label: "All activity" },
-  { value: "staff_created", label: "Created" },
-  { value: "staff_updated", label: "Profile edits" },
-  { value: "status_changed", label: "Status changes" },
-  { value: "permissions_changed", label: "Permissions" },
-  { value: "payroll_changed", label: "Payroll" },
-  { value: "invitation_sent", label: "Invitations" },
+const FILTER_OPTIONS: { value: StaffAuditAction | "all"; key: string }[] = [
+  { value: "all", key: "filterAll" },
+  { value: "staff_created", key: "filterCreated" },
+  { value: "staff_updated", key: "filterProfileEdits" },
+  { value: "status_changed", key: "filterStatusChanges" },
+  { value: "permissions_changed", key: "filterPermissions" },
+  { value: "payroll_changed", key: "filterPayroll" },
+  { value: "invitation_sent", key: "filterInvitations" },
 ];
-
-const STATUS_LABEL: Record<string, string> = {
-  active: "Active",
-  inactive: "Inactive",
-  terminated: "Terminated",
-  invited: "Invited",
-};
 
 const STATUS_TONE: Record<string, string> = {
   active: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -104,28 +103,29 @@ const STATUS_TONE: Record<string, string> = {
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
-function formatDate(iso: string): string {
+/**
+ * "Today" / "Yesterday" / the date — the two words keyed, the date through
+ * `Intl`.
+ *
+ * Was `toLocaleDateString("en-US", …)` beside `toLocaleTimeString("en-US", {
+ * hour12: true })` — a literal tag on both, and `hour12` is the American clock
+ * written out as an option rather than left to the locale. §5q's French is
+ * "14 h 30".
+ */
+function formatDate(
+  iso: string,
+  locale: AppLocale,
+  t: (key: string) => string,
+): string {
   const d = new Date(iso);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86400000);
   const entryDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-  if (entryDay.getTime() === today.getTime()) return "Today";
-  if (entryDay.getTime() === yesterday.getTime()) return "Yesterday";
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  });
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  if (entryDay.getTime() === today.getTime()) return t("today");
+  if (entryDay.getTime() === yesterday.getTime()) return t("yesterday");
+  return formatDateLong(d, locale);
 }
 
 function dayKey(iso: string): string {
@@ -146,20 +146,21 @@ function groupByDay(entries: StaffAuditEntry[]): [string, StaffAuditEntry[]][] {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function ActorBadge({ name, role }: { name: string; role: string }) {
+  const roleName = useStaffRoleLabel();
   const roleTone =
     role === "owner"
       ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
       : role === "manager"
         ? "bg-violet-500/10 text-violet-700 dark:text-violet-400"
         : "bg-muted text-muted-foreground";
-  const roleLabel = ROLE_META[role as keyof typeof ROLE_META]?.label ?? role;
+  const roleLabel = roleName(role);
 
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="text-foreground font-medium">{name}</span>
       <span
         className={cn(
-          "rounded-sm px-1.5 py-0.5 text-[10px] font-medium capitalize",
+          "rounded-sm px-1.5 py-0.5 text-[10px] font-medium",
           roleTone,
         )}
       >
@@ -170,6 +171,7 @@ function ActorBadge({ name, role }: { name: string; role: string }) {
 }
 
 function StatusPill({ status }: { status: string }) {
+  const { t } = useStaffText("status");
   return (
     <span
       className={cn(
@@ -178,7 +180,7 @@ function StatusPill({ status }: { status: string }) {
       )}
     >
       <span className="size-1.5 rounded-full bg-current opacity-60" />
-      {STATUS_LABEL[status] ?? status}
+      {t(status) === status ? status : t(status)}
     </span>
   );
 }
@@ -202,16 +204,18 @@ function StatusChangeDescription({ entry }: { entry: StaffAuditEntry }) {
 }
 
 function PermissionsDescription({ entry }: { entry: StaffAuditEntry }) {
+  const { fill } = useStaffText("auditTrail");
   const count = entry.metadata?.permissionsChanged;
   if (!count) return null;
   return (
     <p className="text-muted-foreground mt-1 text-xs">
-      {count} permission{Number(count) !== 1 ? "s" : ""} updated
+      {fill("permissionsUpdated", { count: Number(count) })}
     </p>
   );
 }
 
 function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
+  const { fill } = useStaffText("auditTrail");
   const [expanded, setExpanded] = useState(true);
   if (!entry.changes?.length) return null;
 
@@ -226,8 +230,7 @@ function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
         ) : (
           <ChevronRight className="size-3" />
         )}
-        {entry.changes.length} field{entry.changes.length !== 1 ? "s" : ""}{" "}
-        changed
+        {fill("fieldsChanged", { count: entry.changes.length })}
       </button>
 
       {expanded && (
@@ -264,6 +267,8 @@ function FieldChanges({ entry }: { entry: StaffAuditEntry }) {
 }
 
 function AuditEntryCard({ entry }: { entry: StaffAuditEntry }) {
+  const { t, locale } = useStaffText("auditTrail");
+  const roleName = useStaffRoleLabel();
   const meta = ACTION_META[entry.action];
   const { Icon } = meta;
 
@@ -283,23 +288,21 @@ function AuditEntryCard({ entry }: { entry: StaffAuditEntry }) {
         {/* Header row */}
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <span className="text-sm font-semibold">{meta.label}</span>
+            <span className="text-sm font-semibold">{t(meta.labelKey)}</span>
             {entry.action === "staff_created" && entry.metadata?.role && (
               <span className="text-muted-foreground ml-1.5 text-xs">
-                —{" "}
-                {ROLE_META[entry.metadata.role as keyof typeof ROLE_META]
-                  ?.label ?? String(entry.metadata.role)}
+                — {roleName(String(entry.metadata.role))}
               </span>
             )}
           </div>
           <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-            {formatTime(entry.timestamp)}
+            {formatTimeI18n(new Date(entry.timestamp), locale)}
           </span>
         </div>
 
         {/* Actor */}
         <div className="text-muted-foreground mt-1 text-xs">
-          by <ActorBadge name={entry.actorName} role={entry.actorRole} />
+          {t("by")} <ActorBadge name={entry.actorName} role={entry.actorRole} />
         </div>
 
         {/* Action-specific body */}
@@ -329,13 +332,14 @@ function DayGroup({
   dayIso: string;
   entries: StaffAuditEntry[];
 }) {
+  const { t, locale } = useStaffText("auditTrail");
   return (
     <div>
       {/* Date separator */}
       <div className="mb-3 flex items-center gap-2">
         <div className="bg-border h-px flex-1" />
         <span className="text-muted-foreground rounded-full border px-2.5 py-0.5 text-[11px] font-medium">
-          {formatDate(dayIso + "T00:00:00")}
+          {formatDate(dayIso + "T00:00:00", locale, t)}
         </span>
         <div className="bg-border h-px flex-1" />
       </div>
@@ -359,6 +363,7 @@ interface StaffAuditTrailProps {
 }
 
 export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
+  const { t, fill } = useStaffText("auditTrail");
   const { can, viewer } = useFacilityRbac();
   const [filter, setFilter] = useState<StaffAuditAction | "all">("all");
 
@@ -383,9 +388,9 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
         <div className="bg-muted rounded-full p-3">
           <ShieldAlert className="text-muted-foreground size-5" />
         </div>
-        <div className="text-sm font-semibold">Access restricted</div>
+        <div className="text-sm font-semibold">{t("accessRestricted")}</div>
         <p className="text-muted-foreground max-w-xs text-xs">
-          Audit trails are only visible to owners and managers.
+          {t("accessRestrictedHelp")}
         </p>
       </div>
     );
@@ -411,7 +416,7 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
                   : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
               )}
             >
-              {opt.label}
+              {t(opt.key)}
             </button>
           );
         })}
@@ -423,9 +428,9 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
           <div className="bg-muted rounded-full p-3">
             <ShieldCheck className="text-muted-foreground size-5" />
           </div>
-          <div className="text-sm font-semibold">No activity recorded</div>
+          <div className="text-sm font-semibold">{t("noActivity")}</div>
           <p className="text-muted-foreground max-w-xs text-xs">
-            Changes to this profile will appear here automatically.
+            {t("noActivityHelp")}
           </p>
         </div>
       ) : (
@@ -439,7 +444,7 @@ export function StaffAuditTrail({ staffId }: StaffAuditTrailProps) {
       {/* Footer count */}
       {entries.length > 0 && (
         <p className="text-muted-foreground text-center text-[11px]">
-          {entries.length} event{entries.length !== 1 ? "s" : ""} in log
+          {fill("eventsInLog", { count: entries.length })}
         </p>
       )}
     </div>

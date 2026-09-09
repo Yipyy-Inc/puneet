@@ -54,6 +54,7 @@ import { useVaccinationRules } from "@/lib/api/facility-settings";
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import type { AdditionalContact } from "@/types/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ========================================
 // Types
@@ -131,12 +132,12 @@ interface ClientForm {
 }
 
 const STEPS = [
-  { id: 1, label: "Client", icon: User },
-  { id: 2, label: "Pet", icon: Heart },
-  { id: 3, label: "Health", icon: ShieldCheck },
-  { id: 4, label: "Vaccines", icon: Syringe },
-  { id: 5, label: "Agreements", icon: FileCheck },
-  { id: 6, label: "Review", icon: ClipboardList },
+  { id: 1, key: "stepClient", icon: User },
+  { id: 2, key: "stepPet", icon: Heart },
+  { id: 3, key: "stepHealth", icon: ShieldCheck },
+  { id: 4, key: "stepVaccines", icon: Syringe },
+  { id: 5, key: "stepAgreements", icon: FileCheck },
+  { id: 6, key: "stepReview", icon: ClipboardList },
 ];
 
 const STORAGE_KEY = "yipyy_create_client_draft";
@@ -341,6 +342,9 @@ function PetVaccineCard({
     }));
   };
 
+  const { t, fill } = useStaffText("createClient");
+  // french-ok: the species SLUG, used for a lookup and shown in a badge that
+  // the catalogue's own species keys cover below
   const speciesLabel = pet.type || "pet";
 
   if (record.vaccines.length === 0) {
@@ -349,15 +353,16 @@ function PetVaccineCard({
         <div className="mb-2 flex items-center gap-2">
           <Syringe className="text-muted-foreground size-4" />
           <p className="text-sm font-semibold">
-            {pet.name || `Pet ${petIndex + 1}`}
+            {pet.name || fill("petN", { n: petIndex + 1 })}
           </p>
           <Badge variant="outline" className="text-[10px] capitalize">
             {speciesLabel}
           </Badge>
         </div>
         <p className="text-muted-foreground text-xs">
-          No vaccines configured for this animal type. The facility has not set
-          any vaccination requirements for {speciesLabel.toLowerCase()}s.
+          {fill("noVaccinesConfigured", {
+            species: speciesLabel.toLowerCase(),
+          })}
         </p>
       </div>
     );
@@ -368,7 +373,7 @@ function PetVaccineCard({
       <div className="mb-3 flex items-center gap-2">
         <Syringe className="text-muted-foreground size-4" />
         <p className="text-sm font-semibold">
-          {pet.name || `Pet ${petIndex + 1}`}
+          {pet.name || fill("petN", { n: petIndex + 1 })}
         </p>
         <Badge variant="outline" className="text-[10px] capitalize">
           {speciesLabel}
@@ -377,7 +382,7 @@ function PetVaccineCard({
 
       <div className="space-y-2">
         <Label className="text-muted-foreground text-xs">
-          Vaccine expiry dates
+          {t("vaccineExpiryDates")}
         </Label>
         {record.vaccines.map((v, i) => (
           <div
@@ -395,7 +400,7 @@ function PetVaccineCard({
                   className="text-muted-foreground border-dashed text-[10px]"
                 >
                   <Clock className="mr-0.5 size-2.5" />
-                  Adding later
+                  {t("addingLater")}
                 </Badge>
               )}
             </div>
@@ -408,7 +413,7 @@ function PetVaccineCard({
                 calendarClassName="p-1"
                 showQuickPresets={false}
                 showManualInput={false}
-                placeholder="Expiry date"
+                placeholder={t("expiryDate")}
               />
             ) : (
               <span className="text-muted-foreground text-xs">—</span>
@@ -428,7 +433,7 @@ function PetVaccineCard({
                   : "text-muted-foreground hover:bg-muted/50",
               )}
             >
-              {v.addLater ? "Add now" : "Add later"}
+              {v.addLater ? t("addNow") : t("addLater")}
             </button>
           </div>
         ))}
@@ -436,11 +441,10 @@ function PetVaccineCard({
 
       <div className="mt-4">
         <Label className="text-muted-foreground mb-1.5 block text-xs">
-          Proof of Vaccination
+          {t("proofOfVaccination")}
         </Label>
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Upload one or more pages covering all vaccines above. JPG, PNG, or PDF
-          — max 10MB per file.
+          {t("proofHelp")}
         </p>
 
         <label className="border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors">
@@ -458,11 +462,11 @@ function PetVaccineCard({
             </div>
             <p className="text-xs font-medium">
               {record.proofs.length === 0
-                ? "Upload vaccine proof"
-                : "Add more pages"}
+                ? t("uploadVaccineProof")
+                : t("addMorePages")}
             </p>
             <p className="text-muted-foreground text-[10px]">
-              Select multiple files for multi-page documents
+              {t("multiPageHint")}
             </p>
           </div>
         </label>
@@ -511,9 +515,7 @@ function PetVaccineCard({
             <div className="col-span-full flex items-center gap-1.5">
               <Check className="size-3 text-emerald-600" />
               <p className="text-muted-foreground text-[11px]">
-                {record.proofs.length} file
-                {record.proofs.length === 1 ? "" : "s"} ready — pending staff
-                verification
+                {fill("filesReady", { count: record.proofs.length })}
               </p>
             </div>
           </div>
@@ -535,15 +537,12 @@ function VaccineStep({
     updater: (prev: PetVaccineRecord) => PetVaccineRecord,
   ) => void;
 }) {
+  const { t } = useStaffText("createClient");
   const { rules: vaccinationRules } = useVaccinationRules();
 
   return (
     <div className="animate-in fade-in space-y-4 py-2 duration-200">
-      <p className="text-muted-foreground text-sm">
-        Enter the expiry date for each required vaccine and upload proof of
-        vaccination. You can upload multiple images or PDF pages — the facility
-        will verify them.
-      </p>
+      <p className="text-muted-foreground text-sm">{t("vaccineIntro")}</p>
 
       {pets.map((pet, i) => (
         <PetVaccineCard
@@ -559,9 +558,8 @@ function VaccineStep({
       ))}
 
       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-        <AlertTriangle className="mb-1 inline size-3" /> Vaccination records can
-        be added later, but some services may require proof before check-in.
-        Uploaded documents will be reviewed by staff.
+        <AlertTriangle className="mb-1 inline size-3" />{" "}
+        {t("vaccineLaterNotice")}
       </div>
     </div>
   );
@@ -654,6 +652,7 @@ export function CreateClientModal({
   onSave,
   facilityName,
 }: CreateClientModalProps) {
+  const { t, fill } = useStaffText("createClient");
   const { languageSettings } = useSettings();
   // The facility's vaccination requirements, for the empty record a pet starts
   // with. This file used to read @/data/settings directly, so a new client was
@@ -708,6 +707,7 @@ export function CreateClientModal({
       const current =
         next[petIndex] ??
         createEmptyPetVaccineRecord(
+          // french-ok: the default species SLUG, matched against the rules
           pets[petIndex]?.type ?? "Dog",
           vaccinationRules,
         );
@@ -757,6 +757,7 @@ export function CreateClientModal({
       if (!client.zip.trim()) e.zip = "Postal code is required";
 
       additionalContacts.forEach((contact, index) => {
+        // french-ok: an error-map key prefix, never rendered
         const prefix = `additionalContact-${index}`;
         if (!contact.name.trim()) {
           e[`${prefix}-name`] = "Contact name is required";
@@ -884,6 +885,7 @@ export function CreateClientModal({
         weight: parseFloat(p.weight) || 0,
         color: p.color,
         microchip: p.microchip,
+        // french-ok: written to the pet RECORD, read back by other screens
         allergies: p.allergies === "yes" ? p.allergyDetails || "Yes" : "None",
         specialNeeds: p.specialNeeds,
       })),
@@ -924,10 +926,13 @@ export function CreateClientModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="size-5" />
-            New Client — Step {step} of 6
+            {fill("title", { step })}
           </DialogTitle>
           <DialogDescription>
-            {STEPS[step - 1].label} information for {facilityName}
+            {fill("subtitle", {
+              step: t(STEPS[step - 1].key),
+              facility: facilityName,
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -964,7 +969,7 @@ export function CreateClientModal({
                     active ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
-                  {s.label}
+                  {t(s.key)}
                 </span>
               </div>
             );
@@ -977,24 +982,24 @@ export function CreateClientModal({
         {step === 1 && (
           <div className="animate-in fade-in space-y-3 py-2 duration-200">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Full Name" required error={errors.name}>
+              <Field label={t("fullName")} required error={errors.name}>
                 <Input
                   value={client.name}
                   onChange={(e) => updateClient("name", e.target.value)}
-                  placeholder="John Doe"
+                  placeholder={t("fullNamePlaceholder")}
                 />
               </Field>
-              <Field label="Email" required error={errors.email}>
+              <Field label={t("email")} required error={errors.email}>
                 <Input
                   type="email"
                   value={client.email}
                   onChange={(e) => updateClient("email", e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder={t("emailPlaceholder")}
                 />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Phone" required error={errors.phone}>
+              <Field label={t("phone")} required error={errors.phone}>
                 <Input
                   type="tel"
                   value={client.phone}
@@ -1004,7 +1009,7 @@ export function CreateClientModal({
                   placeholder="123-456-7890"
                 />
               </Field>
-              <Field label="Preferred Contact">
+              <Field label={t("preferredContact")}>
                 <Select
                   value={client.contactMethod}
                   onValueChange={(v) => updateClient("contactMethod", v)}
@@ -1014,8 +1019,8 @@ export function CreateClientModal({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="sms">SMS</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Phone</SelectItem>
+                    <SelectItem value="email">{t("email")}</SelectItem>
+                    <SelectItem value="phone">{t("phone")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -1023,31 +1028,31 @@ export function CreateClientModal({
 
             <Separator />
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Address
+              {t("address")}
             </p>
-            <Field label="Street" required error={errors.street}>
+            <Field label={t("street")} required error={errors.street}>
               <Input
                 value={client.street}
                 onChange={(e) => updateClient("street", e.target.value)}
-                placeholder="123 Main Street"
+                placeholder={t("streetPlaceholder")}
               />
             </Field>
             <div className="grid grid-cols-3 gap-4">
-              <Field label="City" required error={errors.city}>
+              <Field label={t("city")} required error={errors.city}>
                 <Input
                   value={client.city}
                   onChange={(e) => updateClient("city", e.target.value)}
-                  placeholder="Montreal"
+                  placeholder={t("cityPlaceholder")}
                 />
               </Field>
-              <Field label="Province / State" required error={errors.state}>
+              <Field label={t("province")} required error={errors.state}>
                 <Input
                   value={client.state}
                   onChange={(e) => updateClient("state", e.target.value)}
                   placeholder="QC"
                 />
               </Field>
-              <Field label="Postal Code" required error={errors.zip}>
+              <Field label={t("postalCode")} required error={errors.zip}>
                 <Input
                   value={client.zip}
                   onChange={(e) => updateClient("zip", e.target.value)}
@@ -1075,13 +1080,13 @@ export function CreateClientModal({
                   });
                 }
               }}
-              heading="Additional Contacts"
-              description="Add people who can be contacted for emergencies, pickup, or drop-off. Tag each contact with what they're authorized to do."
+              heading={t("additionalContacts")}
+              description={t("additionalContactsHelp")}
             />
 
             {showPreferredLanguageField && (
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Preferred Language">
+                <Field label={t("preferredLanguage")}>
                   <Select
                     value={selectedPreferredLanguage}
                     onValueChange={(v) => updateClient("language", v)}
@@ -1109,7 +1114,7 @@ export function CreateClientModal({
             {pets.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Added Pets ({pets.length})
+                  {fill("addedPets", { count: pets.length })}
                 </Label>
                 {pets.map((p, i) => (
                   <div
@@ -1133,7 +1138,7 @@ export function CreateClientModal({
                       }
                     >
                       <X className="mr-1 size-3" />
-                      Remove
+                      {t("remove")}
                     </Button>
                   </div>
                 ))}
@@ -1148,17 +1153,17 @@ export function CreateClientModal({
             )}
 
             <div className="space-y-4 rounded-lg border p-4">
-              <p className="text-sm font-semibold">Add a Pet</p>
+              <p className="text-sm font-semibold">{t("addAPet")}</p>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Pet Name" required error={errors.petName}>
+                <Field label={t("petName")} required error={errors.petName}>
                   <Input
                     value={petForm.name}
                     onChange={(e) => updatePet("name", e.target.value)}
-                    placeholder="Buddy"
+                    placeholder={t("petNamePlaceholder")}
                   />
                 </Field>
-                <Field label="Species" required>
+                <Field label={t("species")} required>
                   <Select
                     value={petForm.type}
                     onValueChange={(v) => {
@@ -1170,15 +1175,15 @@ export function CreateClientModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Dog">Dog</SelectItem>
-                      <SelectItem value="Cat">Cat</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="Dog">{t("speciesDog")}</SelectItem>
+                      <SelectItem value="Cat">{t("speciesCat")}</SelectItem>
+                      <SelectItem value="Other">{t("speciesOther")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
               </div>
 
-              <Field label="Breed" required error={errors.petBreed}>
+              <Field label={t("breed")} required error={errors.petBreed}>
                 <BreedCombobox
                   species={petForm.type}
                   value={petForm.breed}
@@ -1189,14 +1194,14 @@ export function CreateClientModal({
 
               <Separator />
               <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Core Details
+                {t("coreDetails")}
               </p>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <div className="mx-auto w-full max-w-sm">
                     <Field
-                      label="Date of Birth"
+                      label={t("dateOfBirth")}
                       required
                       error={errors.petDateOfBirth}
                     >
@@ -1204,7 +1209,7 @@ export function CreateClientModal({
                         value={petForm.dateOfBirth}
                         onValueChange={(next) => updatePet("dateOfBirth", next)}
                         max={new Date().toISOString().split("T")[0]}
-                        placeholder="Select date of birth"
+                        placeholder={t("selectDateOfBirth")}
                         displayMode="dialog"
                         popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
                         calendarClassName="p-1"
@@ -1213,7 +1218,7 @@ export function CreateClientModal({
                     </Field>
                   </div>
                 </div>
-                <Field label="Weight (lbs)" required error={errors.petWeight}>
+                <Field label={t("weightLbs")} required error={errors.petWeight}>
                   <div className="relative">
                     <Input
                       type="number"
@@ -1225,28 +1230,28 @@ export function CreateClientModal({
                       className="pr-10"
                     />
                     <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">
-                      lbs
+                      {t("lbs")}
                     </span>
                   </div>
                 </Field>
 
-                <Field label="Sex" required error={errors.petSex}>
+                <Field label={t("sex")} required error={errors.petSex}>
                   <Select
                     value={petForm.sex}
                     onValueChange={(v) => updatePet("sex", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
+                      <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">{t("sexMale")}</SelectItem>
+                      <SelectItem value="female">{t("sexFemale")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
 
                 <Field
-                  label="Spayed/Neutered"
+                  label={t("spayedNeutered")}
                   required
                   error={errors.petSpayedNeutered}
                 >
@@ -1255,11 +1260,11 @@ export function CreateClientModal({
                     onValueChange={(v) => updatePet("spayedNeutered", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
+                      <SelectValue placeholder={t("select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="yes">{t("yes")}</SelectItem>
+                      <SelectItem value="no">{t("no")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -1267,24 +1272,24 @@ export function CreateClientModal({
 
               {petForm.dateOfBirth && (
                 <p className="text-muted-foreground text-xs">
-                  Pet age: {calculatePetAge(petForm.dateOfBirth).display}
+                  {t("petAge")} {calculatePetAge(petForm.dateOfBirth).display}
                 </p>
               )}
 
               <Separator />
               <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Identifiers
+                {t("identifiers")}
               </p>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Color / Markings">
+                <Field label={t("colorMarkings")}>
                   <Input
                     value={petForm.color}
                     onChange={(e) => updatePet("color", e.target.value)}
-                    placeholder="Golden"
+                    placeholder={t("colorPlaceholder")}
                   />
                 </Field>
-                <Field label="Microchip Number">
+                <Field label={t("microchipNumber")}>
                   <Input
                     value={petForm.microchip}
                     onChange={(e) => updatePet("microchip", e.target.value)}
@@ -1299,7 +1304,7 @@ export function CreateClientModal({
                 onClick={handleAddPet}
               >
                 <Plus className="mr-2 size-4" />
-                Add Pet
+                {t("addPet")}
               </Button>
             </div>
           </div>
@@ -1309,11 +1314,12 @@ export function CreateClientModal({
         {step === 3 && (
           <div className="animate-in fade-in space-y-4 py-2 duration-200">
             <p className="text-muted-foreground text-sm">
-              Health information for{" "}
-              {pets.map((p) => p.name).join(", ") || "your pets"}
+              {fill("healthInformationFor", {
+                name: pets.map((p) => p.name).join(", ") || t("yourPets"),
+              })}
             </p>
 
-            <Field label="Allergies">
+            <Field label={t("allergies")}>
               <Select
                 value={petForm.allergies}
                 onValueChange={(v) => updatePet("allergies", v)}
@@ -1322,23 +1328,23 @@ export function CreateClientModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no">No known allergies</SelectItem>
-                  <SelectItem value="yes">Yes — has allergies</SelectItem>
+                  <SelectItem value="no">{t("noKnownAllergies")}</SelectItem>
+                  <SelectItem value="yes">{t("hasAllergies")}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             {petForm.allergies === "yes" && (
-              <Field label="Allergy Details">
+              <Field label={t("allergyDetails")}>
                 <Textarea
                   value={petForm.allergyDetails}
                   onChange={(e) => updatePet("allergyDetails", e.target.value)}
-                  placeholder="Describe allergies..."
+                  placeholder={t("allergyPlaceholder")}
                   rows={2}
                 />
               </Field>
             )}
 
-            <Field label="Medications">
+            <Field label={t("medications")}>
               <Select
                 value={petForm.medications}
                 onValueChange={(v) => updatePet("medications", v)}
@@ -1347,25 +1353,25 @@ export function CreateClientModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no">No medications</SelectItem>
-                  <SelectItem value="yes">Yes — takes medication</SelectItem>
+                  <SelectItem value="no">{t("noMedications")}</SelectItem>
+                  <SelectItem value="yes">{t("takesMedication")}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             {petForm.medications === "yes" && (
-              <Field label="Medication Details">
+              <Field label={t("medicationDetails")}>
                 <Textarea
                   value={petForm.medicationDetails}
                   onChange={(e) =>
                     updatePet("medicationDetails", e.target.value)
                   }
-                  placeholder="Name, dosage, frequency..."
+                  placeholder={t("medicationPlaceholder")}
                   rows={2}
                 />
               </Field>
             )}
 
-            <Field label="Special Dietary Needs">
+            <Field label={t("specialDietaryNeeds")}>
               <Select
                 value={petForm.dietaryNeeds}
                 onValueChange={(v) => updatePet("dietaryNeeds", v)}
@@ -1374,44 +1380,44 @@ export function CreateClientModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no">No special diet</SelectItem>
-                  <SelectItem value="yes">Yes — special diet</SelectItem>
+                  <SelectItem value="no">{t("noSpecialDiet")}</SelectItem>
+                  <SelectItem value="yes">{t("hasSpecialDiet")}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             {petForm.dietaryNeeds === "yes" && (
-              <Field label="Dietary Details">
+              <Field label={t("dietaryDetails")}>
                 <Textarea
                   value={petForm.dietaryDetails}
                   onChange={(e) => updatePet("dietaryDetails", e.target.value)}
-                  placeholder="Describe dietary requirements..."
+                  placeholder={t("dietaryPlaceholder")}
                   rows={2}
                 />
               </Field>
             )}
 
-            <Field label="Behavior Notes">
+            <Field label={t("behaviorNotes")}>
               <Textarea
                 value={petForm.behaviorNotes}
                 onChange={(e) => updatePet("behaviorNotes", e.target.value)}
-                placeholder="Anxiety triggers, aggression, separation anxiety, etc."
+                placeholder={t("behaviorPlaceholder")}
                 rows={3}
               />
             </Field>
 
             <Separator />
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Veterinarian
+              {t("veterinarian")}
             </p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Vet Name">
+              <Field label={t("vetName")}>
                 <Input
                   value={client.vetName}
                   onChange={(e) => updateClient("vetName", e.target.value)}
-                  placeholder="Dr. Smith"
+                  placeholder={t("vetNamePlaceholder")}
                 />
               </Field>
-              <Field label="Vet Phone" error={errors.vetPhone}>
+              <Field label={t("vetPhone")} error={errors.vetPhone}>
                 <Input
                   type="tel"
                   value={client.vetPhone}
@@ -1451,11 +1457,11 @@ export function CreateClientModal({
                 />
                 <div>
                   <p className="text-sm font-medium">
-                    Terms of Service <span className="text-destructive">*</span>
+                    {t("termsOfService")}{" "}
+                    <span className="text-destructive">*</span>
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    I agree to the facility&apos;s terms of service and
-                    policies.
+                    {t("termsBody")}
                   </p>
                 </div>
               </label>
@@ -1473,11 +1479,11 @@ export function CreateClientModal({
                 />
                 <div>
                   <p className="text-sm font-medium">
-                    Liability Waiver <span className="text-destructive">*</span>
+                    {t("liabilityWaiver")}{" "}
+                    <span className="text-destructive">*</span>
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    I acknowledge the risks associated with pet care services
-                    and release the facility from liability.
+                    {t("liabilityBody")}
                   </p>
                 </div>
               </label>
@@ -1496,9 +1502,9 @@ export function CreateClientModal({
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">Marketing Consent</p>
+                  <p className="text-sm font-medium">{t("marketingConsent")}</p>
                   <p className="text-muted-foreground text-xs">
-                    I agree to receive promotional emails and offers.
+                    {t("marketingBody")}
                   </p>
                 </div>
               </label>
@@ -1512,10 +1518,9 @@ export function CreateClientModal({
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">SMS Consent</p>
+                  <p className="text-sm font-medium">{t("smsConsent")}</p>
                   <p className="text-muted-foreground text-xs">
-                    I agree to receive SMS notifications about bookings and
-                    updates.
+                    {t("smsBody")}
                   </p>
                 </div>
               </label>
@@ -1529,10 +1534,9 @@ export function CreateClientModal({
                   className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">Photo / Video Consent</p>
+                  <p className="text-sm font-medium">{t("photoConsent")}</p>
                   <p className="text-muted-foreground text-xs">
-                    I allow photos/videos of my pet to be used for social media
-                    and report cards.
+                    {t("photoBody")}
                   </p>
                 </div>
               </label>
@@ -1547,7 +1551,7 @@ export function CreateClientModal({
             <div className="rounded-lg border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Client
+                  {t("stepClient")}
                 </p>
                 <Button
                   variant="ghost"
@@ -1555,7 +1559,7 @@ export function CreateClientModal({
                   className="h-6 text-[11px]"
                   onClick={() => setStep(1)}
                 >
-                  Edit
+                  {t("edit")}
                 </Button>
               </div>
               <p className="text-sm font-medium">{client.name}</p>
@@ -1567,14 +1571,16 @@ export function CreateClientModal({
               </p>
               {showPreferredLanguageField && (
                 <p className="text-muted-foreground text-xs">
-                  Preferred language:{" "}
+                  {t("preferredLanguageIs")}{" "}
                   {getCustomerLanguageLabel(selectedPreferredLanguage)}
                 </p>
               )}
               {additionalContacts.length > 0 && (
                 <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
                   <p className="font-medium">
-                    Additional contacts ({additionalContacts.length})
+                    {fill("additionalContactsCount", {
+                      count: additionalContacts.length,
+                    })}
                   </p>
                   {additionalContacts.map((contact) => (
                     <p key={contact.id}>
@@ -1608,7 +1614,7 @@ export function CreateClientModal({
                   className="h-6 text-[11px]"
                   onClick={() => setStep(2)}
                 >
-                  Edit
+                  {t("edit")}
                 </Button>
               </div>
               {pets.map((p, i) => (
@@ -1619,7 +1625,7 @@ export function CreateClientModal({
                   <span className="text-sm font-medium">{p.name}</span>
                   <span className="text-muted-foreground text-xs">
                     {p.breed} · {calculatePetAge(p.dateOfBirth).compact} ·{" "}
-                    {p.weight} lbs
+                    {p.weight} {t("lbs")}
                   </span>
                 </div>
               ))}
@@ -1629,7 +1635,7 @@ export function CreateClientModal({
             <div className="rounded-lg border p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Vaccines
+                  {t("stepVaccines")}
                 </p>
                 <Button
                   variant="ghost"
@@ -1637,12 +1643,12 @@ export function CreateClientModal({
                   className="h-6 text-[11px]"
                   onClick={() => setStep(4)}
                 >
-                  Edit
+                  {t("edit")}
                 </Button>
               </div>
               {pets.length === 0 ? (
                 <p className="text-muted-foreground text-xs italic">
-                  No pets added yet
+                  {t("noPetsYet")}
                 </p>
               ) : (
                 pets.map((pet, petIdx) => {
@@ -1660,7 +1666,7 @@ export function CreateClientModal({
                     >
                       <div className="mb-1 flex items-center gap-2">
                         <span className="text-xs font-semibold">
-                          {pet.name || `Pet ${petIdx + 1}`}
+                          {pet.name || fill("petN", { n: petIdx + 1 })}
                         </span>
                         <Badge
                           variant="outline"
@@ -1674,18 +1680,17 @@ export function CreateClientModal({
                             className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
                           >
                             <FileImage className="mr-0.5 size-2.5" />
-                            {proofs.length} proof file
-                            {proofs.length === 1 ? "" : "s"}
+                            {fill("proofFiles", { count: proofs.length })}
                           </Badge>
                         )}
                       </div>
                       {vaccines.length === 0 ? (
                         <p className="text-muted-foreground text-xs italic">
-                          No vaccines configured for this species
+                          {t("noVaccinesForSpecies")}
                         </p>
                       ) : !hasAny ? (
                         <p className="text-muted-foreground text-xs italic">
-                          No vaccines recorded — can be added later
+                          {t("noVaccinesRecorded")}
                         </p>
                       ) : (
                         vaccines.map((v) => (
@@ -1702,15 +1707,15 @@ export function CreateClientModal({
                                 className="text-muted-foreground border-dashed text-[10px]"
                               >
                                 <Clock className="mr-0.5 size-2.5" />
-                                Adding later
+                                {t("addingLater")}
                               </Badge>
                             ) : v.expiryDate ? (
                               <span className="text-muted-foreground text-xs">
-                                Expires {v.expiryDate}
+                                {t("expires")} {v.expiryDate}
                               </span>
                             ) : (
                               <span className="text-muted-foreground text-xs italic">
-                                Not set
+                                {t("notSet")}
                               </span>
                             )}
                           </div>
@@ -1725,22 +1730,22 @@ export function CreateClientModal({
             {/* Agreements summary */}
             <div className="rounded-lg border p-3">
               <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
-                Agreements
+                {t("agreements")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {agreements.terms && (
                   <Badge variant="secondary" className="text-[10px]">
-                    <Check className="mr-1 size-2.5" /> Terms
+                    <Check className="mr-1 size-2.5" /> {t("terms")}
                   </Badge>
                 )}
                 {agreements.liability && (
                   <Badge variant="secondary" className="text-[10px]">
-                    <Check className="mr-1 size-2.5" /> Liability
+                    <Check className="mr-1 size-2.5" /> {t("liability")}
                   </Badge>
                 )}
                 {agreements.marketing && (
                   <Badge variant="secondary" className="text-[10px]">
-                    <Check className="mr-1 size-2.5" /> Marketing
+                    <Check className="mr-1 size-2.5" /> {t("marketing")}
                   </Badge>
                 )}
                 {agreements.sms && (
@@ -1763,25 +1768,25 @@ export function CreateClientModal({
           {step > 1 && (
             <Button variant="outline" onClick={handleBack}>
               <ChevronLeft className="mr-1 size-4" />
-              Back
+              {t("back")}
             </Button>
           )}
           <div className="flex-1" />
           {step === 1 && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
           )}
           {step < 6 && (
             <Button onClick={handleNext}>
-              Next
+              {t("next")}
               <ChevronRight className="ml-1 size-4" />
             </Button>
           )}
           {step === 6 && (
             <Button onClick={handleSubmit}>
               <Plus className="mr-1 size-4" />
-              Create Client
+              {t("createClient")}
             </Button>
           )}
         </DialogFooter>

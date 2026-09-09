@@ -80,7 +80,6 @@ const BASELINE = new Set<string>([
   "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx",
   "src/app/dashboard/support/email-templates/_components/template-panel.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-quick-actions.tsx",
-  "src/app/facility/dashboard/staff/_components/staff-audit-trail.tsx",
   "src/components/bookings/UnfinishedBookingsTable.tsx",
   "src/components/dashboard/facilities/AddStaffAccountModal.tsx",
   "src/components/dashboard/facilities/StaffTab.tsx",

@@ -142,8 +142,8 @@ export function ContactInfoSection({
         <AdditionalContactsManager
           value={values.additionalContacts}
           onChange={(contacts) => update({ additionalContacts: contacts })}
-          heading="Additional contacts"
-          description="Add people who can be contacted for emergencies, pickup, or drop-off. Tag each contact with what they're authorized to do."
+          // The component's own defaults now come from the catalogue, so a
+          // caller that wants the standard wording passes nothing.
         />
 
         <div className="flex justify-between pt-4">
