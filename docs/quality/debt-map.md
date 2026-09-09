@@ -10906,3 +10906,60 @@ converted, because nothing could see them.
 **Both halves of that are the lesson.** A gate that matches a list of
 attributes is only as good as the list, and a measurement scoped to the wrong
 directory is not a measurement. Settings is back at zero.
+
+## 2026-09-09 — the French verification harness was reading English
+
+Three commits this week ended with "verified by eye at 1440px in French". The
+scratch Playwright spec that produced those screenshots set a cookie:
+
+```ts
+name: "app-language-settings",
+value: encodeURIComponent(JSON.stringify({ primaryLocale: "fr", … })),
+```
+
+**`app-language-settings` is the name of a window EVENT.** It is
+`LANGUAGE_EVENT` in `src/hooks/use-app-locale.ts`, dispatched when the setting
+changes. Nothing reads a cookie by that name. The locale actually lives in
+`localStorage["settings-language"]`, with `NEXT_LOCALE` able to override it.
+
+So the spec rendered the app in **English**, screenshotted English, and ran its
+assertion — "no raw catalogue key on screen" — against English, where it passes
+trivially. It reported on French without ever having been in French.
+
+**The fix is one line, and it is not the cookie.** It is the assertion above
+the others:
+
+```ts
+await page.addInitScript((v) => {
+  window.localStorage.setItem("settings-language", v);
+}, FRENCH);
+…
+expect(shell, "the app is in French").not.toContain("Staff management");
+```
+
+A harness that cannot prove it is in the state it claims is not a harness. The
+locale assertion costs nothing and would have failed on the very first run.
+
+### What it cost, measured
+
+The moment the locale actually took, the profile sheet showed two defects that
+had been on screen the whole time and that no gate can see:
+
+- **CSS `capitalize` title-cases a translated string.** The catalogue says
+  "Temps plein"; the screen said "Temps Plein", and "0 sur 3" became "0 Sur 3".
+  French does not title-case, §5q is sentence case everywhere, and the class
+  was doing the job the catalogue now does — rendering a slug. Look for
+  `capitalize` next to anything that came out of a translator.
+- **The dialog footer's four buttons sat on one line.** French labels are
+  wider, and the PRIMARY action — "Modifier le profil" — was pushed clean off
+  the dialog. Not clipped: absent. §5g already says to read the label at its
+  longest real string in `messages/fr.json`; this is what happens when the
+  layout is not also read at that length.
+
+Both are width and casing, which is exactly the class a static gate is blind to
+and a screenshot is not. That is the fourth time this week the screenshot found
+what the assertions could not — and the first time the screenshot itself was
+the thing that was wrong.
+
+**The general form: a green check on a surface you never actually entered is
+worth less than no check, because it is spent.**
