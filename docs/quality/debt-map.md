@@ -10809,3 +10809,44 @@ All in `staff/documents/page.tsx`, all invisible to the French gate:
 
 **The lesson that generalises: `check:ui-french` at zero means "no English
 literal left in the file", not "this screen is French."** Look at it.
+
+### The fix for the frozen memo broke the build, and the green sequence did not catch it
+
+Adding `roleLabel` to that memo's dependency array was correct and made CI red:
+
+```
+251:54  error  Compilation Skipped: Existing memoization could not be preserved
+```
+
+**`useStaffRoleLabel` returned a bare arrow**, so every render produced a new
+function. Harmless while nobody depended on it; the moment something did, the
+memo re-ran every render — no longer a memo — and the React Compiler refused
+the file. That is a lint ERROR, not a warning, and `image`'s `needs:` includes
+lint, so nothing deployed.
+
+`useCallback` on the identity is the fix at the root.
+`useServiceTypeLabel`, `useWarningTypeLabel` and `useEmployeeDocTypeLabel` were
+already written that way; the three in `use-staff-role-label.ts` were the odd
+ones out. **A translator that will be a dependency has to be stable, or making
+it a dependency is worse than the bug it fixes.**
+
+### And the process failure underneath it
+
+The green sequence exists and was not run. What ran instead was an ad-hoc chain:
+
+```
+bun run typecheck 2>&1|tail -1 && bun run lint 2>&1 | grep -c "documents/page"; bun run format:check 2>&1|tail -1
+```
+
+`grep -c "<filename>"` counts lines mentioning the file, which is not the error
+count; ESLint prints the path once as a header and the findings beneath it. And
+piping the summary through `tail -1` on a later command hid it entirely.
+
+**Read the count, not a proxy for it:** `bun run lint 2>&1 | grep -cE " error "`.
+Better: run the sequence AGENTS.md documents, as one command, unmodified —
+`bun run typecheck && bun run lint && bun run format:check && bun run test:unit
+&& bun run check:all`. Every shortcut taken with it this session has cost more
+than it saved.
+
+`check:all` deliberately does NOT include lint, typecheck, format or the unit
+tier — it is the 35 project checks, and the sequence is the sequence.
