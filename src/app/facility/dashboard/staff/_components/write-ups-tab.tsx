@@ -50,9 +50,22 @@ import {
   type WriteUpCategory,
   type StaffWriteUp,
 } from "@/data/staff-writeups";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
+/**
+ * The message the STAFF MEMBER receives, and the one string on this screen
+ * that must not be translated here.
+ *
+ * It is addressed to somebody else, and this component knows only the
+ * manager's locale — so translating it would send French to an employee who
+ * reads English. Same shape as the offboarding notification; the real fix is
+ * server-side, where the recipient's locale is known. Recorded in the debt map.
+ *
+ * "Please" went, though. §5q bans it outright, and English being deliberate
+ * here is not a reason to leave banned vocabulary in it.
+ */
 const STAFF_NOTIFY_MSG =
-  "A new HR record has been added to your file. Please log in to review and acknowledge.";
+  "A new HR record has been added to your file. Sign in to review and acknowledge it.";
 
 function categoryClass(category: WriteUpCategory): string {
   switch (category) {
@@ -70,6 +83,7 @@ function categoryClass(category: WriteUpCategory): string {
 }
 
 export function WriteUpsTab({ profile }: { profile: StaffProfile }) {
+  const { t, fill } = useStaffText("writeUps");
   const { viewer } = useFacilityRbac();
   const records = useWriteUps(profile.id);
   const [addOpen, setAddOpen] = useState(false);
@@ -95,7 +109,7 @@ export function WriteUpsTab({ profile }: { profile: StaffProfile }) {
     return (
       <div className="text-muted-foreground flex h-40 flex-col items-center justify-center gap-2 text-sm">
         <ShieldAlert className="size-8" />
-        These records are confidential.
+        {t("confidential")}
       </div>
     );
   }
@@ -104,29 +118,27 @@ export function WriteUpsTab({ profile }: { profile: StaffProfile }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Write-ups &amp; HR records</h2>
-          <p className="text-muted-foreground text-xs">
-            Confidential. Permanent — records can be archived by an admin but
-            never deleted.
-          </p>
+          <h2 className="text-sm font-semibold">{t("title")}</h2>
+          <p className="text-muted-foreground text-xs">{t("subtitle")}</p>
         </div>
         <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="size-3.5" /> Add Write-Up
+          <Plus className="size-3.5" /> {t("add")}
         </Button>
       </div>
 
       {unacknowledged > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
           <CircleAlert className="size-4 shrink-0" />
-          {unacknowledged} record{unacknowledged === 1 ? "" : "s"} awaiting the
-          staff member&apos;s acknowledgement.
+          {fill(unacknowledged === 1 ? "awaitingOne" : "awaitingOther", {
+            count: unacknowledged,
+          })}
         </div>
       )}
 
       {active.length === 0 ? (
         <div className="border-border/60 text-muted-foreground flex flex-col items-center gap-1.5 rounded-xl border border-dashed py-10 text-center">
           <FileText className="size-7 opacity-40" />
-          <p className="text-sm">No records on file.</p>
+          <p className="text-sm">{t("empty")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -188,6 +200,16 @@ function WriteUpCard({
   canArchive: boolean;
   archiverRole: StaffProfile["primaryRole"];
 }) {
+  const { t } = useStaffText("writeUps");
+  const categoryLabel = (c: WriteUpCategory) => {
+    const key = `cat${c
+      .split("_")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join("")}`;
+    const label = t(key);
+    return label === key ? WRITEUP_CATEGORY_LABEL[c] : label;
+  };
+
   const acknowledged = !!record.acknowledgedAt;
   const needsAck = !acknowledged && record.category !== "positive_recognition";
 
@@ -201,14 +223,14 @@ function WriteUpCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className={categoryClass(record.category)}>
-            {WRITEUP_CATEGORY_LABEL[record.category]}
+            {categoryLabel(record.category)}
           </Badge>
           <span className="text-muted-foreground text-xs">
             {record.date} · by {record.issuedBy}
           </span>
           {record.archived && (
             <Badge variant="secondary" className="text-[10px]">
-              Archived
+              {t("archived")}
             </Badge>
           )}
         </div>
@@ -223,11 +245,11 @@ function WriteUpCard({
           >
             {record.archived ? (
               <>
-                <ArchiveRestore className="size-3.5" /> Restore
+                <ArchiveRestore className="size-3.5" /> {t("restore")}
               </>
             ) : (
               <>
-                <Archive className="size-3.5" /> Archive
+                <Archive className="size-3.5" /> {t("archive")}
               </>
             )}
           </Button>
@@ -243,7 +265,7 @@ function WriteUpCard({
       <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
         {record.incidentRef && (
           <span className="inline-flex items-center gap-1">
-            <Link2 className="size-3" /> Incident {record.incidentRef}
+            <Link2 className="size-3" /> {t("incident")} {record.incidentRef}
           </span>
         )}
         {record.attachmentUrl && (
@@ -253,18 +275,18 @@ function WriteUpCard({
             rel="noreferrer"
             className="text-primary inline-flex items-center gap-1 hover:underline"
           >
-            <Paperclip className="size-3" /> Attachment
+            <Paperclip className="size-3" /> {t("attachment")}
           </a>
         )}
         {acknowledged ? (
           <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-3" /> Acknowledged{" "}
+            <CheckCircle2 className="size-3" /> {t("acknowledged")}{" "}
             {record.acknowledgedAt?.split("T")[0]}
           </span>
         ) : needsAck ? (
           <span className="inline-flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400">
-            <span className="size-1.5 rounded-full bg-rose-500" /> Awaiting
-            acknowledgement
+            <span className="size-1.5 rounded-full bg-rose-500" />{" "}
+            {t("awaitingAck")}
           </span>
         ) : null}
       </div>
@@ -285,6 +307,16 @@ function AddWriteUpDialog({
   staffFirstName: string;
   issuedBy: string;
 }) {
+  const { t } = useStaffText("writeUps");
+  const categoryLabel = (c: WriteUpCategory) => {
+    const key = `cat${c
+      .split("_")
+      .map((w) => w[0].toUpperCase() + w.slice(1))
+      .join("")}`;
+    const label = t(key);
+    return label === key ? WRITEUP_CATEGORY_LABEL[c] : label;
+  };
+
   const [today] = useState(() => new Date().toISOString().split("T")[0]);
   const [date, setDate] = useState(today);
   const [category, setCategory] = useState<WriteUpCategory>("verbal_warning");
@@ -317,7 +349,7 @@ function AddWriteUpDialog({
 
   const save = () => {
     if (!valid) {
-      toast.error("Add a description before saving.");
+      toast.error(t("needDescription"));
       return;
     }
     addWriteUp({
@@ -348,17 +380,14 @@ function AddWriteUpDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add write-up</DialogTitle>
-          <DialogDescription>
-            This creates a permanent HR record and notifies the staff member to
-            acknowledge it.
-          </DialogDescription>
+          <DialogTitle>{t("dialogTitle")}</DialogTitle>
+          <DialogDescription>{t("dialogHelp")}</DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="wu-date">Date</Label>
+              <Label htmlFor="wu-date">{t("date")}</Label>
               <Input
                 id="wu-date"
                 type="date"
@@ -367,7 +396,7 @@ function AddWriteUpDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="wu-cat">Category</Label>
+              <Label htmlFor="wu-cat">{t("category")}</Label>
               <Select
                 value={category}
                 onValueChange={(v) => setCategory(v as WriteUpCategory)}
@@ -378,7 +407,7 @@ function AddWriteUpDialog({
                 <SelectContent>
                   {WRITEUP_CATEGORIES.map((c) => (
                     <SelectItem key={c} value={c}>
-                      {WRITEUP_CATEGORY_LABEL[c]}
+                      {categoryLabel(c)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -387,26 +416,26 @@ function AddWriteUpDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Description</Label>
+            <Label>{t("description")}</Label>
             <RichTextField key={editorKey} onChange={setDescription} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="wu-incident">Incident reference (optional)</Label>
+            <Label htmlFor="wu-incident">{t("incidentRef")}</Label>
             <Input
               id="wu-incident"
               value={incidentRef}
               onChange={(e) => setIncidentRef(e.target.value)}
-              placeholder="e.g. INC-2043 or a link"
+              placeholder={t("incidentRefPlaceholder")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>PDF attachment (optional)</Label>
+            <Label>{t("pdfAttachment")}</Label>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" asChild>
                 <label className="cursor-pointer">
-                  <Paperclip className="size-3.5" /> Attach PDF
+                  <Paperclip className="size-3.5" /> {t("attachPdf")}
                   <input
                     type="file"
                     accept=".pdf,application/pdf"
@@ -426,10 +455,10 @@ function AddWriteUpDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button disabled={!valid} onClick={save}>
-            Save and notify staff
+            {t("saveAndNotify")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -440,6 +469,7 @@ function AddWriteUpDialog({
 // Lightweight rich-text field — uncontrolled contentEditable + a small toolbar.
 // The parent reads HTML via onChange; remount (key) to clear.
 function RichTextField({ onChange }: { onChange: (html: string) => void }) {
+  const { t } = useStaffText("writeUps");
   const ref = useRef<HTMLDivElement>(null);
   const sync = () => onChange(ref.current?.innerHTML ?? "");
   const exec = (cmd: string) => {
@@ -451,15 +481,15 @@ function RichTextField({ onChange }: { onChange: (html: string) => void }) {
   return (
     <div className="border-input overflow-hidden rounded-md border">
       <div className="bg-muted/40 flex items-center gap-1 border-b px-1.5 py-1">
-        <ToolbarButton onClick={() => exec("bold")} label="Bold">
+        <ToolbarButton onClick={() => exec("bold")} label={t("bold")}>
           <Bold className="size-3.5" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => exec("italic")} label="Italic">
+        <ToolbarButton onClick={() => exec("italic")} label={t("italic")}>
           <Italic className="size-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => exec("insertUnorderedList")}
-          label="Bullet list"
+          label={t("bulletList")}
         >
           <List className="size-3.5" />
         </ToolbarButton>
@@ -469,7 +499,7 @@ function RichTextField({ onChange }: { onChange: (html: string) => void }) {
         contentEditable
         suppressContentEditableWarning
         onInput={sync}
-        data-placeholder="Describe the incident or recognition…"
+        data-placeholder={t("descriptionPlaceholder")}
         className="empty:before:text-muted-foreground/60 min-h-24 px-3 py-2 text-sm empty:before:content-[attr(data-placeholder)] focus:outline-none"
       />
     </div>

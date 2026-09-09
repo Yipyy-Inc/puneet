@@ -38,6 +38,7 @@ import {
 } from "@/types/facility-staff";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { RoleIcon, RolePill, ScopeBadge } from "./staff-shared";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface AccessTabProps {
   profile: StaffProfile;
@@ -54,6 +55,7 @@ const SCOPE_ORDER: AccessScope[] = [
 const ALL_PRESET_ROLES = Object.keys(ROLE_META) as FacilityStaffRole[];
 
 export function AccessTab({ profile, onUpdate }: AccessTabProps) {
+  const { t, fill } = useStaffText("access");
   const { can, resolveFor, customRoles } = useFacilityRbac();
   const canView = can("view_staff_permissions");
   const canManage = can("manage_staff") && !!onUpdate;
@@ -67,31 +69,33 @@ export function AccessTab({ profile, onUpdate }: AccessTabProps) {
     <div className="space-y-4">
       <AccessRow
         icon={ShieldCheck}
-        title="Calendar visibility"
+        title={t("calendarVisibility")}
         value={
           profile.showOnCalendar
-            ? "Shows on the facility calendar"
-            : "Hidden from calendar (admin / back-office)"
+            ? t("showsOnCalendar")
+            : t("hiddenFromCalendar")
         }
       />
       <AccessRow
         icon={BadgeCheck}
-        title="Can view other calendars"
+        title={t("canViewOtherCalendars")}
         value={
           profile.calendarAccess.mode === "all"
-            ? "All working-business staff"
+            ? t("allWorkingStaff")
             : profile.calendarAccess.mode === "none"
-              ? "None"
-              : `${profile.calendarAccess.staffIds.length} selected teammates`
+              ? t("none")
+              : fill("selectedTeammates", {
+                  count: profile.calendarAccess.staffIds.length,
+                })
         }
       />
       <AccessRow
         icon={profile.clockIn.requireAccessCode ? KeyRound : Unlock}
-        title="Clock in / out"
+        title={t("clockInOut")}
         value={
           profile.clockIn.requireAccessCode
-            ? `Requires access code (${profile.clockIn.accessCode})`
-            : "No access code required"
+            ? fill("requiresCode", { code: profile.clockIn.accessCode ?? "" })
+            : t("noCodeRequired")
         }
       />
 
@@ -122,19 +126,17 @@ export function AccessTab({ profile, onUpdate }: AccessTabProps) {
 }
 
 function PermissionsHiddenState() {
+  const { t } = useStaffText("access");
   return (
     <div className="border-border/60 bg-muted/30 flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
       <div className="bg-background rounded-full border p-3">
         <Lock className="text-muted-foreground size-5" />
       </div>
-      <div className="text-sm font-semibold">Permissions are hidden</div>
+      <div className="text-sm font-semibold">{t("hiddenTitle")}</div>
       <p className="text-muted-foreground max-w-sm text-xs">
-        Only owners and managers with the{" "}
-        <span className="text-foreground font-medium">
-          View staff permissions
-        </span>{" "}
-        grant can inspect another staff member&apos;s access. Ask your facility
-        admin if you need to see this.
+        {t("hiddenBodyBefore")}{" "}
+        <span className="text-foreground font-medium">{t("hiddenGrant")}</span>{" "}
+        {t("hiddenBodyAfter")}
       </p>
     </div>
   );
@@ -155,6 +157,7 @@ function RolesSection({
   canManage: boolean;
   onUpdate?: (p: StaffProfile) => void;
 }) {
+  const { t, fill } = useStaffText("access");
   const roleLabel = useStaffRoleLabel();
   const { customRoles } = useFacilityRbac();
   const customList = Object.values(customRoles);
@@ -204,17 +207,18 @@ function RolesSection({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-sm font-semibold">Roles</div>
+        <div className="text-sm font-semibold">{t("roles")}</div>
         <Badge variant="outline" className="text-[10px]">
-          Primary + {profile.additionalRoles.length + customAssigned.length}{" "}
-          additional
+          {fill("primaryPlus", {
+            count: profile.additionalRoles.length + customAssigned.length,
+          })}
         </Badge>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="flex items-center gap-1.5">
           <RolePill role={profile.primaryRole} size="md" />
           <Badge variant="secondary" className="h-5 text-[10px]">
-            Primary
+            {t("primary")}
           </Badge>
         </div>
         {profile.additionalRoles.map((r) => (
@@ -224,7 +228,7 @@ function RolesSection({
               <button
                 onClick={() => removePresetRole(r)}
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-sm p-0.5"
-                aria-label={`Remove ${r}`}
+                aria-label={fill("remove", { name: roleLabel(r) })}
               >
                 <X className="size-3" />
               </button>
@@ -245,7 +249,7 @@ function RolesSection({
               <button
                 onClick={() => removeCustomRole(r.id)}
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-sm p-0.5"
-                aria-label={`Remove ${r.label}`}
+                aria-label={fill("remove", { name: r.label })}
               >
                 <X className="size-3" />
               </button>
@@ -268,7 +272,7 @@ function RolesSection({
             >
               <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs">
                 <Plus className="size-3" />
-                <SelectValue placeholder="Add role" />
+                <SelectValue placeholder={t("addRole")} />
               </SelectTrigger>
               <SelectContent>
                 {availablePresets.length > 0 && (
@@ -287,7 +291,7 @@ function RolesSection({
                   <SelectItem key={r.id} value={`custom:${r.id}`}>
                     {r.label}
                     <span className="text-muted-foreground ml-1 text-[10px]">
-                      (custom)
+                      {t("custom")}
                     </span>
                   </SelectItem>
                 ))}
@@ -297,8 +301,7 @@ function RolesSection({
       </div>
       {editing && canManage && (
         <p className="text-muted-foreground mt-2 text-[11px]">
-          Additional roles broaden what this person can do. Scopes union: the
-          widest scope wins across all assigned roles.
+          {t("additionalRolesHelp")}
         </p>
       )}
     </div>
@@ -326,6 +329,7 @@ function PermissionsSection({
   resolveFor: (p: StaffProfile, k: PermissionKey) => PermissionSetting;
   customRoleLabels: Record<string, string>;
 }) {
+  const { t, fill } = useStaffText("access");
   const roleLabel = useStaffRoleLabel();
   // The per-person overrides are withheld without `view_staff_permissions`.
   // Nothing below can be shown honestly without them — the resolved column
@@ -353,10 +357,8 @@ function PermissionsSection({
   if (!overrides) {
     return (
       <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
-        Permissions are hidden.
-        <div className="mt-1 text-xs">
-          Requires the “View staff permissions” permission.
-        </div>
+        {t("hiddenShort")}
+        <div className="mt-1 text-xs">{t("hiddenShortHelp")}</div>
       </div>
     );
   }
@@ -385,11 +387,12 @@ function PermissionsSection({
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-semibold">Permissions</div>
+          <div className="text-sm font-semibold">{t("permissions")}</div>
           <div className="text-muted-foreground text-[11px]">
-            {totalGranted} granted
-            {overrideCount > 0 && ` · ${overrideCount} overrides`} · Always-on:{" "}
-            {ALWAYS_ON_PERMISSIONS.length}
+            {fill("grantedCount", { count: totalGranted })}
+            {overrideCount > 0 &&
+              fill("overridesCount", { count: overrideCount })}
+            {fill("alwaysOn", { count: ALWAYS_ON_PERMISSIONS.length })}
           </div>
         </div>
         {canManage && (
@@ -401,7 +404,7 @@ function PermissionsSection({
                 className="h-7 px-2 text-xs"
                 onClick={resetAllOverrides}
               >
-                <RotateCcw className="size-3" /> Reset all
+                <RotateCcw className="size-3" /> {t("resetAll")}
               </Button>
             )}
             <Button
@@ -410,7 +413,7 @@ function PermissionsSection({
               className="h-7 px-2 text-xs"
               onClick={onToggleEditing}
             >
-              <Pencil className="size-3" /> {editing ? "Done" : "Edit"}
+              <Pencil className="size-3" /> {editing ? t("done") : t("edit")}
             </Button>
           </div>
         )}
@@ -426,11 +429,13 @@ function PermissionsSection({
       <div className="text-muted-foreground mt-3 flex items-start gap-1.5 text-[11px]">
         <ShieldAlert className="mt-px size-3 shrink-0" />
         <span>
-          Permissions come from the primary role
+          {t("fromPrimaryRole")}
           {profile.additionalRoles.length > 0 &&
-            `, additional preset roles (${profile.additionalRoles
-              .map((r) => roleLabel(r))
-              .join(", ")})`}
+            fill("additionalPresets", {
+              roles: profile.additionalRoles
+                .map((r) => roleLabel(r))
+                .join(", "),
+            })}
           {(profile.customRoleIds ?? []).length > 0 &&
             `, custom roles (${(profile.customRoleIds ?? [])
               .map((id) => customRoleLabels[id])
@@ -457,6 +462,7 @@ type Row = {
 };
 
 function ReadOnlyPermissions({ rows }: { rows: Row[] }) {
+  const { t } = useStaffText("access");
   const permissionText = usePermissionText();
   const groupsWithGrants = rows
     .map((g) => ({
@@ -488,7 +494,7 @@ function ReadOnlyPermissions({ rows }: { rows: Row[] }) {
                     variant="outline"
                     className="h-4 border-amber-300 bg-amber-50 px-1 text-[9px] text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-400"
                   >
-                    override
+                    {t("override")}
                   </Badge>
                 )}
               </div>
@@ -507,6 +513,7 @@ function EditablePermissions({
   rows: Row[];
   applyScope: (key: PermissionKey, next: AccessScope | "reset") => void;
 }) {
+  const { t } = useStaffText("access");
   const permissionText = usePermissionText();
   return (
     <div className="space-y-3">
@@ -545,7 +552,7 @@ function EditablePermissions({
                       variant="outline"
                       className="h-5 border-amber-300 bg-amber-50 px-1 text-[9px] text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-400"
                     >
-                      override
+                      {t("override")}
                     </Badge>
                   )}
                   <Select
@@ -620,12 +627,13 @@ function InlineScope({
   granted: boolean;
   override: boolean;
 }) {
+  const { t } = useStaffText("access");
   const permissionText = usePermissionText();
   if (!granted) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px]">
         <span className="bg-muted-foreground/40 inline-block size-2 rounded-full" />
-        {override ? "Blocked" : "Not granted"}
+        {override ? t("blocked") : t("notGranted")}
       </span>
     );
   }
