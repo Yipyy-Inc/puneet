@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useOnboardingTypeLabel } from "@/lib/staff/use-onboarding-type-label";
+import { formatPercent } from "@/lib/i18n/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +42,6 @@ import { useScopedNotifications } from "@/lib/employee-notification-scope";
 import {
   useOnboarding,
   setOnboardingTaskComplete,
-  ONBOARDING_TYPE_LABEL,
   type OnboardingTask,
 } from "@/data/staff-onboarding";
 
@@ -80,7 +82,8 @@ type QuickAction = {
   id: string;
   /** Any one of these keys grants the action (OR). */
   permKeys: PermissionKey[];
-  label: string;
+  /** Catalogue key for the label. The words live in the catalogue. */
+  labelKey: string;
   href: string;
   /** Primary roles this action belongs to — tie-break only, never a gate. */
   primaryRoles?: FacilityStaffRole[];
@@ -90,14 +93,14 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: "grooming",
     permKeys: ["perform_grooming"],
-    label: "Start next grooming appointment",
+    labelKey: "qaGrooming",
     href: "/employee/grooming",
     primaryRoles: ["groomer"],
   },
   {
     id: "daycare",
     permKeys: ["daycare_check_in_out"],
-    label: "View daycare board",
+    labelKey: "qaDaycare",
     // Daycare has no standalone page — occupancy is the Occupancy Calendar
     // (kennel-view). Every daycare_check_in_out holder also holds view_bookings.
     href: "/employee/kennel-view",
@@ -106,35 +109,35 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: "kennel",
     permKeys: ["boarding_log_feeding", "boarding_daily_care_log"],
-    label: "Log kennel round",
+    labelKey: "qaKennel",
     href: "/employee/daily-care",
     primaryRoles: ["boarding_attendant", "caretaker"],
   },
   {
     id: "training",
     permKeys: ["run_training_sessions"],
-    label: "Start training session",
+    labelKey: "qaTraining",
     href: "/employee/training",
     primaryRoles: ["trainer"],
   },
   {
     id: "check-in",
     permKeys: ["check_in_out"],
-    label: "Check in next arrival",
+    labelKey: "qaCheckIn",
     href: "/employee/bookings",
     primaryRoles: ["reception"],
   },
   {
     id: "cleaning",
     permKeys: ["log_cleaning"],
-    label: "Log cleaning task",
+    labelKey: "qaCleaning",
     href: "/employee/tasks",
     primaryRoles: ["sanitation"],
   },
   {
     id: "bookings",
     permKeys: ["view_bookings"],
-    label: "View today's bookings",
+    labelKey: "qaBookings",
     href: "/employee/bookings",
     primaryRoles: ["manager", "owner", "admin", "supervisor", "accountant"],
   },
@@ -144,7 +147,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 const PERSONAL_QUICK_ACTION: QuickAction = {
   id: "schedule",
   permKeys: [],
-  label: "View my schedule",
+  labelKey: "qaSchedule",
   href: "/employee/schedule",
 };
 
@@ -164,8 +167,15 @@ const PERSONAL_QUICK_ACTION: QuickAction = {
 // ============================================================================
 
 export type QuickAccessItem = {
-  title: string;
-  description: string;
+  /**
+   * The SERVICE MODULE id where there is one — grooming, training, boarding,
+   * daycare — so the four service names come from `useServiceTypeLabel()`,
+   * the catalogue the staff chips already read. `null` for the shortcuts that
+   * are not a module and carry their own key instead.
+   */
+  moduleId: string | null;
+  titleKey: string;
+  descriptionKey: string;
   href: string;
   icon: React.ElementType;
   accent: string;
@@ -179,8 +189,9 @@ type QuickAccessCandidate = QuickAccessItem & {
 
 const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
   {
-    title: "Grooming",
-    description: "Today's grooming queue",
+    moduleId: "grooming",
+    titleKey: "saGroomingTitle",
+    descriptionKey: "saGrooming",
     href: "/employee/grooming",
     icon: Scissors,
     accent: "text-rose-600",
@@ -192,8 +203,9 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
     primaryRoles: ["groomer"],
   },
   {
-    title: "Training",
-    description: "Training sessions",
+    moduleId: "training",
+    titleKey: "saTrainingTitle",
+    descriptionKey: "saTraining",
     href: "/employee/training",
     icon: Dumbbell,
     accent: "text-emerald-600",
@@ -201,8 +213,9 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
     primaryRoles: ["trainer"],
   },
   {
-    title: "Boarding",
-    description: "Boarding occupancy",
+    moduleId: "boarding",
+    titleKey: "saBoardingTitle",
+    descriptionKey: "saBoarding",
     // Boarding has no standalone page — occupancy lives on the Occupancy
     // Calendar (kennel-view). Every boarding_view_dashboard holder also holds
     // view_bookings, so the target is always reachable.
@@ -213,8 +226,9 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
     primaryRoles: ["boarding_attendant", "caretaker"],
   },
   {
-    title: "Daycare",
-    description: "Daycare occupancy",
+    moduleId: "daycare",
+    titleKey: "saDaycareTitle",
+    descriptionKey: "saDaycare",
     // Daycare has no standalone page — see Boarding above; routed to the
     // Occupancy Calendar (kennel-view), reachable via view_bookings.
     href: "/employee/kennel-view",
@@ -227,24 +241,27 @@ const SERVICE_SHORTCUTS: QuickAccessCandidate[] = [
 
 const GENERAL_SHORTCUTS: QuickAccessCandidate[] = [
   {
-    title: "Bookings",
-    description: "Facility bookings",
+    moduleId: null,
+    titleKey: "saBookingsTitle",
+    descriptionKey: "saBookings",
     href: "/employee/bookings",
     icon: ClipboardList,
     accent: "text-sky-600",
     permKeys: ["view_bookings"],
   },
   {
-    title: "Clients",
-    description: "Client directory",
+    moduleId: null,
+    titleKey: "saClientsTitle",
+    descriptionKey: "saClients",
     href: "/employee/clients",
     icon: Users,
     accent: "text-violet-600",
     permKeys: ["view_client_list"],
   },
   {
-    title: "Daily Care",
-    description: "Log today's rounds",
+    moduleId: null,
+    titleKey: "saDailyCareTitle",
+    descriptionKey: "saDailyCare",
     href: "/employee/daily-care",
     icon: ClipboardCheck,
     accent: "text-cyan-600",
@@ -255,15 +272,17 @@ const GENERAL_SHORTCUTS: QuickAccessCandidate[] = [
 /** Universal fallbacks — both are always-on keys, so never blocked. */
 const UNIVERSAL_SHORTCUTS: QuickAccessItem[] = [
   {
-    title: "My Schedule",
-    description: "Your shifts this week",
+    moduleId: null,
+    titleKey: "saScheduleTitle",
+    descriptionKey: "saSchedule",
     href: "/employee/schedule",
     icon: Calendar,
     accent: "text-amber-600",
   },
   {
-    title: "My Tasks",
-    description: "What's assigned to you",
+    moduleId: null,
+    titleKey: "saTasksTitle",
+    descriptionKey: "saTasks",
     href: "/employee/tasks",
     icon: CheckSquare,
     accent: "text-slate-600",
@@ -331,26 +350,27 @@ export function TodaySummary({
   // generic staff field. A groomer sees their assigned appointments; a
   // back-of-house attendant can legitimately read "0 appointments, 6 care
   // tasks". The care-task chip only appears for staff who can log care.
+  const { t } = useStaffText("employeeDashboard");
   const { appointments, careTasks, showCareTasks } = useEmployeeTodayCounts(
     staff.id,
   );
   const chips = [
     {
       icon: Calendar,
-      label: "appointments today",
+      label: t("chipAppointments"),
       value: appointments,
     },
     ...(showCareTasks
-      ? [{ icon: PawPrint, label: "care tasks", value: careTasks }]
+      ? [{ icon: PawPrint, label: t("chipCareTasks"), value: careTasks }]
       : []),
-    { icon: CheckSquare, label: "tasks due", value: staff.openTasks },
+    { icon: CheckSquare, label: t("chipTasksDue"), value: staff.openTasks },
   ];
   return (
     <div className="border-border/60 bg-card rounded-2xl border p-4">
       <p className="text-sm font-semibold">
         {greeting}, {staff.firstName} 👋
       </p>
-      <p className="text-muted-foreground text-xs">Here&apos;s your day.</p>
+      <p className="text-muted-foreground text-xs">{t("heresYourDay")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {chips.map((c) => {
           const Icon = c.icon;
@@ -375,6 +395,7 @@ export function TodaySummary({
 // ============================================================================
 
 export function MyScheduleWidget({ staff }: { staff: StaffProfile }) {
+  const { t, fill } = useStaffText("employeeDashboard");
   const [expanded, setExpanded] = useState(false);
   return (
     <Card>
@@ -386,7 +407,7 @@ export function MyScheduleWidget({ staff }: { staff: StaffProfile }) {
           aria-expanded={expanded}
         >
           <span className="flex items-center gap-2 text-sm font-semibold">
-            <Calendar className="text-primary size-4" /> My Schedule
+            <Calendar className="text-primary size-4" /> {t("saScheduleTitle")}
           </span>
           <ChevronDown
             className={cn(
@@ -398,25 +419,24 @@ export function MyScheduleWidget({ staff }: { staff: StaffProfile }) {
 
         <div className="mt-3 space-y-2">
           <ScheduleRow
-            label="Today"
+            label={t("today")}
             summary={
               staff.upcomingAppointments > 0
-                ? `${staff.upcomingAppointments} appointments`
-                : "No shifts scheduled"
+                ? fill("nAppointments", {
+                    count: staff.upcomingAppointments,
+                  })
+                : t("noShifts")
             }
           />
-          <ScheduleRow label="Tomorrow" summary="View in schedule" />
+          <ScheduleRow label={t("tomorrow")} summary={t("viewInSchedule")} />
         </div>
 
         {expanded && (
           <div className="border-border/50 mt-3 border-t pt-3">
-            <p className="text-muted-foreground text-xs">
-              Detailed shift times, swaps, and time-off live in your full
-              schedule.
-            </p>
+            <p className="text-muted-foreground text-xs">{t("scheduleHelp")}</p>
             <Button asChild variant="outline" size="sm" className="mt-2 w-full">
               <Link href="/employee/schedule">
-                Open My Schedule <ArrowRight className="size-3.5" />
+                {t("openMySchedule")} <ArrowRight className="size-3.5" />
               </Link>
             </Button>
           </div>
@@ -440,6 +460,7 @@ function ScheduleRow({ label, summary }: { label: string; summary: string }) {
 // ============================================================================
 
 export function MyTasksWidget({ staff }: { staff: StaffProfile }) {
+  const { t, fill } = useStaffText("employeeDashboard");
   const [remaining, setRemaining] = useState(staff.openTasks);
   // No per-item overdue signal on the profile yet — stays 0 until a task store
   // exists; the red-badge path is wired for when it does.
@@ -451,18 +472,20 @@ export function MyTasksWidget({ staff }: { staff: StaffProfile }) {
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <CheckSquare className="size-4 text-amber-600 dark:text-amber-400" />
-            My Tasks
+            {t("saTasksTitle")}
           </span>
           {overdue > 0 && (
             <Badge className="bg-rose-600 text-white hover:bg-rose-600">
-              {overdue} overdue
+              {fill("nOverdue", { count: overdue })}
             </Badge>
           )}
         </div>
 
         <div className="mt-3 flex items-end gap-2">
           <span className="text-3xl font-bold">{remaining}</span>
-          <span className="text-muted-foreground pb-1 text-xs">due today</span>
+          <span className="text-muted-foreground pb-1 text-xs">
+            {t("dueToday")}
+          </span>
         </div>
 
         <div className="mt-3 flex gap-2">
@@ -473,17 +496,17 @@ export function MyTasksWidget({ staff }: { staff: StaffProfile }) {
             disabled={remaining === 0}
             onClick={() => setRemaining((n) => Math.max(0, n - 1))}
           >
-            <CircleCheck className="size-3.5" /> Complete one
+            <CircleCheck className="size-3.5" /> {t("completeOne")}
           </Button>
           <Button asChild size="sm" variant="ghost">
             <Link href="/employee/tasks">
-              All tasks <ArrowRight className="size-3.5" />
+              {t("allTasks")} <ArrowRight className="size-3.5" />
             </Link>
           </Button>
         </div>
         {remaining === 0 && (
           <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-            All caught up — nice work!
+            {t("allCaughtUpTasks")}
           </p>
         )}
       </CardContent>
@@ -507,12 +530,13 @@ export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
   // PERMISSION-SCOPED notification feed (4D): an employee is only alerted about
   // things their keys justify — never payment/staff-management traffic, and
   // never another module's bookings.
+  const { t } = useStaffText("employeeDashboard");
   const notifications = useScopedNotifications();
   const alerts: AlertItem[] = [];
   if (!isOnboarded(staff)) {
     alerts.push({
       id: "onboarding",
-      text: "Finish your onboarding to unlock full access.",
+      text: t("finishOnboarding"),
       tone: "warning",
     });
   }
@@ -529,13 +553,13 @@ export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
       <CardContent className="p-4">
         <span className="flex items-center gap-2 text-sm font-semibold">
           <Bell className="size-4 text-violet-600 dark:text-violet-400" />
-          My Alerts
+          {t("myAlerts")}
         </span>
 
         {alerts.length === 0 ? (
           <div className="text-muted-foreground mt-4 flex flex-col items-center gap-1 py-2 text-center">
             <CircleCheck className="size-5 text-emerald-500" />
-            <p className="text-xs">You&apos;re all caught up.</p>
+            <p className="text-xs">{t("allCaughtUp")}</p>
           </div>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -567,6 +591,7 @@ export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
 // ============================================================================
 
 export function QuickActionsBar({ role }: { role: FacilityStaffRole }) {
+  const { t } = useStaffText("employeeDashboard");
   // One read of the effective map, so the OR-of-keys case needs no hook loop.
   const permissions = useEffectivePermissions();
   const permitted = QUICK_ACTIONS.filter((a) =>
@@ -585,15 +610,15 @@ export function QuickActionsBar({ role }: { role: FacilityStaffRole }) {
           <Zap className="size-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold">Quick action</p>
+          <p className="text-sm font-semibold">{t("quickActionTitle")}</p>
           <p className="text-muted-foreground text-xs">
-            The fastest way to start your shift.
+            {t("quickActionHelp")}
           </p>
         </div>
       </div>
       <Button asChild className="shrink-0">
         <Link href={action.href}>
-          {action.label} <ArrowRight className="size-4" />
+          {t(action.labelKey)} <ArrowRight className="size-4" />
         </Link>
       </Button>
     </div>
@@ -605,10 +630,13 @@ export function QuickActionsBar({ role }: { role: FacilityStaffRole }) {
 // ============================================================================
 
 export function OnboardingProgress({ staff }: { staff: StaffProfile }) {
+  // Above the early return, with the other hooks: hooks run in the same
+  // order every render or they run wrong.
+  const { t, fill, locale } = useStaffText("employeeDashboard");
   const tasks = useOnboarding(staff.id);
   if (tasks.length === 0) return null;
 
-  const done = tasks.filter((t) => !!t.completedAt).length;
+  const done = tasks.filter((task) => !!task.completedAt).length;
   const pct = Math.round((done / tasks.length) * 100);
 
   return (
@@ -617,11 +645,13 @@ export function OnboardingProgress({ staff }: { staff: StaffProfile }) {
         <div className="flex items-center gap-2">
           <GraduationCap className="size-5 text-amber-600 dark:text-amber-400" />
           <div>
-            <p className="text-sm font-semibold">
-              Welcome aboard — let&apos;s get set up
-            </p>
+            <p className="text-sm font-semibold">{t("welcomeAboard")}</p>
             <p className="text-muted-foreground text-xs">
-              {done} of {tasks.length} complete · {pct}%
+              {fill("completeOf", {
+                done,
+                total: tasks.length,
+                percent: formatPercent(pct, locale),
+              })}
             </p>
           </div>
         </div>
@@ -644,6 +674,8 @@ function OnboardingRow({
   task: OnboardingTask;
   staffId: string;
 }) {
+  const { t, fill } = useStaffText("employeeDashboard");
+  const typeLabel = useOnboardingTypeLabel();
   const done = !!task.completedAt;
   // Manager-action tasks cannot be self-completed by the staff member.
   const waitingOnManager = task.requiresManager && !done;
@@ -661,10 +693,10 @@ function OnboardingRow({
         </p>
         <p className="text-muted-foreground text-xs">{task.description}</p>
         <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-          <span>{ONBOARDING_TYPE_LABEL[task.type]}</span>
+          <span>{typeLabel(task.type)}</span>
           {task.dueDate && (
             <span className="inline-flex items-center gap-1">
-              <Clock className="size-3" /> Due {task.dueDate}
+              <Clock className="size-3" /> {fill("due", { date: task.dueDate })}
             </span>
           )}
         </div>
@@ -672,11 +704,11 @@ function OnboardingRow({
       <div className="shrink-0">
         {done ? (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <CircleCheck className="size-4" /> Done
+            <CircleCheck className="size-4" /> {t("taskDone")}
           </span>
         ) : waitingOnManager ? (
           <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-            <Hourglass className="size-3" /> Waiting for manager
+            <Hourglass className="size-3" /> {t("waitingForManager")}
           </span>
         ) : (
           <Button
@@ -687,7 +719,7 @@ function OnboardingRow({
               setOnboardingTaskComplete(staffId, task.id, true, "self")
             }
           >
-            Complete
+            {t("complete")}
           </Button>
         )}
       </div>

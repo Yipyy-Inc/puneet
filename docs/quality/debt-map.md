@@ -11102,13 +11102,31 @@ looked.
 
 ### What is actually in there
 
-The staff deepening reached `employee-dashboard-widgets.tsx` — the EMPLOYEE
-PORTAL HOME. Its quick-action catalogue ("Start next grooming appointment",
-"Log kennel round", "Check in next arrival"), its quick-access cards, its
-schedule and task widgets. Read by every member of floor staff at the start of
-every shift, and outside every measured surface until today.
+The staff deepening reached `employee-dashboard-widgets.tsx`: its quick-action
+catalogue ("Start next grooming appointment", "Log kennel round", "Check in
+next arrival"), its quick-access cards, its schedule, task and alert widgets —
+about 30 strings of employee-facing copy, outside every measured surface until
+today.
 
-That is what a shell at depth 3 is likely to hold too, and 524 says so.
+**Corrected the same day, because the first version of this paragraph called it
+"the employee portal home, read by every member of floor staff at the start of
+every shift".** It is not. `EmployeeDashboard` and these widgets are reached
+ONLY through the manager's read-only preview dialog;
+`src/app/employee/(shell)/page.tsx` renders `WeatherWidget` + `DashboardShell`.
+The strings still matter — a manager previewing in French should see French —
+but nobody starts a shift on them, and overstating what a file is makes the
+next person prioritise it wrongly.
+
+The mistake is worth keeping visible because of how it happened: the file's
+NAME and its contents both read like a home screen, and the walk that found it
+starts at the staff routes, so nothing in the evidence contradicted the
+assumption. What settles it is `grep -rn "EmployeeDashboard" src` — one call
+site, and it is a dialog. **Establish which screen renders a file before
+describing what it is**; AGENTS.md says the same thing about fixtures versus
+Postgres, and it is the same mistake.
+
+The 524 in the shells is unaffected: that is chrome, on every route, by
+construction.
 
 ### Why it is not fixed in the same change
 
