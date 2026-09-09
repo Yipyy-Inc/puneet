@@ -43,9 +43,16 @@ import {
   type WarningType,
 } from "@/types/facility-warnings";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useWarningTypeLabel } from "@/lib/staff/use-warning-type-label";
+import { formatDateLong, formatDateShort, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-CA", { dateStyle: "medium" });
+// Was `toLocaleDateString("en-CA", …)` — a literal locale, so a French
+// reader got English months whatever they chose (§5q). Being Canadian does not
+// make a hardcoded locale right.
+function formatDate(iso: string, locale: AppLocale) {
+  return formatDateShort(new Date(iso), locale);
 }
 
 type EmployeeGroup = {
@@ -55,6 +62,8 @@ type EmployeeGroup = {
 };
 
 export default function StaffWarningsPage() {
+  const { t, fill, locale } = useStaffText("warnings");
+  const typeLabel = useWarningTypeLabel();
   const { can, viewer } = useFacilityRbac();
   const isManager = can("manage_staff");
 
@@ -147,12 +156,10 @@ export default function StaffWarningsPage() {
           <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
           <div>
             <p className="text-sm font-semibold text-sky-700 dark:text-sky-400">
-              Your disciplinary record
+              {t("employeeNoticeTitle")}
             </p>
             <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
-              Signing a warning acknowledges receipt — not necessarily
-              agreement. Contact your manager if you believe a record is
-              inaccurate.
+              {t("employeeNoticeBody")}
             </p>
           </div>
         </div>
@@ -162,9 +169,9 @@ export default function StaffWarningsPage() {
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-emerald-500/10">
               <CheckCircle2 className="size-6 text-emerald-600" />
             </div>
-            <p className="font-semibold">Clean disciplinary record</p>
+            <p className="font-semibold">{t("cleanTitle")}</p>
             <p className="text-muted-foreground mt-1 max-w-xs text-sm">
-              You have no warnings on record. Keep up the great work!
+              {t("cleanEmployee")}
             </p>
           </div>
         ) : (
@@ -200,25 +207,25 @@ export default function StaffWarningsPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           icon={ShieldAlert}
-          label="Total warnings"
+          label={t("totalWarnings")}
           value={stats.total}
           tone="text-orange-600 bg-orange-500/10"
         />
         <StatCard
           icon={User}
-          label="Employees on record"
+          label={t("employeesOnRecord")}
           value={stats.affected}
           tone="text-primary bg-primary/10"
         />
         <StatCard
           icon={Clock}
-          label="Pending signature"
+          label={t("statusPending")}
           value={stats.pending}
           tone="text-amber-600 bg-amber-500/10"
         />
         <StatCard
           icon={AlertTriangle}
-          label="Severe (final/suspension)"
+          label={t("severe")}
           value={stats.severe}
           tone="text-red-600 bg-red-500/10"
         />
@@ -226,9 +233,9 @@ export default function StaffWarningsPage() {
 
       <Tabs defaultValue="tracker">
         <TabsList>
-          <TabsTrigger value="tracker">Discipline Log</TabsTrigger>
+          <TabsTrigger value="tracker">{t("tabLog")}</TabsTrigger>
           <TabsTrigger value="templates">
-            Warning Templates
+            {t("tabTemplates")}
             <Badge variant="secondary" className="ml-1.5 text-[10px]">
               {templates.length}
             </Badge>
@@ -244,7 +251,7 @@ export default function StaffWarningsPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search employee or reason…"
+                placeholder={t("searchPlaceholder")}
                 className="h-9 pl-9"
               />
             </div>
@@ -253,13 +260,13 @@ export default function StaffWarningsPage() {
               onValueChange={(v) => setTypeFilter(v as WarningType | "all")}
             >
               <SelectTrigger className="h-9 w-44">
-                <SelectValue placeholder="All types" />
+                <SelectValue placeholder={t("allTypes")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {Object.entries(WARNING_TYPE_META).map(([k, v]) => (
+                <SelectItem value="all">{t("allTypes")}</SelectItem>
+                {Object.keys(WARNING_TYPE_META).map((k) => (
                   <SelectItem key={k} value={k}>
-                    {v.label}
+                    {typeLabel(k as WarningType)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -271,16 +278,16 @@ export default function StaffWarningsPage() {
               }
             >
               <SelectTrigger className="h-9 w-44">
-                <SelectValue placeholder="All statuses" />
+                <SelectValue placeholder={t("allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">{t("allStatuses")}</SelectItem>
                 <SelectItem value="pending_signature">
-                  Pending signature
+                  {t("statusPending")}
                 </SelectItem>
-                <SelectItem value="signed">Signed</SelectItem>
-                <SelectItem value="appealed">Appealed</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="signed">{t("statusSigned")}</SelectItem>
+                <SelectItem value="appealed">{t("statusAppealed")}</SelectItem>
+                <SelectItem value="resolved">{t("statusResolved")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -332,22 +339,27 @@ export default function StaffWarningsPage() {
                                 WARNING_TYPE_META[highestType].text,
                               )}
                             >
-                              {WARNING_TYPE_META[highestType].label}
+                              {typeLabel(highestType)}
                             </Badge>
                           )}
                           {hasPending && (
                             <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-                              <Clock className="mr-0.5 size-2.5" /> Pending
-                              signature
+                              <Clock className="mr-0.5 size-2.5" />{" "}
+                              {t("statusPending")}
                             </Badge>
                           )}
                         </div>
                         <p className="text-muted-foreground text-[11px]">
-                          {group.warnings.length} warning
-                          {group.warnings.length !== 1 ? "s" : ""} on record
+                          {fill(
+                            group.warnings.length === 1
+                              ? "onRecordOne"
+                              : "onRecordOther",
+                            { count: group.warnings.length },
+                          )}
                           {group.warnings.length >= 3 && (
                             <span className="ml-1.5 font-medium text-red-600 dark:text-red-400">
-                              — review for termination protocol
+                              {" "}
+                              {t("reviewProtocol")}
                             </span>
                           )}
                         </p>
@@ -393,23 +405,22 @@ export default function StaffWarningsPage() {
         <TabsContent value="templates" className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold">Warning Templates</p>
+              <p className="text-sm font-semibold">{t("templatesTitle")}</p>
               <p className="text-muted-foreground text-xs">
-                Build custom warning documents. When issuing a warning from a
-                staff profile, managers select one of these templates.
+                {t("templatesHelp")}
               </p>
             </div>
             <Button size="sm" onClick={() => openBuilder()}>
-              <Plus className="mr-1.5 size-3.5" /> Build Template
+              <Plus className="mr-1.5 size-3.5" /> {t("buildTemplate")}
             </Button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {templates.map((t) => {
-              const meta = WARNING_TYPE_META[t.defaultType];
+            {templates.map((template) => {
+              const meta = WARNING_TYPE_META[template.defaultType];
               return (
                 <div
-                  key={t.id}
+                  key={template.id}
                   className="border-border/60 bg-card hover:border-primary/40 group flex flex-col gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start gap-3">
@@ -418,7 +429,7 @@ export default function StaffWarningsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">
-                        {t.title}
+                        {template.title}
                       </p>
                       <Badge
                         className={cn(
@@ -427,23 +438,28 @@ export default function StaffWarningsPage() {
                           meta.text,
                         )}
                       >
-                        {meta.label}
+                        {typeLabel(template.defaultType)}
                       </Badge>
                     </div>
                   </div>
-                  {t.description && (
+                  {template.description && (
                     <p className="text-muted-foreground line-clamp-2 text-xs">
-                      {t.description}
+                      {template.description}
                     </p>
                   )}
                   <div className="text-muted-foreground mt-auto flex items-center justify-between text-[11px]">
                     <span>
-                      {t.fields.length} custom field
-                      {t.fields.length !== 1 ? "s" : ""}
+                      {fill(
+                        template.fields.length === 1
+                          ? "customFieldOne"
+                          : "customFieldOther",
+                        { count: template.fields.length },
+                      )}
                     </span>
-                    {t.requiresSignature && (
+                    {template.requiresSignature && (
                       <span className="flex items-center gap-1">
-                        <PenLine className="size-2.5" /> Requires signature
+                        <PenLine className="size-2.5" />{" "}
+                        {t("requiresSignature")}
                       </span>
                     )}
                   </div>
@@ -451,9 +467,9 @@ export default function StaffWarningsPage() {
                     variant="outline"
                     size="sm"
                     className="w-full text-xs"
-                    onClick={() => openBuilder(t)}
+                    onClick={() => openBuilder(template)}
                   >
-                    <Pencil className="mr-1.5 size-3" /> Edit Template
+                    <Pencil className="mr-1.5 size-3" /> {t("editTemplate")}
                   </Button>
                 </div>
               );
@@ -466,7 +482,7 @@ export default function StaffWarningsPage() {
             >
               <div className="text-center">
                 <Plus className="mx-auto mb-1 size-5" />
-                <p className="text-xs font-medium">New Template</p>
+                <p className="text-xs font-medium">{t("newTemplate")}</p>
               </div>
             </button>
           </div>
@@ -490,6 +506,7 @@ function WarningRow({
   warning: IssuedWarning;
   onAcknowledge: (id: string) => void;
 }) {
+  const { t, fill, locale } = useStaffText("warnings");
   const meta = WARNING_TYPE_META[w.type];
   return (
     <div className="border-border/50 flex items-start gap-3 rounded-xl border p-3">
@@ -507,31 +524,30 @@ function WarningRow({
         <p className="text-muted-foreground text-xs">{w.reason}</p>
         <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px]">
           <span className="flex items-center gap-1">
-            <Calendar className="size-2.5" /> {formatDate(w.issuedAt)}
+            <Calendar className="size-2.5" /> {formatDate(w.issuedAt, locale)}
           </span>
           <span className="flex items-center gap-1">
             <User className="size-2.5" /> {w.issuedByName}
           </span>
           {w.witnessName && (
             <span className="flex items-center gap-1">
-              <User className="size-2.5" /> Witness: {w.witnessName}
+              <User className="size-2.5" />{" "}
+              {fill("witness", { name: w.witnessName })}
             </span>
           )}
         </div>
         {w.managerNotes && (
           <div className="bg-muted/40 rounded-md px-2.5 py-1.5">
             <p className="text-muted-foreground mb-0.5 flex items-center gap-1 text-[10px] font-medium">
-              <MessageSquare className="size-2.5" /> Manager notes
+              <MessageSquare className="size-2.5" /> {t("managerNotes")}
             </p>
             <p className="text-xs">{w.managerNotes}</p>
           </div>
         )}
         {w.signedAt && (
           <p className="text-muted-foreground text-[11px]">
-            Signed{" "}
-            {new Date(w.signedAt).toLocaleString("en-CA", {
-              dateStyle: "medium",
-              timeStyle: "short",
+            {fill("signedAt", {
+              when: `${formatDateLong(new Date(w.signedAt), locale)} ${formatTime(new Date(w.signedAt), locale)}`,
             })}
             {w.ipAddress && ` · ${w.ipAddress}`}
           </p>
@@ -544,7 +560,7 @@ function WarningRow({
           onClick={() => onAcknowledge(w.id)}
           className="shrink-0"
         >
-          <CheckCircle2 className="mr-1 size-3.5" /> Mark signed
+          <CheckCircle2 className="mr-1 size-3.5" /> {t("markSigned")}
         </Button>
       )}
     </div>
@@ -552,27 +568,28 @@ function WarningRow({
 }
 
 function StatusBadge({ status }: { status: IssuedWarning["status"] }) {
+  const { t } = useStaffText("warnings");
   if (status === "signed")
     return (
       <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-400">
-        <CheckCircle2 className="mr-0.5 size-2.5" /> Signed
+        <CheckCircle2 className="mr-0.5 size-2.5" /> {t("statusSigned")}
       </Badge>
     );
   if (status === "pending_signature")
     return (
       <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-        <Clock className="mr-0.5 size-2.5" /> Pending signature
+        <Clock className="mr-0.5 size-2.5" /> {t("statusPending")}
       </Badge>
     );
   if (status === "appealed")
     return (
       <Badge className="border-0 bg-violet-500/10 text-[10px] text-violet-700 dark:text-violet-400">
-        Appealed
+        {t("statusAppealed")}
       </Badge>
     );
   return (
     <Badge className="border-0 bg-slate-500/10 text-[10px] text-slate-700 dark:text-slate-400">
-      Resolved
+      {t("statusResolved")}
     </Badge>
   );
 }
@@ -603,13 +620,13 @@ function StatCard({
 }
 
 function EmptyLog() {
+  const { t } = useStaffText("warnings");
   return (
     <div className="border-border/60 flex flex-col items-center rounded-xl border border-dashed p-12 text-center">
       <ShieldAlert className="text-muted-foreground mb-3 size-10 opacity-30" />
-      <p className="font-semibold">No disciplinary records</p>
+      <p className="font-semibold">{t("emptyTitle")}</p>
       <p className="text-muted-foreground mt-1 max-w-xs text-sm">
-        Warnings issued from staff profiles will appear here for facility-wide
-        tracking.
+        {t("emptyBody")}
       </p>
     </div>
   );
