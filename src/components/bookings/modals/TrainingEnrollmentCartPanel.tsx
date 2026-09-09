@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +40,7 @@ function EnrollmentRow({
   badge?: "current";
   onRemove?: () => void;
 }) {
+  const t = useShellText("booking");
   return (
     <div className="bg-card flex items-start gap-3 rounded-lg border p-3">
       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
@@ -51,7 +54,7 @@ function EnrollmentRow({
               variant="outline"
               className="gap-1 border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700"
             >
-              Current
+              {t("current")}
             </Badge>
           )}
           {item.kind === "drop-in" && (
@@ -89,7 +92,7 @@ function EnrollmentRow({
             type="button"
             onClick={onRemove}
             className="text-muted-foreground hover:text-destructive"
-            aria-label={`Remove ${item.petName} from this booking`}
+            aria-label={t("removeFromBooking").replace("{name}", item.petName)}
           >
             <X className="size-4" />
           </button>
@@ -121,6 +124,8 @@ export function TrainingEnrollmentCartPanel({
   /** False until the current dog has a series selected. */
   canEnrollAnother: boolean;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const total =
     cartItems.reduce((s, li) => s + li.price, 0) +
     currentItems.reduce((s, li) => s + li.price, 0);
@@ -132,16 +137,15 @@ export function TrainingEnrollmentCartPanel({
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold">
-              {count > 1 ? `${count} dogs in this booking` : "This booking"}
+              {count > 1 ? `${count} ${t("dogsInBooking")}` : t("thisBooking")}
             </p>
             <p className="text-muted-foreground text-xs">
-              Each dog is enrolled in its own course — billed together as one
-              transaction.
+              {t("eachDogEnrolled")}
             </p>
           </div>
           {count > 1 && (
             <span className="text-sm font-bold tabular-nums">
-              ${total} combined
+              {formatMoney(total, locale)} {t("combined")}
             </span>
           )}
         </div>
@@ -169,14 +173,10 @@ export function TrainingEnrollmentCartPanel({
           className="w-full gap-1.5 border-dashed"
           onClick={onEnrollAnotherDog}
           disabled={!canEnrollAnother}
-          title={
-            canEnrollAnother
-              ? undefined
-              : "Pick a series for the current dog first."
-          }
+          title={canEnrollAnother ? undefined : t("pickSeriesFirst")}
         >
           <PlusCircle className="size-4" />
-          Enroll another dog
+          {t("enrollAnotherDog")}
         </Button>
       </CardContent>
     </Card>

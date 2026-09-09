@@ -27,9 +27,12 @@
  * ── SEVEN SURFACES, BECAUSE A CURATED LIST HIDES WORK ────────────────────
  *
  *   settings    one entry per section, DERIVED from _sections/, three deep
- *   shell × 5   DERIVED from each portal's layout.tsx, THREE deep since
- *               2026-09-09 — at two it reported zero while 136 strings sat one
- *               hop past the edge, 117 of them the booking modal
+ *   shell × 5   DERIVED from each portal's layout.tsx, FOUR deep since
+ *               2026-09-09. At TWO it reported zero while 136 strings sat one
+ *               hop out (117 of them the booking modal) and 68 more sat two.
+ *               The depth was raised 2 → 3 → 4 in one day, converting at each
+ *               step, so it has never needed a baseline — which is the point:
+ *               deepen and clear together, or the number stops meaning zero
  *   staff       DERIVED from the staff route tree, three deep
  *   primitives  every file in src/components/ui
  *
@@ -654,7 +657,7 @@ function settingsSurface(): Offender[] {
 /** One portal's chrome, derived from its layout. One entry per file. */
 function shellSurface(root: string): Offender[] {
   const seen = new Set<string>();
-  walk(root, 3, seen, true);
+  walk(root, 4, seen, true);
   return [...seen]
     .filter(
       (file) =>

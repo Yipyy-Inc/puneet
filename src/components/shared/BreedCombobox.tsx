@@ -1,5 +1,6 @@
 "use client";
 
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useState } from "react";
 import { Check, ChevronsUpDown, Pencil, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function BreedCombobox({
   onChange,
   error,
 }: BreedComboboxProps) {
+  const t = useShellText("primitives");
   const [open, setOpen] = useState(false);
   const [manualMode, setManualMode] = useState(false);
 
@@ -79,7 +81,7 @@ export function BreedCombobox({
             size="icon"
             className="size-9 shrink-0"
             onClick={() => setManualMode(false)}
-            title="Switch to breed list"
+            title={t("switchToBreedList")}
           >
             <List className="size-3.5" />
           </Button>
@@ -104,19 +106,17 @@ export function BreedCombobox({
                 error && "border-destructive",
               )}
             >
-              {value || "Select breed..."}
+              {value || t("selectBreed")}
               <ChevronsUpDown className="text-muted-foreground ml-2 size-3.5 shrink-0" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0" align="start">
             <Command>
-              <CommandInput placeholder="Search breed..." />
+              <CommandInput placeholder={t("searchBreed")} />
               <CommandList onWheelCapture={handleListWheel}>
-                <CommandEmpty>
-                  No breed found — click &quot;Type manually&quot; below.
-                </CommandEmpty>
+                <CommandEmpty>{t("noBreedFound")}</CommandEmpty>
                 {popular.length > 0 && (
-                  <CommandGroup heading="Popular">
+                  <CommandGroup heading={t("popularBreeds")}>
                     {popular.map((b) => (
                       <CommandItem
                         key={b.name}
@@ -138,7 +138,7 @@ export function BreedCombobox({
                   </CommandGroup>
                 )}
                 <CommandSeparator />
-                <CommandGroup heading="All Breeds">
+                <CommandGroup heading={t("allBreeds")}>
                   {all.map((b) => (
                     <CommandItem
                       key={b.name}
@@ -168,7 +168,7 @@ export function BreedCombobox({
                     }}
                   >
                     <Pencil className="mr-2 size-3.5" />
-                    Type manually (mixed / custom breed)
+                    {t("typeManuallyMixed")}
                   </CommandItem>
                 </CommandGroup>
               </CommandList>
@@ -181,7 +181,7 @@ export function BreedCombobox({
           size="icon"
           className="size-9 shrink-0"
           onClick={() => setManualMode(true)}
-          title="Type breed manually"
+          title={t("typeBreedManually")}
         >
           <Pencil className="size-3.5" />
         </Button>

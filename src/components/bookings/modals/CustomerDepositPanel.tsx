@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { useMemo, useState } from "react";
 import {
   Dialog,
@@ -57,6 +59,8 @@ export function CustomerDepositPanel({
     [sessionCards, clientId],
   );
 
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const remaining = Math.max(0, bookingTotal - depositAmount);
 
   return (
@@ -67,32 +71,32 @@ export function CustomerDepositPanel({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900">
-            Deposit required
+            {t("depositRequired")}
           </p>
           <p className="text-xs text-amber-800">
-            {rule.label} — pay now to confirm your booking.
+            {rule.label} {t("depositPayNow")}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] tracking-wide text-amber-700 uppercase">
-            Due now
+            {t("dueNow")}
           </p>
           <p className="text-lg font-bold text-amber-900 tabular-nums">
-            ${depositAmount.toFixed(2)}
+            {formatMoney(depositAmount, locale)}
           </p>
           <p className="text-[10px] text-amber-700">
-            ${remaining.toFixed(2)} after
+            {formatMoney(remaining, locale)} {t("after")}
           </p>
         </div>
       </div>
 
       <div className="space-y-2">
         <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-          Payment method
+          {t("paymentMethod")}
         </p>
         {cardsOnFile.length === 0 && (
           <p className="text-muted-foreground text-xs italic">
-            No cards on file. Add one to confirm your booking.
+            {t("noCardsOnFile")}
           </p>
         )}
         <div className="space-y-1.5">
@@ -120,7 +124,7 @@ export function CustomerDepositPanel({
                   </span>
                   {card.isDefault && (
                     <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 uppercase">
-                      Default
+                      {t("defaultCard")}
                     </span>
                   )}
                 </div>
@@ -144,7 +148,7 @@ export function CustomerDepositPanel({
           className="h-8 w-full gap-1 text-xs"
         >
           <Plus className="size-3.5" />
-          Add new card
+          {t("addNewCard")}
         </Button>
       </div>
 
@@ -173,6 +177,7 @@ function AddCardDialog({
   clientId: number;
   onAdded: (card: PaymentMethod) => void;
 }) {
+  const t = useShellText("booking");
   const [number, setNumber] = useState("");
   const [exp, setExp] = useState("");
   const [cvc, setCvc] = useState("");
@@ -221,15 +226,15 @@ function AddCardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Add a card</DialogTitle>
+          <DialogTitle>{t("addACard")}</DialogTitle>
           <DialogDescription className="text-xs">
-            We&rsquo;ll save it for this booking and future visits.
+            {t("addACardHelp")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
             <Label htmlFor="card-number" className="text-xs">
-              Card number
+              {t("cardNumber")}
             </Label>
             <Input
               id="card-number"
@@ -244,7 +249,7 @@ function AddCardDialog({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label htmlFor="card-exp" className="text-xs">
-                Expiry
+                {t("expiry")}
               </Label>
               <Input
                 id="card-exp"
@@ -270,11 +275,12 @@ function AddCardDialog({
           </div>
           <div>
             <Label htmlFor="card-name" className="text-xs">
-              Cardholder name
+              {t("cardholderName")}
             </Label>
             <Input
               id="card-name"
               autoComplete="cc-name"
+              // french-ok: a sample name, which §5q keeps out of the locale layer
               placeholder="Alex Customer"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -284,10 +290,10 @@ function AddCardDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            Save card
+            {t("saveCard")}
           </Button>
         </DialogFooter>
       </DialogContent>
