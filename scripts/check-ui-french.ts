@@ -770,7 +770,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       36,
     ],
     ["src/app/facility/dashboard/staff/_components/write-ups-tab.tsx", 30],
-    ["src/app/facility/dashboard/staff/documents/page.tsx", 33],
     ["src/app/facility/dashboard/staff/performance/page.tsx", 19],
     ["src/components/employee/EmployeeDashboard.tsx", 13],
     ["src/components/facility/DepartmentSettings.tsx", 6],
