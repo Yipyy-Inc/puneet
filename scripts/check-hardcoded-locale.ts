@@ -76,8 +76,15 @@ const ANSI = {
 /** The count on the day the rule got a gate (stage 11, 2026-09-04). */
 const BASELINE = 526;
 
-/** Bare `toLocale*String()` calls, measured the day the pattern was added. */
-const BASELINE_UNSPECIFIED = 371;
+/**
+ * Formatters told no locale, measured the day the pattern was added — then
+ * RAISED from 371 to 432 the same day, when the pattern learned to see `([])`
+ * and `(undefined, …)` as well as `()`. Not one line of those 61 files
+ * changed: the gate got sharper, and a ratchet measures the code, so the
+ * number is allowed up once in the change that sharpens it. Same rule as the
+ * two widenings of `check:ui-french`.
+ */
+const BASELINE_UNSPECIFIED = 432;
 
 /**
  * A literal BCP-47 tag handed straight to a formatter. Matching the call
@@ -89,14 +96,25 @@ const HARDCODED =
   /(?:toLocale[A-Za-z]*String|Intl\.(?:DateTimeFormat|NumberFormat|RelativeTimeFormat))\(\s*"[a-z]{2}-[A-Z]{2}"/g;
 
 /**
- * A formatter told NOTHING — `toLocaleDateString()`, empty parens.
+ * A formatter told NOTHING. THREE SPELLINGS OF THE SAME THING:
+ *
+ *   toLocaleDateString()                       empty parens
+ *   toLocaleTimeString([], { hour: … })        an EMPTY ARRAY
+ *   toLocaleString(undefined, { … })           an explicit undefined
+ *
+ * The first version matched only the first, which missed 59 — and the two it
+ * missed are the WORSE half, because they carry an options bag and therefore
+ * look deliberate. `ClockConfirm.formatClockTime` was
+ * `toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })`: the control
+ * every shift in the product starts and ends with, rendering "3:42 PM" to a
+ * French reader, and green under both of this gate's patterns.
  *
  * Deliberately not `\(\s*\)` on `Intl.*Format` as well: `new
- * Intl.NumberFormat()` is rare and `toLocale*String()` is where all 371 of
- * these actually live. Matching the call, not the identifier, so a comment or
- * a type mentioning the name stays out.
+ * Intl.NumberFormat()` is rare and `toLocale*String()` is where these live.
+ * Matching the call, not the identifier, so a comment or a type mentioning the
+ * name stays out.
  */
-const UNSPECIFIED = /\.toLocale[A-Za-z]*String\(\s*\)/g;
+const UNSPECIFIED = /\.toLocale[A-Za-z]*String\(\s*(?:\)|\[\s*\]|undefined\b)/g;
 
 /** The layer whose job is to pin the tags. Everything else must ask it. */
 const EXEMPT = ["src/lib/i18n/format.ts"];

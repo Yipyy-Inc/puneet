@@ -835,7 +835,6 @@ const BASELINE: Record<string, Map<string, number>> = {
     //
     // Four files the walk could not previously reach. None of them is
     // obscure: the first is the employee portal's own home screen.
-    ["src/components/employee/ClockConfirm.tsx", 13],
     ["src/components/facility/NotificationRowMenu.tsx", 4],
     // The facility HEADER's, reached through the preview dialog's embedded
     // portal shell — see the note on staffSurface(). Baselined here because

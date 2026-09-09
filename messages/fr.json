@@ -1386,6 +1386,22 @@
         "typeMeetTheTeam": "Rencontre de l’équipe",
         "typeFacilityTour": "Visite de l’établissement",
         "typeCustom": "Personnalisée"
+      },
+      "clock": {
+        "clockOutSubject": "Pointer la sortie de {name} ?",
+        "endYourShift": "Terminer votre quart ?",
+        "clockInSubject": "Pointer l’arrivée de {name} ?",
+        "startYourShift": "Commencer votre quart ?",
+        "clockOutSubjectHelp": "Cela pointera la sortie de {name}. Confirmez seulement si le quart se termine vraiment.",
+        "clockOutSelfHelp": "Cela pointera votre sortie. Confirmez seulement si votre quart se termine vraiment.",
+        "clockInSubjectHelp": "{name} sera pointé à l’arrivée à {time}.",
+        "clockInSelfHelp": "Vous serez pointé à l’arrivée à {time}.",
+        "onTheClockSince": "En poste depuis {time}",
+        "onTheClockFor": "{elapsed} en poste",
+        "yesClockOut": "Oui, pointer la sortie",
+        "cancel": "Annuler",
+        "cancelStayClockedIn": "Annuler — rester en poste",
+        "confirmClockIn": "Confirmer l’arrivée"
       }
     }
   },
@@ -5626,7 +5642,8 @@
       "previewingAs": "Aperçu en tant que {role} — voici ce qu’un membre du personnel ayant ce rôle voit.",
       "registerStillOpen": "L’heure de fermeture est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée.",
       "registerStillOpenAt": "L’heure de fermeture ({time}) est passée et la caisse est encore ouverte. Comptez et fermez le tiroir pour faire la conciliation de la journée.",
-      "copyright": "© 2026 Yipyy · Portail des employés"
+      "copyright": "© 2026 Yipyy · Portail des employés",
+      "workedSuffix": " · {elapsed} travaillées"
     },
     "admin": {
       "supportNotifications": "Notifications d'assistance",
