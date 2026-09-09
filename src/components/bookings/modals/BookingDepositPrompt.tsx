@@ -27,9 +27,9 @@ interface BookingDepositPromptProps {
 }
 
 const METHODS = [
-  { value: "card" as const, label: "Card on file", Icon: CreditCard },
-  { value: "cash" as const, label: "Cash", Icon: Banknote },
-  { value: "terminal" as const, label: "Terminal", Icon: Smartphone },
+  { value: "card" as const, labelKey: "methodCardOnFile", Icon: CreditCard },
+  { value: "cash" as const, labelKey: "methodCash", Icon: Banknote },
+  { value: "terminal" as const, labelKey: "methodTerminal", Icon: Smartphone },
 ];
 
 export function BookingDepositPrompt({
@@ -153,7 +153,7 @@ export function BookingDepositPrompt({
                 {t("paymentMethod")}
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {METHODS.map(({ value: m, label, Icon }) => (
+                {METHODS.map(({ value: m, labelKey, Icon }) => (
                   <button
                     key={m}
                     type="button"
@@ -166,7 +166,7 @@ export function BookingDepositPrompt({
                     )}
                   >
                     <Icon className="size-4" />
-                    {label}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>

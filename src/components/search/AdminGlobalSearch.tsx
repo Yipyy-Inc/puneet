@@ -34,13 +34,17 @@ import {
   type AdminEntityType,
 } from "@/lib/api/admin-search";
 
-const GROUPS: { type: AdminEntityType; label: string; icon: LucideIcon }[] = [
-  { type: "facility", label: "Facilities", icon: Building2 },
-  { type: "invoice", label: "Invoices", icon: Receipt },
-  { type: "ticket", label: "Support Tickets", icon: LifeBuoy },
-  { type: "team", label: "Team Members", icon: Users },
-  { type: "announcement", label: "Announcements", icon: Megaphone },
-];
+// A result-group heading, by CATALOGUE KEY. It was English prose here and
+// rendered raw, which no scanner could see until check:ui-french learned to
+// read an object property outside the settings surface (2026-09-10).
+const GROUPS: { type: AdminEntityType; labelKey: string; icon: LucideIcon }[] =
+  [
+    { type: "facility", labelKey: "searchFacilities", icon: Building2 },
+    { type: "invoice", labelKey: "searchInvoices", icon: Receipt },
+    { type: "ticket", labelKey: "searchTickets", icon: LifeBuoy },
+    { type: "team", labelKey: "searchTeam", icon: Users },
+    { type: "announcement", labelKey: "searchAnnouncements", icon: Megaphone },
+  ];
 
 function useDebouncedValue<T>(value: T, delayMs: number) {
   const [debounced, setDebounced] = React.useState(value);
@@ -150,7 +154,7 @@ export function AdminGlobalSearch({ className }: { className?: string }) {
 
             {groups.map((g, index) => (
               <React.Fragment key={g.type}>
-                <CommandGroup heading={g.label}>
+                <CommandGroup heading={t(g.labelKey)}>
                   {g.items.map((item) => (
                     <CommandItem
                       key={`${item.entityType}:${item.id}`}

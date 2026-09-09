@@ -500,7 +500,11 @@
         "invitedRelative": "invité {when}",
         "sectionsDone": "{done} sur {total} sections",
         "submitted": "Soumis",
-        "remind": "Rappeler"
+        "remind": "Rappeler",
+        "couldNotSaveProfile": "Impossible d'enregistrer le profil.",
+        "couldNotChangeStatus": "Impossible de changer le statut.",
+        "couldNotSaveChange": "Impossible d'enregistrer ce changement.",
+        "couldNotActivateAccount": "Impossible d'activer ce compte."
       },
       "shell": {
         "title": "Gestion du personnel",
@@ -775,7 +779,9 @@
         "cancel": "Annuler",
         "addToRecord": "Ajouter au dossier",
         "uploading": "Téléversement…",
-        "documentAdded": "Document ajouté au dossier permanent"
+        "documentAdded": "Document ajouté au dossier permanent",
+        "couldNotUpdateTask": "Impossible de mettre à jour cette tâche.",
+        "couldNotUploadFile": "Impossible de téléverser ce fichier."
       },
       "documents": {
         "typeWorkPermit": "Permis de travail",
@@ -982,7 +988,15 @@
         "last7": "7 derniers jours",
         "last30": "30 derniers jours",
         "last90": "90 derniers jours",
-        "completionLabel": "d’achèvement"
+        "completionLabel": "d’achèvement",
+        "colStaffMember": "Membre du personnel",
+        "colAssigned": "Assignées",
+        "colCompleted": "Terminées",
+        "colSkipped": "Ignorées",
+        "colCompletionRate": "Taux d'achèvement",
+        "colAvgTime": "Temps moyen",
+        "colOnTime": "À l'heure",
+        "colPhotoCompliance": "Conformité photo"
       },
       "formSections": {
         "basicInfo": "Renseignements de base",
@@ -1488,7 +1502,16 @@
         "newNamePlaceholder": "Nom du nouveau service…",
         "hasStaff": "{name} compte {count} membres — réaffectez-les d’abord",
         "saved": "Services enregistrés",
-        "save": "Enregistrer les services"
+        "save": "Enregistrer les services",
+        "colourBlue": "Bleu",
+        "colourGreen": "Vert",
+        "colourPurple": "Violet",
+        "colourAmber": "Ambre",
+        "colourOrange": "Orangé",
+        "colourRed": "Rouge",
+        "colourTeal": "Sarcelle",
+        "colourPink": "Rose",
+        "colourGray": "Gris"
       },
       "createClient": {
         "stepClient": "Client",
@@ -5488,7 +5511,7 @@
       }
     }
   },
-  "facilityNav": {
+  "nav": {
     "sections": {
       "calendars": "Calendriers",
       "communication": "Communication",
@@ -5497,7 +5520,20 @@
       "financial": "Finances",
       "reports": "Rapports",
       "marketing": "Marketing",
-      "management": "Gestion"
+      "management": "Gestion",
+      "customer-overview": "Vue d'ensemble",
+      "customer-pets-stays": "Animaux et séjours",
+      "customer-communication": "Communication",
+      "customer-live-view": "Vue en direct",
+      "customer-account": "Compte",
+      "admin-home": "Tableau de bord",
+      "admin-tenants": "Gestion des établissements",
+      "admin-commercial": "Ventes et facturation",
+      "admin-platform": "Contrôle de la plateforme",
+      "admin-support": "Opérations de soutien",
+      "admin-team": "Équipe et accès",
+      "admin-reports": "Rapports et analyses",
+      "admin-system": "Système et sécurité"
     },
     "items": {
       "/facility/dashboard": "Tableau de bord",
@@ -5535,7 +5571,73 @@
       "/facility/dashboard/incidents": "Incidents",
       "/facility/dashboard/waivers": "Décharges électroniques",
       "/facility/dashboard/forms": "Formulaires d'accueil",
-      "/facility/dashboard/settings": "Paramètres"
+      "/facility/dashboard/settings": "Paramètres",
+      "/customer/dashboard": "Tableau de bord",
+      "/customer/pets": "Mes animaux",
+      "/customer/bookings": "Réservations",
+      "/customer/estimates": "Estimations",
+      "/customer/packages": "Forfaits et abonnements",
+      "/customer/training": "Dressage",
+      "/customer/report-cards": "Bulletins",
+      "/customer/messages": "Messages",
+      "/customer/cameras": "Caméras en direct",
+      "/customer/billing": "Facturation et paiements",
+      "/customer/wallet": "Mon portefeuille",
+      "/customer/gift-cards": "Cartes-cadeaux",
+      "/customer/rewards": "Fidélité et récompenses",
+      "/customer/refer": "Parrainer un ami",
+      "/customer/documents": "Documents et ententes",
+      "/customer/settings": "Paramètres",
+      "/dashboard": "Tableau de bord",
+      "/dashboard/facilities": "Établissements",
+      "/dashboard/facilities/requests": "Demandes d'adhésion",
+      "/dashboard/commercial/subscriptions": "Abonnements",
+      "/dashboard/commercial/tiers": "Paliers et tarifs",
+      "/dashboard/commercial/invoices": "Factures",
+      "/dashboard/commercial/credits": "Crédits",
+      "/dashboard/commercial/trials": "Essais",
+      "/dashboard/commercial/dunning": "Relances",
+      "/dashboard/commercial/merchant-applications": "Demandes Yipyy Pay",
+      "/dashboard/platform/flags": "Indicateurs de fonctionnalité",
+      "/dashboard/platform/import": "Importation de données",
+      "/dashboard/support/tickets": "Billets",
+      "/dashboard/support/chat": "Clavardage",
+      "/dashboard/support/calling": "Appels",
+      "/dashboard/support/announcements": "Annonces",
+      "/dashboard/support/email-templates": "Modèles de courriel",
+      "/dashboard/support/agreements": "Ententes et décharges",
+      "/dashboard/support/knowledge-base": "Base de connaissances",
+      "/dashboard/user-management": "Équipe de la plateforme",
+      "/dashboard/user-management/roles": "Rôles de la plateforme",
+      "/dashboard/user-management/activity": "Journal d'audit",
+      "/dashboard/reports/business": "Rapport d'affaires",
+      "/dashboard/reports/financial": "Rapport financier",
+      "/dashboard/reports/churn": "Attrition et rétention",
+      "/dashboard/reports/usage": "Rapport d'utilisation",
+      "/dashboard/reports/support": "Rapport de soutien",
+      "/dashboard/reports/facilities": "Rapport des établissements",
+      "/dashboard/reports/agreements": "Rapport des ententes",
+      "/dashboard/reports/custom": "Rapports personnalisés",
+      "/dashboard/system-admin/global-settings": "Paramètres globaux",
+      "/dashboard/system-admin/ai-settings": "Paramètres d'IA",
+      "/dashboard/system-admin/system-config": "Configuration du système",
+      "/dashboard/system-admin/integrations": "Intégrations",
+      "/dashboard/system-admin/data-management": "Gestion des données",
+      "/dashboard/system-admin/audit-logs": "Journaux d'audit",
+      "/dashboard/system-health/system-status": "État du système",
+      "/dashboard/system-health/alerts-notifications": "Alertes et avis",
+      "/dashboard/security-compliance/security-management": "Gestion de la sécurité",
+      "/dashboard/security-compliance/compliance-tools": "Outils de conformité",
+      "/employee": "Accueil",
+      "/employee/schedule": "Mon horaire",
+      "/employee/tasks": "Mes tâches",
+      "/employee/clients": "Clients",
+      "/employee/availability": "Disponibilités",
+      "/employee/notifications": "Avis",
+      "/employee/documents": "Mes documents",
+      "/employee/performance": "Mon rendement",
+      "/employee/write-ups": "Mes dossiers RH",
+      "/employee/settings": "Paramètres"
     },
     "bottomBar": {
       "/facility/dashboard": "Accueil",
@@ -5907,7 +6009,12 @@
       "messages": "Messages d’assistance",
       "unreadCount": "{count} non lus",
       "noResultsFor": "Aucun résultat pour « {term} ».",
-      "copyright": "© 2026 Yipyy. Tous droits réservés."
+      "copyright": "© 2026 Yipyy. Tous droits réservés.",
+      "searchFacilities": "Établissements",
+      "searchInvoices": "Factures",
+      "searchTickets": "Billets de soutien",
+      "searchTeam": "Membres de l'équipe",
+      "searchAnnouncements": "Annonces"
     },
     "booking": {
       "savedPricingFor": "Tarif enregistré pour {pet}",
@@ -6322,7 +6429,16 @@
       "resumeBooking": "Reprendre la réservation",
       "resumeBookingHelp": "Nous avons rétabli ce que vous aviez saisi — reprenez où vous étiez rendu.",
       "newBookingHelp": "Choisissez un service et réservez pour vos animaux",
-      "wizardUnavailable": "Impossible de charger l’assistant de réservation. Réessayez."
+      "wizardUnavailable": "Impossible de charger l’assistant de réservation. Réessayez.",
+      "methodCardOnFile": "Carte au dossier",
+      "methodCash": "Comptant",
+      "methodTerminal": "Terminal",
+      "walkScheduleTask": "Horaire des promenades"
+    },
+    "meta": {
+      "rootTitle": "Yipyy — Services pour animaux",
+      "rootDescription": "Gérez votre entreprise de soins pour animaux sans effort",
+      "adminTitle": "Yipyy — Tableau de bord admin"
     }
   }
 }

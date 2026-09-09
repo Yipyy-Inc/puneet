@@ -363,7 +363,7 @@ function OffboardingTaskRow({
                         toast.error(
                           error instanceof Error
                             ? error.message
-                            : "Could not update that task.",
+                            : t("couldNotUpdateTask"),
                         ),
                     },
                   );
@@ -461,9 +461,7 @@ function FinalDocuments({
         },
         onError: (error) =>
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Could not upload that file.",
+            error instanceof Error ? error.message : t("couldNotUploadFile"),
           ),
       },
     );

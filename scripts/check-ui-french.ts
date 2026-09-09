@@ -625,6 +625,29 @@ function isComponent(file: string): boolean {
   return file.startsWith("src/components/") || file.startsWith("src/app/");
 }
 
+/**
+ * A file whose CONTENT this gate should read — `.tsx`, and `.ts` beside it.
+ *
+ * ── WHY `.ts` WAS ADDED, 2026-09-10 ──────────────────────────────────────
+ *
+ * Every surface filtered to `.tsx` on a defensible argument: a JSX text node
+ * cannot exist anywhere else, so a `.ts` file has nothing for JSX_TEXT to
+ * find. True, and beside the point — the other six scanners read STRINGS, and
+ * a string does not care what the extension is.
+ *
+ * What that cost, measured: `modals/constants.ts` held the booking wizard's
+ * entire step rail in seven arrays, so a French reader saw "Client & Pet ·
+ * Choose service · Details · Confirm" beside a fully translated wizard body,
+ * while all eight surfaces reported ZERO. `walk()` had reached the file and
+ * put it in `seen`; this filter dropped it before a single scanner ran.
+ *
+ * A long component file gets split, and the labels are what leave — which
+ * makes "`.ts` is not UI" exactly backwards. It is where the UI's words go.
+ */
+function isReadable(file: string): boolean {
+  return file.endsWith(".tsx") || file.endsWith(".ts");
+}
+
 /** settings — one entry per section. */
 function settingsSurface(): Offender[] {
   const out: Offender[] = [];
@@ -675,11 +698,11 @@ function shellSurface(root: string): Offender[] {
   return [...seen]
     .filter(
       (file) =>
-        file.endsWith(".tsx") &&
+        isReadable(file) &&
         (file.startsWith("src/components/") || file === root),
     )
     .sort()
-    .map((file) => ({ id: file, hits: hits(file) }))
+    .map((file) => ({ id: file, hits: hits(file, true) }))
     .filter((entry) => entry.hits.length > 0);
 }
 
@@ -772,7 +795,7 @@ function staffSurface(): Offender[] {
   return [...seen]
     .filter(
       (file) =>
-        file.endsWith(".tsx") &&
+        isReadable(file) &&
         isComponent(file) &&
         // The settings sections are their own surface and several of them are
         // reachable from here — the roles studio is rendered by both. Pinning
@@ -780,7 +803,7 @@ function staffSurface(): Offender[] {
         !file.startsWith(SETTINGS),
     )
     .sort()
-    .map((file) => ({ id: file, hits: hits(file) }))
+    .map((file) => ({ id: file, hits: hits(file, true) }))
     .filter((entry) => entry.hits.length > 0);
 }
 

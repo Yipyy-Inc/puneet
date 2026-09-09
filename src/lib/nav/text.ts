@@ -4,7 +4,7 @@ import fr from "../../../messages/fr.json";
 import type { AppLocale } from "@/lib/language-settings";
 
 // ============================================================================
-// THE FACILITY NAVIGATION, IN THE READER'S LANGUAGE.
+// THE NAVIGATION, IN THE READER'S LANGUAGE — ALL THREE OF THEM.
 //
 // ── WHY THIS EXISTS ───────────────────────────────────────────────────────
 //
@@ -36,6 +36,23 @@ import type { AppLocale } from "@/lib/language-settings";
 // Not to the url, and not to empty. A nav item added tomorrow reads as its
 // English title until somebody writes the French, which is a visible gap
 // rather than a broken one.
+//
+// ── AND IT COVERS THE CUSTOMER AND SUPER-ADMIN NAVS TOO, 2026-09-10 ──────
+//
+// It was `facilityNav` until the widened `check:ui-french` put a number on
+// the other two: 21 labels in `CustomerSidebar` and 48 in
+// `super-admin-sidebar`, all of them English on a French screen, and all of
+// them invisible for the same reason — `GenericSidebar` renders
+// `{t(item.title)}` where `t` is `useUiText`, an English→French map that
+// RETURNS ITS INPUT ON A MISS. So the call site looked identical whether the
+// translation existed or not, which is precisely the shape
+// `tests/unit/shell-i18n.test.ts` was written to end.
+//
+// ONE catalogue rather than three, because the key space is already disjoint
+// by construction: a customer url starts `/customer`, an admin url
+// `/dashboard`, a facility url `/facility`. Section ids are slugged with the
+// same prefix for the same reason. Three catalogues would have been three
+// places to forget.
 // ============================================================================
 
 type NavCatalogue = {
@@ -46,8 +63,8 @@ type NavCatalogue = {
 };
 
 const CATALOGUE: Record<AppLocale, NavCatalogue> = {
-  en: en.facilityNav as NavCatalogue,
-  fr: fr.facilityNav as NavCatalogue,
+  en: en.nav as NavCatalogue,
+  fr: fr.nav as NavCatalogue,
 };
 
 function catalogue(locale: AppLocale): NavCatalogue {

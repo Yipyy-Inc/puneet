@@ -74,7 +74,7 @@ export default function StaffPerformancePage() {
   const performanceColumns: ColumnDef<StaffPerformance>[] = [
     {
       key: "staffName",
-      label: "Staff Member",
+      label: t("colStaffMember"),
       icon: User,
       defaultVisible: true,
       render: (staff) => (
@@ -86,13 +86,13 @@ export default function StaffPerformancePage() {
     },
     {
       key: "totalTasksAssigned",
-      label: "Assigned",
+      label: t("colAssigned"),
       icon: Target,
       defaultVisible: true,
     },
     {
       key: "tasksCompleted",
-      label: "Completed",
+      label: t("colCompleted"),
       icon: CheckCircle2,
       defaultVisible: true,
       render: (staff) => (
@@ -103,7 +103,7 @@ export default function StaffPerformancePage() {
     },
     {
       key: "tasksSkipped",
-      label: "Skipped",
+      label: t("colSkipped"),
       icon: XCircle,
       defaultVisible: true,
       render: (staff) => (
@@ -114,7 +114,7 @@ export default function StaffPerformancePage() {
     },
     {
       key: "completionRate",
-      label: "Completion Rate",
+      label: t("colCompletionRate"),
       icon: BarChart3,
       defaultVisible: true,
       render: (staff) => (
@@ -136,14 +136,14 @@ export default function StaffPerformancePage() {
     },
     {
       key: "avgCompletionTimeMinutes",
-      label: "Avg Time",
+      label: t("colAvgTime"),
       icon: Clock,
       defaultVisible: true,
       render: (staff) => `${staff.avgCompletionTimeMinutes} min`,
     },
     {
       key: "onTimeCompletions",
-      label: "On Time",
+      label: t("colOnTime"),
       defaultVisible: true,
       render: (staff) => (
         <div className="text-sm">
@@ -155,7 +155,7 @@ export default function StaffPerformancePage() {
     },
     {
       key: "photoProofCompliance",
-      label: "Photo Compliance",
+      label: t("colPhotoCompliance"),
       icon: Camera,
       defaultVisible: true,
       render: (staff) => (

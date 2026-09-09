@@ -28,6 +28,7 @@ import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { useNavText } from "@/lib/nav/use-nav-text";
 import {
   fullNameOf,
   RolePill,
@@ -46,15 +47,21 @@ const isActive = (pathname: string, url: string) =>
 
 // The account links surfaced in the Profile sheet (beyond the fixed tabs).
 const ACCOUNT_LINKS: NavSlot[] = [
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { title: "Availability", url: "/employee/availability", icon: CalendarClock },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { title: "Notifications", url: "/employee/notifications", icon: Bell },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { title: "My Documents", url: "/employee/documents", icon: FolderOpen },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { title: "My Performance", url: "/employee/performance", icon: TrendingUp },
+  // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
   { title: "My HR Records", url: "/employee/write-ups", icon: FileText },
 ];
 
 export function EmployeeBottomNav({ staffId }: { staffId: string }) {
   const t = useShellText("employee");
+  const navText = useNavText();
   const pathname = usePathname();
   const { resolvePermissions } = useFacilityRbac();
   // Same fix as the sidebar: the mobile profile sheet names the acting viewer,
@@ -82,11 +89,15 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
         url: toEmployeeRoute(primaryItem.url),
         icon: primaryItem.icon,
       }
-    : { title: "Customer", url: "/employee/clients", icon: Users };
+    : // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
+      { title: "Customer", url: "/employee/clients", icon: Users };
 
   const tabs: NavSlot[] = [
+    // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
     { title: "Home", url: "/employee", icon: Home },
+    // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
     { title: "Schedule", url: "/employee/schedule", icon: Calendar },
+    // french-ok: the English FALLBACK beside navText.item(url, …) — the url is the key
     { title: "Tasks", url: "/employee/tasks", icon: CheckSquare },
     roleSlot,
   ];
@@ -109,7 +120,9 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
             )}
           >
             <Icon className="size-5" />
-            <span className="max-w-full truncate">{tab.title}</span>
+            <span className="max-w-full truncate">
+              {navText.item(tab.url, tab.title)}
+            </span>
           </Link>
         );
       })}
@@ -142,7 +155,7 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
                     className="hover:bg-muted flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors"
                   >
                     <Icon className="text-muted-foreground size-5" />
-                    {link.title}
+                    {navText.item(link.url, link.title)}
                   </Link>
                 </SheetClose>
               );

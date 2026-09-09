@@ -11240,3 +11240,96 @@ unit-tested before any of the four findings above existed. Every one of them
 came from opening the screen in French and looking at it. That is now the
 fourth time in two days, and the ratio is not improving: **a gate at zero is a
 claim about the gate.**
+
+## 2026-09-10 — the gate learned to read `.ts`, and the correction that came first
+
+Yesterday's entry said the wizard rail was invisible for TWO reasons: the
+`.tsx`-only walk, and "no scanner covers an object-literal property". **The
+second half was wrong.** `OBJECT_COPY` has existed since 2026-09-07 and covers
+`title|label|description|placeholder|heading|helper|hint|…`; it was scoped to
+the SETTINGS surface, deliberately, with the three non-copy hits outside it
+checked one by one and written up in the gate's own header. So the rail was
+invisible for ONE reason — the walk never opened the file — and the honest
+next move was not "write a sixth scanner" but "turn the fifth one on, and let
+the walk see `.ts`".
+
+Both landed together. `isReadable()` replaces the `.endsWith(".tsx")` filter on
+the shell and staff surfaces, and `hits(file, true)` is now the call on every
+surface rather than settings alone.
+
+### What it found: 158 strings in 18 files
+
+Every one on a surface that had been reporting **zero**.
+
+| Class                                        | Count | Disposition           |
+| -------------------------------------------- | ----- | --------------------- |
+| The customer + super-admin sidebars          | 69    | Converted             |
+| Employee bottom nav + header                 | 16    | Converted             |
+| Staff performance columns, six toasts        | 17    | Converted             |
+| Department colour names, admin search groups | 14    | Converted             |
+| Deposit methods, two booking labels          | 5     | Converted             |
+| Page `metadata` (browser tab)                | 3     | Converted — see below |
+| Booking service catalogue (seed copy)        | 22    | `french-ok`           |
+| Fixture staff names                          | 7     | `french-ok`           |
+| Keys sitting beside their own translator     | 7     | `french-ok`           |
+| Invented demo notifications                  | 16    | `french-ok`           |
+
+**The two sidebars were the interesting 69.** `GenericSidebar` renders
+`{t(item.title)}` where `t` is `useUiText` — the English→French map that
+returns its input on a miss — so ten labels translated, eleven did not, and
+the call site was identical in both cases. `facility-admin-sidebar` had
+already been fixed the right way (`navText.item(url, title)` at the caller),
+which is what made the other two look fine by comparison.
+
+The catalogue was `messages.*.facilityNav`; it is `messages.*.nav` now, and
+carries all three navs. One catalogue rather than three because the key space
+is disjoint by construction — `/customer`, `/dashboard`, `/facility`,
+`/employee` — and three would have been three places to forget.
+
+**`generateMetadata` replaced a static `metadata` export** in the root and
+super-admin layouts. A static export is evaluated once at build time with no
+request and therefore no locale; `generateMetadata` runs per request and
+`getLocale()` reaches the `NEXT_LOCALE` cookie that `use-settings` writes on
+every load. So the browser tab is English for exactly one page view on a fresh
+browser and correct after that. "Yipyy" itself does not pass through the
+locale layer — §5q, the same rule that protects a pet's name.
+
+### And the screenshots found the next surface
+
+Both navs verified in a real browser, French asserted before anything was
+measured in it. The customer sidebar reads "Animaux et séjours · Forfaits et
+abonnements · Mon portefeuille"; the admin one reads "Ventes et facturation ·
+Paliers et tarifs · Relances".
+
+**The pages behind them are entirely English.** The customer dashboard says
+"Welcome back, Alice!", "Upcoming Appointments", "No report cards yet", and
+quotes an estimate as **"$458.85"** where French wants `458,85 $`. The
+super-admin dashboard says "Command Center", "ACTIVE FACILITIES", "Needs
+Attention", "Flagged for Suspension".
+
+**No gate covers a page body in either portal.** A shell surface is derived
+from `layout.tsx`, and a layout does not import its pages — so the walk cannot
+reach them by construction, at any depth. This is the same hole that created
+the `staff` surface on 2026-09-09 ("the staff screens were nobody's"), and the
+fix has the same shape: a surface derived from the ROUTE TREE rather than from
+the layout, one per portal. `staffSurface()` already does exactly that and is
+the thing to copy.
+
+Until that exists, the eight zeroes mean: **no string the gate can see on the
+chrome.** They say nothing at all about the screens the chrome wraps.
+
+### Smaller, from the same two screenshots
+
+- **"Demandes d'établissement" truncated in the admin rail** where the English
+  "Facility Requests" does not — §5g's growth problem, and its own instruction
+  for what to do about it ("if it breaks the layout, the label is the
+  problem"). Shortened to "Demandes d'adhésion", 24 → 19 characters.
+- `/employee/schedule`, `/employee/tasks` and `/employee/write-ups` each carry
+  TWO English names — "Schedule"/"My Schedule", "Tasks"/"My Tasks", "My HR
+  Records"/"My Write-ups" — depending on whether the bottom nav or the header
+  renders them. Keyed by url, French gets ONE name for each, which is the
+  right answer; the English inconsistency is left as it was found.
+- A `french-ok` comment reading `rendered as t(GROUP_KEY[heading])` made
+  `check:frozen-translator` fail: it scans a memo body for a translator call
+  and found one in the COMMENT. Reworded. Worth knowing before writing another
+  annotation that quotes code.

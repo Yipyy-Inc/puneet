@@ -6,6 +6,9 @@ import {
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { AppSidebar } from "@/components/layout/super-admin-sidebar";
 import { Metadata } from "next";
+import { getLocale } from "next-intl/server";
+import { shellText } from "@/lib/shell/text";
+import type { AppLocale } from "@/lib/language-settings";
 import {
   SidebarInset,
   SidebarProvider,
@@ -18,9 +21,10 @@ import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigPro
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { SupportNotificationBell } from "@/components/layout/SupportNotificationBell";
 
-export const metadata: Metadata = {
-  title: "Yipyy - Admin Dashboard",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale: AppLocale = (await getLocale()) === "fr" ? "fr" : "en";
+  return { title: shellText(locale, "meta", "adminTitle") };
+}
 
 export default async function DashboardLayout({
   children,

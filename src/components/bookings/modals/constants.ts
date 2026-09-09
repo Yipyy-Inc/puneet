@@ -6,6 +6,7 @@ export const SERVICE_CATEGORIES = [
     image: "/services/daycare.jpg",
     name: "Daycare",
     icon: Sun,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Full or half day supervised care in a safe, social environment.",
     basePrice: 35,
@@ -21,6 +22,7 @@ export const SERVICE_CATEGORIES = [
     image: "/services/boarding.jpg",
     name: "Boarding",
     icon: Bed,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Overnight stays with full care so your pet feels at home.",
     basePrice: 45,
     included: [
@@ -36,6 +38,7 @@ export const SERVICE_CATEGORIES = [
       "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=600&h=360&fit=crop",
     name: "Grooming",
     icon: Scissors,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Bath, grooming, and styling services by experienced staff.",
     basePrice: 40,
     included: ["Bath & dry", "Brush-out", "Nail trim", "Ear check"],
@@ -46,6 +49,7 @@ export const SERVICE_CATEGORIES = [
       "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=600&h=360&fit=crop",
     name: "Training",
     icon: GraduationCap,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Obedience and specialized training programs.",
     basePrice: 85,
     included: ["Certified trainers", "Structured sessions", "Take-home tips"],
@@ -56,6 +60,7 @@ export const SERVICE_CATEGORIES = [
       "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&h=360&fit=crop",
     name: "Pet Evaluation",
     icon: CheckCircle,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Assessment to ensure your pet is ready for group services.",
     basePrice: 0,
     included: [
@@ -79,6 +84,7 @@ export const GROOMING_ADDONS = [
     id: "nail_trim",
     name: "Nail Trim",
     price: 15,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Safe trim and file. Reduces scratching.",
     image:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
@@ -87,6 +93,7 @@ export const GROOMING_ADDONS = [
     id: "teeth_brush",
     name: "Teeth Brushing",
     price: 10,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Gentle brush with pet-safe toothpaste.",
     image:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
@@ -95,6 +102,7 @@ export const GROOMING_ADDONS = [
     id: "ear_clean",
     name: "Ear Cleaning",
     price: 12,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Ear check and gentle cleaning.",
     image:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
@@ -103,6 +111,7 @@ export const GROOMING_ADDONS = [
     id: "flea_treatment",
     name: "Flea Treatment",
     price: 25,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Flea bath and treatment add-on.",
     image:
       "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=240&fit=crop",
@@ -111,6 +120,7 @@ export const GROOMING_ADDONS = [
     id: "medicated_bath",
     name: "Medicated Bath",
     price: 20,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Soothing bath for skin conditions.",
     image:
       "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=240&fit=crop",
@@ -119,6 +129,7 @@ export const GROOMING_ADDONS = [
     id: "paw_treatment",
     name: "Paw Pad Treatment",
     price: 15,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Moisturizing paw balm and massage.",
     image:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
@@ -178,6 +189,7 @@ export const CUSTOMER_BOARDING_ROOM_TYPES: CustomerBoardingRoomType[] = [
     id: "standard",
     name: "Standard Room",
     price: 45,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Comfortable indoor kennel with bedding and a calm environment.",
     image: "/rooms/room-1.jpg",
@@ -194,6 +206,7 @@ export const CUSTOMER_BOARDING_ROOM_TYPES: CustomerBoardingRoomType[] = [
     id: "deluxe",
     name: "Deluxe Suite",
     price: 75,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Spacious suite with play area and webcam so you can check in anytime.",
     image: "/rooms/room-2.jpg",
@@ -216,6 +229,7 @@ export const CUSTOMER_BOARDING_ROOM_TYPES: CustomerBoardingRoomType[] = [
     id: "vip",
     name: "VIP Suite",
     price: 120,
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Luxury suite with private outdoor access and premium amenities.",
     image: "/rooms/room-3.jpg",
@@ -256,6 +270,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "extended-walk",
     name: "Extended Walk",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Additional 30-minute walk session for your pet to burn extra energy and explore",
     image:
@@ -268,6 +283,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "playtime-plus",
     name: "Playtime Plus",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Extra supervised play session with interactive toys and games",
     image:
@@ -280,6 +296,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "one-on-one",
     name: "One-on-One Attention",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Dedicated individual time with a staff member for personalized care",
     image:
@@ -292,6 +309,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "mini-training",
     name: "Mini Training Session",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Quick 15-minute basic obedience training during their stay",
     image:
       "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=400&h=300&fit=crop",
@@ -302,6 +320,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "spa-treatment",
     name: "Quick Spa Treatment",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Relaxing paw massage and aromatherapy session to help your pet unwind",
     image:
@@ -313,6 +332,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "treat-time",
     name: "Premium Treat Time",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Special gourmet treats and enrichment activities throughout the day",
     image:
@@ -324,6 +344,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "bath-groom",
     name: "Bath & Groom",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Full bathing and grooming service before checkout to keep your pet fresh",
     image:
@@ -335,6 +356,7 @@ export const CUSTOMER_ADDONS: CustomerAddon[] = [
   {
     id: "video-call",
     name: "Daily Video Call",
+    // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Scheduled daily video call to check in on your pet during their stay",
     image:

@@ -18,16 +18,19 @@ import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { departments, staffSkills } from "@/data/shifts";
 
+// The nine colours a department can be tagged with, by CATALOGUE KEY. A
+// colour name is copy — "Green" is "Vert" — and nine of them sat in English
+// inside a Select a French manager opens to pick one.
 const COLOR_OPTIONS = [
-  { value: "blue", label: "Blue", dot: "bg-blue-500" },
-  { value: "emerald", label: "Green", dot: "bg-emerald-500" },
-  { value: "purple", label: "Purple", dot: "bg-purple-500" },
-  { value: "amber", label: "Amber", dot: "bg-amber-500" },
-  { value: "orange", label: "Orange", dot: "bg-orange-500" },
-  { value: "red", label: "Red", dot: "bg-red-500" },
-  { value: "teal", label: "Teal", dot: "bg-teal-500" },
-  { value: "pink", label: "Pink", dot: "bg-pink-500" },
-  { value: "slate", label: "Gray", dot: "bg-slate-500" },
+  { value: "blue", labelKey: "colourBlue", dot: "bg-blue-500" },
+  { value: "emerald", labelKey: "colourGreen", dot: "bg-emerald-500" },
+  { value: "purple", labelKey: "colourPurple", dot: "bg-purple-500" },
+  { value: "amber", labelKey: "colourAmber", dot: "bg-amber-500" },
+  { value: "orange", labelKey: "colourOrange", dot: "bg-orange-500" },
+  { value: "red", labelKey: "colourRed", dot: "bg-red-500" },
+  { value: "teal", labelKey: "colourTeal", dot: "bg-teal-500" },
+  { value: "pink", labelKey: "colourPink", dot: "bg-pink-500" },
+  { value: "slate", labelKey: "colourGray", dot: "bg-slate-500" },
 ];
 
 let _deptId = 700;
@@ -129,7 +132,7 @@ export function DepartmentSettings() {
                             <div
                               className={cn("size-2.5 rounded-full", c.dot)}
                             />
-                            {c.label}
+                            {t(c.labelKey)}
                           </div>
                         </SelectItem>
                       ))}
@@ -200,7 +203,7 @@ export function DepartmentSettings() {
                   <SelectItem key={c.value} value={c.value}>
                     <div className="flex items-center gap-2">
                       <div className={cn("size-2.5 rounded-full", c.dot)} />
-                      {c.label}
+                      {t(c.labelKey)}
                     </div>
                   </SelectItem>
                 ))}
