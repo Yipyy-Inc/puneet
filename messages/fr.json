@@ -1402,6 +1402,58 @@
         "cancel": "Annuler",
         "cancelStayClockedIn": "Annuler — rester en poste",
         "confirmClockIn": "Confirmer l’arrivée"
+      },
+      "availability": {
+        "templateNotice": "Voici le modèle de disponibilité hebdomadaire de {name} — les heures où cette personne peut travailler. Le modifier met à jour le modèle qui sert à bâtir les horaires à venir. Cela ne change pas les quarts déjà approuvés ou publiés.",
+        "weeklyHeading": "Disponibilité hebdomadaire · {count} jours définis",
+        "to": "à",
+        "endAfterStart": "La fin doit suivre le début",
+        "unavailable": "Non disponible",
+        "unsaved": "Modifications non enregistrées",
+        "saveAvailability": "Enregistrer la disponibilité",
+        "saved": "Modèle de disponibilité mis à jour"
+      },
+      "rolesTab": {
+        "resultingPermissions": "Permissions résultantes",
+        "grantedCount": "{count} permissions accordées",
+        "unionOf": " — l’union du rôle principal, des rôles additionnels et des rôles personnalisés",
+        "plusOverrides": ", et {count} exceptions par permission",
+        "editScopes": ". Modifiez les portées individuelles dans l’onglet Accès et exceptions."
+      },
+      "tasksSection": {
+        "sourceShift": "Tâche de quart",
+        "sourceStandalone": "Tâche attribuée",
+        "sourceIncident": "Suivi d’incident",
+        "priorityUrgent": "Urgente",
+        "priorityHigh": "Élevée",
+        "priorityMedium": "Moyenne",
+        "priorityLow": "Faible",
+        "due": "Échéance {date}",
+        "heading": "Tâches",
+        "openCount": "{count} ouvertes",
+        "taskBoard": "Tableau des tâches",
+        "noTasks": "Aucune tâche ouverte attribuée à {name}."
+      },
+      "preview": {
+        "previewingAs": "Aperçu comme {name} — lecture seule",
+        "exitPreview": "Quitter l’aperçu"
+      },
+      "notificationMenu": {
+        "options": "Options de la notification",
+        "markUnread": "Marquer comme non lue",
+        "markRead": "Marquer comme lue",
+        "navigateTo": "Aller à {where}",
+        "details": "les détails",
+        "navCustomers": "Clients",
+        "navBoarding": "Pension",
+        "navDaycare": "Garderie",
+        "navGrooming": "Toilettage",
+        "navTraining": "Dressage",
+        "navForms": "Formulaires",
+        "navYipyygo": "Arrivée express",
+        "navSchedule": "Horaire",
+        "navTasks": "Tâches",
+        "navSystem": "Annonces"
       }
     }
   },

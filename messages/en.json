@@ -1402,6 +1402,58 @@
         "cancel": "Cancel",
         "cancelStayClockedIn": "Cancel — stay clocked in",
         "confirmClockIn": "Confirm clock in"
+      },
+      "availability": {
+        "templateNotice": "This is {name}’s weekly availability template — the hours they can work. Editing it updates the template used to build future schedules. It does not change shifts that are already approved or published.",
+        "weeklyHeading": "Weekly availability · {count} days set",
+        "to": "to",
+        "endAfterStart": "End must be after start",
+        "unavailable": "Unavailable",
+        "unsaved": "Unsaved changes",
+        "saveAvailability": "Save availability",
+        "saved": "Availability template updated"
+      },
+      "rolesTab": {
+        "resultingPermissions": "Resulting permissions",
+        "grantedCount": "{count} permissions granted",
+        "unionOf": " — the union of the primary role, additional roles and custom roles",
+        "plusOverrides": ", and {count} per-permission overrides",
+        "editScopes": ". Edit individual scopes in the Access and overrides tab."
+      },
+      "tasksSection": {
+        "sourceShift": "Shift task",
+        "sourceStandalone": "Assigned task",
+        "sourceIncident": "Incident follow-up",
+        "priorityUrgent": "Urgent",
+        "priorityHigh": "High",
+        "priorityMedium": "Medium",
+        "priorityLow": "Low",
+        "due": "Due {date}",
+        "heading": "Tasks",
+        "openCount": "{count} open",
+        "taskBoard": "Task board",
+        "noTasks": "No open tasks assigned to {name}."
+      },
+      "preview": {
+        "previewingAs": "Previewing as {name} — read only",
+        "exitPreview": "Exit preview"
+      },
+      "notificationMenu": {
+        "options": "Notification options",
+        "markUnread": "Mark as unread",
+        "markRead": "Mark as read",
+        "navigateTo": "Go to {where}",
+        "details": "details",
+        "navCustomers": "Customers",
+        "navBoarding": "Boarding",
+        "navDaycare": "Daycare",
+        "navGrooming": "Grooming",
+        "navTraining": "Training",
+        "navForms": "Forms",
+        "navYipyygo": "Express check-in",
+        "navSchedule": "Schedule",
+        "navTasks": "Tasks",
+        "navSystem": "Announcements"
       }
     }
   },

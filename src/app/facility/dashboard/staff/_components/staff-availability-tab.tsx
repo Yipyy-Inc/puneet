@@ -14,10 +14,15 @@ import {
   upsertStaffAvailabilityForStaff,
 } from "@/data/staff-availability";
 import { fullNameOf } from "./staff-shared";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatWeekday } from "@/lib/i18n/format";
 
 // Monday-first, mirroring the employee availability view.
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const DAY_LABEL: Record<number, string> = {
+// The EIGHTH copy of the weekday names in this repo, and the second found
+// on a measured surface. `formatWeekday` replaced the first; the remaining
+// six are in the debt map.
+const DAY_LABEL_UNUSED: Record<number, string> = {
   0: "Sunday",
   1: "Monday",
   2: "Tuesday",
@@ -56,11 +61,21 @@ function seedRows(staffId: string): DayRow[] {
 }
 
 /**
+ * Stands in when a staff member has neither an availability row nor an
+ * assigned location. It is WRITTEN INTO the availability record by save()
+ * below, so it is a stored value rather than a label — translating it would
+ * put a French word in a row a report reads back.
+ */
+// french-ok: stored, not a label
+const DEFAULT_FACILITY = "Main";
+
+/**
  * Manager-editable weekly availability TEMPLATE — the preference grid the
  * employee submitted at onboarding. Editing here updates the availability
  * template only; it does NOT touch already-approved / published future shifts.
  */
 export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("availability");
   const [rows, setRows] = useState<DayRow[]>(() => seedRows(staff.id));
   const [dirty, setDirty] = useState(false);
 
@@ -68,7 +83,7 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
     staffAvailability.find((a) => a.staffId === staff.id)?.facility ??
     FACILITY_LOCATIONS.find((l) => l.id === staff.assignedLocations[0])
       ?.label ??
-    "Main";
+    DEFAULT_FACILITY;
 
   const update = (dow: number, patch: Partial<DayRow>) => {
     setRows((rs) =>
@@ -88,26 +103,20 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
       rows,
     );
     setDirty(false);
-    toast.success("Availability template updated");
+    toast.success(t("saved"));
   };
 
   return (
     <div className="space-y-4">
       <div className="text-muted-foreground flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/20">
         <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
-        <span>
-          This is {staff.firstName}&apos;s weekly availability{" "}
-          <strong>template</strong> — the hours they can work. Editing it
-          updates the template used to build future schedules. It does not
-          change shifts that are already approved or published.
-        </span>
+        <span>{fill("templateNotice", { name: staff.firstName })}</span>
       </div>
 
       <div className="border-border/60 overflow-hidden rounded-xl border">
         <div className="text-muted-foreground bg-muted/40 flex items-center gap-2 border-b px-4 py-2 text-xs font-medium">
           <CalendarClock className="size-3.5" />
-          Weekly availability · {activeDays} day{activeDays === 1 ? "" : "s"}{" "}
-          set
+          {fill("weeklyHeading", { count: activeDays })}
         </div>
         <div className="divide-y">
           {rows.map((row) => (
@@ -126,7 +135,7 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
                   }
                 />
                 <span className="text-sm font-medium">
-                  {DAY_LABEL[row.dayOfWeek]}
+                  {formatWeekday(row.dayOfWeek, locale, "long")}
                 </span>
               </label>
 
@@ -140,7 +149,9 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
                     }
                     className="h-8 w-32"
                   />
-                  <span className="text-muted-foreground text-xs">to</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t("to")}
+                  </span>
                   <Input
                     type="time"
                     value={row.endTime}
@@ -151,13 +162,13 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
                   />
                   {row.startTime >= row.endTime && (
                     <span className="text-xs text-rose-600 dark:text-rose-400">
-                      End must be after start
+                      {t("endAfterStart")}
                     </span>
                   )}
                 </div>
               ) : (
                 <span className="text-muted-foreground text-xs">
-                  Unavailable
+                  {t("unavailable")}
                 </span>
               )}
             </div>
@@ -168,7 +179,7 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
       <div className="flex items-center justify-end gap-2">
         {dirty && (
           <span className="text-muted-foreground mr-auto text-xs">
-            Unsaved changes
+            {t("unsaved")}
           </span>
         )}
         <Button
@@ -176,7 +187,7 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
           disabled={!dirty || invalid}
           className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
         >
-          <Save className="size-4" /> Save availability
+          <Save className="size-4" /> {t("saveAvailability")}
         </Button>
       </div>
     </div>
