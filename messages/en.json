@@ -2521,7 +2521,9 @@
         "byServiceHint": "What the money was for. Clover cannot answer this — the booking can.",
         "howTakenHint": "Card present, online, or neither.",
         "afterRefunds": "After refunds",
-        "setupResumeBody": "— you are on step {step} of 3. Nothing you have done is lost."
+        "setupResumeBody": "— you are on step {step} of 3. Nothing you have done is lost.",
+        "declinedOrFailed": "{count} declined or failed",
+        "shareOfTakings": "{percent} of takings"
       },
       "payroll-rules": {
         "ownerOnly": "Only an owner or a manager can change what the facility pays.",
@@ -2597,7 +2599,8 @@
         "percentOfTotal": "% of total",
         "flatAmount": "Flat $",
         "depositRulesSaved": "Deposit rules saved",
-        "toastAmountUpdated": "Deposit amount updated"
+        "toastAmountUpdated": "Deposit amount updated",
+        "toastServiceAmountUpdated": "{service} deposit updated"
       },
       "taxes": {
         "ownerOnly": "Tax settings are only accessible to facility owners and managers.",
@@ -5390,7 +5393,8 @@
       "tagColourGood": "Good",
       "tagColourInformation": "Information",
       "tagColourProgramme": "Programme",
-      "tagColourNeutral": "Neutral"
+      "tagColourNeutral": "Neutral",
+      "shownOfTotal": "{shown} of {total} shown"
     },
     "customer": {
       "portalLabel": "Customer portal",

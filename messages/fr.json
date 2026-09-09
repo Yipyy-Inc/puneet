@@ -2521,7 +2521,9 @@
         "byServiceHint": "À quoi l’argent correspondait. Clover ne peut pas le dire — la réservation, oui.",
         "howTakenHint": "Carte présente, en ligne, ou ni l’un ni l’autre.",
         "afterRefunds": "Après remboursements",
-        "setupResumeBody": "— vous êtes à l’étape {step} sur 3. Rien de ce que vous avez fait n’est perdu."
+        "setupResumeBody": "— vous êtes à l’étape {step} sur 3. Rien de ce que vous avez fait n’est perdu.",
+        "declinedOrFailed": "{count} refusé(s) ou échoué(s)",
+        "shareOfTakings": "{percent} des encaissements"
       },
       "payroll-rules": {
         "ownerOnly": "Seul un propriétaire ou un gestionnaire peut modifier ce que l’établissement paie.",
@@ -2597,7 +2599,8 @@
         "percentOfTotal": "% du total",
         "flatAmount": "Montant fixe",
         "depositRulesSaved": "Règles de dépôt enregistrées",
-        "toastAmountUpdated": "Montant du dépôt mis à jour"
+        "toastAmountUpdated": "Montant du dépôt mis à jour",
+        "toastServiceAmountUpdated": "Acompte {service} mis à jour"
       },
       "taxes": {
         "ownerOnly": "Les paramètres de taxes ne sont accessibles qu’aux propriétaires et aux gestionnaires de l’établissement.",
@@ -5390,7 +5393,8 @@
       "tagColourGood": "Bon",
       "tagColourInformation": "Information",
       "tagColourProgramme": "Programme",
-      "tagColourNeutral": "Neutre"
+      "tagColourNeutral": "Neutre",
+      "shownOfTotal": "{shown} sur {total} affichés"
     },
     "customer": {
       "portalLabel": "Portail client",
