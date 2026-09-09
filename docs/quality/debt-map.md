@@ -10678,67 +10678,34 @@ promoted to `components/ui/` on 2026-09-08. Left alone: swapping it changes
 loading and discard semantics, which is not a translation. Recorded so the one
 save model can reach it deliberately.
 
-### A unit test that depends on DNS
+### A unit-tier flake, and a WRONG diagnosis of it
 
-Noticed three times in one session: `bun run test:unit` fails intermittently
-with `[calling] sendSms failed: warn: getaddrinfo ENOTFOUND`, then passes on an
-immediate re-run with 228/228.
+`bun run test:unit` has reported `1 fail` twice in one session, then passed
+228/228 on an immediate re-run. Both times the log carried
+`[calling] sendSms failed: warn: getaddrinfo ENOTFOUND`.
 
-`calling-provider.test.ts` stubs `globalThis.fetch` and restores it in
-`afterEach`, so at least one path reaches the REAL network — the DNS lookup in
-that message is genuine. AGENTS.md keeps this tier for "pure logic, no browser,
-no database" precisely so it can be trusted in under a second; a test whose
-outcome depends on name resolution is neither fast nor deterministic, and an
-intermittent red here teaches people to re-run rather than to read.
+**The first version of this entry blamed that message, and was wrong.** It
+claimed `calling-provider.test.ts` reaches the real network. It does not: the
+test at line 107 — "a network failure is reported as one, not as a carrier
+verdict" — installs a stub that THROWS that exact string, and the provider logs
+it. The message is the test working, and it prints on every run including the
+green ones.
 
-Not chased down in the French pass. Whoever picks it up: find the case that
-runs outside `stubFetch`, and fail the test on an unstubbed fetch rather than
-letting it escape.
+Chased properly afterwards: eight consecutive runs of `bun test`, all
+`0 fail`. So the flake is real but unreproduced, and that log line is not the
+cause.
 
-### `StatusBadge` exists twice, character for character
+It is left here **without an explanation** rather than with a comfortable wrong
+one. The wrong one had already sent somebody to read a file that is fine, which
+is worse than an open question.
 
-Found while translating the warnings surfaces. `warnings-tab.tsx` and
-`warnings/page.tsx` each define a private `StatusBadge({ status })` over
-`IssuedWarning["status"]` — same four branches, same class strings, same
-glyphs. Both had to be translated, separately, in the same change.
+What is actually known: both sightings were inside a chained command that had
+just run ESLint across ~1,100 files, and on both occasions the lint step also
+reported a problem. Resource contention is a guess, not a finding.
 
-Left duplicated on purpose: extracting it is a refactor, and doing refactors
-inside a translation pass is how a translation pass stops being reviewable.
-Whoever picks it up, it belongs beside the other shared staff bits in
-`_components/staff-shared.tsx`, which already owns `RolePill`, `ServiceChip`
-and the OTHER `StatusBadge` (the one over `StaffProfile["status"]` — note the
-name collision before moving either).
-
-### A notification body composed in the sender's language
-
-Found in `offboarding-tab.tsx` while translating it. When a manager files a
-final document, the client builds the body of a notification the DEPARTING
-EMPLOYEE receives:
-
-```
-const label = name.trim() || DOC_KIND_LABEL[kind];
-… body: `${label} was added to your records.`
-```
-
-Translating that with the manager's `t()` would send French to an employee who
-reads English — worse than the English it replaced, because it looks
-deliberate. So the kind's label is taken from a deliberately untranslated
-`DOC_KIND_EN` map at that one call site, and the rendered labels elsewhere in
-the file are translated normally.
-
-**The real fix is server-side.** A message addressed to somebody else must be
-composed where that person's locale is known, not in the sender's browser.
-Every outbound body built client-side has this defect latent in it; this is the
-first one a translation pass has walked into.
-
-### `capitalize` over a slug, again
-
-Same file: `<span className="capitalize">{instance.reason}</span>`. The value is
-a facility-editable termination reason (`StaffHrConfig.terminationReasons`), so
-§5q says it must NOT be translated — it is data somebody typed. But the CSS
-`capitalize` is still doing what `notification-settings-card` records as a
-defect: title-casing an identifier and calling it a label. Left as-is because
-the value is data; noted because the styling implies it is not.
+**And the meta-lesson, for the third time this session: read the error before
+theorising about it.** A plausible message in the output is not the failure —
+here it was the fixture, printed on purpose.
 
 ## 2026-09-09 — a memo froze on the pre-hydration translator, and a screenshot was the only thing that could see it
 

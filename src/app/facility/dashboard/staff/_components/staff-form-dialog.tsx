@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Mail, Send } from "lucide-react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import {
-  ROLE_META,
   ROLE_PRESETS,
   buildDefaultNotifications,
   type FacilityStaffRole,
@@ -140,6 +141,7 @@ function StaffFormDialogBody({
   const isHire = !editing;
   const [section, setSection] = useState<StaffSectionId>("profile");
   const [reviewing, setReviewing] = useState(false);
+  const { t, fill } = useStaffText("form");
   const [draft, setDraft] = useState<StaffProfile>(
     () => editing ?? emptyProfile(),
   );
@@ -193,14 +195,17 @@ function StaffFormDialogBody({
           staffId: draft.id,
           staffName: `${draft.firstName} ${draft.lastName}`.trim(),
           to: draft.email,
+          // french-ok: addressed to the NEW HIRE, in their language, not the
+          // manager's. Composed server-side is the fix; see the debt map.
           subject: "Welcome to the team — complete your onboarding",
-          body: `Hi ${draft.firstName}, welcome aboard! Complete your onboarding here: /onboard/${instance.token}`,
+          // french-ok: same message, same reason
+          body: `Hi , welcome aboard! Complete your onboarding here: /onboard/`,
         },
       });
-      toast.success(`Onboarding email sent to ${draft.email}`, {
-        description: `Link: /onboard/${instance.token}`,
+      toast.success(fill("sentTo", { email: draft.email }), {
+        description: fill("linkIs", { link: `/onboard/${instance.token}` }),
         action: {
-          label: "Copy link",
+          label: t("copyLink"),
           onClick: () =>
             navigator.clipboard?.writeText(
               `${window.location.origin}/onboard/${instance.token}`,
@@ -208,7 +213,7 @@ function StaffFormDialogBody({
         },
       });
     } else {
-      toast.success(`Staff created — ${draft.email} invited`);
+      toast.success(fill("createdInvited", { email: draft.email }));
     }
     onOpenChange(false);
   }
@@ -242,17 +247,13 @@ function StaffFormDialogBody({
       <DialogHeader className="bg-card/50 border-b px-6 py-4 backdrop-blur-sm">
         <DialogTitle className="text-lg">
           {editing
-            ? "Edit staff profile"
+            ? t("editTitle")
             : reviewing
-              ? "Review & send onboarding"
-              : "Add new staff"}
+              ? t("reviewTitle")
+              : t("addTitle")}
         </DialogTitle>
         <DialogDescription>
-          {editing
-            ? "Update role, services, and per-permission access."
-            : reviewing
-              ? "Confirm the details, then create the record and send the onboarding email."
-              : "Add the essentials. Access, notifications and payroll are set on the profile once they accept."}
+          {editing ? t("editHelp") : reviewing ? t("reviewHelp") : t("addHelp")}
         </DialogDescription>
       </DialogHeader>
 
@@ -346,7 +347,7 @@ function StaffFormDialogBody({
         {editing ? (
           <>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -354,7 +355,7 @@ function StaffFormDialogBody({
                 onOpenChange(false);
               }}
             >
-              Save changes
+              {t("saveChanges")}
             </Button>
           </>
         ) : reviewing ? (
@@ -365,7 +366,7 @@ function StaffFormDialogBody({
               onClick={() => setReviewing(false)}
             >
               <ArrowLeft className="size-4" />
-              Back
+              {t("back")}
             </Button>
             <Button
               className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -373,20 +374,20 @@ function StaffFormDialogBody({
               onClick={createAndSend}
             >
               <Send className="size-4" />
-              Create staff &amp; send onboarding email
+              {t("createAndSend")}
             </Button>
           </>
         ) : (
           <>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               className="gap-1.5"
               disabled={!profileValid}
               onClick={() => setReviewing(true)}
             >
-              Review &amp; send onboarding
+              {t("reviewAndSend")}
               <ArrowLeft className="size-4 rotate-180" />
             </Button>
           </>
@@ -411,9 +412,12 @@ function ReviewScreen({
   templateId: string;
   onTemplateChange: (id: string) => void;
 }) {
-  const fullName = `${draft.firstName} ${draft.lastName}`.trim() || "New hire";
+  const { t, fill } = useStaffText("form");
+  const roleLabel = useStaffRoleLabel();
+  const fullName =
+    `${draft.firstName} ${draft.lastName}`.trim() || t("newHire");
   const roleLabels = [draft.primaryRole, ...draft.additionalRoles]
-    .map((r) => ROLE_META[r]?.label ?? humanizeType(r))
+    .map((r) => roleLabel(r))
     .join(", ");
   const locationNames =
     FACILITY_LOCATIONS.filter((l) => draft.assignedLocations.includes(l.id))
@@ -423,13 +427,17 @@ function ReviewScreen({
   const stepCount = template?.employeeTasks.length ?? 0;
 
   const rows = [
-    { label: "Name", value: fullName },
-    { label: "Email", value: draft.email || "—" },
-    { label: "Role(s)", value: roleLabels || "—" },
-    { label: "Locations", value: locationNames },
-    { label: "Hire date", value: draft.employment.hireDate || "—" },
+    { label: t("rowName"), value: fullName },
+    { label: t("rowEmail"), value: draft.email || "—" },
+    { label: t("rowRoles"), value: roleLabels || "—" },
+    { label: t("rowLocations"), value: locationNames },
+    { label: t("rowHireDate"), value: draft.employment.hireDate || "—" },
     {
-      label: "Employment type",
+      label: t("rowEmploymentType"),
+      // humanizeType() is a regex over an English identifier — it capitalises
+      // and cannot translate. Left as-is here rather than half-fixed: the
+      // employment types have their own catalogue block in settings, and
+      // wiring this to it is its own change. Recorded in the debt map.
       value: humanizeType(draft.employment.employmentType),
     },
   ];
@@ -437,10 +445,7 @@ function ReviewScreen({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <SectionHeader
-          title="Review"
-          hint="Confirm the new hire's details before sending."
-        />
+        <SectionHeader title={t("reviewStep")} hint={t("reviewHint")} />
         <dl className="mt-3 divide-y rounded-lg border">
           {rows.map((r) => (
             <div
@@ -455,32 +460,44 @@ function ReviewScreen({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Onboarding template</Label>
+        <Label className="text-xs">{t("onboardingTemplate")}</Label>
         <Select value={templateId} onValueChange={onTemplateChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Select a template…" />
+            <SelectValue placeholder={t("selectTemplate")} />
           </SelectTrigger>
           <SelectContent>
-            {templates.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.name}
-                {t.status === "draft" ? " (draft)" : ""}
+            {templates.map((tpl) => (
+              <SelectItem key={tpl.id} value={tpl.id}>
+                {tpl.name}
+                {tpl.status === "draft" ? t("draftSuffix") : ""}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-muted-foreground text-[11px]">
-          Auto-selected by role · {stepCount} self-serve step
-          {stepCount === 1 ? "" : "s"}.
+          {fill(stepCount === 1 ? "autoSelectedOne" : "autoSelectedOther", {
+            count: stepCount,
+          })}
         </p>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Mail className="text-muted-foreground size-4" />
-          <span className="text-sm font-medium">Onboarding email preview</span>
+          <span className="text-sm font-medium">{t("emailPreview")}</span>
         </div>
+        {/* ── ENGLISH ON PURPOSE, AND SO IS WHAT IT PREVIEWS ──────────────
+            The subject and body are the actual email sent to the NEW HIRE, and
+            this component knows only the MANAGER's locale — so translating
+            them would post French to somebody who reads English. Third
+            instance of that shape in the staff area; the fix is server-side,
+            where the recipient's locale is known.
+
+            The preview must therefore stay English too. A preview showing
+            different words from the message it previews is worse than one in
+            the wrong language: it is a lie about what is about to be sent. */}
         <div className="text-muted-foreground bg-muted/40 rounded-t-lg border border-b-0 px-4 py-2 text-xs">
+          {/* french-ok: this previews the English email above it, verbatim */}
           <span>To:</span> {draft.email || "—"} · <span>Subject:</span> Welcome
           to the team — complete your onboarding
         </div>

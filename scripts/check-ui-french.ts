@@ -748,7 +748,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       10,
     ],
     ["src/app/facility/dashboard/staff/_components/staff-documents-tab.tsx", 9],
-    ["src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx", 22],
     [
       "src/app/facility/dashboard/staff/_components/staff-form-sections.tsx",
       56,
@@ -767,7 +766,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       "src/app/facility/dashboard/staff/_components/warning-template-builder.tsx",
       36,
     ],
-    ["src/app/facility/dashboard/staff/performance/page.tsx", 19],
     ["src/components/employee/EmployeeDashboard.tsx", 13],
     ["src/components/facility/DepartmentSettings.tsx", 6],
     ["src/components/facility/StaffPreviewDialog.tsx", 2],
