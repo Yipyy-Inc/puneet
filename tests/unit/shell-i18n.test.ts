@@ -42,6 +42,11 @@ const SAME_IN_BOTH = new Set([
   "primitives.actions", // Actions / Actions
   "support.descriptionLabel", // Description / Description
   "customer.notifications", // Notifications / Notifications
+  "booking.service", // Service / Service
+  "booking.standard", // Standard / Standard
+  // Placeholders and a separator, with no words of its own — identical by
+  // construction rather than by oversight.
+  "booking.clientAndPets", // {client} · {pets}
   // Two of the six tag-colour names are the same word in French. Both are
   // spelled identically and mean the same thing; changing either to make this
   // list shorter would make the French wrong.

@@ -1,5 +1,7 @@
 "use client";
 
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 import React, {
   useState,
   useMemo,
@@ -277,6 +279,10 @@ export function BookingModal({
   editMode = false,
   passRedemption,
 }: NewBookingModalProps) {
+  // This modal is reached from THREE shells — customer, facility and employee —
+  // so its words live in `shell.booking` rather than in any one portal group.
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const {
     daycare,
     boarding,
@@ -1469,18 +1475,20 @@ export function BookingModal({
           const fmtDelta = (d: number) =>
             `${d > 0 ? "+" : "-"}$${Math.abs(d).toFixed(2)}`;
           if (pricing.source === "pet-custom") {
-            lines.push(`Saved pricing for ${pet.name}`);
+            lines.push(t("savedPricingFor").replace("{pet}", pet.name));
           } else if (pricing.source === "breed-override") {
-            lines.push(`${pet.breed} breed pricing`);
+            lines.push(t("breedPricing").replace("{breed}", pet.breed ?? ""));
           } else if (pricing.source === "stylist-specific") {
-            lines.push(`Stylist-specific pricing`);
+            lines.push(t("stylistPricing"));
           } else {
             // service-default path: surface any deltas layered on top of size.
             const size = getPetSize(pet);
-            if (size) lines.push(`${size} size`);
+            if (size) lines.push(t("sizePricing").replace("{size}", size));
             if (pricing.coatAdjustment?.delta) {
               lines.push(
-                `Coat: ${pricing.coatAdjustment.coatType} ${fmtDelta(pricing.coatAdjustment.delta)}`,
+                t("coatAdjustment")
+                  .replace("{coat}", pricing.coatAdjustment.coatType)
+                  .replace("{delta}", fmtDelta(pricing.coatAdjustment.delta)),
               );
             }
             if (pricing.ageAdjustment?.delta) {
@@ -1493,7 +1501,9 @@ export function BookingModal({
           // resolved service price) — surface it whenever it fired.
           if (pricing.tierAdjustment?.delta) {
             lines.push(
-              `${pricing.tierAdjustment.tier} groomer tier ${fmtDelta(pricing.tierAdjustment.delta)}`,
+              t("groomerTier")
+                .replace("{tier}", pricing.tierAdjustment.tier)
+                .replace("{delta}", fmtDelta(pricing.tierAdjustment.delta)),
             );
           }
           if (lines.length > 0) {
@@ -1696,7 +1706,9 @@ export function BookingModal({
       const evalCount = Math.max(petsNeedingEval.length, 1);
       evaluationFeeTotal = evaluationConfig.price * evalCount;
       serviceFeeItems.push({
-        label: `${evaluationConfig.internalName ?? "Evaluation"} Fee (×${evalCount})`,
+        label: t("evaluationFee")
+          .replace("{name}", evaluationConfig.internalName ?? t("evaluation"))
+          .replace("{count}", String(evalCount)),
         amount: evaluationFeeTotal,
       });
     }
@@ -1737,7 +1749,10 @@ export function BookingModal({
         subtotal += zoneBreakdown.zoneSurcharge;
         adjustments.push({
           id: "travel_zone",
-          label: `Travel surcharge · ${zoneBreakdown.zone.label}`,
+          label: t("travelSurcharge").replace(
+            "{zone}",
+            zoneBreakdown.zone.label,
+          ),
           amount: zoneBreakdown.zoneSurcharge,
           source: "custom_fee",
         });
@@ -2292,7 +2307,10 @@ export function BookingModal({
         });
         // Show confirmation message
         alert(
-          `Evaluation bookings have been created for: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}. The main booking will be created after evaluations are completed.`,
+          t("evaluationsCreated").replace(
+            "{pets}",
+            petsNeedingEvaluation.map((pet) => pet.name).join(", "),
+          ),
         );
         // Still create the main booking - evaluations can be completed later
       }
@@ -2465,7 +2483,7 @@ export function BookingModal({
         packageId: serviceType,
         customPrice: groomingManualPrice,
         customDurationMin: groomingManualDuration,
-        note: `Saved from booking on ${startDate || "today"}.`,
+        note: t("savedFromBooking").replace("{date}", startDate || t("today")),
         createdBy: "facility-staff",
       });
     }
@@ -2550,20 +2568,18 @@ export function BookingModal({
           .onRedeem({ petId: primaryPetId, petName: primaryPet?.name })
           .then((result) => {
             if (result.ok) {
-              toast.success("Booking confirmed", {
-                description: `1 ${category} pass used. ${result.passesLeft} pass${
-                  result.passesLeft === 1 ? "" : "es"
-                } remaining.`,
+              toast.success(t("bookingConfirmed"), {
+                description: t("passUsed")
+                  .replace("{category}", category)
+                  .replace("{left}", String(result.passesLeft)),
               });
               return;
             }
             // Previously silent. A redemption that fails after the booking is
             // made means a visit nobody has paid for, and the customer is the
             // only person who can see both facts.
-            toast.error("The pass was not applied", {
-              description:
-                result.error ??
-                "Your booking is confirmed, but no pass was used.",
+            toast.error(t("passNotApplied"), {
+              description: result.error ?? t("passNotAppliedHelp"),
             });
           });
       }
@@ -2586,8 +2602,8 @@ export function BookingModal({
           : notificationEmail
             ? "email"
             : "SMS";
-      toast.success("Booking confirmation sent", {
-        description: `${channel} with date, time, address, and care instructions.`,
+      toast.success(t("confirmationSent"), {
+        description: t("confirmationSentHelp").replace("{channel}", channel),
       });
     }
 
@@ -2603,8 +2619,11 @@ export function BookingModal({
         reminderToggle.push && "push",
       ].filter(Boolean);
       if (channels.length > 0) {
-        toast.success("Reminder scheduled", {
-          description: `24h before the appointment via ${channels.join(" + ")}.`,
+        toast.success(t("reminderScheduled"), {
+          description: t("reminderScheduledHelp").replace(
+            "{channels}",
+            channels.join(" + "),
+          ),
         });
       }
     }
@@ -2620,9 +2639,18 @@ export function BookingModal({
         0,
         calculatePrice.total - depositPrompt.amount,
       );
-      toast.success(`Deposit of $${depositPrompt.amount.toFixed(2)} applied`, {
-        description: `Invoice updated · $${remaining.toFixed(2)} remaining.`,
-      });
+      toast.success(
+        t("depositApplied").replace(
+          "{amount}",
+          formatMoney(depositPrompt.amount, locale),
+        ),
+        {
+          description: t("depositAppliedHelp").replace(
+            "{remaining}",
+            formatMoney(remaining, locale),
+          ),
+        },
+      );
     }
 
     if (expressCheckInEnabled) {
@@ -2633,17 +2661,22 @@ export function BookingModal({
             ? "email"
             : selectedClient?.phone
               ? "SMS"
-              : "the client's contact on file";
+              : t("contactOnFile");
       // Lead time is configured per facility (Yipyy Go → Timing & Reminders →
       // "Initial send time") and comes from `facility_settings` with the rest
       // of the setup. It used to be a lazy `require` of the fixture, resolved
       // against a module-level array no save had ever reached — so this toast
       // quoted a seed file's lead time back at whoever sent the form.
       const sendBefore = yipyyGoConfig.timing.initialSendTime;
-      toast.success("Express Check-In form sent", {
-        description: `Heading to ${channel}${
-          sendBefore ? ` · ${sendBefore}h before the appointment` : ""
-        }.`,
+      toast.success(t("expressSent"), {
+        description: t("expressSentHelp")
+          .replace("{channel}", channel)
+          .replace(
+            "{lead}",
+            sendBefore
+              ? t("expressLead").replace("{hours}", String(sendBefore))
+              : "",
+          ),
       });
     }
     if (redeemedPackageId) {
@@ -2651,10 +2684,11 @@ export function BookingModal({
         (p) => p.id === redeemedPackageId,
       );
       if (legacyPkg) {
-        toast.success(`Redeemed 1 session from ${legacyPkg.name}`, {
-          description: `${Math.max(0, legacyPkg.remainingCredits - 1)} session${
-            Math.max(0, legacyPkg.remainingCredits - 1) === 1 ? "" : "s"
-          } remaining.`,
+        toast.success(t("sessionRedeemed").replace("{name}", legacyPkg.name), {
+          description: t("sessionsRemaining").replace(
+            "{count}",
+            String(Math.max(0, legacyPkg.remainingCredits - 1)),
+          ),
         });
       } else {
         const prepaid = customerPackagesData.find(
@@ -2694,14 +2728,18 @@ export function BookingModal({
                     { passesLeft, pool },
                     { petName: primaryPet?.name },
                   );
-                  toast.success(`Redeemed 1 pass from ${packageName}`, {
-                    description: `${passesLeft} pass${
-                      passesLeft === 1 ? "" : "es"
-                    } remaining.`,
-                  });
+                  toast.success(
+                    t("passRedeemed").replace("{name}", packageName),
+                    {
+                      description: t("passesRemaining").replace(
+                        "{count}",
+                        String(passesLeft),
+                      ),
+                    },
+                  );
                 },
                 onError: (error: Error) => {
-                  toast.error("The pass was not redeemed", {
+                  toast.error(t("passNotRedeemed"), {
                     description: error.message,
                   });
                 },
@@ -2827,7 +2865,10 @@ export function BookingModal({
           bookingId: booking.id,
           petId,
           type: "feeding",
-          title: `Feed ${feed.occasions?.[0]?.label || "Feeding"}`,
+          title: t("taskFeed").replace(
+            "{occasion}",
+            feed.occasions?.[0]?.label || t("taskFeeding"),
+          ),
           time: feed.occasions?.[0]?.time || "",
           details: feed.prepInstructions?.join(", ") || "",
           assignedStaff: taskAssignments[`feed-${feed.id}`] || undefined,
@@ -2849,7 +2890,7 @@ export function BookingModal({
             bookingId: booking.id,
             petId,
             type: "medication",
-            title: `Give ${med.name}`,
+            title: t("taskGive").replace("{medication}", med.name),
             time,
             details: med.adminInstructions?.join(", ") || "",
             assignedStaff:
@@ -2876,9 +2917,9 @@ export function BookingModal({
             bookingId: booking.id,
             petId: petId,
             type: "service",
-            title: `Perform ${service}`,
+            title: t("taskPerform").replace("{service}", service),
             time: null,
-            details: "Extra service",
+            details: t("extraService"),
             assignedStaff:
               taskAssignments[`service-${service}-${petId}-${index}`] ||
               undefined,
@@ -2894,9 +2935,15 @@ export function BookingModal({
             bookingId: booking.id,
             petId: service.petId,
             type: "service",
-            title: `Perform ${service.serviceId} service`,
+            title: t("taskPerformService").replace(
+              "{service}",
+              service.serviceId,
+            ),
             time: null,
-            details: `Quantity: ${service.quantity}`,
+            details: t("taskQuantity").replace(
+              "{count}",
+              String(service.quantity),
+            ),
             assignedStaff:
               taskAssignments[
                 `service-${service.serviceId}-${service.petId}`
@@ -2930,7 +2977,10 @@ export function BookingModal({
     }
 
     return taskList;
-  }, [booking, taskAssignments]);
+    // `t` is in the deps because the memo BUILDS the task titles. Left out,
+    // it holds the pre-hydration English forever — which is what
+    // `check:frozen-translator` caught here, on the change that introduced it.
+  }, [booking, taskAssignments, t]);
 
   if (isViewMode && booking) {
     const client = clients.find((c) => c.id === booking.clientId);
@@ -2973,7 +3023,7 @@ export function BookingModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex h-[85vh] w-[90vw] flex-col overflow-hidden p-0 sm:max-w-4xl">
-          <DialogTitle className="sr-only">Booking Details</DialogTitle>
+          <DialogTitle className="sr-only">{t("bookingDetails")}</DialogTitle>
           <div className="border-b p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -2990,7 +3040,7 @@ export function BookingModal({
 
           <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="mx-6 mt-4 grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="details">{t("details")}</TabsTrigger>
               <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
             </TabsList>
 
@@ -2999,29 +3049,33 @@ export function BookingModal({
                 {/* Basic Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
+                    <CardTitle>{t("basicInformation")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-medium">Service</label>
+                        <label className="text-sm font-medium">
+                          {t("service")}
+                        </label>
                         <p className="capitalize">{booking.service}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium">
-                          Service Type
+                          {t("serviceType")}
                         </label>
                         <p>{booking.serviceType || "N/A"}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Status</label>
+                        <label className="text-sm font-medium">
+                          {t("status")}
+                        </label>
                         <Badge variant="outline" className="capitalize">
                           {booking.status}
                         </Badge>
                       </div>
                       <div>
                         <label className="text-sm font-medium">
-                          Payment Status
+                          {t("paymentStatus")}
                         </label>
                         <Badge variant="outline" className="capitalize">
                           {booking.paymentStatus}
@@ -3040,20 +3094,26 @@ export function BookingModal({
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium">
-                          Start Date
+                          {t("startDate")}
                         </label>
                         <p>{booking.startDate}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">End Date</label>
+                        <label className="text-sm font-medium">
+                          {t("endDate")}
+                        </label>
                         <p>{booking.endDate}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Check In</label>
+                        <label className="text-sm font-medium">
+                          {t("checkIn")}
+                        </label>
                         <p>{booking.checkInTime || "N/A"}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium">Check Out</label>
+                        <label className="text-sm font-medium">
+                          {t("checkOut")}
+                        </label>
                         <p>{booking.checkOutTime || "N/A"}</p>
                       </div>
                     </div>
@@ -3063,25 +3123,29 @@ export function BookingModal({
                 {/* Pricing */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Pricing</CardTitle>
+                    <CardTitle>{t("pricing")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm font-medium">
-                          Base Price
+                          {t("basePrice")}
                         </label>
-                        <p>${booking.basePrice}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">Discount</label>
-                        <p>${booking.discount}</p>
+                        <p>{formatMoney(booking.basePrice, locale)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium">
-                          Total Cost
+                          {t("discount")}
                         </label>
-                        <p className="font-semibold">${booking.totalCost}</p>
+                        <p>{formatMoney(booking.discount, locale)}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          {t("totalCost")}
+                        </label>
+                        <p className="font-semibold">
+                          {formatMoney(booking.totalCost, locale)}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -3092,21 +3156,21 @@ export function BookingModal({
                   booking.service === "evaluation") && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Evaluation</CardTitle>
+                      <CardTitle>{t("evaluation")}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {!latestEvaluation ? (
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground text-sm">
-                            No evaluation result
+                            {t("noEvaluationResult")}
                           </span>
-                          <Badge variant="destructive">Missing</Badge>
+                          <Badge variant="destructive">{t("missing")}</Badge>
                         </div>
                       ) : (
                         <>
                           <div className="flex items-center justify-between">
                             <div className="text-muted-foreground text-sm">
-                              Latest outcome
+                              {t("latestOutcome")}
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge
@@ -3127,7 +3191,7 @@ export function BookingModal({
                                     evalExpired ? "destructive" : "secondary"
                                   }
                                 >
-                                  {evalExpired ? "Expired" : "Valid"}
+                                  {evalExpired ? t("expired") : t("valid")}
                                 </Badge>
                               )}
                             </div>
@@ -3138,13 +3202,13 @@ export function BookingModal({
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
                                 <div className="text-muted-foreground">
-                                  Evaluated at
+                                  {t("evaluatedAt")}
                                 </div>
                                 <div>{latestEvaluation.evaluatedAt || "—"}</div>
                               </div>
                               <div>
                                 <div className="text-muted-foreground">
-                                  Evaluator
+                                  {t("evaluator")}
                                 </div>
                                 <div>{latestEvaluation.evaluatedBy || "—"}</div>
                               </div>
@@ -3168,10 +3232,9 @@ export function BookingModal({
                         booking.status === "completed" &&
                         !evalCompleted && (
                           <Alert variant="destructive">
-                            <AlertTitle>Evaluation result missing</AlertTitle>
+                            <AlertTitle>{t("evaluationMissing")}</AlertTitle>
                             <AlertDescription>
-                              Evaluation is required but has not been completed
-                              before checkout.
+                              {t("evaluationMissingHelp")}
                             </AlertDescription>
                           </Alert>
                         )}
@@ -3180,10 +3243,9 @@ export function BookingModal({
                           evalExpired ||
                           evalOutcome === "MISSING") && (
                           <Alert variant="destructive">
-                            <AlertTitle>Services locked</AlertTitle>
+                            <AlertTitle>{t("servicesLocked")}</AlertTitle>
                             <AlertDescription>
-                              Customer must book a new evaluation to unlock
-                              services.
+                              {t("servicesLockedHelp")}
                             </AlertDescription>
                           </Alert>
                         )}
@@ -3195,19 +3257,21 @@ export function BookingModal({
                 {booking.service === "boarding" && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Boarding Details</CardTitle>
+                      <CardTitle>{t("boardingDetails")}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {booking.kennel && (
                         <div>
-                          <label className="text-sm font-medium">Kennel</label>
+                          <label className="text-sm font-medium">
+                            {t("kennel")}
+                          </label>
                           <p>{booking.kennel}</p>
                         </div>
                       )}
                       {booking.walkSchedule && (
                         <div>
                           <label className="text-sm font-medium">
-                            Walk Schedule
+                            {t("walkSchedule")}
                           </label>
                           <p>{booking.walkSchedule}</p>
                         </div>
@@ -3220,12 +3284,12 @@ export function BookingModal({
                   booking.daycareSelectedDates && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Daycare Details</CardTitle>
+                        <CardTitle>{t("daycareDetails")}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div>
                           <label className="text-sm font-medium">
-                            Selected Dates
+                            {t("selectedDates")}
                           </label>
                           <div className="mt-1 flex flex-wrap gap-2">
                             {booking.daycareSelectedDates.map((date) => (
@@ -3242,7 +3306,7 @@ export function BookingModal({
                 {booking.specialRequests && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Special Requests</CardTitle>
+                      <CardTitle>{t("specialRequests")}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p>{booking.specialRequests}</p>
@@ -3258,9 +3322,11 @@ export function BookingModal({
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">
                       <Check className="text-muted-foreground/50 mb-4 size-16" />
-                      <h3 className="mb-2 text-lg font-semibold">No Tasks</h3>
+                      <h3 className="mb-2 text-lg font-semibold">
+                        {t("noTasks")}
+                      </h3>
                       <p className="text-muted-foreground text-center">
-                        This booking does not have any scheduled tasks.
+                        {t("noTasksHelp")}
                       </p>
                     </CardContent>
                   </Card>
@@ -3301,20 +3367,20 @@ export function BookingModal({
                                 </div>
                                 {task.assignedStaff && (
                                   <Badge variant="outline" className="text-xs">
-                                    Assigned: {task.assignedStaff}
+                                    {t("assigned")} {task.assignedStaff}
                                   </Badge>
                                 )}
                               </div>
                               {task.time && (
                                 <p className="text-muted-foreground mb-1 text-sm">
-                                  Time: {task.time}
+                                  {t("time")} {task.time}
                                 </p>
                               )}
                               <p className="mb-2 text-sm">{task.details}</p>
                               {task.assignable && (
                                 <div className="flex items-center gap-2">
                                   <label className="text-sm font-medium">
-                                    Assign to:
+                                    {t("assignTo")}
                                   </label>
                                   <Select
                                     value={task.assignedStaff || ""}
@@ -3326,7 +3392,9 @@ export function BookingModal({
                                     }
                                   >
                                     <SelectTrigger className="w-48">
-                                      <SelectValue placeholder="Select staff" />
+                                      <SelectValue
+                                        placeholder={t("selectStaff")}
+                                      />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {staffOptions.map((staff) => (
@@ -3371,10 +3439,10 @@ export function BookingModal({
       <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px] [&>button]:hidden">
         <DialogTitle className="sr-only">
           {editMode
-            ? "Edit Booking"
+            ? t("editBooking")
             : isEstimateMode
-              ? "New Estimate"
-              : "New Booking"}
+              ? t("newEstimate")
+              : t("newBooking")}
         </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
@@ -3384,7 +3452,7 @@ export function BookingModal({
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Plus className="size-5" />
                 {editMode
-                  ? "Edit Booking"
+                  ? t("editBooking")
                   : (() => {
                       const preSelectedClient = clients.find(
                         (c) => c.id === preSelectedClientId,
@@ -3393,21 +3461,29 @@ export function BookingModal({
                         (p) => p.id === preSelectedPetId,
                       );
                       if (preSelectedPet) {
-                        return `Book ${preSelectedPet.name}`;
+                        return t("bookPet").replace(
+                          "{pet}",
+                          preSelectedPet.name,
+                        );
                       } else if (preSelectedClient) {
-                        return `Book for ${preSelectedClient.name}`;
+                        return t("bookFor").replace(
+                          "{name}",
+                          preSelectedClient.name,
+                        );
                       } else if (selectedService === "daycare") {
                         return daycare.clientFacingName;
                       } else if (selectedService === "boarding") {
                         return boarding.clientFacingName;
                       } else {
-                        return isEstimateMode ? "New Estimate" : "New Booking";
+                        return isEstimateMode
+                          ? t("newEstimate")
+                          : t("newBooking");
                       }
                     })()}
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
                 {editMode
-                  ? "Update dates, room, and add-ons"
+                  ? t("updateDatesHelp")
                   : (() => {
                       const preSelectedClient = clients.find(
                         (c) => c.id === preSelectedClientId,
@@ -3416,15 +3492,21 @@ export function BookingModal({
                         (p) => p.id === preSelectedPetId,
                       );
                       if (preSelectedPet) {
-                        return `Create a new booking for ${preSelectedPet.name}`;
+                        return t("createBookingFor").replace(
+                          "{name}",
+                          preSelectedPet.name,
+                        );
                       } else if (preSelectedClient) {
-                        return `Create a new booking for ${preSelectedClient.name}`;
+                        return t("createBookingFor").replace(
+                          "{name}",
+                          preSelectedClient.name,
+                        );
                       } else if (selectedService === "daycare") {
                         return daycare.slogan;
                       } else if (selectedService === "boarding") {
                         return boarding.slogan;
                       } else {
-                        return "Create a new booking for your facility";
+                        return t("createForFacility");
                       }
                     })()}
               </p>
@@ -3433,7 +3515,9 @@ export function BookingModal({
             <div className="shrink-0 border-b px-4 py-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-                  Step {currentStep + 1} of {displayedSteps.length}
+                  {t("stepOf")
+                    .replace("{step}", String(currentStep + 1))
+                    .replace("{total}", String(displayedSteps.length))}
                 </span>
                 <span className="text-muted-foreground text-[10px]">
                   {Math.round(
@@ -3484,7 +3568,10 @@ export function BookingModal({
                       selectedService === "daycare" &&
                       daycareSelectedDates.length > 0
                     )
-                      return `${daycareSelectedDates.length} day${daycareSelectedDates.length !== 1 ? "s" : ""} scheduled`;
+                      return t("daysScheduled").replace(
+                        "{count}",
+                        String(daycareSelectedDates.length),
+                      );
                     if (
                       selectedService === "boarding" &&
                       boardingRangeStart &&
@@ -3520,14 +3607,18 @@ export function BookingModal({
                           selectedService.slice(1)
                       );
                     if (step.id === "client-pet" && selectedClient)
-                      return `${selectedClient.name}${petSummary ? ` · ${petSummary}` : ""}`;
+                      return petSummary
+                        ? t("clientAndPets")
+                            .replace("{client}", selectedClient.name)
+                            .replace("{pets}", petSummary)
+                        : selectedClient.name;
                     if (step.id === "details" && detailsDesc)
                       return detailsDesc;
                     // #3 — Confirm shows action text, not price (price is in footer)
                     if (step.id === "confirm")
                       return isEstimateMode
-                        ? "Review & send"
-                        : "Review & create";
+                        ? t("reviewAndSend")
+                        : t("reviewAndCreate");
                     return step.description;
                   })();
 
@@ -3652,9 +3743,20 @@ export function BookingModal({
                                 subStep.id === 1 &&
                                 roomAssignments.length > 0
                               )
-                                return `${roomAssignments.length} pet${roomAssignments.length !== 1 ? "s" : ""} assigned`;
+                                return t("petsAssigned").replace(
+                                  "{count}",
+                                  String(roomAssignments.length),
+                                );
                               if (subStep.id === 2 && extraServices.length > 0)
-                                return `${extraServices.reduce((s, e) => s + e.quantity, 0)} add-on${extraServices.reduce((s, e) => s + e.quantity, 0) !== 1 ? "s" : ""}`;
+                                return t("addOns").replace(
+                                  "{count}",
+                                  String(
+                                    extraServices.reduce(
+                                      (n, e) => n + e.quantity,
+                                      0,
+                                    ),
+                                  ),
+                                );
                               if (subStep.id === 3) {
                                 const parts = [
                                   feedingSchedule.length > 0 &&
@@ -3940,11 +4042,10 @@ export function BookingModal({
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-amber-900">
-                              Include Evaluation
+                              {t("includeEvaluation")}
                             </p>
                             <p className="text-[11px] text-amber-700">
-                              Schedule a pet evaluation on the first day of this
-                              booking
+                              {t("includeEvaluationHelp")}
                             </p>
                           </div>
                         </div>
@@ -4024,15 +4125,18 @@ export function BookingModal({
                       </div>
                       <h3 className="mt-4 text-lg font-bold text-slate-800">
                         {passRedemption
-                          ? "Booking Confirmed!"
-                          : "Booking Request Received!"}
+                          ? t("bookingConfirmedTitle")
+                          : t("requestReceived")}
                       </h3>
                       <p className="text-muted-foreground mt-3 max-w-sm text-sm/relaxed">
                         {passRedemption
-                          ? `Your ${passRedemption.serviceLabel} booking is confirmed and 1 pass has been applied — no payment needed.`
+                          ? t("confirmedWithPass").replace(
+                              "{service}",
+                              passRedemption.serviceLabel,
+                            )
                           : bookingRequestMessage ||
                             bookingFlow.bookingRequestConfirmationMessage ||
-                            "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
+                            t("confirmedPending")}
                       </p>
                       <Button
                         className="mt-6"
@@ -4041,7 +4145,7 @@ export function BookingModal({
                           onOpenChange(false);
                         }}
                       >
-                        Done
+                        {t("done")}
                       </Button>
                     </div>
                   )}
@@ -4058,7 +4162,7 @@ export function BookingModal({
                               <Check className="size-7 text-emerald-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-bold text-slate-800">
-                              Estimate Sent!
+                              {t("estimateSent")}
                             </h3>
                             {generatedEstimateId && (
                               <Badge
@@ -4069,22 +4173,21 @@ export function BookingModal({
                               </Badge>
                             )}
                             <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                              The estimate has been sent to{" "}
-                              <span className="font-medium text-slate-700">
-                                {isGuestEstimate
+                              {t("estimateSentTo").replace(
+                                "{who}",
+                                (isGuestEstimate
                                   ? guestEmail ||
                                     guestName ||
-                                    "the inquiry contact"
-                                  : selectedClient?.name}
-                              </span>
-                              .
+                                    t("inquiryContact")
+                                  : selectedClient?.name) ?? "",
+                              )}
                             </p>
                             <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
                               <p className="text-xl font-bold text-emerald-800 tabular-nums">
-                                ${calculatePrice.total.toFixed(2)}
+                                {formatMoney(calculatePrice.total, locale)}
                               </p>
                               <p className="text-xs text-emerald-600">
-                                Estimated total
+                                {t("estimatedTotal")}
                               </p>
                             </div>
                             <Button
@@ -4094,7 +4197,7 @@ export function BookingModal({
                                 onOpenChange(false);
                               }}
                             >
-                              Done
+                              {t("done")}
                             </Button>
                           </>
                         ) : (
@@ -4103,7 +4206,7 @@ export function BookingModal({
                               <Check className="size-7 text-blue-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-bold text-slate-800">
-                              Estimate Created
+                              {t("estimateCreated")}
                             </h3>
                             {generatedEstimateId && (
                               <Badge
@@ -4114,25 +4217,28 @@ export function BookingModal({
                               </Badge>
                             )}
                             <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                              Estimate for{" "}
-                              <span className="font-medium text-slate-700">
-                                {isGuestEstimate
-                                  ? guestName || guestEmail || "New Inquiry"
-                                  : selectedClient?.name}
-                              </span>{" "}
+                              {t("estimateFor").replace(
+                                "{name}",
+                                (isGuestEstimate
+                                  ? guestName || guestEmail || t("newInquiry")
+                                  : selectedClient?.name) ?? "",
+                              )}{" "}
                               —{" "}
                               {isGuestEstimate
                                 ? guestPetSummary.length > 0
                                   ? guestPetSummary.join(", ")
-                                  : "No pets added"
-                                : selectedPets.map((p) => p.name).join(", ")}
+                                  : t("noPetsAdded")
+                                : selectedPets
+                                    .map((pet) => pet.name)
+                                    .join(", ")}
                             </p>
                             <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
                               <p className="text-xl font-bold tabular-nums">
-                                ${calculatePrice.total.toFixed(2)}
+                                {formatMoney(calculatePrice.total, locale)}
                               </p>
                               <p className="text-muted-foreground text-xs">
-                                {selectedService} · {serviceType || "Standard"}
+                                {selectedService} ·{" "}
+                                {serviceType || t("standard")}
                               </p>
                             </div>
                             <div className="mt-6 flex gap-3">
@@ -4143,7 +4249,7 @@ export function BookingModal({
                                   onOpenChange(false);
                                 }}
                               >
-                                Save as Draft
+                                {t("saveAsDraft")}
                               </Button>
                               <Button
                                 className="gap-1.5"
@@ -4162,7 +4268,7 @@ export function BookingModal({
                                     d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
                                   />
                                 </svg>
-                                Send to Customer
+                                {t("sendToCustomer")}
                               </Button>
                             </div>
                           </>
@@ -4260,7 +4366,7 @@ export function BookingModal({
                     onClick={handlePrevious}
                     disabled={currentStep === 0}
                   >
-                    Previous
+                    {t("previous")}
                   </Button>
                   <div className="flex gap-2">
                     <Button
@@ -4275,7 +4381,7 @@ export function BookingModal({
                         }
                       }}
                     >
-                      Cancel
+                      {t("cancel")}
                     </Button>
                     {currentStep < displayedSteps.length - 1 ||
                     showingTipStep ||
@@ -4291,10 +4397,10 @@ export function BookingModal({
                         }
                       >
                         {showingPackagePromptStep
-                          ? "Skip"
+                          ? t("skip")
                           : showingTipStep
-                            ? "Continue to Review"
-                            : "Next"}
+                            ? t("continueToReview")
+                            : t("next")}
                       </Button>
                     ) : (
                       <Button
@@ -4308,14 +4414,14 @@ export function BookingModal({
                         }
                       >
                         {editMode
-                          ? "Save Changes"
+                          ? t("saveChanges")
                           : isEstimateMode
-                            ? "Create Estimate"
+                            ? t("createEstimate")
                             : isCustomerMode
-                              ? "Request Booking"
+                              ? t("requestBooking")
                               : approvalRequired
-                                ? "Submit Request"
-                                : "Create Booking"}
+                                ? t("submitRequest")
+                                : t("createBooking")}
                       </Button>
                     )}
                   </div>
@@ -4331,17 +4437,18 @@ export function BookingModal({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {editMode
-                ? "Discard changes?"
-                : `Discard this ${isEstimateMode ? "estimate" : "booking"}?`}
+                ? t("discardChangesTitle")
+                : t("discardTitle").replace(
+                    "{what}",
+                    isEstimateMode ? t("estimate") : t("booking"),
+                  )}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {editMode
-                ? "All unsaved changes will be lost."
-                : "All information you've entered will be lost. This action cannot be undone."}
+              {editMode ? t("discardHelp") : t("discardAllHelp")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Continue editing</AlertDialogCancel>
+            <AlertDialogCancel>{t("continueEditing")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -4350,8 +4457,11 @@ export function BookingModal({
               }}
             >
               {editMode
-                ? "Discard changes"
-                : `Discard ${isEstimateMode ? "estimate" : "booking"}`}
+                ? t("discardChanges")
+                : t("discardWhat").replace(
+                    "{what}",
+                    isEstimateMode ? t("estimateBare") : t("bookingBare"),
+                  )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
