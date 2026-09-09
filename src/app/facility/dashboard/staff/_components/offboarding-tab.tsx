@@ -50,14 +50,32 @@ import {
   notifyStaffLifecycle,
   maybeAnnounceOffboardingComplete,
 } from "@/lib/staff-notifications";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
-const ASSIGNEE_LABEL: Record<string, string> = {
-  manager: "Manager",
-  owner: "Owner",
-  hr: "HR",
+const ASSIGNEE_KEY: Record<string, string> = {
+  manager: "assigneeManager",
+  owner: "assigneeOwner",
+  hr: "assigneeHr",
 };
 
-const DOC_KIND_LABEL: Record<OffboardingDocumentKind, string> = {
+const DOC_KIND_KEY: Record<OffboardingDocumentKind, string> = {
+  roe: "docRoe",
+  termination_letter: "docTerminationLetter",
+  settlement_agreement: "docSettlementAgreement",
+  other: "docOther",
+};
+
+/**
+ * The English a document kind used to carry, for the ONE place that must not
+ * be translated: the notification body sent to the departing employee.
+ *
+ * That message is read by THEM, in THEIR language, and this component only
+ * knows the manager's. Translating it here would send French to an employee
+ * who reads English — a worse defect than the English it replaced. Recorded in
+ * the debt map; the fix is server-side, where the recipient's locale is known.
+ */
+const DOC_KIND_EN: Record<OffboardingDocumentKind, string> = {
   roe: "Record of Employment (ROE)",
   termination_letter: "Termination letter",
   settlement_agreement: "Settlement agreement",
@@ -65,6 +83,7 @@ const DOC_KIND_LABEL: Record<OffboardingDocumentKind, string> = {
 };
 
 export function OffboardingTab({ staff }: { staff: StaffProfile }) {
+  const { t, fill, locale } = useStaffText("offboarding");
   const instance = useOffboardingInstance(staff.id);
   const config = useStaffHrConfig();
   const { mutate: startOffboarding, isPending: starting } =
@@ -81,10 +100,9 @@ export function OffboardingTab({ staff }: { staff: StaffProfile }) {
     return (
       <div className="border-border/60 flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center">
         <UserX className="text-muted-foreground/50 size-7" />
-        <p className="text-sm font-semibold">No offboarding record</p>
+        <p className="text-sm font-semibold">{t("noRecord")}</p>
         <p className="text-muted-foreground max-w-xs text-xs">
-          This employee was terminated without an offboarding checklist. Start
-          one to track final tasks and documents.
+          {t("noRecordHelp")}
         </p>
         <Button
           size="sm"
@@ -94,22 +112,24 @@ export function OffboardingTab({ staff }: { staff: StaffProfile }) {
             startOffboarding(
               {
                 staffId: staff.id,
+                // A WRITE, not a label: the reason STORED on the offboarding
+                // record, read back later by whoever opens it in either
+                // language. It must not vary with the locale of the manager
+                // who happened to start the departure.
+                // french-ok: stored value, not rendered copy
                 reason: staff.statusReason ?? "Terminated",
               },
               {
-                onSuccess: () => toast.success("Offboarding started"),
+                onSuccess: () => toast.success(t("started")),
                 onError: (error) =>
                   toast.error(
-                    error instanceof Error
-                      ? error.message
-                      : "Could not start offboarding.",
+                    error instanceof Error ? error.message : t("startFailed"),
                   ),
               },
             );
           }}
         >
-          <Plus className="size-3.5" />{" "}
-          {starting ? "Starting…" : "Start offboarding"}
+          <Plus className="size-3.5" /> {starting ? t("starting") : t("start")}
         </Button>
       </div>
     );
@@ -126,34 +146,38 @@ export function OffboardingTab({ staff }: { staff: StaffProfile }) {
       <div className="border-border/60 bg-card/60 rounded-xl border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm">
-            <span className="font-semibold">Offboarding:</span>{" "}
+            <span className="font-semibold">{t("progressLabel")}</span>{" "}
             <span className="text-muted-foreground">
-              {done} of {tasks.length} task{tasks.length === 1 ? "" : "s"}{" "}
-              complete
+              {fill(tasks.length === 1 ? "progressOne" : "progressOther", {
+                done,
+                total: tasks.length,
+              })}
             </span>
           </div>
           {allComplete && (
             <Badge className="border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-              <ShieldCheck className="mr-1 size-3.5" /> Offboarding complete
+              <ShieldCheck className="mr-1 size-3.5" /> {t("complete")}
             </Badge>
           )}
         </div>
         <Progress value={pct} className="mt-2 h-2" />
         <p className="text-muted-foreground mt-2 text-[11px]">
-          Started{" "}
-          {new Date(instance.startedAt).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
+          {/* `reason` is NOT translated: §5q — a facility's own termination
+              reasons are editable data (StaffHrConfig.terminationReasons), and
+              a name somebody typed never passes through the locale layer. The
+              `capitalize` on it is a separate defect, recorded rather than
+              fixed here, because it title-cases a slug. */}
+          {fill("startedOn", {
+            date: formatDateLong(new Date(instance.startedAt), locale),
+            reason: instance.reason,
           })}
-          {" · "}reason: <span className="capitalize">{instance.reason}</span>
         </p>
       </div>
 
       {/* Task list */}
       {tasks.length === 0 ? (
         <div className="border-border/60 text-muted-foreground rounded-xl border border-dashed py-8 text-center text-sm">
-          This offboarding template has no tasks.
+          {t("noTasks")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -198,6 +222,7 @@ function OffboardingTaskRow({
   };
   today: string;
 }) {
+  const { t, fill, locale } = useStaffText("offboarding");
   const [note, setNote] = useState("");
   const { mutate: setTask, isPending } = useSetOffboardingTask();
   const complete = Boolean(task.completedAt);
@@ -237,20 +262,20 @@ function OffboardingTaskRow({
             </span>
             {complete ? (
               <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-400">
-                Completed
+                {t("taskCompleted")}
               </Badge>
             ) : overdue ? (
               <Badge className="border-0 bg-rose-500/10 text-[10px] text-rose-700 dark:text-rose-400">
-                Overdue
+                {t("taskOverdue")}
               </Badge>
             ) : (
               <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-                Pending
+                {t("taskPending")}
               </Badge>
             )}
             {task.required && !complete && (
               <span className="text-muted-foreground text-[10px]">
-                Required
+                {t("taskRequired")}
               </span>
             )}
           </div>
@@ -262,12 +287,16 @@ function OffboardingTaskRow({
           )}
 
           <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px]">
-            <span>{ASSIGNEE_LABEL[task.assignedTo] ?? task.assignedTo}</span>
+            <span>
+              {ASSIGNEE_KEY[task.assignedTo]
+                ? t(ASSIGNEE_KEY[task.assignedTo])
+                : task.assignedTo}
+            </span>
             {task.dueDate && (
               <span
                 className={cn(overdue && "text-rose-600 dark:text-rose-400")}
               >
-                · Due {task.dueDate}
+                {fill("due", { date: task.dueDate })}
               </span>
             )}
           </div>
@@ -276,15 +305,14 @@ function OffboardingTaskRow({
           {complete ? (
             <div className="mt-2 space-y-1">
               <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                Completed{" "}
                 {task.completedAt
-                  ? new Date(task.completedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
+                  ? fill("completedOn", {
+                      date: formatDateLong(new Date(task.completedAt), locale),
                     })
+                  : t("taskCompleted")}
+                {task.completedBy
+                  ? fill("completedBy", { who: task.completedBy })
                   : ""}
-                {task.completedBy ? ` by ${task.completedBy}` : ""}
               </p>
               {task.completionNote && (
                 <p className="bg-muted/40 rounded-md px-2 py-1 text-xs italic">
@@ -303,13 +331,13 @@ function OffboardingTaskRow({
                         toast.error(
                           error instanceof Error
                             ? error.message
-                            : "Could not reopen that task.",
+                            : t("reopenFailed"),
                         ),
                     },
                   )
                 }
               >
-                Reopen
+                {t("reopen")}
               </button>
             </div>
           ) : (
@@ -318,7 +346,7 @@ function OffboardingTaskRow({
               <Input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Optional note (e.g. ROE submitted to Service Canada July 22, ref #XYZ)"
+                placeholder={t("notePlaceholder")}
                 className="h-8 text-xs"
               />
               <Button
@@ -338,7 +366,7 @@ function OffboardingTaskRow({
                         // The response, not local state: whether this was the
                         // last outstanding task is the server's answer.
                         maybeAnnounceOffboardingComplete(updated);
-                        toast.success("Task marked complete");
+                        toast.success(t("taskMarked"));
                       },
                       onError: (error) =>
                         toast.error(
@@ -351,7 +379,7 @@ function OffboardingTaskRow({
                 }}
               >
                 <CheckCircle2 className="size-3.5" />{" "}
-                {isPending ? "Saving…" : "Mark complete"}
+                {isPending ? t("saving") : t("markComplete")}
               </Button>
             </div>
           )}
@@ -370,6 +398,7 @@ function FinalDocuments({
   staff: StaffProfile;
   retentionYears: number;
 }) {
+  const { t, fill, locale } = useStaffText("offboarding");
   // The offboarding kinds live in staff_documents alongside every other HR
   // document rather than in a table of their own — the only thing that did not
   // map was retention, which is one column (20260804180000). So this filters
@@ -410,7 +439,10 @@ function FinalDocuments({
   const handleUpload = () => {
     const file = fileRef.current;
     if (!file) return;
-    const label = name.trim() || DOC_KIND_LABEL[kind];
+    // English on purpose — see DOC_KIND_EN. This string is the body of a
+    // notification the DEPARTING EMPLOYEE reads, and this component knows only
+    // the manager's locale.
+    const label = name.trim() || DOC_KIND_EN[kind];
 
     // `retainUntil` is NOT sent. The server computes it from the facility's
     // retention policy, because whoever files a document should not be the one
@@ -431,7 +463,7 @@ function FinalDocuments({
             },
           });
           setOpen(false);
-          toast.success("Document added to the permanent record");
+          toast.success(t("documentAdded"));
         },
         onError: (error) =>
           toast.error(
@@ -447,22 +479,21 @@ function FinalDocuments({
     <div className="border-border/60 bg-card/60 space-y-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold">Final documents</p>
+          <p className="text-sm font-semibold">{t("docsTitle")}</p>
           <p className="text-muted-foreground text-[11px]">
-            ROE, termination letter, settlement — kept permanently on the
-            record, retained {retentionYears} year
-            {retentionYears === 1 ? "" : "s"} per HR policy.
+            {fill(retentionYears === 1 ? "docsHelpOne" : "docsHelpOther", {
+              years: retentionYears,
+            })}
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={openDialog}>
-          <Upload className="mr-1.5 size-3.5" /> Add document
+          <Upload className="mr-1.5 size-3.5" /> {t("addDocument")}
         </Button>
       </div>
 
       {docs.length === 0 ? (
         <div className="border-border/60 text-muted-foreground rounded-lg border border-dashed py-6 text-center text-xs">
-          No final documents yet. Upload the ROE, termination letter, and any
-          settlement agreement.
+          {t("docsEmpty")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -476,22 +507,19 @@ function FinalDocuments({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-sm font-medium">{doc.name}</span>
                   <Badge className="border-0 bg-indigo-500/10 text-[10px] text-indigo-600 dark:text-indigo-400">
-                    {DOC_KIND_LABEL[doc.type]}
+                    {t(DOC_KIND_KEY[doc.type])}
                   </Badge>
                 </div>
                 <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px]">
                   <span>
-                    Uploaded{" "}
-                    {new Date(doc.uploadedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
+                    {fill("uploadedOn", {
+                      date: formatDateLong(new Date(doc.uploadedAt), locale),
                     })}
                   </span>
                   {doc.retainUntil && (
                     <span className="inline-flex items-center gap-1">
-                      <Lock className="size-2.5" /> Retained until{" "}
-                      {doc.retainUntil}
+                      <Lock className="size-2.5" />{" "}
+                      {fill("retainedUntil", { date: doc.retainUntil })}
                     </span>
                   )}
                 </p>
@@ -507,10 +535,10 @@ function FinalDocuments({
               >
                 {doc.fileUrl ? (
                   <a href={doc.fileUrl} target="_blank" rel="noreferrer">
-                    Open
+                    {t("open")}
                   </a>
                 ) : (
-                  <span>Unavailable</span>
+                  <span>{t("unavailable")}</span>
                 )}
               </Button>
             </div>
@@ -521,11 +549,11 @@ function FinalDocuments({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Add final document</DialogTitle>
+            <DialogTitle>{t("addFinalDocument")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label>Document type</Label>
+              <Label>{t("documentType")}</Label>
               <Select
                 value={kind}
                 onValueChange={(v) => setKind(v as OffboardingDocumentKind)}
@@ -534,23 +562,23 @@ function FinalDocuments({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(
-                    Object.keys(DOC_KIND_LABEL) as OffboardingDocumentKind[]
-                  ).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {DOC_KIND_LABEL[k]}
-                    </SelectItem>
-                  ))}
+                  {(Object.keys(DOC_KIND_KEY) as OffboardingDocumentKind[]).map(
+                    (k) => (
+                      <SelectItem key={k} value={k}>
+                        {t(DOC_KIND_KEY[k])}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Document name</Label>
+              <Label>{t("documentName")}</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={DOC_KIND_LABEL[kind]}
+                placeholder={t(DOC_KIND_KEY[kind])}
               />
             </div>
 
@@ -562,7 +590,7 @@ function FinalDocuments({
               >
                 <Upload className="text-muted-foreground mx-auto mb-2 size-7 opacity-60" />
                 <p className="text-sm font-medium">
-                  {fileName || "Click to select a file"}
+                  {fileName || t("selectFile")}
                 </p>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   PDF, JPG, PNG — max 10 MB
@@ -579,9 +607,9 @@ function FinalDocuments({
 
             <p className="text-muted-foreground flex items-start gap-1.5 text-[11px]">
               <Lock className="mt-0.5 size-3 shrink-0" />
-              Once added, final documents are permanent and cannot be deleted —
-              retained {retentionYears} year{retentionYears === 1 ? "" : "s"}{" "}
-              per HR policy.
+              {fill(retentionYears === 1 ? "permanentOne" : "permanentOther", {
+                years: retentionYears,
+              })}
             </p>
           </div>
           <DialogFooter>
@@ -590,14 +618,14 @@ function FinalDocuments({
               disabled={uploading}
               onClick={() => setOpen(false)}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             {/* A file is now REQUIRED. The mock version accepted an empty
                 dialog and invented a plausible-looking path, which produced a
                 permanent record pointing at nothing. */}
             <Button onClick={handleUpload} disabled={!fileName || uploading}>
               <Upload className="mr-1.5 size-3.5" />{" "}
-              {uploading ? "Uploading…" : "Add to record"}
+              {uploading ? t("uploading") : t("addToRecord")}
             </Button>
           </DialogFooter>
         </DialogContent>

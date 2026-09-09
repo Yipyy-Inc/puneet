@@ -728,7 +728,6 @@ const BASELINE: Record<string, Map<string, number>> = {
       15,
     ],
     ["src/app/facility/dashboard/staff/_components/employee-files-tab.tsx", 32],
-    ["src/app/facility/dashboard/staff/_components/offboarding-tab.tsx", 44],
     [
       "src/app/facility/dashboard/staff/_components/onboarding-progress-list.tsx",
       1,

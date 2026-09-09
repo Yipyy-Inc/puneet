@@ -10708,3 +10708,34 @@ Whoever picks it up, it belongs beside the other shared staff bits in
 `_components/staff-shared.tsx`, which already owns `RolePill`, `ServiceChip`
 and the OTHER `StatusBadge` (the one over `StaffProfile["status"]` — note the
 name collision before moving either).
+
+### A notification body composed in the sender's language
+
+Found in `offboarding-tab.tsx` while translating it. When a manager files a
+final document, the client builds the body of a notification the DEPARTING
+EMPLOYEE receives:
+
+```
+const label = name.trim() || DOC_KIND_LABEL[kind];
+… body: `${label} was added to your records.`
+```
+
+Translating that with the manager's `t()` would send French to an employee who
+reads English — worse than the English it replaced, because it looks
+deliberate. So the kind's label is taken from a deliberately untranslated
+`DOC_KIND_EN` map at that one call site, and the rendered labels elsewhere in
+the file are translated normally.
+
+**The real fix is server-side.** A message addressed to somebody else must be
+composed where that person's locale is known, not in the sender's browser.
+Every outbound body built client-side has this defect latent in it; this is the
+first one a translation pass has walked into.
+
+### `capitalize` over a slug, again
+
+Same file: `<span className="capitalize">{instance.reason}</span>`. The value is
+a facility-editable termination reason (`StaffHrConfig.terminationReasons`), so
+§5q says it must NOT be translated — it is data somebody typed. But the CSS
+`capitalize` is still doing what `notification-settings-card` records as a
+defect: title-casing an identifier and calling it a label. Left as-is because
+the value is data; noted because the styling implies it is not.
