@@ -657,8 +657,8 @@
         "reasonVacation": "Vacances",
         "reasonMedicalLeave": "Congé de maladie",
         "reasonResigned": "Démission volontaire",
-        "reasonTerminatedCause": "Congédiement pour motif",
-        "reasonPerformance": "Congédiement pour rendement",
+        "reasonTerminatedCause": "Licenciement pour motif",
+        "reasonPerformance": "Licenciement pour rendement",
         "reasonRehired": "Retour de congé",
         "reasonOther": "Autre"
       },
@@ -1237,6 +1237,46 @@
         "sendTo": "Envoyer à {name}",
         "changeSent": "Modification demandée — renvoyée à {name}",
         "changeFailed": "Impossible de demander cette modification."
+      },
+      "statusChange": {
+        "title": "Changer le statut de l’employé",
+        "description": "Mettez à jour le statut d’emploi de {name}. Une raison est exigée pour que le dossier reste vérifiable.",
+        "current": "Actuel",
+        "newStatus": "Nouveau statut",
+        "reason": "Raison",
+        "required": "(obligatoire)",
+        "optional": "(facultatif)",
+        "selectReason": "Choisissez une raison…",
+        "offboardingTemplate": "Modèle de départ",
+        "chooseTemplate": "Choisissez un modèle…",
+        "templateTasks": "{name} · {count} tâches",
+        "note": "Note",
+        "describeReason": "Décrivez la raison…",
+        "addContext": "Ajoutez tout contexte supplémentaire au dossier…",
+        "terminationWarning": "Les employés licenciés perdent immédiatement l’accès au système et passent à l’onglet Anciens employés.",
+        "terminationTasks": "{count} tâches de départ seront ajoutées à votre liste de tâches.",
+        "cancel": "Annuler",
+        "startingOffboarding": "Démarrage du départ…",
+        "setAs": "Définir comme {status}",
+        "offboardingFailed": "Impossible de démarrer le départ."
+      },
+      "customRole": {
+        "title": "Créer un rôle personnalisé",
+        "description": "Créez un rôle adapté à votre établissement — comme « Coursier », « Aide » ou « Chef d’équipe ». Partez d’un préréglage ou de zéro, puis choisissez les permissions.",
+        "roleName": "Nom du rôle",
+        "roleNamePlaceholder": "Coursier, Chef d’équipe, Toiletteur principal",
+        "startFrom": "Partir de",
+        "blank": "Vide (permissions de base seulement)",
+        "copyFrom": "Copier de {role}",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Que fait ce rôle ? Par exemple : aide la réception aux départs et l’équipe du chenil aux repas.",
+        "accentColor": "Couleur d’accent",
+        "fineTune": "Ajuster les permissions",
+        "grantedOf": "{granted} permissions sur {total} accordées · touchez pour les choisir",
+        "cancel": "Annuler",
+        "createAndAssign": "Créer et attribuer le rôle",
+        "nameRequired": "Un nom de rôle est exigé",
+        "created": "Rôle {name} créé et attribué"
       }
     }
   },
@@ -1921,7 +1961,7 @@
         "removeNamed": "Retirer {name}"
       },
       "termination-reasons": {
-        "intro": "Les motifs offerts lorsqu’un membre du personnel est congédié, dans la fenêtre de changement de statut. Modifiez, ajoutez ou retirez-en.",
+        "intro": "Les motifs offerts lorsqu’un membre du personnel est licencié, dans la fenêtre de changement de statut. Modifiez, ajoutez ou retirez-en.",
         "none": "Aucun motif pour l’instant — ajoutez-en un ci-dessous.",
         "placeholder": "p. ex. Poste aboli",
         "add": "Ajouter",

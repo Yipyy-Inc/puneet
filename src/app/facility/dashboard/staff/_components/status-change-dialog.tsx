@@ -35,6 +35,7 @@ import {
 } from "@/lib/staff-notifications";
 import { fullNameOf } from "./staff-shared";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useStatusReasonLabel } from "@/lib/staff/use-status-reason-label";
 
 type StaffStatus = "active" | "inactive" | "terminated";
 
@@ -43,19 +44,17 @@ interface ReasonOption {
   label: string;
 }
 
-// Built-in reasons for return-to-active / going inactive. TERMINATION reasons
-// are configured by the facility (Settings → Staff & HR → Termination Reasons,
-// StaffHrConfig.terminationReasons) and resolved at render time below.
-const BUILT_IN_REASONS: Record<"active" | "inactive", ReasonOption[]> = {
-  active: [
-    { value: "rehired", label: "Returned from leave" },
-    { value: "other", label: "Other" },
-  ],
-  inactive: [
-    { value: "vacation", label: "Vacation" },
-    { value: "medical_leave", label: "Medical leave" },
-    { value: "other", label: "Other" },
-  ],
+// Built-in reasons for return-to-active / going inactive. The VALUES only —
+// the words come from `useStatusReasonLabel()`, which the profile sheet and
+// the audit trail also read; this file's own spellings were the third copy,
+// and the three had already drifted in English.
+//
+// TERMINATION reasons are absent on purpose: the facility types its own in
+// Settings → Staff & HR (StaffHrConfig.terminationReasons), so they are words
+// a person entered and §5q keeps those out of the locale layer.
+const BUILT_IN_REASONS: Record<"active" | "inactive", string[]> = {
+  active: ["rehired", "other"],
+  inactive: ["vacation", "medical_leave", "other"],
 };
 
 const STATUS_META: Record<
@@ -63,6 +62,9 @@ const STATUS_META: Record<
   { label: string; icon: React.ElementType; tone: string; dot: string }
 > = {
   active: {
+    // `label` is now the FALLBACK, not the render: `staff.areas.status` is
+    // keyed by the status itself, and a fifth status should read as English
+    // words rather than as a raw key.
     label: "Active",
     icon: UserCheck,
     tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -100,6 +102,9 @@ export function StatusChangeDialog({
   profile,
   onConfirm,
 }: StatusChangeDialogProps) {
+  const { t, fill } = useStaffText("statusChange");
+  const statusLabel = useStaffStatusLabel();
+  const reasonLabel = useStatusReasonLabel();
   const config = useStaffHrConfig();
   // Loaded here rather than inside the reason branch: the templates are needed
   // the instant a termination reason is picked, and a query that starts then
@@ -110,8 +115,12 @@ export function StatusChangeDialog({
 
   const reasonsFor = (status: StaffStatus): ReasonOption[] =>
     status === "terminated"
-      ? config.terminationReasons.map((r) => ({ value: r, label: r }))
-      : BUILT_IN_REASONS[status];
+      ? // french-ok: the facility's own words, typed in settings
+        config.terminationReasons.map((r) => ({ value: r, label: r }))
+      : BUILT_IN_REASONS[status].map((value) => ({
+          value,
+          label: reasonLabel(value),
+        }));
 
   const currentStatus =
     profile?.status === "invited"
@@ -192,7 +201,9 @@ export function StatusChangeDialog({
         notifyStaffLifecycle("offboarding_started", {
           inApp: {
             type: "staff_announcement",
+            // french-ok: stored at compose time, read later by another manager
             title: "Offboarding started",
+            // french-ok: stored, not rendered from this screen's locale
             message: `${name} has been terminated. ${count} offboarding task${
               count === 1 ? "" : "s"
             } added to your task list. View offboarding tasks →`,
@@ -203,15 +214,15 @@ export function StatusChangeDialog({
             staffId: profile.id,
             staffName: name,
             to: managerRecipient().email,
+            // french-ok: an email to a manager who may not read this locale
             subject: "Offboarding started",
+            // french-ok: the email's body, composed here and sent onward
             body: `${name} has been terminated. ${count} offboarding task(s) added to the task list.`,
           },
         });
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Could not start offboarding.",
+          error instanceof Error ? error.message : t("offboardingFailed"),
         );
         // Dialog stays OPEN and nothing was written. The manager can retry or
         // cancel; closing it here would look like the termination succeeded.
@@ -227,10 +238,9 @@ export function StatusChangeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Change employee status</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Update {fullNameOf(profile)}&apos;s employment status. A reason is
-            required so the record stays auditable.
+            {fill("description", { name: fullNameOf(profile) })}
           </DialogDescription>
         </DialogHeader>
 
@@ -238,7 +248,7 @@ export function StatusChangeDialog({
           {/* Current status */}
           <div className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
             <span className="text-muted-foreground text-xs font-medium">
-              Current
+              {t("current")}
             </span>
             <StatusBadge
               status={
@@ -258,7 +268,7 @@ export function StatusChangeDialog({
 
           {/* New status selector */}
           <div className="space-y-1.5">
-            <Label>New status</Label>
+            <Label>{t("newStatus")}</Label>
             <div className="grid grid-cols-3 gap-2">
               {(["active", "inactive", "terminated"] as StaffStatus[]).map(
                 (s) => {
@@ -282,7 +292,7 @@ export function StatusChangeDialog({
                       )}
                     >
                       <Icon className="size-4" />
-                      {meta.label}
+                      {statusLabel(s)}
                     </button>
                   );
                 },
@@ -293,14 +303,14 @@ export function StatusChangeDialog({
           {/* Reason selector */}
           <div className="space-y-1.5">
             <Label>
-              Reason{" "}
+              {t("reason")}{" "}
               <span className="text-muted-foreground font-normal">
-                (required)
+                {t("required")}
               </span>
             </Label>
             <Select value={reason} onValueChange={(v) => setReason(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a reason…" />
+                <SelectValue placeholder={t("selectReason")} />
               </SelectTrigger>
               <SelectContent>
                 {reasons.map((r) => (
@@ -315,18 +325,21 @@ export function StatusChangeDialog({
           {/* Offboarding template — pick when more than one matches the reason */}
           {isDestructive && offboardingTemplates.length > 1 && (
             <div className="space-y-1.5">
-              <Label>Offboarding template</Label>
+              <Label>{t("offboardingTemplate")}</Label>
               <Select
                 value={chosenTemplateId}
                 onValueChange={setOffboardingTemplateId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a template…" />
+                  <SelectValue placeholder={t("chooseTemplate")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {offboardingTemplates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} · {t.managerTasks.length} tasks
+                  {offboardingTemplates.map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {fill("templateTasks", {
+                        name: tpl.name,
+                        count: tpl.managerTasks.length,
+                      })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -337,19 +350,15 @@ export function StatusChangeDialog({
           {/* Note — required for "other", optional otherwise */}
           <div className="space-y-1.5">
             <Label>
-              Note{" "}
+              {t("note")}{" "}
               <span className="text-muted-foreground font-normal">
-                {isOther ? "(required)" : "(optional)"}
+                {isOther ? t("required") : t("optional")}
               </span>
             </Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                isOther
-                  ? "Describe the reason…"
-                  : "Add any additional context for the record…"
-              }
+              placeholder={isOther ? t("describeReason") : t("addContext")}
               rows={3}
             />
           </div>
@@ -359,10 +368,14 @@ export function StatusChangeDialog({
             <div className="flex gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-400">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <span>
-                Terminated employees lose system access immediately and move to
-                the Former Employees tab.
+                {t("terminationWarning")}
                 {chosenTemplateId
-                  ? ` ${offboardingTemplates.find((t) => t.id === chosenTemplateId)?.managerTasks.length ?? 0} offboarding tasks will be added to your task list.`
+                  ? ` ${fill("terminationTasks", {
+                      count:
+                        offboardingTemplates.find(
+                          (tpl) => tpl.id === chosenTemplateId,
+                        )?.managerTasks.length ?? 0,
+                    })}`
                   : ""}
               </span>
             </div>
@@ -375,7 +388,7 @@ export function StatusChangeDialog({
             disabled={offboarding}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             variant={isDestructive ? "destructive" : "default"}
@@ -390,8 +403,8 @@ export function StatusChangeDialog({
           >
             <TargetIcon className="size-4" />
             {offboarding
-              ? "Starting offboarding…"
-              : `Set as ${targetMeta.label}`}
+              ? t("startingOffboarding")
+              : fill("setAs", { status: statusLabel(newStatus) })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -399,8 +412,22 @@ export function StatusChangeDialog({
   );
 }
 
-export function StatusBadge({ status }: { status: StaffStatus }) {
+/**
+ * A staff status in the reader's language.
+ *
+ * The catalogue key IS the status, and `STATUS_META[…].label` is the fallback,
+ * so a fifth status reads as English words rather than as a raw key. Three
+ * places in this file render one — the picker, the confirm button and the
+ * badge — and they had three copies of that fallback dance between them.
+ */
+function useStaffStatusLabel(): (status: StaffStatus) => string {
   const { t } = useStaffText("status");
+  return (status: StaffStatus) =>
+    t(status) === status ? STATUS_META[status].label : t(status);
+}
+
+export function StatusBadge({ status }: { status: StaffStatus }) {
+  const statusLabel = useStaffStatusLabel();
   const meta = STATUS_META[status];
   return (
     <span
@@ -410,9 +437,7 @@ export function StatusBadge({ status }: { status: StaffStatus }) {
       )}
     >
       <span className={cn("size-1.5 rounded-full", meta.dot)} />
-      {/* The catalogue key is the status itself; `meta.label` is the fallback
-          so a fifth status reads as English words, not as a raw key. */}
-      {t(status) === status ? meta.label : t(status)}
+      {statusLabel(status)}
     </span>
   );
 }
