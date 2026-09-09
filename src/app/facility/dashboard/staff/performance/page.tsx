@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatPercent } from "@/lib/i18n/format";
 import { facilities } from "@/data/facilities";
 import {
   staffPerformance as baseStaffPerformance,
@@ -41,10 +43,11 @@ export default function StaffPerformancePage() {
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
 
+  const { t, fill, locale } = useStaffText("performance");
   const [timeRange, setTimeRange] = useState("30days");
 
   if (!facility) {
-    return <div>Facility not found</div>;
+    return <div>{t("notFound")}</div>;
   }
 
   // Calculate aggregate stats
@@ -179,13 +182,13 @@ export default function StaffPerformancePage() {
         <div />
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
+            <SelectValue placeholder={t("selectRange")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="7days">Last 7 Days</SelectItem>
-            <SelectItem value="30days">Last 30 Days</SelectItem>
-            <SelectItem value="90days">Last 90 Days</SelectItem>
-            <SelectItem value="year">This Year</SelectItem>
+            <SelectItem value="7days">{t("last7")}</SelectItem>
+            <SelectItem value="30days">{t("last30")}</SelectItem>
+            <SelectItem value="90days">{t("last90")}</SelectItem>
+            <SelectItem value="year">{t("thisYear")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -194,26 +197,28 @@ export default function StaffPerformancePage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("totalTasks")}
+            </CardTitle>
             <Target className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalTasks}</div>
             <p className="text-muted-foreground text-xs">
-              {totalCompleted} completed
+              {fill("completedCount", { count: totalCompleted })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Avg Completion Rate
+              {t("avgCompletion")}
             </CardTitle>
             <TrendingUp className="size-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {avgCompletionRate.toFixed(1)}%
+              {formatPercent(avgCompletionRate / 100, locale, 1)}
             </div>
             <Progress value={avgCompletionRate} className="mt-2 h-2" />
           </CardContent>
@@ -221,29 +226,29 @@ export default function StaffPerformancePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Photo Compliance
+              {t("photoCompliance")}
             </CardTitle>
             <Camera className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {avgPhotoCompliance.toFixed(1)}%
+              {formatPercent(avgPhotoCompliance / 100, locale, 1)}
             </div>
             <p className="text-muted-foreground text-xs">
-              Average across all staff
+              {t("avgAcrossStaff")}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Staff Tracked</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("staffTracked")}
+            </CardTitle>
             <User className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{staffPerformance.length}</div>
-            <p className="text-muted-foreground text-xs">
-              Active staff members
-            </p>
+            <p className="text-muted-foreground text-xs">{t("activeStaff")}</p>
           </CardContent>
         </Card>
       </div>
@@ -253,7 +258,7 @@ export default function StaffPerformancePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Award className="size-5 text-yellow-500" />
-            Top Performers
+            {t("topPerformers")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -282,9 +287,11 @@ export default function StaffPerformancePage() {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-green-600">
-                    {performer.completionRate.toFixed(1)}%
+                    {formatPercent(performer.completionRate / 100, locale, 1)}
                   </p>
-                  <p className="text-muted-foreground text-xs">completion</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("completionLabel")}
+                  </p>
                 </div>
               </div>
             ))}
@@ -295,7 +302,7 @@ export default function StaffPerformancePage() {
       {/* Performance Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Task Completion by Employee</CardTitle>
+          <CardTitle>{t("byEmployee")}</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable
@@ -312,7 +319,9 @@ export default function StaffPerformancePage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Areas for Improvement</CardTitle>
+            <CardTitle className="text-sm">
+              {t("areasForImprovement")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -332,13 +341,13 @@ export default function StaffPerformancePage() {
                         {staff.completionRate < 85 && (
                           <Badge variant="outline" className="text-xs">
                             <TrendingDown className="mr-1 size-3 text-red-500" />
-                            Low completion
+                            {t("lowCompletion")}
                           </Badge>
                         )}
                         {staff.photoProofCompliance < 90 && (
                           <Badge variant="outline" className="text-xs">
                             <Camera className="mr-1 size-3 text-orange-500" />
-                            Photo compliance
+                            {t("photoComplianceShort")}
                           </Badge>
                         )}
                       </div>
@@ -349,7 +358,7 @@ export default function StaffPerformancePage() {
                 (s) => s.completionRate < 85 || s.photoProofCompliance < 90,
               ).length === 0 && (
                 <p className="text-muted-foreground py-4 text-center text-sm">
-                  All staff members are performing well! 🎉
+                  {t("allWell")}
                 </p>
               )}
             </div>
@@ -358,7 +367,7 @@ export default function StaffPerformancePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Recent Task Activity</CardTitle>
+            <CardTitle className="text-sm">{t("recentActivity")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -382,7 +391,7 @@ export default function StaffPerformancePage() {
                         className="bg-green-100 text-green-800"
                       >
                         <CheckCircle2 className="mr-1 size-3" />
-                        Completed
+                        {t("completed")}
                       </Badge>
                       {task.completedAt && (
                         <p className="text-muted-foreground mt-1 text-xs">
