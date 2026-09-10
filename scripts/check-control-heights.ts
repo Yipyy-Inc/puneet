@@ -247,7 +247,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/bookings/BelongingsSection.tsx", 6],
   ["src/components/bookings/BookingDateRangeFilter.tsx", 2],
   ["src/components/bookings/BookingDetailActionBar.tsx", 12],
-  ["src/components/bookings/BookingNotes.tsx", 2],
   ["src/components/bookings/FeedingSection.tsx", 6],
   ["src/components/bookings/InvoicePanel.tsx", 15],
   ["src/components/bookings/MedicationSection.tsx", 8],

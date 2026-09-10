@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, MessageSquare, StickyNote, Pin, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NoteCard } from "@/components/shared/NoteCard";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { NoteHistoryModal } from "@/components/shared/NoteHistoryModal";
@@ -66,6 +67,7 @@ export function NotesList({
   const t = useShellText("shared");
   const {
     notes,
+    pending,
     addNote,
     updateNote,
     deleteNote,
@@ -186,8 +188,14 @@ export function NotesList({
         )}
       </div>
 
-      {/* Notes list */}
-      {filteredNotes.length === 0 ? (
+      {/* Notes list — a skeleton while the first read is in flight, so an
+          empty list is only ever said once it is true (§5s). */}
+      {pending ? (
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+      ) : filteredNotes.length === 0 ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center py-8">
           {compact ? (
             <MessageSquare className="mb-1 size-6" />

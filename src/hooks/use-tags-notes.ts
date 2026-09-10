@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import type {
   Tag,
@@ -9,17 +9,10 @@ import type {
   NoteCategory,
   NoteVisibility,
   PetNoteSubType,
-  NoteEdit,
 } from "@/types/tags";
-import { notes as allNotes } from "@/data/tags-notes";
 import { useAssignTag, useTagCatalogue, useUnassignTag } from "@/lib/api/tags";
-import {
-  logNoteCreated,
-  logNoteUpdated,
-  logNoteDeleted,
-  logNotePinToggled,
-  logNoteVisibilityChanged,
-} from "@/lib/tag-note-audit";
+import { useEntityNotes, useNoteMutations } from "@/lib/api/notes";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ========================================
 // PRIORITY ORDERING
@@ -175,23 +168,42 @@ const EMPTY_TAGS: Tag[] = [];
 // useNotesForEntity
 // ========================================
 
+/**
+ * The notes on one pet, client, booking or incident.
+ *
+ * ── WHAT CHANGED ON 2026-09-10 ───────────────────────────────────────────
+ *
+ * This kept notes in `useState` seeded from the `@/data/tags-notes` fixture
+ * and pushed new ones onto that module array, logging each change to an
+ * in-memory audit list nothing read. "Note added" was true until the next
+ * reload, and a real pet whose numeric ref matched a fixture pet showed that
+ * pet's notes. Now `/api/notes` answers and every change is a row in
+ * `public.notes`; a refusal shows the reason the route gave.
+ *
+ * The RETURN SHAPE is unchanged, so the call sites were not touched. The
+ * third argument is kept for them and ignored: the facility is the entity's,
+ * asserted by the database (20260910201745).
+ */
 export function useNotesForEntity(
   category: NoteCategory,
   entityId: number,
-  facilityId: number = 1,
+  _facilityId?: number,
 ) {
-  const [notesList, setNotesList] = useState<Note[]>(() =>
-    allNotes
-      .filter((n) => n.category === category && n.entityId === entityId)
-      .sort(sortNotes),
-  );
+  const t = useShellText("shared");
+  const { notes: fetched, pending } = useEntityNotes(category, entityId);
+  const { create, update, remove } = useNoteMutations(category, entityId);
 
+  const notesList = useMemo(() => [...fetched].sort(sortNotes), [fetched]);
   const pinnedNotes = useMemo(
     () => notesList.filter((n) => n.isPinned),
     [notesList],
   );
 
-  const noteCount = notesList.length;
+  const fail = useCallback(
+    (error: Error) =>
+      toast.error(t("noteNotSaved"), { description: error.message }),
+    [t],
+  );
 
   const addNote = useCallback(
     (params: {
@@ -200,146 +212,78 @@ export function useNotesForEntity(
       subType?: PetNoteSubType;
       isPinned?: boolean;
     }) => {
-      const newNote: Note = {
-        id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        category,
-        subType: params.subType,
-        entityId,
-        facilityId,
-        content: params.content,
-        visibility: params.visibility ?? "internal",
-        isPinned: params.isPinned ?? false,
-        createdAt: new Date().toISOString(),
-        createdBy: "Current User",
-        createdById: 1,
-        editHistory: [],
-      };
-      setNotesList((prev) => {
-        const updated = [newNote, ...prev];
-        return updated.sort(sortNotes);
+      create.mutate(params, {
+        onSuccess: () => toast.success(t("noteAdded")),
+        onError: fail,
       });
-      allNotes.push(newNote);
-      logNoteCreated({
-        facilityId,
-        noteId: newNote.id,
-        category,
-        targetId: entityId,
-        actorId: 1,
-        actorName: "Current User",
-      });
-      toast.success("Note added");
     },
-    [category, entityId, facilityId],
+    [create, fail, t],
   );
 
   const updateNote = useCallback(
     (noteId: string, newContent: string) => {
-      const oldNote = notesList.find((n) => n.id === noteId);
-      const oldContent = oldNote?.content ?? "";
-      setNotesList((prev) =>
-        prev.map((n) => {
-          if (n.id !== noteId) return n;
-          const edit: NoteEdit = {
-            id: `edit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            noteId,
-            previousContent: n.content,
-            newContent,
-            editedAt: new Date().toISOString(),
-            editedBy: "Current User",
-            editedById: 1,
-          };
-          return {
-            ...n,
-            content: newContent,
-            updatedAt: new Date().toISOString(),
-            updatedBy: "Current User",
-            updatedById: 1,
-            editHistory: [...n.editHistory, edit],
-          };
-        }),
+      update.mutate(
+        { id: noteId, patch: { content: newContent } },
+        { onSuccess: () => toast.success(t("noteUpdated")), onError: fail },
       );
-      logNoteUpdated({
-        facilityId,
-        noteId,
-        actorId: 1,
-        actorName: "Current User",
-        changes: [
-          {
-            field: "content",
-            oldValue: oldContent.slice(0, 100),
-            newValue: newContent.slice(0, 100),
-          },
-        ],
-      });
-      toast.success("Note updated");
     },
-    [facilityId, notesList],
+    [update, fail, t],
   );
 
   const deleteNote = useCallback(
     (noteId: string) => {
-      setNotesList((prev) => prev.filter((n) => n.id !== noteId));
-      const idx = allNotes.findIndex((n) => n.id === noteId);
-      if (idx >= 0) allNotes.splice(idx, 1);
-      logNoteDeleted({
-        facilityId,
-        noteId,
-        actorId: 1,
-        actorName: "Current User",
+      remove.mutate(noteId, {
+        onSuccess: () => toast.success(t("noteDeleted")),
+        onError: fail,
       });
-      toast.success("Note deleted");
     },
-    [facilityId],
+    [remove, fail, t],
   );
 
   const togglePin = useCallback(
     (noteId: string) => {
-      setNotesList((prev) => {
-        const updated = prev.map((n) =>
-          n.id === noteId ? { ...n, isPinned: !n.isPinned } : n,
-        );
-        return updated.sort(sortNotes);
-      });
       const note = notesList.find((n) => n.id === noteId);
-      if (note) {
-        logNotePinToggled({
-          facilityId,
-          noteId,
-          pinned: !note.isPinned,
-          actorId: 1,
-          actorName: "Current User",
-        });
-      }
+      if (!note) return;
+      update.mutate(
+        { id: noteId, patch: { isPinned: !note.isPinned } },
+        {
+          onSuccess: () =>
+            toast.success(
+              t(note.isPinned ? "noteUnpinnedDone" : "notePinnedDone"),
+            ),
+          onError: fail,
+        },
+      );
     },
-    [facilityId, notesList],
+    [notesList, update, fail, t],
   );
 
   const toggleVisibility = useCallback(
     (noteId: string) => {
-      setNotesList((prev) =>
-        prev.map((n) => {
-          if (n.id !== noteId) return n;
-          const newVis: NoteVisibility =
-            n.visibility === "internal" ? "shared_with_customer" : "internal";
-          logNoteVisibilityChanged({
-            facilityId,
-            noteId,
-            oldVisibility: n.visibility,
-            newVisibility: newVis,
-            actorId: 1,
-            actorName: "Current User",
-          });
-          return { ...n, visibility: newVis };
-        }),
+      const note = notesList.find((n) => n.id === noteId);
+      if (!note) return;
+      const next: NoteVisibility =
+        note.visibility === "internal" ? "shared_with_customer" : "internal";
+      update.mutate(
+        { id: noteId, patch: { visibility: next } },
+        {
+          onSuccess: () =>
+            toast.success(
+              t(next === "internal" ? "noteInternalDone" : "noteSharedDone"),
+            ),
+          onError: fail,
+        },
       );
     },
-    [facilityId],
+    [notesList, update, fail, t],
   );
 
   return {
     notes: notesList,
     pinnedNotes,
-    noteCount,
+    noteCount: notesList.length,
+    pending,
+    saving: create.isPending || update.isPending || remove.isPending,
     addNote,
     updateNote,
     deleteNote,

@@ -1716,7 +1716,8 @@
         "journalOutcomeBoth": "Les deux",
         "journalOutcomeNothing": "Rien",
         "journalOutcomeCompleted": "Terminé",
-        "journalOutcomeIssue": "Problème signalé"
+        "journalOutcomeIssue": "Problème signalé",
+        "notesTitle": "Notes"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
@@ -6775,7 +6776,15 @@
       "witnessPlaceholder": "Nom complet du témoin",
       "capturingSignature": "Enregistrement de la signature…",
       "confirmSignature": "Confirmer la signature",
-      "legalNotice": "En signant ci-dessus, vous acceptez que cette signature électronique ait la même valeur qu’une signature manuscrite. Votre signature, l’heure, votre adresse IP et les renseignements sur votre appareil sont enregistrés à des fins de vérification."
+      "legalNotice": "En signant ci-dessus, vous acceptez que cette signature électronique ait la même valeur qu’une signature manuscrite. Votre signature, l’heure, votre adresse IP et les renseignements sur votre appareil sont enregistrés à des fins de vérification.",
+      "noteAdded": "Note ajoutée",
+      "noteUpdated": "Note modifiée",
+      "noteDeleted": "Note supprimée",
+      "notePinnedDone": "Note épinglée",
+      "noteUnpinnedDone": "Note désépinglée",
+      "noteSharedDone": "Note partagée avec le client",
+      "noteInternalDone": "Note rendue interne",
+      "noteNotSaved": "La note n’a pas été enregistrée"
     },
     "messaging": {
       "scheduleSend": "Programmer l’envoi",

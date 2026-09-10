@@ -38,6 +38,7 @@ const SAME_IN_BOTH = new Set([
   "staff.directory.colServices",
   "staff.shell.tabDocuments",
   "staff.roleMatrix.colPermission",
+  "staff.bookingDetail.notesTitle", // Notes / Notes
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",
   "staff.profile.tabDocuments",
