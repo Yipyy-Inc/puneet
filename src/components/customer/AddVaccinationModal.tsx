@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVaccinationRules } from "@/lib/api/facility-settings";
 import type { VaccinationRecord } from "@/data/pet-data";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatNumber } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 interface VaccineEntryInput {
   name: string;
@@ -49,10 +52,17 @@ const PROOF_ACCEPTED_TYPES = [
 ];
 const PROOF_MAX_SIZE = 10 * 1024 * 1024;
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+// French writes a file size in octets — "12 Ko", "1,4 Mo" — so the unit is
+// copy, and the figure is Intl.
+function formatFileSize(
+  bytes: number,
+  locale: AppLocale,
+  t: (key: string) => string,
+) {
+  if (bytes < 1024) return `${formatNumber(bytes, locale)} ${t("unitB")}`;
+  if (bytes < 1024 * 1024)
+    return `${formatNumber(bytes / 1024, locale)} ${t("unitKB")}`;
+  return `${formatNumber(bytes / (1024 * 1024), locale, 1)} ${t("unitMB")}`;
 }
 
 export function AddVaccinationModal({
@@ -62,9 +72,11 @@ export function AddVaccinationModal({
   petName,
   petSpecies,
   initialStatus = "pending_review",
-  submitLabel = "Upload for Review",
+  submitLabel,
   onSave,
 }: AddVaccinationModalProps) {
+  const t = useShellText("shared");
+  const locale = useShellLocale();
   // The facility's requirements, so the rows a customer is asked to fill in are
   // the ones this business actually checks.
   const { rules: vaccinationRules } = useVaccinationRules();
@@ -99,11 +111,11 @@ export function AddVaccinationModal({
     const valid: File[] = [];
     for (const file of Array.from(files)) {
       if (!PROOF_ACCEPTED_TYPES.includes(file.type)) {
-        toast.error(`${file.name}: Please upload a PDF or image file`);
+        toast.error(t("vaxFileType").replace("{file}", file.name));
         continue;
       }
       if (file.size > PROOF_MAX_SIZE) {
-        toast.error(`${file.name}: File size must be less than 10MB`);
+        toast.error(t("vaxFileSize").replace("{file}", file.name));
         continue;
       }
       valid.push(file);
@@ -139,7 +151,7 @@ export function AddVaccinationModal({
 
     const filled = vaccines.filter((v) => v.expiryDate.trim());
     if (filled.length === 0) {
-      toast.error("Enter an expiry date for at least one vaccine");
+      toast.error(t("vaxNeedExpiry"));
       return;
     }
 
@@ -162,14 +174,15 @@ export function AddVaccinationModal({
 
       await onSave(records);
       toast.success(
-        `${records.length} vaccination record${records.length === 1 ? "" : "s"} uploaded!`,
+        t(records.length === 1 ? "vaxUploadedOne" : "vaxUploadedMany").replace(
+          "{count}",
+          String(records.length),
+        ),
       );
       onOpenChange(false);
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to upload vaccination records";
+        error instanceof Error ? error.message : t("vaxUploadFailed");
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -180,23 +193,21 @@ export function AddVaccinationModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Upload Vaccination Records</DialogTitle>
+          <DialogTitle>{t("vaxTitle")}</DialogTitle>
           <DialogDescription>
-            Enter expiry dates for {petName}&apos;s required vaccines and upload
-            proof. The facility will review and approve each record.
+            {t("vaxDescription").replace("{pet}", petName)}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {vaccines.length === 0 ? (
             <p className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
-              The facility has not configured any required vaccines for{" "}
-              {petSpecies.toLowerCase()}s.
+              {t("vaxNoneConfigured")}
             </p>
           ) : (
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs">
-                Vaccine expiry dates
+                {t("vaxExpiryDates")}
               </Label>
               {vaccines.map((v, i) => (
                 <div
@@ -208,7 +219,7 @@ export function AddVaccinationModal({
                     <p className="text-sm font-medium">{v.name}</p>
                     {v.required === false && (
                       <span className="text-muted-foreground rounded-full border px-2 py-0.5 text-[10px]">
-                        Optional
+                        {t("optionalTag")}
                       </span>
                     )}
                   </div>
@@ -220,7 +231,7 @@ export function AddVaccinationModal({
                     calendarClassName="p-1"
                     showQuickPresets={false}
                     showManualInput={false}
-                    placeholder="Expiry date"
+                    placeholder={t("vaxExpiryPlaceholder")}
                   />
                 </div>
               ))}
@@ -229,11 +240,10 @@ export function AddVaccinationModal({
 
           <div>
             <Label className="text-muted-foreground mb-1.5 block text-xs">
-              Proof of Vaccination
+              {t("vaxProofTitle")}
             </Label>
             <p className="text-muted-foreground mb-2 text-[11px]">
-              Upload one or more pages covering all vaccines above. JPG, PNG, or
-              PDF — max 10MB per file.
+              {t("vaxProofHelp")}
             </p>
 
             <label
@@ -254,12 +264,10 @@ export function AddVaccinationModal({
                   <Upload className="text-muted-foreground size-4" />
                 </div>
                 <p className="text-xs font-medium">
-                  {proofs.length === 0
-                    ? "Upload vaccine proof"
-                    : "Add more pages"}
+                  {proofs.length === 0 ? t("vaxUploadProof") : t("vaxAddPages")}
                 </p>
                 <p className="text-muted-foreground text-[10px]">
-                  Select multiple files for multi-page documents
+                  {t("vaxMultiFileHelp")}
                 </p>
               </div>
             </label>
@@ -291,7 +299,7 @@ export function AddVaccinationModal({
                           {p.file.name}
                         </p>
                         <p className="text-muted-foreground text-[10px]">
-                          {formatFileSize(p.file.size)}
+                          {formatFileSize(p.file.size, locale, t)}
                         </p>
                       </div>
                       <Button
@@ -300,6 +308,10 @@ export function AddVaccinationModal({
                         size="sm"
                         className="text-destructive hover:text-destructive h-5 w-5 shrink-0 p-0"
                         onClick={() => removeProof(i)}
+                        aria-label={t("vaxRemoveFile").replace(
+                          "{file}",
+                          p.file.name,
+                        )}
                       >
                         <X className="size-3" />
                       </Button>
@@ -309,8 +321,11 @@ export function AddVaccinationModal({
                 <div className="col-span-full flex items-center gap-1.5">
                   <Check className="size-3 text-emerald-600" />
                   <p className="text-muted-foreground text-[11px]">
-                    {proofs.length} file{proofs.length === 1 ? "" : "s"} ready —
-                    pending staff verification
+                    {t(
+                      proofs.length === 1
+                        ? "vaxFilesReadyOne"
+                        : "vaxFilesReadyMany",
+                    ).replace("{count}", String(proofs.length))}
                   </p>
                 </div>
               </div>
@@ -318,12 +333,12 @@ export function AddVaccinationModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Label htmlFor="notes">{t("vaxNotes")}</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes about these vaccinations"
+              placeholder={t("vaxNotesPlaceholder")}
               rows={3}
             />
           </div>
@@ -335,18 +350,18 @@ export function AddVaccinationModal({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={isSaving || vaccines.length === 0}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Uploading...
+                  {t("vaxUploading")}
                 </>
               ) : (
                 <>
                   <Upload className="mr-2 size-4" />
-                  {submitLabel}
+                  {submitLabel ?? t("vaxSubmit")}
                 </>
               )}
             </Button>

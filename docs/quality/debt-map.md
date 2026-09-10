@@ -11498,3 +11498,24 @@ call`. The cancel dialog also promises "a refund is processed according to
   actual pet.
 - The same `pet.weight` read as pounds here too; formatted with `formatWeight`
   like the detail page (see above).
+
+### Pet profile (`/customer/pets/[petId]`)
+
+- **Nothing on this page saves.** Editing the pet profile, editing care
+  instructions and uploading a vaccination record are each a `setTimeout`
+  followed by a success toast, under `TODO: Replace with actual API call`.
+  Editing the profile shows TWO success toasts, because `updatePetProfile`
+  toasts and so does its caller.
+- **An uploaded vaccination is a blob URL.** `AddVaccinationModal`'s
+  `uploadFile` waits 200 ms and returns `URL.createObjectURL(file)` — an
+  address that exists only in the customer's own browser tab — and that is
+  what is stored as the record's `documentUrl`. The staff reviewing it can
+  never open it. The same modal is used by the facility's pet page.
+- **`CareInstructionsSection` is a component declared inside the page's
+  render function**, so it is a new component type on every parent render and
+  its edit state resets whenever the page re-renders.
+- It reads bookings and photos from `@/data` fixtures, and the vaccination
+  requirements from `facilityConfig`, while its report cards come from
+  Postgres.
+- The edit form labelled weight "(lbs)" over the field the rest of the product
+  reads as kilograms; it reads "Weight (kg)" now, consistent with the display.

@@ -27,6 +27,7 @@ import {
 import type { Note } from "@/data/tags-notes";
 import { cn } from "@/lib/utils";
 import { formatNoteDate } from "@/lib/format-utils";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 
 interface NoteCardProps {
   note: Note;
@@ -38,14 +39,15 @@ interface NoteCardProps {
   readOnly?: boolean;
 }
 
+// A note's kind, by CATALOGUE KEY; only the badge variant is decided here.
 const SUBTYPE_STYLES: Record<
   string,
-  { label: string; variant: "default" | "info" | "destructive" | "success" }
+  { labelKey: string; variant: "default" | "info" | "destructive" | "success" }
 > = {
-  general: { label: "General", variant: "default" },
-  behavior: { label: "Behavior", variant: "info" },
-  medical: { label: "Medical", variant: "destructive" },
-  feeding: { label: "Feeding", variant: "success" },
+  general: { labelKey: "noteGeneral", variant: "default" },
+  behavior: { labelKey: "noteBehaviour", variant: "info" },
+  medical: { labelKey: "noteMedical", variant: "destructive" },
+  feeding: { labelKey: "noteFeeding", variant: "success" },
 };
 
 export function NoteCard({
@@ -57,6 +59,8 @@ export function NoteCard({
   onViewHistory,
   readOnly = false,
 }: NoteCardProps) {
+  const t = useShellText("shared");
+  const locale = useShellLocale();
   const [expanded, setExpanded] = useState(false);
   const isLong = note.content.length > 200;
   const displayContent =
@@ -82,25 +86,25 @@ export function NoteCard({
               {note.createdBy}
             </span>
             <span className="text-muted-foreground text-xs">
-              {formatNoteDate(note.createdAt)}
+              {formatNoteDate(note.createdAt, locale)}
             </span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {subtypeStyle && (
             <Badge variant={subtypeStyle.variant} className="text-[10px]">
-              {subtypeStyle.label}
+              {t(subtypeStyle.labelKey)}
             </Badge>
           )}
           {note.visibility === "internal" ? (
             <Badge variant="secondary" className="gap-0.5 text-[10px]">
               <EyeOff className="h-2.5 w-2.5" />
-              Internal
+              {t("badgeInternal")}
             </Badge>
           ) : (
             <Badge variant="info" className="gap-0.5 text-[10px]">
               <Eye className="h-2.5 w-2.5" />
-              Shared
+              {t("badgeShared")}
             </Badge>
           )}
         </div>
@@ -114,7 +118,7 @@ export function NoteCard({
           onClick={() => setExpanded(!expanded)}
           className="text-primary mt-1 text-xs hover:underline"
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? t("showLess") : t("showMore")}
         </button>
       )}
 
@@ -127,12 +131,16 @@ export function NoteCard({
                 type="button"
                 onClick={onViewHistory}
                 className="text-muted-foreground hover:text-primary flex cursor-pointer items-center gap-0.5 text-xs transition-colors hover:underline"
-                aria-label="View edit history"
+                aria-label={t("viewEditHistory")}
               >
                 <History className="size-3" />
                 <span>
-                  Edited
-                  {note.updatedAt ? ` ${formatNoteDate(note.updatedAt)}` : ""}
+                  {note.updatedAt
+                    ? t("editedOn").replace(
+                        "{date}",
+                        formatNoteDate(note.updatedAt, locale),
+                      )
+                    : t("edited")}
                 </span>
               </button>
             )}
@@ -145,8 +153,8 @@ export function NoteCard({
                   size="sm"
                   className="size-8 p-0"
                   onClick={onTogglePin}
-                  aria-label={note.isPinned ? "Unpin note" : "Pin note"}
-                  title={note.isPinned ? "Unpin" : "Pin"}
+                  aria-label={note.isPinned ? t("unpinNote") : t("pinNote")}
+                  title={note.isPinned ? t("unpin") : t("pin")}
                 >
                   {note.isPinned ? (
                     <PinOff className="size-4" />
@@ -163,13 +171,13 @@ export function NoteCard({
                   onClick={onToggleVisibility}
                   aria-label={
                     note.visibility === "internal"
-                      ? "Make visible to customer"
-                      : "Make internal only"
+                      ? t("makeVisible")
+                      : t("makeInternal")
                   }
                   title={
                     note.visibility === "internal"
-                      ? "Make visible to customer"
-                      : "Make internal only"
+                      ? t("makeVisible")
+                      : t("makeInternal")
                   }
                 >
                   {note.visibility === "internal" ? (
@@ -185,8 +193,8 @@ export function NoteCard({
                   size="sm"
                   className="size-8 p-0"
                   onClick={onEdit}
-                  aria-label="Edit note"
-                  title="Edit note"
+                  aria-label={t("editNote")}
+                  title={t("editNote")}
                 >
                   <Pencil className="size-4" />
                 </Button>
@@ -198,26 +206,27 @@ export function NoteCard({
                       variant="ghost"
                       size="sm"
                       className="text-destructive hover:text-destructive size-7 p-0"
-                      aria-label="Delete note"
+                      aria-label={t("deleteNote")}
                     >
                       <Trash2 className="size-4" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        {t("deleteNoteTitle")}
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete this note. This action
-                        cannot be undone.
+                        {t("deleteNoteBody")}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={onDelete}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        Delete
+                        {t("deleteNote")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

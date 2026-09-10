@@ -83,6 +83,20 @@ const SAME_IN_BOTH = new Set([
   "customerPages.bookingDetail.date", // Date / Date
   "customerPages.bookingDetail.services", // Services / Services
   "customerPages.bookingDetail.total", // Total / Total
+  // The pet profile's cognates — each the same word in French.
+  "customerPages.petProfile.vaccineException",
+  "customerPages.petProfile.colDocument",
+  "customerPages.petProfile.colService",
+  "customerPages.petProfile.colDate",
+  "customerPages.petProfile.colTotal",
+  "customerPages.petProfile.tabPhotos",
+  "customerPages.petProfile.allergies",
+  "customerPages.petProfile.questionsOne",
+  "customerPages.petProfile.questionsMany",
+  "customerPages.petProfile.photosOne",
+  "customerPages.petProfile.photosMany",
+  "customerPages.petProfile.albumsOne",
+  "customerPages.petProfile.albumsMany",
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
