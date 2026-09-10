@@ -44,12 +44,22 @@ import {
   referralRewardText,
   referralRewardFullText,
   renderReferralTemplate,
-  REFERRAL_TRIGGER_HINTS,
 } from "@/lib/loyalty/referral-program";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateShort, formatMoney } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 // QR Code will be generated using an external service or canvas
 
 type ReferralPillStatus = "pending" | "booked" | "reward_issued";
+
+// When the reward arrives, in the CUSTOMER's words. The facility's wizard has
+// its own hints ("Reward fires when…"), which are written for staff.
+const WHEN_KEY: Record<string, string> = {
+  on_signup: "whenOnSignup",
+  on_first_booking: "whenFirstBooking",
+  on_first_paid_booking: "whenFirstPaidBooking",
+};
 
 interface ReferralTracking {
   id: number;
@@ -67,6 +77,7 @@ export default function CustomerReferPage() {
 
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
+  const { t, fill, locale } = useCustomerText("refer");
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -108,8 +119,8 @@ export default function CustomerReferPage() {
   const referrerName = useMemo(() => {
     const full =
       customerId == null ? "" : (getClientById(customerId)?.name ?? "");
-    return full.split(/\s+/)[0] || "A friend";
-  }, [customerId]);
+    return full.split(/\s+/)[0] || t("aFriend");
+  }, [customerId, t]);
 
   // Pre-composed share message from the program's shareMessageTemplate, with
   // tokens substituted ({code}, {referrerName}, {refereeReward}, {referrerReward}).
@@ -129,11 +140,18 @@ export default function CustomerReferPage() {
         ),
       });
     }
+    // No template: the words are ours, so they are the sender's language.
+    // (A facility's template above is the facility's words, and its reward
+    // tokens stay in English like its own wizard preview.)
     const friendReward =
       loyaltyConfig?.referralProgram?.refereeReward.description ??
-      "a special reward";
-    return `I love ${selectedFacility?.name ?? "this place"}! Sign up with my code ${referralCode} to get ${friendReward}.`;
-  }, [loyaltyConfig, referralCode, referrerName, selectedFacility]);
+      t("aSpecialReward");
+    return fill("fallbackShareMessage", {
+      facility: selectedFacility?.name ?? t("thisPlace"),
+      code: referralCode,
+      reward: friendReward,
+    });
+  }, [loyaltyConfig, referralCode, referrerName, selectedFacility, t, fill]);
 
   // Normalised reward explanation — works from the new referralProgramSetup
   // model or the legacy nested referralProgram.
@@ -142,19 +160,23 @@ export default function CustomerReferPage() {
     if (setup) {
       const conditions = [
         setup.minimumSpend != null
-          ? `Your friend must spend at least $${setup.minimumSpend}.`
+          ? fill("condMinimumSpend", {
+              amount: formatMoney(setup.minimumSpend, locale, {
+                whole: Number.isInteger(setup.minimumSpend),
+              }),
+            })
           : null,
         setup.codeExpiryDays != null
-          ? `Your code expires ${setup.codeExpiryDays} days after it's issued.`
+          ? fill("condCodeExpiry", { n: setup.codeExpiryDays })
           : null,
         setup.maxUsagePerCode != null
-          ? `Your code can be used up to ${setup.maxUsagePerCode} times.`
+          ? fill("condMaxUses", { n: setup.maxUsagePerCode })
           : null,
       ].filter((c): c is string => c !== null);
       return {
-        youGet: referralRewardFullText(setup.referrerReward),
-        friendGets: referralRewardFullText(setup.refereeReward),
-        when: REFERRAL_TRIGGER_HINTS[setup.rewardTrigger],
+        youGet: referralRewardFullText(setup.referrerReward, locale),
+        friendGets: referralRewardFullText(setup.refereeReward, locale),
+        when: t(WHEN_KEY[setup.rewardTrigger] ?? "whenFirstBooking"),
         conditions,
       };
     }
@@ -162,13 +184,17 @@ export default function CustomerReferPage() {
     if (legacy) {
       const conditions = [
         legacy.requirements?.minimumPurchase
-          ? `Friend must make a minimum purchase of $${legacy.requirements.minimumPurchase}.`
+          ? fill("condMinimumSpend", {
+              amount: formatMoney(legacy.requirements.minimumPurchase, locale, {
+                whole: Number.isInteger(legacy.requirements.minimumPurchase),
+              }),
+            })
           : null,
         legacy.requirements?.firstBookingOnly
-          ? "Reward applies to first booking only."
+          ? t("condFirstBookingOnly")
           : null,
         legacy.tracking?.expirationDays
-          ? `Referral code expires in ${legacy.tracking.expirationDays} days.`
+          ? fill("condCodeExpiresIn", { n: legacy.tracking.expirationDays })
           : null,
       ].filter((c): c is string => c !== null);
       return {
@@ -179,13 +205,13 @@ export default function CustomerReferPage() {
           legacy.refereeReward.description ||
           String(legacy.refereeReward.value),
         when: legacy.requirements?.firstBookingOnly
-          ? "After your friend completes their first booking."
-          : "After your friend completes a qualifying booking.",
+          ? t("whenFirstBooking")
+          : t("whenQualifyingBooking"),
         conditions,
       };
     }
     return null;
-  }, [loyaltyConfig]);
+  }, [loyaltyConfig, t, fill, locale]);
 
   // Concise label for the referrer's reward, for the My Referrals table.
   const referrerRewardLabel = useMemo(() => {
@@ -194,14 +220,15 @@ export default function CustomerReferPage() {
       return referralRewardText(
         setup.referrerReward.rewardType,
         setup.referrerReward.rewardValue,
+        locale,
       );
     const legacy = loyaltyConfig?.referralProgram;
     if (legacy)
       return (
         legacy.referrerReward.description || String(legacy.referrerReward.value)
       );
-    return "A reward";
-  }, [loyaltyConfig]);
+    return t("aReward");
+  }, [loyaltyConfig, t, locale]);
 
   // Get referral relationships
   const referralRelationships = useMemo(() => {
@@ -220,8 +247,8 @@ export default function CustomerReferPage() {
       // Privacy: show only the friend's first name, or "Someone" if we can't
       // identify them yet (e.g. they signed up but aren't linked to a profile).
       const friendName = friend?.name
-        ? (friend.name.split(/\s+/)[0] ?? "Someone")
-        : "Someone";
+        ? (friend.name.split(/\s+/)[0] ?? t("someone"))
+        : t("someone");
 
       // Consolidated 3-state status: Reward Issued → Booked → Pending.
       const pillStatus: ReferralPillStatus =
@@ -239,7 +266,7 @@ export default function CustomerReferPage() {
         referredOn: rel.createdAt,
       };
     });
-  }, [referralRelationships]);
+  }, [referralRelationships, t]);
 
   // Use stats from referral tracking system
   const referralStats = useMemo(() => {
@@ -258,69 +285,71 @@ export default function CustomerReferPage() {
   // Copy referral code
   const handleCopyCode = async () => {
     if (!referralCode) {
-      toast.error("No referral code available");
+      toast.error(t("noReferralCode"));
       return;
     }
     try {
       await navigator.clipboard.writeText(referralCode);
       setCopiedCode(true);
-      toast.success("Referral code copied!");
+      toast.success(t("codeCopied"));
       setTimeout(() => setCopiedCode(false), 2000);
     } catch {
-      toast.error("Failed to copy code");
+      toast.error(t("failedToCopyCode"));
     }
   };
 
   // Copy referral link
   const handleCopyLink = async () => {
     if (!referralUrl) {
-      toast.error("Referral link not available");
+      toast.error(t("linkNotAvailable"));
       return;
     }
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopiedLink(true);
-      toast.success("Referral link copied to clipboard!");
+      toast.success(t("linkCopied"));
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("failedToCopyLink"));
     }
   };
 
   // Share via WhatsApp — opens wa.me with the pre-composed message + link.
   const handleShareWhatsApp = () => {
     if (!referralUrl) {
-      toast.error("Referral link not available");
+      toast.error(t("linkNotAvailable"));
       return;
     }
     const text = encodeURIComponent(`${shareMessage} ${referralUrl}`);
     window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-    toast.success("Opening WhatsApp...");
+    toast.success(t("openingWhatsapp"));
   };
 
   // Share via SMS
   const handleShareSMS = () => {
     if (!referralUrl) {
-      toast.error("Referral link not available");
+      toast.error(t("linkNotAvailable"));
       return;
     }
     const body = encodeURIComponent(`${shareMessage} ${referralUrl}`);
     window.location.href = `sms:?body=${body}`;
-    toast.success("Opening SMS app...");
+    toast.success(t("openingSms"));
   };
 
   // Share via Email
   const handleShareEmail = () => {
     if (!referralUrl) {
-      toast.error("Referral link not available");
+      toast.error(t("linkNotAvailable"));
       return;
     }
     const subject = encodeURIComponent(
-      `Join me at ${selectedFacility?.name || "my favourite pet care place"}!`,
+      fill("joinMeAt", {
+        facility: selectedFacility?.name || t("myFavouritePlace"),
+      }),
     );
     const body = encodeURIComponent(`${shareMessage}\n\n${referralUrl}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    toast.success("Opening email app...");
+    toast.success(t("openingEmail"));
   };
 
   // Earned reward notifications
@@ -345,22 +374,18 @@ export default function CustomerReferPage() {
   // Format date helper
   const formatDate = (dateString?: string) => {
     if (!dateString || !isMounted) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return formatDateShort(dateString, locale);
   };
 
   // Consolidated referral status pill: Pending / Booked / Reward Issued.
   const getReferralPill = (status: ReferralPillStatus) => {
     switch (status) {
       case "reward_issued":
-        return <Badge className="bg-green-500">Reward Issued</Badge>;
+        return <Badge className="bg-green-500">{t("rewardIssued")}</Badge>;
       case "booked":
-        return <Badge className="bg-blue-500">Booked</Badge>;
+        return <Badge className="bg-blue-500">{t("booked")}</Badge>;
       default:
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline">{t("pending")}</Badge>;
     }
   };
 
@@ -370,7 +395,7 @@ export default function CustomerReferPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
+          <div className="text-muted-foreground">{t("loading")}</div>
         </div>
       </div>
     );
@@ -381,10 +406,8 @@ export default function CustomerReferPage() {
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Referral Program Not Available</CardTitle>
-            <CardDescription>
-              The referral program is not enabled for this facility.
-            </CardDescription>
+            <CardTitle>{t("programNotAvailable")}</CardTitle>
+            <CardDescription>{t("programNotEnabled")}</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -394,10 +417,7 @@ export default function CustomerReferPage() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       {/* Header */}
-      <PageHeader
-        title="Refer a Friend"
-        description="Share your referral link and earn rewards when your friends book!"
-      />
+      <PageHeader title={t("referAFriend")} description={t("shareAndEarn")} />
 
       {/* Reward Notification Banners */}
       {earnedRewardNotifications.map((notification) => (
@@ -409,18 +429,20 @@ export default function CustomerReferPage() {
             <Gift className="size-5 shrink-0 text-green-600 dark:text-green-400" />
             <div>
               <p className="text-sm font-semibold text-green-700 dark:text-green-300">
-                Reward Earned!
+                {t("rewardEarned")}
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                You earned {notification.rewardLabel} for referring{" "}
-                {notification.friendName}!
+                {fill("youEarnedFor", {
+                  reward: notification.rewardLabel,
+                  friend: notification.friendName,
+                })}
               </p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Dismiss notification"
+            aria-label={t("dismissNotification")}
             className="shrink-0 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:text-green-400"
             onClick={() => handleDismissRewardNotification(notification.id)}
           >
@@ -434,7 +456,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Total Referrals
+              {t("totalReferrals")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -444,7 +466,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Friends Signed Up
+              {t("friendsSignedUp")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -454,7 +476,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Friends Booked
+              {t("friendsBooked")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -464,7 +486,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Rewards Earned
+              {t("rewardsEarned")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -476,7 +498,7 @@ export default function CustomerReferPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
-              Rewards Pending
+              {t("rewardsPending")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -493,11 +515,9 @@ export default function CustomerReferPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="size-5" />
-              Your Referral Link
+              {t("yourReferralLink")}
             </CardTitle>
-            <CardDescription>
-              Share your code or link — you both get rewarded.
-            </CardDescription>
+            <CardDescription>{t("shareCodeOrLink")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {referralCode ? (
@@ -505,7 +525,7 @@ export default function CustomerReferPage() {
                 {/* Large code display */}
                 <div className="bg-primary/5 border-primary/20 rounded-lg border p-4 text-center">
                   <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                    Your code
+                    {t("yourCode")}
                   </div>
                   <div className="text-primary mt-1 font-mono text-3xl font-bold tracking-wider break-all">
                     {referralCode}
@@ -519,7 +539,7 @@ export default function CustomerReferPage() {
                     ) : (
                       <Copy className="mr-2 size-4" />
                     )}
-                    Copy code
+                    {t("copyCode")}
                   </Button>
                   <Button onClick={handleCopyLink} variant="outline">
                     {copiedLink ? (
@@ -527,7 +547,7 @@ export default function CustomerReferPage() {
                     ) : (
                       <Copy className="mr-2 size-4" />
                     )}
-                    Copy link
+                    {t("copyLink")}
                   </Button>
                 </div>
 
@@ -536,7 +556,7 @@ export default function CustomerReferPage() {
                     htmlFor="referral-link"
                     className="text-muted-foreground text-xs"
                   >
-                    Your unique link
+                    {t("yourUniqueLink")}
                   </Label>
                   <Input
                     id="referral-link"
@@ -548,7 +568,7 @@ export default function CustomerReferPage() {
 
                 {/* Share buttons */}
                 <div className="space-y-2">
-                  <div className="text-sm font-medium">Share via</div>
+                  <div className="text-sm font-medium">{t("shareVia")}</div>
                   <div className="grid grid-cols-3 gap-2">
                     <Button
                       onClick={handleShareWhatsApp}
@@ -556,15 +576,16 @@ export default function CustomerReferPage() {
                       className="text-green-600 dark:text-green-400"
                     >
                       <MessageCircle className="mr-2 size-4" />
+                      {/* french-ok: a brand name */}
                       WhatsApp
                     </Button>
                     <Button onClick={handleShareSMS} variant="outline">
                       <MessageSquare className="mr-2 size-4" />
-                      SMS
+                      {t("sms")}
                     </Button>
                     <Button onClick={handleShareEmail} variant="outline">
                       <Mail className="mr-2 size-4" />
-                      Email
+                      {t("email")}
                     </Button>
                   </div>
                   <Button
@@ -574,7 +595,7 @@ export default function CustomerReferPage() {
                     className="text-muted-foreground"
                   >
                     <QrCode className="mr-2 size-4" />
-                    {showQRCode ? "Hide QR code" : "Show QR code"}
+                    {showQRCode ? t("hideQrCode") : t("showQrCode")}
                   </Button>
                 </div>
 
@@ -583,7 +604,7 @@ export default function CustomerReferPage() {
                     <div className="border-border flex size-[200px] items-center justify-center rounded-lg border-2 bg-white p-4">
                       <Image
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralUrl)}`}
-                        alt="QR Code"
+                        alt={t("qrCode")}
                         width={200}
                         height={200}
                         className="size-full"
@@ -591,7 +612,7 @@ export default function CustomerReferPage() {
                       />
                     </div>
                     <p className="text-muted-foreground mt-2 text-sm">
-                      Scan to share your referral link
+                      {t("scanToShare")}
                     </p>
                   </div>
                 )}
@@ -599,10 +620,8 @@ export default function CustomerReferPage() {
             ) : (
               <div className="text-muted-foreground py-8 text-center">
                 <Users className="mx-auto mb-2 size-12 opacity-50" />
-                <p>No referral code available</p>
-                <p className="mt-1 text-xs">
-                  Contact support to get your referral code
-                </p>
+                <p>{t("noReferralCode")}</p>
+                <p className="mt-1 text-xs">{t("contactSupportForCode")}</p>
               </div>
             )}
           </CardContent>
@@ -613,9 +632,9 @@ export default function CustomerReferPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="size-5" />
-              How It Works
+              {t("howItWorks")}
             </CardTitle>
-            <CardDescription>What you and your friend both get</CardDescription>
+            <CardDescription>{t("whatYouBothGet")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {rewardView ? (
@@ -624,7 +643,7 @@ export default function CustomerReferPage() {
                   <div className="flex items-start gap-3">
                     <Gift className="text-primary mt-0.5 size-5 shrink-0" />
                     <div>
-                      <div className="text-sm font-semibold">You get</div>
+                      <div className="text-sm font-semibold">{t("youGet")}</div>
                       <div className="text-primary text-sm font-medium">
                         {rewardView.youGet}
                       </div>
@@ -637,7 +656,7 @@ export default function CustomerReferPage() {
                     <UserPlus className="mt-0.5 size-5 shrink-0 text-green-600 dark:text-green-400" />
                     <div>
                       <div className="text-sm font-semibold">
-                        Your friend gets
+                        {t("yourFriendGets")}
                       </div>
                       <div className="text-sm font-medium text-green-600 dark:text-green-400">
                         {rewardView.friendGets}
@@ -650,7 +669,7 @@ export default function CustomerReferPage() {
                   <div className="flex items-start gap-3">
                     <Info className="text-muted-foreground mt-0.5 size-5 shrink-0" />
                     <div>
-                      <div className="text-sm font-semibold">When</div>
+                      <div className="text-sm font-semibold">{t("when")}</div>
                       <div className="text-muted-foreground text-sm">
                         {rewardView.when}
                       </div>
@@ -660,7 +679,9 @@ export default function CustomerReferPage() {
 
                 {rewardView.conditions.length > 0 && (
                   <div className="border-t pt-3">
-                    <div className="mb-1 text-sm font-semibold">Conditions</div>
+                    <div className="mb-1 text-sm font-semibold">
+                      {t("conditions")}
+                    </div>
                     <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
                       {rewardView.conditions.map((c) => (
                         <li key={c}>{c}</li>
@@ -672,10 +693,8 @@ export default function CustomerReferPage() {
             ) : (
               <div className="text-muted-foreground py-8 text-center">
                 <Gift className="mx-auto mb-2 size-12 opacity-50" />
-                <p>Referral program not configured</p>
-                <p className="mt-1 text-xs">
-                  Contact the facility for more information
-                </p>
+                <p>{t("programNotConfigured")}</p>
+                <p className="mt-1 text-xs">{t("contactFacilityForInfo")}</p>
               </div>
             )}
           </CardContent>
@@ -687,11 +706,9 @@ export default function CustomerReferPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="size-5" />
-            My Referrals
+            {t("myReferrals")}
           </CardTitle>
-          <CardDescription>
-            Friends who used your code, and your reward status
-          </CardDescription>
+          <CardDescription>{t("friendsWhoUsedCode")}</CardDescription>
         </CardHeader>
         <CardContent>
           {referralTracking.length > 0 ? (
@@ -700,16 +717,16 @@ export default function CustomerReferPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                      Friend
+                      {t("colFriend")}
                     </th>
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                      Referred on
+                      {t("colReferredOn")}
                     </th>
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                      Status
+                      {t("colStatus")}
                     </th>
                     <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
-                      Reward
+                      {t("colReward")}
                     </th>
                   </tr>
                 </thead>
@@ -739,7 +756,9 @@ export default function CustomerReferPage() {
                           {referrerRewardLabel}
                         </span>
                         <span className="text-muted-foreground ml-1 text-xs">
-                          {referral.rewardEarned ? "(issued)" : "(pending)"}
+                          {referral.rewardEarned
+                            ? t("issuedParen")
+                            : t("pendingParen")}
                         </span>
                       </td>
                     </tr>
@@ -752,13 +771,15 @@ export default function CustomerReferPage() {
               <div className="bg-primary/10 mb-3 flex size-14 items-center justify-center rounded-full">
                 <Gift className="text-primary size-7" />
               </div>
-              <p className="font-semibold">No referrals yet</p>
+              <p className="font-semibold">{t("noReferralsYet")}</p>
               <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                Invite a friend with your code{" "}
-                <span className="text-foreground font-mono font-semibold">
-                  {referralCode}
-                </span>{" "}
-                — when they book, you both get rewarded.
+                {rich(t("inviteWithCode"), {
+                  code: (
+                    <span className="text-foreground font-mono font-semibold">
+                      {referralCode}
+                    </span>
+                  ),
+                })}
               </p>
               <Button
                 className="mt-4"
@@ -769,7 +790,7 @@ export default function CustomerReferPage() {
                 }
               >
                 <Share2 className="mr-2 size-4" />
-                Share now
+                {t("shareNow")}
               </Button>
             </div>
           )}

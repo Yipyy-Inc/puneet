@@ -12040,3 +12040,28 @@ reply and the star rating write through `replyToReportCard` /
 - Fixed while translating: `page.tsx` is a Server Component, so its title
   moved into a small client `EstimatesHeader`; the `en-US` date formatter
   and `$${n.toFixed(2)}` are `formatDateShort` / `formatMoney`.
+
+### Refer a friend (`/customer/refer`) — **every number on it is the fixture, and the QR code is drawn by a stranger**
+
+- **The whole page reads fixtures.** The program is
+  `getFacilityLoyaltyConfig` (`@/data/facility-loyalty-config`), the code is
+  `getLoyaltyAccount(…)?.referralCode` (`@/data/loyalty-accounts`), and the
+  referrals and stats are `@/data/referral-tracking`, joined to the `clients`
+  fixture for first names. A real customer's code is "" — the page shows "No
+  referral code available" — and their referrals never appear.
+- **The QR code sends the referral link to a third party.** `<Image
+src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
+  — every "Show QR code" tells an outside service the customer's code and
+  facility id. Draw it in the browser instead.
+- **A facility's share template stays the facility's words.** Its reward
+  tokens (`{refereeReward}`, `{referrerReward}`) are filled in English, as
+  the wizard's own live preview shows them; only the no-template fallback
+  message is ours, and it is in the sender's language.
+- Fixed while translating: `lib/loyalty/referral-program.ts`'s
+  `referralRewardText` and `referralRewardFullText` take a locale, defaulting
+  to English byte-for-byte (the facility wizard is pinned by a new unit
+  test), with a French grammar — amount after the noun, `Intl` money and
+  percent, services by `serviceTypeLabel`. The customer's "When" reads its
+  own keyed sentences instead of the wizard's staff-facing
+  `REFERRAL_TRIGGER_HINTS` ("Reward fires when…"). Shared libs are outside
+  every French-gate surface, so none of this was visible to the gate.

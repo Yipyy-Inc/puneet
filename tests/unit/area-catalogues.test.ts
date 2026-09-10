@@ -132,6 +132,7 @@ const SAME_IN_BOTH = new Set([
   "customerPages.estimates.service", // Service / Service
   "customerPages.estimates.dates", // Dates / Dates
   "customerPages.estimates.total", // Total / Total
+  "customerPages.refer.conditions", // Conditions / Conditions
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
 ]);
 
