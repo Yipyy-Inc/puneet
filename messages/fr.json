@@ -7231,7 +7231,10 @@
       "mealCountOther": "{n} repas",
       "itemCountOne": "{n} élément",
       "itemCountOther": "{n} éléments",
-      "medicationLabelPhoto": "Étiquette du médicament"
+      "medicationLabelPhoto": "Étiquette du médicament",
+      "brandName": "Marque / nom",
+      "colorMarkings": "Couleur / marques",
+      "reviewAndSubmit": "Vérifier et envoyer"
     },
     "loyalty": {
       "allActivity": "Toute l’activité",
@@ -8527,7 +8530,8 @@
         "cancelPlanQuestion": "Annuler {plan}?",
         "immediatelyParen": "(immédiatement)",
         "endOfCurrentCycleParen": "(fin du cycle de facturation en cours)",
-        "noticeRequired": "Cet abonnement exige un préavis de {n} jours; votre prochaine date de facturation en tient déjà compte."
+        "noticeRequired": "Cet abonnement exige un préavis de {n} jours; votre prochaine date de facturation en tient déjà compte.",
+        "creditsPerCycleLabel": "Crédits / cycle"
       },
       "settings": {
         "accountSettings": "Paramètres du compte",

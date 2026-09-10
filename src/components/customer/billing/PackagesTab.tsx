@@ -446,7 +446,7 @@ export function PackagesTab() {
                   </tr>
                   <tr className="border-b">
                     <td className="bg-muted/40 sticky left-0 p-3 font-medium">
-                      Credits / cycle
+                      {t("creditsPerCycleLabel")}
                     </td>
                     {availablePlans.map((plan) => (
                       <td key={plan.id} className="p-3 text-center">

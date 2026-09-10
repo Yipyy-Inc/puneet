@@ -161,7 +161,7 @@ export function PetDetailsSection({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pet-color">Color / markings</Label>
+            <Label htmlFor="pet-color">{t("colorMarkings")}</Label>
             <Input
               id="pet-color"
               value={values.color}
