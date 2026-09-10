@@ -8341,7 +8341,20 @@
         "stepOf": "Step {n} of {total}",
         "copyFromLastStay": "Copy belongings, feeding, medications and behavior from your last stay",
         "toBeDecided": "To be decided",
-        "nextSection": "Next: {section}"
+        "nextSection": "Next: {section}",
+        "qrBookingNotFound": "Booking not found.",
+        "qrBackToBookings": "Back to bookings",
+        "qrBackToBooking": "Back to booking",
+        "qrShowAtDropoff": "Show QR at drop-off",
+        "qrStaffWillScan": "Staff will scan this code to open your reservation and complete check-in quickly.",
+        "qrBookingNumber": "Booking #{id}",
+        "qrPet": "Pet",
+        "qrNoCodeYet": "No QR code available. Complete your express check-in form first.",
+        "qrAlsoAvailableIn": "QR also available in",
+        "qrInPortal": "This portal (booking details page)",
+        "qrInEmail": "Confirmation email after you submit the form",
+        "qrInSms": "SMS reminder (if enabled)",
+        "qrViewBookingDetails": "View booking details"
       },
       "packages": {
         "packagesMemberships": "Packages and memberships",

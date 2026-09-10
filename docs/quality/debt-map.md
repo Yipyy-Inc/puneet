@@ -12212,3 +12212,14 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
 - Fixed while translating: "Welcome, there." — the fallback when the
   estimate has no name — is a plain "Welcome." now; the copy said "Click
   here" above a form with no link in it.
+
+### Check-in QR (`/customer/bookings/[id]/check-in-qr`) — **a real booking has no QR**
+
+- The booking is looked up in the `bookings` FIXTURE and the token in
+  `getYipyyGoForm` (the in-memory express check-in forms — see "Express
+  check-in form"), so a real customer's booking lands on "Booking not
+  found", and a QR exists only for a form submitted in the same browser
+  session. The page also promises the QR "in the confirmation email" and
+  "by SMS reminder"; neither sender exists for it.
+- Fixed while translating: the date and check-in time were printed raw
+  (`2026-09-14 · 14:00`) and are `formatDateLong` / `formatTimeOfDay`.
