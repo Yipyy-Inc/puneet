@@ -11333,3 +11333,49 @@ chrome.** They say nothing at all about the screens the chrome wraps.
   `check:frozen-translator` fail: it scans a memo body for a translator call
   and found one in the COMMENT. Reworded. Worth knowing before writing another
   annotation that quotes code.
+
+## 2026-09-10 — the page bodies are a surface now, and they are 24,700 strings
+
+The entry above ended "no gate covers a page body in any portal". Four do now:
+`pages:customer`, `pages:admin`, `pages:employee` and `pages:facility`, each
+derived from every `page.tsx` and `layout.tsx` under the portal and walked five
+deep — the same shape as `staffSurface()`, with settings and staff cut out of
+the facility tree so no fix counts twice inside one portal.
+
+| Surface                    | Files      | Strings     |
+| -------------------------- | ---------- | ----------- |
+| `pages:customer`           | 141        | 2,877       |
+| `pages:admin`              | 288        | 5,284       |
+| `pages:employee`           | 400        | 9,326       |
+| `pages:facility`           | 679        | 17,933      |
+| **Unique across all four** | **~1,083** | **~24,700** |
+
+The surfaces overlap because the employee portal re-renders facility pages
+behind `<RequirePermission>`, and a shared component is reachable from more
+than one portal. That is accepted, as it already was between the facility and
+employee shells: a fix lowers every surface the file sits on.
+
+**A random sample of forty hits was forty real labels** — "Referral code
+copied!", "This estimate expires on", "Disaster Recovery Procedures", "Use
+current time". So there was nothing to annotate away, and the eight chrome
+zeroes had been describing roughly one string in every hundred and fifty a
+French user meets.
+
+### Why a ratchet and not a sweep
+
+Twenty-four thousand strings is weeks. Converting them with no gate means the
+number grows in every file nobody is touching that week, and the repo's own
+rule — the one the §2 colour sweep is waiting on — is that the gate precedes
+the sweep. So the four surfaces landed baselined per file, as a COUNT, in
+`scripts/check-ui-french.baseline.json`: a file that gains one string fails,
+proven by adding a sentence to a baselined page and watching it report `NEW`.
+
+**There is no command that writes the baseline.** A writer makes raising it
+one keystroke. The gate prints "lower its baseline" when a file drops, and a
+person lowers it by hand; the file only ever moves down.
+
+### Where the conversion starts
+
+The customer portal, because it is the one surface a member of the PUBLIC
+reads, and because its dashboard is the screen that exposed all this: "Welcome
+back, Alice!" and an estimate quoted as `$458.85` behind a French sidebar.
