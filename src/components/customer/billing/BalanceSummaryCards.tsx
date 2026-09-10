@@ -14,17 +14,19 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    n,
-  );
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
 
 /**
  * The three account-balance cards. Rendered above the billing tab bar so they
  * stay visible regardless of the active tab.
  */
 export function BalanceSummaryCards() {
+  const { t, locale } = useCustomerText("billing");
+  // Canadian dollars, in the reader's locale. This was
+  // Intl.NumberFormat("en-US", { currency: "USD" }) — US dollars on a
+  // product that takes Canadian ones through Clover.
+  const fmt = (n: number) => formatMoney(n, locale);
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -71,7 +73,7 @@ export function BalanceSummaryCards() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <CreditCard className="size-5" />
-            Store Credit
+            {t("storeCredit")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -80,7 +82,7 @@ export function BalanceSummaryCards() {
             href="/customer/wallet"
             className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
           >
-            Manage wallet <ArrowRight className="size-3.5" />
+            {t("manageWallet")} <ArrowRight className="size-3.5" />
           </Link>
         </CardContent>
       </Card>
@@ -89,7 +91,7 @@ export function BalanceSummaryCards() {
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Gift className="size-5" />
-            Gift Card Balance
+            {t("giftCardBalance")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -99,8 +101,8 @@ export function BalanceSummaryCards() {
             className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
           >
             {totalGiftCardBalance > 0
-              ? "Manage gift cards"
-              : "Send a gift card"}
+              ? t("manageGiftCards")
+              : t("sendGiftCard")}
             <ArrowRight className="size-3.5" />
           </Link>
         </CardContent>
@@ -116,7 +118,7 @@ export function BalanceSummaryCards() {
             ) : (
               <Wallet className="size-5" />
             )}
-            Outstanding Balance
+            {t("outstandingBalance")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -129,9 +131,7 @@ export function BalanceSummaryCards() {
             {fmt(totalOutstanding)}
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
-            {hasOutstanding
-              ? "From unpaid or overdue invoices."
-              : "No outstanding balance."}
+            {hasOutstanding ? t("outstandingHelp") : t("noOutstanding")}
           </p>
         </CardContent>
       </Card>

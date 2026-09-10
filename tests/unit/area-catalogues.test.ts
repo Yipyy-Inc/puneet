@@ -100,6 +100,9 @@ const SAME_IN_BOTH = new Set([
   "customerPages.addPet.allergies", // Allergies / Allergies
   "customerPages.formWizard.signatureAlt", // Signature / Signature
   "customerPages.formWizard.addrProvince", // Province / Province
+  "customerPages.billing.services", // Services / Services
+  "customerPages.billing.total", // Total / Total
+  "customerPages.billing.monthPlaceholder", // MM — the month, in both
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

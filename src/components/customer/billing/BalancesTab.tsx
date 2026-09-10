@@ -13,8 +13,27 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, Gift, TrendingUp, Calendar } from "lucide-react";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
+
+/** A credit's reason, as a CATALOGUE KEY — pure, so a memo can call it. */
+function creditReasonKey(reason: string): string {
+  switch (reason) {
+    case "refund":
+      return "creditRefund";
+    case "promotion":
+      return "creditPromotion";
+    case "compensation":
+      return "creditCompensation";
+    case "prepaid":
+      return "creditPrepaid";
+    default:
+      return "creditGeneric";
+  }
+}
 
 export function BalancesTab() {
+  const { t, locale } = useCustomerText("billing");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -52,35 +71,14 @@ export function BalancesTab() {
     );
   }, [customerId]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
+  // Canadian dollars in the reader's locale — this was en-US and USD.
+  const formatCurrency = (amount: number) => formatMoney(amount, locale);
 
-  const getCreditReasonLabel = (reason: string) => {
-    switch (reason) {
-      case "refund":
-        return "Refund Credit";
-      case "promotion":
-        return "Promotional Credit";
-      case "compensation":
-        return "Compensation";
-      case "prepaid":
-        return "Prepaid Credit";
-      default:
-        return "Credit";
-    }
-  };
+  const getCreditReasonLabel = (reason: string) => t(creditReasonKey(reason));
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateLong(dateString, locale);
   };
 
   // Build transaction history for credits (credit added / used)
@@ -98,7 +96,7 @@ export function BalancesTab() {
         id: `${credit.id}-added`,
         type: "added",
         amount: credit.amount,
-        description: credit.description || getCreditReasonLabel(credit.reason),
+        description: credit.description || t(creditReasonKey(credit.reason)),
         date: credit.createdAt,
       });
 
@@ -107,7 +105,10 @@ export function BalancesTab() {
           id: `${credit.id}-used`,
           type: "used",
           amount: credit.amount - credit.remainingAmount,
-          description: `Credit used from ${getCreditReasonLabel(credit.reason)}`,
+          description: t("creditUsedFrom").replace(
+            "{reason}",
+            t(creditReasonKey(credit.reason)),
+          ),
           date: credit.lastUsedAt,
         });
       }
@@ -116,22 +117,19 @@ export function BalancesTab() {
     return tx.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-  }, [customerCreditsList]);
+  }, [customerCreditsList, t]);
 
   return (
     <>
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold">Account Balances</h2>
-        <p className="text-muted-foreground">
-          Store credit, gift cards, prepaid balances, and any outstanding
-          amounts
-        </p>
+        <h2 className="text-2xl font-semibold">{t("balancesTitle")}</h2>
+        <p className="text-muted-foreground">{t("balancesDescription")}</p>
       </div>
 
       {/* Credits List */}
       {customerCreditsList.length > 0 && (
         <div>
-          <h3 className="mb-4 text-lg font-semibold">Store Credits</h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("storeCredits")}</h3>
           <div className="space-y-4">
             {customerCreditsList.map((credit) => (
               <Card key={credit.id}>
@@ -145,7 +143,7 @@ export function BalancesTab() {
                       <CardDescription>{credit.description}</CardDescription>
                     </div>
                     <Badge variant="default" className="bg-green-500">
-                      Active
+                      {t("active")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -153,20 +151,24 @@ export function BalancesTab() {
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     <div>
                       <p className="text-muted-foreground text-sm">
-                        Original Amount
+                        {t("originalAmount")}
                       </p>
                       <p className="text-lg font-semibold">
                         {formatCurrency(credit.amount)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-sm">Remaining</p>
+                      <p className="text-muted-foreground text-sm">
+                        {t("remaining")}
+                      </p>
                       <p className="text-lg font-semibold text-green-600">
                         {formatCurrency(credit.remainingAmount)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-sm">Used</p>
+                      <p className="text-muted-foreground text-sm">
+                        {t("used")}
+                      </p>
                       <p className="text-lg font-semibold">
                         {formatCurrency(credit.amount - credit.remainingAmount)}
                       </p>
@@ -175,7 +177,7 @@ export function BalancesTab() {
                       <div>
                         <p className="text-muted-foreground flex items-center gap-1 text-sm">
                           <Calendar className="size-3" />
-                          Expires
+                          {t("expires")}
                         </p>
                         <p className="text-sm font-semibold">
                           {formatDate(credit.expiryDate)}
@@ -193,7 +195,7 @@ export function BalancesTab() {
       {/* Gift Cards List */}
       {customerGiftCards.length > 0 && (
         <div>
-          <h3 className="mb-4 text-lg font-semibold">Gift Cards</h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("giftCards")}</h3>
           <div className="grid gap-4 md:grid-cols-2">
             {customerGiftCards.map((giftCard) => (
               <Card key={giftCard.id}>
@@ -209,7 +211,7 @@ export function BalancesTab() {
                       </CardDescription>
                     </div>
                     <Badge variant="default" className="bg-green-500">
-                      Active
+                      {t("active")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -217,7 +219,7 @@ export function BalancesTab() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">
-                        Current Balance:
+                        {t("currentBalance")}
                       </span>
                       <span className="text-2xl font-bold">
                         {formatCurrency(giftCard.currentBalance)}
@@ -225,7 +227,7 @@ export function BalancesTab() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Initial Amount:
+                        {t("initialAmount")}
                       </span>
                       <span>{formatCurrency(giftCard.initialAmount)}</span>
                     </div>
@@ -233,7 +235,7 @@ export function BalancesTab() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" />
-                          Expires:
+                          {t("expiresColon")}
                         </span>
                         <span>{formatDate(giftCard.expiryDate)}</span>
                       </div>
@@ -256,9 +258,7 @@ export function BalancesTab() {
       {/* Transaction History for Credits */}
       {creditTransactions.length > 0 && (
         <div>
-          <h3 className="mb-4 text-lg font-semibold">
-            Credit Transaction History
-          </h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("creditHistory")}</h3>
           <div className="space-y-2">
             {creditTransactions.map((tx) => (
               <div
@@ -273,7 +273,7 @@ export function BalancesTab() {
                   />
                   <div>
                     <div className="font-medium">
-                      {tx.type === "added" ? "Credit Added" : "Credit Used"}
+                      {tx.type === "added" ? t("creditAdded") : t("creditUsed")}
                     </div>
                     <div className="text-muted-foreground text-xs">
                       {tx.description}
@@ -286,7 +286,7 @@ export function BalancesTab() {
                       tx.type === "added" ? "text-green-600" : "text-amber-600"
                     } `}
                   >
-                    {tx.type === "added" ? "+" : "-"}
+                    {tx.type === "added" ? "+" : "−"}
                     {formatCurrency(tx.amount)}
                   </div>
                   <div className="text-muted-foreground text-xs">
@@ -305,10 +305,9 @@ export function BalancesTab() {
           <Card>
             <CardContent className="space-y-3 py-12 text-center">
               <Wallet className="text-muted-foreground mx-auto size-12 opacity-50" />
-              <p className="font-semibold">No active balances</p>
+              <p className="font-semibold">{t("noBalances")}</p>
               <p className="text-muted-foreground text-sm">
-                Your credits, gift card balances, and outstanding amounts will
-                appear here
+                {t("noBalancesHelp")}
               </p>
             </CardContent>
           </Card>

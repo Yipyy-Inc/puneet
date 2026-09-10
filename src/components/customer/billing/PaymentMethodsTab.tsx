@@ -48,8 +48,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 export function PaymentMethodsTab() {
+  const { t, fill } = useCustomerText("billing");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -111,11 +113,11 @@ export function PaymentMethodsTab() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.cardNumber.replace(/\s/g, "").match(/^\d{13,19}$/)) {
-      newErrors.cardNumber = "Please enter a valid card number";
+      newErrors.cardNumber = t("errCardNumber");
     }
 
     if (!formData.expiryMonth || !formData.expiryYear) {
-      newErrors.expiry = "Please enter expiry date";
+      newErrors.expiry = t("errExpiryMissing");
     } else {
       const month = parseInt(formData.expiryMonth);
       const year = parseInt(`20${formData.expiryYear}`);
@@ -124,16 +126,16 @@ export function PaymentMethodsTab() {
         year < now.getFullYear() ||
         (year === now.getFullYear() && month < now.getMonth() + 1)
       ) {
-        newErrors.expiry = "Card has expired";
+        newErrors.expiry = t("errCardExpired");
       }
     }
 
     if (!formData.cvc.match(/^\d{3,4}$/)) {
-      newErrors.cvc = "Please enter a valid CVC";
+      newErrors.cvc = t("errCvc");
     }
 
     if (!formData.cardholderName.trim()) {
-      newErrors.cardholderName = "Please enter cardholder name";
+      newErrors.cardholderName = t("errCardholder");
     }
 
     setErrors(newErrors);
@@ -142,7 +144,7 @@ export function PaymentMethodsTab() {
 
   const handleAddCard = () => {
     if (!validateForm()) {
-      toast.error("Please fix the errors before saving");
+      toast.error(t("fixErrorsToast"));
       return;
     }
 
@@ -150,7 +152,7 @@ export function PaymentMethodsTab() {
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      toast.success("Card verified and added successfully!");
+      toast.success(t("cardAddedToast"));
       setIsAddModalOpen(false);
       setFormData({
         cardNumber: "",
@@ -168,12 +170,12 @@ export function PaymentMethodsTab() {
     setCustomerPaymentMethods((prev) =>
       prev.map((m) => ({ ...m, isDefault: m.id === id })),
     );
-    toast.success("Default payment method updated");
+    toast.success(t("defaultUpdatedToast"));
   };
 
   const removeMethod = (id: string) => {
     setCustomerPaymentMethods((prev) => prev.filter((m) => m.id !== id));
-    toast.success("Payment method removed");
+    toast.success(t("cardRemovedToast"));
   };
 
   const handleRemove = (method: (typeof customerPaymentMethods)[number]) => {
@@ -189,14 +191,14 @@ export function PaymentMethodsTab() {
     <>
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Payment Methods</h2>
+          <h2 className="text-2xl font-semibold">{t("tabPaymentMethods")}</h2>
           <p className="text-muted-foreground">
-            Manage your saved credit and debit cards
+            {t("paymentMethodsDescription")}
           </p>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 size-4" />
-          Add Payment Method
+          {t("addPaymentMethod")}
         </Button>
       </div>
 
@@ -204,13 +206,13 @@ export function PaymentMethodsTab() {
         <Card>
           <CardContent className="space-y-3 py-12 text-center">
             <CreditCard className="text-muted-foreground mx-auto size-12 opacity-50" />
-            <p className="font-semibold">No payment methods</p>
+            <p className="font-semibold">{t("noPaymentMethods")}</p>
             <p className="text-muted-foreground text-sm">
-              Add a payment method to make booking and payments easier
+              {t("noPaymentMethodsHelp")}
             </p>
             <Button onClick={() => setIsAddModalOpen(true)} className="mt-4">
               <Plus className="mr-2 size-4" />
-              Add Your First Card
+              {t("addFirstCard")}
             </Button>
           </CardContent>
         </Card>
@@ -230,24 +232,27 @@ export function PaymentMethodsTab() {
                           {method.cardBrand
                             ? method.cardBrand.charAt(0).toUpperCase() +
                               method.cardBrand.slice(1)
-                            : "Card"}{" "}
+                            : t("cardFallback")}{" "}
                           •••• {method.cardLast4}
                         </CardTitle>
                         <CardDescription className="flex items-center gap-2">
                           <span>
                             {method.cardExpMonth && method.cardExpYear
-                              ? `Expires ${String(method.cardExpMonth).padStart(
-                                  2,
-                                  "0",
-                                )}/${method.cardExpYear}`
-                              : "No expiry date"}
+                              ? fill("cardExpires", {
+                                  month: String(method.cardExpMonth).padStart(
+                                    2,
+                                    "0",
+                                  ),
+                                  year: String(method.cardExpYear),
+                                })
+                              : t("noExpiry")}
                           </span>
                           {isCardExpired(method) && (
                             <Badge
                               variant="destructive"
                               className="text-[10px]"
                             >
-                              Expired
+                              {t("cardExpired")}
                             </Badge>
                           )}
                         </CardDescription>
@@ -257,7 +262,7 @@ export function PaymentMethodsTab() {
                       {method.isDefault && (
                         <Badge variant="default" className="gap-1">
                           <Check className="size-3" />
-                          Default
+                          {t("defaultCard")}
                         </Badge>
                       )}
                       <DropdownMenu>
@@ -266,7 +271,7 @@ export function PaymentMethodsTab() {
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            aria-label="Payment method actions"
+                            aria-label={t("cardActions")}
                           >
                             <MoreHorizontal className="size-4" />
                           </Button>
@@ -277,7 +282,7 @@ export function PaymentMethodsTab() {
                               onSelect={() => handleSetDefault(method.id)}
                             >
                               <Check className="size-4" />
-                              Set as default
+                              {t("setAsDefault")}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
@@ -285,7 +290,7 @@ export function PaymentMethodsTab() {
                             onSelect={() => handleRemove(method)}
                           >
                             <Trash2 className="size-4" />
-                            Remove
+                            {t("removeCard")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -302,14 +307,12 @@ export function PaymentMethodsTab() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Payment Method</DialogTitle>
-            <DialogDescription>
-              Add a new credit or debit card to your account
-            </DialogDescription>
+            <DialogTitle>{t("addPaymentMethod")}</DialogTitle>
+            <DialogDescription>{t("addPaymentMethodHelp")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="cardNumber">Card Number</Label>
+              <Label htmlFor="cardNumber">{t("cardNumber")}</Label>
               <Input
                 id="cardNumber"
                 placeholder="1234 5678 9012 3456"
@@ -333,10 +336,10 @@ export function PaymentMethodsTab() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="expiryMonth">Expiry Month</Label>
+                <Label htmlFor="expiryMonth">{t("expiryMonth")}</Label>
                 <Input
                   id="expiryMonth"
-                  placeholder="MM"
+                  placeholder={t("monthPlaceholder")}
                   value={formData.expiryMonth}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, "").slice(0, 2);
@@ -347,10 +350,10 @@ export function PaymentMethodsTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expiryYear">Expiry Year</Label>
+                <Label htmlFor="expiryYear">{t("expiryYear")}</Label>
                 <Input
                   id="expiryYear"
-                  placeholder="YY"
+                  placeholder={t("yearPlaceholder")}
                   value={formData.expiryYear}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, "").slice(0, 2);
@@ -391,10 +394,10 @@ export function PaymentMethodsTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cardholderName">Cardholder Name</Label>
+              <Label htmlFor="cardholderName">{t("cardholderName")}</Label>
               <Input
                 id="cardholderName"
-                placeholder="John Doe"
+                placeholder={t("cardholderPlaceholder")}
                 value={formData.cardholderName}
                 onChange={(e) => {
                   setFormData({ ...formData, cardholderName: e.target.value });
@@ -413,10 +416,10 @@ export function PaymentMethodsTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleAddCard}>
-              {isVerifying ? "Verifying..." : "Verify & Save"}
+              {isVerifying ? t("verifying") : t("verifyAndSave")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -429,21 +432,20 @@ export function PaymentMethodsTab() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove default card?</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeDefaultTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure? You will need to add a new default card before
-              making purchases.
+              {t("removeDefaultBody")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (removeTarget) removeMethod(removeTarget.id);
                 setRemoveTarget(null);
               }}
             >
-              Remove card
+              {t("removeCardConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
