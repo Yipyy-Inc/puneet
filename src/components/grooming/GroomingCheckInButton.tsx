@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { handleSalonCheckIn } from "@/lib/grooming-post-booking";
 import { toast } from "sonner";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface GroomingCheckInButtonProps {
   bookingId: string;
@@ -17,6 +18,7 @@ export function GroomingCheckInButton({
   clientId,
   disabled = false,
 }: GroomingCheckInButtonProps) {
+  const { t } = useCustomerText("bookingDetail");
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
 
@@ -25,13 +27,12 @@ export function GroomingCheckInButton({
     try {
       await handleSalonCheckIn(bookingId, clientId);
       setIsCheckedIn(true);
-      toast.success("Check-in successful!", {
-        description: "The front desk has been notified that you're here.",
+      toast.success(t("checkInSuccess"), {
+        description: t("checkInSuccessHelp"),
       });
     } catch {
-      toast.error("Check-in failed", {
-        description:
-          "There was an error checking in. Please contact the front desk.",
+      toast.error(t("checkInFailed"), {
+        description: t("checkInFailedHelp"),
       });
     } finally {
       setIsCheckingIn(false);
@@ -42,7 +43,7 @@ export function GroomingCheckInButton({
     return (
       <Button disabled className="border-green-200 bg-green-50 text-green-700">
         <CheckCircle2 className="mr-2 size-4" />
-        Checked In
+        {t("checkedIn")}
       </Button>
     );
   }
@@ -56,10 +57,10 @@ export function GroomingCheckInButton({
       {isCheckingIn ? (
         <>
           <Loader2 className="mr-2 size-4 animate-spin" />
-          Checking in...
+          {t("checkingIn")}
         </>
       ) : (
-        "I'm here - Check In"
+        t("imHere")
       )}
     </Button>
   );

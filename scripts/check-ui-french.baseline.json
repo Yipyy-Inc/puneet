@@ -2,7 +2,6 @@
   "pages:customer": {
     "src/app/customer/billing/page.tsx": 7,
     "src/app/customer/bookings/[id]/check-in-qr/page.tsx": 12,
-    "src/app/customer/bookings/[id]/page.tsx": 47,
     "src/app/customer/bookings/[id]/yipyygo-form/page.tsx": 51,
     "src/app/customer/bookings/new/page.tsx": 5,
     "src/app/customer/cameras/page.tsx": 26,
@@ -95,7 +94,6 @@
     "src/components/estimates/emails/email-helpers.ts": 2,
     "src/components/estimates/EstimatePdfDownload.tsx": 15,
     "src/components/forms/FormWizard.tsx": 18,
-    "src/components/grooming/GroomingCheckInButton.tsx": 6,
     "src/components/loyalty/LoyaltyTransactionHistory.tsx": 12,
     "src/components/messaging/ClientContextPanel.tsx": 49,
     "src/components/messaging/ComposeBar.tsx": 33,

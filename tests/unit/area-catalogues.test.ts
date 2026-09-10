@@ -79,6 +79,10 @@ const SAME_IN_BOTH = new Set([
   "customerPages.dashboard.tierFallback", // Bronze / Bronze
   "customerPages.bookings.metaDate", // Date / Date
   "customerPages.bookings.metaTotal", // Total / Total
+  "customerPages.bookingDetail.serviceType_standard", // Standard / Standard
+  "customerPages.bookingDetail.date", // Date / Date
+  "customerPages.bookingDetail.services", // Services / Services
+  "customerPages.bookingDetail.total", // Total / Total
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

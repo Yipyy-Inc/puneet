@@ -11439,3 +11439,50 @@ booking statuses were missing from `status` and are in now.
 - `check:ui-french`'s object scanner does not know `actionLabel:` — the
   dashboard's "Upload Vaccination" buttons were converted because they were
   read on screen, not because the gate listed them.
+
+## 2026-09-10 — what the customer pages claim, page by page
+
+A running list, added to with each customer page as it is converted. The
+French conversion reads every string on a page, which makes it the first
+pass in a while to read what the pages actually SAY — and several say things
+that are not true. Each is translated as found (removing a claim is a product
+decision, not a translation one) and recorded here.
+
+### Bookings (`/customer/bookings`)
+
+- **Cancelling a booking does nothing.** `confirmCancelBooking` is
+  `await new Promise((r) => setTimeout(r, 1000))` followed by
+  `toast.success("Booking cancelled")`, under a `TODO: Replace with actual API
+call`. The cancel dialog also promises "a refund is processed according to
+  the facility's cancellation policy". Neither happens. This is the most
+  serious item on the list: a customer who cancels believes they have.
+- **"Receipt sent to your email."** (`PastBookingCard`) — a toast behind a
+  TODO; no email is sent. `check:success-claims` had stopped seeing it the
+  moment it was translated; see its 2026-09-10 note.
+- **Three invented caregivers.** `TipPromptDialog` falls back to a hard-coded
+  `FALLBACK_STAFF` — "Sarah", "Mike" and "Jess", with stock photographs — when
+  no staff are passed, and the bookings page passes none. So every customer is
+  told those three looked after their pet, and the tip toast ("{amount} sent
+  to the team") records the tip in component state only.
+- `NotesTab` in `staff/[id]/staff-profile-tabs.tsx` is exported and imported
+  nowhere — dead code, carrying a "Note saved" claim of its own.
+- Past booking cards render at `opacity-75`, which §6 rule 4 bans as text
+  de-emphasis.
+
+### Booking detail (`/customer/bookings/[id]`)
+
+- **It reads the FIXTURE, while the list reads Postgres.** The list uses
+  `bookingQueries.byClient`; the detail page does
+  `bookings.find(...)` over `@/data/bookings`. A real booking clicked in the
+  list therefore lands on "Booking not found" unless its id happens to exist
+  in the seed file.
+- **"Confirm and book" and "Decline the estimate" do nothing** but toast —
+  "Booking confirmed! The facility has been notified." Nothing is confirmed
+  and nobody is notified.
+- **`pet.weight` is labelled in pounds here and kilograms in the booking
+  wizard.** Same field. The seed values (a golden retriever at 25) only make
+  sense as kilograms, so the page now formats it with `formatWeight` —
+  "25 kg (55 lb)" — and the underlying unit needs deciding in the schema, not
+  at each screen.
+- A status the badge table did not know used to be labelled "Pending"
+  whatever it was. It reads as itself now.
