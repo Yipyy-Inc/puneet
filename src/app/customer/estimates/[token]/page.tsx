@@ -20,25 +20,20 @@ import { AcceptEstimateDialog } from "@/components/customer/estimates/AcceptEsti
 import { DeclineEstimateDialog } from "@/components/customer/estimates/DeclineEstimateDialog";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
-
-function fmtDate(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function fmtTime(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import {
+  formatDateLong,
+  formatList,
+  formatMoney,
+  formatPercent,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
 
 export default function CustomerEstimateViewPage() {
   const params = useParams();
   const token = params.token as string;
+  const { t, fill, locale } = useCustomerText("estimates");
 
   const estimate = useMemo(
     () =>
@@ -58,8 +53,8 @@ export default function CustomerEstimateViewPage() {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <PageHeader
-          title="Estimate Not Found"
-          description="This estimate link may have expired or is invalid."
+          title={t("estimateNotFound")}
+          description={t("linkExpiredOrInvalid")}
         />
       </div>
     );
@@ -97,17 +92,23 @@ export default function CustomerEstimateViewPage() {
               {businessProfile.businessName}
             </p>
             <h1 className="mt-2 text-xl font-bold text-slate-800">
-              Estimate for{" "}
-              {estimate.petNames.length > 0
-                ? estimate.petNames.join(", ")
-                : (estimate.guestPetInfo?.name ?? "Your Pet")}
+              {fill("estimateFor", {
+                pets:
+                  estimate.petNames.length > 0
+                    ? formatList(estimate.petNames, locale)
+                    : (estimate.guestPetInfo?.name ?? t("yourPet")),
+              })}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Prepared by {estimate.createdBy} ·{" "}
-              {new Date(estimate.createdAt).toLocaleDateString()}
+              {fill("preparedBy", {
+                name: estimate.createdBy,
+                date: formatDateLong(estimate.createdAt, locale),
+              })}
             </p>
             {isExpired && (
-              <Badge className="mt-2 bg-red-100 text-red-700">Expired</Badge>
+              <Badge className="mt-2 bg-red-100 text-red-700">
+                {t("expired")}
+              </Badge>
             )}
             <div className="mt-3">
               <EstimatePdfDownload estimate={estimate} variant="outline" />
@@ -117,27 +118,33 @@ export default function CustomerEstimateViewPage() {
           {/* Service details */}
           <div className="space-y-4 px-6 py-5">
             <div className="rounded-xl bg-blue-50 p-4">
-              <p className="text-sm font-semibold text-blue-800 capitalize">
-                {estimate.service}
+              <p className="text-sm font-semibold text-blue-800">
+                {serviceTypeLabel(locale, estimate.service)}
                 {estimate.serviceType && ` — ${estimate.serviceType}`}
               </p>
               <div className="text-muted-foreground mt-2 space-y-1 text-xs">
                 <div className="flex items-center gap-2">
                   <Calendar className="size-3.5" />
                   <span>
-                    {fmtDate(estimate.startDate)}
-                    {estimate.endDate &&
-                      estimate.endDate !== estimate.startDate &&
-                      ` to ${fmtDate(estimate.endDate)}`}
+                    {estimate.endDate && estimate.endDate !== estimate.startDate
+                      ? fill("dateRange", {
+                          start: formatDateLong(estimate.startDate, locale),
+                          end: formatDateLong(estimate.endDate, locale),
+                        })
+                      : formatDateLong(estimate.startDate, locale)}
                   </span>
                 </div>
                 {estimate.checkInTime && (
                   <div className="flex items-center gap-2">
                     <Clock className="size-3.5" />
                     <span>
-                      Check-in: {fmtTime(estimate.checkInTime)}
+                      {fill("checkInAt", {
+                        time: formatTimeOfDay(estimate.checkInTime, locale),
+                      })}
                       {estimate.checkOutTime &&
-                        ` · Check-out: ${fmtTime(estimate.checkOutTime)}`}
+                        ` · ${fill("checkOutAt", {
+                          time: formatTimeOfDay(estimate.checkOutTime, locale),
+                        })}`}
                     </span>
                   </div>
                 )}
@@ -145,7 +152,9 @@ export default function CustomerEstimateViewPage() {
                   <div className="flex items-center gap-2">
                     <Moon className="size-3.5" />
                     <span>
-                      {nights} night{nights !== 1 ? "s" : ""}
+                      {fill(nights === 1 ? "nightOne" : "nightMany", {
+                        n: nights,
+                      })}
                     </span>
                   </div>
                 )}
@@ -155,7 +164,7 @@ export default function CustomerEstimateViewPage() {
             {/* Line items */}
             <div>
               <p className="mb-2 text-xs font-semibold text-slate-500 uppercase">
-                Pricing
+                {t("pricing")}
               </p>
               <div className="space-y-2">
                 {estimate.lineItems.map((li, i) => (
@@ -172,7 +181,7 @@ export default function CustomerEstimateViewPage() {
                       )}
                     </div>
                     <span className="font-semibold tabular-nums">
-                      ${li.total.toFixed(2)}
+                      {formatMoney(li.total, locale)}
                     </span>
                   </div>
                 ))}
@@ -181,38 +190,40 @@ export default function CustomerEstimateViewPage() {
               {/* Totals */}
               <div className="mt-3 space-y-1 border-t pt-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">{t("subtotal")}</span>
                   <span className="tabular-nums">
-                    ${estimate.subtotal.toFixed(2)}
+                    {formatMoney(estimate.subtotal, locale)}
                   </span>
                 </div>
                 {estimate.discount > 0 && (
                   <div className="flex justify-between text-sm text-emerald-600">
-                    <span>Discount</span>
+                    <span>{t("discount")}</span>
                     <span className="tabular-nums">
-                      -${estimate.discount.toFixed(2)}
+                      {formatMoney(-estimate.discount, locale)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Tax ({(estimate.taxRate * 100).toFixed(0)}%)
+                    {fill("taxAt", {
+                      rate: formatPercent(estimate.taxRate * 100, locale),
+                    })}
                   </span>
                   <span className="tabular-nums">
-                    ${estimate.taxAmount.toFixed(2)}
+                    {formatMoney(estimate.taxAmount, locale)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t pt-2 text-lg font-bold">
-                  <span>Estimated Total</span>
+                  <span>{t("estimatedTotal")}</span>
                   <span className="tabular-nums">
-                    ${estimate.total.toFixed(2)}
+                    {formatMoney(estimate.total, locale)}
                   </span>
                 </div>
                 {estimate.depositRequired && estimate.depositRequired > 0 && (
                   <div className="flex justify-between text-sm text-blue-600">
-                    <span className="font-medium">Deposit Required</span>
+                    <span className="font-medium">{t("depositRequired")}</span>
                     <span className="font-semibold tabular-nums">
-                      ${estimate.depositRequired.toFixed(2)}
+                      {formatMoney(estimate.depositRequired, locale)}
                     </span>
                   </div>
                 )}
@@ -234,7 +245,7 @@ export default function CustomerEstimateViewPage() {
             <div className="border-t bg-slate-50 px-6 py-5">
               <div className="space-y-3 text-center">
                 <p className="text-sm font-semibold text-slate-700">
-                  {awaiting ? "Ready to accept?" : "Ready to book?"}
+                  {awaiting ? t("readyToAccept") : t("readyToBook")}
                 </p>
 
                 {/* Primary: Accept this estimate (awaiting response) */}
@@ -245,7 +256,7 @@ export default function CustomerEstimateViewPage() {
                     onClick={() => setAcceptOpen(true)}
                   >
                     <Check className="size-4" />
-                    Accept Estimate
+                    {t("acceptEstimate")}
                   </Button>
                 )}
 
@@ -264,7 +275,7 @@ export default function CustomerEstimateViewPage() {
                     href={`/customer/bookings/new?fromEstimate=${estimate.id}&service=${estimate.service}&startDate=${estimate.startDate}&endDate=${estimate.endDate}&token=${token}`}
                   >
                     <CalendarCheck className="size-4" />
-                    Book Now
+                    {t("bookNow")}
                   </Link>
                 </Button>
 
@@ -274,7 +285,7 @@ export default function CustomerEstimateViewPage() {
                     onClick={() => setDeclineOpen(true)}
                     className="text-muted-foreground w-full text-center text-xs hover:text-red-600"
                   >
-                    Decline this estimate
+                    {t("declineThisEstimate")}
                   </button>
                 )}
 
@@ -284,17 +295,17 @@ export default function CustomerEstimateViewPage() {
                     <Button asChild variant="outline" className="w-full gap-2">
                       <Link href={`/customer/estimates/${token}/setup`}>
                         <UserPlus className="size-4" />
-                        Set Up Your Account &amp; View Estimate
+                        {t("setUpAccountAndView")}
                       </Link>
                     </Button>
                     <p className="text-muted-foreground text-xs">
-                      Already have an account?{" "}
+                      {t("alreadyHaveAccount")}{" "}
                       <Link
                         href={loginHref}
                         className="text-primary font-medium hover:underline"
                       >
                         <LogIn className="mr-1 inline-block size-3" />
-                        Log in
+                        {t("logIn")}
                       </Link>
                     </p>
                   </>
@@ -304,7 +315,7 @@ export default function CustomerEstimateViewPage() {
                   <Button asChild variant="outline" className="w-full gap-2">
                     <Link href={loginHref}>
                       <LogIn className="size-4" />
-                      View Estimate in Your Account
+                      {t("viewInYourAccount")}
                     </Link>
                   </Button>
                 )}
@@ -316,17 +327,16 @@ export default function CustomerEstimateViewPage() {
           <div className="text-muted-foreground border-t px-6 py-4 text-center text-xs">
             {estimate.expiresAt && (
               <p>
-                This estimate expires on{" "}
-                {new Date(estimate.expiresAt).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
+                {fill("expiresOn", {
+                  date: formatDateLong(estimate.expiresAt, locale),
                 })}
               </p>
             )}
             <p className="mt-1">
-              Questions? Call {businessProfile.phone} or email{" "}
-              {businessProfile.email}
+              {fill("questionsCallOrEmail", {
+                phone: businessProfile.phone,
+                email: businessProfile.email,
+              })}
             </p>
           </div>
         </div>

@@ -17,14 +17,9 @@ import { clients } from "@/data/clients";
 import { useEstimateSettings } from "@/lib/api/facility-settings";
 import { acceptEstimate } from "@/lib/estimates/accept-estimate";
 import type { Estimate } from "@/types/booking";
-
-function fmtDate(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { formatDateShort, formatList, formatMoney } from "@/lib/i18n/format";
 
 interface Props {
   estimate: Estimate;
@@ -44,6 +39,7 @@ export function AcceptEstimateDialog({
   // The facility's estimate policy, not the browser's: whether accepting an
   // estimate requires the deposit up front.
   const { settings: estimateSettings } = useEstimateSettings();
+  const { t, fill, locale } = useCustomerText("estimates");
   const [step, setStep] = useState<"confirm" | "payment" | "success">(
     "confirm",
   );
@@ -59,15 +55,15 @@ export function AcceptEstimateDialog({
     savedCards.find((card) => card.isDefault) ?? savedCards[0];
   const [selectedCardId, setSelectedCardId] = useState(defaultCard?.id ?? "");
 
-  const dateRange = `${fmtDate(estimate.startDate)}${
+  const dateRange = `${formatDateShort(estimate.startDate, locale)}${
     estimate.endDate && estimate.endDate !== estimate.startDate
-      ? ` – ${fmtDate(estimate.endDate)}`
+      ? ` – ${formatDateShort(estimate.endDate, locale)}`
       : ""
   }`;
   const petLabel =
     estimate.petNames.length > 0
-      ? estimate.petNames.join(", ")
-      : (estimate.guestPetInfo?.name ?? "your pet");
+      ? formatList(estimate.petNames, locale)
+      : (estimate.guestPetInfo?.name ?? t("yourPetLower"));
 
   const reset = () => {
     setStep("confirm");
@@ -88,9 +84,17 @@ export function AcceptEstimateDialog({
     setConverted(result.autoConverted);
 
     // Facility notification (mock) — appears in the facility's Estimates queue.
+    // It is the FACILITY's message, shown to the customer as a toast; see the
+    // debt map, "Estimate (public link)". Kept in the reader's words so the
+    // screen is not half English while it is still here.
     const roomPart = estimate.roomType ? ` · ${estimate.roomType}` : "";
     toast(
-      `${estimate.clientName} accepted Estimate ${estimate.estimateId} for ${petLabel} (${estimate.service}${roomPart} · ${dateRange}). Convert to booking in Estimates.`,
+      fill("acceptedToast", {
+        client: estimate.clientName,
+        id: estimate.estimateId,
+        pet: petLabel,
+        details: `${serviceTypeLabel(locale, estimate.service)}${roomPart} · ${dateRange}`,
+      }),
     );
 
     onAccepted?.({ estimateId: estimate.id, converted: result.autoConverted });
@@ -105,24 +109,26 @@ export function AcceptEstimateDialog({
   const summaryRows = (
     <div className="space-y-1.5 rounded-xl border bg-slate-50 p-3.5 text-sm">
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Service</span>
-        <span className="font-medium capitalize">
-          {estimate.service}
+        <span className="text-muted-foreground">{t("service")}</span>
+        <span className="font-medium">
+          {serviceTypeLabel(locale, estimate.service)}
           {estimate.serviceType ? ` · ${estimate.serviceType}` : ""}
         </span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Dates</span>
+        <span className="text-muted-foreground">{t("dates")}</span>
         <span className="font-medium">{dateRange}</span>
       </div>
       <div className="flex justify-between border-t pt-1.5 font-semibold">
-        <span>Total</span>
-        <span className="tabular-nums">${estimate.total.toFixed(2)}</span>
+        <span>{t("total")}</span>
+        <span className="tabular-nums">
+          {formatMoney(estimate.total, locale)}
+        </span>
       </div>
       {deposit > 0 && (
         <div className="flex justify-between text-xs text-blue-600">
-          <span>Deposit required</span>
-          <span className="tabular-nums">${deposit.toFixed(2)}</span>
+          <span>{t("depositRequiredLower")}</span>
+          <span className="tabular-nums">{formatMoney(deposit, locale)}</span>
         </div>
       )}
     </div>
@@ -134,10 +140,8 @@ export function AcceptEstimateDialog({
         {step === "confirm" && (
           <>
             <DialogHeader>
-              <DialogTitle>You are about to accept this estimate.</DialogTitle>
-              <DialogDescription>
-                Review the details below, then confirm your acceptance.
-              </DialogDescription>
+              <DialogTitle>{t("aboutToAccept")}</DialogTitle>
+              <DialogDescription>{t("reviewThenConfirm")}</DialogDescription>
             </DialogHeader>
             {summaryRows}
             <div className="flex gap-2 pt-1">
@@ -146,13 +150,13 @@ export function AcceptEstimateDialog({
                 className="flex-1"
                 onClick={() => handleOpenChange(false)}
               >
-                Go Back
+                {t("goBack")}
               </Button>
               <Button
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600"
                 onClick={handleConfirm}
               >
-                Confirm Acceptance
+                {t("confirmAcceptance")}
               </Button>
             </div>
           </>
@@ -161,16 +165,17 @@ export function AcceptEstimateDialog({
         {step === "payment" && (
           <>
             <DialogHeader>
-              <DialogTitle>Deposit required</DialogTitle>
+              <DialogTitle>{t("depositRequiredLower")}</DialogTitle>
               <DialogDescription>
-                A deposit of ${deposit.toFixed(2)} is required to secure your
-                booking.
+                {fill("depositToSecure", {
+                  amount: formatMoney(deposit, locale),
+                })}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-2">
               <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Payment Method
+                {t("paymentMethod")}
               </p>
               {savedCards.length > 0 ? (
                 <div className="space-y-2">
@@ -192,7 +197,7 @@ export function AcceptEstimateDialog({
                       </span>
                       {card.isDefault && (
                         <span className="text-muted-foreground text-[10px]">
-                          Default
+                          {t("default")}
                         </span>
                       )}
                       {selectedCardId === card.id && (
@@ -203,7 +208,7 @@ export function AcceptEstimateDialog({
                 </div>
               ) : (
                 <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-3 text-sm">
-                  No saved payment method — you&apos;ll be prompted to add one.
+                  {t("noSavedPaymentMethod")}
                 </p>
               )}
             </div>
@@ -214,13 +219,13 @@ export function AcceptEstimateDialog({
                 className="flex-1"
                 onClick={() => setStep("confirm")}
               >
-                Go Back
+                {t("goBack")}
               </Button>
               <Button
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600"
                 onClick={() => finalizeAccept(true)}
               >
-                Pay ${deposit.toFixed(2)} &amp; Accept
+                {fill("payAndAccept", { amount: formatMoney(deposit, locale) })}
               </Button>
             </div>
           </>
@@ -233,21 +238,21 @@ export function AcceptEstimateDialog({
                 <Check className="size-7 text-emerald-600" />
               </div>
               <DialogTitle className="text-center">
-                Your estimate has been accepted!
+                {t("estimateAccepted")}
               </DialogTitle>
               <DialogDescription className="text-center">
-                {facilityName} will confirm your booking shortly.
+                {fill("willConfirmShortly", { facility: facilityName })}
               </DialogDescription>
             </DialogHeader>
             {summaryRows}
             {converted && (
               <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-                <CalendarCheck className="size-3.5" />A booking has been created
-                from this estimate.
+                <CalendarCheck className="size-3.5" />
+                {t("bookingCreatedFromEstimate")}
               </div>
             )}
             <Button asChild className="w-full">
-              <Link href="/customer/estimates">View in My Account</Link>
+              <Link href="/customer/estimates">{t("viewInMyAccount")}</Link>
             </Button>
           </>
         )}
