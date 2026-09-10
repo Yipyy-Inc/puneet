@@ -16,13 +16,19 @@ import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { declineEstimate } from "@/lib/estimates/decline-estimate";
 import type { Estimate } from "@/types/booking";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { formatList } from "@/lib/i18n/format";
 
+// A reason by CATALOGUE KEY. The one sent to the facility is written in the
+// reader's words, like anything else they type; "other" alone sends only
+// what they wrote.
 const REASONS = [
-  "Price too high",
-  "Dates no longer work",
-  "Found another option",
-  "Changed my mind",
-  "Other",
+  "reasonPrice",
+  "reasonDates",
+  "reasonAnotherOption",
+  "reasonChangedMind",
+  "reasonOther",
 ] as const;
 
 interface Props {
@@ -40,6 +46,7 @@ export function DeclineEstimateDialog({
   onOpenChange,
   onDeclined,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("estimates");
   const [step, setStep] = useState<"reason" | "success">("reason");
   const [selected, setSelected] = useState<string>("");
   const [detail, setDetail] = useState("");
@@ -58,26 +65,34 @@ export function DeclineEstimateDialog({
   const handleSubmit = () => {
     if (!selected) return;
     const text = detail.trim();
+    const label = t(selected);
     const reason =
-      selected === "Other"
-        ? text || "Other"
+      selected === "reasonOther"
+        ? text || label
         : text
-          ? `${selected} — ${text}`
-          : selected;
+          ? `${label} — ${text}`
+          : label;
 
     declineEstimate(estimate, { reason, now: new Date() });
 
     // Facility notification (mock) with a quick action to revise the estimate.
     const petLabel =
       estimate.petNames.length > 0
-        ? estimate.petNames.join(", ")
-        : (estimate.guestPetInfo?.name ?? "their pet");
+        ? formatList(estimate.petNames, locale)
+        : (estimate.guestPetInfo?.name ?? t("theirPet"));
     toast(
-      `${estimate.clientName} declined Estimate ${estimate.estimateId}. Reason: ${reason}.`,
+      fill("declinedToast", {
+        client: estimate.clientName,
+        id: estimate.estimateId,
+        reason,
+      }),
       {
-        description: `${estimate.service} for ${petLabel}`,
+        description: fill("serviceForPet", {
+          service: serviceTypeLabel(locale, estimate.service),
+          pet: petLabel,
+        }),
         action: {
-          label: "Create Revised Estimate",
+          label: t("createRevisedEstimate"),
           onClick: () => {
             /* facility opens the revised-estimate composer */
           },
@@ -95,9 +110,9 @@ export function DeclineEstimateDialog({
         {step === "reason" ? (
           <>
             <DialogHeader>
-              <DialogTitle>We&apos;re sorry to hear that.</DialogTitle>
+              <DialogTitle>{t("sorryToHear")}</DialogTitle>
               <DialogDescription>
-                Let us know why so {facilityName} can better help you.
+                {fill("letUsKnowWhy", { facility: facilityName })}
               </DialogDescription>
             </DialogHeader>
 
@@ -126,7 +141,7 @@ export function DeclineEstimateDialog({
                       <span className="size-2 rounded-full bg-slate-800" />
                     )}
                   </span>
-                  {reason}
+                  {t(reason)}
                 </button>
               ))}
             </div>
@@ -134,7 +149,7 @@ export function DeclineEstimateDialog({
             <Textarea
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
-              placeholder="Anything else you'd like to add? (optional)"
+              placeholder={t("anythingElseOptional")}
               rows={2}
               className="min-h-[60px] resize-y text-sm"
             />
@@ -145,7 +160,7 @@ export function DeclineEstimateDialog({
                 className="flex-1"
                 onClick={() => handleOpenChange(false)}
               >
-                Go Back
+                {t("goBack")}
               </Button>
               <Button
                 variant="destructive"
@@ -153,24 +168,23 @@ export function DeclineEstimateDialog({
                 onClick={handleSubmit}
                 disabled={!selected}
               >
-                Decline Estimate
+                {t("declineEstimate")}
               </Button>
             </div>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Your estimate has been declined.</DialogTitle>
+              <DialogTitle>{t("estimateDeclined")}</DialogTitle>
               <DialogDescription>
-                You can contact {facilityName} anytime if you have questions or
-                change your mind.
+                {fill("contactAnytime", { facility: facilityName })}
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2 pt-1">
               <Button asChild className="w-full gap-1.5">
                 <Link href="/customer/messages">
                   <MessageSquare className="size-4" />
-                  Message {facilityName}
+                  {fill("messageFacility", { facility: facilityName })}
                 </Link>
               </Button>
               <Button
@@ -178,7 +192,7 @@ export function DeclineEstimateDialog({
                 className="w-full"
                 onClick={() => handleOpenChange(false)}
               >
-                Close
+                {t("close")}
               </Button>
             </div>
           </>

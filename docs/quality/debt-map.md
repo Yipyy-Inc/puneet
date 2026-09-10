@@ -11997,3 +11997,32 @@ reply and the star rating write through `replyToReportCard` /
   written.
 - **The quick replies are sent in the sender's language**, like a message
   they typed; the facility reads whatever the owner tapped.
+
+### Estimate, public link (`/customer/estimates/[token]`) — **"Pay and accept" takes no money, and a real link finds nothing**
+
+- **The page reads the fixture.** The estimate is `estimates.find(…)` from
+  `@/data/estimates` and the facility is `businessProfile` from
+  `@/data/settings`, so a token for any real estimate lands on "Estimate not
+  found", and every page shows the fixture facility's name, phone and email.
+- **Accepting and declining change an in-memory array.** `acceptEstimate`
+  sets `status` on the fixture object and pushes to fixture `bookings`;
+  `declineEstimate` the same. Both "send" through `lib/estimates/email-sends`,
+  whose outbox is a module-level array. Nothing leaves the browser.
+- **"Pay {amount} and accept" charges nothing.** The deposit step lists
+  `savedCards` from the `clients` fixture and calls `finalizeAccept(true)` —
+  `depositPaid: true` with no payment made.
+- **The customer is shown the facility's notification.** Accepting toasts
+  "{client} accepted Estimate … Convert to booking in Estimates."; declining
+  toasts "{client} declined … " with a "Create revised estimate" action that
+  does nothing. Both are the facility's side of the event, rendered on the
+  customer's screen as a stand-in. Translated so the screen is not half
+  English while they exist; they should go.
+- **The printable estimate (`EstimatePdfDownload`) is shared** with the
+  facility's estimate drawer, so its words are a shell group
+  (`shell.estimates`) and it prints in whoever opened it's language, with
+  `lang` set on the document. Money, percentages, dates and check-in times
+  are `Intl`; two hand-rolled 12-hour clocks and three `en-US` date
+  formatters are gone. Its `<style>` block carries `french-ok` CSS comments —
+  the gate's text scanner read two CSS selectors as copy.
+- The estimate emails' own helpers (`components/estimates/emails/`) stay in
+  English and baselined — they are the email pipeline's, not the page's.

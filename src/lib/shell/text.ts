@@ -80,6 +80,9 @@ type ShellCatalogue = {
   /** `components/loyalty` — the points history, shown to the customer on
    *  their rewards page and to staff on the client’s loyalty tab. */
   loyalty: Record<string, string>;
+  /** `components/estimates` — the printable estimate, opened from the
+   *  facility's estimate drawer and from the customer's estimate pages. */
+  estimates: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */
