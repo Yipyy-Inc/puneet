@@ -50,6 +50,8 @@ import { useAssignedScope } from "@/lib/facility-permissions";
 import { useAssignedClientRefs } from "@/lib/api/client";
 import { facilities } from "@/data/facilities";
 import { threadMeta as defaultThreadMeta } from "@/data/messaging";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
 const COLORS = [
   "bg-rose-500",
@@ -75,44 +77,45 @@ function initials(name: string) {
 
 const STATUS_CONFIG: Record<
   ConversationStatus,
-  { label: string; color: string; icon: typeof CheckCircle2 }
+  { labelKey: string; color: string; icon: typeof CheckCircle2 }
 > = {
   open: {
-    label: "Open",
+    labelKey: "open",
     color: "bg-emerald-100 text-emerald-700 border-emerald-200",
     icon: CheckCircle2,
   },
   pending_client: {
-    label: "Pending Client",
+    labelKey: "pendingClient",
     color: "bg-amber-100 text-amber-700 border-amber-200",
     icon: Clock,
   },
   pending_staff: {
-    label: "Pending Staff",
+    labelKey: "pendingStaff",
     color: "bg-blue-100 text-blue-700 border-blue-200",
     icon: Clock,
   },
   follow_up: {
-    label: "Follow-up",
+    labelKey: "followUp",
     color: "bg-violet-100 text-violet-700 border-violet-200",
     icon: AlertCircle,
   },
   resolved: {
-    label: "Resolved",
+    labelKey: "resolved",
     color: "bg-slate-100 text-slate-600 border-slate-200",
     icon: CheckCircle2,
   },
   archived: {
-    label: "Archived",
+    labelKey: "archived",
     color: "bg-slate-100 text-slate-500 border-slate-200",
     icon: Archive,
   },
 };
 
-const CHANNEL_LABELS = {
-  sms: "SMS",
-  email: "Email",
-  "in-app": "Chat",
+// A channel's name, by CATALOGUE KEY.
+const CHANNEL_KEYS: Record<string, string> = {
+  sms: "channelSms",
+  email: "channelEmail",
+  "in-app": "channelChat",
 };
 
 type ActiveChannel = "sms" | "email" | "in-app";
@@ -137,6 +140,8 @@ export function ConversationThread({
   senderBlocked?: boolean;
   composePrefill?: { key: string; text: string } | null;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const isCustomerMode = mode === "customer";
   const conversationState = useConversationState();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -203,8 +208,8 @@ export function ConversationThread({
     | string
     | undefined;
   const counterpartyName = isCustomerMode
-    ? (facility?.name ?? threadMessages[0]?.from ?? "Facility")
-    : (client?.name ?? threadMessages[0]?.from ?? "Unknown");
+    ? (facility?.name ?? threadMessages[0]?.from ?? t("facility"))
+    : (client?.name ?? threadMessages[0]?.from ?? t("unknown"));
   const counterpartyImage = isCustomerMode
     ? facilityLogo
     : ((client as Record<string, unknown>)?.imageUrl as string | undefined);
@@ -219,8 +224,8 @@ export function ConversationThread({
       ((counterpartyContact as Record<string, unknown>)?.email as
         | string
         | undefined) ||
-      "Typically responds within 2 hours"
-    : (client?.phone ?? client?.email ?? "Active now");
+      t("typicallyResponds")
+    : (client?.phone ?? client?.email ?? t("activeNow"));
   const preferredLanguageLabel =
     !isCustomerMode && client?.preferredLanguage
       ? getCustomerLanguageLabel(client.preferredLanguage)
@@ -294,11 +299,13 @@ export function ConversationThread({
             <Star className="size-5 text-emerald-300" />
           </div>
         </div>
-        <h3 className="mt-6 text-xl font-bold text-slate-700">Your Messages</h3>
+        <h3 className="mt-6 text-xl font-bold text-slate-700">
+          {t("yourMessages")}
+        </h3>
         <p className="mt-2 max-w-xs text-center text-sm/relaxed text-slate-400">
           {isCustomerMode
-            ? "Select a facility conversation from the left panel"
-            : "Select a client from the left panel or create a new message"}
+            ? t("selectAFacilityConversationFrom")
+            : t("selectAClientOrCreate")}
         </p>
       </div>
     );
@@ -310,11 +317,7 @@ export function ConversationThread({
   let lastDate = "";
 
   for (const message of chatMessages) {
-    const date = new Date(message.timestamp).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+    const date = formatDateLong(message.timestamp, locale);
     if (date !== lastDate) {
       grouped.push({ type: "date", date });
       lastDate = date;
@@ -324,10 +327,12 @@ export function ConversationThread({
 
   const channelLabel =
     channels.length === 0
-      ? "No history"
+      ? t("noHistory")
       : channels.length === 1
-        ? (CHANNEL_LABELS[channels[0]] ?? channels[0])
-        : `${channels.length} channels`;
+        ? CHANNEL_KEYS[channels[0]]
+          ? t(CHANNEL_KEYS[channels[0]])
+          : channels[0]
+        : t("channelCount").replace("{n}", String(channels.length));
 
   const conversationPanel = (
     <>
@@ -381,17 +386,12 @@ export function ConversationThread({
                   : ""}
               </p>
               <p className="mt-1 text-[10px] text-slate-300">
-                Conversation started{" "}
                 {chatMessages[0]
-                  ? new Date(chatMessages[0].timestamp).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      },
+                  ? t("conversationStarted").replace(
+                      "{date}",
+                      formatDateLong(chatMessages[0].timestamp, locale),
                     )
-                  : ""}
+                  : null}
               </p>
             </div>
           )}
@@ -399,11 +399,11 @@ export function ConversationThread({
           {grouped.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-5 py-8 text-center">
               <p className="text-sm font-semibold text-slate-600">
-                No chat messages in this thread yet
+                {t("noChatMessagesInThis")}
               </p>
               {isCustomerMode && (
                 <p className="mt-1 text-xs text-slate-500">
-                  Open the Reminders tab to see your reminders.
+                  {t("openTheRemindersTabTo")}
                 </p>
               )}
             </div>
@@ -431,10 +431,9 @@ export function ConversationThread({
           <div className="flex items-start gap-3">
             <Lock className="mt-0.5 size-4 shrink-0 text-rose-600" />
             <div className="text-xs text-rose-800">
-              <p className="font-semibold">Messaging unavailable</p>
+              <p className="font-semibold">{t("messagingUnavailable")}</p>
               <p className="mt-0.5 text-rose-700">
-                You are unable to message this facility at this time. Please
-                contact them by phone if you need to reach them.
+                {t("unableToMessageFacility")}
               </p>
             </div>
           </div>
@@ -443,7 +442,7 @@ export function ConversationThread({
         // 5F: replying needs messages_send, and when that key is assigned_only
         // it's limited to the viewer's assigned-client conversations.
         <div className="text-muted-foreground border-t px-5 py-4 text-center text-xs">
-          You don&rsquo;t have permission to reply to this conversation.
+          {t("youDontHavePermissionTo")}
         </div>
       ) : (
         <ComposeBar
@@ -482,7 +481,7 @@ export function ConversationThread({
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Back to inbox"
+              aria-label={t("backToInbox")}
               onClick={onBack}
               className="-ml-2 size-9 shrink-0 rounded-full lg:hidden"
             >
@@ -516,7 +515,7 @@ export function ConversationThread({
                   variant="outline"
                   className="border-rose-200 bg-rose-50 text-[9px] text-rose-700"
                 >
-                  Blocked
+                  {t("blocked")}
                 </Badge>
               )}
               {preferredLanguageLabel && (
@@ -555,19 +554,19 @@ export function ConversationThread({
               )}
               title={
                 conversationState.isClosed(threadId)
-                  ? "Reopen conversation"
-                  : "Mark conversation as closed"
+                  ? t("reopenConversation2")
+                  : t("markConversationClosed")
               }
             >
               {conversationState.isClosed(threadId) ? (
                 <>
                   <Lock className="size-3" />
-                  <span className="hidden sm:inline">Closed</span>
+                  <span className="hidden sm:inline">{t("closed")}</span>
                 </>
               ) : (
                 <>
                   <Unlock className="size-3" />
-                  <span className="hidden sm:inline">Open</span>
+                  <span className="hidden sm:inline">{t("open")}</span>
                 </>
               )}
             </button>
@@ -580,7 +579,7 @@ export function ConversationThread({
                 <button
                   type="button"
                   className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
-                  title="Assign to staff"
+                  title={t("assignToStaff")}
                 >
                   {conversationState.getAssignee(threadId) ? (
                     <>
@@ -599,7 +598,7 @@ export function ConversationThread({
                   ) : (
                     <>
                       <UserPlus className="size-3" />
-                      <span className="hidden sm:inline">Assign</span>
+                      <span className="hidden sm:inline">{t("assign")}</span>
                     </>
                   )}
                   <ChevronDown className="hidden size-3 text-slate-400 sm:block" />
@@ -610,7 +609,7 @@ export function ConversationThread({
                 className="w-56 rounded-xl p-1 shadow-lg"
               >
                 <p className="px-2 py-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-                  Assign conversation
+                  {t("assignConversation")}
                 </p>
                 {conversationState.staff.map((s) => {
                   const active =
@@ -655,7 +654,7 @@ export function ConversationThread({
                       onClick={() => conversationState.assignTo(threadId, null)}
                       className="flex w-full items-center justify-center rounded-lg px-2 py-2 text-xs font-semibold text-red-500 hover:bg-red-50"
                     >
-                      Unassign
+                      {t("unassign")}
                     </button>
                   </>
                 )}
@@ -675,7 +674,9 @@ export function ConversationThread({
                   )}
                 >
                   <StatusIcon className="size-3" />
-                  <span className="hidden sm:inline">{statusCfg.label}</span>
+                  <span className="hidden sm:inline">
+                    {t(statusCfg.labelKey)}
+                  </span>
                   <ChevronDown className="size-3" />
                 </button>
               </PopoverTrigger>
@@ -701,7 +702,7 @@ export function ConversationThread({
                       )}
                     >
                       <Icon className="size-3.5" />
-                      {cfg.label}
+                      {t(cfg.labelKey)}
                       {currentStatus === key && (
                         <CheckCircle2 className="ml-auto size-3 text-emerald-500" />
                       )}
@@ -757,26 +758,26 @@ export function ConversationThread({
                 className="size-9 rounded-full text-slate-400 hover:bg-slate-100"
               >
                 <MoreHorizontal className="size-[18px]" />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t("openMenu")}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem>
                 {isCustomerMode
-                  ? "View facility profile"
-                  : "View client profile"}
+                  ? t("viewFacilityProfile")
+                  : t("viewClientProfile")}
               </DropdownMenuItem>
               <DropdownMenuItem>
-                {isCustomerMode ? "My booking history" : "Booking history"}
+                {isCustomerMode ? t("myBookingHistory") : t("bookingHistory")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Pin conversation</DropdownMenuItem>
-              <DropdownMenuItem>Mark as unread</DropdownMenuItem>
+              <DropdownMenuItem>{t("pinConversation")}</DropdownMenuItem>
+              <DropdownMenuItem>{t("markAsUnread")}</DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setStatus("archived")}
                 className="text-red-500"
               >
-                Archive
+                {t("archive")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -796,9 +797,9 @@ export function ConversationThread({
           className="flex min-h-0 flex-1 flex-col gap-0"
         >
           <TabsList className="border-b border-slate-200 bg-white px-4">
-            <TabsTrigger value="conversation">Chat</TabsTrigger>
+            <TabsTrigger value="conversation">{t("chat")}</TabsTrigger>
             <TabsTrigger value="reminders" className="gap-2">
-              Reminders
+              {t("reminders")}
               <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
                 {reminderHistory.length}
               </Badge>

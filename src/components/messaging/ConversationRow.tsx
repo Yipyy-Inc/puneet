@@ -27,6 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { Thread } from "./ContactList";
 import type { MessagingStaff } from "@/data/saved-replies";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatRelativeShort } from "@/lib/i18n/format";
 
 const TAG_STYLES: Record<string, string> = {
   vip: "bg-amber-100 text-amber-700 border-amber-200",
@@ -42,35 +44,36 @@ const TAG_STYLES: Record<string, string> = {
 
 const CHANNEL_STYLES: Record<
   string,
-  { label: string; icon: typeof Mail; class: string }
+  { labelKey: string; icon: typeof Mail; class: string }
 > = {
   sms: {
-    label: "SMS",
+    labelKey: "channelSms",
     icon: Smartphone,
     class: "border-blue-200 bg-blue-50 text-blue-700",
   },
   email: {
-    label: "Email",
+    labelKey: "channelEmail",
     icon: Mail,
     class: "border-purple-200 bg-purple-50 text-purple-700",
   },
   "in-app": {
-    label: "Chat",
+    labelKey: "channelChat",
     icon: MessageSquare,
     class: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
 };
 
-const TAG_LABELS: Record<string, string> = {
-  vip: "VIP",
-  new_lead: "New Lead",
-  overdue_payment: "Overdue",
-  boarding_now: "Boarding",
-  high_priority: "High Priority",
-  needs_follow_up: "Follow-up",
-  vaccine_expired: "Vaccine Exp.",
-  complaint: "Complaint",
-  upsell_opportunity: "Upsell",
+// A tag's name, by CATALOGUE KEY.
+const TAG_KEYS: Record<string, string> = {
+  vip: "tagVip",
+  new_lead: "tagNewLead",
+  overdue_payment: "tagOverdue",
+  boarding_now: "tagBoarding",
+  high_priority: "tagHighPriority",
+  needs_follow_up: "followUp",
+  vaccine_expired: "tagVaccineExpired",
+  complaint: "tagComplaint",
+  upsell_opportunity: "tagUpsell",
 };
 
 const COLORS = [
@@ -95,21 +98,6 @@ function initials(name: string) {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-}
-
-function relTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function ConversationRow({
@@ -147,6 +135,8 @@ export function ConversationRow({
   onToggleClosed: (threadId: string) => void;
   onAssign: (threadId: string, staffId: string | null) => void;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const failed =
@@ -237,7 +227,7 @@ export function ConversationRow({
                   "absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[8px] font-bold text-white shadow-sm ring-2 ring-white",
                   assignee.color,
                 )}
-                title={`Assigned to ${assignee.name}`}
+                title={t("assignedTo").replace("{name}", assignee.name)}
               >
                 {assignee.initials}
               </div>
@@ -251,7 +241,7 @@ export function ConversationRow({
                 {isPriority && (
                   <Flag
                     className="size-3 shrink-0 fill-orange-500 text-orange-500"
-                    aria-label="Priority"
+                    aria-label={t("priority")}
                   />
                 )}
                 <span
@@ -275,10 +265,13 @@ export function ConversationRow({
                         "inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] leading-none font-semibold",
                         ch.class,
                       )}
-                      title={`Channel: ${ch.label}`}
+                      title={t("channelIs").replace(
+                        "{channel}",
+                        t(ch.labelKey),
+                      )}
                     >
                       <Icon className="size-2.5" />
-                      {ch.label}
+                      {t(ch.labelKey)}
                     </span>
                   );
                 })()}
@@ -304,7 +297,7 @@ export function ConversationRow({
                       }
                     }}
                     className="cursor-pointer text-amber-400 hover:text-amber-500"
-                    title="Unstar"
+                    title={t("unstar")}
                   >
                     <Star className="size-3 fill-current" />
                   </div>
@@ -324,7 +317,7 @@ export function ConversationRow({
                       }
                     }}
                     className="cursor-pointer text-slate-300 hover:text-amber-400"
-                    title="Star"
+                    title={t("star")}
                   >
                     <StarOff className="size-3" />
                   </div>
@@ -338,8 +331,8 @@ export function ConversationRow({
                   )}
                 >
                   {thread.isPlaceholder
-                    ? "new"
-                    : relTime(thread.lastMessage.timestamp)}
+                    ? t("newThread")
+                    : formatRelativeShort(thread.lastMessage.timestamp, locale)}
                 </span>
               </div>
             </div>
@@ -348,7 +341,7 @@ export function ConversationRow({
               {failed ? (
                 <span className="flex items-center gap-1 text-xs text-red-500">
                   <AlertCircle className="size-3" />
-                  Failed
+                  {t("failed")}
                 </span>
               ) : (
                 <span
@@ -359,9 +352,10 @@ export function ConversationRow({
                       : "text-slate-400",
                   )}
                 >
-                  {thread.lastMessage.direction === "outbound" && "You: "}
+                  {thread.lastMessage.direction === "outbound" &&
+                    t("youPrefix")}
                   {thread.isPlaceholder
-                    ? "No messages yet"
+                    ? t("noMessagesYet")
                     : thread.lastMessage.body}
                 </span>
               )}
@@ -383,7 +377,7 @@ export function ConversationRow({
                 {isPriority && (
                   <span className="inline-flex items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[9px] font-semibold text-orange-700">
                     <Flag className="size-2.5" />
-                    Priority
+                    {t("priority")}
                   </span>
                 )}
                 {isFollowUp && (
@@ -395,13 +389,13 @@ export function ConversationRow({
                 {isClosed && (
                   <span className="inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
                     <CheckCircle2 className="size-2.5" />
-                    Closed
+                    {t("closed")}
                   </span>
                 )}
                 {status === "pending_client" && (
                   <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
                     <AlertTriangle className="size-2.5" />
-                    Pending
+                    {t("pending")}
                   </span>
                 )}
                 {locationLabel && (
@@ -419,7 +413,7 @@ export function ConversationRow({
                         "border-slate-200 bg-slate-100 text-slate-600",
                     )}
                   >
-                    {TAG_LABELS[tag] ?? tag}
+                    {TAG_KEYS[tag] ? t(TAG_KEYS[tag]) : tag}
                   </span>
                 ))}
               </div>
@@ -435,7 +429,7 @@ export function ConversationRow({
               isPriority ? "fill-orange-500 text-orange-500" : "text-slate-500",
             )}
           />
-          {isPriority ? "Remove Priority" : "Mark as Priority"}
+          {isPriority ? t("removePriority") : t("markAsPriority")}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onToggleFollowUp(thread.threadId)}>
           <Clock
@@ -444,7 +438,7 @@ export function ConversationRow({
               isFollowUp ? "text-violet-600" : "text-slate-500",
             )}
           />
-          {isFollowUp ? "Clear Follow-up" : "Mark for Follow-up"}
+          {isFollowUp ? t("clearFollowUp") : t("markForFollowUp")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => onToggleClosed(thread.threadId)}>
@@ -453,12 +447,14 @@ export function ConversationRow({
           ) : (
             <CheckCircle2 className="size-4 text-emerald-500" />
           )}
-          {isClosed ? "Reopen Conversation" : "Mark as Closed"}
+          {isClosed ? t("reopenConversation") : t("markAsClosed")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuLabel className="flex items-center gap-2 px-2">
           <UserPlus className="size-3.5 text-slate-400" />
-          {assignee ? `Assigned: ${assignee.name}` : "Assign to staff"}
+          {assignee
+            ? t("assignedTo").replace("{name}", assignee.name)
+            : t("assignToStaff")}
         </ContextMenuLabel>
         {staffOptions.map((s) => (
           <ContextMenuItem
@@ -484,7 +480,7 @@ export function ConversationRow({
             onSelect={() => onAssign(thread.threadId, null)}
             className="text-red-500"
           >
-            Unassign
+            {t("unassign")}
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
@@ -494,7 +490,7 @@ export function ConversationRow({
           ) : (
             <Star className="size-4 text-slate-500" />
           )}
-          {isStarred ? "Unstar" : "Star"}
+          {isStarred ? t("unstar") : t("star")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

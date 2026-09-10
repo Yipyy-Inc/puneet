@@ -33,6 +33,8 @@ import { ConversationRow } from "./ConversationRow";
 import { useConversationState } from "./conversation-state-context";
 import { threadLocationMap } from "@/data/saved-replies";
 import { useLocationContext } from "@/hooks/use-location-context";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney, formatNumber } from "@/lib/i18n/format";
 
 // SMS credits
 const facility = facilities.find((f) => f.id === 11);
@@ -106,17 +108,18 @@ type Filter =
   | "assigned_me"
   | "closed";
 
-const FILTER_ITEMS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "unread", label: "Unread" },
-  { key: "assigned_me", label: "Mine" },
-  { key: "starred", label: "Starred" },
-  { key: "high_priority", label: "Priority" },
-  { key: "follow_up", label: "Follow-up" },
-  { key: "closed", label: "Closed" },
-  { key: "chat", label: "Chat" },
-  { key: "email", label: "Email" },
-  { key: "sms", label: "SMS" },
+// A filter's name, by CATALOGUE KEY.
+const FILTER_ITEMS: { key: Filter; labelKey: string }[] = [
+  { key: "all", labelKey: "all" },
+  { key: "unread", labelKey: "filterUnread" },
+  { key: "assigned_me", labelKey: "filterMine" },
+  { key: "starred", labelKey: "filterStarred" },
+  { key: "high_priority", labelKey: "priority" },
+  { key: "follow_up", labelKey: "followUp" },
+  { key: "closed", labelKey: "filterClosed" },
+  { key: "chat", labelKey: "channelChat" },
+  { key: "email", labelKey: "channelEmail" },
+  { key: "sms", labelKey: "channelSms" },
 ];
 
 const CURRENT_USER_STAFF_ID = "staff-1"; // mock: "Sarah M." is logged in
@@ -134,6 +137,8 @@ export function ContactList({
   mode?: "facility" | "customer";
   customerFacilityIds?: number[];
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
   const { locations } = useLocationContext();
@@ -295,7 +300,7 @@ export function ContactList({
             direction: "inbound",
             from: facilityItem.name,
             to: "You",
-            body: "No messages yet",
+            body: t("noMessagesYet"),
             status: "delivered",
             timestamp: new Date(0).toISOString(),
             clientId: facilityId,
@@ -321,7 +326,7 @@ export function ContactList({
       if (bTime !== aTime) return bTime - aTime;
       return a.clientName.localeCompare(b.clientName);
     });
-  }, [customerFacilityIds, isCustomerMode, messages, priorityIds]);
+  }, [customerFacilityIds, isCustomerMode, messages, priorityIds, t]);
 
   const filtered = useMemo(() => {
     let list = threads;
@@ -397,10 +402,10 @@ export function ContactList({
       const next = new Set(prev);
       if (next.has(threadId)) {
         next.delete(threadId);
-        toast("Priority removed");
+        toast(t("priorityRemoved"));
       } else {
         next.add(threadId);
-        toast.success("Marked as Priority");
+        toast.success(t("markedAsPriority"));
       }
       return next;
     });
@@ -411,10 +416,10 @@ export function ContactList({
       const next = new Set(prev);
       if (next.has(threadId)) {
         next.delete(threadId);
-        toast("Follow-up cleared");
+        toast(t("followUpCleared"));
       } else {
         next.add(threadId);
-        toast.success("Marked for Follow-up");
+        toast.success(t("markedForFollowUp"));
       }
       return next;
     });
@@ -425,8 +430,8 @@ export function ContactList({
     conversationState.setClosed(threadId, !isCurrentlyClosed);
     toast.success(
       isCurrentlyClosed
-        ? "Conversation reopened"
-        : "Conversation closed — moved to Closed tab",
+        ? t("conversationReopened")
+        : t("conversationClosedMoved"),
     );
   };
 
@@ -435,10 +440,13 @@ export function ContactList({
     if (staffId) {
       const staff = conversationState.staff.find((s) => s.id === staffId);
       toast.success(
-        `Assigned to ${staff?.name ?? "staff"} — they'll be notified`,
+        t("assignedNotified").replace(
+          "{name}",
+          staff?.name ?? t("staffMember"),
+        ),
       );
     } else {
-      toast("Conversation unassigned");
+      toast(t("conversationUnassigned"));
     }
   };
 
@@ -454,7 +462,7 @@ export function ContactList({
     <div className="flex h-full w-full shrink-0 flex-col bg-white lg:w-80">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <h1 className="text-xl font-bold text-slate-900">Inbox</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t("inbox")}</h1>
         {/* 5F: starting a conversation requires messages_send. */}
         {!isCustomerMode && canSend && (
           <Button
@@ -483,7 +491,7 @@ export function ContactList({
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-medium text-slate-500">
-                    SMS Credits
+                    {t("smsCredits")}
                   </span>
                   <span
                     className={cn(
@@ -495,7 +503,10 @@ export function ContactList({
                           : "text-red-500",
                     )}
                   >
-                    {smsRemaining.toLocaleString()} left
+                    {t("creditsLeft").replace(
+                      "{n}",
+                      formatNumber(smsRemaining, locale),
+                    )}
                   </span>
                 </div>
                 <div className="mt-1 h-1 overflow-hidden rounded-full bg-blue-100">
@@ -524,7 +535,7 @@ export function ContactList({
             <div className="px-4 pt-3.5 pb-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-slate-500">
-                  SMS Balance
+                  {t("smsBalance")}
                 </span>
                 <span
                   className={cn(
@@ -536,7 +547,7 @@ export function ContactList({
                         : "text-red-500",
                   )}
                 >
-                  {smsRemaining.toLocaleString()}
+                  {formatNumber(smsRemaining, locale)}
                 </span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
@@ -555,17 +566,32 @@ export function ContactList({
                 />
               </div>
               <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
-                <span>{credits.monthlyAllowance.toLocaleString()} plan</span>
+                <span>
+                  {t("creditsPlan").replace(
+                    "{n}",
+                    formatNumber(credits.monthlyAllowance, locale),
+                  )}
+                </span>
                 <span className="text-slate-300">·</span>
-                <span>{credits.purchased.toLocaleString()} extra</span>
+                <span>
+                  {t("creditsExtra").replace(
+                    "{n}",
+                    formatNumber(credits.purchased, locale),
+                  )}
+                </span>
                 <span className="text-slate-300">·</span>
-                <span>{credits.used.toLocaleString()} used</span>
+                <span>
+                  {t("creditsUsed").replace(
+                    "{n}",
+                    formatNumber(credits.used, locale),
+                  )}
+                </span>
               </div>
               {credits.autoReload && (
                 <div className="mt-2 flex items-center gap-1.5">
                   <RefreshCw className="size-2.5 text-blue-400" />
                   <span className="text-[10px] text-blue-500">
-                    Auto-reload on
+                    {t("autoReloadOn")}
                   </span>
                 </div>
               )}
@@ -574,18 +600,27 @@ export function ContactList({
             {canPurchase && (
               <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
                 <p className="mb-2 text-[11px] font-semibold text-slate-500">
-                  Buy More Credits
+                  {t("buyMoreCredits")}
                 </p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {SMS_PACKAGES.map((pkg) => {
-                    const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
+                    const perSms = formatNumber(
+                      (pkg.price / pkg.amount) * 100,
+                      locale,
+                      1,
+                    );
                     return (
                       <button
                         key={pkg.amount}
                         type="button"
                         onClick={() =>
                           toast.success(
-                            `${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`,
+                            t("creditsPurchased")
+                              .replace("{n}", formatNumber(pkg.amount, locale))
+                              .replace(
+                                "{price}",
+                                formatMoney(pkg.price, locale),
+                              ),
                           )
                         }
                         className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
@@ -596,13 +631,13 @@ export function ContactList({
                             : pkg.amount}
                         </span>
                         <span className="text-[9px] text-slate-400">
-                          credits
+                          {t("credits")}
                         </span>
                         <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
-                          ${pkg.price}
+                          {formatMoney(pkg.price, locale)}
                         </span>
                         <span className="mt-0.5 text-[9px] text-slate-400">
-                          {perSms}¢/sms
+                          {t("perSms").replace("{n}", perSms)}
                         </span>
                       </button>
                     );
@@ -622,10 +657,10 @@ export function ContactList({
             <Input
               placeholder={
                 compose
-                  ? "Search clients..."
+                  ? t("searchClients")
                   : isCustomerMode
-                    ? "Search facilities..."
-                    : "Search by name, phone, email..."
+                    ? t("searchFacilities")
+                    : t("searchByNamePhoneEmail")
               }
               value={compose ? clientSearch : search}
               onChange={(e) =>
@@ -657,7 +692,7 @@ export function ContactList({
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200",
               )}
             >
-              {f.label}
+              {t(f.labelKey)}
             </button>
           ))}
         </div>
@@ -669,7 +704,7 @@ export function ContactList({
           {clientResults.length === 0 && clientSearch.trim() ? (
             <div className="px-5 py-4">
               <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-                No matching client
+                {t("noMatchingClient")}
               </p>
               <button
                 type="button"
@@ -689,17 +724,18 @@ export function ContactList({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-blue-700">
-                    Start new contact
+                    {t("startNewContact")}
                   </p>
                   <p className="truncate text-xs text-blue-500/80">
-                    Send to “{clientSearch.trim()}” — we&#39;ll create a
-                    profile.
+                    {t("sendToNewContact").replace(
+                      "{name}",
+                      clientSearch.trim(),
+                    )}
                   </p>
                 </div>
               </button>
               <p className="mt-2 text-[10px] text-slate-400">
-                Works for unknown numbers, walk-ins, and inbound inquiries from
-                channels we haven&#39;t matched yet.
+                {t("newContactHelp")}
               </p>
             </div>
           ) : (
@@ -745,7 +781,9 @@ export function ContactList({
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center">
               <MessageSquare className="size-10 text-slate-200" />
-              <p className="mt-3 text-sm text-slate-400">No conversations</p>
+              <p className="mt-3 text-sm text-slate-400">
+                {t("noConversations")}
+              </p>
             </div>
           ) : (
             filtered.map((thread) => {

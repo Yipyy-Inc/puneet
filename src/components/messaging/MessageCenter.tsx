@@ -15,6 +15,7 @@ import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
 import { isClientBlocked } from "@/lib/blocked-clients";
 import type { Message } from "@/types/communications";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export type MessageCenterMode = "facility" | "customer";
 
@@ -31,6 +32,7 @@ function buildCustomerMessages(customerId: number): Message[] {
     .filter((record) => record.clientId === customerId)
     .map((record) => {
       const facility = facilities.find((f) => f.id === record.facilityId);
+      // french-ok: a fallback label for a fixture row whose facility is missing
       const facilityName = facility?.name ?? `Facility #${record.facilityId}`;
       const type =
         record.type === "email" ||
@@ -121,6 +123,7 @@ export function MessageCenter({
   mode?: MessageCenterMode;
   customerId?: number;
 }) {
+  const t = useShellText("messaging");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() =>
     mode === "customer"
       ? getLatestThreadId(buildCustomerMessages(customerId))
@@ -205,13 +208,19 @@ export function MessageCenter({
     prefillAppliedRef.current = sourceParam;
     setSelectedThreadId(threadId);
     const call = callLogs.find((c) => c.id === sourceParam);
-    const firstName = (call?.clientName ?? "").split(" ")[0] || "there";
-    const callbackNumber = call?.to ?? toParam ?? "us";
+    // The prefill is the start of a message a person will edit and send, so
+    // it is written in the language of the person writing it.
+    const firstName = (call?.clientName ?? "").split(" ")[0];
+    const callbackNumber = call?.to ?? toParam;
     setComposePrefill({
       key: sourceParam,
-      text: `Hi ${firstName}, sorry we missed your call at Yipyy. How can we help? Reply here or call us back at ${callbackNumber}.`,
+      text: t(
+        callbackNumber ? "missedCallPrefill" : "missedCallPrefillNoNumber",
+      )
+        .replace("{name}", firstName ? ` ${firstName}` : "")
+        .replace("{number}", callbackNumber ?? ""),
     });
-  }, [mode, sourceParam, toParam]);
+  }, [mode, sourceParam, toParam, t]);
 
   useEffect(() => {
     if (mode !== "customer" || !composeParam) return;
@@ -240,6 +249,7 @@ export function MessageCenter({
         <div
           className={cn(
             "w-full shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:w-auto",
+            // french-ok: a class list, not copy
             selectedThreadId ? "hidden lg:block" : "block",
           )}
         >
@@ -266,6 +276,7 @@ export function MessageCenter({
           selectedThreadId
             ? "fixed inset-0 z-50 rounded-none lg:relative lg:inset-auto lg:z-auto lg:rounded-2xl"
             : "rounded-2xl",
+          // french-ok: a class list, not copy
           selectedThreadId || !showContactList ? "flex" : "hidden lg:flex",
         )}
       >

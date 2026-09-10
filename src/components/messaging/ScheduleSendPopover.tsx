@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/popover";
 import { Clock, Calendar as CalendarIcon, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 function pad(n: number) {
   return n.toString().padStart(2, "0");
@@ -22,16 +25,8 @@ function defaultDate(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function formatPreset(label: string, target: Date) {
-  return `${label} · ${target.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })} at ${target.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })}`;
+function formatPreset(label: string, target: Date, locale: AppLocale) {
+  return `${label} · ${formatDateLong(target, locale)} · ${formatTime(target, locale)}`;
 }
 
 export function ScheduleSendPopover({
@@ -41,6 +36,8 @@ export function ScheduleSendPopover({
   disabled?: boolean;
   onSchedule: (iso: string) => void;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(defaultDate());
   const [time, setTime] = useState("09:00");
@@ -56,11 +53,11 @@ export function ScheduleSendPopover({
     monday9.setDate(monday9.getDate() + daysUntilMon);
     monday9.setHours(9, 0, 0, 0);
     return [
-      { label: "In 1 hour", date: inAnHour },
-      { label: "Tomorrow 9am", date: tomorrow9 },
-      { label: "Next Monday 9am", date: monday9 },
+      { label: t("in1Hour"), date: inAnHour },
+      { label: t("tomorrow9am"), date: tomorrow9 },
+      { label: t("nextMonday9am"), date: monday9 },
     ];
-  }, []);
+  }, [t]);
 
   const submit = (iso: string) => {
     onSchedule(iso);
@@ -85,7 +82,7 @@ export function ScheduleSendPopover({
             "size-9 shrink-0 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600",
             disabled && "opacity-40",
           )}
-          title="Schedule send"
+          title={t("scheduleSend")}
         >
           <Clock className="size-4" />
         </Button>
@@ -98,7 +95,7 @@ export function ScheduleSendPopover({
         <div className="mb-3 flex items-center gap-2">
           <CalendarIcon className="size-3.5 text-blue-600" />
           <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-            Schedule send
+            {t("scheduleSend")}
           </span>
         </div>
 
@@ -110,7 +107,7 @@ export function ScheduleSendPopover({
               onClick={() => submit(p.date.toISOString())}
               className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
             >
-              <span>{formatPreset(p.label, p.date)}</span>
+              <span>{formatPreset(p.label, p.date, locale)}</span>
               <Send className="size-3 text-slate-300" />
             </button>
           ))}
@@ -120,7 +117,7 @@ export function ScheduleSendPopover({
 
         <div className="space-y-2">
           <Label className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
-            Pick a date & time
+            {t("pickADateTime")}
           </Label>
           <div className="flex gap-2">
             <Input
@@ -143,7 +140,7 @@ export function ScheduleSendPopover({
             onClick={submitCustom}
           >
             <Clock className="mr-1.5 size-3.5" />
-            Schedule
+            {t("schedule")}
           </Button>
         </div>
       </PopoverContent>

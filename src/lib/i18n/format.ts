@@ -396,6 +396,42 @@ export function formatRelative(
   if (absMin >= 24 * 60) return formatDateShort(then, locale);
 
   const rtf = new Intl.RelativeTimeFormat(TAG[locale], { numeric: "auto" });
+  // Under 30 seconds the minute rounds to 0, and `numeric: "auto"` renders
+  // a 0-minute as "this minute" / "cette minute-ci". A 0-SECOND is "now" /
+  // "maintenant", which is what a person says.
+  if (Math.round(absMin) === 0) return rtf.format(0, "second");
+  if (absMin < 60) return rtf.format(Math.round(diffMs / 60000), "minute");
+  return rtf.format(Math.round(diffMs / 3600000), "hour");
+}
+
+/**
+ * `5 mins ago` · `il y a 5 min` — `formatRelative` for a column with no room.
+ *
+ * The same 24-hour expiry, the same `Intl`, only the short unit. It exists
+ * because the inbox row's time sits in a 10px column beside the client's
+ * name, and the hand-rolled clock it replaced (`5m`, `3h`, `2d`) was the
+ * eighth one found in this conversion — English units, and a "2d" that §5q
+ * says should have been a date.
+ */
+export function formatRelativeShort(
+  value: Date | string | number,
+  locale: AppLocale,
+  now: Date = new Date(),
+): string {
+  const then = asDate(value);
+  if (unformattable(then)) return NO_DATE;
+  const diffMs = then.getTime() - now.getTime();
+  const absMin = Math.abs(diffMs) / 60000;
+
+  if (absMin >= 24 * 60) return formatDateShort(then, locale);
+
+  // "short", not "narrow": narrow French is "-5 min", a minus sign where a
+  // reader expects "il y a".
+  const rtf = new Intl.RelativeTimeFormat(TAG[locale], {
+    numeric: "auto",
+    style: "short",
+  });
+  if (Math.round(absMin) === 0) return rtf.format(0, "second");
   if (absMin < 60) return rtf.format(Math.round(diffMs / 60000), "minute");
   return rtf.format(Math.round(diffMs / 3600000), "hour");
 }

@@ -67,6 +67,9 @@ type ShellCatalogue = {
   meta: Record<string, string>;
   /** `components/shared` — notes, tags: reached from every portal, owned by none. */
   shared: Record<string, string>;
+  /** The inbox — MessageCenter and its parts, used by the facility, employee
+   *  and customer portals alike. */
+  messaging: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */

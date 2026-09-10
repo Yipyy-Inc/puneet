@@ -233,6 +233,26 @@ const JSX_TEXT = /[>}]([^<>{}]{2,2000})[<{]/g;
 const TERNARY = /\?\s*"([^"]{2,})"\s*:\s*"([^"]{2,})"/g;
 
 /**
+ * A ternary HALF converted: `{sent ? t("sent") : "Not saved yet"}`.
+ *
+ * Added 2026-09-10, and it is the shape a conversion LEAVES. `TERNARY` wants
+ * two literals, so the moment one branch becomes `t(…)` the pair stops
+ * matching — and the branch still in English vanishes from the gate with it.
+ * The Messages page reported three hits in `ConversationThread` and rendered
+ * six more this way: "No history", "View client profile", "Mark conversation
+ * as closed", the empty-thread prompt. Measured across `src/` the day it
+ * landed: 13 hits, and 9 of them were in messaging.
+ *
+ * Deliberately the narrow form. `? "X" : anything` is 2,497 hits across
+ * `src/`, almost all class lists in `cn()`; the translated sibling is what
+ * says this pair is copy, so it is the whole discriminator. `\bt\(` rather
+ * than any `t…(` — `timeOf(`, `terminalName(` and `toStatusLabel(` are not
+ * translators, and matched when it was looser.
+ */
+const TERNARY_HALF =
+  /\?\s*\bt\((?:[^()]|\([^()]*\))*\)\s*:\s*"([^"]{2,})"|\?\s*"([^"]{2,})"\s*:\s*\bt\(/g;
+
+/**
  * A template literal — `` `Remove the ${label} filter` ``.
  *
  * The discriminator against a Tailwind class list in backticks (there are ~50
@@ -534,6 +554,11 @@ function hits(file: string, objectCopy = false): Hit[] {
       if (!/^[A-Z]/.test(branch) && !branch.includes(" ")) continue;
       record(branch, m.index ?? 0);
     }
+  }
+  for (const m of stripped.matchAll(TERNARY_HALF)) {
+    const branch = m[1] ?? m[2];
+    if (!/^[A-Z]/.test(branch) && !branch.includes(" ")) continue;
+    record(branch, m.index ?? 0);
   }
   for (const m of stripped.matchAll(TEMPLATE)) {
     // An uppercase letter separates copy from a class list — but only when the

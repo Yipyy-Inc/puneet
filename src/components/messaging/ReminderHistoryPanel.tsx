@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { Clock3, Mail, Smartphone, Sparkles } from "lucide-react";
 import { clientCommunications } from "@/data/communications";
 import type { Message } from "@/types/communications";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 export type ReminderTab = "conversation" | "reminders";
 
@@ -130,19 +133,17 @@ export function getReminderHistoryForCustomer({
   );
 }
 
-function formatReminderTimestamp(timestamp: string) {
-  return new Date(timestamp).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function formatReminderTimestamp(timestamp: string, locale: AppLocale) {
+  return `${formatDateLong(timestamp, locale)} · ${formatTime(timestamp, locale)}`;
 }
 
-function reminderStatusLabel(status: Message["status"]) {
-  if (status === "read") return "opened";
-  return status;
+// The catalogue key for a reminder's status. A "read" email is shown as
+// "opened", which is what the reader of this panel means by it.
+function reminderStatusKey(status: Message["status"]) {
+  if (status === "read") return "statusOpened";
+  if (status === "delivered") return "statusDelivered";
+  if (status === "failed") return "statusFailed";
+  return "statusSent";
 }
 
 function reminderStatusClass(status: Message["status"]) {
@@ -163,6 +164,8 @@ function ReminderColumn({
   channel: ReminderChannel;
   items: ReminderHistoryItem[];
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const titleTone =
     channel === "email"
       ? "bg-blue-50 text-blue-700 border-blue-200"
@@ -183,7 +186,7 @@ function ReminderColumn({
           </span>
         </div>
         <p className="text-xs font-semibold text-slate-500">
-          {items.length} sent
+          {t("sentCount").replace("{count}", String(items.length))}
         </p>
       </div>
 
@@ -191,10 +194,10 @@ function ReminderColumn({
         {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center">
             <p className="text-sm font-medium text-slate-500">
-              No {title.toLowerCase()} yet
+              {t("noKindYet").replace("{kind}", title.toLowerCase())}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              New reminders for this customer will appear here automatically.
+              {t("newRemindersForThisCustomer")}
             </p>
           </div>
         ) : (
@@ -206,7 +209,7 @@ function ReminderColumn({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-slate-800">
-                    {item.subject ?? "Automated reminder"}
+                    {item.subject ?? t("automatedReminder")}
                   </p>
                   <p className="mt-1 text-xs/5 text-slate-600">{item.body}</p>
                 </div>
@@ -216,13 +219,13 @@ function ReminderColumn({
                     reminderStatusClass(item.status),
                   )}
                 >
-                  {reminderStatusLabel(item.status)}
+                  {t(reminderStatusKey(item.status))}
                 </span>
               </div>
 
               <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
                 <Clock3 className="size-3.5" />
-                {formatReminderTimestamp(item.timestamp)}
+                {formatReminderTimestamp(item.timestamp, locale)}
               </div>
             </article>
           ))
@@ -241,6 +244,8 @@ export function ReminderHistoryPanel({
   reminderHistory: ReminderHistoryItem[];
   mode?: "facility" | "customer";
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const isCustomerMode = mode === "customer";
   const emailReminders = useMemo(
     () => reminderHistory.filter((message) => message.type === "email"),
@@ -267,7 +272,7 @@ export function ReminderHistoryPanel({
           <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold tracking-[0.35em] text-amber-700 uppercase">
-                Reminder Concierge
+                {t("reminderConcierge")}
               </p>
               <h4
                 className="mt-1 text-2xl/tight font-semibold text-slate-900"
@@ -275,19 +280,19 @@ export function ReminderHistoryPanel({
                   fontFamily: '"Cormorant Garamond", "Times New Roman", serif',
                 }}
               >
-                {counterpartyName} reminder timeline
+                {t("reminderTimeline").replace("{name}", counterpartyName)}
               </h4>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
                 {isCustomerMode
-                  ? "All reminders from this facility are listed here so your chat stays clean and easy to follow."
-                  : "Every outbound reminder sent to this customer, separated by email and SMS for fast follow-up checks."}
+                  ? t("allRemindersFromThisFacility")
+                  : t("everyOutboundReminder")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-amber-200/70 bg-white/75 px-3 py-2 backdrop-blur-sm">
               <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700">
                 <Sparkles className="size-3.5" />
-                Total reminders
+                {t("totalReminders")}
               </p>
               <p className="mt-1 text-right text-2xl font-bold text-slate-900 tabular-nums">
                 {isCustomerMode
@@ -304,11 +309,10 @@ export function ReminderHistoryPanel({
               {customerReminders.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center">
                   <p className="text-sm font-medium text-slate-500">
-                    No reminders yet
+                    {t("noRemindersYet")}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    New reminders for this facility will appear here
-                    automatically.
+                    {t("newRemindersForFacility")}
                   </p>
                 </div>
               ) : (
@@ -320,7 +324,7 @@ export function ReminderHistoryPanel({
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
-                          {item.subject ?? "Automated reminder"}
+                          {item.subject ?? t("automatedReminder")}
                         </p>
                         <p className="mt-1 text-xs/5 text-slate-600">
                           {item.body}
@@ -332,13 +336,13 @@ export function ReminderHistoryPanel({
                           reminderStatusClass(item.status),
                         )}
                       >
-                        {reminderStatusLabel(item.status)}
+                        {t(reminderStatusKey(item.status))}
                       </span>
                     </div>
 
                     <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
                       <Clock3 className="size-3.5" />
-                      {formatReminderTimestamp(item.timestamp)}
+                      {formatReminderTimestamp(item.timestamp, locale)}
                     </div>
                   </article>
                 ))
@@ -348,13 +352,13 @@ export function ReminderHistoryPanel({
         ) : (
           <div className="mt-5 grid gap-4 xl:grid-cols-2">
             <ReminderColumn
-              title="Email Reminders"
+              title={t("emailReminders")}
               icon={Mail}
               channel="email"
               items={emailReminders}
             />
             <ReminderColumn
-              title="SMS Reminders"
+              title={t("smsReminders")}
               icon={Smartphone}
               channel="sms"
               items={smsReminders}

@@ -8,18 +8,14 @@ import { Pin, PinOff, Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { InternalNote } from "@/types/messaging";
 import { toast } from "sonner";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import type { AppLocale } from "@/lib/language-settings";
+import { formatRelative } from "@/lib/i18n/format";
 
-function relTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+// The SEVENTH hand-rolled relative clock found in this conversion. It is
+// formatRelative: Intl, the reader's locale, and a date past 24 hours (§5q).
+function relTime(iso: string, locale: AppLocale) {
+  return formatRelative(iso, locale);
 }
 
 export function InternalNotesTab({
@@ -29,6 +25,8 @@ export function InternalNotesTab({
   threadId: string;
   initialNotes: InternalNote[];
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const [notes, setNotes] = useState<InternalNote[]>(() =>
     [...initialNotes].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -51,7 +49,7 @@ export function InternalNotesTab({
     setNotes((prev) => [note, ...prev]);
     setBody("");
     setIsAdding(false);
-    toast.success("Internal note added");
+    toast.success(t("internalNoteAdded"));
   };
 
   const togglePin = (id: string) => {
@@ -70,7 +68,7 @@ export function InternalNotesTab({
 
   const deleteNote = (id: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
-    toast.success("Note removed");
+    toast.success(t("noteRemoved"));
   };
 
   return (
@@ -80,7 +78,7 @@ export function InternalNotesTab({
         <div className="flex items-center gap-2">
           <Lock className="size-4 text-amber-600" />
           <span className="text-sm font-semibold text-amber-800">
-            Staff-only notes
+            {t("staffOnlyNotes")}
           </span>
           <Badge className="bg-amber-100 text-[10px] text-amber-700">
             {notes.length}
@@ -93,7 +91,7 @@ export function InternalNotesTab({
           onClick={() => setIsAdding(true)}
         >
           <Plus className="size-3.5" />
-          Add Note
+          {t("addNote")}
         </Button>
       </div>
 
@@ -104,7 +102,7 @@ export function InternalNotesTab({
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Add a staff-only note (not visible to client)..."
+              placeholder={t("addAStaffOnlyNote")}
               className="min-h-[80px] resize-none border-amber-200 bg-white text-sm focus-visible:ring-amber-300"
               autoFocus
             />
@@ -118,7 +116,7 @@ export function InternalNotesTab({
                   setBody("");
                 }}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 size="sm"
@@ -126,7 +124,7 @@ export function InternalNotesTab({
                 disabled={!body.trim()}
                 onClick={addNote}
               >
-                Save Note
+                {t("saveNote")}
               </Button>
             </div>
           </div>
@@ -136,9 +134,11 @@ export function InternalNotesTab({
         {notes.length === 0 && !isAdding ? (
           <div className="flex flex-col items-center py-16 text-center">
             <Lock className="size-10 text-slate-200" />
-            <p className="mt-3 text-sm text-slate-400">No internal notes yet</p>
+            <p className="mt-3 text-sm text-slate-400">
+              {t("noInternalNotesYet")}
+            </p>
             <p className="mt-1 text-xs text-slate-300">
-              Staff notes are never visible to clients
+              {t("staffNotesAreNeverVisible")}
             </p>
           </div>
         ) : (
@@ -155,7 +155,7 @@ export function InternalNotesTab({
                   <div className="absolute top-3 right-3">
                     <Badge className="bg-amber-100 text-[9px] text-amber-700">
                       <Pin className="mr-1 size-2.5" />
-                      Pinned
+                      {t("pinned")}
                     </Badge>
                   </div>
                 )}
@@ -168,12 +168,12 @@ export function InternalNotesTab({
                       {note.author}
                     </span>
                     <span>·</span>
-                    <span>{relTime(note.createdAt)}</span>
+                    <span>{relTime(note.createdAt, locale)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      title={note.pinned ? "Unpin" : "Pin"}
+                      title={note.pinned ? t("unpin") : t("pin")}
                       onClick={() => togglePin(note.id)}
                       className="rounded-sm p-1 text-slate-300 hover:bg-amber-100 hover:text-amber-600"
                     >
@@ -185,7 +185,7 @@ export function InternalNotesTab({
                     </button>
                     <button
                       type="button"
-                      title="Delete note"
+                      title={t("deleteNote")}
                       onClick={() => deleteNote(note.id)}
                       className="rounded-sm p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
                     >

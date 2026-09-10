@@ -330,7 +330,7 @@ export function ServiceBundleModal({
               <Label>
                 {form.pricingMode === "discount_percentage"
                   ? t("sbDiscountPercentLabel")
-                  : "$ Value"}
+                  : t("sbValueDollarsLabel")}
               </Label>
               <Input
                 type="number"

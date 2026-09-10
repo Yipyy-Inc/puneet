@@ -10,6 +10,7 @@ import {
   formatPercent,
   formatPhone,
   formatRelative,
+  formatRelativeShort,
   formatWeekday,
   formatTime,
   formatTimeOfDay,
@@ -185,6 +186,21 @@ describe("§5q — relative time expires at 24 hours", () => {
     const justOver = new Date(now.getTime() - 24.5 * 3600 * 1000);
     expect(formatRelative(justUnder, "en", now)).not.toBe("Sep 1");
     expect(formatRelative(justOver, "en", now)).toBe("Sep 1");
+  });
+
+  test("under half a minute is 'now', not 'this minute'", () => {
+    const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
+    expect(formatRelative(tenSecondsAgo, "en", now)).toBe("now");
+    expect(formatRelative(tenSecondsAgo, "fr", now)).toBe("maintenant");
+    expect(formatRelativeShort(tenSecondsAgo, "fr", now)).toBe("maintenant");
+  });
+
+  test("the short form keeps 'il y a' and the same expiry", () => {
+    const fiveMin = new Date(now.getTime() - 5 * 60 * 1000);
+    const threeDaysAgo = new Date(2026, 7, 30, 12, 0, 0);
+    expect(formatRelativeShort(fiveMin, "fr", now)).toBe("il y a 5 min");
+    expect(formatRelativeShort(fiveMin, "en", now)).toBe("5 mins ago");
+    expect(formatRelativeShort(threeDaysAgo, "fr", now)).toBe("30 août");
   });
 });
 
