@@ -636,6 +636,8 @@ export type BelongingEntry = z.infer<typeof belongingEntrySchema>;
 
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
+  /** When the row was written — for a customer request, when they asked. Read-only. */
+  createdAt: z.string().optional(),
   /**
    * DERIVED from the payments ledger, never sent. See `amountPaid` below and
    * 20260806680000: 'paid' once `amountPaid` covers `totalCost`, 'refunded'

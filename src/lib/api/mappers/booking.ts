@@ -83,6 +83,7 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     tipAmount: row.tip_amount === null ? undefined : Number(row.tip_amount),
 
     specialRequests: row.special_requests ?? undefined,
+    createdAt: row.created_at ?? undefined,
   } as BookingWithRowId;
 }
 
@@ -135,6 +136,9 @@ const COLUMN_FIELDS = [
   "specialRequests",
   "assignedStaff",
   "locationId",
+  // Read-only: the database stamps it. Listed so a PATCH, which merges the
+  // stored booking into the input, never copies it into `details`.
+  "createdAt",
 ];
 
 /**
