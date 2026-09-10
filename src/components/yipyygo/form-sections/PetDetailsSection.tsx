@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, Dog } from "lucide-react";
 import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatList } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 type PetForm = {
   name: string;
@@ -35,6 +38,8 @@ export function PetDetailsSection({
   onNext,
   onBack,
 }: PetDetailsSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const [values, setValues] = useState<PetForm>(() => ({
     name: pet.name ?? "",
     breed: pet.breed ?? "",
@@ -48,13 +53,13 @@ export function PetDetailsSection({
 
   const missing = useMemo(() => {
     const list: string[] = [];
-    if (!values.name.trim()) list.push("Name");
-    if (!values.breed.trim()) list.push("Breed");
+    if (!values.name.trim()) list.push(t("name"));
+    if (!values.breed.trim()) list.push(t("breed"));
     if (!values.weight.trim() || Number(values.weight) <= 0)
-      list.push("Weight");
-    if (!values.age.trim()) list.push("Age");
+      list.push(t("weight"));
+    if (!values.age.trim()) list.push(t("age"));
     return list;
-  }, [values]);
+  }, [values, t]);
 
   const update = (updates: Partial<PetForm>) =>
     setValues((v) => ({ ...v, ...updates }));
@@ -79,11 +84,10 @@ export function PetDetailsSection({
             </div>
           )}
           <div>
-            <CardTitle>Verify {pet.name}&apos;s details</CardTitle>
-            <CardDescription>
-              Prefilled from your pet&apos;s profile. Update anything that has
-              changed since the last stay.
-            </CardDescription>
+            <CardTitle>
+              {t("verifyPetDetails").replace("{pet}", pet.name)}
+            </CardTitle>
+            <CardDescription>{t("prefilledFromPetProfile")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -92,7 +96,9 @@ export function PetDetailsSection({
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
             <AlertDescription>
-              Please fill in: <strong>{missing.join(", ")}</strong>.
+              {rich(t("fillIn"), {
+                fields: <strong>{formatList(missing, locale)}</strong>,
+              })}
             </AlertDescription>
           </Alert>
         )}
@@ -100,21 +106,24 @@ export function PetDetailsSection({
           <Alert>
             <CheckCircle2 className="size-4 text-green-600" />
             <AlertDescription>
-              {pet.name}&apos;s profile looks complete. Full profile in{" "}
-              <Link
-                href={`/customer/pets/${pet.id}`}
-                className="text-primary underline"
-              >
-                My Pets
-              </Link>
-              .
+              {rich(t("profileLooksComplete"), {
+                pet: pet.name,
+                link: (
+                  <Link
+                    href={`/customer/pets/${pet.id}`}
+                    className="text-primary underline"
+                  >
+                    {t("myPets")}
+                  </Link>
+                ),
+              })}
             </AlertDescription>
           </Alert>
         )}
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="pet-name">Name</Label>
+            <Label htmlFor="pet-name">{t("name")}</Label>
             <Input
               id="pet-name"
               value={values.name}
@@ -122,7 +131,7 @@ export function PetDetailsSection({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pet-breed">Breed</Label>
+            <Label htmlFor="pet-breed">{t("breed")}</Label>
             <Input
               id="pet-breed"
               value={values.breed}
@@ -157,7 +166,7 @@ export function PetDetailsSection({
               id="pet-color"
               value={values.color}
               onChange={(e) => update({ color: e.target.value })}
-              placeholder="e.g., Black &amp; white"
+              placeholder={t("eGBlackWhite")}
             />
           </div>
           <div className="space-y-1.5">
@@ -166,35 +175,35 @@ export function PetDetailsSection({
               id="pet-microchip"
               value={values.microchip}
               onChange={(e) => update({ microchip: e.target.value })}
-              placeholder="Optional"
+              placeholder={t("optional")}
             />
           </div>
           <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="pet-allergies">Allergies</Label>
+            <Label htmlFor="pet-allergies">{t("allergies")}</Label>
             <Input
               id="pet-allergies"
               value={values.allergies}
               onChange={(e) => update({ allergies: e.target.value })}
-              placeholder="None / list allergies"
+              placeholder={t("noneListAllergies")}
             />
           </div>
           <div className="space-y-1.5 md:col-span-2">
-            <Label htmlFor="pet-special">Special needs</Label>
+            <Label htmlFor="pet-special">{t("specialNeeds")}</Label>
             <Input
               id="pet-special"
               value={values.specialNeeds}
               onChange={(e) => update({ specialNeeds: e.target.value })}
-              placeholder="None / e.g., Anxiety around fireworks"
+              placeholder={t("noneEGAnxietyAround")}
             />
           </div>
         </div>
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
           <Button onClick={onNext} disabled={!canContinue}>
-            Next: Booking details
+            {t("nextBookingDetails")}
           </Button>
         </div>
       </CardContent>

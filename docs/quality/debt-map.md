@@ -11736,3 +11736,43 @@ list.
   screens, and `MILESTONE_LABELS` also feeds a notification email subject.
 - Waiver titles and bodies come from `@/data/training-waivers` and stay as
   written — they are the facility's legal text, not interface copy.
+
+### Express check-in form (`/customer/bookings/[id]/yipyygo-form`) — **it cannot find a real booking**
+
+- **The booking is looked up in the fixture list.** `bookings.find(...)` from
+  `@/data/bookings`, and the owner in `@/data/clients` — so a booking that
+  lives in Postgres, which is every booking the booking wizard makes, gets
+  "Booking not found". The booking-detail page has the same split (see
+  above); this form is the next link in that chain.
+- **Submitting saves nowhere.** `saveYipyyGoForm` writes into
+  `mockYipyyGoForms`, a module-level array, and the success screen says "A
+  confirmation email has been sent to {email}" — the email is a
+  `console.info`. The feeding and medication instructions a customer enters
+  here are exactly what staff need at drop-off, and they are lost on reload.
+- **The verification code is made in the browser and sent to no one.**
+  "Send a verification code" calls `generateVerificationCode()` client-side
+  and toasts "Verification code sent to your email or phone". Nothing is
+  sent; the code the gate checks against is one the page itself invented.
+- **Paid add-ons the facility never offered.** `AddOnsSection` renders
+  `AVAILABLE_ADD_ONS` — "Extra Playtime" $15, "Enrichment Activities" $20,
+  "Grooming Add-on" $35, "Massage Therapy", "Video Call" — commented "Mock
+  add-ons - in production, these would come from facility config", and says
+  they "will be added to your booking as pending line items". Their names and
+  descriptions are left in English on purpose (`french-ok`): translating an
+  invented service would make it look more real, not less.
+- **The medication high-risk flag reads English only.** `HIGH_RISK_KEYWORDS`
+  is "insulin", "seizure", "phenobarbital", "prednisone", "thyroid", "heart",
+  "blood pressure". A French owner typing "anticonvulsivant", "cœur" or
+  "pression artérielle" is not flagged; "insuline" happens to match
+  "insulin". A safety check that depends on the owner's language.
+- **Allergy chips are stored as English on purpose.** Tapping "Poulet" saves
+  "Chicken" — the canonical value staff read on the facility booking page —
+  and only the chip's face is translated. A meal name, which the owner can
+  edit freely, is written in the owner's language like anything they type.
+- Fixed while translating, because they were formatting and not behaviour:
+  two more 12-hour `formatTime` copies (feeding and medication times) are
+  `formatTimeOfDay`; every price was `$${n.toFixed(2)}` and is `formatMoney`;
+  the pet's weight is `formatWeightFromLb`; the service is `serviceTypeLabel`
+  rather than a lowercase id with `capitalize`; and the booking's start date,
+  a bare `YYYY-MM-DD`, was parsed as UTC — the day before in Canada — in
+  three places.

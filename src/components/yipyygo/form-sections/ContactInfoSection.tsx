@@ -17,6 +17,9 @@ import { AlertCircle, CheckCircle2, User, Phone, Mail } from "lucide-react";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import type { AdditionalContact } from "@/types/client";
 import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatList } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 type ContactForm = {
   name: string;
@@ -32,6 +35,8 @@ export function ContactInfoSection({
   onNext,
   onBack,
 }: ContactInfoSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const [values, setValues] = useState<ContactForm>(() => ({
     name: customer.name ?? "",
     email: customer.email ?? "",
@@ -42,19 +47,19 @@ export function ContactInfoSection({
 
   const missing = useMemo(() => {
     const list: string[] = [];
-    if (!values.name.trim()) list.push("Full name");
-    if (!values.email.trim()) list.push("Email");
-    if (!values.phone.trim()) list.push("Phone number");
+    if (!values.name.trim()) list.push(t("fullName"));
+    if (!values.email.trim()) list.push(t("email"));
+    if (!values.phone.trim()) list.push(t("phoneNumber"));
     values.additionalContacts.forEach((contact, idx) => {
       if (!contact.name.trim()) {
-        list.push(`Additional contact #${idx + 1} name`);
+        list.push(t("additionalContactName").replace("{n}", String(idx + 1)));
       }
       if (!contact.phone.trim()) {
-        list.push(`Additional contact #${idx + 1} phone`);
+        list.push(t("additionalContactPhone").replace("{n}", String(idx + 1)));
       }
     });
     return list;
-  }, [values]);
+  }, [values, t]);
 
   const update = (updates: Partial<ContactForm>) =>
     setValues((v) => ({ ...v, ...updates }));
@@ -66,20 +71,18 @@ export function ContactInfoSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="text-primary size-5" />
-          Verify your contact info
+          {t("verifyYourContactInfo")}
         </CardTitle>
-        <CardDescription>
-          We prefilled this from your Yipyy account. Review and update anything
-          that&apos;s out of date before continuing.
-        </CardDescription>
+        <CardDescription>{t("prefilledFromAccount")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {missing.length > 0 && (
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
             <AlertDescription>
-              Please fill in: <strong>{missing.join(", ")}</strong>. You
-              can&apos;t continue until these are provided.
+              {rich(t("fillInToContinue"), {
+                fields: <strong>{formatList(missing, locale)}</strong>,
+              })}
             </AlertDescription>
           </Alert>
         )}
@@ -87,34 +90,34 @@ export function ContactInfoSection({
           <Alert>
             <CheckCircle2 className="size-4 text-green-600" />
             <AlertDescription>
-              All required contact info is on file.{" "}
+              {t("allContactInfoOnFile")}{" "}
               <Link
                 href="/customer/settings"
                 className="text-primary underline"
               >
-                Edit in account settings
+                {t("editInAccountSettings")}
               </Link>{" "}
-              if needed.
+              {t("ifNeeded")}
             </AlertDescription>
           </Alert>
         )}
 
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">Primary contact</h3>
+          <h3 className="text-sm font-semibold">{t("primaryContact")}</h3>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="contact-name">Full name</Label>
+              <Label htmlFor="contact-name">{t("fullName")}</Label>
               <Input
                 id="contact-name"
                 value={values.name}
                 onChange={(e) => update({ name: e.target.value })}
-                placeholder="Full name"
+                placeholder={t("fullName")}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="contact-phone">
                 <Phone className="mr-1 inline size-3" />
-                Phone
+                {t("phone")}
               </Label>
               <Input
                 id="contact-phone"
@@ -126,14 +129,14 @@ export function ContactInfoSection({
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="contact-email">
                 <Mail className="mr-1 inline size-3" />
-                Email
+                {t("email")}
               </Label>
               <Input
                 id="contact-email"
                 type="email"
                 value={values.email}
                 onChange={(e) => update({ email: e.target.value })}
-                placeholder="you@example.com"
+                placeholder={t("youExampleCom")}
               />
             </div>
           </div>
@@ -148,10 +151,10 @@ export function ContactInfoSection({
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack} disabled>
-            Back
+            {t("back")}
           </Button>
           <Button onClick={onNext} disabled={!canContinue}>
-            Next: Pet details
+            {t("nextPetDetails")}
           </Button>
         </div>
       </CardContent>

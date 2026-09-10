@@ -73,6 +73,10 @@ type ShellCatalogue = {
   /** `components/training` — the progress charts and milestones, shown on the
    *  customer's training page and the facility's student profile alike. */
   training: Record<string, string>;
+  /** `components/yipyygo` — the pre-check-in form's sections. Feeding,
+   *  medication and belongings are also rendered on the facility's booking
+   *  page, so the whole folder is one group rather than a customer area. */
+  yipyygo: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */

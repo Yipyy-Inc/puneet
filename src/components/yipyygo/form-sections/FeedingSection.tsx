@@ -43,76 +43,86 @@ import type {
   PrepInstruction,
   RefusalAction,
 } from "@/types/booking";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatTimeOfDay } from "@/lib/i18n/format";
 
 type FeedingSectionProps = Omit<YipyyGoFormSectionProps, "isSubmitting">;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const OCCASION_PRESETS: { label: string; time: string }[] = [
-  { label: "Breakfast", time: "07:00" },
-  { label: "Lunch", time: "12:00" },
-  { label: "Dinner", time: "17:00" },
-  { label: "Bedtime Snack", time: "20:00" },
+// Option tables carry CATALOGUE KEYS; the value stored is `value`, never
+// the label, so a French owner and an English one save the same record.
+const OCCASION_PRESETS: { labelKey: string; time: string }[] = [
+  { labelKey: "breakfast", time: "07:00" },
+  { labelKey: "lunch", time: "12:00" },
+  { labelKey: "dinner", time: "17:00" },
+  { labelKey: "bedtimeSnack", time: "20:00" },
 ];
 
-const FOOD_TYPES: { value: FoodComponentType; label: string }[] = [
-  { value: "kibble", label: "Kibble" },
-  { value: "wet_food", label: "Wet Food" },
-  { value: "raw", label: "Raw" },
-  { value: "supplement", label: "Supplement" },
-  { value: "toppers", label: "Toppers / Extras" },
-  { value: "prescription", label: "Prescription Diet" },
-  { value: "other", label: "Other" },
+const FOOD_TYPES: { value: FoodComponentType; labelKey: string }[] = [
+  { value: "kibble", labelKey: "foodKibble" },
+  { value: "wet_food", labelKey: "foodWet" },
+  { value: "raw", labelKey: "foodRaw" },
+  { value: "supplement", labelKey: "foodSupplement" },
+  { value: "toppers", labelKey: "foodToppers" },
+  { value: "prescription", labelKey: "foodPrescription" },
+  { value: "other", labelKey: "other" },
 ];
 
-const FOOD_UNITS: { value: FoodUnit; label: string }[] = [
-  { value: "cups", label: "Cup" },
-  { value: "tbsp", label: "Tbsp" },
-  { value: "grams", label: "Grams" },
-  { value: "oz", label: "Oz" },
-  { value: "scoop", label: "Scoop" },
-  { value: "other", label: "Other" },
+const FOOD_UNITS: { value: FoodUnit; labelKey: string }[] = [
+  { value: "cups", labelKey: "unitCup" },
+  { value: "tbsp", labelKey: "unitTbsp" },
+  { value: "grams", labelKey: "unitGrams" },
+  { value: "oz", labelKey: "unitOz" },
+  { value: "scoop", labelKey: "unitScoop" },
+  { value: "other", labelKey: "other" },
 ];
 
 const SOURCE_OPTIONS: {
   value: FoodSource;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }[] = [
   {
     value: "parent_brings",
-    label: "I bring all food",
-    description: "You will provide food for your pet's stay",
+    labelKey: "sourceParentBrings",
+    descriptionKey: "sourceParentBringsHint",
   },
   {
     value: "facility_provides",
-    label: "Facility provides",
-    description: "The facility will provide meals",
+    labelKey: "sourceFacilityProvides",
+    descriptionKey: "sourceFacilityProvidesHint",
   },
   {
     value: "mix",
-    label: "Mix",
-    description: "Some food from you, some from the facility",
+    labelKey: "sourceMix",
+    descriptionKey: "sourceMixHint",
   },
 ];
 
-const PREP_OPTIONS: { value: PrepInstruction; label: string }[] = [
-  { value: "soak", label: "Soak kibble for 5 min" },
-  { value: "microwave", label: "Microwave 10 seconds" },
-  { value: "mix_powder", label: "Mix powder into wet first" },
-  { value: "serve_separately", label: "Serve items separately" },
-  { value: "warm_water", label: "Add warm water" },
+const PREP_OPTIONS: { value: PrepInstruction; labelKey: string }[] = [
+  { value: "soak", labelKey: "prepSoak" },
+  { value: "microwave", labelKey: "prepMicrowave" },
+  { value: "mix_powder", labelKey: "prepMixPowder" },
+  { value: "serve_separately", labelKey: "prepServeSeparately" },
+  { value: "warm_water", labelKey: "prepWarmWater" },
 ];
 
-const REFUSAL_OPTIONS: { value: RefusalAction; label: string }[] = [
-  { value: "plain_kibble", label: "Offer plain kibble only" },
-  { value: "warm_water", label: "Add warm water and retry" },
-  { value: "skip_notify", label: "Skip meal and notify me" },
-  { value: "call_parent", label: "Call me" },
-  { value: "try_again_1hr", label: "Try again in 1 hour" },
-  { value: "add_toppers", label: "Add toppers" },
+const REFUSAL_OPTIONS: { value: RefusalAction; labelKey: string }[] = [
+  { value: "plain_kibble", labelKey: "refusePlainKibble" },
+  { value: "warm_water", labelKey: "refuseWarmWater" },
+  { value: "skip_notify", labelKey: "refuseSkipNotify" },
+  { value: "call_parent", labelKey: "callMe" },
+  { value: "try_again_1hr", labelKey: "refuseTryAgain" },
+  { value: "add_toppers", labelKey: "refuseAddToppers" },
 ];
 
+// These ARE stored — a tapped chip saves its English text into
+// `feeding.allergies`, and staff read that list on the facility's booking
+// page. So the stored value stays the canonical English and only the chip's
+// face is translated (ALLERGY_KEY); a French owner's tap saves the same word
+// an English owner's does. An allergy typed by hand is saved as typed.
+// french-ok: stored canonical values, translated at display through ALLERGY_KEY
 const ALLERGY_PRESETS = [
   "Chicken",
   "Grain-free only",
@@ -124,24 +134,21 @@ const ALLERGY_PRESETS = [
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+const ALLERGY_KEY: Record<string, string> = {
+  Chicken: "allergyChicken",
+  "Grain-free only": "allergyGrainFree",
+  "No beef": "allergyNoBeef",
+  "Sensitive stomach": "allergySensitiveStomach",
+  "No dairy": "allergyNoDairy",
+  "No pork": "allergyNoPork",
+};
+
 function makeOccasionId() {
   return `occ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 function makeComponentId() {
   return `comp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-}
-
-function formatTime(time: string) {
-  try {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return time;
-  }
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -153,6 +160,8 @@ export function FeedingSection({
   onBack,
   isLastSection,
 }: FeedingSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const feeding = formData.feedingInstructions || {
     foodType: "",
     portionSize: "",
@@ -180,10 +189,12 @@ export function FeedingSection({
 
   // ── Occasion CRUD ──
 
-  const addOccasion = (preset?: { label: string; time: string }) => {
+  // A meal's NAME is free text the owner can edit, so a preset writes it in
+  // the owner's language, the same as if they had typed it.
+  const addOccasion = (preset?: { labelKey: string; time: string }) => {
     const occ: FeedingOccasion = {
       id: makeOccasionId(),
-      label: preset?.label || "Meal",
+      label: preset ? t(preset.labelKey) : t("meal"),
       time: preset?.time || "08:00",
       components: [],
     };
@@ -286,9 +297,9 @@ export function FeedingSection({
             <Utensils className="h-4.5 w-4.5 text-orange-600" />
           </div>
           <div>
-            <CardTitle>Feeding Instructions</CardTitle>
+            <CardTitle>{t("feedingInstructions")}</CardTitle>
             <CardDescription>
-              Build {formData.petName}&apos;s meal plan for their stay
+              {t("buildMealPlan").replace("{pet}", formData.petName)}
             </CardDescription>
           </div>
         </div>
@@ -296,7 +307,9 @@ export function FeedingSection({
       <CardContent className="space-y-6">
         {/* ── Food Source ── */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Who provides the food?</Label>
+          <Label className="text-sm font-medium">
+            {t("whoProvidesTheFood")}
+          </Label>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {SOURCE_OPTIONS.map((opt) => (
               <button
@@ -310,9 +323,9 @@ export function FeedingSection({
                     : `border-input hover:bg-muted/50`,
                 )}
               >
-                <span className="text-sm font-medium">{opt.label}</span>
+                <span className="text-sm font-medium">{t(opt.labelKey)}</span>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  {opt.description}
+                  {t(opt.descriptionKey)}
                 </p>
               </button>
             ))}
@@ -322,7 +335,7 @@ export function FeedingSection({
         {/* ── Allergy Tags ── */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            Food allergies or restrictions
+            {t("foodAllergiesOrRestrictions")}
           </Label>
           <div className="flex flex-wrap gap-1.5">
             {ALLERGY_PRESETS.map((allergy) => {
@@ -340,7 +353,7 @@ export function FeedingSection({
                   )}
                 >
                   {active && <AlertTriangle className="mr-1 inline size-3" />}
-                  {allergy}
+                  {t(ALLERGY_KEY[allergy] ?? allergy)}
                 </button>
               );
             })}
@@ -363,7 +376,7 @@ export function FeedingSection({
             <Input
               value={customAllergy}
               onChange={(e) => setCustomAllergy(e.target.value)}
-              placeholder="Add custom allergy..."
+              placeholder={t("addCustomAllergy")}
               className="h-8 max-w-[200px] text-sm"
               onKeyDown={(e) =>
                 e.key === "Enter" && (e.preventDefault(), addCustomAllergy())
@@ -376,7 +389,7 @@ export function FeedingSection({
               className="h-8"
               onClick={addCustomAllergy}
             >
-              Add
+              {t("add")}
             </Button>
           </div>
         </div>
@@ -384,34 +397,36 @@ export function FeedingSection({
         {/* ── Meal Occasions ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Meal Schedule</Label>
+            <Label className="text-sm font-medium">{t("mealSchedule")}</Label>
             <Badge variant="secondary" className="text-xs">
-              {occasions.length} {occasions.length === 1 ? "meal" : "meals"}
+              {t(
+                occasions.length === 1 ? "mealCountOne" : "mealCountOther",
+              ).replace("{n}", String(occasions.length))}
             </Badge>
           </div>
 
           {/* Quick-add preset chips */}
           <div className="flex flex-wrap gap-2">
-            {OCCASION_PRESETS.filter((p) => !usedPresets.has(p.label)).map(
-              (preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => addOccasion(preset)}
-                  className="rounded-full border border-dashed border-orange-300 px-3 py-1.5 text-sm text-orange-600 transition-colors hover:bg-orange-50"
-                >
-                  <Plus className="mr-1 inline size-3" />
-                  {preset.label}
-                </button>
-              ),
-            )}
+            {OCCASION_PRESETS.filter(
+              (p) => !usedPresets.has(t(p.labelKey)),
+            ).map((preset) => (
+              <button
+                key={preset.labelKey}
+                type="button"
+                onClick={() => addOccasion(preset)}
+                className="rounded-full border border-dashed border-orange-300 px-3 py-1.5 text-sm text-orange-600 transition-colors hover:bg-orange-50"
+              >
+                <Plus className="mr-1 inline size-3" />
+                {t(preset.labelKey)}
+              </button>
+            ))}
             <button
               type="button"
               onClick={() => addOccasion()}
               className="border-input text-muted-foreground hover:bg-muted/50 rounded-full border border-dashed px-3 py-1.5 text-sm transition-colors"
             >
               <Plus className="mr-1 inline size-3" />
-              Custom Meal
+              {t("customMeal")}
             </button>
           </div>
 
@@ -444,11 +459,15 @@ export function FeedingSection({
                         <span className="text-sm font-medium">{occ.label}</span>
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <Clock className="size-3" />
-                          {formatTime(occ.time)}
+                          {formatTimeOfDay(occ.time, locale)}
                           {occ.components.length > 0 && (
                             <span className="ml-1">
-                              &middot; {occ.components.length}{" "}
-                              {occ.components.length === 1 ? "item" : "items"}
+                              &middot;{" "}
+                              {t(
+                                occ.components.length === 1
+                                  ? "itemCountOne"
+                                  : "itemCountOther",
+                              ).replace("{n}", String(occ.components.length))}
                             </span>
                           )}
                         </div>
@@ -481,7 +500,7 @@ export function FeedingSection({
                       {/* Occasion name + time */}
                       <div className="grid grid-cols-2 gap-3 pt-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">Meal Name</Label>
+                          <Label className="text-xs">{t("mealName")}</Label>
                           <Input
                             value={occ.label}
                             onChange={(e) =>
@@ -491,7 +510,7 @@ export function FeedingSection({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Time</Label>
+                          <Label className="text-xs">{t("time")}</Label>
                           <Input
                             type="time"
                             value={occ.time}
@@ -506,7 +525,7 @@ export function FeedingSection({
                       {/* Food components */}
                       <div className="space-y-2">
                         <Label className="text-muted-foreground text-xs font-medium">
-                          Food Components
+                          {t("foodComponents")}
                         </Label>
                         {occ.components.map((comp) => (
                           <div
@@ -516,7 +535,7 @@ export function FeedingSection({
                             <div className="flex items-start justify-between">
                               <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Type</Label>
+                                  <Label className="text-xs">{t("type")}</Label>
                                   <Select
                                     value={comp.type}
                                     onValueChange={(v) =>
@@ -529,12 +548,12 @@ export function FeedingSection({
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {FOOD_TYPES.map((t) => (
+                                      {FOOD_TYPES.map((type) => (
                                         <SelectItem
-                                          key={t.value}
-                                          value={t.value}
+                                          key={type.value}
+                                          value={type.value}
                                         >
-                                          {t.label}
+                                          {t(type.labelKey)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -551,12 +570,14 @@ export function FeedingSection({
                                         name: e.target.value,
                                       })
                                     }
-                                    placeholder="e.g., Royal Canin"
+                                    placeholder={t("eGRoyalCanin")}
                                     className="h-8 text-xs"
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Amount</Label>
+                                  <Label className="text-xs">
+                                    {t("amount")}
+                                  </Label>
                                   <Input
                                     value={comp.amount}
                                     onChange={(e) =>
@@ -569,7 +590,7 @@ export function FeedingSection({
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Unit</Label>
+                                  <Label className="text-xs">{t("unit")}</Label>
                                   <Select
                                     value={comp.unit}
                                     onValueChange={(v) =>
@@ -587,7 +608,7 @@ export function FeedingSection({
                                           key={u.value}
                                           value={u.value}
                                         >
-                                          {u.label}
+                                          {t(u.labelKey)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -608,7 +629,7 @@ export function FeedingSection({
                               comp.type === "toppers") && (
                               <div className="space-y-1">
                                 <Label className="text-muted-foreground text-xs">
-                                  Mix with
+                                  {t("mixWith")}
                                 </Label>
                                 <Input
                                   value={comp.mixWith || ""}
@@ -617,7 +638,7 @@ export function FeedingSection({
                                       mixWith: e.target.value,
                                     })
                                   }
-                                  placeholder="e.g., Wet food"
+                                  placeholder={t("eGWetFood")}
                                   className="h-8 max-w-[200px] text-xs"
                                 />
                               </div>
@@ -632,7 +653,7 @@ export function FeedingSection({
                           onClick={() => addComponent(occ.id)}
                         >
                           <Plus className="mr-1 size-3" />
-                          Add Food Component
+                          {t("addFoodComponent")}
                         </Button>
                       </div>
                     </div>
@@ -646,9 +667,9 @@ export function FeedingSection({
         {/* ── Pre-portioned bags (kept from v1) ── */}
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
-            <Label className="text-sm">Pre-portioned bags</Label>
+            <Label className="text-sm">{t("prePortionedBags")}</Label>
             <p className="text-muted-foreground text-xs">
-              Bringing bagged meals?
+              {t("bringingBaggedMeals")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -682,8 +703,10 @@ export function FeedingSection({
 
         {/* ── Prep Instructions ── */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Prep Instructions</Label>
-          <p className="text-muted-foreground text-xs">Select all that apply</p>
+          <Label className="text-sm font-medium">{t("prepInstructions")}</Label>
+          <p className="text-muted-foreground text-xs">
+            {t("selectAllThatApply")}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {PREP_OPTIONS.map((opt) => {
               const active = (feeding.prepInstructions || []).includes(
@@ -701,7 +724,7 @@ export function FeedingSection({
                       : `border-input text-muted-foreground hover:bg-muted/50`,
                   )}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               );
             })}
@@ -709,7 +732,7 @@ export function FeedingSection({
           <Input
             value={feeding.prepNotes || ""}
             onChange={(e) => handleUpdate({ prepNotes: e.target.value })}
-            placeholder="Other prep instructions..."
+            placeholder={t("otherPrepInstructions")}
             className="h-8 text-sm"
           />
         </div>
@@ -717,10 +740,10 @@ export function FeedingSection({
         {/* ── If Dog Refuses ── */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            If {formData.petName} refuses to eat
+            {t("ifPetRefusesToEat").replace("{pet}", formData.petName)}
           </Label>
           <p className="text-muted-foreground text-xs">
-            What should staff do? Select all that apply
+            {t("whatShouldStaffDoSelect")}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {REFUSAL_OPTIONS.map((opt) => {
@@ -737,7 +760,7 @@ export function FeedingSection({
                       : `border-input text-muted-foreground hover:bg-muted/50`,
                   )}
                 >
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </button>
               );
             })}
@@ -745,7 +768,7 @@ export function FeedingSection({
           <Input
             value={feeding.refusalNotes || ""}
             onChange={(e) => handleUpdate({ refusalNotes: e.target.value })}
-            placeholder="Other instructions if food is refused..."
+            placeholder={t("otherInstructionsIfFoodIs")}
             className="h-8 text-sm"
           />
         </div>
@@ -761,17 +784,17 @@ export function FeedingSection({
           ) : (
             <ChevronDown className="size-3" />
           )}
-          Advanced options
+          {t("advancedOptions")}
         </button>
 
         {showAdvanced && (
           <div className="space-y-3 rounded-lg border border-dashed p-4">
             <div className="space-y-2">
-              <Label className="text-sm">Feeding Notes</Label>
+              <Label className="text-sm">{t("feedingNotes")}</Label>
               <Input
                 value={feeding.notes || ""}
                 onChange={(e) => handleUpdate({ notes: e.target.value })}
-                placeholder="e.g., Eats less the day before pickup, gets raw only on weekends..."
+                placeholder={t("eGEatsLessThe")}
               />
             </div>
           </div>
@@ -780,9 +803,11 @@ export function FeedingSection({
         {/* ── Navigation ── */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
-          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
+          <Button onClick={onNext}>
+            {isLastSection ? t("review") : t("next")}
+          </Button>
         </div>
       </CardContent>
     </Card>

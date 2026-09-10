@@ -77,6 +77,13 @@ const SAME_IN_BOTH = new Set([
   // The training rating and level vocabulary: "Excellent" is the French word.
   "training.rating4", // Excellent / Excellent
   "training.level_excellent", // Excellent / Excellent
+  // The pre-check-in form: field names French spells the same way.
+  "yipyygo.type", // Type / Type
+  "yipyygo.allergies", // Allergies / Allergies
+  "yipyygo.formInjection", // Injection / Injection
+  "yipyygo.service", // Service / Service
+  "yipyygo.dates", // Dates / Dates
+  "yipyygo.date", // Date / Date
 ]);
 
 describe("the shell namespace", () => {
