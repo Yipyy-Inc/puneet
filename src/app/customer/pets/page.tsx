@@ -23,8 +23,11 @@ import { PetComplianceChecklist } from "@/components/customer/PetComplianceCheck
 import { TagList } from "@/components/shared/TagList";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatWeight } from "@/lib/i18n/format";
 
 export default function CustomerPetsPage() {
+  const { t, fill, locale } = useCustomerText("pets");
   const { selectedFacility } = useCustomerFacility();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -87,19 +90,27 @@ export default function CustomerPetsPage() {
     };
   };
 
+  // "Dog" is the record's own word for the species; the reader's word for it
+  // comes from the catalogue, and a species nobody mapped reads as recorded.
+  const speciesLabel = (species: string) => {
+    const key = `species_${species.toLowerCase()}`;
+    const label = t(key);
+    return label === key ? species : label;
+  };
+
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <PageHeader
-            title="My Pets"
-            description="Manage your pets' profiles and information"
+            title={t("pageTitle")}
+            description={t("pageDescription")}
           />
           <Button asChild>
             <Link href="/customer/pets/add">
               <Plus className="mr-2 size-4" />
-              Add Pet
+              {t("addPet")}
             </Link>
           </Button>
         </div>
@@ -108,7 +119,7 @@ export default function CustomerPetsPage() {
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Search pets by name, breed, or type..."
+            placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -123,14 +134,16 @@ export default function CustomerPetsPage() {
                 {customerPets.length === 0 ? (
                   <>
                     <Dog className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
-                    <h3 className="mb-2 text-lg font-semibold">No pets yet</h3>
+                    <h3 className="mb-2 text-lg font-semibold">
+                      {t("noPetsTitle")}
+                    </h3>
                     <p className="text-muted-foreground mb-4">
-                      Add your first pet to get started with bookings
+                      {t("noPetsBody")}
                     </p>
                     <Button asChild>
                       <Link href="/customer/pets/add">
                         <Plus className="mr-2 size-4" />
-                        Add Your First Pet
+                        {t("addFirstPet")}
                       </Link>
                     </Button>
                   </>
@@ -138,11 +151,9 @@ export default function CustomerPetsPage() {
                   <>
                     <Search className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
                     <h3 className="mb-2 text-lg font-semibold">
-                      No pets found
+                      {t("noMatchTitle")}
                     </h3>
-                    <p className="text-muted-foreground">
-                      Try adjusting your search query
-                    </p>
+                    <p className="text-muted-foreground">{t("noMatchBody")}</p>
                   </>
                 )}
               </div>
@@ -176,14 +187,14 @@ export default function CustomerPetsPage() {
                         <div>
                           <CardTitle className="text-xl">{pet.name}</CardTitle>
                           <CardDescription>
-                            {pet.breed} • {pet.age}{" "}
-                            {pet.age === 1 ? "year" : "years"} old
+                            {pet.breed} ·{" "}
+                            {fill(pet.age === 1 ? "ageOne" : "ageMany", {
+                              count: pet.age,
+                            })}
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge variant="outline" className="capitalize">
-                        {pet.type}
-                      </Badge>
+                      <Badge variant="outline">{speciesLabel(pet.type)}</Badge>
                     </div>
                     <TagList
                       entityType="pet"
@@ -196,11 +207,16 @@ export default function CustomerPetsPage() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Weight</p>
-                        <p className="font-medium">{pet.weight} lbs</p>
+                        <p className="text-muted-foreground">{t("weight")}</p>
+                        {/* Metric leads, imperial follows (§5q). This read
+                            "{weight} lbs" over a field the booking wizard reads
+                            as kilograms — see the debt map, 2026-09-10. */}
+                        <p className="font-medium">
+                          {formatWeight(pet.weight, locale)}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Color</p>
+                        <p className="text-muted-foreground">{t("colour")}</p>
                         <p className="font-medium">{pet.color}</p>
                       </div>
                     </div>
@@ -209,7 +225,7 @@ export default function CustomerPetsPage() {
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="text-destructive size-4" />
                         <Badge variant="destructive" className="text-xs">
-                          Allergies: {pet.allergies}
+                          {fill("allergies", { list: pet.allergies })}
                         </Badge>
                       </div>
                     )}
@@ -230,22 +246,40 @@ export default function CustomerPetsPage() {
 
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
-                        <p className="text-muted-foreground">Total Stays</p>
+                        <p className="text-muted-foreground">
+                          {t("totalStays")}
+                        </p>
                         <p className="text-lg font-semibold">
                           {stats.totalStays}
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Vaccinations</p>
+                        <p className="text-muted-foreground">
+                          {t("vaccinations")}
+                        </p>
                         <div className="flex items-center gap-1">
                           {stats.expiredVaccinations > 0 && (
                             <Badge variant="destructive" className="text-xs">
-                              {stats.expiredVaccinations} expired
+                              {fill(
+                                stats.expiredVaccinations === 1
+                                  ? "expiredOne"
+                                  : "expiredMany",
+                                {
+                                  count: stats.expiredVaccinations,
+                                },
+                              )}
                             </Badge>
                           )}
                           {stats.upcomingVaccinations > 0 && (
                             <Badge variant="warning" className="text-xs">
-                              {stats.upcomingVaccinations} expiring
+                              {fill(
+                                stats.upcomingVaccinations === 1
+                                  ? "expiringOne"
+                                  : "expiringMany",
+                                {
+                                  count: stats.upcomingVaccinations,
+                                },
+                              )}
                             </Badge>
                           )}
                         </div>
@@ -254,7 +288,7 @@ export default function CustomerPetsPage() {
 
                     <Button variant="outline" className="w-full" asChild>
                       <Link href={`/customer/pets/${pet.id}`}>
-                        View Profile
+                        {fill("viewProfile", { pet: pet.name })}
                       </Link>
                     </Button>
                   </CardContent>

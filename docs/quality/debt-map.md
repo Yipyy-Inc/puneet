@@ -11486,3 +11486,15 @@ call`. The cancel dialog also promises "a refund is processed according to
   at each screen.
 - A status the badge table did not know used to be labelled "Pending"
   whatever it was. It reads as itself now.
+
+### Pets (`/customer/pets`)
+
+- **"Eligible to book" is computed from seed data.** `PetComplianceChecklist`
+  checks vaccinations against `vaccinationRecords`, signed agreements against
+  `clientDocuments` and invoices against `invoices` — all `src/data` fixtures —
+  and `evaluationRequired` is the literal `true` under a
+  `TODO: Get from facility config`. So the badge a customer reads on every pet
+  card, and the "Action required" on the pet profile, say nothing about their
+  actual pet.
+- The same `pet.weight` read as pounds here too; formatted with `formatWeight`
+  like the detail page (see above).

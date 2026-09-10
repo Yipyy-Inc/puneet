@@ -8,6 +8,7 @@ import { clientDocuments } from "@/data/documents";
 import { invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
 import type { Pet } from "@/types/pet";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface PetComplianceChecklistProps {
   pet: Pet;
@@ -22,6 +23,7 @@ export function PetComplianceChecklist({
   facilityId,
   compact = false,
 }: PetComplianceChecklistProps) {
+  const { t, fill } = useCustomerText("pets");
   // Check vaccination compliance
   const vaccinationStatus = useMemo(() => {
     const petVaccinations = vaccinationRecords.filter(
@@ -152,7 +154,7 @@ export function PetComplianceChecklist({
           ) : (
             <XCircle className="mr-1 size-3" />
           )}
-          Vaccines
+          {t("chipVaccines")}
         </Badge>
         <Badge
           variant={agreementsStatus.valid ? "default" : "destructive"}
@@ -163,7 +165,7 @@ export function PetComplianceChecklist({
           ) : (
             <XCircle className="mr-1 size-3" />
           )}
-          Agreements
+          {t("chipAgreements")}
         </Badge>
         {evaluationStatus.required && (
           <Badge
@@ -175,7 +177,7 @@ export function PetComplianceChecklist({
             ) : (
               <XCircle className="mr-1 size-3" />
             )}
-            Evaluation
+            {t("chipEvaluation")}
           </Badge>
         )}
         <Badge
@@ -187,7 +189,7 @@ export function PetComplianceChecklist({
           ) : (
             <XCircle className="mr-1 size-3" />
           )}
-          Invoices
+          {t("chipInvoices")}
         </Badge>
       </div>
     );
@@ -197,9 +199,9 @@ export function PetComplianceChecklist({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Compliance Checklist</h3>
+        <h3 className="text-sm font-semibold">{t("complianceTitle")}</h3>
         <Badge variant={allCompliant ? "default" : "destructive"}>
-          {allCompliant ? "Eligible to Book" : "Action Required"}
+          {allCompliant ? t("eligibleToBook") : t("actionRequired")}
         </Badge>
       </div>
 
@@ -212,18 +214,32 @@ export function PetComplianceChecklist({
             ) : (
               <XCircle className="text-destructive size-4" />
             )}
-            <span className="text-sm font-medium">Vaccines Valid</span>
+            <span className="text-sm font-medium">{t("vaccinesValid")}</span>
           </div>
           {!vaccinationStatus.valid && (
             <div className="text-muted-foreground text-xs">
               {vaccinationStatus.expired.length > 0 && (
                 <span className="text-destructive">
-                  {vaccinationStatus.expired.length} expired
+                  {fill(
+                    vaccinationStatus.expired.length === 1
+                      ? "expiredOne"
+                      : "expiredMany",
+                    {
+                      count: vaccinationStatus.expired.length,
+                    },
+                  )}
                 </span>
               )}
               {vaccinationStatus.missing.length > 0 && (
                 <span className="text-destructive ml-2">
-                  {vaccinationStatus.missing.length} missing
+                  {fill(
+                    vaccinationStatus.missing.length === 1
+                      ? "missingOne"
+                      : "missingMany",
+                    {
+                      count: vaccinationStatus.missing.length,
+                    },
+                  )}
                 </span>
               )}
             </div>
@@ -238,11 +254,14 @@ export function PetComplianceChecklist({
             ) : (
               <XCircle className="text-destructive size-4" />
             )}
-            <span className="text-sm font-medium">Signed Agreements</span>
+            <span className="text-sm font-medium">{t("signedAgreements")}</span>
           </div>
           {!agreementsStatus.valid && (
             <div className="text-muted-foreground text-xs">
-              {agreementsStatus.count}/{agreementsStatus.required} signed
+              {fill("signedOf", {
+                count: agreementsStatus.count,
+                total: agreementsStatus.required,
+              })}
             </div>
           )}
         </div>
@@ -256,10 +275,14 @@ export function PetComplianceChecklist({
               ) : (
                 <XCircle className="text-destructive size-4" />
               )}
-              <span className="text-sm font-medium">Evaluation Completed</span>
+              <span className="text-sm font-medium">
+                {t("evaluationCompleted")}
+              </span>
             </div>
             {!evaluationStatus.valid && (
-              <div className="text-muted-foreground text-xs">Required</div>
+              <div className="text-muted-foreground text-xs">
+                {t("required")}
+              </div>
             )}
           </div>
         )}
@@ -272,11 +295,11 @@ export function PetComplianceChecklist({
             ) : (
               <XCircle className="text-destructive size-4" />
             )}
-            <span className="text-sm font-medium">No Overdue Invoice</span>
+            <span className="text-sm font-medium">{t("noOverdueInvoice")}</span>
           </div>
           {!invoicesStatus.valid && (
             <div className="text-destructive text-xs">
-              {invoicesStatus.count} overdue
+              {fill("overdueCount", { count: invoicesStatus.count })}
             </div>
           )}
         </div>
