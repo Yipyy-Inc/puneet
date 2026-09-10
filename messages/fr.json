@@ -6915,7 +6915,6 @@
         "basicInformation": "Renseignements de base",
         "name": "Nom",
         "ageYears": "Âge (ans)",
-        "weightKg": "Poids (kg)",
         "colour": "Couleur",
         "microchipNumber": "Numéro de micropuce",
         "microchip": "Micropuce",
@@ -6978,7 +6977,8 @@
         "uploadedBy": "Téléversée par {name}",
         "viewAllPhotos": "Voir toutes les photos",
         "albumsOne": "{count} album",
-        "albumsMany": "{count} albums"
+        "albumsMany": "{count} albums",
+        "weightLb": "Poids (lb)"
       }
     }
   }

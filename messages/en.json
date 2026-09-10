@@ -6915,7 +6915,6 @@
         "basicInformation": "Basic information",
         "name": "Name",
         "ageYears": "Age (years)",
-        "weightKg": "Weight (kg)",
         "colour": "Colour",
         "microchipNumber": "Microchip number",
         "microchip": "Microchip",
@@ -6978,7 +6977,8 @@
         "uploadedBy": "Uploaded by {name}",
         "viewAllPhotos": "View all the photos",
         "albumsOne": "{count} album",
-        "albumsMany": "{count} albums"
+        "albumsMany": "{count} albums",
+        "weightLb": "Weight (lb)"
       }
     }
   }

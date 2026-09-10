@@ -15,6 +15,7 @@ import {
   formatTimeOfDay,
   formatList,
   formatWeight,
+  formatWeightFromLb,
 } from "@/lib/i18n/format";
 
 // ============================================================================
@@ -337,5 +338,30 @@ describe("a list of names gets the reader's conjunction", () => {
     expect(formatList(pets, "en")).toBe("Buddy, Whiskers, Daisy and Max");
     expect(formatList(pets, "fr")).toBe("Buddy, Whiskers, Daisy et Max");
     expect(formatList(["Kofi"], "fr")).toBe("Kofi");
+  });
+});
+
+// ============================================================================
+// pets.weight IS POUNDS, AND FOUR SCREENS READ IT AS KILOGRAMS FOR A DAY.
+//
+// The code that charges money converts it with `/ 2.20462` (pricing-rules.ts),
+// the grooming tiers compare it to `maxWeightLbs`, and the size bands in
+// pet-size.ts are 20 / 40 / 80. A 50 lb dog rendered "50 kg (110 lb)". These
+// pin the direction, because both mistakes produce a plausible-looking string.
+// ============================================================================
+
+describe("a weight stored in pounds", () => {
+  test("a 50 lb dog is about 22.7 kg, and the pounds are kept exactly", () => {
+    expect(formatWeightFromLb(50, "en")).toBe("23 kg (50 lb)");
+    expect(formatWeightFromLb(25, "en")).toBe("11.3 kg (25 lb)");
+  });
+
+  test("French writes the decimal comma, metric still first", () => {
+    expect(formatWeightFromLb(25, "fr")).toBe("11,3 kg (25 lb)");
+  });
+
+  test("it never reads the pounds as kilograms", () => {
+    // The exact wrong output this replaced.
+    expect(formatWeightFromLb(50, "en")).not.toBe("50 kg (110 lb)");
   });
 });

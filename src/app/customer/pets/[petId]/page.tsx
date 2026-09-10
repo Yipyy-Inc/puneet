@@ -61,7 +61,7 @@ import {
   formatDateLong,
   formatDateShort,
   formatMoney,
-  formatWeight,
+  formatWeightFromLb,
 } from "@/lib/i18n/format";
 import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
 
@@ -964,10 +964,9 @@ export default function CustomerPetDetailPage({
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">{t("weight")}</p>
-                  {/* Metric leads (§5q); the field is read as kilograms
-                      everywhere now — see the debt map, 2026-09-10. */}
+                  {/* Metric leads (§5q). pets.weight is POUNDS — see formatWeightFromLb for how that was established. */}
                   <p className="font-medium">
-                    {formatWeight(pet.weight, locale)}
+                    {formatWeightFromLb(pet.weight, locale)}
                   </p>
                 </div>
               </div>
@@ -1061,7 +1060,7 @@ export default function CustomerPetDetailPage({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="weight">{t("weightKg")}</Label>
+                          <Label htmlFor="weight">{t("weightLb")}</Label>
                           <Input
                             id="weight"
                             type="number"
@@ -1135,7 +1134,7 @@ export default function CustomerPetDetailPage({
                             {t("weight")}
                           </p>
                           <p className="font-medium">
-                            {formatWeight(pet.weight, locale)}
+                            {formatWeightFromLb(pet.weight, locale)}
                           </p>
                         </div>
                       </div>

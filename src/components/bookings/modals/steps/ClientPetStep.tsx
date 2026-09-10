@@ -1,6 +1,6 @@
 import React from "react";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatWeight } from "@/lib/i18n/format";
+import { formatWeightFromLb } from "@/lib/i18n/format";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1256,7 +1256,7 @@ export function ClientPetStep({
                                       ? t("ageYearsOne")
                                       : t("ageYearsMany")
                                     ).replace("{count}", String(pet.age))}{" "}
-                                    • {formatWeight(pet.weight, locale)}
+                                    • {formatWeightFromLb(pet.weight, locale)}
                                   </p>
                                   {/* #1 — only render wrapper when badge exists */}
                                   {evalBadge && (
