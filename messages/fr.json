@@ -1762,6 +1762,23 @@
         "statusResolved": "résolu",
         "statusClosed": "fermé",
         "followUpAdded": "Suivi ajouté au tableau des tâches"
+      },
+      "clientEdit": {
+        "title": "Modifier {name}",
+        "contact": "Coordonnées",
+        "fullName": "Nom complet",
+        "email": "Courriel",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "street": "Rue",
+        "city": "Ville",
+        "province": "Province ou État",
+        "postalCode": "Code postal",
+        "save": "Enregistrer le profil de {name}",
+        "saving": "Enregistrement…",
+        "saved": "Le profil de {name} est enregistré",
+        "notSaved": "Le profil n’a pas été enregistré",
+        "nameRequired": "Un client doit avoir un nom"
       }
     }
   },

@@ -1762,6 +1762,23 @@
         "statusResolved": "resolved",
         "statusClosed": "closed",
         "followUpAdded": "Follow-up added to the task board"
+      },
+      "clientEdit": {
+        "title": "Edit {name}",
+        "contact": "Contact information",
+        "fullName": "Full name",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address",
+        "street": "Street",
+        "city": "City",
+        "province": "Province or state",
+        "postalCode": "Postal code",
+        "save": "Save {name}’s profile",
+        "saving": "Saving…",
+        "saved": "{name}’s profile is saved",
+        "notSaved": "The profile was not saved",
+        "nameRequired": "A client needs a name"
       }
     }
   },
