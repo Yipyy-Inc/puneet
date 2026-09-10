@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
 import { SignaturePad as SignaturePadComponent } from "@/components/shared/SignaturePad";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +40,7 @@ interface FormWizardProps {
 // ---------------------------------------------------------------------------
 
 function draftKey(formId: string, petId: number): string {
+  // french-ok: a localStorage key, never shown
   return `formDraft_${formId}_pet_${petId}`;
 }
 
@@ -124,6 +126,7 @@ function WizardQuestionInput({
   const htmlId = `wq-${question.id}`;
   const opts = question.options ?? [];
   const help = question.helpText;
+  const { t } = useCustomerText("formWizard");
 
   switch (question.type) {
     // ---- yes_no ----
@@ -131,8 +134,8 @@ function WizardQuestionInput({
       const yesNoOpts = opts.length
         ? opts
         : [
-            { value: "yes", label: "Yes" },
-            { value: "no", label: "No" },
+            { value: "yes", label: t("yes") },
+            { value: "no", label: t("no") },
           ];
       return (
         <div className="space-y-2">
@@ -227,7 +230,7 @@ function WizardQuestionInput({
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
           >
-            <option value="">Select...</option>
+            <option value="">{t("selectOption")}</option>
             {opts.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -371,13 +374,16 @@ function WizardQuestionInput({
                     {String(value)}
                   </span>
                 ) : (
-                  <>Click to upload a file</>
+                  <>{t("clickToUpload")}</>
                 )}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
                 {question.validation?.allowedFileTypes
-                  ? `Allowed: ${question.validation.allowedFileTypes.join(", ")}`
-                  : "PDF, JPG, PNG, DOC accepted"}
+                  ? t("allowedTypes").replace(
+                      "{types}",
+                      question.validation.allowedFileTypes.join(", "),
+                    )
+                  : t("defaultTypes")}
               </p>
             </label>
           </div>
@@ -402,10 +408,12 @@ function WizardQuestionInput({
                     ? String((value as Record<string, unknown>).signatureData)
                     : String(value)
                 }
-                alt="Signature"
+                alt={t("signatureAlt")}
                 className="h-20 w-full object-contain"
               />
-              <p className="text-xs text-emerald-600">✓ Signature captured</p>
+              <p className="text-xs text-emerald-600">
+                {t("signatureCaptured")}
+              </p>
             </div>
           ) : (
             <SignaturePadComponent
@@ -492,7 +500,7 @@ function WizardQuestionInput({
           />
           <div className="space-y-2">
             <Input
-              placeholder="Street address"
+              placeholder={t("addrStreet")}
               value={addr.street ?? ""}
               onChange={(e) => update("street", e.target.value)}
               className="min-h-12 text-base"
@@ -500,19 +508,19 @@ function WizardQuestionInput({
             />
             <div className="grid grid-cols-3 gap-2">
               <Input
-                placeholder="City"
+                placeholder={t("addrCity")}
                 value={addr.city ?? ""}
                 onChange={(e) => update("city", e.target.value)}
                 className="col-span-1 min-h-12 text-base"
               />
               <Input
-                placeholder="State"
+                placeholder={t("addrProvince")}
                 value={addr.state ?? ""}
                 onChange={(e) => update("state", e.target.value)}
                 className="min-h-12 text-base"
               />
               <Input
-                placeholder="ZIP"
+                placeholder={t("addrPostalCode")}
                 value={addr.zip ?? ""}
                 onChange={(e) => update("zip", e.target.value)}
                 className="min-h-12 text-base"
@@ -557,6 +565,9 @@ export function FormWizard({
   facilityId,
   onComplete,
 }: FormWizardProps) {
+  // Above the loading / all-done / no-form returns below, so the hook order
+  // is the same on every render.
+  const { t, fill } = useCustomerText("formWizard");
   // ---- State ----
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -758,7 +769,7 @@ export function FormWizard({
           <div className="flex items-center justify-center py-8">
             <div className="border-primary size-6 animate-spin rounded-full border-2 border-t-transparent" />
             <span className="text-muted-foreground ml-3 text-sm">
-              Loading required forms...
+              {t("loadingForms")}
             </span>
           </div>
         </CardContent>
@@ -775,12 +786,10 @@ export function FormWizard({
             <CheckCircle className="size-10 text-emerald-600" />
           </div>
           <h2 className="mb-2 text-xl font-semibold">
-            {totalSteps === 0 ? "No Forms Required" : "All Forms Completed"}
+            {totalSteps === 0 ? t("noFormsTitle") : t("allDoneTitle")}
           </h2>
           <p className="text-muted-foreground max-w-xs text-sm">
-            {totalSteps === 0
-              ? "There are no required forms for this pet at this time."
-              : "Thank you! All required forms have been submitted successfully."}
+            {totalSteps === 0 ? t("noFormsBody") : t("allDoneBody")}
           </p>
         </CardContent>
       </Card>
@@ -807,11 +816,15 @@ export function FormWizard({
             variant="secondary"
             className="bg-slate-100 text-xs font-medium text-slate-700 hover:bg-slate-100"
           >
-            Step {currentStep + 1} of {totalSteps}
+            {fill("stepOf", { n: currentStep + 1, total: totalSteps })}
           </Badge>
           <span className="text-muted-foreground text-xs">
-            {answered} of {visibleQuestions.length}{" "}
-            {visibleQuestions.length === 1 ? "question" : "questions"} answered
+            {fill(
+              visibleQuestions.length === 1
+                ? "answeredOfOne"
+                : "answeredOfMany",
+              { answered, total: visibleQuestions.length },
+            )}
           </span>
         </div>
         <CardTitle className="text-lg sm:text-xl">{currentForm.name}</CardTitle>
@@ -854,9 +867,7 @@ export function FormWizard({
 
       <CardContent>
         {/* Autosave notice */}
-        <p className="text-muted-foreground mb-4 text-xs">
-          Your progress is saved automatically.
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">{t("autosave")}</p>
 
         {/* End form message from logic rules */}
         {logicEffects?.endFormMessage ? (
@@ -873,9 +884,7 @@ export function FormWizard({
                 className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
                 role="alert"
               >
-                <p className="font-medium">
-                  Please complete the required fields
-                </p>
+                <p className="font-medium">{t("completeRequired")}</p>
                 <p className="mt-1 opacity-90">{error}</p>
               </div>
             )}
@@ -905,7 +914,7 @@ export function FormWizard({
                   onClick={handleBack}
                 >
                   <ArrowLeft className="mr-2 size-4" />
-                  Back
+                  {t("back")}
                 </Button>
               )}
 
@@ -915,11 +924,11 @@ export function FormWizard({
               >
                 {currentStep < totalSteps - 1 ? (
                   <>
-                    Continue
+                    {t("continue")}
                     <ArrowRight className="ml-2 size-4" />
                   </>
                 ) : (
-                  "Submit & Finish"
+                  t("submitFinish")
                 )}
               </Button>
             </div>

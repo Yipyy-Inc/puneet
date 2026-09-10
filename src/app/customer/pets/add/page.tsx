@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { FormWizard } from "@/components/forms/FormWizard";
 import type { Pet } from "@/types/pet";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface PetFormData {
   name: string;
@@ -44,6 +45,7 @@ interface PetFormData {
 }
 
 export default function AddPetPage() {
+  const { t, fill } = useCustomerText("addPet");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -72,23 +74,23 @@ export default function AddPetPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Pet name is required";
+      newErrors.name = t("errNameRequired");
     }
 
     if (!formData.breed.trim()) {
-      newErrors.breed = "Breed is required";
+      newErrors.breed = t("errBreedRequired");
     }
 
     if (formData.age === "" || formData.age < 0) {
-      newErrors.age = "Please enter a valid age";
+      newErrors.age = t("errAgeInvalid");
     }
 
     if (formData.weight === "" || formData.weight <= 0) {
-      newErrors.weight = "Please enter a valid weight";
+      newErrors.weight = t("errWeightInvalid");
     }
 
     if (!formData.color.trim()) {
-      newErrors.color = "Color is required";
+      newErrors.color = t("errColourRequired");
     }
 
     setErrors(newErrors);
@@ -99,7 +101,7 @@ export default function AddPetPage() {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors before saving");
+      toast.error(t("fixErrorsToast"));
       return;
     }
 
@@ -107,7 +109,7 @@ export default function AddPetPage() {
       // No client record means there is nothing to own the pet. This is
       // reachable — a signed-in stranger — and saying so beats a write that
       // cannot succeed.
-      toast.error("Join this facility before adding a pet.");
+      toast.error(t("joinFirstToast"));
       return;
     }
 
@@ -120,12 +122,12 @@ export default function AddPetPage() {
         weight: Number(formData.weight),
       });
       setNewPetId(createdPet.id);
-      toast.success(`${createdPet.name} added. Now any required forms.`);
+      toast.success(fill("addedToast", { pet: createdPet.name }));
       setShowWizard(true);
       // The list is stale the moment this succeeds.
       void queryClient.invalidateQueries({ queryKey: ["pets"] });
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to add pet");
+      toast.error(error instanceof Error ? error.message : t("addFailedToast"));
     } finally {
       setIsSaving(false);
     }
@@ -178,7 +180,7 @@ export default function AddPetPage() {
       const body = (await response.json().catch(() => ({}))) as {
         error?: string;
       };
-      throw new Error(body.error ?? "Could not add that pet.");
+      throw new Error(body.error ?? t("addFailedToast"));
     }
 
     return (await response.json()) as Pet;
@@ -203,8 +205,8 @@ export default function AddPetPage() {
             </Button>
             {/* §5r: use the pet's name wherever the record knows it. */}
             <PageHeader
-              title="Required forms"
-              description={`Complete these forms for ${formData.name}`}
+              title={t("requiredFormsTitle")}
+              description={fill("requiredFormsFor", { pet: formData.name })}
             />
           </div>
           <FormWizard
@@ -233,10 +235,8 @@ export default function AddPetPage() {
             <ArrowLeft className="size-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Add a New Pet</h1>
-            <p className="text-muted-foreground mt-1">
-              Add your pet&apos;s information to start booking services
-            </p>
+            <h1 className="text-3xl font-bold">{t("pageTitle")}</h1>
+            <p className="text-muted-foreground mt-1">{t("pageDescription")}</p>
           </div>
         </div>
 
@@ -244,10 +244,10 @@ export default function AddPetPage() {
           {/* Pet Photo */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Pet Photo</CardTitle>
-              <CardDescription>
-                Upload a photo of your pet (optional)
-              </CardDescription>
+              <CardTitle className="text-sm font-semibold">
+                {t("photoTitle")}
+              </CardTitle>
+              <CardDescription>{t("photoDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-6">
@@ -255,7 +255,7 @@ export default function AddPetPage() {
                   {formData.imageUrl ? (
                     <Image
                       src={formData.imageUrl}
-                      alt="Pet preview"
+                      alt={t("photoPreviewAlt")}
                       fill
                       className="object-cover"
                     />
@@ -266,10 +266,10 @@ export default function AddPetPage() {
                 <div className="flex-1">
                   <Button type="button" variant="outline" size="sm">
                     <Upload className="mr-2 size-4" />
-                    Upload Photo
+                    {t("uploadPhoto")}
                   </Button>
                   <p className="text-muted-foreground mt-2 text-xs">
-                    You can add a photo later from your pet&apos;s profile
+                    {t("photoLater")}
                   </p>
                 </div>
               </div>
@@ -280,17 +280,15 @@ export default function AddPetPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">
-                Basic Information
+                {t("basicTitle")}
               </CardTitle>
-              <CardDescription>
-                Essential details about your pet
-              </CardDescription>
+              <CardDescription>{t("basicDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">
-                    Pet Name <span className="text-destructive">*</span>
+                    {t("petName")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="name"
@@ -299,6 +297,7 @@ export default function AddPetPage() {
                       setFormData({ ...formData, name: e.target.value });
                       if (errors.name) setErrors({ ...errors, name: "" });
                     }}
+                    // french-ok: a sample pet's name — §5q keeps a name out of the locale layer
                     placeholder="Buddy"
                     aria-invalid={errors.name ? "true" : "false"}
                   />
@@ -308,7 +307,7 @@ export default function AddPetPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type">{t("species")}</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value: "Dog" | "Cat") =>
@@ -319,8 +318,8 @@ export default function AddPetPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Dog">Dog</SelectItem>
-                      <SelectItem value="Cat">Cat</SelectItem>
+                      <SelectItem value="Dog">{t("species_dog")}</SelectItem>
+                      <SelectItem value="Cat">{t("species_cat")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -329,7 +328,7 @@ export default function AddPetPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="breed">
-                    Breed <span className="text-destructive">*</span>
+                    {t("breed")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="breed"
@@ -338,7 +337,7 @@ export default function AddPetPage() {
                       setFormData({ ...formData, breed: e.target.value });
                       if (errors.breed) setErrors({ ...errors, breed: "" });
                     }}
-                    placeholder="Golden Retriever"
+                    placeholder={t("breedPlaceholder")}
                     aria-invalid={errors.breed ? "true" : "false"}
                   />
                   {errors.breed && (
@@ -348,7 +347,7 @@ export default function AddPetPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="color">
-                    Color <span className="text-destructive">*</span>
+                    {t("colour")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="color"
@@ -357,7 +356,7 @@ export default function AddPetPage() {
                       setFormData({ ...formData, color: e.target.value });
                       if (errors.color) setErrors({ ...errors, color: "" });
                     }}
-                    placeholder="Golden"
+                    placeholder={t("colourPlaceholder")}
                     aria-invalid={errors.color ? "true" : "false"}
                   />
                   {errors.color && (
@@ -369,7 +368,7 @@ export default function AddPetPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="age">
-                    Age (years) <span className="text-destructive">*</span>
+                    {t("ageYears")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="age"
@@ -393,7 +392,7 @@ export default function AddPetPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="weight">
-                    Weight (lbs) <span className="text-destructive">*</span>
+                    {t("weightLb")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="weight"
@@ -417,7 +416,7 @@ export default function AddPetPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="microchip">Microchip Number</Label>
+                <Label htmlFor="microchip">{t("microchipNumber")}</Label>
                 <Input
                   id="microchip"
                   value={formData.microchip}
@@ -428,7 +427,7 @@ export default function AddPetPage() {
                   className="font-mono"
                 />
                 <p className="text-muted-foreground text-xs">
-                  Optional - Enter your pet&apos;s microchip number if available
+                  {t("microchipHelp")}
                 </p>
               </div>
             </CardContent>
@@ -438,44 +437,40 @@ export default function AddPetPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">
-                Medical & Health Information
+                {t("medicalTitle")}
               </CardTitle>
-              <CardDescription>
-                Important health details for your pet&apos;s care
-              </CardDescription>
+              <CardDescription>{t("medicalDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="allergies">Allergies</Label>
+                <Label htmlFor="allergies">{t("allergies")}</Label>
                 <Textarea
                   id="allergies"
                   value={formData.allergies}
                   onChange={(e) =>
                     setFormData({ ...formData, allergies: e.target.value })
                   }
-                  placeholder="List any allergies (e.g., Chicken, Beef) or enter 'None'"
+                  placeholder={t("allergiesPlaceholder")}
                   rows={3}
                 />
                 <p className="text-muted-foreground text-xs">
-                  List any known allergies. Enter &quot;None&quot; if your pet
-                  has no allergies.
+                  {t("allergiesHelp")}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="specialNeeds">Special Needs</Label>
+                <Label htmlFor="specialNeeds">{t("specialNeeds")}</Label>
                 <Textarea
                   id="specialNeeds"
                   value={formData.specialNeeds}
                   onChange={(e) =>
                     setFormData({ ...formData, specialNeeds: e.target.value })
                   }
-                  placeholder="Any special medical or care needs (e.g., medication, mobility assistance)"
+                  placeholder={t("specialNeedsPlaceholder")}
                   rows={3}
                 />
                 <p className="text-muted-foreground text-xs">
-                  Include any special care requirements, medications, or health
-                  conditions.
+                  {t("specialNeedsHelp")}
                 </p>
               </div>
             </CardContent>
@@ -489,18 +484,18 @@ export default function AddPetPage() {
               onClick={() => router.push("/customer/pets")}
               disabled={isSaving}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Adding Pet...
+                  {t("adding")}
                 </>
               ) : (
                 <>
                   <Save className="mr-2 size-4" />
-                  Add Pet
+                  {t("addPet")}
                 </>
               )}
             </Button>

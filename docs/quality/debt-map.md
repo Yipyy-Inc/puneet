@@ -11554,3 +11554,22 @@ pricing engine, the API route and the form that writes the column are the
 authorities; a fixture value is the weakest possible evidence. The column is
 still named `weight` with no unit, which is how this was possible; renaming it
 `weight_lb` is a schema change worth making and is not made here.
+
+### Add a pet (`/customer/pets/add`)
+
+This page genuinely writes — `POST /api/pets`, into Postgres — and was
+already fixed once, on 2026-08-19, when it was found to sleep a second and
+invent an id. Its field labels are the evidence that `pets.weight` is pounds.
+
+- **The signature pad sends every signer's IP to a third party.**
+  `SignaturePad.getIpAddress()` fetches `https://api.ipify.org` from the
+  customer's browser at the moment of signing, and the IP it records is the
+  one the CLIENT reports — which the signer controls. An IP meant as evidence
+  should be read by the server from the request that stores the signature.
+  The pad's own legal notice says the IP is "recorded for verification";
+  translated as written, and the mechanism behind it recorded here.
+- **The form wizard's address block asked a Canadian customer for a "State"
+  and a "ZIP".** Province and postal code now, in both languages.
+- `FormWizard` was converted for its strings only. Its dynamic-form state
+  (`useState` + `evaluateLogicRules`, the localStorage draft store) is the
+  handle-with-care zone above and was not touched.
