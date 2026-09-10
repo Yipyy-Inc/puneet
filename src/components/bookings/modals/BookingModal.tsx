@@ -2597,6 +2597,11 @@ export function BookingModal({
 
     onCreateBooking(booking);
 
+    // An EDIT sends no confirmation, schedules no reminder and collects no
+    // deposit — the toasts below describe a new booking. The caller reports
+    // what the edit itself did.
+    if (editMode) return;
+
     // Post-submit side effects driven by Confirm-screen toggles.
     // 1) Booking confirmation (email / SMS) — driven by the per-booking
     //    notification toggles. The actual content (groomer name, address,

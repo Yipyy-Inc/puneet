@@ -29,10 +29,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import type { Booking, Invoice } from "@/types/booking";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 export interface DestructiveConfirmRequest {
   title: string;
@@ -77,6 +77,11 @@ export interface BookingDetailActionBarProps {
 
   // Destructive
   requestDestructiveConfirm: (payload: DestructiveConfirmRequest) => void;
+  /** Reverse a step. Each writes the status back; the page reports the result. */
+  onUndoCheckIn: () => void;
+  onUndoConfirm: () => void;
+  onUndoCheckout: () => void;
+  onNoShow: () => void;
   onCancelBooking: () => void;
 }
 
@@ -223,6 +228,7 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
   const showPrimary = primary != null && (!primaryIsPayment || canTakePayment);
 
   const requestConfirm = props.requestDestructiveConfirm;
+  const { t: detailT } = useStaffText("bookingDetail");
 
   return (
     <div className="border-border/50 mt-4 space-y-3 border-t pt-4">
@@ -421,14 +427,11 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 gap-1.5 text-[11px]"
               onClick={() =>
                 requestConfirm({
-                  title: "Undo check-in?",
-                  description:
-                    "This reverts the booking back to Confirmed. Any deposit collected will remain on file.",
-                  confirmLabel: "Undo Check-In",
-                  onConfirm: () =>
-                    toast.success(
-                      "Check-in undone — status reverted to Confirmed. Deposit remains collected.",
-                    ),
+                  title: detailT("undoCheckInTitle"),
+                  description: detailT("undoCheckInBody"),
+                  confirmLabel: detailT("undoCheckInConfirm"),
+                  // It toasted "Check-in undone" and changed nothing.
+                  onConfirm: props.onUndoCheckIn,
                 })
               }
             >
@@ -443,14 +446,10 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 gap-1.5 text-[11px]"
               onClick={() =>
                 requestConfirm({
-                  title: "Undo confirmation?",
-                  description:
-                    "This reverts the booking to Pending. Any deposit collected stays on file.",
-                  confirmLabel: "Undo Confirm",
-                  onConfirm: () =>
-                    toast.success(
-                      "Confirmation undone — status reverted to Pending. Deposit remains collected.",
-                    ),
+                  title: detailT("undoConfirmTitle"),
+                  description: detailT("undoConfirmBody"),
+                  confirmLabel: detailT("undoConfirmConfirm"),
+                  onConfirm: props.onUndoConfirm,
                 })
               }
             >
@@ -465,20 +464,12 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               className="text-muted-foreground hover:text-foreground hover:bg-muted h-7 gap-1.5 text-[11px]"
               onClick={() =>
                 requestConfirm({
-                  title: "Undo checkout?",
+                  title: detailT("undoCheckoutTitle"),
                   description: isPaid
-                    ? "This reverts the booking to Confirmed. Payment is already recorded — issue a refund separately if needed."
-                    : "This reverts the booking to Confirmed.",
-                  confirmLabel: "Undo Checkout",
-                  onConfirm: () =>
-                    toast.success(
-                      "Checkout undone — status reverted to Confirmed",
-                      {
-                        description: isPaid
-                          ? "Payment is already recorded — issue a refund separately if needed."
-                          : undefined,
-                      },
-                    ),
+                    ? detailT("undoCheckoutBodyPaid")
+                    : detailT("undoCheckoutBody"),
+                  confirmLabel: detailT("undoCheckoutConfirm"),
+                  onConfirm: props.onUndoCheckout,
                 })
               }
             >
@@ -493,13 +484,12 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               className="text-muted-foreground h-7 gap-1.5 text-[11px] hover:bg-amber-50 hover:text-amber-700"
               onClick={() =>
                 requestConfirm({
-                  title: "Mark as no-show?",
-                  description: `The collected deposit of $${(invoice?.depositCollected ?? 0).toFixed(2)} will be forfeited as a no-show fee. This cannot be undone.`,
-                  confirmLabel: "Confirm No-Show",
-                  onConfirm: () =>
-                    toast.success(
-                      `No-show recorded — deposit of $${(invoice?.depositCollected ?? 0).toFixed(2)} forfeited as no-show fee`,
-                    ),
+                  title: detailT("noShowTitle"),
+                  // The deposit it quoted came from the fixture invoice, so a
+                  // real booking was told "$0.00 will be forfeited".
+                  description: detailT("noShowBody"),
+                  confirmLabel: detailT("noShowConfirm"),
+                  onConfirm: props.onNoShow,
                 })
               }
             >
