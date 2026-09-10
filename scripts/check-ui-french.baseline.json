@@ -698,7 +698,6 @@
     "src/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page.tsx": 114,
     "src/app/facility/dashboard/clients/[id]/bookings/page.tsx": 1,
     "src/app/facility/dashboard/clients/[id]/documents/page.tsx": 1,
-    "src/app/facility/dashboard/clients/[id]/edit/page.tsx": 12,
     "src/app/facility/dashboard/clients/[id]/estimates/page.tsx": 9,
     "src/app/facility/dashboard/clients/[id]/forms/page.tsx": 13,
     "src/app/facility/dashboard/clients/[id]/layout.tsx": 1,
