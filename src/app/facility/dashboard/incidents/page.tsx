@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -28,17 +30,15 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  incidents,
-  getIncidentStats,
-  getPendingFollowUpTasks,
-} from "@/data/incidents";
+import { incidentQueries } from "@/lib/api/incidents";
+import { useIncidentFollowUps } from "@/lib/incidents/use-incident-follow-ups";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { FollowUpProtocolsManager } from "@/components/incidents/protocols/FollowUpProtocolsManager";
 import { FollowUpTaskCard } from "@/components/incidents/follow-up/FollowUpTaskCard";
 import { getIncidentOwnerNotifications } from "@/lib/incidents/owner-notifications";
-import type { FollowUpTask } from "@/types/incidents";
+import type { FollowUpTask, Incident } from "@/types/incidents";
 import { TagList } from "@/components/shared/TagList";
 import {
   Select,
@@ -55,21 +55,50 @@ const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 export default function IncidentsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedIncident, setSelectedIncident] = useState<
-    (typeof incidents)[0] | null
-  >(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
+    null,
+  );
+  // The facility's own incidents. This page read the fixture — the same
+  // fourteen invented incidents at every facility — and a report filed here
+  // was gone on reload.
+  const { data: incidents = [] } = useQuery(incidentQueries.all());
+  const { t } = useStaffText("incidentReport");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [taskFilter, setTaskFilter] = useState<
     "all" | "today" | "overdue" | "upcoming"
   >("all");
-  const [tasks, setTasks] = useState<FollowUpTask[]>(getPendingFollowUpTasks());
+  // Follow-ups are task-board rows now (use-incident-follow-ups.ts); a call
+  // logged or a task completed here is on the board and survives a reload.
+  const { followUps, save: saveFollowUp } = useIncidentFollowUps();
+  const tasks = useMemo(
+    () => followUps.filter((task) => task.status !== "completed"),
+    [followUps],
+  );
 
-  const stats = getIncidentStats();
+  const stats = useMemo(() => {
+    const now = new Date();
+    return {
+      total: incidents.length,
+      open: incidents.filter((i) => i.status === "open").length,
+      critical: incidents.filter((i) => i.severity === "critical").length,
+      thisMonth: incidents.filter((i) => {
+        const date = new Date(i.incidentDate);
+        return (
+          date.getMonth() === now.getMonth() &&
+          date.getFullYear() === now.getFullYear()
+        );
+      }).length,
+    };
+  }, [incidents]);
   // Archived ("dismissed as historical") tasks drop out of the active lists.
-  const pendingTasks = tasks.filter((t) => !t.archived);
+  const pendingTasks = tasks.filter((task) => !task.archived);
   const handleTaskUpdate = (updated: FollowUpTask) => {
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    saveFollowUp(updated).catch((error: unknown) =>
+      toast.error(t("followUpNotSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      }),
+    );
   };
 
   // "Dismiss as historical" confirm — archives a >90-day-overdue task (with a
@@ -148,7 +177,7 @@ export default function IncidentsPage() {
   };
 
   // Incident Columns
-  const incidentColumns: ColumnDef<(typeof incidents)[0]>[] = [
+  const incidentColumns: ColumnDef<Incident>[] = [
     {
       accessorKey: "id",
       header: "ID",

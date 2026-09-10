@@ -1744,6 +1744,24 @@
         "requestWaitlisted": "Moved to the waitlist",
         "declineBody": "The request is declined and leaves your queue. The customer is not messaged from here.",
         "waitlistBody": "The request moves to the waitlist. The customer is not messaged from here."
+      },
+      "incidentReport": {
+        "recorded": "Incident recorded: {title}",
+        "followUpsOnBoard": "{n} follow-up tasks are on the task board",
+        "followUpOnBoard": "1 follow-up task is on the task board",
+        "followUpsNotCreated": "The incident is recorded, but its follow-up tasks were not created",
+        "notSaved": "The incident was not saved",
+        "ownerToldLabel": "I have told the pet’s owner",
+        "ownerToldHelp": "Records when the owner was told. Yipyy does not send the message for you — call or text them.",
+        "filing": "Filing the report…",
+        "followUpNotSaved": "The follow-up was not saved",
+        "statusSaved": "{title} is now {status}",
+        "statusNotSaved": "The incident was not changed",
+        "statusOpen": "open",
+        "statusInvestigating": "under investigation",
+        "statusResolved": "resolved",
+        "statusClosed": "closed",
+        "followUpAdded": "Follow-up added to the task board"
       }
     }
   },

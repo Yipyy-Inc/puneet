@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { invoices, giftCards, customerCredits } from "@/data/payments";
 import { getClientRetailPurchases } from "@/data/retail";
-import { getIncidentsForClient, getIncidentsForPet } from "@/data/incidents";
+import { incidentQueries } from "@/lib/api/incidents";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { useFieldMask } from "@/lib/staff/mask";
 import { usePermission } from "@/hooks/use-facility-rbac";
@@ -222,6 +222,9 @@ export default function ClientDetailPage({
   // and `payments.filter()` over the fixtures. Declared HERE, above the early
   // returns further down, because a hook cannot be called conditionally;
   // `enabled` holds them until the client resolves.
+  // The facility's incidents, from Postgres. These read the fixture by
+  // numeric id, so real pet 1 and client 15 wore invented incidents.
+  const { data: allIncidents = [] } = useQuery(incidentQueries.all());
   const { data: clientBookings = [] } = useQuery({
     ...bookingQueries.byClient(client?.id ?? 0),
     enabled: Boolean(client),
@@ -362,8 +365,10 @@ export default function ClientDetailPage({
   const clientIncidents = Array.from(
     new Map(
       [
-        ...getIncidentsForClient(client.id),
-        ...client.pets.flatMap((p) => getIncidentsForPet(p.id)),
+        ...allIncidents.filter((i) => i.clientId === client.id),
+        ...allIncidents.filter((i) =>
+          i.petIds.some((id) => client.pets.some((p) => p.id === id)),
+        ),
       ].map((i) => [i.id, i]),
     ).values(),
   ).sort(
@@ -1494,11 +1499,13 @@ export default function ClientDetailPage({
                           const petData = getPetData(pet);
                           // Per-animal incident history (2E.1) — spot repeat
                           // fights / recurring illness at a glance.
-                          const petIncidents = getIncidentsForPet(pet.id).sort(
-                            (a, b) =>
-                              new Date(b.incidentDate).getTime() -
-                              new Date(a.incidentDate).getTime(),
-                          );
+                          const petIncidents = allIncidents
+                            .filter((i) => i.petIds.includes(pet.id))
+                            .sort(
+                              (a, b) =>
+                                new Date(b.incidentDate).getTime() -
+                                new Date(a.incidentDate).getTime(),
+                            );
                           return (
                             <div
                               key={pet.id}

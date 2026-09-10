@@ -12321,3 +12321,50 @@ booking:<ref>:<task>`) the first time somebody starts or finishes it —
     incidents are converted.
   - The in-memory `tag-note-audit` log is no longer written by notes; it was
     read by nothing.
+
+## 2026-09-10 — an incident reported is an incident on record
+
+The incidents page, the client file and every booking card read
+`src/data/incidents.ts`: fourteen invented incidents, the same at every
+facility, matched by numeric id. Real pet 1, client 15 and booking 1 exist,
+so real records wore invented bites and fights. The report form pushed onto
+that array, and the details modal's status change and close were
+`console.log("In a real app, would save to backend")`. `public.incidents` had
+existed since 20260829180000 with nothing writing it.
+
+- **The record is real.** `/api/incidents` (GET, POST) and
+  `/api/incidents/[ref]` (PATCH) read and write `public.incidents`; the
+  incidents page, the client file's incident table and per-pet history, and
+  `BookingCard`'s count read it. The fixture array is empty on purpose, with a
+  comment saying why. `tests/e2e/incidents.spec.ts` files one, reloads, changes
+  its status, and cleans up as service_role — incidents cannot be deleted by
+  anybody signed in, which is the point of the table.
+- **A customer is never sent `internal_notes`.** RLS admits an owner to their
+  own incidents but cannot narrow columns, so the route selects a list with
+  no `internal_notes` in it for a customer. The POLICY still admits the whole
+  row: any future customer path must select the narrow list too.
+- **The report form tells the truth.** Pets and staff come from the facility,
+  not a fixture and five hard-coded names. "Notify Manager" sent nothing and
+  toasted "Manager notified" — it is gone. "Notify Pet Owner" toasted
+  "client-facing message sent via their SMS/email" and sent nothing — it is now
+  "I have told the pet's owner", an attestation that stamps
+  `owner_notified_at`, unchecked by default. The emergency-contact toast is
+  gone.
+- **Follow-ups are on the task board.** A protocol's follow-up tasks, and ones
+  added by hand in the details modal, are `facility_tasks` rows
+  (`source = manual`, `source_ref = incident:<ref>:<step>`), with the
+  follow-up's own state (call log, attempts, archive reason) in `metadata`.
+  `PATCH /api/tasks/[id]` accepts `metadata` for this. A close reason is
+  appended to the internal notes — there is no column for it.
+- **Still open, recorded:**
+  - **Photos have no store.** The photo section is gone (it saved a path to an
+    image that did not exist), so "require a photo on critical incidents" in
+    Settings cannot be enforced and is not.
+  - **In-stay care has no table.** Care actions, incident medications and
+    their care logs, `lockInStayCare` and incident billing all still read the
+    (now empty) fixture, so for a real incident they find nothing: the
+    In-Stay Care tab does not appear and checkout never asks to lock care.
+  - `PetIncidentSafetyAlert` and `ReservationIncidentPanel` still import the
+    fixture; neither is rendered anywhere.
+  - A follow-up's assignee is a name the protocol invented; it is not a
+    staff assignment on the board.
