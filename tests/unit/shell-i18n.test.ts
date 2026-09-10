@@ -88,6 +88,12 @@ const SAME_IN_BOTH = new Set([
   "booking.salon", // Salon / Salon — a grooming salon, same word
   "booking.mobile", // Mobile / Mobile — the grooming van, same word
   "booking.pricePerUnit", // {price}/{unit} — placeholders and a slash
+  // The points history's column heads: French spells these the same.
+  "loyalty.date", // Date / Date
+  "loyalty.type", // Type / Type
+  "loyalty.description", // Description / Description
+  "loyalty.points", // Points / Points
+  "loyalty.kindBadge", // Badge / Badge
 ]);
 
 describe("the shell namespace", () => {

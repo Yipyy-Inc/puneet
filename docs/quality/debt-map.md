@@ -11910,3 +11910,36 @@ touches files the gate calls NEW.
 - Validation messages were stored in state as English sentences; they are
   catalogue keys now and render through `t`, so a French customer reads the
   error in French.
+
+### Rewards (`/customer/rewards`) — **redeeming a reward invents a code and spends nothing**
+
+The page itself is real — the points balance, tiers, earn rules, wallet and
+badges come from `/api/customer/loyalty` (Postgres) since 2026-08-22. Three
+things on it are not:
+
+- **"Redeem" on a catalogue reward is a timeout.** The handler is `// TODO:
+Replace with actual API call`, 1.5 s, then "Reward redeemed! Discount code:
+  LOYALTY-X7K2QP" — a code made up with `Math.random()` in the browser. No
+  points are deducted, no code exists anywhere a till could check it, and the
+  "What happens next" panel above it promises all of that. The catalogue
+  itself is `loyaltyRewards` from `@/data/marketing`, a fixture.
+- **"Redeem points for credit" writes to a fixture.**
+  `redeemPointsForCredit` (`@/data/loyalty-redeem`) mutates the in-memory
+  fixture account and appends fixture history rows. The page reads the
+  Postgres wallet, so the change is invisible; and a real customer has no
+  fixture account, so they get "No loyalty account found." (in English — the
+  message comes from the data module).
+- **Referral codes are fixtures** (`referralCodes` from `@/data/marketing`,
+  matched on `referrerId`).
+- **Badge conditions and rewards are phrased in English on the server** —
+  `/api/customer/loyalty` builds `conditionText` and `rewardText` with no
+  locale. The card around them is French; the sentence inside is not.
+- Fixed while translating: the "How points are earned" sentences come from
+  `lib/loyalty/earn-rule-summary.ts`, which now has a French grammar of its
+  own (amount after the noun, a service named in parentheses rather than
+  inflected, `Intl` for money, dates and weekdays — with tests). The wallet
+  card's title, value chip and services line (`lib/loyalty/rewards-wallet.ts`)
+  take the locale too. Neither file is on any French-gate surface — shared
+  libs are deliberately outside them — so the gate could not have asked for
+  either. Twenty-one `toLocaleString()` calls with no locale and a handful of
+  `$${n.toFixed(2)}` are `formatNumber` / `formatMoney`.
