@@ -1517,55 +1517,16 @@ function buildTaskEvents(
   });
 }
 
-function buildFacilitySeedEvents(anchorDate: Date): ManualFacilityEvent[] {
-  const day = formatDateKey(anchorDate);
-  const next = formatDateKey(addDays(anchorDate, 1));
-  const nextTwo = formatDateKey(addDays(anchorDate, 2));
-
-  return [
-    {
-      id: "facility-seed-blocked-time",
-      title: "Blocked Time - Pool Maintenance",
-      subtype: "blocked-time",
-      start: `${day}T11:00:00`,
-      end: `${day}T12:00:00`,
-      allDay: false,
-      location: "Main Pool",
-      staff: "Operations Team",
-      status: "Planned",
-    },
-    {
-      id: "facility-seed-meeting",
-      title: "All Staff Meeting",
-      subtype: "staff-meeting",
-      start: `${next}T08:30:00`,
-      end: `${next}T09:15:00`,
-      allDay: false,
-      location: "Ops Room",
-      staff: "All Staff",
-      status: "Scheduled",
-    },
-    {
-      id: "facility-seed-closure",
-      title: "Holiday Closure",
-      subtype: "holiday-closure",
-      start: `${nextTwo}T00:00:00`,
-      end: `${nextTwo}T23:59:00`,
-      allDay: true,
-      location: "Facility Wide",
-      staff: "Management",
-      status: "Planned",
-    },
-  ];
-}
-
 function buildFacilityEvents(
   anchorDate: Date,
   manualEvents: ManualFacilityEvent[],
   viewerKey?: string,
 ): OperationsCalendarEvent[] {
-  const seeded = buildFacilitySeedEvents(anchorDate);
-  const merged = [...seeded, ...manualEvents];
+  // Only the facility's own events. Three invented ones — "Blocked Time -
+  // Pool Maintenance", "All Staff Meeting", "Holiday Closure" — used to be
+  // merged in here, placed relative to whichever day was being viewed, so
+  // every facility had a staff meeting tomorrow, whatever tomorrow was.
+  const merged = manualEvents;
 
   return merged
     .filter((event) => {
@@ -1577,7 +1538,9 @@ function buildFacilityEvents(
         return false;
       }
 
-      if (event.visibility === "internal-only") {
+      // An internal-only event is scoped by the DATABASE now: it is returned
+      // only to its author, and arrives with no `privateToUser` to compare.
+      if (event.visibility === "internal-only" && event.privateToUser) {
         return event.privateToUser === viewerKey;
       }
 

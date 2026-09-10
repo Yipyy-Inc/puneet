@@ -1840,6 +1840,11 @@
         "checkedOut": "Départ de {pet} enregistré",
         "notSaved": "Ce changement n’a pas été enregistré",
         "guest": "Ce pensionnaire"
+      },
+      "opsCalendar": {
+        "eventNotSaved": "L’événement n’a pas été enregistré",
+        "rescheduled": "Déplacé",
+        "ownerNotMessaged": "Le propriétaire n’a pas été prévenu : Yipyy n’envoie pas encore d’avis de changement d’horaire."
       }
     }
   },

@@ -12402,3 +12402,23 @@ categories and the pet's real notes instead of fixtures matched by number.
   row, so its daycare half cannot show a busy yard (the check-in board can).
   Seeded daycare bookings have no section, so that half is empty on the demo
   facility. Room blocks are still local to the board.
+
+## 2026-09-10 — the facility calendar's events are rows, and its invented ones are gone
+
+The calendar's own events and block time lived in localStorage under a key
+with a hard-coded facility id of 11; edits, deletes and recoveries were local,
+and dragging one saved nothing while toasting success. They are
+`public.calendar_events` now (20260910223523; `/api/calendar/events`), with
+the calendar's full shape in `event` and a soft delete the 30-day recovery
+reads. Three invented events — "Blocked Time - Pool Maintenance", "All Staff
+Meeting", "Holiday Closure" — were merged into every facility's calendar,
+placed relative to whichever day was being viewed; they are gone. A booking
+dragged with "notify" said "owner notified via SMS/email"; nothing sends, so
+it says the owner was not messaged.
+
+- **Still open:** the calendar's tasks still come from the `facilityTasks`
+  fixture (the real board is `/api/tasks`); add-ons attached, notes updated,
+  waitlist offers, lead conversions, recurring-series cancellations and the
+  drawer's SMS/email buttons are still local or toast-only; external calendar
+  connections are a module store. `FACILITY_ID = 11` still keys the saved
+  views and visual settings in localStorage, which are per-browser by design.
