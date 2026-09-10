@@ -23,6 +23,9 @@ import { giftCards, customerWallets } from "@/data/gift-cards";
 import { clients } from "@/data/clients";
 import type { GiftCard } from "@/types/payments";
 import { EmptyState, Thumb, fmtDate } from "./gift-card-list-shared";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 const WALLET_EXPLAINER =
   "Loading to your wallet lets you pay for services at checkout automatically — no need to enter a code.";
@@ -36,6 +39,7 @@ export function ReceivedGiftCardsList({
   facilityId,
   customerId,
 }: ReceivedGiftCardsListProps) {
+  const { t, fill, locale } = useCustomerText("giftCards");
   const customer = clients.find((c) => c.id === customerId);
   const customerEmail = customer?.email.toLowerCase() ?? "";
 
@@ -93,7 +97,9 @@ export function ReceivedGiftCardsList({
     setLoadedAmount(amount);
     setLoading(false);
     setDone(true);
-    toast.success(`$${amount.toFixed(2)} loaded to your wallet.`);
+    toast.success(
+      fill("loadedToWallet", { amount: formatMoney(amount, locale) }),
+    );
   };
 
   const toggleChecked = (id: string) =>
@@ -124,21 +130,28 @@ export function ReceivedGiftCardsList({
                   <Thumb id={gc.id} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      From {gc.purchasedBy ?? "Someone"}
+                      {fill("fromSender", {
+                        name: gc.purchasedBy ?? t("someone"),
+                      })}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      Received {fmtDate(gc.createdAt ?? gc.purchaseDate)} ·{" "}
+                      {fill("receivedOn", {
+                        date: fmtDate(locale, gc.createdAt ?? gc.purchaseDate),
+                      })}{" "}
+                      ·{" "}
                       {gc.neverExpires
-                        ? "No expiry"
-                        : `Expires ${fmtDate(gc.expiryDate)}`}
+                        ? t("noExpiry")
+                        : fill("expiresOn", {
+                            date: fmtDate(locale, gc.expiryDate),
+                          })}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-semibold text-green-600">
-                      ${bal.toFixed(2)}
+                      {formatMoney(bal, locale)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      of ${gc.initialAmount.toFixed(2)}
+                      of {formatMoney(gc.initialAmount, locale)}
                     </p>
                   </div>
                   <Tooltip>
@@ -150,7 +163,7 @@ export function ReceivedGiftCardsList({
                         onClick={() => openLoad(gc)}
                       >
                         <Wallet className="size-3.5" />
-                        Load to my wallet
+                        {t("loadToMyWallet")}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-56 text-xs">
@@ -165,13 +178,13 @@ export function ReceivedGiftCardsList({
                     onClick={() => toggleChecked(gc.id)}
                     className="text-primary font-medium hover:underline"
                   >
-                    {checked ? "Hide balance" : "Check balance"}
+                    {checked ? t("hideBalance") : t("checkBalance")}
                   </button>
                   {checked && (
                     <span className="text-muted-foreground">
-                      Current balance:{" "}
+                      {t("currentBalanceLabel")}{" "}
                       <span className="text-foreground font-medium">
-                        ${bal.toFixed(2)}
+                        {formatMoney(bal, locale)}
                       </span>
                     </span>
                   )}
@@ -190,10 +203,10 @@ export function ReceivedGiftCardsList({
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Wallet className="size-5" />
-                  Load to my wallet
+                  {t("loadToMyWallet")}
                 </DialogTitle>
                 <DialogDescription>
-                  Choose how much of this gift card to move into your wallet.
+                  {t("chooseHowMuchOfThis")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -201,14 +214,16 @@ export function ReceivedGiftCardsList({
                 <Thumb id={loadCard.id} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">
-                    From {loadCard.purchasedBy ?? "Someone"}
+                    {fill("fromSender", {
+                      name: loadCard.purchasedBy ?? t("someone"),
+                    })}
                   </p>
                   <p className="text-muted-foreground text-xs">
                     {loadCard.code}
                   </p>
                 </div>
                 <p className="text-lg font-bold text-green-600">
-                  ${cardBal.toFixed(2)}
+                  {formatMoney(cardBal, locale)}
                 </p>
               </div>
 
@@ -220,14 +235,16 @@ export function ReceivedGiftCardsList({
                 <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border p-3">
                   <RadioGroupItem value="full" />
                   <span className="text-sm font-medium">
-                    Load full balance: ${cardBal.toFixed(2)}
+                    {fill("loadFullBalance", {
+                      amount: formatMoney(cardBal, locale),
+                    })}
                   </span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-3">
                   <RadioGroupItem value="partial" className="mt-0.5" />
                   <div className="flex-1 space-y-1.5">
                     <span className="text-sm font-medium">
-                      Load partial amount:
+                      {t("loadPartialAmount")}
                     </span>
                     <div className="relative">
                       <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
@@ -250,7 +267,9 @@ export function ReceivedGiftCardsList({
                     </div>
                     {mode === "partial" && partialNum > cardBal && (
                       <p className="text-destructive text-xs">
-                        Max is ${cardBal.toFixed(2)}.
+                        {fill("maxIs", {
+                          amount: formatMoney(cardBal, locale),
+                        })}
                       </p>
                     )}
                   </div>
@@ -259,14 +278,14 @@ export function ReceivedGiftCardsList({
 
               {/* Before / after wallet preview */}
               <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3 text-sm">
-                <span className="text-muted-foreground">Your wallet</span>
+                <span className="text-muted-foreground">{t("yourWallet")}</span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  ${walletBalance.toFixed(2)}
+                  {formatMoney(walletBalance, locale)}
                   <ArrowRight className="text-muted-foreground size-3.5" />
                   <span className="text-green-600">
-                    $
-                    {(walletBalance + (canConfirm ? amountToLoad : 0)).toFixed(
-                      2,
+                    {formatMoney(
+                      walletBalance + (canConfirm ? amountToLoad : 0),
+                      locale,
                     )}
                   </span>
                 </span>
@@ -274,16 +293,16 @@ export function ReceivedGiftCardsList({
 
               <DialogFooter>
                 <Button variant="outline" onClick={closeLoad}>
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button onClick={handleConfirm} disabled={!canConfirm}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 size-4 animate-spin" />
-                      Loading…
+                      {t("loading")}
                     </>
                   ) : (
-                    "Confirm"
+                    t("confirmLoad")
                   )}
                 </Button>
               </DialogFooter>
@@ -295,20 +314,26 @@ export function ReceivedGiftCardsList({
                 <CheckCircle2 className="size-8 text-green-600" />
               </div>
               <div>
-                <p className="text-lg font-semibold">Added to your wallet!</p>
+                <p className="text-lg font-semibold">
+                  {t("addedToYourWallet")}
+                </p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  <span className="font-medium text-green-600">
-                    ${loadedAmount.toFixed(2)}
-                  </span>{" "}
-                  is now available to spend. Wallet balance:{" "}
-                  <span className="text-foreground font-medium">
-                    ${walletBalance.toFixed(2)}
-                  </span>
-                  .
+                  {rich(t("nowAvailableToSpend"), {
+                    amount: (
+                      <span className="font-medium text-green-600">
+                        {formatMoney(loadedAmount, locale)}
+                      </span>
+                    ),
+                    balance: (
+                      <span className="text-foreground font-medium">
+                        {formatMoney(walletBalance, locale)}
+                      </span>
+                    ),
+                  })}
                 </p>
               </div>
               <Button className="w-full" onClick={closeLoad}>
-                Done
+                {t("done")}
               </Button>
             </div>
           )}

@@ -2,15 +2,18 @@ import { Gift } from "lucide-react";
 import { YipyyPose, type YipyyPoseProps } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import type { GiftCard } from "@/types/payments";
+import type { AppLocale } from "@/lib/language-settings";
+import { formatDateLong } from "@/lib/i18n/format";
 
+// A status's words, by CATALOGUE KEY in `customerPages.areas.giftCards`.
 export const STATUS_META: Record<
   GiftCard["status"],
-  { label: string; className: string }
+  { labelKey: string; className: string }
 > = {
-  active: { label: "Active", className: "bg-green-500 text-white" },
-  redeemed: { label: "Fully Redeemed", className: "bg-blue-500 text-white" },
-  expired: { label: "Expired", className: "bg-red-500 text-white" },
-  cancelled: { label: "Voided", className: "bg-gray-500 text-white" },
+  active: { labelKey: "statusActive", className: "bg-green-500 text-white" },
+  redeemed: { labelKey: "statusRedeemed", className: "bg-blue-500 text-white" },
+  expired: { labelKey: "statusExpired", className: "bg-red-500 text-white" },
+  cancelled: { labelKey: "statusVoided", className: "bg-gray-500 text-white" },
 };
 
 // Cards carry no design field yet, so derive a stable thumbnail gradient by id.
@@ -28,14 +31,8 @@ const thumbGradient = (id: string) => {
   return THUMB_GRADIENTS[h];
 };
 
-export const fmtDate = (s?: string) =>
-  s
-    ? new Date(s).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "—";
+export const fmtDate = (locale: AppLocale, s?: string) =>
+  s ? formatDateLong(s, locale) : "—";
 
 export function Thumb({ id }: { id: string }) {
   return (

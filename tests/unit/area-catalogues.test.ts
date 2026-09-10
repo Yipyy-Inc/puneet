@@ -120,6 +120,11 @@ const SAME_IN_BOTH = new Set([
   "customerPages.rewards.unitPoints", // points / points
   "customerPages.rewards.pointsCount", // {n} points
   "customerPages.rewards.pointsCountLower", // {n} points
+  "customerPages.giftCards.alice", // a sample first name in a placeholder
+  "customerPages.giftCards.date", // Date / Date
+  "customerPages.giftCards.total", // Total / Total
+  "customerPages.giftCards.code", // Code / Code
+  "customerPages.giftCards.statusActive", // Active / Active (la carte)
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

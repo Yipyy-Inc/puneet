@@ -35,10 +35,23 @@ import {
 import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import { giftCardSettings } from "@/data/gift-cards";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
+// A MOCK — see the debt map, "Gift cards". Its labels are keys.
 const SAVED_CARDS = [
-  { id: "visa-4242", brand: "VISA", last4: "4242", label: "Default card" },
-  { id: "mc-8888", brand: "Mastercard", last4: "8888", label: "Personal" },
+  { id: "visa-4242", brand: "VISA", last4: "4242", labelKey: "cardDefault" },
+  {
+    id: "mc-8888",
+    brand: "Mastercard",
+    last4: "8888",
+    labelKey: "cardPersonal",
+  },
 ];
 
 // DESIGN TODO (pre-launch): the emoji + gradient tiles below are placeholders.
@@ -48,7 +61,7 @@ const SAVED_CARDS = [
 const CARD_DESIGNS = [
   {
     id: "birthday",
-    label: "Birthday",
+    labelKey: "designBirthday",
     emoji: "🎂",
     gradient: "from-pink-400 via-rose-400 to-red-500",
     accentBg: "bg-pink-50 dark:bg-pink-950/20",
@@ -56,7 +69,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "holiday",
-    label: "Holiday",
+    labelKey: "designHoliday",
     emoji: "🎄",
     gradient: "from-green-400 via-emerald-500 to-teal-600",
     accentBg: "bg-green-50 dark:bg-green-950/20",
@@ -64,7 +77,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "anniversary",
-    label: "Anniversary",
+    labelKey: "designAnniversary",
     emoji: "💝",
     gradient: "from-purple-400 via-violet-500 to-indigo-600",
     accentBg: "bg-purple-50 dark:bg-purple-950/20",
@@ -72,7 +85,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "just_because",
-    label: "Just Because",
+    labelKey: "designJustBecause",
     emoji: "🐾",
     gradient: "from-amber-400 via-orange-400 to-red-400",
     accentBg: "bg-amber-50 dark:bg-amber-950/20",
@@ -80,7 +93,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "thank_you",
-    label: "Thank You",
+    labelKey: "designThankYou",
     emoji: "🌸",
     gradient: "from-sky-400 via-blue-500 to-indigo-500",
     accentBg: "bg-sky-50 dark:bg-sky-950/20",
@@ -88,7 +101,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "welcome",
-    label: "Welcome",
+    labelKey: "designWelcome",
     emoji: "🏠",
     gradient: "from-teal-400 via-cyan-500 to-sky-500",
     accentBg: "bg-teal-50 dark:bg-teal-950/20",
@@ -96,7 +109,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "new_pet",
-    label: "New pet",
+    labelKey: "designNewPet",
     emoji: "🐶",
     gradient: "from-orange-400 via-amber-500 to-yellow-500",
     accentBg: "bg-orange-50 dark:bg-orange-950/20",
@@ -104,7 +117,7 @@ const CARD_DESIGNS = [
   },
   {
     id: "gotcha_day",
-    label: "Gotcha Day",
+    labelKey: "designGotchaDay",
     emoji: "🎉",
     gradient: "from-emerald-400 via-teal-500 to-green-600",
     accentBg: "bg-emerald-50 dark:bg-emerald-950/20",
@@ -112,21 +125,17 @@ const CARD_DESIGNS = [
   },
 ];
 
-// Hourly delivery slots, 9 AM through 9 PM.
-const TIME_SLOTS = Array.from({ length: 13 }, (_, i) => {
-  const h = 9 + i;
-  const hour12 = ((h + 11) % 12) + 1;
-  return {
-    value: `${String(h).padStart(2, "0")}:00`,
-    label: `${hour12} ${h < 12 ? "AM" : "PM"}`,
-  };
-});
+// Hourly delivery slots, 9 AM through 9 PM. The label is formatTimeOfDay
+// at render — "9:00 AM" · "9 h 00" (§5q).
+const TIME_SLOTS = Array.from({ length: 13 }, (_, i) => ({
+  value: `${String(9 + i).padStart(2, "0")}:00`,
+}));
 
 const STEPS = [
-  { id: 1, label: "Amount" },
-  { id: 2, label: "Design" },
-  { id: 3, label: "Recipient" },
-  { id: 4, label: "Payment" },
+  { id: 1, labelKey: "stepAmount" },
+  { id: 2, labelKey: "stepDesign" },
+  { id: 3, labelKey: "stepRecipient" },
+  { id: 4, labelKey: "stepPayment" },
 ] as const;
 
 interface BuyGiftCardFlowProps {
@@ -141,6 +150,7 @@ export function BuyGiftCardFlow({
   onComplete,
   onViewSent,
 }: BuyGiftCardFlowProps) {
+  const { t, fill, locale } = useCustomerText("giftCards");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -184,7 +194,7 @@ export function BuyGiftCardFlow({
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const purchaserEmail = customer?.email ?? "your email";
+  const purchaserEmail = customer?.email ?? t("yourEmail");
   const activeCard =
     SAVED_CARDS.find((c) => c.id === paymentCardId) ?? SAVED_CARDS[0];
   const hasPaymentMethod = SAVED_CARDS.length > 0 && !!activeCard;
@@ -228,11 +238,10 @@ export function BuyGiftCardFlow({
 
   const schedulePreview =
     scheduleDelivery && deliveryDate
-      ? `${new Date(`${deliveryDate}T00:00:00`).toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })} at ${TIME_SLOTS.find((s) => s.value === deliveryTime)?.label ?? ""}`
+      ? fill("dateAtTime", {
+          date: formatDateLong(deliveryDate, locale),
+          time: formatTimeOfDay(deliveryTime, locale),
+        })
       : null;
 
   const generateCode = () => {
@@ -314,13 +323,15 @@ export function BuyGiftCardFlow({
             <div className="flex items-center justify-between">
               <span className="text-3xl">{selectedDesign.emoji}</span>
               <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
-                Gift Card
+                {t("giftCard")}
               </Badge>
             </div>
             <p className="mt-3 text-3xl font-bold">
-              ${resolvedAmount.toFixed(2)}
+              {formatMoney(resolvedAmount, locale)}
             </p>
-            <p className="mt-1 text-sm opacity-80">For {recipientName}</p>
+            <p className="mt-1 text-sm opacity-80">
+              {fill("forRecipient", { name: recipientName })}
+            </p>
             <p className="mt-3 border-t border-white/20 pt-2 font-mono text-xs opacity-60">
               {generatedCode}
             </p>
@@ -329,27 +340,32 @@ export function BuyGiftCardFlow({
 
         <div className="space-y-1">
           <p className="text-lg font-semibold">
-            Gift card sent to {recipientName || "your recipient"}!
+            {fill("giftCardSentTo", {
+              name: recipientName || t("yourRecipient"),
+            })}
           </p>
           <p className="text-muted-foreground text-sm">
-            A beautifully branded email has been sent to{" "}
-            <span className="text-foreground font-medium">
-              {recipientEmail}
-            </span>
-            {schedulePreview ? ` on ${schedulePreview}` : " right now"}.
-            {sendCopy && " A copy has also been sent to you for your records."}
+            {rich(t(schedulePreview ? "emailSentToOn" : "emailSentToNow"), {
+              email: (
+                <span className="text-foreground font-medium">
+                  {recipientEmail}
+                </span>
+              ),
+              when: schedulePreview ?? "",
+            })}
+            {sendCopy && ` ${t("copySentToYou")}`}
           </p>
         </div>
 
         <div className="flex w-full max-w-xs flex-col gap-2">
           <Button onClick={onComplete ?? resetFlow}>
             <Gift className="size-4" />
-            Send another gift card
+            {t("sendAnotherGiftCard")}
           </Button>
           {onViewSent && (
             <Button variant="outline" onClick={onViewSent}>
               <Send className="size-4" />
-              View cards I sent
+              {t("viewCardsISent")}
             </Button>
           )}
         </div>
@@ -386,7 +402,7 @@ export function BuyGiftCardFlow({
                 step === s.id ? "font-semibold" : "text-muted-foreground",
               )}
             >
-              {s.label}
+              {t(s.labelKey)}
             </span>
             {i < STEPS.length - 1 && (
               <div className="bg-border mx-1 h-px flex-1" />
@@ -399,9 +415,9 @@ export function BuyGiftCardFlow({
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <h3 className="font-semibold">Choose an amount</h3>
+            <h3 className="font-semibold">{t("chooseAnAmount")}</h3>
             <p className="text-muted-foreground text-sm">
-              Pick a preset or enter a custom value ($10–$500)
+              {t("pickAPresetOrEnter")}
             </p>
           </div>
           <div className="grid gap-5 sm:grid-cols-[1fr_180px]">
@@ -438,14 +454,14 @@ export function BuyGiftCardFlow({
                         amount === p ? "text-primary" : "",
                       )}
                     >
-                      ${p}
+                      {formatMoney(p, locale, { whole: true })}
                     </p>
                   </button>
                 ))}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground text-sm">
-                  Custom Amount
+                  {t("customAmount")}
                 </Label>
                 <div className="relative">
                   <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2">
@@ -462,7 +478,7 @@ export function BuyGiftCardFlow({
                       setCustomAmount(e.target.value);
                       setAmount("");
                     }}
-                    placeholder="Enter amount"
+                    placeholder={t("enterAmount")}
                     aria-invalid={amountError !== ""}
                   />
                 </div>
@@ -485,20 +501,20 @@ export function BuyGiftCardFlow({
                   <span className="text-2xl">{selectedDesign.emoji}</span>
                   {resolvedAmount > 0 ? (
                     <p className="mt-2 text-2xl font-bold">
-                      ${resolvedAmount.toFixed(2)}
+                      {formatMoney(resolvedAmount, locale)}
                     </p>
                   ) : (
                     <p className="mt-2 text-base font-semibold opacity-80">
-                      Choose an amount
+                      {t("chooseAnAmount")}
                     </p>
                   )}
                   <p className="text-[10px] tracking-wide uppercase opacity-70">
-                    Gift Card
+                    {t("giftCard")}
                   </p>
                 </div>
               </div>
               <p className="text-muted-foreground mt-2 text-center text-xs">
-                Live preview
+                {t("livePreview")}
               </p>
             </div>
           </div>
@@ -509,9 +525,9 @@ export function BuyGiftCardFlow({
       {step === 2 && (
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold">Pick a design</h3>
+            <h3 className="font-semibold">{t("pickADesign")}</h3>
             <p className="text-muted-foreground text-sm">
-              Choose the card theme that fits the occasion
+              {t("chooseTheCardThemeThat")}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -534,9 +550,9 @@ export function BuyGiftCardFlow({
                   )}
                 >
                   <span className="text-3xl">{d.emoji}</span>
-                  <span className="text-sm font-semibold">{d.label}</span>
+                  <span className="text-sm font-semibold">{t(d.labelKey)}</span>
                   <span className="font-mono text-xs opacity-70">
-                    ${resolvedAmount.toFixed(2)}
+                    {formatMoney(resolvedAmount, locale)}
                   </span>
                 </div>
               </button>
@@ -549,36 +565,36 @@ export function BuyGiftCardFlow({
       {step === 3 && (
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold">Who is this for?</h3>
+            <h3 className="font-semibold">{t("whoIsThisFor")}</h3>
             <p className="text-muted-foreground text-sm">
-              Fill in the recipient details and your personal message
+              {t("fillInTheRecipientDetails")}
             </p>
           </div>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
                 <User className="size-4" />
-                Recipient Name
+                {t("recipientName")}
                 <span className="text-destructive">*</span>
               </Label>
               <Input
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
-                placeholder="Jane Smith"
+                placeholder={t("janeSmith")}
                 aria-invalid={
                   attemptedStep3 && recipientName.trim().length === 0
                 }
               />
               {attemptedStep3 && recipientName.trim().length === 0 && (
                 <p className="text-destructive text-xs">
-                  Recipient name is required.
+                  {t("recipientNameIsRequired")}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
                 <Mail className="size-4" />
-                Recipient Email
+                {t("recipientEmail")}
                 <span className="text-destructive">*</span>
               </Label>
               <Input
@@ -596,7 +612,7 @@ export function BuyGiftCardFlow({
                     setEmailError("Please enter a valid email address.");
                   }
                 }}
-                placeholder="jane@example.com"
+                placeholder={t("janeExampleCom")}
                 aria-invalid={
                   emailError !== "" ||
                   (attemptedStep3 && recipientEmail.trim().length === 0)
@@ -604,7 +620,7 @@ export function BuyGiftCardFlow({
               />
               {attemptedStep3 && recipientEmail.trim().length === 0 ? (
                 <p className="text-destructive text-xs">
-                  Recipient email is required.
+                  {t("recipientEmailIsRequired")}
                 </p>
               ) : (
                 emailError && (
@@ -615,23 +631,23 @@ export function BuyGiftCardFlow({
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
                 <User className="size-4" />
-                From (Your Name)
+                {t("fromYourName")}
               </Label>
               <Input
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                placeholder="Alice"
+                placeholder={t("alice")}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5">
                 <MessageSquare className="size-4" />
-                Personal Message
+                {t("personalMessage")}
               </Label>
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Happy birthday! Enjoy some pampering for your fur baby..."
+                placeholder={t("happyBirthdayEnjoySomePampering")}
                 rows={3}
                 maxLength={300}
               />
@@ -644,15 +660,13 @@ export function BuyGiftCardFlow({
                 checked={sendCopy}
                 onCheckedChange={(v) => setSendCopy(v === true)}
               />
-              <span className="text-sm">
-                Send me a copy of this gift card for my records.
-              </span>
+              <span className="text-sm">{t("sendMeACopyOf")}</span>
             </label>
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
                 <Label className="flex cursor-pointer items-center gap-1.5">
                   <CalendarDays className="size-4" />
-                  Schedule Delivery
+                  {t("scheduleDelivery")}
                 </Label>
                 <Switch
                   checked={scheduleDelivery}
@@ -664,7 +678,7 @@ export function BuyGiftCardFlow({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">
-                        Date
+                        {t("date")}
                       </Label>
                       <DatePicker
                         value={deliveryDate}
@@ -673,12 +687,12 @@ export function BuyGiftCardFlow({
                         max={maxDeliveryDate}
                         displayMode="dialog"
                         showManualInput={false}
-                        placeholder="Pick a date"
+                        placeholder={t("pickADate")}
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-muted-foreground text-xs">
-                        Time
+                        {t("time")}
                       </Label>
                       <Select
                         value={deliveryTime}
@@ -690,7 +704,7 @@ export function BuyGiftCardFlow({
                         <SelectContent>
                           {TIME_SLOTS.map((s) => (
                             <SelectItem key={s.value} value={s.value}>
-                              {s.label}
+                              {formatTimeOfDay(s.value, locale)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -699,7 +713,7 @@ export function BuyGiftCardFlow({
                   </div>
                   {schedulePreview && (
                     <p className="text-muted-foreground text-xs">
-                      Will be delivered on{" "}
+                      {t("willBeDeliveredOn")}{" "}
                       <span className="text-foreground font-medium">
                         {schedulePreview}
                       </span>
@@ -717,9 +731,9 @@ export function BuyGiftCardFlow({
       {step === 4 && (
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold">Review & Pay</h3>
+            <h3 className="font-semibold">{t("reviewPay")}</h3>
             <p className="text-muted-foreground text-sm">
-              Confirm your gift card order before purchasing
+              {t("confirmYourGiftCardOrder")}
             </p>
           </div>
 
@@ -737,14 +751,16 @@ export function BuyGiftCardFlow({
                 <div>
                   <span className="text-3xl">{selectedDesign.emoji}</span>
                   <p className="mt-2 text-3xl font-bold">
-                    ${resolvedAmount.toFixed(2)}
+                    {formatMoney(resolvedAmount, locale)}
                   </p>
                   <p className="mt-0.5 text-sm opacity-80">
-                    For {recipientName || "Recipient"}
+                    {fill("forRecipient", {
+                      name: recipientName || t("recipient"),
+                    })}
                   </p>
                 </div>
                 <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
-                  {selectedDesign.label}
+                  {t(selectedDesign.labelKey)}
                 </Badge>
               </div>
               {messagePreview && (
@@ -759,23 +775,23 @@ export function BuyGiftCardFlow({
           <Card>
             <CardContent className="space-y-2 py-4 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Recipient</span>
+                <span className="text-muted-foreground">{t("recipient")}</span>
                 <span className="font-medium">{recipientName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Delivery to</span>
+                <span className="text-muted-foreground">{t("deliveryTo")}</span>
                 <span className="font-medium">{recipientEmail}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Delivery</span>
+                <span className="text-muted-foreground">{t("delivery")}</span>
                 <span className="font-medium">
-                  {schedulePreview ?? "Immediately after purchase"}
+                  {schedulePreview ?? t("immediatelyAfterPurchase")}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span className="font-semibold">Total</span>
+                <span className="font-semibold">{t("total")}</span>
                 <span className="price-value text-lg font-bold text-green-600">
-                  ${resolvedAmount.toFixed(2)}
+                  {formatMoney(resolvedAmount, locale)}
                 </span>
               </div>
             </CardContent>
@@ -784,26 +800,28 @@ export function BuyGiftCardFlow({
           {/* "Send a copy" reassurance */}
           {sendCopy && (
             <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-              <Mail className="size-3.5" />A copy will also be sent to{" "}
-              <span className="text-foreground font-medium">
-                {purchaserEmail}
-              </span>
-              .
+              <Mail className="size-3.5" />
+              {rich(t("copyWillBeSentTo"), {
+                email: (
+                  <span className="text-foreground font-medium">
+                    {purchaserEmail}
+                  </span>
+                ),
+              })}
             </p>
           )}
 
           {/* Payment method */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Payment method</Label>
+            <Label className="text-sm font-medium">{t("paymentMethod")}</Label>
             {!hasPaymentMethod ? (
               <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-4 text-center">
                 <CreditCard className="text-muted-foreground size-6" />
                 <p className="text-muted-foreground text-sm">
-                  You don&apos;t have a saved payment method. Add one to
-                  complete your purchase.
+                  {t("noSavedPaymentMethod")}
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link href="/customer/billing">Add a payment method</Link>
+                  <Link href="/customer/billing">{t("addAPaymentMethod")}</Link>
                 </Button>
               </div>
             ) : !showCardSelector ? (
@@ -817,7 +835,7 @@ export function BuyGiftCardFlow({
                       {activeCard.brand} •••• {activeCard.last4}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {activeCard.label}
+                      {t(activeCard.labelKey)}
                     </p>
                   </div>
                   <CheckCircle2 className="size-5 text-green-600" />
@@ -827,14 +845,14 @@ export function BuyGiftCardFlow({
                     className="flex-1"
                     onClick={() => setShowCardSelector(false)}
                   >
-                    Use this card
+                    {t("useThisCard")}
                   </Button>
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={() => setShowCardSelector(true)}
                   >
-                    Use different card
+                    {t("useDifferentCard")}
                   </Button>
                 </div>
               </>
@@ -860,7 +878,9 @@ export function BuyGiftCardFlow({
                       <p className="text-sm font-medium">
                         {c.brand} •••• {c.last4}
                       </p>
-                      <p className="text-muted-foreground text-xs">{c.label}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t(c.labelKey)}
+                      </p>
                     </div>
                     {c.id === paymentCardId && (
                       <CheckCircle2 className="text-primary size-4" />
@@ -873,7 +893,7 @@ export function BuyGiftCardFlow({
                   className="w-full"
                   onClick={() => setShowCardSelector(false)}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
               </div>
             )}
@@ -882,10 +902,7 @@ export function BuyGiftCardFlow({
           {resolvedAmount >= 200 && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
               <span className="mt-0.5">🔐</span>
-              <span>
-                This is a high-value card. The recipient will be asked to set a
-                4-digit PIN when they redeem it for extra security.
-              </span>
+              <span>{t("highValueCardPin")}</span>
             </div>
           )}
         </div>
@@ -898,7 +915,7 @@ export function BuyGiftCardFlow({
           onClick={() => setStep((s) => Math.max(1, s - 1) as typeof s)}
           disabled={step === 1}
         >
-          Back
+          {t("back")}
         </Button>
 
         {step < 4 ? (
@@ -907,7 +924,7 @@ export function BuyGiftCardFlow({
             disabled={step < 3 && !canProceed}
             className="gap-1.5"
           >
-            Continue
+            {t("continue")}
             <ChevronRight className="size-4" />
           </Button>
         ) : (
@@ -919,12 +936,14 @@ export function BuyGiftCardFlow({
             {loading ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Processing…
+                {t("processing")}
               </>
             ) : (
               <>
                 <Gift className="size-4" />
-                Purchase ${resolvedAmount.toFixed(2)}
+                {fill("purchaseAmount", {
+                  amount: formatMoney(resolvedAmount, locale),
+                })}
               </>
             )}
           </Button>
