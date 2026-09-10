@@ -1744,6 +1744,24 @@
         "requestWaitlisted": "Déplacée sur la liste d’attente",
         "declineBody": "La demande est refusée et quitte votre file. Aucun message n’est envoyé au client d’ici.",
         "waitlistBody": "La demande passe sur la liste d’attente. Aucun message n’est envoyé au client d’ici."
+      },
+      "incidentReport": {
+        "recorded": "Incident enregistré : {title}",
+        "followUpsOnBoard": "{n} tâches de suivi sont au tableau des tâches",
+        "followUpOnBoard": "1 tâche de suivi est au tableau des tâches",
+        "followUpsNotCreated": "L’incident est enregistré, mais ses tâches de suivi n’ont pas été créées",
+        "notSaved": "L’incident n’a pas été enregistré",
+        "ownerToldLabel": "J’ai prévenu le propriétaire de l’animal",
+        "ownerToldHelp": "Enregistre le moment où le propriétaire a été prévenu. Yipyy n’envoie pas le message à votre place : appelez-le ou écrivez-lui.",
+        "filing": "Enregistrement du rapport…",
+        "followUpNotSaved": "Le suivi n’a pas été enregistré",
+        "statusSaved": "« {title} » est maintenant : {status}",
+        "statusNotSaved": "L’incident n’a pas été modifié",
+        "statusOpen": "ouvert",
+        "statusInvestigating": "en cours d’enquête",
+        "statusResolved": "résolu",
+        "statusClosed": "fermé",
+        "followUpAdded": "Suivi ajouté au tableau des tâches"
       }
     }
   },

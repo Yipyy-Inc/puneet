@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { useFieldMask } from "@/lib/staff/mask";
-import { getIncidentsForBooking } from "@/data/incidents";
+import { useQuery } from "@tanstack/react-query";
+import { incidentQueries } from "@/lib/api/incidents";
 
 function formatDateShort(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
@@ -71,10 +72,13 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
   const total = booking.invoice?.total ?? booking.totalCost;
   const cId = clientId ?? booking.clientId;
   const duration = nights > 0 ? `${nights}n` : "day";
-  // Incidents filed against this booking (same getIncidentsForX derivation as
-  // 2E.1). The whole card links to the booking overview, so the icon navigates
-  // there too.
-  const incidentCount = getIncidentsForBooking(booking.id).length;
+  // Incidents filed against this booking. One query for every card on the
+  // page — React Query shares it — and the icon links to the booking overview
+  // with the rest of the card.
+  const { data: incidents = [] } = useQuery(incidentQueries.all());
+  const incidentCount = incidents.filter(
+    (i) => i.bookingId === booking.id,
+  ).length;
 
   return (
     <Link

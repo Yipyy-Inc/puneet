@@ -385,7 +385,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/grooming/GroomingBookingFlow.tsx", 1],
   ["src/components/guest-journal/PetCareNoteCard.tsx", 1],
   ["src/components/hq/LastUpdated.tsx", 1],
-  ["src/components/incidents/CreateIncidentModal.tsx", 1],
   ["src/components/incidents/InStayCareTab.tsx", 6],
   ["src/components/integrations/quickbooks/QuickBooksErrorPanel.tsx", 4],
   ["src/components/integrations/quickbooks/QuickBooksMappingCard.tsx", 3],

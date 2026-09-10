@@ -45,6 +45,10 @@ import {
   isIncidentInStay,
 } from "@/components/incidents/InStayCareTab";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useUpdateIncident } from "@/lib/api/incidents";
+import { useIncidentFollowUps } from "@/lib/incidents/use-incident-follow-ups";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { FollowUpTask, Incident } from "@/types/incidents";
 
 interface IncidentDetailsModalProps {
@@ -69,7 +73,15 @@ export function IncidentDetailsModal({
     dueDate: "",
   });
   const [showAddTask, setShowAddTask] = useState(false);
-  const [tasks, setTasks] = useState<FollowUpTask[]>(incident.followUpTasks);
+  // Status, close and follow-ups are written now. Every one of them was
+  // `setState` plus a `console.log("In a real app, would save to backend")`.
+  const { t, fill } = useStaffText("incidentReport");
+  const updateIncident = useUpdateIncident();
+  const {
+    followUps: tasks,
+    save: saveFollowUp,
+    add: addFollowUp,
+  } = useIncidentFollowUps(incident.id);
 
   // Closing with open follow-up tasks (Flow C) — gate on a confirm + reason.
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -85,7 +97,57 @@ export function IncidentDetailsModal({
     isIncidentInStay(incident) || !!incident.inStayCareLocked;
 
   const handleTaskUpdate = (next: FollowUpTask) => {
-    setTasks((prev) => prev.map((t) => (t.id === next.id ? next : t)));
+    saveFollowUp(next).catch((error: unknown) =>
+      toast.error(t("followUpNotSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      }),
+    );
+  };
+
+  const STATUS_KEY = {
+    open: "statusOpen",
+    investigating: "statusInvestigating",
+    resolved: "statusResolved",
+    closed: "statusClosed",
+  } as const;
+
+  /** Write a status; the select shows it at once and steps back on refusal. */
+  const persistStatus = async (
+    next: "open" | "investigating" | "resolved" | "closed",
+    closeNote?: string,
+  ) => {
+    const previous = status;
+    setStatus(next);
+    try {
+      await updateIncident.mutateAsync({
+        id: incident.id,
+        patch: {
+          status: next,
+          // There is no close-reason column; the reason is kept where staff
+          // will read it, at the end of the internal notes.
+          ...(closeNote
+            ? {
+                internalNotes: [incident.internalNotes, closeNote]
+                  .filter(Boolean)
+                  .join("\n\n"),
+              }
+            : {}),
+        },
+      });
+      toast.success(
+        fill("statusSaved", {
+          title: incident.title,
+          status: t(STATUS_KEY[next]),
+        }),
+      );
+      return true;
+    } catch (error) {
+      setStatus(previous);
+      toast.error(t("statusNotSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return false;
+    }
   };
 
   const getSeverityColor = (severity: string) => {
@@ -121,9 +183,7 @@ export function IncidentDetailsModal({
   const handleStatusChange = (
     newStatus: "open" | "investigating" | "resolved" | "closed",
   ) => {
-    setStatus(newStatus);
-    console.log("Status changed to:", newStatus);
-    // In a real app, would save to backend
+    void persistStatus(newStatus);
   };
 
   const handleCloseIncident = () => {
@@ -133,44 +193,45 @@ export function IncidentDetailsModal({
       setCloseConfirmOpen(true);
       return;
     }
-    setStatus("closed");
-    console.log("Incident closed");
-    onClose();
+    void persistStatus("closed").then((ok) => ok && onClose());
   };
 
   const confirmCloseWithOpenTasks = () => {
     if (!closeReason.trim()) return;
-    setStatus("closed");
     // Record the reason; open tasks are intentionally left untouched.
-    console.log("Incident closed", {
-      closeReason: closeReason.trim(),
-      openTasksLeftOpen: openTaskCount,
+    void persistStatus("closed", closeReason.trim()).then((ok) => {
+      if (!ok) return;
+      setCloseConfirmOpen(false);
+      onClose();
     });
-    setCloseConfirmOpen(false);
-    onClose();
   };
 
   const handleAddTask = () => {
     if (!newTask.title.trim()) return;
-    const task: FollowUpTask = {
-      id: `task-adhoc-${Date.now()}`,
-      incidentId: incident.id,
+    const task = {
       title: newTask.title.trim(),
       description: newTask.description.trim(),
       assignedTo: newTask.assignedTo || "Unassigned",
       dueDate: newTask.dueDate
         ? `${newTask.dueDate}:00`
         : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      status: "pending",
-      contactMethod: "phone",
+      contactMethod: "phone" as const,
       conversationLog: [],
       attemptCount: 0,
       escalated: false,
       surfacedToDailyTasks: true,
     };
-    setTasks((prev) => [...prev, task]);
-    setNewTask({ title: "", description: "", assignedTo: "", dueDate: "" });
-    setShowAddTask(false);
+    addFollowUp(incident, task, `adhoc-${Date.now()}`)
+      .then(() => {
+        toast.success(t("followUpAdded"));
+        setNewTask({ title: "", description: "", assignedTo: "", dueDate: "" });
+        setShowAddTask(false);
+      })
+      .catch((error: unknown) =>
+        toast.error(t("followUpNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        }),
+      );
   };
 
   return (

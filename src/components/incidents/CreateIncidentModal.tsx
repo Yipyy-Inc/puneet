@@ -25,7 +25,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertTriangle,
-  Camera,
   X,
   UserPlus,
   Siren,
@@ -55,7 +54,12 @@ import {
   Video,
   ArrowUpRight,
 } from "lucide-react";
-import { clients } from "@/data/clients";
+import { useQuery } from "@tanstack/react-query";
+import { clientQueries } from "@/lib/api/client";
+import { staffQueries } from "@/lib/api/staff";
+import { useReportIncident, useUpdateIncident } from "@/lib/api/incidents";
+import { useIncidentFollowUps } from "@/lib/incidents/use-incident-follow-ups";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAiText } from "@/hooks/use-ai-text";
 import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
@@ -64,10 +68,6 @@ import {
   suggestProtocols,
 } from "@/data/follow-up-protocols";
 import { generateFollowUpTasks } from "@/lib/incidents/generate-follow-up-tasks";
-import { generateCareActionsFromProtocol } from "@/lib/incidents/generate-care-actions";
-import { useIncidentReporting } from "@/lib/api/facility-settings";
-import { addFacilityNotification } from "@/data/facility-notifications";
-import { addIncident } from "@/data/incidents";
 import { toast } from "sonner";
 import type { ContactMethod } from "@/types/incidents";
 
@@ -87,7 +87,8 @@ interface CreateIncidentModalProps {
   reservationId?: string;
   boardingGuestId?: string;
   // Booking linkage (numeric booking-overview route param) + owner account.
-  // Threaded from the reporting context so the incident stores them on save.
+  // The booking is stored on save; the owner is not taken from here — the
+  // route derives it from the pets, so it cannot disagree with them.
   bookingId?: number;
   clientId?: number;
 }
@@ -585,7 +586,6 @@ export function CreateIncidentModal({
   reservationId,
   boardingGuestId,
   bookingId,
-  clientId,
 }: CreateIncidentModalProps) {
   const { user: currentUser } = useCurrentUser();
   const [incidentType, setIncidentType] = useState<IncidentType | "">("");
@@ -623,18 +623,21 @@ export function CreateIncidentModal({
   const [staffInvolved, setStaffInvolved] = useState<string[]>([]);
   // Pre-fill with the logged-in staff member (2A.1); still editable.
   const [reportedBy, setReportedBy] = useState(currentUser.name);
-  const [notifyManager, setNotifyManager] = useState(true);
-  const [notifyClient, setNotifyClient] = useState(false);
-  // Once the reporter toggles a notify checkbox, stop auto-setting it from the
-  // severity rule (they've taken manual control — 2G.1).
-  const [notifyTouched, setNotifyTouched] = useState(false);
-  const [photos, setPhotos] = useState<
-    { id: string; url: string; caption: string; isClientVisible: boolean }[]
-  >([]);
+  // An ATTESTATION, not a send: "I have told the owner" stamps
+  // owner_notified_at. It was "Notify Pet Owner", which sent nothing and said
+  // "client-facing message sent via their SMS/email". Unchecked by default —
+  // the facility's severity rule cannot tell somebody they already called.
+  const [ownerTold, setOwnerTold] = useState(false);
+  const { t, fill } = useStaffText("incidentReport");
+  const report = useReportIncident();
+  const updateIncident = useUpdateIncident();
+  const { add: addFollowUp } = useIncidentFollowUps();
+  const { data: realClients = [] } = useQuery(clientQueries.all());
+  const { data: staffProfiles = [] } = useQuery(staffQueries.profiles());
   const [selectedProtocolId, setSelectedProtocolId] = useState<string | "">("");
   const [autoSuggested, setAutoSuggested] = useState(false);
 
-  const allPets = clients.flatMap((client) =>
+  const allPets = realClients.flatMap((client) =>
     client.pets.map((pet) => ({
       uid: `${client.id}-${pet.id}`,
       id: pet.id,
@@ -646,17 +649,12 @@ export function CreateIncidentModal({
     })),
   );
 
-  // Ensure the logged-in staff member is always a selectable option.
-  const staffMembers = Array.from(
-    new Set([
-      currentUser.name,
-      "Sarah Johnson",
-      "Mike Davis",
-      "Emily Brown",
-      "Emma Wilson",
-      "John Smith",
-    ]),
+  // The facility's own staff — it was five hard-coded names. Picked by name,
+  // sent by id.
+  const staffIdByName = new Map(
+    staffProfiles.map((s) => [`${s.firstName} ${s.lastName}`.trim(), s.id]),
   );
+  const staffMembers = Array.from(staffIdByName.keys());
 
   const handleAddPet = (pet: PetOption) => {
     if (!selectedPets.find((p) => p.id === pet.id)) {
@@ -677,113 +675,74 @@ export function CreateIncidentModal({
     setStaffInvolved(staffInvolved.filter((s) => s !== staff));
   };
 
-  const handleAddPhoto = () => {
-    setPhotos([
-      ...photos,
-      {
-        id: `photo-${Date.now()}`,
-        url: `/images/incidents/photo-${photos.length + 1}.jpg`,
-        caption: "",
-        isClientVisible: false,
-      },
-    ]);
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Submit is gated by isValid, but narrow the union types for the record.
     if (!incidentType || !severity) return;
-    const fullIncidentDate = incidentDate
-      ? `${incidentDate}T${incidentTime}:00`
-      : "";
-    // Owner account: prefer the explicit prop, else derive from the reporting
-    // context (prefilled pet or the first selected pet's owner).
-    const resolvedClientId =
-      clientId ?? prefilledPet?.clientId ?? selectedPets[0]?.clientId;
-    const incidentId = `INC-${Date.now()}`;
-    const nowIso = new Date().toISOString();
-    const generatedTasks = selectedProtocol
-      ? generateFollowUpTasks(selectedProtocol, {
-          incidentId,
-          incidentDate: fullIncidentDate || nowIso,
+    const occurred = incidentDate
+      ? new Date(`${incidentDate}T${incidentTime}:00`).toISOString()
+      : new Date().toISOString();
+
+    let incident;
+    try {
+      incident = await report.mutateAsync({
+        type: incidentType,
+        severity,
+        title,
+        description,
+        internalNotes,
+        clientFacingNotes,
+        petRefs: selectedPets.map((p) => p.id),
+        staffIds: staffInvolved
+          .map((name) => staffIdByName.get(name))
+          .filter((id): id is string => Boolean(id)),
+        bookingRef: bookingId,
+        incidentDate: occurred,
+      });
+    } catch (error) {
+      toast.error(t("notSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return;
+    }
+    toast.success(fill("recorded", { title }));
+
+    if (ownerTold) {
+      await updateIncident
+        .mutateAsync({ id: incident.id, patch: { ownerNotified: true } })
+        .catch(() => undefined);
+    }
+
+    // The protocol's follow-ups go on the task board, where somebody will see
+    // them tomorrow. They were pushed onto the fixture incident and lived in
+    // one browser tab.
+    // Looked up here rather than read from `selectedProtocol` below, which is
+    // declared after this handler.
+    const protocol = followUpProtocols.find((p) => p.id === selectedProtocolId);
+    const followUps = protocol
+      ? generateFollowUpTasks(protocol, {
+          incidentId: incident.id,
+          incidentDate: occurred,
           reporter: reportedBy,
         })
       : [];
-    // In-stay care steps become pre-populated incident care actions (Flow A #8);
-    // staff review/adjust them in the In-Stay Care tab.
-    const generatedCareActions = selectedProtocol
-      ? generateCareActionsFromProtocol(selectedProtocol, {
-          incidentId,
-          createdBy: reportedBy,
-          createdAt: nowIso,
-        })
-      : [];
-    // Persist the incident so it flows to every read surface (In-Stay Care tab,
-    // booking Medications, Daily Care, care-completion alert, customer profile).
-    addIncident({
-      id: incidentId,
-      type: incidentType,
-      severity,
-      status: "open",
-      title,
-      description,
-      internalNotes,
-      clientFacingNotes,
-      petIds: selectedPets.map((p) => p.id),
-      petNames: selectedPets.map((p) => p.name),
-      staffInvolved,
-      reportedBy,
-      incidentDate: fullIncidentDate || nowIso,
-      reportedDate: nowIso,
-      photos,
-      followUpTasks: generatedTasks,
-      followUpProtocolId: selectedProtocolId || undefined,
-      managerNotified: notifyManager,
-      managersNotified: notifyManager ? ["On-duty manager"] : [],
-      clientNotified: notifyClient,
-      clientNotificationDate: notifyClient ? nowIso : undefined,
-      clientNotifications:
-        resolvedClientId != null
-          ? [
-              {
-                clientId: resolvedClientId,
-                notified: notifyClient,
-                notifiedAt: notifyClient ? nowIso : undefined,
-              },
-            ]
-          : undefined,
-      careActions: generatedCareActions,
-      incidentMedications: [],
-      careLogs: [],
-      reservationId,
-      bookingId,
-      clientId: resolvedClientId,
-      boardingGuestId,
-    });
-
-    // Flow A step 12 — fire the notifications the reporter left checked, plus
-    // the emergency contact when the severity rule calls for it (mocked).
-    const petNames = selectedPets.map((p) => p.name).join(", ");
-    if (notifyManager) {
-      addFacilityNotification({
-        type: "incident",
-        title: `Incident reported${severity ? ` — ${severity}` : ""}`,
-        message: `${title || "New incident"}${
-          petNames ? ` · ${petNames}` : ""
-        } — reported by ${reportedBy || "staff"}`,
-        facilityId: 11,
-        category: "boarding",
-        link: "/facility/dashboard/incidents",
-      });
-      toast.warning("Manager notified — incident added to the facility feed");
-    }
-    if (notifyClient) {
-      toast.success(
-        "Pet owner notified — client-facing message sent via their SMS/email",
+    if (followUps.length > 0) {
+      const petNames = selectedPets.map((p) => p.name).join(", ");
+      const results = await Promise.allSettled(
+        followUps.map((task) =>
+          addFollowUp(
+            incident,
+            {
+              ...task,
+              title: petNames ? `${task.title} — ${petNames}` : task.title,
+            },
+            task.stepOrder ?? task.id,
+          ),
+        ),
       );
-    }
-    const severityRule = severity ? incidentConfig.autoNotify[severity] : null;
-    if (severityRule?.notifyEmergencyContact) {
-      toast.warning("Emergency contact notified (from the pet's profile)");
+      const made = results.filter((r) => r.status === "fulfilled").length;
+      if (made < followUps.length) toast.error(t("followUpsNotCreated"));
+      else if (made === 1) toast.success(t("followUpOnBoard"));
+      else toast.success(fill("followUpsOnBoard", { n: made }));
     }
 
     onClose();
@@ -870,28 +829,13 @@ export function CreateIncidentModal({
   const isCriticalOrHigh = severity === "critical" || severity === "high";
   // Facility Incident Reporting settings (2G.1): photo gate + per-severity
   // auto-notify rules.
-  const { config: incidentConfig } = useIncidentReporting();
-  const criticalPhotoMissing =
-    incidentConfig.requirePhotoOnCritical &&
-    severity === "critical" &&
-    photos.length === 0;
-
-  // Pre-set the notify checkboxes from the selected severity's rule until the
-  // reporter overrides them (they can still change per incident).
-  useEffect(() => {
-    if (notifyTouched || !severity) return;
-    const rule = incidentConfig.autoNotify[severity];
-    setNotifyManager(rule.notifyManager);
-    setNotifyClient(rule.notifyOwner);
-  }, [severity, notifyTouched, incidentConfig]);
   const isValid =
     incidentType &&
     severity &&
     title &&
     description &&
     selectedPets.length > 0 &&
-    reportedBy &&
-    !criticalPhotoMissing;
+    reportedBy;
 
   return (
     <>
@@ -1400,102 +1344,6 @@ export function CreateIncidentModal({
           </div>
         </div>
 
-        {/* ── Photos ──────────────────────────────────────────────────────── */}
-        <div className="space-y-3">
-          <SectionHeader
-            icon={Camera}
-            label="Photos"
-            iconBg="bg-purple-100 dark:bg-purple-900/30"
-            iconColor="text-purple-600 dark:text-purple-400"
-            badge={
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={handleAddPhoto}
-              >
-                <Camera className="mr-1 size-3" />
-                Add Photo
-              </Button>
-            }
-          />
-
-          {photos.length === 0 ? (
-            <button
-              onClick={handleAddPhoto}
-              className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors hover:border-purple-300 hover:bg-purple-50/40 dark:hover:bg-purple-900/10"
-            >
-              <div className="bg-muted flex size-10 items-center justify-center rounded-xl">
-                <Camera className="text-muted-foreground size-5" />
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Click to attach photos of the incident
-              </p>
-              <p className="text-muted-foreground text-xs">
-                You can control which ones are visible to the client
-              </p>
-            </button>
-          ) : (
-            <div className="space-y-2">
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="bg-muted/30 flex items-start gap-3 rounded-xl border p-3"
-                >
-                  <div className="bg-muted flex size-14 shrink-0 items-center justify-center rounded-lg border">
-                    <Camera className="text-muted-foreground size-5" />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Input
-                      placeholder="Caption (optional)"
-                      value={photo.caption}
-                      onChange={(e) =>
-                        setPhotos(
-                          photos.map((p) =>
-                            p.id === photo.id
-                              ? { ...p, caption: e.target.value }
-                              : p,
-                          ),
-                        )
-                      }
-                      className="h-8 text-sm"
-                    />
-                    <div className="flex items-center justify-between">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs">
-                        <Checkbox
-                          checked={photo.isClientVisible}
-                          onCheckedChange={() =>
-                            setPhotos(
-                              photos.map((p) =>
-                                p.id === photo.id
-                                  ? {
-                                      ...p,
-                                      isClientVisible: !p.isClientVisible,
-                                    }
-                                  : p,
-                              ),
-                            )
-                          }
-                        />
-                        <Eye className="text-muted-foreground size-3" />
-                        Visible to client
-                      </label>
-                      <button
-                        onClick={() =>
-                          setPhotos(photos.filter((p) => p.id !== photo.id))
-                        }
-                        className="text-muted-foreground hover:text-destructive rounded-sm transition-colors"
-                      >
-                        <X className="size-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* ── Notifications ───────────────────────────────────────────────── */}
         <div className="space-y-3">
           <SectionHeader
@@ -1506,41 +1354,16 @@ export function CreateIncidentModal({
           />
 
           <div className="divide-y rounded-xl border">
-            <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between p-4">
+            <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 p-4">
               <div className="space-y-0.5">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  Notify Manager
-                  {isCriticalOrHigh && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      Default for {severity}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Send an immediate alert to the facility manager
+                <p className="text-sm font-medium">{t("ownerToldLabel")}</p>
+                <p className="text-ink-tertiary text-xs">
+                  {t("ownerToldHelp")}
                 </p>
               </div>
               <Checkbox
-                checked={notifyManager}
-                onCheckedChange={(v) => {
-                  setNotifyManager(v as boolean);
-                  setNotifyTouched(true);
-                }}
-              />
-            </label>
-            <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between p-4">
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">Notify Pet Owner</p>
-                <p className="text-muted-foreground text-xs">
-                  Send the client-facing message you wrote above
-                </p>
-              </div>
-              <Checkbox
-                checked={notifyClient}
-                onCheckedChange={(v) => {
-                  setNotifyClient(v as boolean);
-                  setNotifyTouched(true);
-                }}
+                checked={ownerTold}
+                onCheckedChange={(v) => setOwnerTold(v === true)}
               />
             </label>
           </div>
@@ -1678,8 +1501,6 @@ export function CreateIncidentModal({
                 !description && "description",
                 selectedPets.length === 0 && "at least one pet",
                 !reportedBy && "reported by",
-                criticalPhotoMissing &&
-                  "a photo (required for critical incidents)",
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -1694,13 +1515,13 @@ export function CreateIncidentModal({
           Cancel
         </Button>
         <Button
-          onClick={handleSubmit}
-          disabled={!isValid}
+          onClick={() => void handleSubmit()}
+          disabled={!isValid || report.isPending}
           className="gap-2"
           variant={isCriticalOrHigh ? "destructive" : "default"}
         >
           <Siren className="size-4" />
-          File Incident Report
+          {report.isPending ? t("filing") : "File Incident Report"}
         </Button>
       </DialogFooter>
     </>
