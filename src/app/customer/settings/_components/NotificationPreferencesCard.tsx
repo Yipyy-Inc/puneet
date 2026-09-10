@@ -29,6 +29,7 @@ import {
   type NotificationCategoryState,
   type NotificationPreferences,
 } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 type LanguageOption = { code: string; label: string };
 
@@ -61,24 +62,25 @@ export function NotificationPreferencesCard({
   customerPets,
   isEditing,
 }: NotificationPreferencesCardProps) {
+  const { t } = useCustomerText("settings");
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="size-5" />
-          Notification Preferences
+          {t("notificationPreferences")}
         </CardTitle>
-        <CardDescription>
-          Choose how you want to receive notifications from the facility
-        </CardDescription>
+        <CardDescription>{t("chooseHowYouWantTo")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Service notifications — what + how */}
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-base font-semibold">Service notifications</h3>
+            <h3 className="text-base font-semibold">
+              {t("serviceNotifications")}
+            </h3>
             <p className="text-muted-foreground hidden text-xs sm:block">
-              Choose what to be notified about and where to receive it.
+              {t("chooseWhatToBeNotified")}
             </p>
           </div>
 
@@ -138,11 +140,11 @@ export function NotificationPreferencesCard({
                               !isOn && "text-muted-foreground",
                             )}
                           >
-                            {cat.label}
+                            {t(cat.labelKey)}
                           </p>
                         </div>
                         <p className="text-muted-foreground mt-1 ml-9 text-xs/relaxed">
-                          {cat.description}
+                          {t(cat.descriptionKey)}
                         </p>
                       </div>
                     </label>
@@ -172,9 +174,9 @@ export function NotificationPreferencesCard({
         {/* Marketing — separate group to make the consent boundary explicit */}
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-base font-semibold">Marketing</h3>
+            <h3 className="text-base font-semibold">{t("marketing")}</h3>
             <p className="text-muted-foreground hidden text-xs sm:block">
-              Optional. Unsubscribe at any time.
+              {t("optionalUnsubscribeAtAnyTime")}
             </p>
           </div>
 
@@ -229,11 +231,11 @@ export function NotificationPreferencesCard({
                               !isOn && "text-muted-foreground",
                             )}
                           >
-                            {cat.label}
+                            {t(cat.labelKey)}
                           </p>
                         </div>
                         <p className="text-muted-foreground mt-1 ml-9 text-xs/relaxed">
-                          {cat.description}
+                          {t(cat.descriptionKey)}
                         </p>
                       </div>
                     </label>
@@ -266,9 +268,11 @@ export function NotificationPreferencesCard({
           <>
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <h3 className="text-base font-semibold">Report cards by pet</h3>
+                <h3 className="text-base font-semibold">
+                  {t("reportCardsByPet")}
+                </h3>
                 <p className="text-muted-foreground hidden text-xs sm:block">
-                  Pick which pets should generate report cards.
+                  {t("pickWhichPetsShouldGenerate")}
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -331,19 +335,17 @@ export function NotificationPreferencesCard({
             <div className="mb-1 flex items-center gap-2">
               <Bell className="text-muted-foreground size-5" />
               <h3 className="text-lg font-semibold">
-                Quiet Hours (SMS & Push)
+                {t("quietHoursSmsPush")}
               </h3>
             </div>
             <p className="text-muted-foreground text-sm">
-              During quiet hours, non‑urgent SMS and push notifications will be
-              held and sent after your quiet period ends. Emergency alerts may
-              still be delivered.
+              {t("quietHoursHint")}
             </p>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
-                <Label className="text-sm">Enable Quiet Hours</Label>
+                <Label className="text-sm">{t("enableQuietHours")}</Label>
                 <p className="text-muted-foreground text-xs">
-                  Temporarily mute reminders and updates overnight.
+                  {t("temporarilyMuteRemindersAndUpdates")}
                 </p>
               </div>
               <Switch
@@ -360,7 +362,7 @@ export function NotificationPreferencesCard({
             {notificationPreferences.quietHoursEnabled && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="quiet-start">Start Time</Label>
+                  <Label htmlFor="quiet-start">{t("startTime")}</Label>
                   <Input
                     id="quiet-start"
                     type="time"
@@ -375,7 +377,7 @@ export function NotificationPreferencesCard({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="quiet-end">End Time</Label>
+                  <Label htmlFor="quiet-end">{t("endTime")}</Label>
                   <Input
                     id="quiet-end"
                     type="time"
@@ -397,15 +399,15 @@ export function NotificationPreferencesCard({
           <div className="space-y-4">
             <div className="mb-1 flex items-center gap-2">
               <UserCircle className="text-muted-foreground size-5" />
-              <h3 className="text-lg font-semibold">Language Preference</h3>
+              <h3 className="text-lg font-semibold">
+                {t("languagePreference")}
+              </h3>
             </div>
             <p className="text-muted-foreground text-sm">
-              Choose the language you prefer for emails, SMS (where supported),
-              and in‑app communications for facilities that support multiple
-              languages.
+              {t("languagePreferenceHint")}
             </p>
             <div className="max-w-xs space-y-2">
-              <Label htmlFor="language">Language</Label>
+              <Label htmlFor="language">{t("language")}</Label>
               <Select
                 value={selectedNotificationLanguage}
                 onValueChange={(value) =>
@@ -417,7 +419,7 @@ export function NotificationPreferencesCard({
                 disabled={!isEditing}
               >
                 <SelectTrigger id="language">
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={t("selectLanguage")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customerLanguageOptions.map((option) => (
@@ -428,7 +430,7 @@ export function NotificationPreferencesCard({
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
-                Language options are based on your facility settings.
+                {t("languageOptionsAreBasedOn")}
               </p>
             </div>
           </div>

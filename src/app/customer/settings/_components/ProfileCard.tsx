@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import type { ProfileData } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface ProfileCardProps {
   profileData: ProfileData;
@@ -34,23 +35,21 @@ export function ProfileCard({
   isEditing,
   errors,
 }: ProfileCardProps) {
+  const { t } = useCustomerText("settings");
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="size-5" />
-          Profile Information
+          {t("profileInformation")}
         </CardTitle>
-        <CardDescription>
-          Your personal information. Updates will reflect on the facility side
-          automatically.
-        </CardDescription>
+        <CardDescription>{t("profileHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">
-              Full Name <span className="text-destructive">*</span>
+              {t("fullName")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="name"
@@ -62,13 +61,13 @@ export function ProfileCard({
               aria-invalid={errors.name ? "true" : "false"}
             />
             {errors.name && (
-              <p className="text-destructive text-sm">{errors.name}</p>
+              <p className="text-destructive text-sm">{t(errors.name)}</p>
             )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">
-              Email <span className="text-destructive">*</span>
+              {t("email")} <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
               <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -85,12 +84,12 @@ export function ProfileCard({
               />
             </div>
             {errors.email && (
-              <p className="text-destructive text-sm">{errors.email}</p>
+              <p className="text-destructive text-sm">{t(errors.email)}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t("phone")}</Label>
             <div className="relative">
               <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
@@ -107,7 +106,7 @@ export function ProfileCard({
               />
             </div>
             {errors.phone && (
-              <p className="text-destructive text-sm">{errors.phone}</p>
+              <p className="text-destructive text-sm">{t(errors.phone)}</p>
             )}
           </div>
         </div>
@@ -117,11 +116,11 @@ export function ProfileCard({
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <MapPin className="text-muted-foreground size-5" />
-            <Label className="text-base font-semibold">Address</Label>
+            <Label className="text-base font-semibold">{t("address")}</Label>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="street">Street Address</Label>
+              <Label htmlFor="street">{t("streetAddress")}</Label>
               <Input
                 id="street"
                 value={profileData.address.street}
@@ -135,12 +134,12 @@ export function ProfileCard({
                   })
                 }
                 disabled={!isEditing}
-                placeholder="123 Main Street"
+                placeholder={t("str123MainStreet")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
+              <Label htmlFor="city">{t("city")}</Label>
               <Input
                 id="city"
                 value={profileData.address.city}
@@ -154,12 +153,12 @@ export function ProfileCard({
                   })
                 }
                 disabled={!isEditing}
-                placeholder="Springfield"
+                placeholder={t("springfield")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
+              <Label htmlFor="state">{t("state")}</Label>
               <Input
                 id="state"
                 value={profileData.address.state}
@@ -178,7 +177,7 @@ export function ProfileCard({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="zip">ZIP Code</Label>
+              <Label htmlFor="zip">{t("zipCode")}</Label>
               <Input
                 id="zip"
                 value={profileData.address.zip}
@@ -197,7 +196,7 @@ export function ProfileCard({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
+              <Label htmlFor="country">{t("country")}</Label>
               <Select
                 value={profileData.address.country}
                 onValueChange={(value) =>
@@ -212,10 +211,10 @@ export function ProfileCard({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USA">United States</SelectItem>
-                  <SelectItem value="CAN">Canada</SelectItem>
-                  <SelectItem value="MEX">Mexico</SelectItem>
-                  <SelectItem value="GBR">United Kingdom</SelectItem>
+                  <SelectItem value="USA">{t("unitedStates")}</SelectItem>
+                  <SelectItem value="CAN">{t("canada")}</SelectItem>
+                  <SelectItem value="MEX">{t("mexico")}</SelectItem>
+                  <SelectItem value="GBR">{t("unitedKingdom")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -228,7 +227,7 @@ export function ProfileCard({
           <div className="flex items-center gap-2">
             <UserCircle className="text-muted-foreground size-5" />
             <Label className="text-base font-semibold">
-              Additional Contacts
+              {t("additionalContacts")}
             </Label>
           </div>
           <AdditionalContactsManager
@@ -241,7 +240,7 @@ export function ProfileCard({
             }
             disabled={!isEditing}
             heading=""
-            description="Add people who can be contacted for emergencies, pickup, or drop-off. Tag each contact with what they're authorized to do."
+            description={t("addPeopleWhoCanBe")}
           />
         </div>
       </CardContent>

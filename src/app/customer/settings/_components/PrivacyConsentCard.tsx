@@ -37,6 +37,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { PhotoUsageScope, PrivacyPreferences } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface PrivacyConsentCardProps {
   privacyPreferences: PrivacyPreferences;
@@ -44,28 +45,19 @@ interface PrivacyConsentCardProps {
   isEditing: boolean;
 }
 
+// Each option's words, by CATALOGUE KEY.
 const PHOTO_OPTIONS: {
   value: PhotoUsageScope;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
 }[] = [
-  {
-    value: "all",
-    label: "All marketing channels",
-    description:
-      "Photos may appear on the website, social media, ads, and printed materials.",
-  },
+  { value: "all", labelKey: "photosAll", descriptionKey: "photosAllHint" },
   {
     value: "facility",
-    label: "Facility website only",
-    description:
-      "Photos may appear on the facility website and lobby boards — not on social media or ads.",
+    labelKey: "photosFacility",
+    descriptionKey: "photosFacilityHint",
   },
-  {
-    value: "none",
-    label: "Don’t use my pet’s photos",
-    description: "Photos are kept for internal records and report cards only.",
-  },
+  { value: "none", labelKey: "photosNone", descriptionKey: "photosNoneHint" },
 ];
 
 export function PrivacyConsentCard({
@@ -73,6 +65,7 @@ export function PrivacyConsentCard({
   setPrivacyPreferences,
   isEditing,
 }: PrivacyConsentCardProps) {
+  const { t } = useCustomerText("settings");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const update = <K extends keyof PrivacyPreferences>(
@@ -83,16 +76,12 @@ export function PrivacyConsentCard({
   };
 
   const handleExportData = () => {
-    toast.success(
-      "Data export requested. We'll email you a download link within 48 hours.",
-    );
+    toast.success(t("dataExportRequested"));
   };
 
   const handleConfirmDelete = () => {
     setConfirmDelete(false);
-    toast.success(
-      "Account deletion requested. Our team will reach out within 5 business days to confirm.",
-    );
+    toast.success(t("accountDeletionRequested"));
   };
 
   return (
@@ -100,13 +89,9 @@ export function PrivacyConsentCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldOff className="size-5" />
-          Privacy & Consent
+          {t("privacyAndConsent")}
         </CardTitle>
-        <CardDescription>
-          Control how your data and your pet&apos;s photos may be used. Your
-          facility honors these preferences across all communications and
-          marketing.
-        </CardDescription>
+        <CardDescription>{t("privacyHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Photo & media usage */}
@@ -114,7 +99,7 @@ export function PrivacyConsentCard({
           <div className="flex items-center gap-2">
             <Camera className="text-muted-foreground size-5" />
             <Label className="text-base font-semibold">
-              Photo & media usage
+              {t("photoMediaUsage")}
             </Label>
           </div>
           <RadioGroup
@@ -143,9 +128,9 @@ export function PrivacyConsentCard({
                   className="mt-0.5"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{option.label}</p>
+                  <p className="text-sm font-medium">{t(option.labelKey)}</p>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    {option.description}
+                    {t(option.descriptionKey)}
                   </p>
                 </div>
               </label>
@@ -158,14 +143,14 @@ export function PrivacyConsentCard({
         {/* Granular toggles */}
         <div className="space-y-3">
           <Label className="text-base font-semibold">
-            Visibility & sharing
+            {t("visibilityAndSharing")}
           </Label>
           <div className="divide-border/70 divide-y overflow-hidden rounded-xl border">
             <PrivacyToggleRow
               icon={Share2}
               iconClass="bg-pink-50 text-pink-600"
-              title="Social media tagging"
-              description="Allow the facility to tag your pet's name in their social media posts."
+              title={t("socialMediaTagging")}
+              description={t("allowTheFacilityToTag")}
               checked={privacyPreferences.socialMediaTagging}
               onCheckedChange={(checked) =>
                 update("socialMediaTagging", checked)
@@ -175,8 +160,8 @@ export function PrivacyConsentCard({
             <PrivacyToggleRow
               icon={Globe}
               iconClass="bg-violet-50 text-violet-600"
-              title="Lobby boards & client wall"
-              description="Show your pet on the facility's in-house displays (welcome board, birthday celebrations)."
+              title={t("lobbyBoardsClientWall")}
+              description={t("showYourPetOnThe")}
               checked={privacyPreferences.lobbyBoardVisibility}
               onCheckedChange={(checked) =>
                 update("lobbyBoardVisibility", checked)
@@ -186,8 +171,8 @@ export function PrivacyConsentCard({
             <PrivacyToggleRow
               icon={Building2}
               iconClass="bg-blue-50 text-blue-600"
-              title="Cross-location sharing"
-              description="Share your profile and pet records with sister locations of this facility, so you can book at any of them seamlessly."
+              title={t("crossLocationSharing")}
+              description={t("shareYourProfileAndPet")}
               checked={privacyPreferences.crossLocationSharing}
               onCheckedChange={(checked) =>
                 update("crossLocationSharing", checked)
@@ -197,8 +182,8 @@ export function PrivacyConsentCard({
             <PrivacyToggleRow
               icon={Phone}
               iconClass="bg-amber-50 text-amber-600"
-              title="Call recording"
-              description="Allow inbound and outbound calls to be recorded for quality and training. You'll always be notified at the start of a recorded call."
+              title={t("callRecording")}
+              description={t("allowInboundAndOutboundCalls")}
               checked={privacyPreferences.callRecording}
               onCheckedChange={(checked) => update("callRecording", checked)}
               disabled={!isEditing}
@@ -212,10 +197,9 @@ export function PrivacyConsentCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-semibold">Your data</Label>
+              <Label className="text-base font-semibold">{t("yourData")}</Label>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Request a copy of everything we have on file, or close your
-                account permanently.
+                {t("yourDataHint")}
               </p>
             </div>
           </div>
@@ -226,7 +210,7 @@ export function PrivacyConsentCard({
               onClick={handleExportData}
             >
               <Download className="mr-2 size-4" />
-              Export my data
+              {t("exportMyData")}
             </Button>
             <Button
               variant="outline"
@@ -234,13 +218,12 @@ export function PrivacyConsentCard({
               onClick={() => setConfirmDelete(true)}
             >
               <Trash2 className="mr-2 size-4" />
-              Delete my account
+              {t("deleteMyAccount")}
             </Button>
           </div>
           <p className="text-muted-foreground flex items-start gap-2 text-xs">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-            Account deletion is reviewed manually. Outstanding bookings or
-            balances must be settled first.
+            {t("accountDeletionReviewed")}
           </p>
         </div>
       </CardContent>
@@ -248,20 +231,18 @@ export function PrivacyConsentCard({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteYourAccount")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This sends a deletion request to your facility. Your pets&apos;
-              records, booking history, and saved payment methods will be
-              removed once the request is approved. This can&apos;t be undone.
+              {t("deleteAccountWarning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Request deletion
+              {t("requestDeletion")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

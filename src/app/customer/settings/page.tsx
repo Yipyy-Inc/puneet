@@ -14,8 +14,10 @@ import { LoginSecurityCard } from "./_components/LoginSecurityCard";
 import { PasskeysCard } from "@/components/auth/PasskeysCard";
 import { PrivacyConsentCard } from "./_components/PrivacyConsentCard";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 export default function CustomerSettingsPage() {
+  const { t } = useCustomerText("settings");
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const form = useCustomerSettingsForm();
 
@@ -25,13 +27,13 @@ export default function CustomerSettingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <PageHeader
-            title="Account Settings"
-            description="Manage your profile and preferences"
+            title={t("accountSettings")}
+            description={t("manageYourProfileAndPreferences")}
           />
           {!form.isEditing ? (
             <Button onClick={() => form.setIsEditing(true)}>
               <Edit className="mr-2 size-4" />
-              Edit Profile
+              {t("editProfile")}
             </Button>
           ) : (
             <div className="flex gap-2">
@@ -40,18 +42,18 @@ export default function CustomerSettingsPage() {
                 onClick={form.handleCancel}
                 disabled={form.isSaving}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button onClick={form.handleSave} disabled={form.isSaving}>
                 {form.isSaving ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Saving...
+                    {t("saving")}
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 size-4" />
-                    Save Changes
+                    {t("saveChanges")}
                   </>
                 )}
               </Button>
@@ -120,12 +122,10 @@ export default function CustomerSettingsPage() {
                 <AlertCircle className="text-primary mt-0.5 size-5" />
                 <div className="flex-1">
                   <p className="mb-1 text-sm font-medium">
-                    Changes sync automatically
+                    {t("changesSyncAutomatically")}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    Any updates you make will automatically reflect on the
-                    facility side. The facility staff will see your updated
-                    information immediately.
+                    {t("updatesReflectOnFacilitySide")}
                   </p>
                 </div>
               </div>

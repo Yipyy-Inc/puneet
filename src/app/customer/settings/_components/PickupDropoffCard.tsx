@@ -11,6 +11,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProfileData } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface PickupDropoffCardProps {
   profileData: ProfileData;
@@ -23,30 +24,28 @@ export function PickupDropoffCard({
   setProfileData,
   isEditing,
 }: PickupDropoffCardProps) {
+  const { t } = useCustomerText("settings");
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="size-5" />
-          Pick-up & Drop-off Instructions
+          {t("pickUpDropOffInstructions")}
         </CardTitle>
-        <CardDescription>
-          Let the facility know who is allowed to pick up your pets and any
-          special instructions for boarding or daycare.
-        </CardDescription>
+        <CardDescription>{t("pickupHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="authorizedPickup">
-              Who is allowed to pick up?{" "}
+              {t("whoMayPickUp")}{" "}
               <span className="text-muted-foreground text-xs font-normal">
                 (Names of family, friends, pet transport services)
               </span>
             </Label>
             <Textarea
               id="authorizedPickup"
-              placeholder="Example: Robert Johnson (spouse), Sarah Lee (sister), Paws Taxi Service"
+              placeholder={t("exampleRobertJohnsonSpouseSarah")}
               rows={4}
               value={profileData.pickupDropoff.authorizedPickupPeople}
               onChange={(e) =>
@@ -63,11 +62,11 @@ export function PickupDropoffCard({
           </div>
           <div className="space-y-2">
             <Label htmlFor="pickupNotes">
-              Additional instructions (optional)
+              {t("additionalInstructionsOptional")}
             </Label>
             <Textarea
               id="pickupNotes"
-              placeholder="Gate code, parking details, which door to use, special handling notes..."
+              placeholder={t("gateCodeParkingDetailsWhich")}
               rows={4}
               value={profileData.pickupDropoff.notes}
               onChange={(e) =>
@@ -83,10 +82,7 @@ export function PickupDropoffCard({
             />
           </div>
         </div>
-        <p className="text-muted-foreground text-xs">
-          Staff will use this information at check-in and pick-up. Make sure the
-          people you list bring a valid ID when picking up your pet.
-        </p>
+        <p className="text-muted-foreground text-xs">{t("pickupStaffHint")}</p>
       </CardContent>
     </Card>
   );

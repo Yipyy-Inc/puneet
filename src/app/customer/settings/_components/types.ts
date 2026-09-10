@@ -12,10 +12,11 @@ import type { AdditionalContact } from "@/types/client";
 
 export type NotificationChannel = "email" | "sms" | "push";
 
-export const CHANNEL_LABELS: Record<NotificationChannel, string> = {
-  email: "Email",
-  sms: "SMS",
-  push: "Push",
+/** A channel's name, by CATALOGUE KEY in `customerPages.areas.settings`. */
+export const CHANNEL_KEYS: Record<NotificationChannel, string> = {
+  email: "channelEmail",
+  sms: "channelSms",
+  push: "channelPush",
 };
 
 export type NotificationCategoryKey =
@@ -31,8 +32,9 @@ export type NotificationCategoryGroup = "service" | "marketing";
 
 export interface NotificationCategoryMeta {
   key: NotificationCategoryKey;
-  label: string;
-  description: string;
+  /** Catalogue keys, not copy — the card renders them through `t`. */
+  labelKey: string;
+  descriptionKey: string;
   allowedChannels: NotificationChannel[];
   group: NotificationCategoryGroup;
   icon: typeof Bell;
@@ -42,9 +44,8 @@ export interface NotificationCategoryMeta {
 export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   {
     key: "bookingConfirmations",
-    label: "Booking confirmations",
-    description:
-      "Updates when a booking is confirmed, rescheduled, or cancelled.",
+    labelKey: "catBookingConfirmations",
+    descriptionKey: "catBookingConfirmationsHint",
     allowedChannels: ["email", "sms", "push"],
     group: "service",
     icon: CalendarCheck,
@@ -52,8 +53,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "bookingReminders",
-    label: "Booking reminders",
-    description: "Friendly reminders 24 hours before each appointment.",
+    labelKey: "catBookingReminders",
+    descriptionKey: "catBookingRemindersHint",
     allowedChannels: ["email", "sms", "push"],
     group: "service",
     icon: CalendarClock,
@@ -61,8 +62,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "checkInOut",
-    label: "Check-in & check-out",
-    description: "Alerts when your pet arrives at and leaves the facility.",
+    labelKey: "catCheckInOut",
+    descriptionKey: "catCheckInOutHint",
     allowedChannels: ["email", "sms", "push"],
     group: "service",
     icon: LogIn,
@@ -70,8 +71,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "reportCards",
-    label: "Report cards & pet updates",
-    description: "Photos and daily updates from the team.",
+    labelKey: "catReportCards",
+    descriptionKey: "catReportCardsHint",
     allowedChannels: ["email", "push"],
     group: "service",
     icon: Sparkles,
@@ -79,8 +80,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "paymentReceipts",
-    label: "Payment receipts",
-    description: "A receipt every time you’re charged.",
+    labelKey: "catPaymentReceipts",
+    descriptionKey: "catPaymentReceiptsHint",
     allowedChannels: ["email"],
     group: "service",
     icon: CreditCard,
@@ -88,8 +89,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "emergencyAlerts",
-    label: "Emergency alerts",
-    description: "Critical, time-sensitive issues only.",
+    labelKey: "catEmergencyAlerts",
+    descriptionKey: "catEmergencyAlertsHint",
     allowedChannels: ["sms", "push"],
     group: "service",
     icon: ShieldAlert,
@@ -97,9 +98,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryMeta[] = [
   },
   {
     key: "marketing",
-    label: "Promotions & news",
-    description:
-      "Occasional offers and facility news. Standard rates may apply.",
+    labelKey: "catMarketing",
+    descriptionKey: "catMarketingHint",
     allowedChannels: ["email", "sms"],
     group: "marketing",
     icon: Megaphone,

@@ -11883,3 +11883,30 @@ worse, the gate got sharper: customer +11 strings in 10 files, admin +34 in
 30, employee +26 in 19, facility +83 in 52. Every raised count is the count
 the gate itself measures for that file, set by a throwaway script that only
 touches files the gate calls NEW.
+
+### Account settings (`/customer/settings`) — **Save saves nothing, and the privacy requests go nowhere**
+
+- **"Save changes" is a timeout.** `handleSave` in
+  `use-customer-settings-form.ts` is `// TODO: Replace with actual API call`,
+  a one-second wait, and "Profile updated. Changes will show on the facility
+  side." Nothing leaves the browser: name, email, phone, address, contacts,
+  pick-up instructions, notification choices, auto-tip and privacy choices
+  are all lost on reload. The page's banner says "Facility staff see your
+  updated information right away" beside it. The login and security card is
+  the exception and is real (see the comment in `page.tsx`).
+- **"Export my data" and "Delete my account" are toasts.** They say "We'll
+  email you a download link within 48 hours" and "Our team will reach out
+  within 5 business days". No request is recorded and no one is told. In
+  Quebec, under Law 25, an access request and a deletion request are legal
+  obligations with deadlines — a screen that acknowledges them and drops
+  them is worse than one that has no button.
+- **The notification, privacy and instant-booking choices are read from
+  fixtures** (`@/data/services-pricing` for the membership that grants
+  instant booking), and the photo-consent and call-recording switches have
+  no backing store either.
+- The address block said "State" and "ZIP Code" with a country list headed
+  "United States"; the labels are "Province" and "Postal code" now, as the
+  add-a-pet form's became. The country list itself is unchanged.
+- Validation messages were stored in state as English sentences; they are
+  catalogue keys now and render through `t`, so a French customer reads the
+  error in French.

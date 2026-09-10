@@ -20,6 +20,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { PaymentPreferences } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface PaymentPreferencesCardProps {
   paymentPreferences: PaymentPreferences;
@@ -32,28 +33,22 @@ export function PaymentPreferencesCard({
   setPaymentPreferences,
   isEditing,
 }: PaymentPreferencesCardProps) {
+  const { t } = useCustomerText("settings");
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="size-5" />
-          Payment Preferences
+          {t("paymentPreferences")}
         </CardTitle>
-        <CardDescription>
-          Set a default tip to apply automatically when a card on file is
-          charged. Skips the tip prompt at checkout.
-        </CardDescription>
+        <CardDescription>{t("autoTipHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
           <div className="space-y-0.5 pr-4">
-            <Label className="text-sm">
-              Apply the tip to my account automatically when processing the
-              payment
-            </Label>
+            <Label className="text-sm">{t("autoTipLabel")}</Label>
             <p className="text-muted-foreground text-xs">
-              When enabled, the tip below is added to every payment without
-              showing a prompt.
+              {t("autoTipSwitchHint")}
             </p>
           </div>
           <Switch
@@ -74,7 +69,7 @@ export function PaymentPreferencesCard({
             !paymentPreferences.enabled && "opacity-50",
           )}
         >
-          <Label className="text-sm">Auto tipping</Label>
+          <Label className="text-sm">{t("autoTipping")}</Label>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr]">
             <Select
               value={paymentPreferences.type}
@@ -90,8 +85,8 @@ export function PaymentPreferencesCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentage">By percentage</SelectItem>
-                <SelectItem value="fixed">Fixed amount</SelectItem>
+                <SelectItem value="percentage">{t("byPercentage")}</SelectItem>
+                <SelectItem value="fixed">{t("fixedAmount")}</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative">
