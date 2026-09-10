@@ -22,6 +22,9 @@
 --   6  a note about a pet that does not exist is refused, 23503
 --   7  the pet's own customer CANNOT read an internal note
 --   8  anon holds no privilege on the table at all
+--   9  once a note is SHARED, the pet's customer reads it — and not the
+--        internal one beside it (20260910202241)
+--  10  sharing a note does not show it to another facility
 -- ============================================================================
 
 begin;
@@ -171,6 +174,36 @@ begin
   perform public.link_client_record('notes-alpha');
   select count(*) into n from public.notes;
   perform pg_temp.t(7, 'the pet''s own customer CANNOT read an internal note',
+    n = 0, n || ' rows');
+end $$;
+
+-- ── 9, 10. Shared with the customer ───────────────────────────────────────
+
+reset role;
+update public.notes set visibility = 'shared_with_customer'
+ where content = 'Nervous around the dryer.';
+insert into public.notes (facility_id, category, entity_id, content, visibility)
+select f.id, 'pet', p.id, 'Bit a groomer.', 'internal'
+  from public.pets p, public.facilities f
+ where p.name = 'Pepper' and f.slug = 'notes-alpha';
+set local role authenticated;
+
+do $$
+declare n int; body text;
+begin
+  select count(*), min(content) into n, body from public.notes;
+  perform pg_temp.t(9, 'the pet''s own customer reads the note shared with them, and only that one',
+    n = 1 and body = 'Nervous around the dryer.', n || ' rows, ' || coalesce(body, 'none'));
+end $$;
+
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_ntOwnerB000000000000000000000','role','authenticated')::text, true);
+
+do $$
+declare n int;
+begin
+  select count(*) into n from public.notes;
+  perform pg_temp.t(10, 'a shared note is still not another facility''s to read',
     n = 0, n || ' rows');
 end $$;
 
