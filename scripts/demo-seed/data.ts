@@ -798,3 +798,219 @@ export const FACILITY_PROFILE = {
     country: "Canada",
   },
 };
+
+// ── The facility's routine: task templates per service ────────────────────
+//
+// What the booking page's Tasks card is generated from. Recurring ones repeat
+// per night of a stay, so a week's boarding has a week of kennel cleans.
+
+export type SeedTaskTemplate = {
+  legacyId: string;
+  moduleId: "boarding" | "daycare" | "grooming";
+  name: string;
+  description: string;
+  category: "setup" | "execution" | "cleanup" | "transport" | "care" | "custom";
+  timingType: "before_start" | "at_start" | "during" | "at_end" | "after_end";
+  offsetMinutes?: number;
+  durationMinutes: number;
+  isRequired: boolean;
+  recurringTimes?: string[];
+};
+
+export const TASK_TEMPLATES: SeedTaskTemplate[] = [
+  {
+    legacyId: `${SEED_PREFIX}-task-suite-prep`,
+    moduleId: "boarding",
+    name: "Prepare the suite",
+    description: "Fresh bedding, water bowl, name card on the door.",
+    category: "setup",
+    timingType: "before_start",
+    offsetMinutes: -60,
+    durationMinutes: 15,
+    isRequired: true,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-arrival-check`,
+    moduleId: "boarding",
+    name: "Arrival health check",
+    description:
+      "Eyes, ears, coat and weight; note anything the owner did not mention.",
+    category: "care",
+    timingType: "at_start",
+    durationMinutes: 10,
+    isRequired: true,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-suite-clean`,
+    moduleId: "boarding",
+    name: "Clean the suite",
+    description: "Spot clean, refresh water, check the bedding.",
+    category: "cleanup",
+    timingType: "during",
+    durationMinutes: 10,
+    isRequired: false,
+    recurringTimes: ["10:00"],
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-departure-brush`,
+    moduleId: "boarding",
+    name: "Going-home brush",
+    description: "A brush and a photo for the owner before pickup.",
+    category: "execution",
+    timingType: "at_end",
+    offsetMinutes: -30,
+    durationMinutes: 15,
+    isRequired: false,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-temperament`,
+    moduleId: "daycare",
+    name: "Temperament check at drop-off",
+    description: "How they greet the group decides the playgroup today.",
+    category: "care",
+    timingType: "at_start",
+    durationMinutes: 5,
+    isRequired: true,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-daycare-report`,
+    moduleId: "daycare",
+    name: "Write the day's report card",
+    description: "Two lines and a photo before pickup.",
+    category: "execution",
+    timingType: "at_end",
+    offsetMinutes: -45,
+    durationMinutes: 10,
+    isRequired: false,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-station-prep`,
+    moduleId: "grooming",
+    name: "Set up the station",
+    description: "Blades cleaned, towels out, the right shampoo for the coat.",
+    category: "setup",
+    timingType: "before_start",
+    offsetMinutes: -15,
+    durationMinutes: 10,
+    isRequired: true,
+  },
+  {
+    legacyId: `${SEED_PREFIX}-task-after-photo`,
+    moduleId: "grooming",
+    name: "Take the after photo",
+    description: "For the owner's report card.",
+    category: "execution",
+    timingType: "at_end",
+    durationMinutes: 5,
+    isRequired: false,
+  },
+];
+
+// ── Notes staff have written ─────────────────────────────────────────────
+
+export type SeedNote = {
+  /** The pet's or the client's name in the seed; the runner resolves it. */
+  about: { pet: string } | { client: string };
+  subType?: "general" | "behavior" | "medical" | "feeding";
+  content: string;
+  pinned?: boolean;
+  shared?: boolean;
+  author: string;
+};
+
+export const NOTES: SeedNote[] = [
+  {
+    about: { pet: "Maple" },
+    subType: "medical",
+    content:
+      "Heart murmur. Vetmedin 08:00 and 20:00 in a pill pocket — never skip. Short walks only, no group play.",
+    pinned: true,
+    author: "Valérie Lacroix",
+  },
+  {
+    about: { pet: "Biscuit" },
+    subType: "behavior",
+    content:
+      "Resource guards tennis balls. Fine with every dog otherwise; take the balls out of the yard before his group goes in.",
+    pinned: true,
+    author: "Valérie Lacroix",
+  },
+  {
+    about: { pet: "Luna" },
+    subType: "feeding",
+    content: "Eats slowly — give her twenty minutes before you lift the bowl.",
+    shared: true,
+    author: "Hugo Martel",
+  },
+  {
+    about: { client: "Isabelle Morin" },
+    content:
+      "Prefers a text over a call during the day. Picks up after 17:30 on weekdays.",
+    author: "Valérie Lacroix",
+  },
+];
+
+// ── Incidents on record ───────────────────────────────────────────────────
+
+export type SeedIncident = {
+  key: string;
+  pet: string;
+  kind:
+    | "injury"
+    | "illness"
+    | "behavioral"
+    | "accident"
+    | "escape"
+    | "fight"
+    | "other";
+  severity: "low" | "medium" | "high" | "critical";
+  status: "open" | "investigating" | "resolved" | "closed";
+  title: string;
+  description: string;
+  internalNotes: string;
+  clientNotes: string;
+  daysAgo: number;
+  ownerTold: boolean;
+  followUp?: { title: string; description: string; dueInDays: number };
+};
+
+export const INCIDENTS: SeedIncident[] = [
+  {
+    key: `${SEED_PREFIX}-incident-01`,
+    pet: "Biscuit",
+    kind: "behavioral",
+    severity: "medium",
+    status: "investigating",
+    title: "Growled at a playmate over a ball",
+    description:
+      "Biscuit growled and snapped the air when a younger dog reached for his ball in the big-dog yard. No contact. Separated for ten minutes, then back in without toys.",
+    internalNotes:
+      "Third time with toys this month. Take balls out of the yard before his group.",
+    clientNotes:
+      "Biscuit had a short disagreement over a toy today — no contact, and he went back to playing happily without toys.",
+    daysAgo: 2,
+    ownerTold: true,
+    followUp: {
+      title: "Call the owner about toy guarding",
+      description:
+        "Ask whether it happens at home, and whether they want a trainer's opinion.",
+      dueInDays: 1,
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-incident-02`,
+    pet: "Luna",
+    kind: "injury",
+    severity: "low",
+    status: "resolved",
+    title: "Small scratch on the left ear",
+    description:
+      "Found a 1 cm scratch on Luna's left ear during the afternoon round. Cleaned with saline; no swelling.",
+    internalNotes:
+      "Probably the fence by run 4 — maintenance asked to check it.",
+    clientNotes:
+      "Luna has a small scratch on her left ear. We cleaned it and it looks fine; keep an eye on it for a day or two.",
+    daysAgo: 9,
+    ownerTold: true,
+  },
+];

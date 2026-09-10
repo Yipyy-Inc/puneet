@@ -18,7 +18,7 @@
  */
 import { SQL, type TransactionSQL } from "bun";
 import { DEMO_FACILITY_ID, DEMO_FACILITY_SLUG, SEED_PREFIX } from "./config";
-import { CATEGORIES } from "./data";
+import { CATEGORIES, INCIDENTS, NOTES } from "./data";
 
 const ROLLBACK = process.argv.includes("--rollback");
 class Rollback extends Error {}
@@ -31,6 +31,9 @@ const kept: string[] = [];
 
 /** A uuid[] parameter: the driver sends a JS array as a bare comma list. */
 const pgArray = (ids: string[]) => `{${ids.join(",")}}`;
+/** A text[] literal whose elements may hold commas, quotes or spaces. */
+const pgTextArray = (items: string[]) =>
+  `{${items.map((v) => `"${v.replace(/[\\"]/g, (c) => `\\${c}`)}"`).join(",")}}`;
 
 type Tx = TransactionSQL;
 
@@ -80,6 +83,36 @@ try {
       throw new Error(
         `Facility ${DEMO_FACILITY_ID} is not ${DEMO_FACILITY_SLUG}. Refusing.`,
       );
+    }
+
+    // ── Notes and incidents the seed wrote ────────────────────────────────
+    // Neither has a foreign key to what it is about (notes are polymorphic;
+    // incidents keep pets in an array), so deleting a seeded pet would leave
+    // them behind. Matched by their exact seeded words, never by facility
+    // alone: the client's own notes and incidents stay.
+    const notes = await tx`
+      delete from public.notes
+       where facility_id = ${DEMO_FACILITY_ID}
+         and content = any(${pgTextArray(NOTES.map((n) => n.content))}::text[])`;
+    if (notes.count) removed["public.notes"] = notes.count;
+    const incidents = await tx`
+      select id, ref from public.incidents
+       where facility_id = ${DEMO_FACILITY_ID}
+         and title = any(${pgTextArray(INCIDENTS.map((i) => i.title))}::text[])`;
+    for (const inc of incidents) {
+      const tasks = await tx`
+        delete from public.facility_tasks
+         where facility_id = ${DEMO_FACILITY_ID}
+           and source = 'manual' and source_ref like ${`incident:${inc.ref}:%`}`;
+      if (tasks.count)
+        removed["public.facility_tasks"] =
+          (removed["public.facility_tasks"] ?? 0) + tasks.count;
+    }
+    if (incidents.length) {
+      const gone = await tx`
+        delete from public.incidents
+         where id = any(${pgArray(incidents.map((i: { id: string }) => i.id))}::uuid[])`;
+      removed["public.incidents"] = gone.count;
     }
 
     const seeded = async (table: string): Promise<string[]> =>
@@ -199,6 +232,11 @@ try {
     };
 
     await byLegacy("staff", "legacy_id like $2", `${SEED_PREFIX}-staff-%`);
+    await byLegacy(
+      "task_templates",
+      "legacy_id like $2",
+      `${SEED_PREFIX}-task-%`,
+    );
     await byLegacy(
       "grooming_add_ons",
       "legacy_id like $2",
