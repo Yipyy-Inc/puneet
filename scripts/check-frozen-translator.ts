@@ -91,6 +91,32 @@ const TRANSLATORS = [
   "label",
 ];
 
+/**
+ * Names that freeze without ever being CALLED.
+ *
+ * ── ADDED 2026-09-10, AND WHY THE FIRST ATTEMPT MEASURED NOTHING ─────────
+ *
+ * Both of these flip when hydration lands, exactly as `t` does, so a memo
+ * that uses one without listing it serves the pre-hydration value forever:
+ *
+ *   navText   `useNavText()` returns an OBJECT of translators, used as
+ *             `navText.item(url, title)`. The customer and super-admin
+ *             sidebars both build their menu in a memo through it.
+ *   locale    `useStaffText`, `useShellLocale` and `useCustomerText` all
+ *             hand back the effective locale, which is "en" until hydration.
+ *             A memo that formats money or a date with it and does not list
+ *             it shows a French user en-CA figures for the life of the page —
+ *             `$458.85` where they should read `458,85 $`.
+ *
+ * They were first added to TRANSLATORS above, and the gate reported zero.
+ * That zero was the matcher, not the code: TRANSLATORS counts a name as used
+ * only when it is CALLED — `t(` — and neither of these ever is. One is read
+ * through a dot and the other is passed as an argument. So they get their own
+ * rule: a REFERENCE to the identifier, not preceded by a dot (`intl.locale`
+ * is somebody else's) and not followed by a colon (`{ locale: x }` is a key).
+ */
+const CAPTURED = ["navText", "locale"];
+
 const BASELINE = 0;
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -163,11 +189,22 @@ for (const file of walk("src")) {
     if (!depMatch) continue;
     const depLine = depMatch[1].replace(/\s+/g, " ").trim();
 
+    // ── MATCH AGAINST CODE, NOT COMMENTS ─────────────────────────────────
+    //
+    // Twice in two days a comment tripped this: a `french-ok` note quoting
+    // `t(GROUP_KEY[heading])` read as a call, and "re-firing on a locale
+    // change is harmless" read as a captured `locale`. So the NAME tests run
+    // on the body with comments blanked. A `//` counts only after whitespace
+    // or at the start of a line, so the one inside "https://…" survives.
+    const code = body
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/(^|\s)\/\/.*$/gm, "$1");
+
     const used = TRANSLATORS.filter((name) => {
       // A CALL of the identifier, not a mention of it — `t(` but not `t.foo`
       // and not `format(t)`. The leading class excludes `.t(`, `at(`, `let(`.
       const call = new RegExp(`(^|[^\\w.$])${name}\\s*\\(`, "m");
-      if (!call.test(body)) return false;
+      if (!call.test(code)) return false;
       // Already DEFINED inside the memo? Then it is not closed over.
       //
       // Three shapes, and the third is why this list is not just `const`:
@@ -180,8 +217,21 @@ for (const file of walk("src")) {
           `|\\b${name}\\s*[:=]\\s*(\\(|async|function)` + // t: (…) => …
           `|\\b${name}\\s*=>`, // t => …
       );
-      return !defined.test(body);
+      return !defined.test(code);
     });
+    for (const name of CAPTURED) {
+      const ref = new RegExp(`(^|[^\\w.$])${name}(?!\\s*:)(?![\\w$])`, "m");
+      if (!ref.test(code)) continue;
+      // Defined inside the memo — `const locale = …`, a destructure, or a
+      // parameter of the memo's own arrow — is not captured.
+      const defined = new RegExp(
+        `(const|let|var)\\s+${name}\\b` +
+          `|(const|let|var)\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*=` +
+          `|\\(\\s*[^)]*\\b${name}\\b[^)]*\\)\\s*=>`,
+      );
+      if (defined.test(code)) continue;
+      used.push(name);
+    }
     if (used.length === 0) continue;
 
     const missing = used.filter(

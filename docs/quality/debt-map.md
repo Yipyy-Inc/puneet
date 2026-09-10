@@ -11379,3 +11379,63 @@ person lowers it by hand; the file only ever moves down.
 The customer portal, because it is the one surface a member of the PUBLIC
 reads, and because its dashboard is the screen that exposed all this: "Welcome
 back, Alice!" and an estimate quoted as `$458.85` behind a French sidebar.
+
+## 2026-09-10 — the customer dashboard, and five things the conversion turned up
+
+The first page off the new ratchet: `customer/dashboard/page.tsx` (67 strings)
+and the training-credits banner it renders (9), both to zero, verified in a
+real browser with French asserted first. The estimate line that exposed the
+page-body gap now reads **`458,85 $`** with "Pension" where it said
+`$458.85` and a raw `boarding`.
+
+It is converted into a new catalogue, `messages.*.customerPages.areas`, read
+through `useCustomerText(area)` — the same `{ locale, t, fill }` contract as
+`useStaffText`, so the two portals convert with the same hands. Two helpers
+came with it: `rich()` for a translated sentence with a bold value mid-
+sentence (French moves the value; a JSX fragment around English words pins
+it), and `serviceTypeLabel` / `statusLabel`, which read `messages.serviceTypes`
+and `messages.status` — both correctly translated for months and **read by
+nothing**, since the only next-intl provider is scoped to `auth`. Eight
+booking statuses were missing from `status` and are in now.
+
+### Fixed alongside, because the same screen showed them
+
+- **A fifth hand-rolled relative clock.** `formatTimeAgo` rendered "3d ago",
+  which §5q forbids past 24 hours. It is `formatRelative` now.
+- **`formatList`** — the household's pets were joined with `&`. `Intl.ListFormat`
+  says "Buddy, Whiskers, Daisy et Max".
+- **78 plain spaces before `:` and `%` across ALL of `fr.json`**, against 10
+  correct non-breaking ones — so "Allergies :" could strand its colon. Swept
+  to U+00A0 and held by a unit test that asserts on the character itself,
+  because the two look identical in review, which is how 78 got in (several of
+  them mine, from the previous two days).
+- **`check:frozen-translator` could not see `navText` or `locale`.** It counts
+  a name as used only when it is CALLED, and neither ever is — one is read
+  through a dot, one is passed as an argument. Adding them to its list first
+  produced a zero that meant nothing; the fix was a second, reference-based
+  rule, proven by two negative controls. It also blanks comments before
+  matching now, after a comment tripped it for the second time in two days.
+- **The staff catalogue had no parity test** — 1,136 keys. It passes one now
+  (with 38 cognates read and allow-listed), and so does the new customer
+  catalogue. Both, and the shell, now also check that a French string carries
+  every `{placeholder}` its English one does — a dropped `{pet}` reads fine and
+  silently loses the name.
+
+### Recorded, not fixed
+
+- **The loyalty card says "Silver · 160 pts to Silver".** `currentTier` comes
+  from the stored `tier` field and `nextTier` is computed from points, and the
+  fixture stores `silver` against 340 points. Two sources that disagree; derive
+  the current tier from points. Fixture-backed (`src/data/marketing`), so not
+  changed inside a translation commit.
+- **Every pet reads "Healthy" with a green dot**, and the empty action list
+  reads "Add your first pet: done ✓", whatever the record says. Neither is
+  backed by data. Translated as found — removing a claim is a product call —
+  but both are claims the screen cannot support.
+- **The customer header overlaps its own logo** — the facility name and
+  "Portail client" render over the Yipyy mark at the top-left of the main
+  area. Seen in all three customer screenshots taken on 2026-09-10, in both
+  languages, so it is not a French-length problem. Cause not investigated.
+- `check:ui-french`'s object scanner does not know `actionLabel:` — the
+  dashboard's "Upload Vaccination" buttons were converted because they were
+  read on screen, not because the gate listed them.

@@ -258,6 +258,20 @@ export function formatTimeOfDay(value: string, locale: AppLocale): string {
   return out.replace(/\ba\.m\./i, "AM").replace(/\bp\.m\./i, "PM");
 }
 
+/**
+ * `Buddy, Whiskers and Max` · `Buddy, Whiskers et Max` — a list of names.
+ *
+ * The customer dashboard joined a household's pets with ` & `, which is an
+ * English habit on a French screen. `Intl.ListFormat` knows the conjunction
+ * and the comma rules for both locales. The NAMES pass through untouched —
+ * §5q keeps a pet's name out of the locale layer; only the glue is localised.
+ */
+export function formatList(items: string[], locale: AppLocale): string {
+  return new Intl.ListFormat(TAG[locale], { type: "conjunction" }).format(
+    items,
+  );
+}
+
 // ── MONEY, NUMBERS, PERCENT ────────────────────────────────────────────────
 
 /** `$42.50` · `42,50 $` — Canadian dollars, with the French NBSP. */

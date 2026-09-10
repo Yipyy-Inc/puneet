@@ -61,6 +61,18 @@ import {
 import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatDateShort as intlDateShort,
+  formatList,
+  formatMoney,
+  formatNumber,
+  formatRelative,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
+import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
+import { rich } from "@/lib/i18n/rich";
 
 // ============================================================================
 // WHO THIS PAGE IS FOR comes from the session now.
@@ -88,6 +100,7 @@ const MOOD_TONE: Record<string, string> = {
 };
 
 export default function CustomerDashboardPage() {
+  const { t, fill, locale } = useCustomerText("dashboard");
   const { selectedFacility } = useCustomerFacility();
   const { config: yipyyGoConfig, isPending: yipyyGoPending } =
     useCustomerYipyyGo();
@@ -283,14 +296,14 @@ export default function CustomerDashboardPage() {
     const pet = customerPets.find((p) => p.id === card.petRef);
     const mood = typeof card.input.mood === "string" ? card.input.mood : "";
     return {
-      petName: card.petName ?? pet?.name ?? "Your pet",
+      petName: card.petName ?? pet?.name ?? t("yourPet"),
       petImage: pet?.imageUrl,
       // The signed URL, or nothing. A private-bucket path that failed to sign
       // renders as a broken image.
       photo: card.photos.find((p) => p.url)?.url ?? null,
       mood,
     };
-  }, [customerPets, myReportCards]);
+  }, [customerPets, myReportCards, t]);
 
   // Get unfinished bookings for this customer + facility
   const unfinishedBookings = useMemo(() => {
@@ -343,13 +356,18 @@ export default function CustomerDashboardPage() {
       upcomingNeedingForm.forEach((b) => {
         const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
         const pet = customer.pets?.find((p) => p.id === petId);
-        const petName = pet?.name ?? "Your pet";
+        const petName = pet?.name ?? t("yourPet");
         actions.push({
           type: "yipyygo_needed",
           priority: "high",
-          title: `Express Check-in required for ${petName}'s ${b.service}`,
-          message: `Complete the Express Check-in form before drop-off on ${new Date(b.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} — you won't be able to leave your pet until this is done.`,
-          actionLabel: "Complete form",
+          title: fill("expressRequiredTitle", {
+            pet: petName,
+            service: serviceTypeLabel(locale, b.service ?? ""),
+          }),
+          message: fill("expressRequiredMessage", {
+            date: intlDateShort(b.startDate, locale),
+          }),
+          actionLabel: t("completeForm"),
           actionLink: `/customer/bookings/${b.id}/yipyygo-form`,
           petName: pet?.name,
         });
@@ -377,9 +395,9 @@ export default function CustomerDashboardPage() {
           actions.push({
             type: "vaccination_expired",
             priority: "high",
-            title: `Vaccination missing for ${pet.name}`,
-            message: `${req.name} vaccination is required — upload now`,
-            actionLabel: "Upload Vaccination",
+            title: fill("vaccineMissingTitle", { pet: pet.name }),
+            message: fill("vaccineMissingMessage", { vaccine: req.name }),
+            actionLabel: t("uploadVaccination"),
             actionLink: `/customer/pets/${pet.id}`,
             petName: pet.name,
           });
@@ -394,9 +412,14 @@ export default function CustomerDashboardPage() {
             actions.push({
               type: "vaccination_expired",
               priority: "high",
-              title: `Vaccines expired for ${pet.name}`,
-              message: `${req.name} expired ${Math.abs(daysUntilExpiry)} day${Math.abs(daysUntilExpiry) > 1 ? "s" : ""} ago — upload now`,
-              actionLabel: "Upload Vaccination",
+              title: fill("vaccineExpiredTitle", { pet: pet.name }),
+              message: fill(
+                Math.abs(daysUntilExpiry) === 1
+                  ? "vaccineExpiredMessageOne"
+                  : "vaccineExpiredMessageMany",
+                { vaccine: req.name, days: Math.abs(daysUntilExpiry) },
+              ),
+              actionLabel: t("uploadVaccination"),
               actionLink: `/customer/pets/${pet.id}`,
               petName: pet.name,
             });
@@ -404,9 +427,14 @@ export default function CustomerDashboardPage() {
             actions.push({
               type: "vaccination_expiring",
               priority: "medium",
-              title: `Vaccination expiring for ${pet.name}`,
-              message: `${req.name} expires in ${daysUntilExpiry} day${daysUntilExpiry > 1 ? "s" : ""}`,
-              actionLabel: "Update Vaccination",
+              title: fill("vaccineExpiringTitle", { pet: pet.name }),
+              message: fill(
+                daysUntilExpiry === 1
+                  ? "vaccineExpiringMessageOne"
+                  : "vaccineExpiringMessageMany",
+                { vaccine: req.name, days: daysUntilExpiry },
+              ),
+              actionLabel: t("updateVaccination"),
               actionLink: `/customer/pets/${pet.id}`,
               petName: pet.name,
             });
@@ -423,9 +451,14 @@ export default function CustomerDashboardPage() {
       actions.push({
         type: "booking_pending",
         priority: "medium",
-        title: "Booking request pending",
-        message: `You have ${pendingBookings.length} booking request${pendingBookings.length > 1 ? "s" : ""} pending facility approval`,
-        actionLabel: "View Bookings",
+        title: t("bookingPendingTitle"),
+        message: fill(
+          pendingBookings.length === 1
+            ? "bookingPendingMessageOne"
+            : "bookingPendingMessageMany",
+          { count: pendingBookings.length },
+        ),
+        actionLabel: t("viewBookings"),
         actionLink: "/customer/bookings",
       });
     }
@@ -441,9 +474,9 @@ export default function CustomerDashboardPage() {
       actions.push({
         type: "payment_failed",
         priority: "high",
-        title: "Payment failed",
-        message: "Update your payment method to continue using services",
-        actionLabel: "Update Payment",
+        title: t("paymentFailedTitle"),
+        message: t("paymentFailedMessage"),
+        actionLabel: t("updatePayment"),
         actionLink: "/customer/billing",
       });
     }
@@ -460,9 +493,14 @@ export default function CustomerDashboardPage() {
       actions.push({
         type: "payment_failed",
         priority: "high",
-        title: "Payment overdue",
-        message: `You have ${overdueInvoices.length} overdue invoice${overdueInvoices.length > 1 ? "s" : ""}`,
-        actionLabel: "View Invoices",
+        title: t("paymentOverdueTitle"),
+        message: fill(
+          overdueInvoices.length === 1
+            ? "paymentOverdueMessageOne"
+            : "paymentOverdueMessageMany",
+          { count: overdueInvoices.length },
+        ),
+        actionLabel: t("viewInvoices"),
         actionLink: "/customer/billing",
       });
     }
@@ -481,43 +519,37 @@ export default function CustomerDashboardPage() {
     selectedFacility,
     yipyyGoConfig,
     yipyyGoPending,
+    t,
+    fill,
+    locale,
   ]);
 
   // Format date/time helper
+  // §5q, three ways. Each was a format string pinned to en-US; the date and
+  // the check-in time now come from Intl in the reader's locale, and the
+  // "time ago" is formatRelative — which is also what stops it saying "3d
+  // ago": relative time expires at 24 hours, and past that it is a date. This
+  // was the FIFTH hand-rolled relative clock found in the customer portal.
   const formatDateTime = (dateString: string, timeString?: string) => {
     if (!isMounted) return "";
-    const date = new Date(dateString);
-    const dateStr = date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-    if (timeString) {
-      return `${dateStr} - ${timeString}`;
-    }
-    return dateStr;
+    const dateStr = formatDateLong(dateString, locale);
+    return timeString
+      ? `${dateStr} · ${formatTimeOfDay(timeString, locale)}`
+      : dateStr;
   };
 
-  const formatDateShort = (date: Date) => {
-    if (!isMounted) return "";
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const formatDateShort = (date: Date) =>
+    isMounted ? intlDateShort(date, locale) : "";
 
-  const formatTimeAgo = (timestamp: string) => {
-    if (!isMounted) return "";
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffMs = now.getTime() - time.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const formatTimeAgo = (timestamp: string) =>
+    isMounted ? formatRelative(timestamp, locale) : "";
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+  // A mood is one of the facility's fixed answers. An unknown one — a mood a
+  // facility added — reads as the facility wrote it, never as `mood_sleepy`.
+  const moodLabel = (mood: string) => {
+    const key = `mood_${mood}`;
+    const label = t(key);
+    return label === key ? mood : label;
   };
 
   // Get service icon
@@ -561,7 +593,7 @@ export default function CustomerDashboardPage() {
                 <div className="flex items-center gap-2.5">
                   <Clock className="size-4 shrink-0 text-amber-600" />
                   <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                    You have unfinished bookings — pick up where you left off
+                    {t("unfinishedTitle")}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
                     {unfinishedBookings.length}
@@ -592,8 +624,10 @@ export default function CustomerDashboardPage() {
                           <ServiceIcon className="size-4 text-amber-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-amber-900 capitalize dark:text-amber-200">
-                            {ub.service ?? "Booking"}
+                          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                            {ub.service
+                              ? serviceTypeLabel(locale, ub.service)
+                              : t("bookingFallback")}
                             {ub.petName && (
                               <span className="font-normal text-amber-700 dark:text-amber-400">
                                 {" "}
@@ -609,7 +643,9 @@ export default function CustomerDashboardPage() {
                               />
                             </div>
                             <span className="text-xs text-amber-700 dark:text-amber-400">
-                              Stopped at {stepInfo.label}
+                              {fill("stoppedAt", {
+                                step: t(`abandon_${ub.abandonmentStep}`),
+                              })}
                             </span>
                           </div>
                         </div>
@@ -621,7 +657,7 @@ export default function CustomerDashboardPage() {
                           <Link
                             href={`/customer/bookings/new?resumeBooking=${ub.id}`}
                           >
-                            Resume
+                            {t("resume")}
                             <ArrowRight className="size-3.5" />
                           </Link>
                         </Button>
@@ -634,7 +670,9 @@ export default function CustomerDashboardPage() {
                         href="/customer/bookings?tab=unfinished"
                         className="text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400"
                       >
-                        +{unfinishedBookings.length - 3} more →
+                        {fill("moreCount", {
+                          count: unfinishedBookings.length - 3,
+                        })}
                       </Link>
                     </div>
                   )}
@@ -661,11 +699,17 @@ export default function CustomerDashboardPage() {
                 knows it. A customer's first name is one of the strings that
                 never passes through the locale layer. */}
             <PageHeader
-              title={`Welcome back${customer ? `, ${customer.name.split(" ")[0]}` : ""}!`}
+              title={
+                customer
+                  ? fill("welcomeBackName", {
+                      name: customer.name.split(" ")[0],
+                    })
+                  : t("welcomeBack")
+              }
               description={
                 isMounted && selectedFacility
-                  ? `Manage your pets and book services at ${selectedFacility.name}`
-                  : "Manage your pets and book services with ease"
+                  ? fill("manageAt", { facility: selectedFacility.name })
+                  : t("manageGeneric")
               }
             />
           </div>
@@ -677,15 +721,20 @@ export default function CustomerDashboardPage() {
             <Card className="relative cursor-pointer overflow-hidden border border-emerald-100/70 bg-linear-to-br from-white via-white to-emerald-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-100/60">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-emerald-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">My Pets</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t("tileMyPets")}
+                </CardTitle>
                 <PawPrint className="size-4 text-emerald-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{customerPets.length}</div>
                 <p className="text-muted-foreground text-xs">
                   {customerPets.length > 0
-                    ? customerPets.map((p) => p.name).join(" & ")
-                    : "Add your first pet"}
+                    ? formatList(
+                        customerPets.map((p) => p.name),
+                        locale,
+                      )
+                    : t("addFirstPet")}
                 </p>
               </CardContent>
             </Card>
@@ -696,7 +745,7 @@ export default function CustomerDashboardPage() {
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-sky-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Upcoming Appointments
+                  {t("tileUpcoming")}
                 </CardTitle>
                 <Calendar className="size-4 text-sky-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
@@ -706,8 +755,10 @@ export default function CustomerDashboardPage() {
                 </div>
                 <p className="text-muted-foreground text-xs">
                   {upcomingBookings.length > 0 && nextBooking
-                    ? `Next: ${formatDateShort(new Date(nextBooking.startDate))}`
-                    : "No upcoming appointments"}
+                    ? fill("nextOn", {
+                        date: formatDateShort(new Date(nextBooking.startDate)),
+                      })
+                    : t("noUpcoming")}
                 </p>
               </CardContent>
             </Card>
@@ -717,7 +768,9 @@ export default function CustomerDashboardPage() {
             <Card className="relative cursor-pointer overflow-hidden border border-cyan-100/80 bg-linear-to-br from-white via-white to-cyan-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-100/60">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-cyan-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Messages</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  {t("tileMessages")}
+                </CardTitle>
                 <MessageSquare className="size-4 text-cyan-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
               <CardContent>
@@ -725,10 +778,15 @@ export default function CustomerDashboardPage() {
                 <p className="text-muted-foreground text-xs">
                   {messagesData.unread > 0 ? (
                     <span className="font-medium text-sky-700">
-                      {messagesData.unread} new messages
+                      {fill(
+                        messagesData.unread === 1
+                          ? "newMessagesOne"
+                          : "newMessagesMany",
+                        { count: messagesData.unread },
+                      )}
                     </span>
                   ) : (
-                    "No new messages"
+                    t("noNewMessages")
                   )}
                 </p>
               </CardContent>
@@ -740,7 +798,7 @@ export default function CustomerDashboardPage() {
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-rose-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Report Cards
+                  {t("tileReportCards")}
                 </CardTitle>
                 <FileText className="size-4 text-rose-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
@@ -750,8 +808,10 @@ export default function CustomerDashboardPage() {
                 </div>
                 <p className="text-muted-foreground text-xs">
                   {reportCardsData.latest
-                    ? `Latest: ${formatDateShort(reportCardsData.latest)}`
-                    : "No report cards yet"}
+                    ? fill("latestOn", {
+                        date: formatDateShort(reportCardsData.latest),
+                      })
+                    : t("noReportCards")}
                 </p>
               </CardContent>
             </Card>
@@ -783,32 +843,34 @@ export default function CustomerDashboardPage() {
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-emerald-900 dark:text-emerald-200">
-                  New report card from{" "}
-                  <span className="font-semibold">
-                    {isMounted && selectedFacility
-                      ? selectedFacility.name
-                      : businessProfile.businessName}
-                  </span>{" "}
-                  —{" "}
-                  <span className="font-semibold">{newReportCard.petName}</span>
                   {/* Mood is one of the facility's optional questions. When it
                       was not answered the sentence closes without it, rather
-                      than reading "had a  day!". */}
-                  {newReportCard.mood ? (
-                    <>
-                      {" "}
-                      had a{" "}
-                      <span className="capitalize">
-                        {newReportCard.mood}
-                      </span>{" "}
-                      day! 🐶
-                    </>
-                  ) : (
-                    <> has a new report! 🐶</>
+                      than reading "had a  day!". One catalogue sentence per
+                      case, so French can put the pet and the mood where
+                      French puts them. */}
+                  {rich(
+                    t(
+                      newReportCard.mood ? "reportCardMood" : "reportCardPlain",
+                    ),
+                    {
+                      facility: (
+                        <span className="font-semibold">
+                          {isMounted && selectedFacility
+                            ? selectedFacility.name
+                            : businessProfile.businessName}
+                        </span>
+                      ),
+                      pet: (
+                        <span className="font-semibold">
+                          {newReportCard.petName}
+                        </span>
+                      ),
+                      mood: moodLabel(newReportCard.mood),
+                    },
                   )}
                 </p>
                 <span className="text-primary mt-0.5 inline-flex items-center gap-1 text-xs font-medium group-hover:underline">
-                  View {newReportCard.petName}&apos;s Report
+                  {fill("viewPetReport", { pet: newReportCard.petName })}
                   <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
@@ -839,32 +901,39 @@ export default function CustomerDashboardPage() {
               <div className="flex min-w-0 items-center gap-2.5">
                 <FileText className="size-4 shrink-0 text-blue-600" />
                 <span className="text-sm text-blue-900 dark:text-blue-200">
-                  {pendingEstimates.length === 1 ? (
-                    <>
-                      {isMounted && selectedFacility
-                        ? selectedFacility.name
-                        : businessProfile.businessName}{" "}
-                      sent you an estimate for{" "}
-                      <span className="font-semibold">
-                        {pendingEstimates[0].petNames[0] ??
-                          pendingEstimates[0].guestPetInfo?.name ??
-                          "your pet"}
-                        &apos;s{" "}
-                        <span className="capitalize">
-                          {pendingEstimates[0].service}
-                        </span>
-                      </span>{" "}
-                      — ${pendingEstimates[0].total.toFixed(2)}. Accept or
-                      decline
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-semibold">
-                        {pendingEstimates.length} estimates
-                      </span>{" "}
-                      awaiting your response
-                    </>
-                  )}
+                  {pendingEstimates.length === 1
+                    ? rich(t("estimateOne"), {
+                        facility:
+                          isMounted && selectedFacility
+                            ? selectedFacility.name
+                            : businessProfile.businessName,
+                        what: (
+                          <span className="font-semibold">
+                            {fill("estimateWhat", {
+                              pet:
+                                pendingEstimates[0].petNames[0] ??
+                                pendingEstimates[0].guestPetInfo?.name ??
+                                t("yourPet"),
+                              service: serviceTypeLabel(
+                                locale,
+                                pendingEstimates[0].service,
+                              ),
+                            })}
+                          </span>
+                        ),
+                        // §5q: Intl, the reader's locale, and the NBSP before
+                        // the dollar sign that keeps "458,85 $" on one line.
+                        total: formatMoney(pendingEstimates[0].total, locale),
+                      })
+                    : rich(t("estimateMany"), {
+                        count: (
+                          <span className="font-semibold">
+                            {fill("estimatesCount", {
+                              count: pendingEstimates.length,
+                            })}
+                          </span>
+                        ),
+                      })}
                 </span>
               </div>
               <ArrowRight className="size-4 shrink-0 text-blue-600 transition-transform group-hover:translate-x-0.5" />
@@ -879,15 +948,27 @@ export default function CustomerDashboardPage() {
               <div className="flex min-w-0 items-center gap-2.5">
                 <Clock className="size-4 shrink-0 text-amber-600" />
                 <span className="text-sm text-amber-900 dark:text-amber-200">
-                  Your{" "}
-                  <span className="font-semibold">
-                    {expiringPasses[0].pkg.packageName}
-                  </span>{" "}
-                  expires in {expiringPasses[0].daysLeft} day
-                  {expiringPasses[0].daysLeft === 1 ? "" : "s"}. You have{" "}
-                  {expiringPasses[0].remaining} pass
-                  {expiringPasses[0].remaining === 1 ? "" : "es"} remaining —
-                  book your next visit now.
+                  {rich(
+                    t(
+                      expiringPasses[0].daysLeft === 1
+                        ? "passExpiresOneDay"
+                        : "passExpiresDays",
+                    ),
+                    {
+                      pkg: (
+                        <span className="font-semibold">
+                          {expiringPasses[0].pkg.packageName}
+                        </span>
+                      ),
+                      days: expiringPasses[0].daysLeft,
+                      passes: fill(
+                        expiringPasses[0].remaining === 1
+                          ? "passesLeftOne"
+                          : "passesLeftMany",
+                        { count: expiringPasses[0].remaining },
+                      ),
+                    },
+                  )}
                 </span>
               </div>
               <ArrowRight className="size-4 shrink-0 text-amber-600 transition-transform group-hover:translate-x-0.5" />
@@ -907,17 +988,25 @@ export default function CustomerDashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
                   <div className="text-4xl font-bold text-white drop-shadow-md">
-                    {loyaltyData.points} pts
+                    {fill("points", {
+                      points: formatNumber(loyaltyData.points, locale),
+                    })}
                   </div>
                 </div>
                 <div className="min-w-50 flex-1">
                   <div className="mb-1 text-xs tracking-wide text-white uppercase drop-shadow-sm">
-                    LOYALTY REWARDS
+                    {t("loyaltyRewards")}
                   </div>
                   <div className="mb-2 text-sm font-medium text-slate-900">
-                    {loyaltyData.currentTier?.name || "Bronze"}
+                    {loyaltyData.currentTier?.name || t("tierFallback")}
                     {loyaltyData.nextTier &&
-                      ` - ${loyaltyData.pointsToNextTier} pts to ${loyaltyData.nextTier.name}`}
+                      ` · ${fill("pointsToTier", {
+                        points: formatNumber(
+                          loyaltyData.pointsToNextTier,
+                          locale,
+                        ),
+                        tier: loyaltyData.nextTier.name,
+                      })}`}
                   </div>
                   {loyaltyData.nextTier && (
                     <>
@@ -926,8 +1015,14 @@ export default function CustomerDashboardPage() {
                         className="mb-1 h-2"
                       />
                       <div className="text-xs text-slate-700">
-                        {loyaltyData.points}/{loyaltyData.nextTier.minPoints}{" "}
-                        pts to {loyaltyData.nextTier.name}
+                        {fill("pointsProgress", {
+                          points: formatNumber(loyaltyData.points, locale),
+                          target: formatNumber(
+                            loyaltyData.nextTier.minPoints,
+                            locale,
+                          ),
+                          tier: loyaltyData.nextTier.name,
+                        })}
                       </div>
                     </>
                   )}
@@ -938,7 +1033,7 @@ export default function CustomerDashboardPage() {
                   className="text-primary bg-white/95 shadow-sm hover:bg-white"
                   asChild
                 >
-                  <Link href="/customer/rewards">Redeem Points</Link>
+                  <Link href="/customer/rewards">{t("redeemPoints")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -952,19 +1047,19 @@ export default function CustomerDashboardPage() {
               {urgentActions.length > 0 ? (
                 <>
                   <AlertTriangle className="text-destructive size-5" />
-                  Action Needed
+                  {t("actionNeeded")}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="size-5 text-green-600" />
-                  Getting Started
+                  {t("gettingStarted")}
                 </>
               )}
             </CardTitle>
             <CardDescription>
               {urgentActions.length > 0
-                ? "Items requiring your attention"
-                : "Complete your profile to get the most out of Yipyy"}
+                ? t("actionNeededHelp")
+                : t("gettingStartedHelp")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -972,7 +1067,7 @@ export default function CustomerDashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="size-4 text-green-600" />
-                  <span>Add your first pet: Done ✓</span>
+                  <span>{t("firstPetDone")}</span>
                 </div>
               </div>
             ) : (
@@ -999,7 +1094,7 @@ export default function CustomerDashboardPage() {
                             {isExpressCheckin && (
                               <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
                                 <span className="size-1.5 animate-ping rounded-full bg-white" />
-                                Required
+                                {t("required")}
                               </span>
                             )}
                             {action.title}
@@ -1043,12 +1138,12 @@ export default function CustomerDashboardPage() {
           <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>My Pets</CardTitle>
+                <CardTitle>{t("tileMyPets")}</CardTitle>
                 <Link
                   href="/customer/pets"
                   className="text-muted-foreground hover:text-foreground text-sm"
                 >
-                  Manage all →
+                  {t("manageAll")}
                 </Link>
               </div>
             </CardHeader>
@@ -1056,9 +1151,9 @@ export default function CustomerDashboardPage() {
               {customerPets.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
                   <Dog className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>No pets registered yet</p>
+                  <p>{t("noPets")}</p>
                   <Button variant="outline" size="sm" className="mt-4" asChild>
-                    <Link href="/customer/pets/add">Add your first pet</Link>
+                    <Link href="/customer/pets/add">{t("addFirstPet")}</Link>
                   </Button>
                 </div>
               ) : (
@@ -1086,22 +1181,24 @@ export default function CustomerDashboardPage() {
                             <div className="flex items-center gap-1">
                               <div className="size-2 rounded-full bg-green-500" />
                               <span className="text-muted-foreground text-xs">
-                                Healthy
+                                {t("healthy")}
                               </span>
                             </div>
                           </div>
                           <p className="text-muted-foreground text-xs">
-                            {pet.breed} - {pet.age}{" "}
-                            {pet.age === 1 ? "yr" : "yrs"}
+                            {pet.breed} ·{" "}
+                            {fill(pet.age === 1 ? "ageOne" : "ageMany", {
+                              count: pet.age,
+                            })}
                           </p>
                           <div className="mt-1 flex flex-wrap gap-1">
                             {petServices.map((service) => (
                               <Badge
                                 key={service}
                                 variant="secondary"
-                                className="text-xs capitalize"
+                                className="text-xs"
                               >
-                                {service}
+                                {serviceTypeLabel(locale, service)}
                               </Badge>
                             ))}
                           </div>
@@ -1113,7 +1210,7 @@ export default function CustomerDashboardPage() {
                     href="/customer/pets/add"
                     className="text-muted-foreground hover:text-foreground block border-t pt-2 text-center text-sm"
                   >
-                    + Add a new pet
+                    {t("addNewPet")}
                   </Link>
                 </>
               )}
@@ -1124,12 +1221,12 @@ export default function CustomerDashboardPage() {
           <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Messages</CardTitle>
+                <CardTitle>{t("tileMessages")}</CardTitle>
                 <Link
                   href="/customer/messages"
                   className="text-muted-foreground hover:text-foreground text-sm"
                 >
-                  View all →
+                  {t("viewAll")}
                 </Link>
               </div>
             </CardHeader>
@@ -1137,7 +1234,7 @@ export default function CustomerDashboardPage() {
               {messagesData.recent.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
                   <MessageSquare className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>No messages yet</p>
+                  <p>{t("noMessages")}</p>
                 </div>
               ) : (
                 messagesData.recent.map((message) => {
@@ -1162,7 +1259,7 @@ export default function CustomerDashboardPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-medium">
-                            {message.staffName || "Facility Team"}
+                            {message.staffName || t("facilityTeam")}
                           </p>
                           {isUnread && (
                             <div className="size-2 shrink-0 rounded-full bg-sky-500" />
@@ -1188,12 +1285,12 @@ export default function CustomerDashboardPage() {
           <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Upcoming Bookings</CardTitle>
+                <CardTitle>{t("upcomingBookings")}</CardTitle>
                 <Link
                   href="/customer/bookings"
                   className="text-muted-foreground hover:text-foreground text-sm"
                 >
-                  View all →
+                  {t("viewAll")}
                 </Link>
               </div>
             </CardHeader>
@@ -1230,10 +1327,10 @@ export default function CustomerDashboardPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium uppercase">
-                          {booking.service}
+                          {serviceTypeLabel(locale, booking.service)}
                         </p>
                         <Badge variant="outline" className="text-xs">
-                          {booking.status}
+                          {statusLabel(locale, booking.status)}
                         </Badge>
                       </div>
                       <p className="text-muted-foreground text-xs">
@@ -1251,8 +1348,8 @@ export default function CustomerDashboardPage() {
                         )}
                       </p>
                     </div>
-                    <div className="text-primary text-sm font-semibold">
-                      ${booking.totalCost}
+                    <div className="text-primary text-sm font-semibold tabular-nums">
+                      {formatMoney(booking.totalCost, locale)}
                     </div>
                   </Link>
                 );
