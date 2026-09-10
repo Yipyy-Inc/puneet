@@ -53,6 +53,10 @@ import { NO_TAX, taxConfigSchema } from "@/lib/settings/tax";
 import { NO_YIPYY_PAY, yipyyPayConfigSchema } from "@/lib/settings/yipyy-pay";
 import { YIPYY_GO_OFF, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
 import {
+  dailyCareConfigSchema,
+  SHIPPED_DAILY_CARE_ROUTINE,
+} from "@/lib/settings/daily-care";
+import {
   DEFAULT_TAG_NOTE_POLICY,
   tagNoteSettingsSchema,
 } from "@/lib/settings/tag-notes";
@@ -392,6 +396,17 @@ export const SETTING_DOMAINS = {
   // because the shipped default is already inert — `enabled: false`, and all
   // four services off. See the banner in lib/settings/yipyy-go.ts.
   yipyy_go_config: { schema: yipyyGoSettingsSchema, fallback: YIPYY_GO_OFF },
+  // ── THE DAILY CARE ROUTINE ─────────────────────────────────────────────
+  //
+  // The rounds the Daily Care board is built from. A module-level copy of the
+  // seed until 2026-09-11, under a screen that autosaved into it and flashed
+  // "Saved" — gone on reload, and never the routine another device drew. The
+  // fallback is the shipped routine, because an empty one is an empty board;
+  // see the banner in lib/settings/daily-care.ts.
+  daily_care_config: {
+    schema: dailyCareConfigSchema,
+    fallback: SHIPPED_DAILY_CARE_ROUTINE,
+  },
   // ── TAGS AND NOTES ─────────────────────────────────────────────────────
   //
   // Which tag types the facility uses, what a new tag or note defaults to, and

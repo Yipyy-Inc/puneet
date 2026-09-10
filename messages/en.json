@@ -1855,7 +1855,8 @@
         "flagHelp": "The flag stays on the board for the next shift. Nobody is messaged.",
         "notDelivered": "Logged {task} as not delivered",
         "ownerNotMessaged": "The owner has not been messaged.",
-        "writeFailed": "That was not saved on the board"
+        "writeFailed": "That was not saved on the board",
+        "routineNotSaved": "The routine was not saved"
       }
     }
   },

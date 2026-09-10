@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { FacilityDailyCareConfig } from "@/types/boarding";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type { IvrSettings } from "@/lib/settings/ivr";
@@ -121,6 +122,11 @@ export interface FacilitySettings {
    * "unset" and "asks nothing".
    */
   yipyy_go_config: SettingState<YipyyGoSettings>;
+  /**
+   * The Daily Care routine the board is built from. Falls back to the shipped
+   * routine, because an empty one is an empty board.
+   */
+  daily_care_config: SettingState<FacilityDailyCareConfig>;
   /**
    * Which tag types this facility uses, what a new tag or note defaults to,
    * and who may read, write, edit and delete a note of each category.
