@@ -9336,6 +9336,31 @@
         "markAsRead": "Mark as read",
         "delete": "Delete",
         "viewDetails": "View details →"
+      },
+      "cameras": {
+        "reasonActiveStay": "Active {service} stay",
+        "reasonMember": "Member",
+        "reasonPackage": "Package",
+        "reasonServiceCustomer": "{service} customer",
+        "reasonOpenHours": "Open hours",
+        "notAvailableTitle": "Live cameras not available",
+        "notAvailableBody": "Live camera access is not currently enabled at this facility.",
+        "liveCameras": "Live cameras",
+        "watchInRealTime": "Watch your pet in real time at {facility}",
+        "theFacility": "the facility",
+        "noCamerasTitle": "No cameras available",
+        "noCamerasBody": "Camera access requires an active stay, qualifying membership, or service package at this facility.",
+        "camerasOne": "{n} camera available",
+        "camerasMany": "{n} cameras available",
+        "peaceOfMind": "Cameras are provided for your peace of mind while your pet is with us. Live streams are only visible to you and authorized staff — never recorded for public use.",
+        "qualityAdjusts": "Video quality adjusts automatically based on your connection speed.",
+        "liveBadge": "LIVE",
+        "live": "Live",
+        "audio": "Audio",
+        "panTilt": "Pan/tilt",
+        "nightVision": "Night vision",
+        "accessVia": "Access via:",
+        "closeCamera": "Close camera"
       }
     }
   }

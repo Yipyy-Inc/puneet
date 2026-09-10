@@ -43,6 +43,8 @@ import type {
   CameraServiceType,
 } from "@/types/camera-integration";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 type AccessReason =
   | { type: "active_stay"; service: CameraServiceType }
@@ -132,12 +134,14 @@ function evaluateRuleSet(
 }
 
 function AccessReasonBadge({ reason }: { reason: AccessReason }) {
+  const { t, fill, locale } = useCustomerText("cameras");
   if (reason.type === "active_stay") {
     return (
       <Badge className="gap-1 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-400">
         <CalendarCheck className="size-3" />
-        Active{" "}
-        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)} Stay
+        {fill("reasonActiveStay", {
+          service: serviceTypeLabel(locale, reason.service),
+        })}
       </Badge>
     );
   }
@@ -145,7 +149,7 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
     return (
       <Badge className="gap-1 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400">
         <Crown className="size-3" />
-        Member
+        {t("reasonMember")}
       </Badge>
     );
   }
@@ -153,7 +157,7 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
     return (
       <Badge className="gap-1 bg-indigo-500/10 text-xs text-indigo-700 dark:text-indigo-400">
         <Package className="size-3" />
-        Package
+        {t("reasonPackage")}
       </Badge>
     );
   }
@@ -161,8 +165,9 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
     return (
       <Badge className="gap-1 bg-blue-500/10 text-xs text-blue-700 dark:text-blue-400">
         <Eye className="size-3" />
-        {reason.service.charAt(0).toUpperCase() + reason.service.slice(1)}{" "}
-        Customer
+        {fill("reasonServiceCustomer", {
+          service: serviceTypeLabel(locale, reason.service),
+        })}
       </Badge>
     );
   }
@@ -170,7 +175,7 @@ function AccessReasonBadge({ reason }: { reason: AccessReason }) {
     return (
       <Badge className="gap-1 bg-slate-500/10 text-xs text-slate-700 dark:text-slate-400">
         <Clock className="size-3" />
-        Open Hours
+        {t("reasonOpenHours")}
       </Badge>
     );
   }
@@ -184,6 +189,7 @@ export default function CustomerCamerasPage() {
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
+  const { t, fill } = useCustomerText("cameras");
   const [selectedCamera, setSelectedCamera] = useState<{
     cam: PetCam;
     reasons: AccessReason[];
@@ -335,11 +341,9 @@ export default function CustomerCamerasPage() {
             <CardContent className="py-12 text-center">
               <Camera className="text-muted-foreground mx-auto mb-4 size-16 opacity-30" />
               <h2 className="mb-2 text-2xl font-bold">
-                Live Cameras Not Available
+                {t("notAvailableTitle")}
               </h2>
-              <p className="text-muted-foreground">
-                Live camera access is not currently enabled at this facility.
-              </p>
+              <p className="text-muted-foreground">{t("notAvailableBody")}</p>
             </CardContent>
           </Card>
         </div>
@@ -354,17 +358,18 @@ export default function CustomerCamerasPage() {
         <div className="mx-auto max-w-4xl space-y-6">
           <div className="space-y-1">
             <PageHeader
-              title="Live cameras"
-              description={`Watch your pet in real time at ${selectedFacility?.name ?? "the facility"}`}
+              title={t("liveCameras")}
+              description={fill("watchInRealTime", {
+                facility: selectedFacility?.name ?? t("theFacility"),
+              })}
             />
           </div>
           <Card>
             <CardContent className="py-12 text-center">
               <Clock className="text-muted-foreground mx-auto mb-4 size-16 opacity-30" />
-              <h2 className="mb-2 text-2xl font-bold">No Cameras Available</h2>
+              <h2 className="mb-2 text-2xl font-bold">{t("noCamerasTitle")}</h2>
               <p className="text-muted-foreground mx-auto max-w-sm">
-                Camera access requires an active stay, qualifying membership, or
-                service package at this facility.
+                {t("noCamerasBody")}
               </p>
             </CardContent>
           </Card>
@@ -380,28 +385,25 @@ export default function CustomerCamerasPage() {
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <PageHeader
-              title="Live cameras"
-              description={`Watch your pet in real time at ${selectedFacility?.name ?? "the facility"}`}
+              title={t("liveCameras")}
+              description={fill("watchInRealTime", {
+                facility: selectedFacility?.name ?? t("theFacility"),
+              })}
             />
           </div>
           <Badge className="gap-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
             <CircleDot className="size-2.5 animate-pulse" />
-            {accessibleCameras.length} Camera
-            {accessibleCameras.length > 1 ? "s" : ""} Available
+            {fill(
+              accessibleCameras.length === 1 ? "camerasOne" : "camerasMany",
+              { n: accessibleCameras.length },
+            )}
           </Badge>
         </div>
 
         <Alert>
           <AlertDescription className="text-muted-foreground space-y-1 text-sm">
-            <p>
-              Cameras are provided for your peace of mind while your pet is with
-              us. Live streams are only visible to you and authorized staff —
-              never recorded for public use.
-            </p>
-            <p>
-              Video quality adjusts automatically based on your connection
-              speed.
-            </p>
+            <p>{t("peaceOfMind")}</p>
+            <p>{t("qualityAdjusts")}</p>
           </AlertDescription>
         </Alert>
 
@@ -433,7 +435,7 @@ export default function CustomerCamerasPage() {
                     <Video className="size-12 text-slate-600" />
                     <div className="absolute top-2 left-2 flex items-center gap-1 rounded-md bg-red-600 px-2 py-1 text-xs text-white">
                       <CircleDot className="size-2 animate-pulse" />
-                      LIVE
+                      {t("liveBadge")}
                     </div>
                     <div className="absolute top-2 right-2 rounded-md bg-black/50 px-2 py-1 text-xs text-white">
                       {cam.resolution}
@@ -446,19 +448,19 @@ export default function CustomerCamerasPage() {
                   {cam.hasAudio && (
                     <Badge variant="outline" className="gap-1 text-xs">
                       <Volume2 className="size-3" />
-                      Audio
+                      {t("audio")}
                     </Badge>
                   )}
                   {cam.hasPanTilt && (
                     <Badge variant="outline" className="gap-1 text-xs">
                       <Move className="size-3" />
-                      Pan/Tilt
+                      {t("panTilt")}
                     </Badge>
                   )}
                   {cam.hasNightVision && (
                     <Badge variant="outline" className="gap-1 text-xs">
                       <Moon className="size-3" />
-                      Night Vision
+                      {t("nightVision")}
                     </Badge>
                   )}
                   <Badge variant="outline" className="gap-1 text-xs">
@@ -471,7 +473,7 @@ export default function CustomerCamerasPage() {
                 {reasons.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 border-t pt-2">
                     <span className="text-muted-foreground self-center text-xs">
-                      Access via:
+                      {t("accessVia")}
                     </span>
                     {reasons.slice(0, 2).map((r, i) => (
                       <AccessReasonBadge key={i} reason={r} />
@@ -506,9 +508,11 @@ export default function CustomerCamerasPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                     <CircleDot className="size-2.5 animate-pulse" />
-                    Live
+                    {t("live")}
                   </div>
                   <button
+                    type="button"
+                    aria-label={t("closeCamera")}
                     onClick={() => setSelectedCamera(null)}
                     className="rounded-lg bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
                   >
@@ -531,17 +535,17 @@ export default function CustomerCamerasPage() {
               <div className="flex flex-wrap items-center gap-4 border-t border-white/10 px-5 py-3 text-xs text-slate-400">
                 {selectedCamera.cam.hasAudio && (
                   <span className="flex items-center gap-1">
-                    <Volume2 className="size-3" /> Audio
+                    <Volume2 className="size-3" /> {t("audio")}
                   </span>
                 )}
                 {selectedCamera.cam.hasPanTilt && (
                   <span className="flex items-center gap-1">
-                    <Move className="size-3" /> Pan/Tilt
+                    <Move className="size-3" /> {t("panTilt")}
                   </span>
                 )}
                 {selectedCamera.cam.hasNightVision && (
                   <span className="flex items-center gap-1">
-                    <Moon className="size-3" /> Night Vision
+                    <Moon className="size-3" /> {t("nightVision")}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
