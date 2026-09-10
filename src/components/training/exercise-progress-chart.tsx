@@ -19,7 +19,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { EXERCISE_RATING_LABELS } from "@/lib/training-report-cards";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateShort } from "@/lib/i18n/format";
 
 /** A single rating point — one session worth of data. */
 export interface ExerciseProgressPoint {
@@ -42,16 +43,14 @@ interface Props {
   height?: number;
 }
 
-// Single source of truth for the rating vocabulary lives in
-// `training-report-cards`. The chart re-exports the same labels so the
-// y-axis is self-explaining without needing a separate legend.
-const TIER_LABEL: Record<number, string> = EXERCISE_RATING_LABELS;
+// The rating vocabulary is the catalogue's `rating1`…`rating5` — the same
+// words the trainer rates with — so the y-axis is self-explaining without a
+// separate legend, in either language.
 
-function formatDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function localDay(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 interface TooltipPayload {
@@ -65,19 +64,23 @@ function ChartTooltip({
   active?: boolean;
   payload?: TooltipPayload[];
 }) {
+  const t = useShellText("training");
+  const locale = useShellLocale();
   if (!active || !payload || payload.length === 0) return null;
   const point = payload[0]?.payload;
   if (!point) return null;
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
       <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-        Session {point.sessionNumber}
+        {t("sessionN").replace("{n}", String(point.sessionNumber))}
       </p>
       <p className="mt-0.5 text-xs font-semibold text-slate-800">
-        Rating {point.rating} · {TIER_LABEL[point.rating]}
+        {t("ratingN")
+          .replace("{n}", String(point.rating))
+          .replace("{label}", t(`rating${point.rating}`))}
       </p>
       <p className="text-muted-foreground mt-1 text-[11px]">
-        {formatDate(point.date)}
+        {formatDateShort(localDay(point.date), locale)}
         {point.context && (
           <>
             <span className="mx-1">·</span>
@@ -94,6 +97,7 @@ export function ExerciseProgressChart({
   color = "#6366f1",
   height = 160,
 }: Props) {
+  const t = useShellText("training");
   // Recharts behaves better when a single-point series gets an invisible
   // ghost point so the line/area has something to render — without this a
   // single-rating exercise renders an empty plot.
@@ -146,7 +150,7 @@ export function ExerciseProgressChart({
           // `tickFormatter` width check at render time would be overkill
           // here — every consumer renders at ≥ 200px wide.
           width={70}
-          tickFormatter={(v) => `${v} ${TIER_LABEL[v] ?? ""}`}
+          tickFormatter={(v) => `${v} ${t(`rating${v}`)}`}
         />
         {/* Faint guide at "Good" (3) — anchors the eye on the midpoint */}
         <ReferenceLine y={3} stroke="rgb(203 213 225)" strokeDasharray="2 4" />

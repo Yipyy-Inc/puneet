@@ -15,6 +15,7 @@ import {
   defaultTrainingWaivers,
   type TrainingWaiver,
 } from "@/data/training-waivers";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface Props {
   /** The set of waiver ids the owner has agreed to. */
@@ -32,11 +33,12 @@ export function TrainingWaiversSection({
   onChange,
   waivers = defaultTrainingWaivers,
 }: Props) {
+  const { t } = useCustomerText("training");
   return (
     <div className="space-y-2">
       <Label className="inline-flex items-center gap-1.5">
         <FileSignature className="size-4" />
-        Waivers <span className="text-destructive">*</span>
+        {t("waivers")} <span className="text-destructive">*</span>
       </Label>
       <ul className="space-y-2">
         {waivers.map((waiver) => {
@@ -69,6 +71,7 @@ function WaiverRow({
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
 }) {
+  const { t } = useCustomerText("training");
   const [expanded, setExpanded] = useState(false);
   return (
     <li
@@ -97,14 +100,14 @@ function WaiverRow({
                 variant="outline"
                 className="border-rose-200 bg-rose-50 text-[10px] text-rose-700"
               >
-                Required
+                {t("required")}
               </Badge>
             ) : (
               <Badge
                 variant="outline"
                 className="border-slate-200 bg-slate-50 text-[10px] text-slate-600"
               >
-                Optional
+                {t("optional")}
               </Badge>
             )}
           </div>
@@ -122,7 +125,7 @@ function WaiverRow({
                 ) : (
                   <ChevronRight className="size-3" />
                 )}
-                {expanded ? "Hide full text" : "View full text"}
+                {expanded ? t("hideFullText") : t("viewFullText")}
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>

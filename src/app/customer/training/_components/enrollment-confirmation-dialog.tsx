@@ -33,9 +33,16 @@ import { useState } from "react";
 import {
   type TrainingSeries,
   calculateSessionDates,
-  getDayName,
 } from "@/lib/training-series";
 import type { TrainingCourseType } from "@/lib/training-config";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   open: boolean;
@@ -47,21 +54,10 @@ interface Props {
   onAddToCalendar: () => void;
 }
 
-function formatLongDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+// A calendar date, read at local midnight so no zone can move it.
+function formatLongDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 export function EnrollmentConfirmationDialog({
@@ -73,6 +69,7 @@ export function EnrollmentConfirmationDialog({
   paymentLabel,
   onAddToCalendar,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const sessionDates = useMemo(() => {
@@ -93,20 +90,22 @@ export function EnrollmentConfirmationDialog({
           <div className="mb-2 flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-sm">
             <CheckCircle2 className="size-7" />
           </div>
-          <DialogTitle className="text-xl">You&apos;re enrolled!</DialogTitle>
+          <DialogTitle className="text-xl">{t("youreEnrolled")}</DialogTitle>
           <DialogDescription>
-            {petName ? (
-              <>
-                <span className="font-semibold text-slate-900">{petName}</span>
-                {" is booked into "}
-                <span className="font-semibold text-slate-900">
-                  {series.seriesName}
-                </span>
-                .
-              </>
-            ) : (
-              <>You&apos;re booked into {series.seriesName}.</>
-            )}
+            {petName
+              ? rich(t("petIsBookedInto"), {
+                  pet: (
+                    <span className="font-semibold text-slate-900">
+                      {petName}
+                    </span>
+                  ),
+                  series: (
+                    <span className="font-semibold text-slate-900">
+                      {series.seriesName}
+                    </span>
+                  ),
+                })
+              : fill("youreBookedInto", { series: series.seriesName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -117,7 +116,7 @@ export function EnrollmentConfirmationDialog({
               <span className="inline-flex items-center gap-1.5">
                 <PawPrint className="text-muted-foreground size-3.5" />
                 <span className="font-medium text-slate-800">
-                  {petName ?? "Your pet"}
+                  {petName ?? t("yourPet")}
                 </span>
               </span>
               <span className="text-muted-foreground/50">·</span>
@@ -139,15 +138,17 @@ export function EnrollmentConfirmationDialog({
           <section className="space-y-1.5">
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <CalendarDays className="size-3" />
-              Schedule ({sessionDates.length} sessions)
+              {fill("scheduleSessions", { n: sessionDates.length })}
             </p>
             <div className="bg-card rounded-lg border px-3 py-2">
               <p className="text-sm font-medium text-slate-800">
-                {getDayName(series.dayOfWeek)}s · {formatTime(series.startTime)}{" "}
-                – {formatTime(series.endTime)}
+                {fill("everyWeekdayAt", {
+                  day: formatWeekday(series.dayOfWeek, locale, "long"),
+                  time: `${formatTimeOfDay(series.startTime, locale)} – ${formatTimeOfDay(series.endTime, locale)}`,
+                })}
               </p>
               <p className="text-muted-foreground text-[11.5px]">
-                {series.numberOfWeeks} weeks total
+                {fill("weeksTotal", { n: series.numberOfWeeks })}
               </p>
               <Collapsible open={scheduleOpen} onOpenChange={setScheduleOpen}>
                 <CollapsibleTrigger asChild>
@@ -159,7 +160,7 @@ export function EnrollmentConfirmationDialog({
                       className={cnRotated(scheduleOpen)}
                       aria-hidden
                     />
-                    {scheduleOpen ? "Hide all dates" : "See all session dates"}
+                    {scheduleOpen ? t("hideAllDates") : t("seeAllSessionDates")}
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -170,13 +171,13 @@ export function EnrollmentConfirmationDialog({
                         className="flex items-baseline justify-between text-[12px] text-slate-700"
                       >
                         <span>
-                          <span className="text-muted-foreground inline-block w-16 text-[11px] font-medium">
-                            Session {idx + 1}
+                          <span className="text-muted-foreground inline-block min-w-16 pr-1 text-[11px] font-medium">
+                            {fill("sessionN", { n: idx + 1 })}
                           </span>
-                          {formatLongDate(d)}
+                          {formatLongDate(d, locale)}
                         </span>
                         <span className="text-muted-foreground tabular-nums">
-                          {formatTime(series.startTime)}
+                          {formatTimeOfDay(series.startTime, locale)}
                         </span>
                       </li>
                     ))}
@@ -190,7 +191,7 @@ export function EnrollmentConfirmationDialog({
           <section className="space-y-1.5">
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <MapPin className="size-3" />
-              Location
+              {t("location")}
             </p>
             <p className="bg-card rounded-lg border px-3 py-2 text-sm text-slate-800">
               {series.location}
@@ -203,7 +204,7 @@ export function EnrollmentConfirmationDialog({
               <section className="space-y-1.5">
                 <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                   <Sparkles className="size-3" />
-                  What you will learn
+                  {t("whatYouWillLearn2")}
                 </p>
                 <ul className="bg-card space-y-1 rounded-lg border px-3 py-2">
                   {courseType.whatYouWillLearn.map((item, idx) => (
@@ -224,7 +225,7 @@ export function EnrollmentConfirmationDialog({
             <section className="space-y-1.5">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Luggage className="size-3" />
-                What to bring
+                {t("whatToBring2")}
               </p>
               <ul className="bg-card space-y-1 rounded-lg border px-3 py-2">
                 {courseType.whatToBring.map((item, idx) => (
@@ -243,8 +244,8 @@ export function EnrollmentConfirmationDialog({
           <Separator />
 
           <p className="text-muted-foreground inline-flex items-center gap-1 text-[11.5px]">
-            <Sparkles className="size-3" />A confirmation email is on its way
-            with all the details above.
+            <Sparkles className="size-3" />
+            {t("confirmationEmailOnItsWay")}
           </p>
         </div>
 
@@ -255,10 +256,10 @@ export function EnrollmentConfirmationDialog({
             className="gap-1.5"
           >
             <CalendarCheck className="size-4" />
-            Add to Calendar
+            {t("addToCalendar")}
             <Download className="size-3.5 opacity-60" />
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={() => onOpenChange(false)}>{t("close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

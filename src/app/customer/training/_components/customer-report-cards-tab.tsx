@@ -32,10 +32,8 @@ import {
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
-  EXERCISE_RATING_LABELS,
   REPORT_CARD_THEME_ACCENT,
   TRAINING_LEVEL_BADGE_CLS,
-  TRAINING_LEVEL_LABELS,
   fanOutReportCardUpsert,
 } from "@/lib/training-report-cards";
 import { clients } from "@/data/clients";
@@ -43,45 +41,36 @@ import type {
   TrainingReportCard,
   TrainingReportCardExerciseSummary,
 } from "@/lib/training-enrollment";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { useHydrated } from "@/hooks/use-hydrated";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatDayRelative,
+  formatNumber,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface Props {
   customerId: number;
 }
 
-/** Map an averaged rating (float, 1-5) onto the canonical owner-facing
- *  label. Rounds to the nearest integer so the report card reads with the
- *  same vocabulary the trainer used in-session. */
-function ratingLabelForAvg(avg: number): string {
-  const rounded = Math.max(1, Math.min(5, Math.round(avg))) as
-    | 1
-    | 2
-    | 3
-    | 4
-    | 5;
-  return EXERCISE_RATING_LABELS[rounded];
+/** Map an averaged rating (float, 1-5) onto the catalogue key of the
+ *  canonical owner-facing label. Rounds to the nearest integer so the report
+ *  card reads with the same vocabulary the trainer used in-session. */
+function ratingKeyForAvg(avg: number): string {
+  return `rating${Math.max(1, Math.min(5, Math.round(avg)))}`;
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function relativeDays(iso: string, todayISO: string): string {
-  const today = new Date(`${todayISO}T00:00:00`).getTime();
-  const target = new Date(`${iso.slice(0, 10)}T00:00:00`).getTime();
-  const days = Math.round((today - target) / 86_400_000);
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.round(days / 7)}w ago`;
-  return `${Math.round(days / 30)}mo ago`;
+// A calendar date, read at local midnight so no zone can move it.
+function formatDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 export function CustomerReportCardsTab({ customerId }: Props) {
+  const { t, fill } = useCustomerText("training");
   const queryClient = useQueryClient();
   // Capture "now" once at mount so the schedule cutoff stays stable while the
   // tab is open (and so React Compiler doesn't flag Date reads inside
@@ -162,13 +151,17 @@ export function CustomerReportCardsTab({ customerId }: Props) {
   // enrollment, then stamp `graduationFollowUpSentAt` so it only fires
   // once. Real-world this would be a server cron.
   const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  // Not before hydration: until then `t` is the English one, and this runs
+  // once — so without the gate the toast would always be English, and with
+  // `t` alone in the deps it would fire twice.
+  const hydrated = useHydrated();
   useEffect(() => {
-    if (!moduleSettings?.graduationFollowUpEnabled) return;
+    if (!hydrated || !moduleSettings?.graduationFollowUpEnabled) return;
     const delayMs =
       Math.max(1, moduleSettings.graduationFollowUpDays) * 24 * 60 * 60 * 1000;
     const template =
       moduleSettings.graduationFollowUpTemplate ??
-      "{petName} has graduated — have you seen the upcoming {programName} classes?";
+      t("graduationFollowUpDefault");
     for (const card of cards) {
       if (card.kind !== "series-completion") continue;
       if (!card.sentToOwner || !card.sentAt) continue;
@@ -180,7 +173,7 @@ export function CustomerReportCardsTab({ customerId }: Props) {
         .replace("{petName}", card.petName)
         .replace("{programName}", card.recommendedNextProgram.packageName);
       toast(message, {
-        description: "Tap your Report Cards tab to enroll.",
+        description: t("tapYourReportCardsTab"),
         duration: 8_000,
       });
       fanOutReportCardUpsert(queryClient, {
@@ -192,14 +185,13 @@ export function CustomerReportCardsTab({ customerId }: Props) {
     // time is good enough for the demo, and re-running on each card change
     // would re-fire toasts during rapid edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleSettings?.graduationFollowUpEnabled]);
+  }, [moduleSettings?.graduationFollowUpEnabled, hydrated, t]);
 
   if (cards.length === 0) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        No report cards yet — your instructor will send a progress summary after
-        each session.
+        {t("noReportCardsYet")}
       </div>
     );
   }
@@ -210,10 +202,20 @@ export function CustomerReportCardsTab({ customerId }: Props) {
         <div className="flex items-center gap-3 text-sm text-slate-700">
           <FileText className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold text-slate-900 tabular-nums">
-              {cards.length}
-            </span>{" "}
-            report card{cards.length === 1 ? "" : "s"}
+            {rich(
+              t(
+                cards.length === 1
+                  ? "reportCardCountOne"
+                  : "reportCardCountOther",
+              ),
+              {
+                n: (
+                  <span className="font-semibold text-slate-900 tabular-nums">
+                    {cards.length}
+                  </span>
+                ),
+              },
+            )}
           </span>
           {newCount > 0 && (
             <Badge
@@ -221,13 +223,12 @@ export function CustomerReportCardsTab({ customerId }: Props) {
               className="gap-1 border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700"
             >
               <Sparkles className="size-3" />
-              {newCount} new
+              {fill("newCount", { n: newCount })}
             </Badge>
           )}
         </div>
         <p className="text-muted-foreground text-[12px]">
-          Each card is a progress summary across every session — not a recap of
-          just one.
+          {t("eachCardIsAProgressSummary")}
         </p>
       </div>
 
@@ -257,6 +258,8 @@ function CustomerCard({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
+  const shellT = useShellText("training");
   const isGraduation = card.kind === "series-completion";
   const isNew = !card.viewedByOwner;
   const progressPct = Math.round(
@@ -264,8 +267,8 @@ function CustomerCard({
   );
   const headerDateLabel =
     isGraduation && card.seriesStartDate && card.seriesEndDate
-      ? `${formatDate(card.seriesStartDate)} → ${formatDate(card.seriesEndDate)}`
-      : formatDate(card.date);
+      ? `${formatDate(card.seriesStartDate, locale)} → ${formatDate(card.seriesEndDate, locale)}`
+      : formatDate(card.date, locale);
 
   return (
     <li
@@ -317,7 +320,7 @@ function CustomerCard({
                   ? "bg-amber-500 text-white"
                   : "bg-indigo-500 text-white",
               )}
-              title={isGraduation ? "Graduation card" : "Session card"}
+              title={isGraduation ? t("graduationCard") : t("sessionCard")}
             >
               {isGraduation ? (
                 <Award className="size-3" />
@@ -330,8 +333,11 @@ function CustomerCard({
             <div className="flex flex-wrap items-center gap-1.5">
               <p className="text-base font-semibold text-slate-800">
                 {isGraduation
-                  ? `${card.petName} graduated`
-                  : `${card.petName} · Session ${card.throughSessionNumber}`}
+                  ? fill("petGraduated", { pet: card.petName })
+                  : fill("petSessionN", {
+                      pet: card.petName,
+                      n: card.throughSessionNumber,
+                    })}
               </p>
               {isNew && (
                 <Badge
@@ -344,7 +350,7 @@ function CustomerCard({
                   )}
                 >
                   <Sparkles className="size-3" />
-                  New
+                  {t("new")}
                 </Badge>
               )}
               {isGraduation && (
@@ -353,7 +359,7 @@ function CustomerCard({
                   className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
                 >
                   <Award className="size-3" />
-                  Series complete
+                  {t("seriesComplete")}
                 </Badge>
               )}
             </div>
@@ -372,7 +378,11 @@ function CustomerCard({
               {card.sentAt && !isGraduation && (
                 <>
                   <span className="text-muted-foreground/50">·</span>
-                  <span>Sent {relativeDays(card.sentAt, todayISO)}</span>
+                  <span>
+                    {fill("sentWhen", {
+                      when: formatDayRelative(card.sentAt, locale, todayISO),
+                    })}
+                  </span>
                 </>
               )}
             </p>
@@ -383,10 +393,10 @@ function CustomerCard({
                   "gap-1 border text-[11px] font-semibold",
                   TRAINING_LEVEL_BADGE_CLS[card.trainingLevel],
                 )}
-                title="Your dog's current training level"
+                title={t("yourDogSCurrentTraining")}
               >
                 <Award className="size-3" />
-                {TRAINING_LEVEL_LABELS[card.trainingLevel]}
+                {shellT(`level_${card.trainingLevel}`)}
               </Badge>
             </div>
           </div>
@@ -414,11 +424,11 @@ function CustomerCard({
             <div className="mb-1.5 flex items-center gap-2">
               <Award className="size-4" />
               <span className="text-[10px] font-bold tracking-wider uppercase">
-                Where {card.petName} is right now
+                {fill("wherePetIsNow", { pet: card.petName })}
               </span>
             </div>
             <p className="text-lg/tight font-bold">
-              {TRAINING_LEVEL_LABELS[card.trainingLevel]}
+              {shellT(`level_${card.trainingLevel}`)}
             </p>
             {card.overallAssessment ? (
               <p className="mt-1.5 text-[13px]/relaxed text-slate-700">
@@ -426,7 +436,7 @@ function CustomerCard({
               </p>
             ) : (
               <p className="text-muted-foreground mt-1.5 text-[12px] italic">
-                Your trainer&apos;s written assessment will appear here.
+                {t("yourTrainersWrittenAssessmentWill")}
               </p>
             )}
           </div>
@@ -436,7 +446,7 @@ function CustomerCard({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
                   <TrendingUp className="size-3" />
-                  Progress
+                  {t("progress")}
                 </span>
                 <span className="font-semibold text-slate-800 tabular-nums">
                   {card.sessionsAttended}/{card.totalSessions} sessions ·{" "}
@@ -448,26 +458,26 @@ function CustomerCard({
             <div className="space-y-1.5">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-medium tracking-wider uppercase">
                 <Users className="size-3" />
-                Attendance
+                {t("attendance")}
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 {card.attendanceBreakdown.present > 0 && (
                   <Chip
-                    label="Present"
+                    label={t("present")}
                     count={card.attendanceBreakdown.present}
                     cls="border-emerald-200 bg-emerald-50 text-emerald-700"
                   />
                 )}
                 {card.attendanceBreakdown.late > 0 && (
                   <Chip
-                    label="Late"
+                    label={t("late")}
                     count={card.attendanceBreakdown.late}
                     cls="border-amber-200 bg-amber-50 text-amber-700"
                   />
                 )}
                 {card.attendanceBreakdown.absent > 0 && (
                   <Chip
-                    label="Missed"
+                    label={t("missed")}
                     count={card.attendanceBreakdown.absent}
                     cls="border-rose-200 bg-rose-50 text-rose-700"
                   />
@@ -480,7 +490,7 @@ function CustomerCard({
             <div className="rounded-lg border border-indigo-300 px-3 py-2.5">
               <p className="mb-1 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
                 <Quote className="size-3" />
-                {isGraduation ? "Series wrap-up" : "What we worked on"}
+                {isGraduation ? t("seriesWrapUp") : t("whatWeWorkedOn")}
               </p>
               <p className="text-[13px]/relaxed text-slate-700">
                 {card.sessionSummary}
@@ -492,7 +502,7 @@ function CustomerCard({
             <div className="space-y-1.5">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Star className="size-3" />
-                Exercises covered ({card.exercisesCovered.length})
+                {fill("exercisesCovered", { n: card.exercisesCovered.length })}
               </p>
               <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 rounded-lg border bg-white px-3 py-2.5 sm:grid-cols-2">
                 {card.exercisesCovered.map((ex) => (
@@ -504,7 +514,7 @@ function CustomerCard({
                       {ex.name}
                       <span className="text-muted-foreground"> — </span>
                       <span className="font-medium text-slate-800">
-                        {ratingLabelForAvg(ex.avgRating)}
+                        {shellT(ratingKeyForAvg(ex.avgRating))}
                       </span>
                     </span>
                     <StarRow value={ex.avgRating} count={ex.ratingsCount} />
@@ -518,18 +528,18 @@ function CustomerCard({
             card.needsWorkExercises.length > 0) && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <ExercisePanel
-                title="Strongest"
+                title={t("strongest")}
                 icon={Star}
                 tone="emerald"
                 exercises={card.topExercises}
-                emptyHint="Not enough ratings yet."
+                emptyHint={t("notEnoughRatingsYet")}
               />
               <ExercisePanel
-                title="Keep practicing"
+                title={t("keepPracticing")}
                 icon={Target}
                 tone="rose"
                 exercises={card.needsWorkExercises}
-                emptyHint="Nothing flagged — keep building reps."
+                emptyHint={t("nothingFlaggedKeepBuilding")}
               />
             </div>
           )}
@@ -538,7 +548,7 @@ function CustomerCard({
             <div className="space-y-1.5">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <BookOpen className="size-3" />
-                Homework to work on
+                {t("homeworkToWorkOn")}
               </p>
               <ul className="space-y-1 rounded-lg border bg-white px-3 py-2">
                 {card.assignedHomework.map((hw) => (
@@ -560,7 +570,7 @@ function CustomerCard({
                 ))}
               </ul>
               <p className="text-muted-foreground text-[10px]">
-                See the Homework tab to mark practice and watch demo videos.
+                {t("seeTheHomeworkTabTo")}
               </p>
             </div>
           )}
@@ -569,7 +579,7 @@ function CustomerCard({
             <div className="space-y-1.5">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <Camera className="size-3" />
-                Photos from the session
+                {t("photosFromTheSession")}
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {card.photos.map((photo, idx) => (
@@ -577,7 +587,9 @@ function CustomerCard({
                     <div className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
                       <Image
                         src={photo.url}
-                        alt={photo.caption ?? `Session photo ${idx + 1}`}
+                        alt={
+                          photo.caption ?? fill("sessionPhotoN", { n: idx + 1 })
+                        }
                         fill
                         sizes="(max-width: 640px) 50vw, 33vw"
                         className="object-cover"
@@ -598,7 +610,7 @@ function CustomerCard({
           {card.progressNarrative && (
             <div className="rounded-lg border bg-slate-50/40 px-3 py-2.5">
               <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
-                Progression so far
+                {t("progressionSoFar")}
               </p>
               <p className="text-[13px]/relaxed text-slate-700">
                 {card.progressNarrative}
@@ -611,11 +623,10 @@ function CustomerCard({
               <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3 text-center">
                 <Award className="mx-auto mb-1 size-6 text-amber-500" />
                 <p className="text-sm font-semibold text-amber-800">
-                  Congratulations, {card.petName}!
+                  {fill("congratulationsPet", { pet: card.petName })}
                 </p>
                 <p className="mt-0.5 text-[12px] text-amber-700">
-                  Series complete. We&apos;re so proud of how far you&apos;ve
-                  both come.
+                  {t("seriesCompleteProud")}
                 </p>
               </div>
 
@@ -627,11 +638,13 @@ function CustomerCard({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
-                        Next step
+                        {t("nextStep")}
                       </p>
                       <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        {card.petName} is ready for{" "}
-                        {card.recommendedNextProgram.packageName}
+                        {fill("petIsReadyFor", {
+                          pet: card.petName,
+                          program: card.recommendedNextProgram.packageName,
+                        })}
                       </p>
                       {card.recommendedNextProgram.description && (
                         <p className="text-muted-foreground text-micro/relaxed mt-0.5">
@@ -648,7 +661,7 @@ function CustomerCard({
                             card.recommendedNextProgram.packageId,
                           )}&pet=${card.petId}`}
                         >
-                          See upcoming classes
+                          {t("seeUpcomingClasses")}
                           <ArrowRight className="size-3.5" />
                         </Link>
                       </Button>
@@ -661,7 +674,7 @@ function CustomerCard({
 
           <div className="text-muted-foreground border-t pt-2 text-center text-[11px]">
             <Button variant="ghost" size="sm" onClick={onToggle}>
-              Close
+              {t("close")}
             </Button>
           </div>
         </div>
@@ -673,13 +686,16 @@ function CustomerCard({
 /** Five-star row for a single exercise's average rating. Mirrors the trainer
  *  side's StarRow so both views read the same. */
 function StarRow({ value, count }: { value: number; count: number }) {
+  const { fill, locale } = useCustomerText("training");
   const full = Math.floor(value);
   const hasHalf = value - full >= 0.5;
   return (
     <span className="inline-flex shrink-0 items-center gap-1 tabular-nums">
       <span
         className="inline-flex items-center"
-        aria-label={`${value} out of 5 stars`}
+        aria-label={fill("starsOutOfFive", {
+          n: formatNumber(value, locale, Number.isInteger(value) ? 0 : 1),
+        })}
       >
         {Array.from({ length: 5 }).map((_, i) => {
           const filled = i < full;
@@ -736,6 +752,7 @@ function ExercisePanel({
   exercises: TrainingReportCardExerciseSummary[];
   emptyHint: string;
 }) {
+  const shellT = useShellText("training");
   const toneCls = tone === "emerald" ? "text-emerald-700" : "text-rose-700";
   return (
     <div className="rounded-lg border bg-white px-3 py-2.5">
@@ -761,7 +778,7 @@ function ExercisePanel({
                 {ex.name}
                 <span className="text-muted-foreground"> — </span>
                 <span className="font-medium">
-                  {ratingLabelForAvg(ex.avgRating)}
+                  {shellT(ratingKeyForAvg(ex.avgRating))}
                 </span>
               </span>
               <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1 tabular-nums">

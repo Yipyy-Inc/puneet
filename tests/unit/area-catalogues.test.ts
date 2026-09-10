@@ -103,6 +103,8 @@ const SAME_IN_BOTH = new Set([
   "customerPages.billing.services", // Services / Services
   "customerPages.billing.total", // Total / Total
   "customerPages.billing.monthPlaceholder", // MM — the month, in both
+  "customerPages.training.description", // Description / Description
+  "customerPages.training.date", // Date / Date
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

@@ -37,7 +37,6 @@ import {
 import {
   type TrainingSeries,
   calculateSessionDates,
-  getDayName,
 } from "@/lib/training-series";
 import {
   type MakeupSession,
@@ -48,6 +47,14 @@ import {
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 const mockEnrollments: TrainingEnrollment[] = [
   {
@@ -155,6 +162,7 @@ interface MissedSessionInfo {
 }
 
 export function MakeupSessionsTab() {
+  const { t, fill, locale } = useCustomerText("training");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -251,22 +259,27 @@ export function MakeupSessionsTab() {
 
         setMakeupSessions([...makeupSessions, newMakeup]);
         toast.success(
-          `Makeup session requested for Week ${selectedMissedSession.attendance.sessionNumber}. You'll be contacted to schedule.`,
+          fill("makeupRequested", {
+            week: selectedMissedSession.attendance.sessionNumber,
+          }),
         );
       } catch (error: unknown) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to schedule makeup",
+          error instanceof Error ? error.message : t("failedToScheduleMakeup"),
         );
       }
     } else {
       try {
         await new Promise((resolve) => setTimeout(resolve, 500));
         toast.success(
-          `Week ${selectedMissedSession.attendance.sessionNumber} skipped. Continuing with Week ${selectedMissedSession.enrollment.currentSessionNumber}.`,
+          fill("weekSkipped", {
+            week: selectedMissedSession.attendance.sessionNumber,
+            next: selectedMissedSession.enrollment.currentSessionNumber,
+          }),
         );
       } catch (error: unknown) {
         toast.error(
-          error instanceof Error ? error.message : "Failed to skip session",
+          error instanceof Error ? error.message : t("failedToSkipSession"),
         );
       }
     }
@@ -277,12 +290,16 @@ export function MakeupSessionsTab() {
 
   const formatDate = (dateStr: string) => {
     if (!isMounted) return dateStr;
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
+    // A bare YYYY-MM-DD is a calendar day: read it at LOCAL midnight. Handed
+    // to `new Date` as-is it parses as UTC and shows the day before anywhere
+    // west of Greenwich — which is all of Canada.
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+      ? (() => {
+          const [y, m, d] = dateStr.split("-").map(Number);
+          return new Date(y, m - 1, d);
+        })()
+      : new Date(dateStr);
+    return formatDateLong(day, locale);
   };
 
   const makeupConfig = facilityConfig.training?.makeupSessions;
@@ -296,14 +313,16 @@ export function MakeupSessionsTab() {
     <div className="space-y-6">
       <Alert>
         <AlertCircle className="size-4" />
-        <AlertTitle>What is a Makeup Session?</AlertTitle>
+        <AlertTitle>{t("whatIsAMakeupSession")}</AlertTitle>
         <AlertDescription>
-          If you miss a training class, you can schedule a{" "}
-          <strong>makeup session</strong> — a private one-on-one session with a
-          trainer to cover the material you missed. Makeup sessions must be
-          scheduled within {expirationDays} days of the missed session.
+          {rich(t("makeupExplainer"), {
+            makeup: <strong>{t("makeupSession")}</strong>,
+            days: String(expirationDays),
+          })}
           {makeupConfig?.expirationRules?.expiresAfterDays &&
-            ` Unused makeup credits expire after ${makeupConfig.expirationRules.expiresAfterDays} days.`}
+            ` ${fill("unusedMakeupCreditsExpire", {
+              n: makeupConfig.expirationRules.expiresAfterDays,
+            })}`}
         </AlertDescription>
       </Alert>
 
@@ -311,10 +330,8 @@ export function MakeupSessionsTab() {
         <Card>
           <CardContent className="text-muted-foreground py-12 text-center">
             <CheckCircle2 className="mx-auto mb-4 size-12 text-green-600" />
-            <p className="text-lg font-medium">No missed sessions</p>
-            <p className="mt-2 text-sm">
-              All your training sessions have been attended!
-            </p>
+            <p className="text-lg font-medium">{t("noMissedSessions")}</p>
+            <p className="mt-2 text-sm">{t("allYourTrainingSessionsHave")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -335,7 +352,9 @@ export function MakeupSessionsTab() {
                         {missed.enrollment.petName} (
                         {missed.enrollment.petBreed})
                         <Badge variant="destructive">
-                          Absent - Week {missed.attendance.sessionNumber}
+                          {fill("absentWeek", {
+                            week: missed.attendance.sessionNumber,
+                          })}
                         </Badge>
                       </CardTitle>
                       <CardDescription className="mt-1">
@@ -345,11 +364,11 @@ export function MakeupSessionsTab() {
                     {missed.existingMakeup && (
                       <Badge variant="outline">
                         {missed.existingMakeup.status === "pending" &&
-                          "Makeup Pending"}
+                          t("makeupPending")}
                         {missed.existingMakeup.status === "scheduled" &&
-                          "Makeup Scheduled"}
+                          t("makeupScheduled")}
                         {missed.existingMakeup.status === "completed" &&
-                          "Makeup Completed"}
+                          t("makeupCompleted")}
                       </Badge>
                     )}
                   </div>
@@ -357,23 +376,31 @@ export function MakeupSessionsTab() {
                 <CardContent className="space-y-4">
                   <div className="bg-muted/50 space-y-3 rounded-lg p-4">
                     <p className="text-sm font-medium">
-                      Missed Session Details
+                      {t("missedSessionDetails")}
                     </p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="text-muted-foreground flex items-center gap-2">
                         <Calendar className="size-4" />
                         <div>
-                          <p className="text-foreground font-medium">Date</p>
+                          <p className="text-foreground font-medium">
+                            {t("date")}
+                          </p>
                           <p>{formatDate(missed.sessionDate)}</p>
                         </div>
                       </div>
                       <div className="text-muted-foreground flex items-center gap-2">
                         <Clock className="size-4" />
                         <div>
-                          <p className="text-foreground font-medium">Time</p>
+                          <p className="text-foreground font-medium">
+                            {t("time")}
+                          </p>
                           <p>
-                            {getDayName(missed.series.dayOfWeek)}{" "}
-                            {missed.series.startTime}
+                            {formatWeekday(
+                              missed.series.dayOfWeek,
+                              locale,
+                              "long",
+                            )}{" "}
+                            {formatTimeOfDay(missed.series.startTime, locale)}
                           </p>
                         </div>
                       </div>
@@ -381,7 +408,7 @@ export function MakeupSessionsTab() {
                     {missed.attendance.trainerNotes && (
                       <div className="mt-2 border-t pt-2">
                         <p className="text-foreground mb-1 text-sm font-medium">
-                          Reason / Notes:
+                          {t("reasonNotes")}
                         </p>
                         <p className="text-muted-foreground text-sm">
                           {missed.attendance.trainerNotes}
@@ -393,21 +420,31 @@ export function MakeupSessionsTab() {
                   {missed.existingMakeup ? (
                     <div className="bg-muted rounded-lg p-4">
                       <p className="mb-1 text-sm font-medium">
-                        Makeup Session Status
+                        {t("makeupSessionStatus")}
                       </p>
                       <p className="text-muted-foreground text-sm">
                         {missed.existingMakeup.status === "pending" &&
-                          "Your makeup request is pending. We'll contact you to schedule."}
+                          t("makeupRequestPending")}
                         {missed.existingMakeup.status === "scheduled" &&
-                          `Scheduled for ${missed.existingMakeup.scheduledDate ? formatDate(missed.existingMakeup.scheduledDate) : "TBD"} at ${missed.existingMakeup.scheduledTime || "TBD"}`}
+                          fill("makeupScheduledFor", {
+                            date: missed.existingMakeup.scheduledDate
+                              ? formatDate(missed.existingMakeup.scheduledDate)
+                              : t("toBeDecided"),
+                            time: missed.existingMakeup.scheduledTime
+                              ? formatTimeOfDay(
+                                  missed.existingMakeup.scheduledTime,
+                                  locale,
+                                )
+                              : t("toBeDecided"),
+                          })}
                         {missed.existingMakeup.status === "completed" &&
-                          "Makeup session completed."}
+                          t("makeupSessionCompleted")}
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-3 rounded-lg border p-4">
                       <p className="text-sm font-medium">
-                        What would you like to do?
+                        {t("whatWouldYouLikeTo")}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -416,7 +453,7 @@ export function MakeupSessionsTab() {
                           onClick={() => handleScheduleMakeup(missed)}
                         >
                           <GraduationCap className="mr-2 size-4" />
-                          Schedule Private Makeup
+                          {t("schedulePrivateMakeup")}
                         </Button>
                         <Button
                           variant="outline"
@@ -424,19 +461,23 @@ export function MakeupSessionsTab() {
                           onClick={() => handleSkipSession(missed)}
                         >
                           <XCircle className="mr-2 size-4" />
-                          Skip and Continue Week{" "}
-                          {missed.enrollment.currentSessionNumber}
+                          {fill("skipAndContinueWeek", {
+                            week: missed.enrollment.currentSessionNumber,
+                          })}
                         </Button>
                       </div>
                       <div className="space-y-2 border-t pt-2">
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
                           <DollarSign className="size-4" />
-                          Makeup session: ${makeupPrice}
+                          {fill("makeupSessionPrice", {
+                            price: formatMoney(makeupPrice, locale),
+                          })}
                         </div>
                         {makeupConfig?.expirationRules?.enabled && (
                           <p className="text-muted-foreground text-xs">
-                            Must be scheduled within {expirationDays} days of
-                            the missed session
+                            {fill("mustBeScheduledWithin", {
+                              n: expirationDays,
+                            })}
                           </p>
                         )}
                       </div>
@@ -455,12 +496,14 @@ export function MakeupSessionsTab() {
           <DialogHeader>
             <DialogTitle>
               {makeupAction === "schedule"
-                ? "Schedule Makeup Session"
-                : "Skip Session"}
+                ? t("scheduleMakeupSession")
+                : t("skipSession")}
             </DialogTitle>
             <DialogDescription>
-              {selectedMissedSession?.enrollment.petName} - Week{" "}
-              {selectedMissedSession?.attendance.sessionNumber}
+              {fill("petWeek", {
+                pet: selectedMissedSession?.enrollment.petName ?? "",
+                week: selectedMissedSession?.attendance.sessionNumber ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -470,32 +513,36 @@ export function MakeupSessionsTab() {
                 <>
                   <div className="bg-muted space-y-2 rounded-lg p-4">
                     <p className="text-sm font-medium">
-                      Makeup Session Details
+                      {t("makeupSessionDetails")}
                     </p>
                     <div className="text-muted-foreground space-y-1 text-sm">
-                      <p>• Private one-on-one session with trainer</p>
+                      <p>{t("privateOneOnOneSession")}</p>
                       <p>
-                        • Covers material from Week{" "}
-                        {selectedMissedSession.attendance.sessionNumber}
+                        •{" "}
+                        {fill("coversMaterialFromWeek", {
+                          week: selectedMissedSession.attendance.sessionNumber,
+                        })}
                       </p>
                       <p>
-                        • Price: $
-                        {calculateMakeupPrice(
-                          selectedMissedSession.series,
-                          selectedMissedSession.attendance.sessionNumber,
-                          facilityConfig,
-                        )}
+                        •{" "}
+                        {fill("priceIs", {
+                          price: formatMoney(
+                            calculateMakeupPrice(
+                              selectedMissedSession.series,
+                              selectedMissedSession.attendance.sessionNumber,
+                              facilityConfig,
+                            ),
+                            locale,
+                          ),
+                        })}
                       </p>
-                      <p>
-                        • We&apos;ll contact you to schedule a convenient time
-                      </p>
+                      <p>{t("wellContactYouToSchedule")}</p>
                     </div>
                   </div>
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <p className="text-sm text-blue-900">
                       <AlertCircle className="mr-1 inline size-4" />
-                      After requesting, our team will contact you within 24
-                      hours to schedule your makeup session.
+                      {t("afterRequestingWeContact")}
                     </p>
                   </div>
                 </>
@@ -503,15 +550,14 @@ export function MakeupSessionsTab() {
                 <div className="border-destructive/20 bg-destructive/10 rounded-lg border p-4">
                   <p className="text-destructive mb-2 text-sm font-medium">
                     <AlertCircle className="mr-1 inline size-4" />
-                    You will forfeit this session
+                    {t("youWillForfeitThisSession")}
                   </p>
                   <p className="text-destructive/80 text-sm">
-                    By skipping, you will forfeit Week{" "}
-                    {selectedMissedSession.attendance.sessionNumber} and
-                    continue directly to Week{" "}
-                    {selectedMissedSession.enrollment.currentSessionNumber}. You
-                    can still schedule a makeup session later if needed, but
-                    this session will be marked as forfeited.
+                    {fill("bySkippingForfeitLong", {
+                      week: selectedMissedSession.attendance.sessionNumber,
+                      next: selectedMissedSession.enrollment
+                        .currentSessionNumber,
+                    })}
                   </p>
                 </div>
               )}
@@ -526,12 +572,12 @@ export function MakeupSessionsTab() {
                 setSelectedMissedSession(null);
               }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={confirmMakeupAction}>
               {makeupAction === "schedule"
-                ? "Request Makeup Session"
-                : "Skip Session"}
+                ? t("requestMakeupSession")
+                : t("skipSession")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -544,10 +590,11 @@ export function MakeupSessionsTab() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Skip Session</DialogTitle>
+            <DialogTitle>{t("confirmSkipSession")}</DialogTitle>
             <DialogDescription>
-              You are about to forfeit Week{" "}
-              {selectedMissedSession?.attendance.sessionNumber}
+              {fill("aboutToForfeitWeek", {
+                week: selectedMissedSession?.attendance.sessionNumber ?? "",
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -556,27 +603,24 @@ export function MakeupSessionsTab() {
               <div className="border-destructive/20 bg-destructive/10 rounded-lg border p-4">
                 <p className="text-destructive mb-2 text-sm font-medium">
                   <AlertCircle className="mr-1 inline size-4" />
-                  Warning: You will forfeit this session
+                  {t("warningYouWillForfeitThis")}
                 </p>
                 <p className="text-destructive/80 mb-3 text-sm">
-                  By skipping, you will forfeit Week{" "}
-                  {selectedMissedSession.attendance.sessionNumber} and continue
-                  directly to Week{" "}
-                  {selectedMissedSession.enrollment.currentSessionNumber}.
+                  {fill("bySkippingForfeit", {
+                    week: selectedMissedSession.attendance.sessionNumber,
+                    next: selectedMissedSession.enrollment.currentSessionNumber,
+                  })}
                 </p>
                 <div className="text-muted-foreground space-y-1 text-sm">
-                  <p>• This session will be marked as forfeited</p>
-                  <p>
-                    • You can still schedule a makeup session later if needed
-                  </p>
-                  <p>• You will continue with the next session in the series</p>
+                  <p>{t("thisSessionWillBeMarked")}</p>
+                  <p>{t("youCanStillScheduleA")}</p>
+                  <p>{t("youWillContinueWithThe")}</p>
                 </div>
               </div>
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                 <p className="text-sm text-blue-900">
                   <AlertCircle className="mr-1 inline size-4" />
-                  Consider scheduling a makeup session instead to ensure your
-                  pet doesn&apos;t miss important training material.
+                  {t("considerMakeupInstead")}
                 </p>
               </div>
             </div>
@@ -590,7 +634,7 @@ export function MakeupSessionsTab() {
                 setSelectedMissedSession(null);
               }}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -600,19 +644,23 @@ export function MakeupSessionsTab() {
                 try {
                   await new Promise((resolve) => setTimeout(resolve, 500));
                   toast.success(
-                    `Week ${selectedMissedSession.attendance.sessionNumber} skipped. Continuing with Week ${selectedMissedSession.enrollment.currentSessionNumber}.`,
+                    fill("weekSkipped", {
+                      week: selectedMissedSession.attendance.sessionNumber,
+                      next: selectedMissedSession.enrollment
+                        .currentSessionNumber,
+                    }),
                   );
                 } catch (error: unknown) {
                   toast.error(
                     error instanceof Error
                       ? error.message
-                      : "Failed to skip session",
+                      : t("failedToSkipSession"),
                   );
                 }
                 setSelectedMissedSession(null);
               }}
             >
-              Yes, Skip and Continue
+              {t("yesSkipAndContinue")}
             </Button>
           </DialogFooter>
         </DialogContent>

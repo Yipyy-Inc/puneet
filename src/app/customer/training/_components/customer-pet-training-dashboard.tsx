@@ -46,10 +46,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PetProgressCharts } from "@/components/training/pet-progress-charts";
 import { PathwayJourney } from "@/components/training/pathway-journey";
 import { MilestoneTrophyShelf } from "@/components/training/milestone-visuals";
-import { EXERCISE_RATING_LABELS } from "@/lib/training-report-cards";
 import { computePetMilestones } from "@/lib/pet-milestones";
 import { useQuery } from "@tanstack/react-query";
 import { trainingQueries } from "@/lib/api/training";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatDayRelative,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface Props {
   dashboard: PetTrainingDashboard;
@@ -67,40 +76,20 @@ interface Props {
   attendances: SessionAttendance[];
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+// Calendar dates — each value is a day, read at local midnight so no zone
+// can move it. The 12-hour clock and the "in 3d" / "2w ago" clock that lived
+// here are formatTimeOfDay and formatDayRelative now (§5q).
+function localDay(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
-function formatShort(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+function formatDate(iso: string, locale: AppLocale): string {
+  return formatDateLong(localDay(iso), locale);
 }
 
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
-}
-
-function relativeDays(iso: string, todayISO: string): string {
-  const today = new Date(`${todayISO}T00:00:00`).getTime();
-  const target = new Date(`${iso.slice(0, 10)}T00:00:00`).getTime();
-  const days = Math.round((target - today) / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  if (days === -1) return "Yesterday";
-  if (days > 0 && days < 7) return `in ${days}d`;
-  if (days < 0 && days > -7) return `${-days}d ago`;
-  if (days >= 7) return `in ${Math.round(days / 7)}w`;
-  return `${Math.round(-days / 7)}w ago`;
+function formatShort(iso: string, locale: AppLocale): string {
+  return formatDateShort(localDay(iso), locale);
 }
 
 export function CustomerPetTrainingDashboard({
@@ -111,6 +100,7 @@ export function CustomerPetTrainingDashboard({
   seriesById,
   attendances,
 }: Props) {
+  const { t } = useCustomerText("training");
   const { pet, currentProgram } = dashboard;
   void nowMs;
 
@@ -175,7 +165,7 @@ export function CustomerPetTrainingDashboard({
             )}
           >
             <GraduationCap className="size-3" />
-            {currentProgram.isBetweenPrograms ? "Past program" : "Active"}
+            {currentProgram.isBetweenPrograms ? t("pastProgram") : t("active")}
           </Badge>
         )}
       </header>
@@ -186,9 +176,9 @@ export function CustomerPetTrainingDashboard({
           board. */}
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="history">Session History</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="overview">{t("overview")}</TabsTrigger>
+          <TabsTrigger value="history">{t("sessionHistory")}</TabsTrigger>
+          <TabsTrigger value="progress">{t("progress")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-3 pt-3">
@@ -232,6 +222,7 @@ function CurrentProgramPanel({
   dashboard: PetTrainingDashboard;
   todayISO: string;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
   const { currentProgram, pet } = dashboard;
   const {
     enrollment,
@@ -249,16 +240,15 @@ function CurrentProgramPanel({
     : 0;
 
   return (
-    <Panel icon={GraduationCap} title="Current Program" iconTone="indigo">
+    <Panel icon={GraduationCap} title={t("currentProgram")} iconTone="indigo">
       {!enrollment ? (
         <div className="space-y-3">
           <p className="text-muted-foreground text-[12.5px]/relaxed">
-            {pet.name} isn&apos;t enrolled in a training series yet — browse
-            upcoming classes to get started.
+            {fill("notEnrolledYet", { pet: pet.name })}
           </p>
           <Button asChild size="sm" className="h-8 gap-1 text-[12px]">
             <Link href="/customer/training?tab=classes">
-              Browse classes
+              {t("browseClasses")}
               <ArrowRight className="size-3.5" />
             </Link>
           </Button>
@@ -276,7 +266,8 @@ function CurrentProgramPanel({
                   <>
                     {" · "}
                     <CalendarDays className="mr-0.5 inline size-3 align-text-bottom" />
-                    {formatShort(startDate)} → {formatShort(endDate)}
+                    {formatShort(startDate, locale)} →{" "}
+                    {formatShort(endDate, locale)}
                   </>
                 )}
               </p>
@@ -295,7 +286,7 @@ function CurrentProgramPanel({
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[12px]">
               <span className="text-muted-foreground inline-flex items-center gap-1 font-medium tracking-wider uppercase">
-                Progress
+                {t("progress")}
               </span>
               <span className="font-semibold text-slate-800 tabular-nums">
                 {enrollment.sessionsAttended} of {enrollment.totalSessions} ·{" "}
@@ -309,7 +300,7 @@ function CurrentProgramPanel({
             <div className="space-y-2">
               <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                 <CalendarDays className="size-3" />
-                Upcoming sessions
+                {t("upcomingSessions")}
               </p>
               <ul className="space-y-2">
                 {upcomingSessions.map((s) => (
@@ -319,13 +310,14 @@ function CurrentProgramPanel({
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
                       <p className="text-[12.5px] font-semibold text-slate-800">
-                        Session {s.sessionNumber}
+                        {fill("sessionN", { n: s.sessionNumber })}
                         {s.theme ? ` · ${s.theme}` : ""}
                       </p>
                       <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
                         <CalendarDays className="size-3" />
-                        {formatDate(s.date)} · {formatTime(s.startTime)} ·{" "}
-                        {relativeDays(s.date, todayISO)}
+                        {formatDate(s.date, locale)} ·{" "}
+                        {formatTimeOfDay(s.startTime, locale)} ·{" "}
+                        {formatDayRelative(s.date, locale, todayISO, "start")}
                       </p>
                     </div>
                     {series?.location && (
@@ -350,15 +342,13 @@ function CurrentProgramPanel({
                     {s.hasPlan && (
                       <p className="mt-1.5 inline-flex items-start gap-1 rounded-md bg-indigo-50/70 px-2 py-1 text-[11px] text-indigo-700">
                         <BookOpen className="mt-0.5 size-3 shrink-0" />
-                        Practice these at home before class to get the most out
-                        of your session.
+                        {t("practiceBeforeClass")}
                       </p>
                     )}
                     {!s.hasPlan && s.adaptive && (
                       <p className="text-muted-foreground mt-1.5 inline-flex items-start gap-1 text-[11px]">
                         <Sparkles className="mt-0.5 size-3 shrink-0 text-amber-500" />
-                        Your trainer tailors each session to what your dog needs
-                        that day.
+                        {t("trainerTailorsEachSession")}
                       </p>
                     )}
                   </li>
@@ -367,8 +357,7 @@ function CurrentProgramPanel({
             </div>
           ) : isBetweenPrograms ? (
             <p className="text-muted-foreground text-[12px] italic">
-              Program complete — pick the next course to keep building on their
-              training.
+              {t("programCompletePickNext")}
             </p>
           ) : null}
         </div>
@@ -385,19 +374,20 @@ function SessionHistoryPanel({
   dashboard: PetTrainingDashboard;
   todayISO: string;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
+  const shellT = useShellText("training");
   const { sessionHistory, pet } = dashboard;
   if (sessionHistory.recentSessions.length === 0) {
     return (
-      <Panel icon={CalendarDays} title="Session History" iconTone="sky">
+      <Panel icon={CalendarDays} title={t("sessionHistory")} iconTone="sky">
         <p className="text-muted-foreground text-[12.5px]/relaxed">
-          No sessions logged yet for {pet.name}. After the first session,
-          you&apos;ll see your trainer&apos;s notes and ratings here.
+          {fill("noSessionsLoggedYet", { pet: pet.name })}
         </p>
       </Panel>
     );
   }
   return (
-    <Panel icon={CalendarDays} title="Session History" iconTone="sky">
+    <Panel icon={CalendarDays} title={t("sessionHistory")} iconTone="sky">
       <ol className="border-border relative ml-1.5 space-y-3 border-l pl-4">
         {sessionHistory.recentSessions.map((entry) => {
           const a = entry.attendance;
@@ -410,15 +400,16 @@ function SessionHistoryPanel({
                 </p>
                 <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
                   <CalendarDays className="size-3" />
-                  {formatDate(a.sessionDate)} ·{" "}
-                  {relativeDays(a.sessionDate, todayISO)}
+                  {formatDate(a.sessionDate, locale)} ·{" "}
+                  {formatDayRelative(a.sessionDate, locale, todayISO, "start")}
                 </p>
               </div>
               {a.exercises && a.exercises.length > 0 && (
                 <p className="text-muted-foreground mt-0.5 text-[11px]">
-                  Rating scale: 1 {EXERCISE_RATING_LABELS[1]} · 2{" "}
-                  {EXERCISE_RATING_LABELS[2]} · 3 {EXERCISE_RATING_LABELS[3]} ·
-                  4 {EXERCISE_RATING_LABELS[4]} · 5 {EXERCISE_RATING_LABELS[5]}
+                  {t("ratingScale")}{" "}
+                  {([1, 2, 3, 4, 5] as const)
+                    .map((n) => `${n} ${shellT(`rating${n}`)}`)
+                    .join(" · ")}
                 </p>
               )}
               {a.trainerNotes && a.trainerNotes.trim() && (
@@ -454,7 +445,7 @@ function SessionHistoryPanel({
             className="-mx-2 h-7 gap-1 text-[11px]"
           >
             <Link href="/customer/training?tab=classes">
-              See all {sessionHistory.totalAttended} sessions
+              {fill("seeAllSessions", { n: sessionHistory.totalAttended })}
               <ArrowUpRight className="size-3" />
             </Link>
           </Button>
@@ -465,13 +456,6 @@ function SessionHistoryPanel({
 }
 
 /** ──────────── Mini progress (Overview) ───────────────────────────── */
-const RATING_TIER_LABEL: Record<number, string> = {
-  1: "Developing",
-  2: "Getting it",
-  3: "Good",
-  4: "Excellent",
-  5: "Mastered",
-};
 const RATING_TIER_COLOR: Record<number, string> = {
   1: "#f43f5e",
   2: "#f59e0b",
@@ -495,6 +479,7 @@ function CurrentSeriesProgressPanel({
   enrollment: TrainingEnrollment | null | undefined;
   attendances: SessionAttendance[];
 }) {
+  const { t } = useCustomerText("training");
   const rows = useMemo<MiniExerciseRow[]>(() => {
     if (!enrollment) return [];
     // Pull every attended session for this enrollment, ordered chronologically,
@@ -556,13 +541,15 @@ function CurrentSeriesProgressPanel({
   if (!enrollment || rows.length === 0) return null;
 
   return (
-    <Panel icon={LineChart} title="Progress so far" iconTone="emerald">
+    <Panel icon={LineChart} title={t("progressSoFar")} iconTone="emerald">
       <p className="text-muted-foreground -mt-1 mb-2 text-[11.5px]">
-        Every exercise in{" "}
-        <span className="font-medium text-slate-700">
-          {enrollment.seriesName}
-        </span>
-        , from where you started to where you are now.
+        {rich(t("everyExerciseIn"), {
+          series: (
+            <span className="font-medium text-slate-700">
+              {enrollment.seriesName}
+            </span>
+          ),
+        })}
       </p>
       <ul className="space-y-2.5">
         {rows.map((row) => (
@@ -570,14 +557,19 @@ function CurrentSeriesProgressPanel({
         ))}
       </ul>
       <p className="text-muted-foreground mt-2 text-[11px]">
-        Open the <span className="font-medium text-slate-700">Progress</span>{" "}
-        tab for the full per-session chart.
+        {rich(t("openProgressTab"), {
+          tab: (
+            <span className="font-medium text-slate-700">{t("progress")}</span>
+          ),
+        })}
       </p>
     </Panel>
   );
 }
 
 function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
+  const { t, fill } = useCustomerText("training");
+  const shellT = useShellText("training");
   const min = Math.min(row.start, row.current);
   const max = Math.max(row.start, row.current);
   const improved = row.delta > 0;
@@ -596,10 +588,18 @@ function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
         </p>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className="text-muted-foreground text-[10px]">
-            Start{" "}
-            <span className="font-semibold text-slate-700">{row.start}</span> →
-            Now{" "}
-            <span className="font-semibold text-slate-700">{row.current}</span>
+            {rich(t("startToNow"), {
+              start: (
+                <span className="font-semibold text-slate-700">
+                  {row.start}
+                </span>
+              ),
+              now: (
+                <span className="font-semibold text-slate-700">
+                  {row.current}
+                </span>
+              ),
+            })}
           </span>
           {improved && (
             <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
@@ -614,7 +614,7 @@ function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
           )}
           {!improved && !regressed && row.ratingsCount > 1 && (
             <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
-              Steady
+              {t("steady")}
             </span>
           )}
         </div>
@@ -642,13 +642,19 @@ function MiniProgressRow({ row }: { row: MiniExerciseRow }) {
             position={row.start}
             kind="start"
             color="#94a3b8"
-            label={`Start: ${row.start} · ${RATING_TIER_LABEL[row.start]}`}
+            label={fill("startMarker", {
+              n: row.start,
+              label: shellT(`rating${row.start}`),
+            })}
           />
           <Marker
             position={row.current}
             kind="current"
             color={RATING_TIER_COLOR[row.current]!}
-            label={`Now: ${row.current} · ${RATING_TIER_LABEL[row.current]}`}
+            label={fill("nowMarker", {
+              n: row.current,
+              label: shellT(`rating${row.current}`),
+            })}
           />
         </div>
       </div>
@@ -690,13 +696,13 @@ function HomeworkPanel({
   dashboard: PetTrainingDashboard;
   todayISO: string;
 }) {
+  const { t, fill } = useCustomerText("training");
   const { homework, pet } = dashboard;
   return (
-    <Panel icon={BookOpen} title="Homework" iconTone="violet">
+    <Panel icon={BookOpen} title={t("homework")} iconTone="violet">
       {homework.activeCount === 0 ? (
         <p className="text-muted-foreground text-[12.5px]/relaxed">
-          No active homework right now — {pet.name} is between assignments. New
-          exercises will appear here after the next session.
+          {fill("noActiveHomeworkFor", { pet: pet.name })}
         </p>
       ) : (
         <div className="space-y-3">
@@ -706,7 +712,7 @@ function HomeworkPanel({
               className="gap-1 border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700"
             >
               <BookOpen className="size-3" />
-              {homework.activeCount} active
+              {fill("activeCount", { n: homework.activeCount })}
             </Badge>
             {homework.practicedTodayCount > 0 && (
               <Badge
@@ -714,7 +720,7 @@ function HomeworkPanel({
                 className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
               >
                 <CheckCircle2 className="size-3" />
-                {homework.practicedTodayCount} done today
+                {fill("doneTodayCount", { n: homework.practicedTodayCount })}
               </Badge>
             )}
             {homework.streakDays >= 2 && (
@@ -723,7 +729,7 @@ function HomeworkPanel({
                 className="gap-1 border-orange-200 bg-orange-50 text-[10px] text-orange-700"
               >
                 <Flame className="size-3" />
-                {homework.streakDays}-day streak
+                {fill("dayStreak", { n: homework.streakDays })}
               </Badge>
             )}
             {homework.overdueCount > 0 && (
@@ -732,7 +738,7 @@ function HomeworkPanel({
                 className="gap-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
               >
                 <AlertTriangle className="size-3" />
-                {homework.overdueCount} overdue
+                {fill("overdueCount", { n: homework.overdueCount })}
               </Badge>
             )}
           </div>
@@ -748,7 +754,7 @@ function HomeworkPanel({
             className="-mx-2 h-7 gap-1 text-[11px]"
           >
             <Link href="/customer/training?tab=homework">
-              Open Homework tab for resources & media
+              {t("openHomeworkTabForResources")}
               <ArrowRight className="size-3" />
             </Link>
           </Button>
@@ -765,6 +771,7 @@ function HomeworkRow({
   item: TrainingHomework;
   todayISO: string;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
   const queryClient = useQueryClient();
   const [practicedNow, setPracticedNow] = useState(false);
   const practiced = practicedNow || hasPracticedToday(item, todayISO);
@@ -774,11 +781,13 @@ function HomeworkRow({
     const updated = markPracticedToday(item, todayISO);
     fanOutHomeworkUpsert(queryClient, updated);
     setPracticedNow(true);
-    toast.success(`Nice work — "${item.title}" marked done for today.`);
+    toast.success(fill("markedDoneToday", { title: item.title }));
   }
 
   const dueLabel = item.nextDueDate
-    ? `Due ${relativeDays(item.nextDueDate, todayISO).toLowerCase()}`
+    ? fill("dueWhen", {
+        when: formatDayRelative(item.nextDueDate, locale, todayISO),
+      })
     : null;
   const overdue =
     !!item.nextDueDate && item.nextDueDate < todayISO && !practiced;
@@ -826,7 +835,7 @@ function HomeworkRow({
           )}
         >
           <CheckCircle2 className="size-3.5" />
-          {practiced ? "Done today" : "Mark as Done"}
+          {practiced ? t("doneToday") : t("markAsDone")}
         </Button>
       </div>
       {item.description && (
@@ -853,10 +862,11 @@ function HomeworkRow({
 
 /** Compact 5-star renderer matching the report-card StarRow visual. */
 function StarRow({ value }: { value: 1 | 2 | 3 | 4 | 5 }) {
+  const { fill } = useCustomerText("training");
   return (
     <span
       className="inline-flex items-center gap-0.5"
-      aria-label={`${value} out of 5 stars`}
+      aria-label={fill("starsOutOfFive", { n: value })}
     >
       {Array.from({ length: 5 }).map((_, i) => (
         <Star

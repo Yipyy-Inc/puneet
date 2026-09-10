@@ -74,7 +74,7 @@ const ANSI = {
 };
 
 /** The count on the day the rule got a gate (stage 11, 2026-09-04). */
-const BASELINE = 499;
+const BASELINE = 483;
 
 /**
  * Formatters told no locale, measured the day the pattern was added — then

@@ -11686,3 +11686,53 @@ Also found: the shell catalogue's accent test listed `entente` as stripped
 French. It is the correct spelling — there is no accent to lose — and
 `messages/fr.json` already used it 19 times outside the shell. It is off the
 list.
+
+### Training (`/customer/training`) — **"Enroll and pay" marks the series paid and takes no money**
+
+- **Enrolling charges nothing and records a payment.** `handleEnroll` is
+  `// TODO: API call to enroll`, a 1.5 s timeout, then a new enrollment is
+  pushed into the React Query cache with `paymentStatus: "paid"` (or
+  `"deposit"`) — the customer picked a payment option, pressed "Enroll and
+  pay", and the facility's student list now shows them paid. Nothing was
+  charged and nothing reached Postgres; a reload loses it. **The most serious
+  item in this section**, for the same reason `PayNowModal` was on Billing.
+- **A drop-in is the same, smaller.** "Book drop-in · $X" is commented
+  `// Mock: simulate an async charge + write`, writes an invoice line into the
+  cache, and toasts "A confirmation email is on the way." No charge, no email.
+- **Every customer is shown someone else's missed class.**
+  `makeup-sessions-tab.tsx` renders `mockEnrollments` / `mockSeries` /
+  `mockAttendances` declared in the file: a Golden Retriever called Remy,
+  owned by John Smith, absent from week 2 of "Basic Obedience - Saturday
+  Morning February". Requesting a makeup is local state; skipping a week is a
+  500 ms timeout and a toast.
+- **The class list is an inline mock too** — `page.tsx` declares its own
+  `mockSeries` ("Training Room A", "Sarah K.") and the page reads it through
+  `useState`. The catalogue, report cards, homework and packages tabs read
+  `trainingQueries`, so one page mixes the two.
+- **Report cards are scoped through the fixture client list** —
+  `clients.find((c) => c.id === customerId)` from `@/data/clients` decides
+  which pets are the viewer's, the same shape Billing had.
+- **Claims with nothing behind them:** the waitlist toast "We'll text and
+  email you the moment a spot opens" (the entry is a cache write; nothing
+  sends); package renewal "coming soon. Your instructor was notified" (no one
+  is); the graduation follow-up toast is a client-side stand-in for "a server
+  cron", stamped into the cache.
+- Fixed while translating, because they were formatting and not behaviour:
+  **four more hand-rolled clocks** — three copies of `relativeDays` ("in 3d",
+  "2w ago", "1mo ago") are `formatDayRelative` now, which stops at
+  yesterday/tomorrow and then shows a date (§5q's 24-hour line); four copies
+  of a 12-hour `formatTime` are `formatTimeOfDay`; `getDayName` (an English
+  weekday array in `lib/training-series`) is `formatWeekday` at every call
+  site on this page; every price was `$${price}` and is `formatMoney`; the
+  calendar (.ics) export's summary and description are in the reader's
+  language. The makeup tab parsed a bare `YYYY-MM-DD` with `new Date()`,
+  which is UTC midnight — the day BEFORE everywhere in Canada; it reads local
+  midnight now.
+- The rating and level vocabulary ("Developing" … "Mastered", "Foundation"
+  … "Excellent") and the milestone titles live in `shell.training`, because
+  the facility's student profile renders the same components.
+  `EXERCISE_RATING_LABELS`, `TRAINING_LEVEL_LABELS` and `MILESTONE_LABELS`
+  in `lib/` are still English and still read by the facility report-card
+  screens, and `MILESTONE_LABELS` also feeds a notification email subject.
+- Waiver titles and bodies come from `@/data/training-waivers` and stay as
+  written — they are the facility's legal text, not interface copy.

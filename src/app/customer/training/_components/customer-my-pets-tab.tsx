@@ -12,12 +12,15 @@ import {
   pickEligiblePets,
 } from "@/lib/customer-training-dashboard";
 import { CustomerPetTrainingDashboard } from "./customer-pet-training-dashboard";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatList } from "@/lib/i18n/format";
 
 interface Props {
   customerId: number;
 }
 
 export function CustomerMyPetsTab({ customerId }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   // Pin "now" once at mount so React Compiler doesn't flag Date reads in
   // downstream useMemos. Matches the homework + report-cards pattern.
   const [nowMs] = useState(() => Date.now());
@@ -88,7 +91,7 @@ export function CustomerMyPetsTab({ customerId }: Props) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        Add a pet to your profile to see their training dashboard here.
+        {t("addAPetToYour")}
       </div>
     );
   }
@@ -98,12 +101,17 @@ export function CustomerMyPetsTab({ customerId }: Props) {
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <PawPrint className="text-muted-foreground/30 mx-auto mb-2 size-8" />
         <p>
-          No training history for{" "}
-          {customer.pets.map((p) => p.name).join(" or ")} yet.
+          {fill("noTrainingHistoryFor", {
+            pets: formatList(
+              customer.pets.map((p) => p.name),
+              locale,
+              "disjunction",
+            ),
+          })}
         </p>
         <Button asChild size="sm" className="mt-4">
           <Link href="/customer/training?tab=classes">
-            Browse Training Classes
+            {t("browseTrainingClasses")}
           </Link>
         </Button>
       </div>
