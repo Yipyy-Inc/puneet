@@ -10,7 +10,6 @@
     "src/app/customer/gift-cards/redeem/page.tsx": 2,
     "src/app/customer/household/page.tsx": 19,
     "src/app/customer/notifications/page.tsx": 31,
-    "src/app/customer/refer/page.tsx": 75,
     "src/app/customer/training/accept-offer/[enrollmentId]/_components/accept-offer-client.tsx": 25,
     "src/app/customer/wallet/_components/WalletView.tsx": 32,
     "src/app/customer/wallet/page.tsx": 2,

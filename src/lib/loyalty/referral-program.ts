@@ -5,6 +5,14 @@ import type {
   EarnRuleRewardType,
   ReferralRewardTrigger,
 } from "@/types/loyalty";
+import type { AppLocale } from "@/lib/language-settings";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import {
+  formatList,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+} from "@/lib/i18n/format";
 
 /**
  * Whether a facility's referral program is active. Reads the canonical
@@ -60,11 +68,20 @@ export function isItemReward(type: EarnRuleRewardType): boolean {
   return type === "freebie";
 }
 
-/** "$25 account credit", "10% off", "100 points", "Free Nail Trim". */
+/**
+ * "$25 account credit", "10% off", "100 points", "Free Nail Trim".
+ *
+ * `locale` defaults to English, which is byte-for-byte what this returned
+ * before it took one: the facility's wizard preview and a facility's own share
+ * template still read the English. The customer's page passes theirs. French
+ * puts the amount after the noun and a space before `$` and `%` (§5q).
+ */
 export function referralRewardText(
   type: EarnRuleRewardType,
   value: number | string,
+  locale: AppLocale = "en",
 ): string {
+  if (locale === "fr") return frRewardText(type, value);
   switch (type) {
     case "points":
       return `${value} points`;
@@ -83,6 +100,27 @@ export function referralRewardText(
   }
 }
 
+function frRewardText(type: EarnRuleRewardType, value: number | string) {
+  const n = Number(value);
+  const money = formatMoney(n, "fr", { whole: Number.isInteger(n) });
+  switch (type) {
+    case "points":
+      return `${formatNumber(n, "fr")} points`;
+    case "credit":
+      return `${money} de crédit au compte`;
+    case "gift_card":
+      return `carte-cadeau de ${money}`;
+    case "discount_pct":
+      return `${formatPercent(n, "fr")} de rabais`;
+    case "discount_fixed":
+      return `${money} de rabais`;
+    case "freebie":
+      return typeof value === "string" && value.trim()
+        ? `Gratuit : ${value}`
+        : "Article gratuit";
+  }
+}
+
 /** "all services" or "grooming, daycare" (capitalised by the UI as needed). */
 export function referralServiceScopeText(
   appliesToServiceTypes: string[] | null,
@@ -97,13 +135,30 @@ export function referralServiceScopeText(
  * Full one-line summary of a reward side: reward · service scope (when limited)
  * · expiry (when set). e.g. "10% off · grooming only · expires in 30 days".
  */
-export function referralRewardFullText(config: ReferralRewardConfig): string {
-  const parts = [referralRewardText(config.rewardType, config.rewardValue)];
-  if (config.appliesToServiceTypes && config.appliesToServiceTypes.length > 0) {
-    parts.push(`${config.appliesToServiceTypes.join(", ")} only`);
+export function referralRewardFullText(
+  config: ReferralRewardConfig,
+  locale: AppLocale = "en",
+): string {
+  const parts = [
+    referralRewardText(config.rewardType, config.rewardValue, locale),
+  ];
+  const scope = config.appliesToServiceTypes ?? [];
+  if (scope.length > 0) {
+    parts.push(
+      locale === "fr"
+        ? `${formatList(
+            scope.map((s) => serviceTypeLabel("fr", s).toLowerCase()),
+            "fr",
+          )} seulement`
+        : `${scope.join(", ")} only`,
+    );
   }
   if (config.expiresAfterDays != null) {
-    parts.push(`expires in ${config.expiresAfterDays} days`);
+    parts.push(
+      locale === "fr"
+        ? `expire dans ${config.expiresAfterDays} jours`
+        : `expires in ${config.expiresAfterDays} days`,
+    );
   }
   return parts.join(" · ");
 }
