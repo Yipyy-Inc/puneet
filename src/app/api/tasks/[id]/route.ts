@@ -9,7 +9,7 @@ import {
   type TaskRow,
 } from "@/lib/api/mappers/facility-task";
 import { createServerClient } from "@/lib/supabase/server";
-import type { TablesUpdate } from "@/types/database";
+import type { Json, TablesUpdate } from "@/types/database";
 
 // ============================================================================
 // Changing one task.
@@ -87,6 +87,7 @@ export async function PATCH(
     requiresPhoto?: boolean;
     requiresSignoff?: boolean;
     notes?: string | null;
+    metadata?: Record<string, unknown>;
   } | null;
 
   if (!body) {
@@ -146,6 +147,21 @@ export async function PATCH(
   if (body.requiresSignoff !== undefined)
     patch.requires_signoff = body.requiresSignoff;
   if (body.notes !== undefined) patch.notes = body.notes;
+  // The producing feature's own state — an incident follow-up keeps its call
+  // log here. An object or nothing: a bare value would replace the whole bag.
+  if (body.metadata !== undefined) {
+    if (
+      !body.metadata ||
+      typeof body.metadata !== "object" ||
+      Array.isArray(body.metadata)
+    ) {
+      return NextResponse.json(
+        { error: "metadata is an object." },
+        { status: 400 },
+      );
+    }
+    patch.metadata = body.metadata as Json;
+  }
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to change." }, { status: 400 });
