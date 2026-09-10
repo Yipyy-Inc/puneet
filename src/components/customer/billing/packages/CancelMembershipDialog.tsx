@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import type { Membership, MembershipPlan } from "@/data/services-pricing";
 import { defaultMembershipChangePolicy } from "@/data/services-pricing";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
 
 interface Props {
   open: boolean;
@@ -22,12 +24,6 @@ interface Props {
   onConfirm: () => void;
 }
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
-
 export function CancelMembershipDialog({
   open,
   onOpenChange,
@@ -35,6 +31,7 @@ export function CancelMembershipDialog({
   plan,
   onConfirm,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const [nowMs] = useState(() => Date.now());
   const policy = plan?.changePolicy ?? defaultMembershipChangePolicy;
 
@@ -55,11 +52,13 @@ export function CancelMembershipDialog({
           ? 90
           : 30;
     const refund = Math.round((membership.monthlyPrice * daysLeft) / cycleDays);
-    refundLine = `Estimated prorated refund: ${formatCurrency(refund)} to your original payment method.`;
+    refundLine = fill("estimatedProratedRefund", {
+      amount: formatMoney(refund, locale),
+    });
   } else if (policy.refundRule === "remaining_credits_as_store_credit") {
     const remaining =
       membership.creditsRemaining > 0 ? membership.creditsRemaining : 0;
-    refundLine = `${remaining} unused credits will convert to store credit you can use for future bookings.`;
+    refundLine = fill("unusedCreditsToStoreCredit", { n: remaining });
   }
 
   return (
@@ -68,26 +67,21 @@ export function CancelMembershipDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-amber-500" />
-            Cancel {membership.planName}?
+            {fill("cancelPlanQuestion", { plan: membership.planName })}
           </DialogTitle>
           <DialogDescription>
-            Please review what happens when you cancel this membership.
+            {t("pleaseReviewWhatHappensWhen")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2 text-sm">
           <div className="rounded-lg border p-3">
-            <p className="text-muted-foreground text-xs">Access ends</p>
+            <p className="text-muted-foreground text-xs">{t("accessEnds")}</p>
             <p className="mt-0.5 font-medium">
-              {effectiveDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDateLong(effectiveDate, locale)}{" "}
               {policy.cancellationPolicy === "immediate"
-                ? " (immediately)"
-                : ` (end of current ${membership.billingCycle} cycle)`}
+                ? t("immediatelyParen")
+                : t("endOfCurrentCycleParen")}
             </p>
           </div>
 
@@ -100,8 +94,7 @@ export function CancelMembershipDialog({
           {policy.noticeRequiredDays > 0 &&
             policy.cancellationPolicy === "end_of_cycle" && (
               <p className="text-muted-foreground text-xs">
-                This plan requires {policy.noticeRequiredDays} days notice; your
-                next billing date already accounts for that.
+                {fill("noticeRequired", { n: policy.noticeRequiredDays })}
               </p>
             )}
 
@@ -114,7 +107,7 @@ export function CancelMembershipDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Keep membership
+            {t("keepMembership")}
           </Button>
           <Button
             variant="destructive"
@@ -123,7 +116,7 @@ export function CancelMembershipDialog({
               onOpenChange(false);
             }}
           >
-            Cancel membership
+            {t("cancelMembership")}
           </Button>
         </DialogFooter>
       </DialogContent>

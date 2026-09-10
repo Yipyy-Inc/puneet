@@ -11818,3 +11818,36 @@ client` and a `console.log` — and its message says 10 minutes, not 15.
   possible mutation of a memo dependency. `formatDuration(+packageDuration,
 locale)` hands on a copy and the errors go. Only per-file lint against HEAD
   caught it — typecheck and the gates were green.
+
+### Packages (`/customer/packages`) — **a customer can buy real passes and pay nothing**
+
+- **"Buy now" on a pass pack grants real passes with no payment.** It posts
+  to `/api/packages/owned`, which checks the session owns the client row and
+  then runs `purchase_package` with the service-role client. A row in
+  `customer_packages` is written in Postgres — the passes are real and
+  redeemable — and nothing takes money. The route says so itself ("nothing
+  here takes payment ... a payment gate can be added"). Because staging
+  shares the production database, a click on staging does this for real.
+  **The most serious item in this section.**
+- **"Confirm purchase" on a membership is a toast.** `handleConfirmPurchase`
+  shows "Membership purchased" and closes the dialog — under a panel that
+  says "$X charged now, then renews automatically every month". Nothing is
+  charged and nothing is recorded; there is no membership table.
+- **Memberships and prepaid credits are fixtures.** `membershipPlans`,
+  `memberships` and `prepaidCredits` come from `@/data/services-pricing`,
+  matched on `customerId` as a string. The passes zone reads Postgres, so the
+  page mixes both, as the booking pages do.
+- The four membership dialogs (upgrade, downgrade, pause, cancel) already say
+  "not recorded — contact the facility" rather than claiming success; that
+  was fixed before this change and only the words moved. The sentence they
+  share was a constant whose deletion broke compilation at every call site;
+  it is a catalogue key now (`membershipNotRecorded`), so a future cleanup
+  must grep for it — noted where the constant used to be.
+- Fixed while translating, because they were formatting and not behaviour:
+  **six** files each carried a `formatCurrency` on `Intl.NumberFormat("en-US",
+{ currency: "USD" })` — US dollars, in a Canadian product — and four a
+  `formatDate` on `"en-US"`. All are `formatMoney` (CAD) and `formatDateLong`
+  in the reader's locale. And `formatDateLong` itself now reads a bare
+  `YYYY-MM-DD` at local midnight: `new Date("2026-09-10")` is UTC, which is
+  the 9th in every Canadian zone, and this was the fourth file this afternoon
+  to need a local fix for it. One fix in `asDate`, with a test.

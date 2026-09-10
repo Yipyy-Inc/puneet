@@ -49,6 +49,9 @@ import { PauseMembershipDialog } from "./packages/PauseMembershipDialog";
 import { CancelMembershipDialog } from "./packages/CancelMembershipDialog";
 import { PurchasedPackageCard } from "./packages/PurchasedPackageCard";
 import { BuyPackagesSection } from "./packages/BuyPackagesSection";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 /**
  * Why the four membership dialogs no longer report success.
@@ -65,45 +68,26 @@ import { BuyPackagesSection } from "./packages/BuyPackagesSection";
  * There is nowhere honest to put the request either -- there is no messaging,
  * ticket or request table for a facility, so "we have passed this on" would be
  * the same lie one step removed. So the dialogs say what is true: the request
- * is not recorded, contact the facility. When memberships get a table this
- * constant is the thing to delete, and the four call sites will fail to
- * compile until they are wired properly.
+ * is not recorded, contact the facility. When memberships get a table, the
+ * `membershipNotRecorded` catalogue key is the thing to delete: the four call
+ * sites are `rg membershipNotRecorded`. (It was a constant, so deleting it
+ * failed compilation at every call; it became a key when the page went French
+ * on 2026-09-10, and a missing key renders its own name rather than failing,
+ * so grep for it.)
  */
-const MEMBERSHIP_NOT_RECORDED =
-  "This request is not recorded automatically yet — please contact the facility to action it.";
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-const formatDateMs = (ms: number) =>
-  new Date(ms).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-
-/** Human "auto-renews …" cadence for a billing cycle. */
-function renewalCadence(cycle: string): string {
+/** The catalogue key for a billing cycle's "auto-renews …" cadence. */
+function renewalCadenceKey(cycle: string): string {
   switch (cycle) {
     case "weekly":
-      return "every week";
+      return "cadenceWeekly";
     case "quarterly":
-      return "every 3 months";
+      return "cadenceQuarterly";
     case "annually":
     case "yearly":
-      return "every year";
+      return "cadenceYearly";
     default:
-      return "every month";
+      return "cadenceMonthly";
   }
 }
 
@@ -140,6 +124,7 @@ function ZoneHeader({
 }
 
 export function PackagesTab() {
+  const { t, fill, locale } = useCustomerText("packages");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -258,7 +243,7 @@ export function PackagesTab() {
   };
 
   const handleConfirmPurchase = () => {
-    toast.success("Membership purchased successfully!");
+    toast.success(t("membershipPurchasedSuccessfully"));
     setIsPurchaseModalOpen(false);
     setSelectedPlan(null);
   };
@@ -270,8 +255,8 @@ export function PackagesTab() {
         <section>
           <ZoneHeader
             icon={CreditCard}
-            title="My Memberships"
-            description="Your recurring subscriptions — status, billing and self-service."
+            title={t("myMemberships")}
+            description={t("yourRecurringSubscriptionsStatusBilling")}
             count={customerMemberships.length}
           />
           {customerMemberships.length > 0 ? (
@@ -317,8 +302,7 @@ export function PackagesTab() {
             </div>
           ) : (
             <p className="text-muted-foreground border-muted rounded-xl border border-dashed px-4 py-6 text-sm">
-              You don&apos;t have an active membership. Explore plans below to
-              start saving on every visit.
+              {t("noActiveMembership")}
             </p>
           )}
         </section>
@@ -327,8 +311,8 @@ export function PackagesTab() {
         <section>
           <ZoneHeader
             icon={Ticket}
-            title="My Passes"
-            description="Prepaid credit packs — credits remaining, expiry and quick-book."
+            title={t("myPasses")}
+            description={t("prepaidCreditPacksCreditsRemaining")}
             count={customerPackages.length + customerPrepaidCredits.length}
           />
           {customerPackages.length > 0 || customerPrepaidCredits.length > 0 ? (
@@ -351,32 +335,36 @@ export function PackagesTab() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="size-5" />
-                      Prepaid Balance
+                      {t("prepaidBalance")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">
-                        Current Balance:
+                        {t("currentBalance")}
                       </span>
                       <span className="text-2xl font-bold">
-                        {formatCurrency(credit.balance)}
+                        {formatMoney(credit.balance, locale)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Total Purchased:
+                        {t("totalPurchased")}
                       </span>
-                      <span>{formatCurrency(credit.totalPurchased)}</span>
+                      <span>{formatMoney(credit.totalPurchased, locale)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total Used:</span>
-                      <span>{formatCurrency(credit.totalUsed)}</span>
+                      <span className="text-muted-foreground">
+                        {t("totalUsed")}
+                      </span>
+                      <span>{formatMoney(credit.totalUsed, locale)}</span>
                     </div>
                     {credit.expiresAt && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Expires:</span>
-                        <span>{formatDate(credit.expiresAt)}</span>
+                        <span className="text-muted-foreground">
+                          {t("expires")}
+                        </span>
+                        <span>{formatDateLong(credit.expiresAt, locale)}</span>
                       </div>
                     )}
                   </CardContent>
@@ -385,8 +373,7 @@ export function PackagesTab() {
             </div>
           ) : (
             <p className="text-muted-foreground border-muted rounded-xl border border-dashed px-4 py-6 text-sm">
-              No prepaid passes yet. Buy a credit pack to save on bundled
-              visits.
+              {t("noPrepaidPassesYet")}
             </p>
           )}
         </section>
@@ -398,8 +385,8 @@ export function PackagesTab() {
         <section className="bg-muted/40 rounded-2xl border p-6 md:p-8">
           <ZoneHeader
             icon={Store}
-            title="Explore Plans"
-            description="Browse memberships and add more savings and perks — this is the shop."
+            title={t("explorePlans")}
+            description={t("browseMembershipsAndAddMore")}
           />
 
           {/* Compare plans toggle */}
@@ -412,7 +399,7 @@ export function PackagesTab() {
               aria-pressed={compareOpen}
             >
               <Table2 className="size-4" />
-              {compareOpen ? "Hide comparison" : "Compare plans"}
+              {compareOpen ? t("hideComparison") : t("comparePlans")}
             </Button>
           </div>
 
@@ -423,7 +410,7 @@ export function PackagesTab() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-muted-foreground bg-muted/40 sticky left-0 p-3 text-left font-medium">
-                      Feature
+                      {t("feature")}
                     </th>
                     {availablePlans.map((plan) => (
                       <th
@@ -438,7 +425,7 @@ export function PackagesTab() {
                               className="gap-1 bg-emerald-600 text-[10px] hover:bg-emerald-600"
                             >
                               <Check className="size-2.5" />
-                              Current
+                              {t("current")}
                             </Badge>
                           )}
                         </div>
@@ -449,11 +436,11 @@ export function PackagesTab() {
                 <tbody>
                   <tr className="border-b">
                     <td className="bg-muted/40 sticky left-0 p-3 font-medium">
-                      Monthly price
+                      {t("monthlyPrice")}
                     </td>
                     {availablePlans.map((plan) => (
                       <td key={plan.id} className="p-3 text-center">
-                        {formatCurrency(plan.monthlyPrice)}
+                        {formatMoney(plan.monthlyPrice, locale)}
                       </td>
                     ))}
                   </tr>
@@ -463,13 +450,13 @@ export function PackagesTab() {
                     </td>
                     {availablePlans.map((plan) => (
                       <td key={plan.id} className="p-3 text-center">
-                        {plan.credits === -1 ? "Unlimited" : plan.credits}
+                        {plan.credits === -1 ? t("unlimited") : plan.credits}
                       </td>
                     ))}
                   </tr>
                   <tr className="border-b">
                     <td className="bg-muted/40 sticky left-0 p-3 font-medium">
-                      Discount
+                      {t("discount")}
                     </td>
                     {availablePlans.map((plan) => (
                       <td
@@ -528,7 +515,7 @@ export function PackagesTab() {
                             className="mt-2 gap-1 bg-emerald-600 hover:bg-emerald-600"
                           >
                             <Check className="size-3" />
-                            Your Current Plan
+                            {t("yourCurrentPlan")}
                           </Badge>
                         ) : (
                           plan.isPopular && (
@@ -536,7 +523,7 @@ export function PackagesTab() {
                               variant="default"
                               className="mt-2 border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
                             >
-                              Most Popular
+                              {t("mostPopular")}
                             </Badge>
                           )
                         )}
@@ -547,20 +534,24 @@ export function PackagesTab() {
                   <CardContent className="space-y-4">
                     <div>
                       <div className="text-3xl font-bold">
-                        {formatCurrency(plan.monthlyPrice)}
+                        {formatMoney(plan.monthlyPrice, locale)}
                       </div>
                       <div className="text-muted-foreground text-sm">
-                        per month
+                        {t("perMonth")}
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Credits:</span>
+                        <span className="text-muted-foreground">
+                          {t("credits")}
+                        </span>
                         <span className="font-semibold">{plan.credits}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Discount:</span>
+                        <span className="text-muted-foreground">
+                          {t("discount2")}
+                        </span>
                         <span className="font-semibold text-green-600">
                           {plan.discountPercentage}%
                         </span>
@@ -569,7 +560,7 @@ export function PackagesTab() {
 
                     {plan.perks.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-sm font-medium">Perks:</p>
+                        <p className="text-sm font-medium">{t("perks")}</p>
                         <ul className="text-muted-foreground space-y-1 text-sm">
                           {plan.perks.map((perk, idx) => (
                             <li key={idx} className="flex items-center gap-2">
@@ -588,14 +579,14 @@ export function PackagesTab() {
                         disabled
                       >
                         <Check className="size-4" />
-                        Your Current Plan
+                        {t("yourCurrentPlan")}
                       </Button>
                     ) : (
                       <Button
                         className="w-full"
                         onClick={() => handlePurchasePlan(plan.id)}
                       >
-                        Purchase Plan
+                        {t("purchasePlan")}
                       </Button>
                     )}
                   </CardContent>
@@ -610,9 +601,11 @@ export function PackagesTab() {
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Purchase {purchasePlan?.name}</DialogTitle>
+            <DialogTitle>
+              {fill("purchasePlanNamed", { plan: purchasePlan?.name ?? "" })}
+            </DialogTitle>
             <DialogDescription>
-              Review what&apos;s included before confirming your membership.
+              {t("reviewWhatsIncludedBeforeConfirming")}
             </DialogDescription>
           </DialogHeader>
           {purchasePlan && (
@@ -620,9 +613,9 @@ export function PackagesTab() {
               {/* What you get */}
               <div className="space-y-2 rounded-lg border p-3">
                 <div className="flex items-center justify-between font-semibold">
-                  <span>Price</span>
+                  <span>{t("price")}</span>
                   <span>
-                    {formatCurrency(purchasePlan.monthlyPrice)}
+                    {formatMoney(purchasePlan.monthlyPrice, locale)}
                     <span className="text-muted-foreground font-normal">
                       {" "}
                       /{" "}
@@ -631,19 +624,19 @@ export function PackagesTab() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Credits</span>
+                  <span className="text-muted-foreground">{t("credits2")}</span>
                   <span className="font-medium">
                     {purchasePlan.credits === -1
-                      ? "Unlimited"
-                      : `${purchasePlan.credits} / cycle`}
+                      ? t("unlimited")
+                      : fill("creditsPerCycle", { n: purchasePlan.credits })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">
-                    Discount on all services
+                    {t("discountOnAllServices")}
                   </span>
                   <span className="font-medium text-green-600">
-                    {purchasePlan.discountPercentage}%
+                    {formatPercent(purchasePlan.discountPercentage, locale)}
                   </span>
                 </div>
               </div>
@@ -651,7 +644,7 @@ export function PackagesTab() {
               {/* Perks */}
               {purchasePlan.perks.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="font-medium">What&apos;s included</p>
+                  <p className="font-medium">{t("whatsIncluded")}</p>
                   <ul className="space-y-1">
                     {purchasePlan.perks.map((perk, idx) => (
                       <li key={idx} className="flex items-center gap-2">
@@ -668,27 +661,33 @@ export function PackagesTab() {
                 <CreditCard className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                 <div>
                   <p className="font-medium">
-                    First charge today — {formatDateMs(nowMs)}
+                    {fill("firstChargeToday", {
+                      date: formatDateLong(nowMs, locale),
+                    })}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {formatCurrency(purchasePlan.monthlyPrice)} charged now,
-                    then auto-renews {renewalCadence(purchasePlan.billingCycle)}
-                    .
+                    {fill("chargedNowThenRenews", {
+                      amount: formatMoney(purchasePlan.monthlyPrice, locale),
+                      cadence: t(renewalCadenceKey(purchasePlan.billingCycle)),
+                    })}
                   </p>
                 </div>
               </div>
 
               {/* Auto-renewal notice */}
               <p className="text-muted-foreground text-xs">
-                By confirming you agree to auto-renewal. Cancel anytime — see
-                our{" "}
-                <Link
-                  href={purchasePlan.termsUrl ?? "/customer/settings/billing"}
-                  className="text-primary font-medium underline"
-                >
-                  cancellation policy
-                </Link>
-                .
+                {rich(t("autoRenewalNotice"), {
+                  policy: (
+                    <Link
+                      href={
+                        purchasePlan.termsUrl ?? "/customer/settings/billing"
+                      }
+                      className="text-primary font-medium underline"
+                    >
+                      {t("cancellationPolicy")}
+                    </Link>
+                  ),
+                })}
               </p>
             </div>
           )}
@@ -697,9 +696,11 @@ export function PackagesTab() {
               variant="outline"
               onClick={() => setIsPurchaseModalOpen(false)}
             >
-              Cancel
+              {t("cancel")}
             </Button>
-            <Button onClick={handleConfirmPurchase}>Confirm Purchase</Button>
+            <Button onClick={handleConfirmPurchase}>
+              {t("confirmPurchase")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -718,9 +719,9 @@ export function PackagesTab() {
             const newPlan = availablePlans.find((p) => p.id === newPlanId);
             // NOT "New perks are active now." Nothing switched: memberships
             // have no table, so there is no plan to change and no schedule to
-            // put a change on. See the note above `MEMBERSHIP_NOT_RECORDED`.
-            toast.warning("Not submitted yet", {
-              description: `${MEMBERSHIP_NOT_RECORDED} Ask about ${newPlan?.name ?? "this plan"} directly.`,
+            // put a change on. See the "membershipNotRecorded" note.
+            toast.warning(t("notSubmittedYet"), {
+              description: `${t("membershipNotRecorded")} ${fill("askAboutPlan", { plan: newPlan?.name ?? t("thisPlan") })}`,
             });
           }}
         />
@@ -738,8 +739,8 @@ export function PackagesTab() {
           allPlans={availablePlans}
           onConfirm={(newPlanId) => {
             const newPlan = availablePlans.find((p) => p.id === newPlanId);
-            toast.warning("Not scheduled yet", {
-              description: `${MEMBERSHIP_NOT_RECORDED} Ask about ${newPlan?.name ?? "this plan"} directly.`,
+            toast.warning(t("notScheduledYet"), {
+              description: `${t("membershipNotRecorded")} ${fill("askAboutPlan", { plan: newPlan?.name ?? t("thisPlan") })}`,
             });
           }}
         />
@@ -753,8 +754,8 @@ export function PackagesTab() {
           membership={pauseMembership}
           plan={pausePlan}
           onConfirm={(months) => {
-            toast.warning("Not scheduled yet", {
-              description: `${MEMBERSHIP_NOT_RECORDED} Ask about a ${months}-month pause directly.`,
+            toast.warning(t("notScheduledYet"), {
+              description: `${t("membershipNotRecorded")} ${fill("askAboutPause", { n: months })}`,
             });
           }}
         />
@@ -774,8 +775,8 @@ export function PackagesTab() {
             // false twice over -- no cancellation was recorded and no email was
             // sent -- and a customer who believes they have cancelled stops
             // watching their statements.
-            toast.warning("Not cancelled yet", {
-              description: `${MEMBERSHIP_NOT_RECORDED} Your membership is still active.`,
+            toast.warning(t("notCancelledYet"), {
+              description: `${t("membershipNotRecorded")} ${t("membershipStillActive")}`,
             });
           }}
         />

@@ -107,6 +107,9 @@ const SAME_IN_BOTH = new Set([
   "customerPages.training.date", // Date / Date
   "customerPages.yipyygo.service", // Service / Service
   "customerPages.yipyygo.date", // Date / Date
+  "customerPages.packages.total", // Total / Total
+  "customerPages.packages.creditsPerCycle", // {n} / cycle — "cycle" is French too
+  "customerPages.packages.service", // Service / Service
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
