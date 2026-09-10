@@ -16,6 +16,8 @@ import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
 import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatTimeOfDay } from "@/lib/i18n/format";
 
 export default function CheckInQRPage({
   params,
@@ -24,6 +26,7 @@ export default function CheckInQRPage({
 }) {
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
+  const { t, fill, locale } = useCustomerText("yipyygo");
 
   const { id } = use(params);
   const booking = useMemo(
@@ -43,10 +46,10 @@ export default function CheckInQRPage({
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center">
-              Booking not found.
+              {t("qrBookingNotFound")}
             </p>
             <Button variant="outline" className="mt-4 w-full" asChild>
-              <Link href="/customer/bookings">Back to Bookings</Link>
+              <Link href="/customer/bookings">{t("qrBackToBookings")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -64,17 +67,14 @@ export default function CheckInQRPage({
         <Button variant="ghost" size="sm" asChild>
           <Link href={`/customer/bookings/${booking.id}`}>
             <ArrowLeft className="mr-2 size-4" />
-            Back to booking
+            {t("qrBackToBooking")}
           </Link>
         </Button>
 
         <Card className="border-primary/30 bg-card">
           <CardHeader className="pb-2 text-center">
-            <CardTitle className="text-xl">Show QR at drop-off</CardTitle>
-            <CardDescription>
-              Staff will scan this code to open your reservation and complete
-              check-in quickly.
-            </CardDescription>
+            <CardTitle className="text-xl">{t("qrShowAtDropoff")}</CardTitle>
+            <CardDescription>{t("qrStaffWillScan")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center pt-4">
             {hasToken ? (
@@ -83,15 +83,19 @@ export default function CheckInQRPage({
                   <CheckInQRCode token={form!.qrCheckInToken!} size={240} />
                 </div>
                 <p className="text-muted-foreground mt-4 text-center text-sm">
-                  Booking #{booking.id} · {pet?.name ?? "Pet"}
+                  {fill("qrBookingNumber", { id: booking.id })} ·{" "}
+                  {pet?.name ?? t("qrPet")}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  {booking.startDate} · {booking.checkInTime ?? "—"}
+                  {formatDateLong(booking.startDate, locale)} ·{" "}
+                  {booking.checkInTime
+                    ? formatTimeOfDay(booking.checkInTime, locale)
+                    : "—"}
                 </p>
               </>
             ) : (
               <p className="text-muted-foreground py-8 text-center">
-                No QR code available. Complete your Express Check-in form first.
+                {t("qrNoCodeYet")}
               </p>
             )}
           </CardContent>
@@ -101,19 +105,19 @@ export default function CheckInQRPage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Smartphone className="size-4" />
-              QR also available in
+              {t("qrAlsoAvailableIn")}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground space-y-2 text-sm">
-            <p>· This portal (booking details page)</p>
-            <p>· Confirmation email after you submit the form</p>
-            <p>· SMS reminder (if enabled)</p>
+            <p>· {t("qrInPortal")}</p>
+            <p>· {t("qrInEmail")}</p>
+            <p>· {t("qrInSms")}</p>
           </CardContent>
         </Card>
 
         <Button variant="outline" className="w-full" asChild>
           <Link href={`/customer/bookings/${booking.id}`}>
-            View booking details
+            {t("qrViewBookingDetails")}
           </Link>
         </Button>
       </div>
