@@ -561,7 +561,7 @@ export function FeedingSection({
                                 </div>
                                 <div className="space-y-1">
                                   <Label className="text-xs">
-                                    Brand / Name
+                                    {t("brandName")}
                                   </Label>
                                   <Input
                                     value={comp.name}

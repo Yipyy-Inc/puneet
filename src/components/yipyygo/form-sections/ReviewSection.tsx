@@ -36,7 +36,7 @@ export function ReviewSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Review & Submit</CardTitle>
+        <CardTitle>{t("reviewAndSubmit")}</CardTitle>
         <CardDescription>
           {t("reviewYourInformationBeforeSubmitting")}
         </CardDescription>

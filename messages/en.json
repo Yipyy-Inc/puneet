@@ -7231,7 +7231,10 @@
       "mealCountOther": "{n} meals",
       "itemCountOne": "{n} item",
       "itemCountOther": "{n} items",
-      "medicationLabelPhoto": "Medication label"
+      "medicationLabelPhoto": "Medication label",
+      "brandName": "Brand / name",
+      "colorMarkings": "Colour / markings",
+      "reviewAndSubmit": "Review and submit"
     },
     "loyalty": {
       "allActivity": "All activity",
@@ -8527,7 +8530,8 @@
         "cancelPlanQuestion": "Cancel {plan}?",
         "immediatelyParen": "(immediately)",
         "endOfCurrentCycleParen": "(end of the current billing cycle)",
-        "noticeRequired": "This plan requires {n} days’ notice; your next billing date already accounts for that."
+        "noticeRequired": "This plan requires {n} days’ notice; your next billing date already accounts for that.",
+        "creditsPerCycleLabel": "Credits / cycle"
       },
       "settings": {
         "accountSettings": "Account settings",
