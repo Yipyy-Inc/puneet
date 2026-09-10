@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { MAX_UPLOAD_BYTES, sniffContentType } from "@/lib/api/file-type";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Staff documents: list with short-lived signed URLs, and upload.
@@ -37,17 +41,20 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const staffId = new URL(request.url).searchParams.get("staffId");
 
   let query = supabase
     .from("staff_documents")
     .select("*")
+    .match(inFacility(scope))
     .order("uploaded_at", { ascending: false });
 
   if (staffId) {
     const { data: staff } = await supabase
       .from("staff")
       .select("id")
+      .match(inFacility(scope))
       .eq("legacy_id", staffId)
       .maybeSingle();
     // An unreadable staff member yields an empty list, not an error: the caller

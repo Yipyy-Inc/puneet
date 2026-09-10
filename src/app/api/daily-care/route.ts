@@ -7,6 +7,10 @@ import {
   type BookingCareDetails,
   type CareGuest,
 } from "@/lib/daily-care/care-guest";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Who is in the building today, with what their owners asked for.
@@ -101,6 +105,7 @@ export async function GET(request: NextRequest) {
   const date = requested ?? new Date().toISOString().slice(0, 10);
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   // The stay must have STARTED by the end of the requested day and not have
   // ended before it began — a range check rather than "today", because the
@@ -109,6 +114,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("bookings")
     .select(SELECT)
+    .match(inFacility(scope))
     .eq("service", "boarding")
     .lte("start_at", `${date}T23:59:59Z`)
     .gte("end_at", `${date}T00:00:00Z`)

@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import {
   DAYCARE_BOOKING_SELECT,
@@ -46,6 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const url = new URL(request.url);
 
   // The facility's day, taken as a whole. A visit that started this morning is
@@ -58,6 +63,7 @@ export async function GET(request: NextRequest) {
   const { data: bookingRows, error: bookingError } = await supabase
     .from("bookings")
     .select(DAYCARE_BOOKING_SELECT)
+    .match(inFacility(scope))
     .eq("service", "daycare")
     .not("status", "in", "(cancelled,declined)")
     .gte("start_at", dayStart)
@@ -73,6 +79,7 @@ export async function GET(request: NextRequest) {
   const { data: groomingConfig } = await supabase
     .from("grooming_config")
     .select("pet_size_tiers")
+    .match(inFacility(scope))
     .maybeSingle();
 
   const tiers = (groomingConfig?.pet_size_tiers ??
@@ -85,6 +92,7 @@ export async function GET(request: NextRequest) {
   const { data: configRow } = await supabase
     .from("daycare_config")
     .select("capacity_total, capacity_by_size")
+    .match(inFacility(scope))
     .maybeSingle();
 
   const config = (configRow ?? null) as DaycareConfigRow | null;

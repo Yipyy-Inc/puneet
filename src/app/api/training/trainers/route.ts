@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // The people who actually teach here.
@@ -65,12 +69,14 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data: staffRows, error } = await supabase
     .from("staff")
     .select(
       "id, legacy_id, first_name, last_name, email, phone, avatar_url, job_title, primary_role, additional_roles, status",
     )
+    .match(inFacility(scope))
     .order("first_name", { ascending: true });
 
   if (error) {
@@ -87,7 +93,8 @@ export async function GET() {
     .from("training_trainer_profiles")
     .select(
       "staff_id, specializations, certifications, years_experience, bio, visible_online, calendar_color",
-    );
+    )
+    .match(inFacility(scope));
 
   const byStaff = new Map(
     ((profileRows ?? []) as unknown as ProfileRow[]).map((p) => [

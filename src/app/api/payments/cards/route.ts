@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { getViewer } from "@/lib/auth/viewer";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { createServerClient } from "@/lib/supabase/server";
 import { vaultCard } from "@/lib/clover/vault";
 
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const clientId = request.nextUrl.searchParams.get("clientId");
 
   // No facility filter and no permission check in this file. `saved_cards_read`
@@ -66,6 +71,7 @@ export async function GET(request: NextRequest) {
     .select(
       "id, client_id, facility_id, card_brand, card_last4, exp_month, exp_year, consent_at, created_at",
     )
+    .match(inFacility(scope))
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
 

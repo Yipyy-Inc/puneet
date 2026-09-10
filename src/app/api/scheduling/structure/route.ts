@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   toDepartment,
   toPosition,
@@ -56,6 +60,7 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const [departments, positions, pay, members, permissions] = await Promise.all(
     [
@@ -64,17 +69,23 @@ export async function GET() {
         .select(
           "id, facility_id, name, color, description, is_active, created_at",
         )
+        .match(inFacility(scope))
         .order("name"),
       supabase
         .from("facility_positions")
         .select(
           "id, facility_id, department_id, name, color, description, is_active",
         )
+        .match(inFacility(scope))
         .order("name"),
       supabase
         .from("facility_position_pay")
-        .select("position_id, pay_type, hourly_rate, salary"),
-      supabase.from("staff_departments").select("staff_id, department_id"),
+        .select("position_id, pay_type, hourly_rate, salary")
+        .match(inFacility(scope)),
+      supabase
+        .from("staff_departments")
+        .select("staff_id, department_id")
+        .match(inFacility(scope)),
       supabase.rpc("my_permissions"),
     ],
   );

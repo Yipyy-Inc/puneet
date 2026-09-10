@@ -11,6 +11,10 @@ import {
   type PoolStatusRow,
   type RefMaps,
 } from "@/lib/api/mappers/customer-packages";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // What customers own: list it, sell one.
@@ -82,10 +86,12 @@ export async function GET(request: NextRequest) {
 
   const clientRef = request.nextUrl.searchParams.get("clientId");
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   let query = supabase
     .from("customer_packages")
     .select(CUSTOMER_PACKAGE_SELECT)
+    .match(inFacility(scope))
     .order("purchased_at", { ascending: false });
 
   // Filtering through the embedded client keeps one code path for both the

@@ -7,7 +7,11 @@ import {
   templateToRow,
 } from "@/lib/api/mappers/staff-onboarding";
 import { insertTemplateTasks } from "@/lib/api/onboarding-task-writes";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { OnboardingTemplate } from "@/data/staff-onboarding";
 
@@ -34,9 +38,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("onboarding_templates")
     .select(TEMPLATE_SELECT)
+    .match(inFacility(scope))
     .order("name");
 
   if (error) {

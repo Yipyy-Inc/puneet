@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   SERVICE_SELECT,
   rowToService,
@@ -43,9 +47,11 @@ export async function GET(request: NextRequest) {
   const locationId = request.nextUrl.searchParams.get("locationId");
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("grooming_services")
     .select(SERVICE_SELECT)
+    .match(inFacility(scope))
     .order("display_order", { ascending: true })
     .order("name", { ascending: true });
 

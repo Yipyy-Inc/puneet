@@ -7,6 +7,10 @@ import {
   type ServicePackagePricing,
   type ServicePackageRow,
 } from "@/lib/api/mappers/service-packages";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // The whole package catalogue, every module — what the customer portal sells.
@@ -33,9 +37,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("prepaid_packages")
     .select(SERVICE_PACKAGE_SELECT)
+    .match(inFacility(scope))
     .order("popularity_rank", { ascending: true, nullsFirst: false })
     .order("package_price", { ascending: true });
 
@@ -45,7 +51,8 @@ export async function GET() {
 
   const { data: pricingRows } = await supabase
     .from("prepaid_package_pricing")
-    .select("id, regular_price, savings, savings_percentage, purchase_count");
+    .select("id, regular_price, savings, savings_percentage, purchase_count")
+    .match(inFacility(scope));
 
   const pricing = new Map<string, ServicePackagePricing>();
   for (const row of (pricingRows ?? []) as unknown as (ServicePackagePricing & {

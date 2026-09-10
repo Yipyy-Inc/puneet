@@ -9,6 +9,10 @@ import {
   type InstanceRow,
 } from "@/lib/api/mappers/offboarding";
 import { resolveActorNames } from "@/lib/api/actor-names";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Offboarding instances — list, and start one.
@@ -36,9 +40,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("offboarding_instances")
     .select(OFFBOARDING_SELECT)
+    .match(inFacility(scope))
     .order("started_at", { ascending: false });
 
   if (error) {

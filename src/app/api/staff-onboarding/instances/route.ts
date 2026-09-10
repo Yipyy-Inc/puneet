@@ -7,6 +7,10 @@ import {
   toByteaLiteral,
 } from "@/lib/api/onboarding-token";
 import { INSTANCE_SELECT, rowToInstance } from "@/lib/api/mappers/instance";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Onboarding instances — the manager's side.
@@ -31,9 +35,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("onboarding_instances")
     .select(INSTANCE_SELECT)
+    .match(inFacility(scope))
     .order("invited_at", { ascending: false });
 
   if (error) {

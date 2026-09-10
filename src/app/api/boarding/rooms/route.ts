@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   ROOM_CATEGORY_SELECT,
   FACILITY_ROOM_SELECT,
@@ -48,6 +52,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   // `RoomCategory.facilityId` and `FacilityRoom.facilityId` are the app's
   // NUMERIC ref, which these rows do not carry — they key on the uuid. Every
   // row RLS returns belongs to the caller's facility, so this is a LABEL on the
@@ -75,6 +80,7 @@ export async function GET(request: NextRequest) {
   const { data: categoryRows, error: categoryError } = await supabase
     .from("room_categories")
     .select(ROOM_CATEGORY_SELECT)
+    .match(inFacility(scope))
     .eq("service", "boarding")
     .order("sort_order", { ascending: true });
 
@@ -96,6 +102,7 @@ export async function GET(request: NextRequest) {
   const { data: roomRows, error: roomError } = await supabase
     .from("facility_rooms")
     .select(FACILITY_ROOM_SELECT)
+    .match(inFacility(scope))
     .in("category_id", [...categoryIdByUuid.keys()])
     .order("sort_order", { ascending: true });
 
@@ -119,6 +126,7 @@ export async function GET(request: NextRequest) {
   const { data: stayRows, error: stayError } = await supabase
     .from("boarding_stays")
     .select(BOARDING_STAY_SELECT)
+    .match(inFacility(scope))
     .is("released_at", null)
     .overlaps("occupies", `[${from},${windowEnd}]`);
 

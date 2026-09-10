@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { toAuditLogEntry, type AuditLogRow } from "@/lib/api/audit-log";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // The audit trail, for the screens that show it.
@@ -59,11 +63,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const params = new URL(request.url).searchParams;
 
   let query = supabase
     .from("audit_log")
     .select("*")
+    .match(inFacility(scope))
     .order("occurred_at", { ascending: false })
     .limit(LIMIT);
 

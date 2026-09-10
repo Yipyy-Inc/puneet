@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type {
   CreateTrainingSeriesInput,
@@ -61,10 +65,12 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data, error } = await supabase
     .from("training_series")
     .select(SERIES_SELECT)
+    .match(inFacility(scope))
     .order("start_date", { ascending: true });
 
   if (error) {
@@ -81,6 +87,7 @@ export async function GET() {
     const { data: enrollmentRows } = await supabase
       .from("training_series_enrollments")
       .select("series_id, status")
+      .match(inFacility(scope))
       .in("series_id", ids);
     for (const row of (enrollmentRows ?? []) as {
       series_id: string;

@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // What was actually done for a booking: meals, doses, rounds.
@@ -138,7 +142,11 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
-  let query = supabase.from("care_log_entries").select(SELECT);
+  const scope = await activeFacilityIdForStaff();
+  let query = supabase
+    .from("care_log_entries")
+    .select(SELECT)
+    .match(inFacility(scope));
   query = on
     ? query.eq("occurred_on", on)
     : query.eq("bookings.ref", bookingRef);
