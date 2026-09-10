@@ -77,6 +77,9 @@ type ShellCatalogue = {
    *  medication and belongings are also rendered on the facility's booking
    *  page, so the whole folder is one group rather than a customer area. */
   yipyygo: Record<string, string>;
+  /** `components/loyalty` — the points history, shown to the customer on
+   *  their rewards page and to staff on the client’s loyalty tab. */
+  loyalty: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */

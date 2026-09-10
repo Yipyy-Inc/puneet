@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Coins, DollarSign } from "lucide-react";
 import { loyaltyQueries } from "@/lib/api/loyalty";
 import { redeemPointsForCredit } from "@/data/loyalty-redeem";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney, formatNumber } from "@/lib/i18n/format";
 
 export function RedeemPointsDialog({
   open,
@@ -32,6 +34,7 @@ export function RedeemPointsDialog({
   /** Points per $1 of credit (default 100). */
   redemptionRate: number;
 }) {
+  const { t, fill, locale } = useCustomerText("rewards");
   const queryClient = useQueryClient();
   const { data: account } = useQuery(
     loyaltyQueries.account(facilityId, customerId),
@@ -49,9 +52,9 @@ export function RedeemPointsDialog({
   const presets = [rate, rate * 5, rate * 10].filter((p) => p <= balance);
   const error =
     points > balance
-      ? "Not enough points"
+      ? t("notEnoughPoints")
       : points > 0 && creditPreview <= 0
-        ? `Redeem at least ${rate} points`
+        ? fill("redeemAtLeast", { n: formatNumber(rate, locale) })
         : null;
   const canRedeem = points > 0 && !error;
 
@@ -63,13 +66,16 @@ export function RedeemPointsDialog({
       redemptionRate: rate,
     });
     if (!result.ok) {
-      toast.error(result.error ?? "Could not redeem points.");
+      toast.error(result.error ?? t("couldNotRedeemPoints"));
       return;
     }
     // Refresh the account/transactions so the balance updates immediately.
     queryClient.invalidateQueries({ queryKey: ["loyalty"] });
     toast.success(
-      `Redeemed ${result.pointsRedeemed} points for $${result.creditAdded?.toFixed(2)} account credit`,
+      fill("redeemedPointsForCredit", {
+        n: formatNumber(result.pointsRedeemed ?? 0, locale),
+        amount: formatMoney(result.creditAdded ?? 0, locale),
+      }),
     );
     setPointsInput("");
     onOpenChange(false);
@@ -81,30 +87,35 @@ export function RedeemPointsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Coins className="size-5 text-amber-500" />
-            Redeem Points for Credit
+            {t("redeemPointsForCredit")}
           </DialogTitle>
           <DialogDescription>
-            {rate.toLocaleString()} points = $1.00 account credit. Credit
-            applies automatically to your next booking.
+            {fill("redeemRateHint", {
+              rate: formatNumber(rate, locale),
+              dollar: formatMoney(1, locale),
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="bg-muted/40 flex items-center justify-between rounded-lg border p-3 text-sm">
-            <span className="text-muted-foreground">Available</span>
+            <span className="text-muted-foreground">{t("available")}</span>
             <span className="font-semibold tabular-nums">
-              {balance.toLocaleString()} points
+              {fill("pointsCountLower", { n: formatNumber(balance, locale) })}
               {account && account.creditBalance > 0 && (
                 <span className="text-muted-foreground font-normal">
                   {" "}
-                  · ${account.creditBalance.toFixed(2)} credit
+                  ·{" "}
+                  {fill("creditAmount", {
+                    amount: formatMoney(account.creditBalance, locale),
+                  })}
                 </span>
               )}
             </span>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="redeem-points">How many points to redeem?</Label>
+            <Label htmlFor="redeem-points">{t("howManyPointsToRedeem")}</Label>
             <Input
               id="redeem-points"
               type="number"
@@ -127,7 +138,7 @@ export function RedeemPointsDialog({
                     className="h-7 text-xs"
                     onClick={() => setPointsInput(String(p))}
                   >
-                    {p.toLocaleString()}
+                    {formatNumber(p, locale)}
                   </Button>
                 ))}
                 {balance > 0 && (
@@ -138,7 +149,7 @@ export function RedeemPointsDialog({
                     className="h-7 text-xs"
                     onClick={() => setPointsInput(String(balance))}
                   >
-                    All ({balance.toLocaleString()})
+                    {fill("allPoints", { n: formatNumber(balance, locale) })}
                   </Button>
                 )}
               </div>
@@ -148,10 +159,10 @@ export function RedeemPointsDialog({
           <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
             <span className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-200">
               <DollarSign className="size-4" />
-              Credit you&apos;ll receive
+              {t("creditYoullReceive")}
             </span>
             <span className="font-bold text-emerald-700 tabular-nums dark:text-emerald-300">
-              ${creditPreview.toFixed(2)}
+              {formatMoney(creditPreview, locale)}
             </span>
           </div>
 
@@ -160,14 +171,14 @@ export function RedeemPointsDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             disabled={!canRedeem}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handleRedeem}
           >
-            Apply as account credit
+            {t("applyAsAccountCredit")}
           </Button>
         </DialogFooter>
       </DialogContent>

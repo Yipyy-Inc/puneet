@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 /**
  * Full-page celebration overlay shown when a customer newly earns a badge:
@@ -37,11 +38,12 @@ export function BadgeCelebration({
   name: string;
   onDone: () => void;
 }) {
+  const { t } = useCustomerText("rewards");
   useEffect(() => {
     // setState in the parent runs from this timeout (async) — not synchronously
     // in the effect body — so it doesn't trip react-hooks/set-state-in-effect.
-    const t = setTimeout(onDone, 3200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDone, 3200);
+    return () => clearTimeout(timer);
   }, [onDone]);
 
   return (
@@ -55,6 +57,7 @@ export function BadgeCelebration({
             width: `${p.size}px`,
             height: `${p.size}px`,
             backgroundColor: p.color,
+            // french-ok: a CSS animation shorthand, not copy
             animation: `confetti-fall ${p.duration}s linear ${p.delay}s forwards`,
           }}
         />
@@ -65,7 +68,7 @@ export function BadgeCelebration({
           {icon}
         </div>
         <div className="text-primary text-xs font-semibold tracking-widest uppercase">
-          Badge unlocked!
+          {t("badgeUnlocked")}
         </div>
         <div className="text-xl font-bold">{name}</div>
       </div>

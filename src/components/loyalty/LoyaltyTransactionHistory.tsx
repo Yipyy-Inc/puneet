@@ -20,6 +20,14 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatMoney,
+  formatNumber,
+  formatTime,
+} from "@/lib/i18n/format";
 /**
  * What this list needs from a points transaction, and nothing more.
  *
@@ -64,13 +72,21 @@ type Kind =
   | "adjusted"
   | "referral";
 
-const KIND_LABEL: Record<Kind, string> = {
-  earned: "Earned",
-  badge: "Badge",
-  redeemed: "Redeemed",
-  expired: "Expired",
-  adjusted: "Adjustment",
-  referral: "Referral",
+// A filter's empty message, by CATALOGUE KEY.
+const NO_TRANSACTIONS_KEY: Record<HistoryFilter, string> = {
+  all: "noTransactionsAll",
+  earned: "noTransactionsEarned",
+  redeemed: "noTransactionsRedeemed",
+};
+
+// A movement's name, by CATALOGUE KEY in `shell.loyalty`.
+const KIND_KEY: Record<Kind, string> = {
+  earned: "kindEarned",
+  badge: "kindBadge",
+  redeemed: "kindRedeemed",
+  expired: "kindExpired",
+  adjusted: "kindAdjusted",
+  referral: "kindReferral",
 };
 
 function kindOf(t: LoyaltyHistoryEntry): Kind {
@@ -94,19 +110,10 @@ function kindOf(t: LoyaltyHistoryEntry): Kind {
   }
 }
 
-function formatDate(iso: string, withTime = false) {
-  const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function formatDate(iso: string, locale: AppLocale, withTime = false) {
+  const date = formatDateLong(iso, locale);
   if (!withTime) return date;
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${date} · ${time}`;
+  return `${date} · ${formatTime(iso, locale)}`;
 }
 
 /**
@@ -120,7 +127,7 @@ export function LoyaltyTransactionHistory({
   currentBalance,
   filterable = false,
   showTime = false,
-  emptyText = "No transactions yet.",
+  emptyText,
 }: {
   transactions: LoyaltyHistoryEntry[];
   currentBalance: number;
@@ -131,6 +138,8 @@ export function LoyaltyTransactionHistory({
   /** Empty-state message when there are no transactions. */
   emptyText?: string;
 }) {
+  const t = useShellText("loyalty");
+  const locale = useShellLocale();
   const rows = useMemo(() => {
     const sorted = [...transactions].sort((a, b) =>
       a.createdAt < b.createdAt ? 1 : -1,
@@ -162,7 +171,11 @@ export function LoyaltyTransactionHistory({
   const pageRows = displayRows.slice(start, start + PAGE_SIZE);
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground text-sm">{emptyText}</p>;
+    return (
+      <p className="text-muted-foreground text-sm">
+        {emptyText ?? t("noTransactionsYet")}
+      </p>
+    );
   }
 
   const filterControl = filterable ? (
@@ -178,9 +191,9 @@ export function LoyaltyTransactionHistory({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All activity</SelectItem>
-          <SelectItem value="earned">Earned</SelectItem>
-          <SelectItem value="redeemed">Redeemed</SelectItem>
+          <SelectItem value="all">{t("allActivity")}</SelectItem>
+          <SelectItem value="earned">{t("earned")}</SelectItem>
+          <SelectItem value="redeemed">{t("redeemed")}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -191,7 +204,7 @@ export function LoyaltyTransactionHistory({
       <div className="space-y-3">
         {filterControl}
         <p className="text-muted-foreground text-sm">
-          No {filter} transactions.
+          {t(NO_TRANSACTIONS_KEY[filter])}
         </p>
       </div>
     );
@@ -204,11 +217,11 @@ export function LoyaltyTransactionHistory({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Points</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
+              <TableHead>{t("date")}</TableHead>
+              <TableHead>{t("type")}</TableHead>
+              <TableHead>{t("description")}</TableHead>
+              <TableHead className="text-right">{t("points")}</TableHead>
+              <TableHead className="text-right">{t("balance")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -217,13 +230,13 @@ export function LoyaltyTransactionHistory({
               return (
                 <TableRow key={txn.id}>
                   <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                    {formatDate(txn.createdAt, showTime)}
+                    {formatDate(txn.createdAt, locale, showTime)}
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant={kind === "adjusted" ? "secondary" : "outline"}
                     >
-                      {KIND_LABEL[kind]}
+                      {t(KIND_KEY[kind])}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-xs">
@@ -245,15 +258,15 @@ export function LoyaltyTransactionHistory({
                     )}
                   >
                     {txn.points > 0 ? "+" : ""}
-                    {txn.points.toLocaleString()}
+                    {formatNumber(txn.points, locale)}
                     {txn.points === 0 && (txn.value ?? 0) > 0 && (
                       <span className="text-muted-foreground block text-xs">
-                        +${txn.value!.toFixed(2)}
+                        +{formatMoney(txn.value ?? 0, locale)}
                       </span>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {balanceAfter.toLocaleString()}
+                    {formatNumber(balanceAfter, locale)}
                   </TableCell>
                 </TableRow>
               );
@@ -265,8 +278,13 @@ export function LoyaltyTransactionHistory({
       {pageCount > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {start + 1}–{Math.min(start + PAGE_SIZE, displayRows.length)} of{" "}
-            {displayRows.length}
+            {t("rangeOf")
+              .replace("{from}", String(start + 1))
+              .replace(
+                "{to}",
+                String(Math.min(start + PAGE_SIZE, displayRows.length)),
+              )
+              .replace("{total}", String(displayRows.length))}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -275,10 +293,12 @@ export function LoyaltyTransactionHistory({
               disabled={safePage === 0}
               onClick={() => setPage(safePage - 1)}
             >
-              <ChevronLeft className="size-4" /> Prev
+              <ChevronLeft className="size-4" /> {t("previous")}
             </Button>
             <span className="text-muted-foreground">
-              Page {safePage + 1} of {pageCount}
+              {t("pageOf")
+                .replace("{n}", String(safePage + 1))
+                .replace("{total}", String(pageCount))}
             </span>
             <Button
               variant="outline"
@@ -286,7 +306,7 @@ export function LoyaltyTransactionHistory({
               disabled={safePage >= pageCount - 1}
               onClick={() => setPage(safePage + 1)}
             >
-              Next <ChevronRight className="size-4" />
+              {t("next")} <ChevronRight className="size-4" />
             </Button>
           </div>
         </div>

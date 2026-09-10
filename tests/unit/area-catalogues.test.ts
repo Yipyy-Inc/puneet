@@ -114,6 +114,12 @@ const SAME_IN_BOTH = new Set([
   "customerPages.settings.canada", // Canada / Canada
   "customerPages.settings.marketing", // Marketing / Marketing
   "customerPages.settings.channelSms", // SMS / SMS
+  // "Points" and "badges" are French words too, and "{n} points" is the same.
+  "customerPages.rewards.badges", // Badges / Badges
+  "customerPages.rewards.points2", // points / points
+  "customerPages.rewards.unitPoints", // points / points
+  "customerPages.rewards.pointsCount", // {n} points
+  "customerPages.rewards.pointsCountLower", // {n} points
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
