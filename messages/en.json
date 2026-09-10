@@ -781,7 +781,8 @@
         "uploading": "Uploading…",
         "documentAdded": "Document added to the permanent record",
         "couldNotUpdateTask": "Could not update that task.",
-        "couldNotUploadFile": "Could not upload that file."
+        "couldNotUploadFile": "Could not upload that file.",
+        "fileTypesMax": "PDF, JPG, PNG — max 10 MB"
       },
       "documents": {
         "typeWorkPermit": "Work permit",
@@ -853,7 +854,8 @@
         "bannerExpiring": "{count} expiring within 90 days",
         "bannerAction": ". Open the employee profile to upload renewed versions.",
         "countExpiringSoonOne": "{count} expiring soon",
-        "countExpiringSoonOther": "{count} expiring soon"
+        "countExpiringSoonOther": "{count} expiring soon",
+        "fileTypesMax": "PDF, JPG, PNG — max 10 MB"
       },
       "writeUps": {
         "catVerbalWarning": "Verbal warning",
@@ -3111,7 +3113,8 @@
         "saving": "Saving…",
         "save": "Save mobile app settings",
         "saved": "Mobile app settings saved",
-        "notSaved": "Those mobile app settings were not saved."
+        "notSaved": "Those mobile app settings were not saved.",
+        "iosAndAndroid": "iOS & Android"
       },
       "pet-breeds": {
         "speciesDogs": "Dogs",
@@ -4700,7 +4703,8 @@
         "removeNamed": "Remove {name}",
         "customLengthHint": "e.g. 1 hr 45 min for a 105-minute evaluation",
         "to": "to",
-        "windowLabel": "Label"
+        "windowLabel": "Label",
+        "validityAndExpiration": "Validity and expiration"
       },
       "addons": {
         "svcDaycare": "Daycare",
@@ -6591,7 +6595,10 @@
       "outsideServiceAreaOnDay": "Outside your service area on this day.",
       "noMobileCoverageOnDay": "No mobile coverage on this day.",
       "full": "Full",
-      "openCount": "{n} open"
+      "openCount": "{n} open",
+      "datesAndTimes": "Dates and times",
+      "cartSeriesLine": "Every {day} · {time} · {weeks} weeks · starts {date}",
+      "dropInBadge": "Drop-in"
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",

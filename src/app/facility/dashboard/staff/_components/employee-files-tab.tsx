@@ -594,7 +594,7 @@ function UploadDialog({
               {t("dropzone")}
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              PDF, JPG, PNG — max 10 MB
+              {t("fileTypesMax")}
             </p>
           </div>
         </div>

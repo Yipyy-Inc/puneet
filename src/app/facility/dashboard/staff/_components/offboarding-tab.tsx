@@ -585,7 +585,7 @@ function FinalDocuments({
                   {fileName || t("selectFile")}
                 </p>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  PDF, JPG, PNG — max 10 MB
+                  {t("fileTypesMax")}
                 </p>
               </button>
               <input

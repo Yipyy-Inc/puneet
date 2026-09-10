@@ -374,7 +374,18 @@ function looksLikeCode(t: string): boolean {
   // time` is copy, and testing for a bare `;` threw it away — a false
   // NEGATIVE introduced by the fix for a false positive. Entities go first.
   const bare = t.replace(/&[a-zA-Z]+;|&#\d+;/g, "");
-  if (bare.includes("`") || bare.includes(";")) return true;
+  // And a semicolon in a SENTENCE — "Your facility manages this perk; reach
+  // out to staff" — is not a statement terminator. Found 2026-09-10: the
+  // customer settings page's instant-booking description was invisible for
+  // exactly this. Code that reaches this position carries an `=` or a bracket
+  // beside its `;`; prose puts a space and a lowercase word after every one.
+  const proseSemicolon =
+    !/[=(){}]/.test(bare) &&
+    /;\s[a-z]/.test(bare) &&
+    !/;(?!\s[a-z])/.test(bare);
+  if (bare.includes("`") || (bare.includes(";") && !proseSemicolon)) {
+    return true;
+  }
   // A CALL or an INDEX: `setBrands([...brands,`, `start.mutate(undefined,`.
   // Both sit between one block's closing brace and the next one's opening
   // brace, and both end at a comma, so the punctuation test below lets them
@@ -387,8 +398,13 @@ function looksLikeCode(t: string): boolean {
   // two threw both away — the same false-negative shape as the entity test
   // above. An attribute in this position always ends at `=`, which the first
   // test already took, so a bare alphabetic word here is copy.
+  //
+  // "Two words" includes two words joined by a connector: "Login & Security",
+  // "Privacy & Consent". Their only gap is ` & `, so letter-space-letter never
+  // matched and the whole title read as code — three card titles on the
+  // customer settings page, found 2026-09-10.
   if (
-    !/[A-Za-z]\s+[A-Za-z]/.test(t) &&
+    !/[A-Za-z]\s+(?:[&+/·—–]\s+)?[A-Za-z]/.test(t) &&
     !/[.!?:,]$/.test(t) &&
     !/^[A-Za-z]{3,}$/.test(t)
   ) {

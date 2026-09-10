@@ -3095,7 +3095,7 @@ export function BookingModal({
                 {/* Dates & Times */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Dates & Times</CardTitle>
+                    <CardTitle>{t("datesAndTimes")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">

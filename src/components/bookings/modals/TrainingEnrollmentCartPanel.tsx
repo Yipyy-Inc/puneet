@@ -1,34 +1,22 @@
 "use client";
 
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatMoney } from "@/lib/i18n/format";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Dog, GraduationCap, PlusCircle, X } from "lucide-react";
-import { getDayName } from "@/lib/training-series";
 import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
 
 /** A single dog → series/course line item in a multi-dog booking. */
 export interface TrainingCartItem extends TrainingSelection {
   petId: number;
   petName: string;
-}
-
-function formatLongDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatTime12(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
 
 function EnrollmentRow({
@@ -41,6 +29,7 @@ function EnrollmentRow({
   onRemove?: () => void;
 }) {
   const t = useShellText("booking");
+  const locale = useShellLocale();
   return (
     <div className="bg-card flex items-start gap-3 rounded-lg border p-3">
       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
@@ -59,7 +48,7 @@ function EnrollmentRow({
           )}
           {item.kind === "drop-in" && (
             <Badge variant="outline" className="text-[10px]">
-              Drop-in
+              {t("dropInBadge")}
             </Badge>
           )}
         </div>
@@ -73,20 +62,32 @@ function EnrollmentRow({
           <CalendarDays className="size-3 shrink-0" />
           {item.kind === "enroll" ? (
             <span>
-              {getDayName(new Date(item.startDate + "T00:00:00").getDay())}s ·{" "}
-              {formatTime12(item.startTime)} · {item.numberOfWeeks} weeks ·
-              starts {formatLongDate(item.startDate)}
+              {t("cartSeriesLine")
+                .replace(
+                  "{day}",
+                  formatWeekday(
+                    new Date(item.startDate + "T00:00:00").getDay(),
+                    locale,
+                    "long",
+                  ),
+                )
+                .replace("{time}", formatTimeOfDay(item.startTime, locale))
+                .replace("{weeks}", String(item.numberOfWeeks))
+                .replace("{date}", formatDateLong(item.startDate, locale))}
             </span>
           ) : (
             <span>
-              {formatLongDate(item.startDate)} · {formatTime12(item.startTime)}–
-              {formatTime12(item.endTime)}
+              {formatDateLong(item.startDate, locale)} ·{" "}
+              {formatTimeOfDay(item.startTime, locale)}–
+              {formatTimeOfDay(item.endTime, locale)}
             </span>
           )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <span className="text-sm font-bold tabular-nums">${item.price}</span>
+        <span className="text-sm font-bold tabular-nums">
+          {formatMoney(item.price, locale)}
+        </span>
         {onRemove && (
           <button
             type="button"
