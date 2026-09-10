@@ -27,15 +27,17 @@ import {
   getBookingSurfaceClasses,
   getStatusLabel,
 } from "../_lib/calendar-helpers";
-import { roomCategories } from "@/data/rooms";
 import type { OccupancyKennel } from "../_lib/calendar-types";
-import { getNoteCount } from "@/data/tags-notes";
+import { useEntityNotes } from "@/lib/api/notes";
+import type { RoomCategory } from "@/types/rooms";
 import { useTagsByEntity } from "@/hooks/use-tags-notes";
 
 interface BookingDetailsSheetProps {
   booking: OccupancyKennel | null;
   isPastWeek?: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The board's own categories — it read the rooms FIXTURE by id. */
+  categories?: RoomCategory[];
   onCheckIn?: (bookingId: number) => void;
   onCheckOut?: (bookingId: number) => void;
   onEdit?: (bookingId: number) => void;
@@ -48,14 +50,17 @@ export function BookingDetailsSheet({
   onCheckIn,
   onCheckOut,
   onEdit,
+  categories = [],
 }: BookingDetailsSheetProps) {
   const open = booking !== null;
   const category = booking
-    ? roomCategories.find((c) => c.id === booking.categoryId)
+    ? categories.find((c) => c.id === booking.categoryId)
     : undefined;
   const { tagsFor } = useTagsByEntity();
   const petTags = tagsFor("pet", booking?.petId);
-  const noteCount = booking?.petId ? getNoteCount("pet", booking.petId) : 0;
+  // The pet's real notes; the fixture count matched real pets by number.
+  const { notes: petNotes } = useEntityNotes("pet", booking?.petId ?? 0);
+  const noteCount = petNotes.length;
   const isCritical = petTags.some((t) => t.priority === "critical");
 
   return (

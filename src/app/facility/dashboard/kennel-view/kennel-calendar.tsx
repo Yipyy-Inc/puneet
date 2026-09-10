@@ -71,6 +71,9 @@ interface KennelCalendarViewProps {
     toRoomId: string,
     staffInitials: string,
   ) => void;
+  /** Arrival and departure from the details sheet; absent hides nothing. */
+  onCheckIn?: (bookingId: number) => void;
+  onCheckOut?: (bookingId: number) => void;
   customServicesMap?: Map<number, CustomServiceCheckIn[]>;
   moduleColorMap?: Map<string, string>;
   showCustomServices?: boolean;
@@ -109,6 +112,8 @@ export function KennelCalendarView({
   onAddBooking,
   onUpdateBooking,
   onMoveBooking,
+  onCheckIn,
+  onCheckOut,
   customServicesMap,
   moduleColorMap,
   showCustomServices,
@@ -1027,10 +1032,17 @@ export function KennelCalendarView({
       {/* Booking details side panel */}
       <BookingDetailsSheet
         booking={selectedBooking}
+        categories={categories}
         isPastWeek={isPastWeek}
         onOpenChange={(open) => !open && setSelectedBooking(null)}
-        onCheckIn={(id) => console.log("check-in", id)}
-        onCheckOut={(id) => console.log("check-out", id)}
+        onCheckIn={(id) => {
+          onCheckIn?.(id);
+          setSelectedBooking(null);
+        }}
+        onCheckOut={(id) => {
+          onCheckOut?.(id);
+          setSelectedBooking(null);
+        }}
         onEdit={() => setSelectedBooking(null)}
       />
 

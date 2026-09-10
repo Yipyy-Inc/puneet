@@ -12381,3 +12381,24 @@ after payments, not a price. The page is in both languages, the capacity meter
 is orange (§2b: capacity, and full is not an error), and the tint-filled alert
 tiles are white with a glyph. `boardingAnalytics()` in report-data-sources is
 still fixture-based and still feeds the reports.
+
+## 2026-09-10 — the occupancy board moves the dog, not the picture of it
+
+On `kennel-view` a kennel move was `console.log("Moved booking")` over local
+state, stretching a stay was `console.log("Updated stay")`, and the details
+sheet's Check in / Check out were `console.log("check-in", id)` — the board
+showed the change until the reload undid it. A move now writes the stay's room
+(`PUT /api/boarding/stays`, the kennels board's own write; a kennel taken
+meanwhile is refused and the move steps back), a stretched stay writes the
+booking's dates (the stay follows by trigger), and arrival and departure are
+the boarding attendance the arrivals board records. The daycare half's five
+invented guests ("Bella / Alice Johnson / 123-456-7890", May 2026, $35) are
+gone; a section shows the facility's own daycare booking assigned to it, and a
+daycare move writes the booking's section. The details sheet reads the board's
+categories and the pet's real notes instead of fixtures matched by number.
+
+- **Still open:** stretching a stay does not re-price the booking — the toast
+  says so. A daycare section holds many dogs and this board draws one guest per
+  row, so its daycare half cannot show a busy yard (the check-in board can).
+  Seeded daycare bookings have no section, so that half is empty on the demo
+  facility. Room blocks are still local to the board.
