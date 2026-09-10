@@ -18,20 +18,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
-import { bookingMutations } from "@/lib/api/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
 
 import type { AdditionalContact } from "@/types/client";
-import type { NewBooking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 
 interface FacilityHeaderProps {
   facilityId?: number;
@@ -49,7 +47,6 @@ const SERVICE_SECTION_SLUGS: Record<string, string> = {
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const t = useShellText("header");
   const { openBookingModal } = useBookingModal();
-  const { currentLocationId } = useLocationContext();
   const pathname = usePathname();
 
   // When staff hit "+ New Booking" from inside a service section, pre-select
@@ -78,7 +75,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const { profile } = useFacilityProfile();
   const { data: clients = [] } = useQuery(clientQueries.all());
   const createClient = useCreateClient();
-  const queryClient = useQueryClient();
+  const handleCreateBooking = useCreateBookingFromModal();
 
   // Each quick-action is gated by the permission its underlying flow requires.
   // The facility admin (and the no-provider fallback) resolve every key to
@@ -154,35 +151,6 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
           description: error instanceof Error ? error.message : t("tryAgain"),
         }),
     });
-  };
-
-  const handleCreateBooking = async (bookingData: NewBooking) => {
-    try {
-      // The id comes back from the database. It used to be
-      // `max(existing ids) + 1` over the fixture array, so the number in the
-      // toast belonged to nothing and collided with a real booking the moment
-      // one existed.
-      const created = await bookingMutations.create(
-        bookingData,
-        currentLocationId,
-      );
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-
-      // The Undo that used to be here spliced the booking out of local state.
-      // Against the database there is no undo to offer: bookings have no DELETE
-      // policy on purpose — a booking is cancelled, not erased — so the button
-      // is gone rather than made to look like it worked.
-      toast.success(t("bookingCreated").replace("{id}", String(created.id)), {
-        description: t("bookingCreatedBody").replace(
-          "{service}",
-          bookingData.service,
-        ),
-      });
-    } catch (error) {
-      toast.error(t("createBookingFailed"), {
-        description: error instanceof Error ? error.message : t("tryAgain"),
-      });
-    }
   };
 
   const handleQuickDaycareCheckIn = () => {

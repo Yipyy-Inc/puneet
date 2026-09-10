@@ -62,7 +62,9 @@ import {
   ExternalLink,
   ClipboardList,
 } from "lucide-react";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { toast } from "sonner";
 import type { NewBooking as BookingData } from "@/types/booking";
@@ -189,6 +191,8 @@ export default function PetDetailPage({
   const [activeTab, setActiveTab] = useState("overview");
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
+  const createBooking = useCreateBookingFromModal();
+  const { profile: facilityProfile } = useFacilityProfile();
   const { role, userId } = useFacilityRole();
   const canUseEvaluationForm = hasPermission(
     role,
@@ -351,11 +355,10 @@ export default function PetDetailPage({
     setIsEditing(false);
   };
 
-  const handleCreateBooking = (bookingData: BookingData) => {
-    // In a real app, this would save to the backend
-    console.log("Creating booking:", bookingData);
-    // For now, just close the modal
-    setBookingModalOpen(false);
+  // It logged "Creating booking:" and closed. The modal now closes only once
+  // the booking is written, keeping what was entered if it was not.
+  const handleCreateBooking = async (bookingData: BookingData) => {
+    if (await createBooking(bookingData)) setBookingModalOpen(false);
   };
 
   return (
@@ -1476,8 +1479,8 @@ export default function PetDetailPage({
           open={bookingModalOpen}
           onOpenChange={setBookingModalOpen}
           clients={allClients}
-          facilityId={1} // Assuming facility ID is 1
-          facilityName="Sample Facility"
+          facilityId={11}
+          facilityName={facilityProfile.businessName}
           onCreateBooking={handleCreateBooking}
           preSelectedClientId={Number(id)}
           preSelectedPetId={parseInt(petId)}

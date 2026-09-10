@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useSettings } from "@/hooks/use-settings";
-import { facilities } from "@/data/facilities";
-import { clients as initialClients } from "@/data/clients";
-import type { NewBooking as BookingData } from "@/types/booking";
-import type { Client } from "@/types/client";
+import { useQuery } from "@tanstack/react-query";
+import { clientQueries } from "@/lib/api/client";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import {
   Sun,
   DollarSign,
@@ -78,19 +78,13 @@ export default function DaycareLayout({
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const [disableReason, setDisableReason] = useState("");
 
-  // Static facility ID for now (would come from user token in production)
-  const facilityId = 11;
-  const facility = facilities.find((f) => f.id === facilityId);
-  const clients = initialClients as Client[];
-
-  if (!facility) {
-    return <div>Facility not found</div>;
-  }
-
-  const handleCreateBooking = (bookingData: BookingData) => {
-    console.log("Booking created:", bookingData);
-    // TODO: Handle booking creation, perhaps redirect to bookings page
-  };
+  // The facility and its clients from the session, and a booking that is
+  // WRITTEN. This read the fixture facility 11 and its fixture clients, and
+  // "Book" ended in `console.log("Booking created:")` — a real facility
+  // could not pick one of its own clients, and nothing was ever saved.
+  const { profile } = useFacilityProfile();
+  const { data: clients = [] } = useQuery(clientQueries.all());
+  const handleCreateBooking = useCreateBookingFromModal();
 
   const handleToggleEnabled = (checked: boolean) => {
     setPendingEnabled(checked);
@@ -155,11 +149,11 @@ export default function DaycareLayout({
               <Button
                 onClick={() =>
                   openBookingModal({
-                    clients: clients.filter(
-                      (c) => c.facility === facility.name,
-                    ),
-                    facilityId: facilityId,
-                    facilityName: facility.name,
+                    clients,
+                    // The modal still keys fixture-era lookups (tax, add-on
+                    // storage) by this number; the header passes the same 11.
+                    facilityId: 11,
+                    facilityName: profile.businessName,
                     preSelectedService: "daycare",
                     onCreateBooking: handleCreateBooking,
                   })
