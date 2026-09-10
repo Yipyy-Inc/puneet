@@ -116,6 +116,11 @@ export const customerNotificationsStore = {
     emit();
   },
 
+  remove(id: string): void {
+    notifications = notifications.filter((n) => n.id !== id);
+    emit();
+  },
+
   push(notification: Notification): void {
     notifications = [notification, ...notifications];
     emit();

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { type Notification } from "@/components/customer/CustomerNotifications";
+import { useState, useSyncExternalStore } from "react";
+import {
+  notificationCategoryLabel,
+  type Notification,
+} from "@/components/customer/CustomerNotifications";
+import { customerNotificationsStore } from "@/data/customer-notifications";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { formatRelative } from "@/lib/i18n/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,93 +16,10 @@ import { CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 
-// Mock notifications - in production, this would come from an API
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "reminder",
-    title: "Upcoming Grooming Appointment",
-    message: "Your grooming appointment for Max is tomorrow at 2:00 PM",
-    read: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/bookings",
-    category: "Reminders",
-  },
-  {
-    id: "2",
-    type: "receipt",
-    title: "Payment Receipt",
-    message: "Receipt for your daycare booking on March 15, 2024",
-    read: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/billing",
-    category: "Payments",
-  },
-  {
-    id: "3",
-    type: "report_card",
-    title: "Report Card Available",
-    message: "Max's daycare report card for March 14 is now available",
-    read: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/report-cards",
-    category: "Reports",
-  },
-  {
-    id: "4",
-    type: "vaccination",
-    title: "Vaccination Expiring Soon",
-    message: "Max's Rabies vaccination expires in 30 days",
-    read: false,
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/pets",
-    category: "Health",
-  },
-  {
-    id: "5",
-    type: "booking_update",
-    title: "Booking Confirmed",
-    message: "Your boarding request for March 20-25 has been confirmed",
-    read: true,
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/bookings",
-    category: "Bookings",
-  },
-  {
-    id: "6",
-    type: "form_confirmed",
-    title: "Form Submission Confirmed",
-    message:
-      "Your New Client Intake Form has been reviewed and confirmed by the facility",
-    read: false,
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/documents",
-    category: "Forms",
-  },
-  {
-    id: "7",
-    type: "form_reminder",
-    title: "Missing Required Form",
-    message:
-      "Please complete the Vaccination Records form before your upcoming boarding on March 28",
-    read: false,
-    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/documents",
-    category: "Forms",
-  },
-  {
-    id: "8",
-    type: "form_correction",
-    title: "Form Needs Correction",
-    message:
-      "Your Boarding Agreement form needs an update — please review the emergency contact section",
-    read: false,
-    createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
-    link: "/customer/documents",
-    category: "Forms",
-  },
-];
-
+// The same store the header's bell reads. This page used to keep its own copy
+// of the mock list, so marking a notification read here left it unread in
+// the bell, and the three form notifications existed only here. Still a
+// client-side mock — see the debt map, "Notifications".
 const notificationIcons: Record<Notification["type"], string> = {
   reminder: "📅",
   receipt: "🧾",
@@ -107,26 +31,14 @@ const notificationIcons: Record<Notification["type"], string> = {
   form_correction: "⚠️",
 };
 
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return "just now";
-  if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  }
-  if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  }
-  const days = Math.floor(diffInSeconds / 86400);
-  return `${days} day${days > 1 ? "s" : ""} ago`;
-}
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications);
+  const { t, fill, locale } = useCustomerText("notifications");
+  const shellT = useShellText("customer");
+  const notifications = useSyncExternalStore(
+    customerNotificationsStore.subscribe,
+    customerNotificationsStore.getSnapshot,
+    customerNotificationsStore.getSnapshot,
+  );
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
 
   const filteredNotifications = notifications.filter((n) => {
@@ -137,19 +49,12 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-    );
-  };
+  const markAsRead = (id: string) => customerNotificationsStore.markRead(id);
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
+  const markAllAsRead = () => customerNotificationsStore.markAllRead();
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  const deleteNotification = (id: string) =>
+    customerNotificationsStore.remove(id);
 
   // Group by category
   const groupedNotifications = filteredNotifications.reduce(
@@ -167,28 +72,30 @@ export default function NotificationsPage() {
     <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center justify-between">
         <PageHeader
-          title="Notifications"
+          title={t("notifications")}
           description={
             unreadCount > 0
-              ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
-              : "All caught up!"
+              ? fill(unreadCount === 1 ? "unreadOne" : "unreadMany", {
+                  n: unreadCount,
+                })
+              : t("allCaughtUp")
           }
         />
         {unreadCount > 0 && (
           <Button variant="outline" onClick={markAllAsRead}>
             <CheckCircle2 className="mr-2 size-4" />
-            Mark all as read
+            {t("markAllAsRead")}
           </Button>
         )}
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="all">{t("tabAll")}</TabsTrigger>
           <TabsTrigger value="unread">
-            Unread {unreadCount > 0 && `(${unreadCount})`}
+            {t("tabUnread")} {unreadCount > 0 && `(${unreadCount})`}
           </TabsTrigger>
-          <TabsTrigger value="read">Read</TabsTrigger>
+          <TabsTrigger value="read">{t("tabRead")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value={filter} className="mt-4 space-y-4">
@@ -197,10 +104,10 @@ export default function NotificationsPage() {
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
                   {filter === "unread"
-                    ? "No unread notifications"
+                    ? t("noUnread")
                     : filter === "read"
-                      ? "No read notifications"
-                      : "No notifications"}
+                      ? t("noRead")
+                      : t("noNotifications")}
                 </p>
               </CardContent>
             </Card>
@@ -210,7 +117,7 @@ export default function NotificationsPage() {
                 <Card key={category}>
                   <CardHeader>
                     <CardTitle className="text-muted-foreground text-sm font-semibold uppercase">
-                      {category}
+                      {notificationCategoryLabel(category, shellT)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -244,7 +151,7 @@ export default function NotificationsPage() {
                                   {notif.message}
                                 </p>
                                 <p className="text-muted-foreground mt-2 text-xs">
-                                  {formatTimeAgo(new Date(notif.createdAt))}
+                                  {formatRelative(notif.createdAt, locale)}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
@@ -254,7 +161,8 @@ export default function NotificationsPage() {
                                     size="icon"
                                     className="size-7"
                                     onClick={() => markAsRead(notif.id)}
-                                    title="Mark as read"
+                                    title={t("markAsRead")}
+                                    aria-label={t("markAsRead")}
                                   >
                                     <CheckCircle2 className="size-4" />
                                   </Button>
@@ -264,7 +172,8 @@ export default function NotificationsPage() {
                                   size="icon"
                                   className="size-7"
                                   onClick={() => deleteNotification(notif.id)}
-                                  title="Delete"
+                                  title={t("delete")}
+                                  aria-label={t("delete")}
                                 >
                                   <X className="size-4" />
                                 </Button>
@@ -277,7 +186,9 @@ export default function NotificationsPage() {
                                 className="mt-2 h-auto p-0 text-xs"
                                 asChild
                               >
-                                <Link href={notif.link}>View details →</Link>
+                                <Link href={notif.link}>
+                                  {t("viewDetails")}
+                                </Link>
                               </Button>
                             )}
                           </div>

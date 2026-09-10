@@ -5940,7 +5940,14 @@
       "viewAllNotifications": "View all notifications",
       "switchFacility": "Switch facility",
       "selectFacility": "Select facility",
-      "bookAService": "Book a service"
+      "bookAService": "Book a service",
+      "notifCatReminders": "Reminders",
+      "notifCatPayments": "Payments",
+      "notifCatReports": "Reports",
+      "notifCatHealth": "Health",
+      "notifCatBookings": "Bookings",
+      "notifCatForms": "Forms",
+      "notifCatRewards": "Rewards"
     },
     "employee": {
       "calling": "Calling",
@@ -9313,6 +9320,22 @@
         "addedToWallet": "Added to your wallet!",
         "nowInWallet": "{amount} is now in your wallet and ready to use at checkout.",
         "redeemAnother": "Redeem another"
+      },
+      "notifications": {
+        "notifications": "Notifications",
+        "unreadOne": "{n} unread notification",
+        "unreadMany": "{n} unread notifications",
+        "allCaughtUp": "All caught up!",
+        "markAllAsRead": "Mark all as read",
+        "tabAll": "All",
+        "tabUnread": "Unread",
+        "tabRead": "Read",
+        "noUnread": "No unread notifications",
+        "noRead": "No read notifications",
+        "noNotifications": "No notifications",
+        "markAsRead": "Mark as read",
+        "delete": "Delete",
+        "viewDetails": "View details →"
       }
     }
   }

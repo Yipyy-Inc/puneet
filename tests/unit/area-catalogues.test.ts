@@ -137,6 +137,7 @@ const SAME_IN_BOTH = new Set([
   "customerPages.documents.questionOne", // "{n} question" in both
   "customerPages.documents.questionMany", // "{n} questions" in both
   "customerPages.giftCardRedeem.active", // Active / Active (la carte)
+  "customerPages.notifications.notifications", // Notifications / Notifications
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
 ]);
 

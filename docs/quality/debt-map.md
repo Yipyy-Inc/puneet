@@ -12124,3 +12124,22 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
 - Fixed while translating: eleven `$${n.toFixed(2)}` are `formatMoney`;
   the amount slider has an accessible name; the page's title is a small
   client `RedeemHeader` because `page.tsx` is a Server Component.
+
+### Notifications (`/customer/notifications`) — **eight invented notifications about "Max", for everyone**
+
+- **Every notification is a seed.** The bell and this page both read
+  `customerNotificationsStore` (`@/data/customer-notifications`), a
+  module-level array seeded with "Your grooming appointment for Max is
+  tomorrow at 2:00 PM", "Max's Rabies vaccination expires in 30 days" and
+  so on, stamped relative to page load. Every customer sees them, about a
+  pet they may not have. Their titles and messages stay English: they are
+  invented records, and translating them would make an invented reminder
+  more convincing, not less.
+- Fixed while translating: this page kept its OWN copy of the list, so
+  "Mark as read" here left the bell unread, and three form notifications
+  existed only here. It now reads the bell's store, which gained `remove`.
+  The category headings ("Reminders", "Payments" …) are stored as English
+  words and were printed raw in the bell too, under a French shell; both
+  screens now name them through `notificationCategoryLabel`. The page's
+  hand-rolled "2 hours ago" is `formatRelative`, which expires at 24 hours
+  as §5q asks.
