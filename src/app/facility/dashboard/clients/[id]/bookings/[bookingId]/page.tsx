@@ -63,6 +63,7 @@ import {
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { useStoreCredit } from "@/lib/api/store-credit";
 import { bookingMutations } from "@/lib/api/booking";
 import { useBoardingStayUpdate } from "@/lib/api/boarding-attendance";
 import { useBookingModal } from "@/hooks/use-booking-modal";
@@ -213,7 +214,6 @@ export default function ClientBookingDetailPage({
     grooming,
     training,
     bookingFlow: facilityBookingFlowConfig,
-    reportCards: reportCardConfig,
   } = useSettings();
   const { data: clientBookings = [], isPending: bookingsPending } = useQuery(
     bookingQueries.byClient(clientId),
@@ -292,7 +292,6 @@ export default function ClientBookingDetailPage({
     subtotal: booking?.totalCost ?? 0,
     serviceType: booking?.service?.toLowerCase(),
   });
-  const [reportCardSent, setReportCardSent] = useState(false);
   const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
     null,
   );
@@ -592,6 +591,10 @@ export default function ClientBookingDetailPage({
   // called in a different order on the render where the booking is loading.
   const updateStatus = useUpdateBookingStatus();
   const boardingStay = useBoardingStayUpdate();
+  // The client's store credit, so the till can offer it. The tender existed
+  // and record_payment spends the ledger correctly, but the page never passed
+  // a balance, so the checkout filtered store credit out for everybody.
+  const { data: storeCredit } = useStoreCredit();
   const { openBookingModal, closeBookingModal } = useBookingModal();
   const createBooking = useCreateBookingFromModal();
   const { profile: facilityProfile } = useFacilityProfile();
@@ -750,6 +753,9 @@ export default function ClientBookingDetailPage({
     );
     pending?.run();
   };
+
+  const storeCreditBalance =
+    storeCredit?.accounts.find((a) => a.clientRef === client.id)?.balance ?? 0;
 
   const openCheckout = () => {
     // ── NOT WHILE THE PRICING RULES ARE IN FLIGHT ─────────────────────────
@@ -2041,6 +2047,7 @@ export default function ClientBookingDetailPage({
         <PaymentCheckoutFlow
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
+          clientStoreCreditBalance={storeCreditBalance}
           // What the customer is being charged FOR. The printed receipt used to
           // show a single "Amount" line — a total with no evidence behind it.
           receiptReference={bookingRef}
@@ -2253,6 +2260,13 @@ export default function ClientBookingDetailPage({
                     items,
                   });
                 }
+                // Store credit pays what the balance covers and no more — the
+                // checkout promises "the rest by another method", and asking
+                // the ledger for more than it holds is a refusal.
+                const charged =
+                  payment.method === "store_credit"
+                    ? Math.min(payment.amount, storeCreditBalance)
+                    : payment.amount;
                 await chargeBooking.mutateAsync({
                   booking: {
                     ...booking,
@@ -2266,7 +2280,7 @@ export default function ClientBookingDetailPage({
                         (reward?.amount ?? 0),
                     ),
                   },
-                  amount: payment.amount,
+                  amount: charged,
                   // Throws on "Custom", which has no ledger meaning.
                   method: checkoutTender(payment.method),
                   ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
@@ -2328,7 +2342,7 @@ export default function ClientBookingDetailPage({
                   ? ` + ${payment.includedInvoices.length} other invoices`
                   : "";
                 toast.success(
-                  `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
+                  `Charged $${charged.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
                 );
               } catch (error) {
                 // The reward is already spent and no money moved. Give it back
@@ -2342,18 +2356,10 @@ export default function ClientBookingDetailPage({
               }
             })();
 
-            if (!reportCardSent) {
-              const mode = reportCardConfig.autoSend.mode;
-              if (mode === "immediate" || mode === "checkout") {
-                toast.success(`Report card sent to ${client.name}`);
-                setReportCardSent(true);
-              } else if (mode === "scheduled") {
-                toast.success(
-                  `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
-                );
-                setReportCardSent(true);
-              }
-            }
+            // "Report card sent to …" / "Report card scheduled for 18:00"
+            // used to follow every checkout, and nothing was sent or
+            // scheduled. Report cards are written and sent from the Report
+            // cards module; the till no longer claims to have done it.
           }}
         />
         <TipSplitModal
