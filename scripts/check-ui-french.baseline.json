@@ -3,7 +3,6 @@
     "src/app/customer/bookings/[id]/check-in-qr/page.tsx": 12,
     "src/app/customer/estimates/[token]/setup/page.tsx": 17,
     "src/app/customer/household/page.tsx": 19,
-    "src/app/customer/training/accept-offer/[enrollmentId]/_components/accept-offer-client.tsx": 25,
     "src/components/additional-features/waivers/categories.ts": 1,
     "src/components/customer/billing/PackagesTab.tsx": 1,
     "src/components/estimates/emails/email-helpers.ts": 2,

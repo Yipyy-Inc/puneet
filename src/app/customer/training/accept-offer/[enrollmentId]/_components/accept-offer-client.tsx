@@ -20,7 +20,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
-import { getDayName } from "@/lib/training-series";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatDuration,
+  formatMoney,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
+import type { AppLocale } from "@/lib/language-settings";
 import type {
   TrainingEnrollment,
   WaitlistOffer,
@@ -30,33 +39,15 @@ interface Props {
   enrollmentId: string;
 }
 
-function formatLongDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatTime12(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
-}
-
-function formatRemaining(ms: number): string {
-  if (ms <= 0) return "0 minutes";
-  const totalMinutes = Math.floor(ms / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours >= 1) return `${hours}h ${minutes}m`;
-  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+// A hand-rolled 12-hour clock, an en-US date and an English "2h 5m" lived
+// here. They are formatTimeOfDay, formatDateLong and formatDuration now —
+// "14 h 30" and "2 h 05" in French (§5q).
+function formatRemaining(ms: number, locale: AppLocale): string {
+  return formatDuration(Math.max(0, Math.floor(ms / 60_000)), locale);
 }
 
 export function AcceptOfferClient({ enrollmentId }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const queryClient = useQueryClient();
   const { data: enrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
@@ -112,15 +103,14 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
       <CenteredCard>
         <div className="space-y-3 text-center">
           <AlarmClock className="text-muted-foreground/40 mx-auto size-10" />
-          <h1 className="text-lg font-semibold">Offer not found</h1>
+          <h1 className="text-lg font-semibold">{t("offerNotFound")}</h1>
           <p className="text-muted-foreground text-sm">
-            This confirmation link may have expired or been re-issued. Contact
-            the facility if you think this is a mistake.
+            {t("offerNotFoundBody")}
           </p>
           <Button asChild variant="outline" className="mt-2">
             <Link href="/customer/training">
               <ArrowLeft className="mr-1.5 size-4" />
-              Back to your training portal
+              {t("offerBackToPortal")}
             </Link>
           </Button>
         </div>
@@ -155,9 +145,12 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
       updatedAt: nowISO,
     }));
     toast.success(
-      `You're in! ${confirmedPetName} is enrolled in ${confirmedSeriesName}.`,
+      fill("offerYoureInToast", {
+        pet: confirmedPetName,
+        series: confirmedSeriesName,
+      }),
       {
-        description: "We'll send a confirmation email shortly.",
+        description: t("offerConfirmationEmail"),
         duration: 6_000,
       },
     );
@@ -173,17 +166,20 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
             <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <CheckCircle2 className="size-6" />
             </div>
-            <h1 className="text-xl font-semibold">You&apos;re in!</h1>
+            <h1 className="text-xl font-semibold">{t("offerYoureIn")}</h1>
             <p className="text-muted-foreground text-sm">
-              {enrollment.petName} is enrolled in {enrollment.seriesName}. See
-              you on {formatLongDate(series.startDate)}.
+              {fill("offerEnrolledSeeYou", {
+                pet: enrollment.petName,
+                series: enrollment.seriesName,
+                date: formatDateLong(series.startDate, locale),
+              })}
             </p>
           </div>
           <SeriesSummary enrollment={enrollment} series={series} />
           <Button asChild className="w-full">
             <Link href="/customer/training">
               <ArrowLeft className="mr-1.5 size-4" />
-              Open your training portal
+              {t("offerOpenPortal")}
             </Link>
           </Button>
         </div>
@@ -197,16 +193,16 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
       <CenteredCard>
         <div className="space-y-3 text-center">
           <AlarmClock className="mx-auto size-10 text-rose-500" />
-          <h1 className="text-lg font-semibold">This offer has closed</h1>
+          <h1 className="text-lg font-semibold">{t("offerClosed")}</h1>
           <p className="text-muted-foreground text-sm">
             {offer?.outcome === "cancelled"
-              ? "The facility cancelled this invitation. Reach out if you'd like to re-join the waitlist."
-              : "The hold window expired before we heard back. The spot has moved to the next person on the list — but you can re-join the waitlist for the next opening."}
+              ? t("offerCancelledBody")
+              : t("offerExpiredBody")}
           </p>
           <Button asChild variant="outline">
             <Link href="/customer/training">
               <ArrowLeft className="mr-1.5 size-4" />
-              Back to your training portal
+              {t("offerBackToPortal")}
             </Link>
           </Button>
         </div>
@@ -222,27 +218,30 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
           variant="outline"
           className="gap-1 border-amber-200 bg-amber-50 text-amber-800"
         >
-          <Sparkles className="size-3" />A spot opened up for{" "}
-          {enrollment.petName}
+          <Sparkles className="size-3" />
+          {fill("offerSpotOpened", { pet: enrollment.petName })}
         </Badge>
         <h1 className="text-2xl font-bold tracking-tight">
-          Confirm your enrollment
+          {t("offerConfirmTitle")}
         </h1>
         <p className="text-muted-foreground text-sm">
-          We&apos;re holding{" "}
-          <span className="text-foreground font-medium">
-            {enrollment.seriesName}
-          </span>{" "}
-          for you for{" "}
-          <span
-            className={cn(
-              "font-semibold tabular-nums",
-              offerState.urgent ? "text-rose-700" : "text-amber-700",
-            )}
-          >
-            {formatRemaining(offerState.remainingMs)}
-          </span>
-          .
+          {rich(t("offerHolding"), {
+            series: (
+              <span className="text-foreground font-medium">
+                {enrollment.seriesName}
+              </span>
+            ),
+            remaining: (
+              <span
+                className={cn(
+                  "font-semibold tabular-nums",
+                  offerState.urgent ? "text-rose-700" : "text-amber-700",
+                )}
+              >
+                {formatRemaining(offerState.remainingMs, locale)}
+              </span>
+            ),
+          })}
         </p>
       </div>
 
@@ -256,13 +255,23 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
           <div className="flex items-start gap-2">
             <CreditCard className="mt-0.5 size-4 shrink-0 text-indigo-600" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">Payment</p>
+              <p className="text-sm font-semibold">{t("offerPayment")}</p>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {enrollment.paymentStatus === "deposit"
-                  ? `A $${series.enrollmentRules.depositRequired} deposit is due to confirm — the balance bills before the first session.`
+                  ? fill("offerDepositDue", {
+                      amount: formatMoney(
+                        series.enrollmentRules.depositRequired,
+                        locale,
+                      ),
+                    })
                   : enrollment.paymentStatus === "paid"
-                    ? "Your payment is already on file from the original signup."
-                    : `Full tuition: $${series.enrollmentRules.fullPaymentAmount}. We'll send a payment link after you confirm.`}
+                    ? t("offerPaymentOnFile")
+                    : fill("offerFullTuition", {
+                        amount: formatMoney(
+                          series.enrollmentRules.fullPaymentAmount,
+                          locale,
+                        ),
+                      })}
               </p>
             </div>
           </div>
@@ -273,18 +282,16 @@ export function AcceptOfferClient({ enrollmentId }: Props) {
             className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700"
           >
             <CheckCircle2 className="mr-1.5 size-4" />
-            Confirm enrollment
+            {t("offerConfirmButton")}
           </Button>
           <p className="text-muted-foreground text-center text-[11px]">
-            By confirming, {enrollment.petName} is enrolled in this series. You
-            can manage everything from your customer portal afterwards.
+            {fill("offerByConfirming", { pet: enrollment.petName })}
           </p>
         </CardContent>
       </Card>
 
       <p className="text-muted-foreground text-center text-[11px]">
-        Not the right time? Let the offer expire and the spot will move to the
-        next person on the waitlist.
+        {t("offerNotTheRightTime")}
       </p>
     </div>
   );
@@ -316,6 +323,7 @@ function SeriesSummary({
     seriesName: string;
   };
 }) {
+  const { t, fill, locale } = useCustomerText("training");
   return (
     <Card>
       <CardContent className="space-y-2 p-4 text-sm">
@@ -324,20 +332,30 @@ function SeriesSummary({
           <li className="flex items-center gap-2">
             <CalendarDays className="text-muted-foreground size-4" />
             <span>
-              Starts{" "}
-              <span className="font-semibold">
-                {formatLongDate(series.startDate)}
-              </span>
+              {rich(t("offerStarts"), {
+                date: (
+                  <span className="font-semibold">
+                    {formatDateLong(series.startDate, locale)}
+                  </span>
+                ),
+              })}
             </span>
           </li>
           <li className="flex items-center gap-2">
             <Clock className="text-muted-foreground size-4" />
             <span>
-              {getDayName(series.dayOfWeek)}s · {formatTime12(series.startTime)}
+              {fill("offerEveryWeekday", {
+                day: formatWeekday(series.dayOfWeek, locale, "long"),
+              })}{" "}
+              · {formatTimeOfDay(series.startTime, locale)}
               {series.numberOfWeeks > 0 && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · {series.numberOfWeeks} weeks
+                  ·{" "}
+                  {fill(
+                    series.numberOfWeeks === 1 ? "offerWeekOne" : "offerWeeks",
+                    { n: series.numberOfWeeks },
+                  )}
                 </span>
               )}
             </span>
