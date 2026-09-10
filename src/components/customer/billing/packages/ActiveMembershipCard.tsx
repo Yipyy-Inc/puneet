@@ -34,6 +34,9 @@ import type {
 import { defaultMembershipChangePolicy } from "@/data/services-pricing";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   membership: Membership;
@@ -43,19 +46,6 @@ interface Props {
   onPause: () => void;
   onCancel: () => void;
 }
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 
 /** Warm-gold / slate / teal banner treatment keyed off the membership tier. */
 function getTierTheme(tierLabel: string | undefined, planName: string) {
@@ -85,18 +75,19 @@ function getTierTheme(tierLabel: string | undefined, planName: string) {
   };
 }
 
-function getStatusChipLabel(status: Membership["status"]) {
+/** The catalogue key for a membership status. */
+function statusKey(status: Membership["status"]) {
   switch (status) {
     case "active":
-      return "Active";
+      return "statusActive";
     case "paused":
-      return "Paused";
+      return "statusPaused";
     case "cancelled":
-      return "Cancelled";
+      return "statusCancelled";
     case "expired":
-      return "Expired";
+      return "statusExpired";
     case "pending":
-      return "Pending";
+      return "statusPending";
   }
 }
 
@@ -113,6 +104,7 @@ export function ActiveMembershipCard({
   onPause,
   onCancel,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -173,7 +165,7 @@ export function ActiveMembershipCard({
   };
 
   const inactiveReason = !isActive
-    ? `Membership is ${membership.status}`
+    ? fill("membershipIs", { status: t(statusKey(membership.status)) })
     : undefined;
 
   return (
@@ -215,7 +207,7 @@ export function ActiveMembershipCard({
                           : "#ef4444",
                   }}
                 />
-                {getStatusChipLabel(membership.status)}
+                {t(statusKey(membership.status))}
               </span>
             </div>
           </div>
@@ -230,62 +222,70 @@ export function ActiveMembershipCard({
                 style={{ color: theme.foreground }}
               >
                 <MoreHorizontal className="size-5" />
-                <span className="sr-only">Membership actions</span>
+                <span className="sr-only">{t("membershipActions")}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Manage membership</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("manageMembership")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <MenuAction
                 icon={ArrowUpCircle}
-                label="Upgrade plan"
+                label={t("upgradePlan")}
                 onClick={onUpgrade}
                 enabled={isActive && policy.allowUpgrade && !inCooldown}
                 reason={
                   inactiveReason ??
                   (!policy.allowUpgrade
-                    ? "Upgrades not allowed on this plan"
+                    ? t("upgradesNotAllowed")
                     : inCooldown
-                      ? `Available in ${cooldownRemaining} day${cooldownRemaining === 1 ? "" : "s"}`
+                      ? fill(
+                          cooldownRemaining === 1
+                            ? "availableInDaysOne"
+                            : "availableInDaysOther",
+                          { n: cooldownRemaining },
+                        )
                       : undefined)
                 }
               />
               <MenuAction
                 icon={ArrowDownCircle}
-                label="Downgrade plan"
+                label={t("downgradePlan")}
                 onClick={onDowngrade}
                 enabled={isActive && policy.allowDowngrade && !inCooldown}
                 reason={
                   inactiveReason ??
                   (!policy.allowDowngrade
-                    ? "No lower tier available"
+                    ? t("noLowerTier")
                     : inCooldown
-                      ? `Available in ${cooldownRemaining} day${cooldownRemaining === 1 ? "" : "s"}`
+                      ? fill(
+                          cooldownRemaining === 1
+                            ? "availableInDaysOne"
+                            : "availableInDaysOther",
+                          { n: cooldownRemaining },
+                        )
                       : undefined)
                 }
               />
               <MenuAction
                 icon={PauseCircle}
-                label="Pause membership"
+                label={t("pauseMembership")}
                 onClick={onPause}
                 enabled={isActive && policy.allowPause}
                 reason={
                   inactiveReason ??
-                  (!policy.allowPause
-                    ? "Pause not supported on this plan"
-                    : undefined)
+                  (!policy.allowPause ? t("pauseNotSupported") : undefined)
                 }
               />
               <DropdownMenuSeparator />
               <MenuAction
                 icon={XCircle}
-                label="Cancel membership"
+                label={t("cancelMembership")}
                 onClick={onCancel}
                 enabled={isActive && policy.allowCancel}
                 reason={
                   inactiveReason ??
                   (!policy.allowCancel
-                    ? "Contact the facility to cancel"
+                    ? t("contactFacilityToCancel")
                     : undefined)
                 }
                 destructive
@@ -306,16 +306,16 @@ export function ActiveMembershipCard({
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
             <div className="space-y-2">
               <p className="font-semibold text-red-700 dark:text-red-300">
-                Payment failed
+                {t("paymentFailed")}
               </p>
               <p className="text-red-700/90 dark:text-red-300/90">
-                We couldn&apos;t charge your{" "}
-                {membership.autoPayment.methodBrand} ending{" "}
-                {membership.autoPayment.last4}. We&apos;ve emailed you — update
-                your payment method to keep your membership active.
+                {fill("couldNotChargeCard", {
+                  brand: membership.autoPayment.methodBrand,
+                  last4: membership.autoPayment.last4,
+                })}
               </p>
               <Button size="sm" variant="destructive" asChild>
-                <Link href="/customer/billing">Update payment method</Link>
+                <Link href="/customer/billing">{t("updatePaymentMethod")}</Link>
               </Button>
             </div>
           </div>
@@ -324,15 +324,18 @@ export function ActiveMembershipCard({
         {/* 3-stat row */}
         <div className="grid grid-cols-3 gap-3">
           <Stat
-            label="Monthly Price"
-            value={formatCurrency(membership.monthlyPrice)}
+            label={t("monthlyPrice2")}
+            value={formatMoney(membership.monthlyPrice, locale)}
           />
-          <Stat label="Member Since" value={formatDate(membership.startDate)} />
           <Stat
-            label="Next Renewal"
+            label={t("memberSince")}
+            value={formatDateLong(membership.startDate, locale)}
+          />
+          <Stat
+            label={t("nextRenewal")}
             value={
               membership.nextBillingDate
-                ? formatDate(membership.nextBillingDate)
+                ? formatDateLong(membership.nextBillingDate, locale)
                 : "—"
             }
           />
@@ -342,10 +345,10 @@ export function ActiveMembershipCard({
         <div>
           <div className="mb-1.5 flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
-              Credits used this cycle
+              {t("creditsUsedThisCycle")}
             </span>
             <span className="font-semibold">
-              {unlimited ? "Unlimited" : `${creditsUsed}/${cycleTotal}`}
+              {unlimited ? t("unlimited") : `${creditsUsed}/${cycleTotal}`}
             </span>
           </div>
           {!unlimited && (
@@ -358,14 +361,19 @@ export function ActiveMembershipCard({
           )}
           {!unlimited && (
             <p className="text-muted-foreground mt-1 text-xs">
-              {creditsLeft} credit{creditsLeft === 1 ? "" : "s"} remaining
+              {fill(
+                creditsLeft === 1
+                  ? "creditsRemainingOne"
+                  : "creditsRemainingOther",
+                { n: creditsLeft },
+              )}
             </p>
           )}
           {membership.rolloverCredits != null &&
             membership.rolloverCredits > 0 && (
               <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-teal-700 dark:text-teal-300">
                 <RotateCcw className="size-3.5" />
-                Rollover credits: {membership.rolloverCredits} carrying forward
+                {fill("rolloverCredits", { n: membership.rolloverCredits })}
               </p>
             )}
         </div>
@@ -373,7 +381,9 @@ export function ActiveMembershipCard({
         {/* Discount chip */}
         <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">
           <Sparkles className="size-3.5" />
-          {membership.discountPercentage}% off all services
+          {fill("percentOffAllServices", {
+            percent: formatPercent(membership.discountPercentage, locale),
+          })}
         </div>
 
         {/* Auto-payment row (active) */}
@@ -381,28 +391,41 @@ export function ActiveMembershipCard({
           membership.autoPayment.status !== "failed" && (
             <div className="bg-muted/20 rounded-lg border p-3 text-xs">
               <p className="text-muted-foreground">
-                Your membership renews automatically on{" "}
-                <span className="text-foreground font-medium">
-                  {formatDate(membership.autoPayment.nextRenewalDate)}
-                </span>{" "}
-                for{" "}
-                <span className="text-foreground font-medium">
-                  {formatCurrency(membership.autoPayment.renewalAmount)}
-                </span>
-                .
+                {rich(t("renewsAutomaticallyOn"), {
+                  date: (
+                    <span className="text-foreground font-medium">
+                      {formatDateLong(
+                        membership.autoPayment.nextRenewalDate,
+                        locale,
+                      )}
+                    </span>
+                  ),
+                  amount: (
+                    <span className="text-foreground font-medium">
+                      {formatMoney(
+                        membership.autoPayment.renewalAmount,
+                        locale,
+                      )}
+                    </span>
+                  ),
+                })}
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <CreditCard className="text-muted-foreground size-3.5" />
-                <span className="text-muted-foreground">Payment method:</span>
+                <span className="text-muted-foreground">
+                  {t("paymentMethod")}
+                </span>
                 <span className="text-foreground font-medium">
-                  {membership.autoPayment.methodBrand} ending{" "}
-                  {membership.autoPayment.last4}
+                  {fill("cardEnding", {
+                    brand: membership.autoPayment.methodBrand,
+                    last4: membership.autoPayment.last4,
+                  })}
                 </span>
                 <Link
                   href="/customer/billing"
                   className="text-primary ml-auto font-medium hover:underline"
                 >
-                  Update
+                  {t("update")}
                 </Link>
               </div>
             </div>
@@ -415,7 +438,7 @@ export function ActiveMembershipCard({
           disabled={!canBook || !selectedFacility || !customer}
         >
           <Calendar className="size-4" />
-          Book with Credits
+          {t("bookWithCredits")}
         </Button>
       </div>
     </Card>

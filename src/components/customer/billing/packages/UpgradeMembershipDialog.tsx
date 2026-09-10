@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpCircle, Check, Plus } from "lucide-react";
 import type { Membership, MembershipPlan } from "@/data/services-pricing";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatList, formatMoney } from "@/lib/i18n/format";
 
 interface Props {
   open: boolean;
@@ -22,12 +24,6 @@ interface Props {
   allPlans: MembershipPlan[];
   onConfirm: (newPlanId: string) => void;
 }
-
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
 
 function cycleLengthDays(cycle: Membership["billingCycle"]) {
   if (cycle === "annually" || cycle === "yearly") return 365;
@@ -44,6 +40,7 @@ export function UpgradeMembershipDialog({
   allPlans,
   onConfirm,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [nowMs] = useState(() => Date.now());
 
@@ -96,19 +93,14 @@ export function UpgradeMembershipDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowUpCircle className="size-5 text-emerald-600" />
-            Upgrade your plan
+            {t("upgradeYourPlan")}
           </DialogTitle>
-          <DialogDescription>
-            Upgrades take effect immediately. You&apos;ll be charged a prorated
-            amount for the rest of this billing cycle.
-          </DialogDescription>
+          <DialogDescription>{t("upgradesTakeEffect")}</DialogDescription>
         </DialogHeader>
 
         {eligiblePlans.length === 0 ? (
           <div className="bg-muted/30 rounded-lg border p-4 text-center text-sm">
-            <p className="text-muted-foreground">
-              No higher-tier plans are available for your subscription.
-            </p>
+            <p className="text-muted-foreground">{t("noHigherTierPlansAre")}</p>
           </div>
         ) : (
           <div className="space-y-4 py-1">
@@ -135,10 +127,10 @@ export function UpgradeMembershipDialog({
                       )}
                     </div>
                     <span className="font-semibold">
-                      {formatCurrency(p.monthlyPrice)}
+                      {formatMoney(p.monthlyPrice, locale)}
                       <span className="text-muted-foreground text-[11px] font-normal">
                         {" "}
-                        / mo
+                        {t("perMonth")}
                       </span>
                     </span>
                   </button>
@@ -154,7 +146,7 @@ export function UpgradeMembershipDialog({
               if (!target || !currentPlan) {
                 return (
                   <p className="text-muted-foreground text-center text-sm">
-                    Select a plan above to compare.
+                    {t("selectAPlanAboveTo2")}
                   </p>
                 );
               }
@@ -165,11 +157,12 @@ export function UpgradeMembershipDialog({
                     {/* Current */}
                     <div className="rounded-lg border p-3">
                       <p className="text-muted-foreground text-[11px] uppercase">
-                        Current
+                        {t("current")}
                       </p>
                       <p className="mt-0.5 font-semibold">{currentPlan.name}</p>
                       <p className="text-muted-foreground text-sm">
-                        {formatCurrency(currentPlan.monthlyPrice)} / mo
+                        {formatMoney(currentPlan.monthlyPrice, locale)}{" "}
+                        {t("perMonth")}
                       </p>
                       <ul className="mt-2 space-y-1">
                         {currentPlan.perks.map((perk, i) => (
@@ -186,13 +179,14 @@ export function UpgradeMembershipDialog({
                     {/* New */}
                     <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
                       <p className="text-[11px] text-emerald-700 uppercase dark:text-emerald-400">
-                        New
+                        {t("new")}
                       </p>
                       <p className="mt-0.5 font-semibold">
                         {activeTarget.name}
                       </p>
                       <p className="text-muted-foreground text-sm">
-                        {formatCurrency(activeTarget.monthlyPrice)} / mo
+                        {formatMoney(activeTarget.monthlyPrice, locale)}{" "}
+                        {t("perMonth")}
                       </p>
                       <ul className="mt-2 space-y-1">
                         {activeTarget.perks.map((perk, i) => {
@@ -222,10 +216,14 @@ export function UpgradeMembershipDialog({
                   {gains.length > 0 && (
                     <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
                       <span className="font-semibold">
-                        You gain {gains.length} new perk
-                        {gains.length === 1 ? "" : "s"}:
+                        {fill(
+                          gains.length === 1
+                            ? "youGainPerksOne"
+                            : "youGainPerksOther",
+                          { n: gains.length },
+                        )}
                       </span>{" "}
-                      {gains.join(", ")}.
+                      {formatList(gains, locale)}.
                     </div>
                   )}
 
@@ -233,22 +231,23 @@ export function UpgradeMembershipDialog({
                   <div className="bg-muted/30 space-y-1 rounded-lg border p-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Price difference
+                        {t("priceDifference")}
                       </span>
                       <span className="font-medium">
                         +
-                        {formatCurrency(
+                        {formatMoney(
                           activeTarget.monthlyPrice - currentPlan.monthlyPrice,
+                          locale,
                         )}{" "}
-                        / mo
+                        {t("perMonth")}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Prorated charge today
+                        {t("proratedChargeToday")}
                       </span>
                       <span className="font-semibold">
-                        {formatCurrency(proratedCharge)}
+                        {formatMoney(proratedCharge, locale)}
                       </span>
                     </div>
                   </div>
@@ -260,7 +259,7 @@ export function UpgradeMembershipDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             disabled={eligiblePlans.length === 0}
@@ -274,7 +273,7 @@ export function UpgradeMembershipDialog({
               }
             }}
           >
-            Upgrade now
+            {t("upgradeNow")}
           </Button>
         </DialogFooter>
       </DialogContent>

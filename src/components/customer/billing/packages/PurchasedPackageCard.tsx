@@ -51,6 +51,8 @@ import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import type { Booking } from "@/types/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
 
 interface Props {
   purchase: CustomerPackagePurchase;
@@ -70,13 +72,6 @@ interface Props {
    *  re-render the updated remaining count. */
   onRedeemed?: () => void;
 }
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 
 function daysUntilFrom(iso: string, nowMs: number): number {
   return Math.ceil((new Date(iso).getTime() - nowMs) / 86_400_000);
@@ -106,6 +101,7 @@ export function PurchasedPackageCard({
   onRequestRefund,
   onRedeemed,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -235,19 +231,19 @@ export function PurchasedPackageCard({
                   className="text-muted-foreground size-8 shrink-0"
                 >
                   <MoreHorizontal className="size-5" />
-                  <span className="sr-only">Pass actions</span>
+                  <span className="sr-only">{t("passActions")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Manage pass</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("managePass")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {canExtend && (
                   <DropdownMenuItem onSelect={onRequestExtension}>
                     <CalendarPlus className="mr-2 size-4" />
-                    Extend validity
+                    {t("extendValidity")}
                     {policy.extensionFee > 0 && (
                       <span className="text-muted-foreground ml-auto text-[11px]">
-                        ${policy.extensionFee}
+                        {formatMoney(policy.extensionFee, locale)}
                       </span>
                     )}
                   </DropdownMenuItem>
@@ -255,7 +251,7 @@ export function PurchasedPackageCard({
                 {canTransfer && (
                   <DropdownMenuItem onSelect={onRequestTransfer}>
                     <Share2 className="mr-2 size-4" />
-                    Transfer
+                    {t("transfer")}
                   </DropdownMenuItem>
                 )}
                 {canRefund && (
@@ -264,10 +260,15 @@ export function PurchasedPackageCard({
                     className="text-destructive focus:text-destructive"
                   >
                     <RotateCcw className="mr-2 size-4" />
-                    Refund unused
+                    {t("refundUnused")}
                     {policy.refundPerUnusedPass !== undefined && (
                       <span className="text-muted-foreground ml-auto text-[11px]">
-                        ${policy.refundPerUnusedPass}/pass
+                        {fill("perPass", {
+                          price: formatMoney(
+                            policy.refundPerUnusedPass,
+                            locale,
+                          ),
+                        })}
                       </span>
                     )}
                   </DropdownMenuItem>
@@ -283,7 +284,7 @@ export function PurchasedPackageCard({
         {isExpired ? (
           <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-lg border p-2.5 text-sm font-medium">
             <AlertTriangle className="size-4 shrink-0" />
-            This pass has expired
+            {t("thisPassHasExpired")}
           </div>
         ) : available > 0 && daysLeft <= 14 ? (
           <div
@@ -294,7 +295,12 @@ export function PurchasedPackageCard({
             }
           >
             <AlertTriangle className="size-4 shrink-0" />
-            Expiring in {daysLeft} day{daysLeft === 1 ? "" : "s"}
+            {fill(
+              daysLeft === 1 ? "expiringInDaysOne" : "expiringInDaysOther",
+              {
+                n: daysLeft,
+              },
+            )}
           </div>
         ) : null}
 
@@ -312,7 +318,7 @@ export function PurchasedPackageCard({
               {available}
             </span>
             <span className="text-muted-foreground text-sm">
-              of {purchase.totalPasses} passes left
+              {fill("ofPassesLeft", { total: purchase.totalPasses })}
             </span>
           </div>
           {/* Dot row — filled = remaining, empty = consumed */}
@@ -345,13 +351,20 @@ export function PurchasedPackageCard({
           <Clock className="size-4 shrink-0" />
           {isExpired ? (
             <span className="font-medium">
-              Expired on {formatDate(purchase.expiresAt)}
+              {fill("expiredOn", {
+                date: formatDateLong(purchase.expiresAt, locale),
+              })}
             </span>
           ) : (
             <span>
-              Expires {formatDate(purchase.expiresAt)} ·{" "}
+              {fill("expiresOn", {
+                date: formatDateLong(purchase.expiresAt, locale),
+              })}{" "}
+              ·{" "}
               <span className="font-medium">
-                {daysLeft} day{daysLeft === 1 ? "" : "s"} left
+                {fill(daysLeft === 1 ? "daysLeftOne" : "daysLeftOther", {
+                  n: daysLeft,
+                })}
               </span>
             </span>
           )}
@@ -365,7 +378,7 @@ export function PurchasedPackageCard({
                 type="button"
                 className="hover:bg-muted/30 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors"
               >
-                <span className="font-medium">View history</span>
+                <span className="font-medium">{t("viewHistory")}</span>
                 <ChevronDown
                   className={`size-4 transition-transform ${
                     historyOpen ? "rotate-180" : ""
@@ -387,11 +400,12 @@ export function PurchasedPackageCard({
                   {purchase.adjustments.map((adj) => (
                     <div key={adj.id} className="flex justify-between">
                       <span className="text-muted-foreground">
-                        {formatDate(adj.date)} · {adj.description}
+                        {formatDateLong(adj.date, locale)} · {adj.description}
                       </span>
                       {adj.amount !== undefined && (
                         <span className="font-medium">
-                          {adj.amount > 0 ? "+" : ""}${adj.amount}
+                          {adj.amount > 0 ? "+" : ""}
+                          {formatMoney(adj.amount, locale)}
                         </span>
                       )}
                     </div>
@@ -411,7 +425,7 @@ export function PurchasedPackageCard({
             >
               <span className="flex items-center gap-1.5 font-medium">
                 <Info className="size-4" />
-                View package policy
+                {t("viewPackagePolicy")}
               </span>
               <ChevronDown
                 className={`size-4 transition-transform ${
@@ -422,8 +436,7 @@ export function PurchasedPackageCard({
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
             <p className="text-muted-foreground bg-muted/20 rounded-lg border p-3 text-xs">
-              {policy.policyNotes ??
-                "Refer to facility policies for refunds and extensions."}
+              {policy.policyNotes ?? t("referToFacilityPolicies")}
             </p>
           </CollapsibleContent>
         </Collapsible>
@@ -437,7 +450,7 @@ export function PurchasedPackageCard({
               <Button variant="outline" className="w-full gap-2" asChild>
                 <Link href="/customer/messages">
                   <MessageSquare className="size-4" />
-                  Contact us to extend
+                  {t("contactUsToExtend")}
                 </Link>
               </Button>
             ) : null
@@ -468,6 +481,7 @@ function BookWithPassButton({
   disabled?: boolean;
   onRedeemed?: () => void;
 }) {
+  const { t } = useCustomerText("packages");
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
   const { mutateAsync: redeemPass } = useRedeemPackagePass();
@@ -524,7 +538,7 @@ function BookWithPassButton({
       disabled={disabled || !selectedFacility || !customer}
     >
       <Calendar className="size-4" />
-      Book with Pass
+      {t("bookWithPass")}
     </Button>
   );
 }
@@ -538,6 +552,7 @@ function PassRow({
   booking: Booking | undefined;
   bookingLinkPrefix: string;
 }) {
+  const { t, locale } = useCustomerText("packages");
   const { status, passNumber, usedAt, notes, refundedAt } = pass;
 
   const statusIcon =
@@ -553,12 +568,12 @@ function PassRow({
 
   const statusLabel =
     status === "used"
-      ? "Used"
+      ? t("passUsed")
       : status === "refunded"
-        ? "Refunded"
+        ? t("passRefunded")
         : status === "expired"
-          ? "Expired"
-          : "Available";
+          ? t("expired")
+          : t("passAvailable");
 
   const statusBadgeVariant =
     status === "available"
@@ -578,12 +593,12 @@ function PassRow({
           <span className="text-sm font-medium">{statusLabel}</span>
           {usedAt && (
             <span className="text-muted-foreground text-xs">
-              · {new Date(usedAt).toLocaleDateString()}
+              · {formatDateLong(usedAt, locale)}
             </span>
           )}
           {refundedAt && (
             <span className="text-muted-foreground text-xs">
-              · {new Date(refundedAt).toLocaleDateString()}
+              · {formatDateLong(refundedAt, locale)}
             </span>
           )}
         </div>

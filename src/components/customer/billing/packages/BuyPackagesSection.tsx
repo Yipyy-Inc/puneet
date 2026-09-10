@@ -20,30 +20,25 @@ import {
   useServicePackages,
   usePurchasePackage,
 } from "@/lib/api/customer-packages";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
 
 // The signed-in customer. Same placeholder the rest of the portal uses; it is
 // the id the purchase is recorded against, so it stops being a constant when
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(n);
-
-const serviceName = (serviceId: string) =>
-  services.find((s) => s.id === serviceId)?.name ?? "Service";
+const serviceName = (serviceId: string, fallback: string) =>
+  services.find((s) => s.id === serviceId)?.name ?? fallback;
 
 /** Total number of passes/credits a package grants (sum of quantities). */
 const passCount = (pkg: ServicePackage) =>
   pkg.services.reduce((sum, s) => sum + s.quantity, 0);
 
+// A rank badge's words, by CATALOGUE KEY.
 function rankBadge(rank?: number) {
   if (rank === 1)
-    return { label: "Most Popular", className: "bg-amber-500 text-white" };
+    return { labelKey: "mostPopular", className: "bg-amber-500 text-white" };
   if (rank === 2)
-    return { label: "Best Value", className: "bg-emerald-600 text-white" };
+    return { labelKey: "bestValue", className: "bg-emerald-600 text-white" };
   return null;
 }
 
@@ -53,6 +48,7 @@ function rankBadge(rank?: number) {
  * package purchase surface the portal was missing.
  */
 export function BuyPackagesSection() {
+  const { t, fill, locale } = useCustomerText("packages");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -83,8 +79,11 @@ export function BuyPackagesSection() {
       { clientId: customerId, packageId: pkg.id },
       {
         onSuccess: () => {
-          toast.success(`${pkg.name} purchased`, {
-            description: `${passCount(pkg)} passes added to your account. Valid for ${pkg.validDays} days.`,
+          toast.success(fill("packagePurchased", { package: pkg.name }), {
+            description: fill("passesAddedValidFor", {
+              n: passCount(pkg),
+              days: pkg.validDays,
+            }),
           });
           setSelected(null);
         },
@@ -92,7 +91,7 @@ export function BuyPackagesSection() {
           // The old flow could not fail, so it never said anything. This one
           // can: the pack may have been retired between the page loading and
           // the button being pressed.
-          toast.error("That purchase did not go through", {
+          toast.error(t("thatPurchaseDidNotGo"), {
             description: error.message,
           });
         },
@@ -110,11 +109,10 @@ export function BuyPackagesSection() {
         </div>
         <div className="min-w-0">
           <h2 className="text-xl font-semibold tracking-tight">
-            Buy Passes &amp; Bundles
+            {t("buyPassesBundles")}
           </h2>
           <p className="text-muted-foreground text-sm">
-            Prepaid pass packs — buy in bulk and save. Passes are used
-            automatically when you book.
+            {t("prepaidPassPacksHint")}
           </p>
         </div>
       </div>
@@ -131,7 +129,7 @@ export function BuyPackagesSection() {
                 <span
                   className={`absolute top-0 right-0 rounded-bl-lg px-2.5 py-1 text-[11px] font-semibold ${badge.className}`}
                 >
-                  {badge.label}
+                  {t(badge.labelKey)}
                 </span>
               )}
               <CardContent className="flex flex-1 flex-col gap-3 p-5">
@@ -154,7 +152,7 @@ export function BuyPackagesSection() {
                         <span className="font-semibold tabular-nums">
                           {s.quantity}×
                         </span>{" "}
-                        {serviceName(s.serviceId)}
+                        {serviceName(s.serviceId, t("service"))}
                       </span>
                     </li>
                   ))}
@@ -164,11 +162,11 @@ export function BuyPackagesSection() {
                 <div className="mt-auto space-y-2 pt-2">
                   <div className="flex items-end gap-2">
                     <span className="text-2xl font-bold">
-                      {formatCurrency(pkg.packagePrice)}
+                      {formatMoney(pkg.packagePrice, locale, { whole: true })}
                     </span>
                     {pkg.totalValue > pkg.packagePrice && (
                       <span className="text-muted-foreground mb-1 text-sm line-through">
-                        {formatCurrency(pkg.totalValue)}
+                        {formatMoney(pkg.totalValue, locale, { whole: true })}
                       </span>
                     )}
                   </div>
@@ -176,13 +174,20 @@ export function BuyPackagesSection() {
                     {pkg.savings > 0 && (
                       <Badge className="gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
                         <Tag className="size-3" />
-                        Save {formatCurrency(pkg.savings)} ·{" "}
-                        {Math.round(pkg.savingsPercentage)}%
+                        {fill("saveAmountPercent", {
+                          amount: formatMoney(pkg.savings, locale, {
+                            whole: true,
+                          }),
+                          percent: formatPercent(
+                            Math.round(pkg.savingsPercentage),
+                            locale,
+                          ),
+                        })}
                       </Badge>
                     )}
                     <span className="text-muted-foreground flex items-center gap-1 text-xs">
                       <CalendarClock className="size-3" />
-                      Valid {pkg.validDays} days
+                      {fill("validDays", { n: pkg.validDays })}
                     </span>
                   </div>
                 </div>
@@ -191,7 +196,7 @@ export function BuyPackagesSection() {
                   className="mt-1 w-full bg-emerald-600 text-white hover:bg-emerald-700"
                   onClick={() => setSelected(pkg)}
                 >
-                  Buy Now
+                  {t("buyNow")}
                 </Button>
               </CardContent>
             </Card>
@@ -207,10 +212,10 @@ export function BuyPackagesSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="text-primary size-5" />
-              Purchase {selected?.name}
+              {fill("purchasePlanNamed", { plan: selected?.name ?? "" })}
             </DialogTitle>
             <DialogDescription>
-              Confirm your prepaid pass purchase.
+              {t("confirmYourPrepaidPassPurchase")}
             </DialogDescription>
           </DialogHeader>
 
@@ -227,38 +232,44 @@ export function BuyPackagesSection() {
                       <span className="font-semibold tabular-nums">
                         {s.quantity}×
                       </span>{" "}
-                      {serviceName(s.serviceId)}
+                      {serviceName(s.serviceId, t("service"))}
                     </li>
                   ))}
                 </ul>
                 <div className="flex items-center justify-between border-t pt-2 text-sm">
                   <span className="text-muted-foreground">
-                    Valid for {selected.validDays} days
+                    {fill("validForDays", { n: selected.validDays })}
                   </span>
                   {selected.savings > 0 && (
                     <span className="font-medium text-emerald-700">
-                      You save {formatCurrency(selected.savings)}
+                      {fill("youSave", {
+                        amount: formatMoney(selected.savings, locale, {
+                          whole: true,
+                        }),
+                      })}
                     </span>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>{formatCurrency(selected.packagePrice)}</span>
+                <span>{t("total")}</span>
+                <span>
+                  {formatMoney(selected.packagePrice, locale, { whole: true })}
+                </span>
               </div>
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelected(null)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={confirmPurchase}
               disabled={isPending}
             >
-              {isPending ? "Purchasing…" : "Confirm Purchase"}
+              {isPending ? t("purchasing") : t("confirmPurchase")}
             </Button>
           </DialogFooter>
         </DialogContent>

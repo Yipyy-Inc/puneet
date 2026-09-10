@@ -12,6 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { PauseCircle, Coins, CreditCard } from "lucide-react";
 import type { Membership, MembershipPlan } from "@/data/services-pricing";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   open: boolean;
@@ -22,13 +25,6 @@ interface Props {
 }
 
 const PAUSE_OPTIONS = [1, 2, 3] as const;
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 
 /** Add whole months to an ISO date, returning a new ISO string. */
 function addMonths(iso: string, months: number): string {
@@ -44,6 +40,7 @@ export function PauseMembershipDialog({
   plan,
   onConfirm,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const [months, setMonths] = useState<number>(1);
 
   const pauseStart = membership.nextBillingDate;
@@ -60,18 +57,15 @@ export function PauseMembershipDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PauseCircle className="size-5 text-amber-500" />
-            Pause {membership.planName}
+            {fill("pausePlan", { plan: membership.planName })}
           </DialogTitle>
-          <DialogDescription>
-            Take a break without cancelling. Your membership resumes
-            automatically when the pause ends.
-          </DialogDescription>
+          <DialogDescription>{t("takeABreak")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1 text-sm">
           {/* Duration selector */}
           <div>
-            <p className="mb-2 font-medium">Pause duration</p>
+            <p className="mb-2 font-medium">{t("pauseDuration")}</p>
             <div className="grid grid-cols-3 gap-2">
               {PAUSE_OPTIONS.map((m) => (
                 <button
@@ -86,7 +80,7 @@ export function PauseMembershipDialog({
                 >
                   <span className="block text-lg font-semibold">{m}</span>
                   <span className="text-muted-foreground text-xs">
-                    month{m === 1 ? "" : "s"}
+                    {t(m === 1 ? "monthOne" : "monthOther")}
                   </span>
                 </button>
               ))}
@@ -97,13 +91,13 @@ export function PauseMembershipDialog({
           <div className="flex items-start gap-2 rounded-lg border p-3">
             <Coins className="text-muted-foreground mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="font-medium">Your credits during the pause</p>
+              <p className="font-medium">{t("yourCreditsDuringThePause")}</p>
               <p className="text-muted-foreground text-xs">
                 {plan && plan.credits === -1
-                  ? "No new credits are issued while paused; your unlimited access resumes when the pause ends."
-                  : `No new credits are issued while paused. Any credits already in your balance (${
-                      membership.creditsRemaining
-                    }) are held and available again when you resume.`}
+                  ? t("noCreditsWhilePausedUnlimited")
+                  : fill("noCreditsWhilePaused", {
+                      n: membership.creditsRemaining,
+                    })}
               </p>
             </div>
           </div>
@@ -113,12 +107,17 @@ export function PauseMembershipDialog({
             <CreditCard className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div>
               <p className="font-medium text-emerald-900 dark:text-emerald-200">
-                No charges while paused
+                {t("noChargesWhilePaused")}
               </p>
               <p className="text-xs text-emerald-900/90 dark:text-emerald-200/90">
-                Billing pauses on {formatDate(pauseStart)} and resumes on{" "}
-                <span className="font-semibold">{formatDate(resumeDate)}</span>.
-                Your next charge will be on your resume date.
+                {rich(t("billingPausesOn"), {
+                  start: formatDateLong(pauseStart, locale),
+                  resume: (
+                    <span className="font-semibold">
+                      {formatDateLong(resumeDate, locale)}
+                    </span>
+                  ),
+                })}
               </p>
             </div>
           </div>
@@ -126,7 +125,7 @@ export function PauseMembershipDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={() => {
@@ -134,7 +133,7 @@ export function PauseMembershipDialog({
               handleClose(false);
             }}
           >
-            Pause membership
+            {t("pauseMembership")}
           </Button>
         </DialogFooter>
       </DialogContent>

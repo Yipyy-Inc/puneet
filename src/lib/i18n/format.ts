@@ -81,8 +81,23 @@ function numFmt(
   return f;
 }
 
+/**
+ * A bare `YYYY-MM-DD` is a CALENDAR DAY, and is read at local midnight.
+ *
+ * `new Date("2026-09-10")` is UTC midnight — the evening of the 9th anywhere
+ * in Canada — so every formatter here showed a booking, a purchase or an
+ * expiry one day early for a date stored without a time. Found in three
+ * separate files in one afternoon of the French conversion, each with its own
+ * local fix; this is the one fix. A full timestamp is an instant and is left
+ * to `new Date`.
+ */
 function asDate(value: Date | string | number): Date {
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) return value;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
 }
 
 /**

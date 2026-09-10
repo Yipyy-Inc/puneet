@@ -124,6 +124,13 @@ describe("§5q — dates", () => {
     expect(formatDateISO(AT_1430)).toBe("2026-09-01");
   });
 
+  test("a bare YYYY-MM-DD is that calendar day, not UTC midnight", () => {
+    // new Date("2026-09-01") is UTC — Aug 31 in any Canadian zone. The day a
+    // record was stored as is the day it shows.
+    expect(formatDateShort("2026-09-01", "en")).toBe("Sep 1");
+    expect(formatDateLong("2026-09-01", "fr")).toBe("mar. 1 sept. 2026");
+  });
+
   test("no date output anywhere contains a slash", () => {
     for (const locale of ["en", "fr"] as const) {
       expect(formatDateLong(AT_1430, locale)).not.toContain("/");

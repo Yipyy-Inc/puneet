@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownCircle, Minus, CalendarClock, Coins } from "lucide-react";
 import type { Membership, MembershipPlan } from "@/data/services-pricing";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
 
 interface Props {
   open: boolean;
@@ -23,20 +25,6 @@ interface Props {
   onConfirm: (newPlanId: string) => void;
 }
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-
 export function DowngradeMembershipDialog({
   open,
   onOpenChange,
@@ -45,6 +33,7 @@ export function DowngradeMembershipDialog({
   allPlans,
   onConfirm,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("packages");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const eligiblePlans = useMemo(() => {
@@ -88,19 +77,14 @@ export function DowngradeMembershipDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowDownCircle className="size-5 text-blue-600" />
-            Downgrade your plan
+            {t("downgradeYourPlan")}
           </DialogTitle>
-          <DialogDescription>
-            Downgrades take effect on your next billing date. Your current plan
-            and perks continue until then.
-          </DialogDescription>
+          <DialogDescription>{t("downgradesTakeEffect")}</DialogDescription>
         </DialogHeader>
 
         {eligiblePlans.length === 0 ? (
           <div className="bg-muted/30 rounded-lg border p-4 text-center text-sm">
-            <p className="text-muted-foreground">
-              No lower-tier plans are available for your subscription.
-            </p>
+            <p className="text-muted-foreground">{t("noLowerTierPlansAre")}</p>
           </div>
         ) : (
           <div className="space-y-4 py-1">
@@ -126,10 +110,10 @@ export function DowngradeMembershipDialog({
                       )}
                     </div>
                     <span className="font-semibold">
-                      {formatCurrency(p.monthlyPrice)}
+                      {formatMoney(p.monthlyPrice, locale)}
                       <span className="text-muted-foreground text-[11px] font-normal">
                         {" "}
-                        / mo
+                        {t("perMonth")}
                       </span>
                     </span>
                   </button>
@@ -139,14 +123,14 @@ export function DowngradeMembershipDialog({
 
             {!target || !currentPlan ? (
               <p className="text-muted-foreground text-center text-sm">
-                Select a plan above to review what changes.
+                {t("selectAPlanAboveTo")}
               </p>
             ) : (
               <>
                 {/* What's lost */}
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
                   <p className="mb-1.5 text-sm font-semibold text-amber-900 dark:text-amber-200">
-                    Moving to {target.name} — what you&apos;ll lose
+                    {fill("movingToWhatYouLose", { plan: target.name })}
                   </p>
                   {lost.length > 0 ? (
                     <ul className="space-y-1">
@@ -162,9 +146,10 @@ export function DowngradeMembershipDialog({
                     </ul>
                   ) : (
                     <p className="text-xs text-amber-900 dark:text-amber-200">
-                      Your perks stay the same, but your monthly credit
-                      allotment drops from {currentPlan.credits} to{" "}
-                      {target.credits}.
+                      {fill("creditAllotmentDrops", {
+                        from: currentPlan.credits,
+                        to: target.credits,
+                      })}
                     </p>
                   )}
                 </div>
@@ -173,11 +158,15 @@ export function DowngradeMembershipDialog({
                 <div className="flex items-start gap-2 rounded-lg border p-3 text-sm">
                   <CalendarClock className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                   <div>
-                    <p className="font-medium">Effective next cycle</p>
+                    <p className="font-medium">{t("effectiveNextCycle")}</p>
                     <p className="text-muted-foreground text-xs">
-                      Your new plan starts on{" "}
-                      {formatDate(membership.nextBillingDate)}. Until then you
-                      keep {currentPlan.name}.
+                      {fill("newPlanStartsOn", {
+                        date: formatDateLong(
+                          membership.nextBillingDate,
+                          locale,
+                        ),
+                        plan: currentPlan.name,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -186,17 +175,23 @@ export function DowngradeMembershipDialog({
                 <div className="flex items-start gap-2 rounded-lg border p-3 text-sm">
                   <Coins className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                   <div>
-                    <p className="font-medium">Your unused credits</p>
+                    <p className="font-medium">{t("yourUnusedCredits")}</p>
                     <p className="text-muted-foreground text-xs">
                       {unusedCredits > 0
-                        ? `You have ${unusedCredits} unused credit${
-                            unusedCredits === 1 ? "" : "s"
-                          }. Use them before ${formatDate(
-                            membership.nextBillingDate,
-                          )} — they don't carry over, and your new plan resets to ${
-                            target.credits
-                          } credits per cycle.`
-                        : `No unused credits remain. Your new plan provides ${target.credits} credits per cycle.`}
+                        ? fill(
+                            unusedCredits === 1
+                              ? "unusedCreditsUseBeforeOne"
+                              : "unusedCreditsUseBeforeOther",
+                            {
+                              n: unusedCredits,
+                              date: formatDateLong(
+                                membership.nextBillingDate,
+                                locale,
+                              ),
+                              credits: target.credits,
+                            },
+                          )
+                        : fill("noUnusedCredits", { credits: target.credits })}
                     </p>
                   </div>
                 </div>
@@ -204,17 +199,18 @@ export function DowngradeMembershipDialog({
                 {/* Price change */}
                 <div className="bg-muted/30 flex justify-between rounded-lg border p-3 text-sm">
                   <span className="text-muted-foreground">
-                    New monthly price
+                    {t("newMonthlyPrice")}
                   </span>
                   <span className="font-semibold">
-                    {formatCurrency(target.monthlyPrice)}
+                    {formatMoney(target.monthlyPrice, locale)}
                     <span className="text-muted-foreground text-[11px] font-normal">
                       {" "}
                       (−
-                      {formatCurrency(
+                      {formatMoney(
                         currentPlan.monthlyPrice - target.monthlyPrice,
+                        locale,
                       )}{" "}
-                      / mo)
+                      {t("perMonth")})
                     </span>
                   </span>
                 </div>
@@ -225,7 +221,7 @@ export function DowngradeMembershipDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)}>
-            Keep current plan
+            {t("keepCurrentPlan")}
           </Button>
           <Button
             variant="secondary"
@@ -237,7 +233,7 @@ export function DowngradeMembershipDialog({
               }
             }}
           >
-            Downgrade
+            {t("downgrade")}
           </Button>
         </DialogFooter>
       </DialogContent>
