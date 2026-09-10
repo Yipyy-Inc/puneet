@@ -68,6 +68,12 @@ function facilityToday(): string {
 
 const money = (n: number) => Math.round(n * 100) / 100;
 
+const shiftDay = (iso: string, n: number) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
 // ── Validate before touching anything ─────────────────────────────────────
 for (const c of CLIENTS)
   assertSafeContact(c.key, c.client.email!, c.client.phone);
@@ -368,6 +374,97 @@ try {
              ${b.payment === "cash" ? Math.ceil(total) : null}, '{}',
              ${SEED_AUTHOR}, null, ${endAt})`;
         count("payments");
+      }
+    }
+
+    // ── What staff logged during the stays ──────────────────────────────
+    // The guest journal is built from `care_log_entries`, the same rows the
+    // booking page's feeding and medication panels write — so seeded stays
+    // get the meals, doses and potty breaks a shift would have recorded,
+    // keyed exactly as the panels key them. Days before today in full; today
+    // only up to breakfast. One row per task per day (the table's own rule),
+    // so a second run adds nothing.
+    for (const b of plan) {
+      if (b.booking.service !== "boarding" || !b.arrived) continue;
+      const [row] = await tx`
+        select id from public.bookings
+         where facility_id = ${DEMO_FACILITY_ID} and details->>'demoSeedKey' = ${b.key}`;
+      if (!row) continue;
+      const petId = petIds.get(b.petKeys[0])!;
+      const petName = PETS.find((p) => p.key === b.petKeys[0])!.pet.name!;
+      const feedId = `feed-${petName.toLowerCase()}`;
+      const last = b.departed ? b.booking.endDate! : today;
+      const staff = String(b.booking.assignedStaff ?? SEED_AUTHOR);
+
+      for (
+        let d = b.booking.startDate!, i = 0;
+        d <= last;
+        d = shiftDay(d, 1), i++
+      ) {
+        const isToday = d === today;
+        const firstNight = i === 0;
+        const entries: [string, string, string, string, string | null][] = [
+          // [task_key, task_type, executed_at, outcome, notes]
+          ...(firstNight
+            ? []
+            : ([
+                [
+                  `sched-${feedId}-am`,
+                  "feeding",
+                  "07:45",
+                  i % 5 === 3 ? "ate_most" : "ate_all",
+                  null,
+                ],
+                ["potty-am", "potty", "07:00", "both", null],
+              ] as [string, string, string, string, string | null][])),
+          ...(isToday
+            ? []
+            : ([
+                ["potty-midday", "potty", "12:30", "pee", null],
+                [
+                  `sched-${feedId}-pm`,
+                  "feeding",
+                  "17:45",
+                  firstNight ? "ate_some" : "ate_all",
+                  firstNight
+                    ? "Settling in — picked at dinner the first night."
+                    : null,
+                ],
+                ["potty-pm", "potty", "21:00", "both", null],
+              ] as [string, string, string, string, string | null][])),
+        ];
+        if (petName === "Maple") {
+          if (!firstNight)
+            entries.push([
+              "med-maple-vetmedin#08:00",
+              "medication",
+              "08:05",
+              "given",
+              "In a pill pocket.",
+            ]);
+          if (!isToday)
+            entries.push([
+              "med-maple-vetmedin#20:00",
+              "medication",
+              "20:05",
+              "given",
+              null,
+            ]);
+        }
+        for (const [taskKey, taskType, at, outcome, notes] of entries) {
+          const res = await tx`
+            insert into public.care_log_entries
+              (facility_id, booking_id, pet_id, task_key, task_type,
+               occurred_on, executed_at, served_at, outcome, notes,
+               recorded_by_name, details)
+            values
+              (${DEMO_FACILITY_ID}, ${row.id}, ${petId}, ${taskKey}, ${taskType},
+               ${d}, ${at}, ${taskType === "feeding" ? at : null}, ${outcome},
+               ${notes}, ${staff}, '{}'::jsonb)
+            on conflict (booking_id, task_key, occurred_on) do nothing
+            returning id`;
+          if (res.length) count("care log entries");
+        }
       }
     }
 
