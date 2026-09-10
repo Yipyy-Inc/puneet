@@ -9,9 +9,8 @@ import {
 // keyed by date. It was the whole truth, in one browser tab, under a
 // hard-coded facility id; the server now scopes by the session's facility, so
 // `facilityId` below is kept for the callers and no longer decides anything.
-// Mirrors daily-care-config-store.ts: components subscribe via
-// useSyncExternalStore, so a note left from the dialog shows up in the banner
-// (and any other subscriber) without prop-drilling or an API round-trip.
+// Components subscribe via useSyncExternalStore, so a note left from the
+// dialog shows up in the banner (and any other subscriber) at once.
 // ============================================================================
 
 export type ShiftNote = {

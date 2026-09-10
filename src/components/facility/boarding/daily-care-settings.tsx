@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   DndContext,
   KeyboardSensor,
@@ -33,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { TASK_TYPE_META } from "@/components/daily-care/task-type-meta";
 import { StepCreatorModal } from "./StepCreatorModal";
 import { ScheduleTemplates } from "./ScheduleTemplates";
@@ -159,8 +161,10 @@ export function DailyCareSettings() {
   const [stepModalOpen, setStepModalOpen] = useState(false);
   const [editingStep, setEditingStep] = useState<DailyCareStep | null>(null);
 
-  // Subtle "saved" affordance — every change persists immediately (the store
-  // re-renders the daily list live); this just flashes a brief confirmation.
+  // Subtle "saved" affordance — every change is saved to the facility's
+  // settings; the flash waits for the save, and a refused one says so. It used
+  // to flash for a write to an in-memory copy that was gone on reload.
+  const { t: boardT } = useStaffText("dailyCareBoard");
   const [justSaved, setJustSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function markSaved() {
@@ -169,12 +173,14 @@ export function DailyCareSettings() {
     savedTimer.current = setTimeout(() => setJustSaved(false), 1500);
   }
 
-  // Persist directly to the store on every edit — no draft, no Save button.
+  // Saved on every edit — no draft, no Save button.
   function updateConfig(
     updater: (prev: FacilityDailyCareConfig) => FacilityDailyCareConfig,
   ) {
-    persistConfig(updater(config));
-    markSaved();
+    void persistConfig(updater(config)).then((saved) => {
+      if (saved) markSaved();
+      else toast.error(boardT("routineNotSaved"));
+    });
   }
 
   const sortedSteps = [...config.steps].sort(

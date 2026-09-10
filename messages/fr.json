@@ -1855,7 +1855,8 @@
         "flagHelp": "Le signalement reste au tableau pour la prochaine équipe. Personne n’est prévenu par message.",
         "notDelivered": "« {task} » consigné comme non effectué",
         "ownerNotMessaged": "Le propriétaire n’a pas été prévenu.",
-        "writeFailed": "Ce changement n’a pas été enregistré au tableau"
+        "writeFailed": "Ce changement n’a pas été enregistré au tableau",
+        "routineNotSaved": "La routine n’a pas été enregistrée"
       }
     }
   },

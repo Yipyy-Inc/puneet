@@ -12443,7 +12443,8 @@ each mutator writes through and puts its change back if the write is refused.
 over nothing; they say the flag is on the board and that nobody was
 messaged.
 
-- **Still open:** the feeding-round and schedule configuration is still an
-  in-memory store seeded from a fixture (the settings page's "Saved" badge
-  over it too); the staff filter reads `@/data/staff`; pet care notes are
+- **Still open:** ~~the schedule configuration is an in-memory store~~ — the
+  Daily Care routine is the `daily_care_config` settings domain now (shipped
+  routine as its fallback), and the settings screen's "Saved" waits for the
+  save. The boarding feeding-round settings are still local; the staff filter reads `@/data/staff`; pet care notes are
   in-memory; the HQ view's "Nudge sent" is a toast.
