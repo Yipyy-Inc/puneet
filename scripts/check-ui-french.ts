@@ -1003,8 +1003,10 @@ const SURFACES: {
     label: `${portal} pages (derived from its route tree)`,
     run: () => pagesSurface(dir, exclude),
     advice:
-      "Route it through the portal's text hook — useShellText, useStaffText " +
-      "or useSettingsText — or a catalogue block of its own",
+      portal === "customer"
+        ? 'Route it through useCustomerText("<area>") — see lib/customer/text.ts'
+        : "Route it through the portal's text hook — useShellText, useStaffText " +
+          "or useSettingsText — or a catalogue block of its own",
   })),
   {
     name: "primitives",
@@ -1016,6 +1018,20 @@ const SURFACES: {
 
 let failed = false;
 let total = 0;
+
+// ── ONE FILE, EVERY HIT: `UI_FRENCH_FILE=src/…/page.tsx bun run check:ui-french`
+//
+// A baselined file is silent — the gate prints only what got WORSE — so
+// converting one needs its list from somewhere. This prints every string the
+// scanners see in that one file, regardless of any baseline, and exits
+// without judging anything. It is a worklist, not a check.
+if (process.env.UI_FRENCH_FILE) {
+  const target = process.env.UI_FRENCH_FILE.replace(/\\/g, "/");
+  const found = hits(target, true);
+  for (const h of found) console.log(`${h.line}\t${JSON.stringify(h.text)}`);
+  console.log(`\n${found.length} strings in ${target}`);
+  process.exit(0);
+}
 
 console.log(`${ANSI.bold}The interface, in French${ANSI.reset}\n`);
 
@@ -1077,7 +1093,7 @@ for (const surface of SURFACES) {
   if (converted.length > 0) {
     failed = true;
     console.log(
-      `    ${ANSI.yellow}${converted.length} baselined entr(y|ies) now render no English — remove from BASELINE.${surface.name}:${ANSI.reset}`,
+      `    ${ANSI.yellow}${converted.length} baselined entr(y|ies) now render no English — remove from ${surface.name in BASELINE ? `BASELINE.${surface.name}` : `"${surface.name}" in scripts/check-ui-french.baseline.json`}:${ANSI.reset}`,
     );
     for (const id of converted)
       console.log(`      ${ANSI.dim}${id}${ANSI.reset}`);

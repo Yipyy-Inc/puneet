@@ -13,6 +13,7 @@ import {
   formatWeekday,
   formatTime,
   formatTimeOfDay,
+  formatList,
   formatWeight,
 } from "@/lib/i18n/format";
 
@@ -327,5 +328,14 @@ describe("a bare HH:MM field becomes a time of day", () => {
     for (const bad of ["", "9:", "abc", "25:00", "10:75"]) {
       expect(formatTimeOfDay(bad, "en")).toBe(bad);
     }
+  });
+});
+
+describe("a list of names gets the reader's conjunction", () => {
+  test("English says and, French says et, and the names are untouched", () => {
+    const pets = ["Buddy", "Whiskers", "Daisy", "Max"];
+    expect(formatList(pets, "en")).toBe("Buddy, Whiskers, Daisy and Max");
+    expect(formatList(pets, "fr")).toBe("Buddy, Whiskers, Daisy et Max");
+    expect(formatList(["Kofi"], "fr")).toBe("Kofi");
   });
 });

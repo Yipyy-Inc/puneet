@@ -13,6 +13,7 @@ import {
   aggregateActivePackagesForClient,
   totalSessionsRemainingForClient,
 } from "@/lib/client-training-packages";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 /** Slim "Training Credits" widget shown on the customer dashboard between
  *  the summary tiles and the loyalty rewards section. Designed to read at a
@@ -24,6 +25,7 @@ export function CustomerTrainingCreditsBanner({
 }: {
   customerId: number;
 }) {
+  const { t, fill } = useCustomerText("dashboard");
   const [nowMs] = useState(() => Date.now());
   const todayISO = useMemo(
     () => new Date(nowMs).toISOString().split("T")[0]!,
@@ -78,14 +80,21 @@ export function CustomerTrainingCreditsBanner({
             </div>
             <div>
               <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                Training credits
+                {t("trainingCredits")}
               </p>
               <p className="text-lg/tight font-bold text-slate-900">
-                {totalRemaining} session{totalRemaining === 1 ? "" : "s"} left
+                {fill(
+                  totalRemaining === 1 ? "sessionsLeftOne" : "sessionsLeftMany",
+                  { count: totalRemaining },
+                )}
               </p>
               <p className="text-muted-foreground text-[11px]">
-                Across {rows.length} active package
-                {rows.length === 1 ? "" : "s"}
+                {fill(
+                  rows.length === 1
+                    ? "acrossPackagesOne"
+                    : "acrossPackagesMany",
+                  { count: rows.length },
+                )}
               </p>
             </div>
           </div>
@@ -96,7 +105,9 @@ export function CustomerTrainingCreditsBanner({
                 className="gap-1 border-amber-200 bg-amber-50 text-amber-700"
               >
                 <AlertTriangle className="size-3" />
-                {lowCount} need{lowCount === 1 ? "s" : ""} renewal
+                {fill(lowCount === 1 ? "needRenewalOne" : "needRenewalMany", {
+                  count: lowCount,
+                })}
               </Badge>
             ) : (
               <Badge
@@ -104,7 +115,7 @@ export function CustomerTrainingCreditsBanner({
                 className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
               >
                 <Sparkles className="size-3" />
-                All set
+                {t("allSet")}
               </Badge>
             )}
             <Button
@@ -113,7 +124,7 @@ export function CustomerTrainingCreditsBanner({
               className="gap-1 text-[12px]"
               tabIndex={-1}
             >
-              View packages
+              {t("viewPackages")}
               <ArrowRight className="size-3 transition-transform duration-300 group-hover:translate-x-0.5" />
             </Button>
           </div>

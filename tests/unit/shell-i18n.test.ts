@@ -91,6 +91,19 @@ describe("the shell namespace", () => {
     expect(untranslated).toEqual([]);
   });
 
+  test("a French string carries every value its English one does", () => {
+    // Added 2026-09-10 with the same check on the area catalogues. A French
+    // string that drops `{pet}` reads fine and silently loses the value; the
+    // shell passed on the day it was added, and this keeps it that way.
+    const shape = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join();
+    const mismatched: string[] = [];
+    for (const group of GROUPS)
+      for (const [key, value] of Object.entries(enShell[group]))
+        if (shape(value) !== shape(frShell[group][key] ?? value))
+          mismatched.push(`${group}.${key}`);
+    expect(mismatched).toEqual([]);
+  });
+
   test("the French carries its accents", () => {
     // Thirty-five strings in ui-translations.ts shipped as "Creer",
     // "Parametres" and "a ete". Unaccented French is not a near miss; it is
