@@ -39,6 +39,8 @@ const SAME_IN_BOTH = new Set([
   "staff.shell.tabDocuments",
   "staff.roleMatrix.colPermission",
   "staff.bookingDetail.notesTitle", // Notes / Notes
+  "staff.bookingDetail.taskCatExecution", // Service / Service
+  "staff.bookingDetail.taskCatTransport", // Transport / Transport
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",
   "staff.profile.tabDocuments",

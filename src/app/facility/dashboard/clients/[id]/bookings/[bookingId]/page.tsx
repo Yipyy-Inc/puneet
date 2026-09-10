@@ -11,10 +11,7 @@ import {
   ClipboardList,
   ShieldCheck,
   XCircle,
-  Circle,
-  CircleDot,
   CheckCircle2,
-  ListChecks,
   Clock,
   CalendarDays,
   MapPin,
@@ -100,7 +97,6 @@ import {
 } from "@/lib/late-pickup-fee";
 import { MoveBookingLocationDialog } from "@/components/bookings/modals/MoveBookingLocationDialog";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
@@ -134,12 +130,7 @@ import { BookingJournal } from "@/components/guest-journal/BookingJournal";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { ExtraService } from "@/types/booking";
-import type { GeneratedTask } from "@/types/task";
-import {
-  getTasksForBooking,
-  completeTask,
-  startTask,
-} from "@/data/generated-tasks";
+import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -625,11 +616,6 @@ export default function ClientBookingDetailPage({
   // which apply and the generator filters on it.
   const { data: allTaskTemplates = [] } = useQuery(taskTemplateQueries.all());
 
-  const [tasks, setTasks] = useState<GeneratedTask[]>([]);
-  useEffect(() => {
-    setTasks(getTasksForBooking(bookingId, allTaskTemplates));
-  }, [bookingId, allTaskTemplates]);
-
   // "Not found" is a conclusion, and it needs both answers back before it can
   // be drawn. Rendering it while either request is open told staff a booking
   // they were looking at did not exist.
@@ -724,7 +710,6 @@ export default function ClientBookingDetailPage({
   // facility toggle (2G.1); per_admin lines recompute as care logs accrue.
   const incidentCareItems = getIncidentCareCharges(booking.id);
   const incidentCareTotal = incidentCareItems.reduce((s, i) => s + i.price, 0);
-  const completedTasks = tasks.filter((t) => t.status === "completed").length;
 
   // Flow C: open, unlocked incidents with active in-stay care that checkout must
   // lock before proceeding.
@@ -1644,112 +1629,13 @@ export default function ClientBookingDetailPage({
               </CardContent>
             </Card>
 
-            {/* Tasks */}
-            {tasks.length > 0 && (
-              <Card className="overflow-hidden">
-                <CardHeader className="bg-muted/30 pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-                      <ListChecks className="size-3.5" />
-                      Tasks
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-[11px]">
-                        {completedTasks} of {tasks.length} done
-                      </span>
-                      <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
-                        <div
-                          className="bg-primary h-full rounded-full transition-all"
-                          style={{
-                            width: `${tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <div className="space-y-0.5">
-                    {tasks.slice(0, 10).map((task) => (
-                      <div
-                        key={task.id}
-                        className={cn(
-                          "group flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors",
-                          task.status === "completed"
-                            ? "opacity-50"
-                            : "hover:bg-muted/40",
-                        )}
-                      >
-                        <button
-                          onClick={() => {
-                            if (task.status === "pending") startTask(task.id);
-                            else if (task.status === "in_progress")
-                              completeTask(task.id, "You");
-                            setTasks(
-                              getTasksForBooking(bookingId, allTaskTemplates),
-                            );
-                          }}
-                          disabled={
-                            task.status === "completed" ||
-                            task.status === "skipped"
-                          }
-                          className="shrink-0"
-                        >
-                          {task.status === "completed" ? (
-                            <CheckCircle2 className="size-4 text-emerald-500" />
-                          ) : task.status === "in_progress" ? (
-                            <CircleDot className="size-4 text-blue-500" />
-                          ) : (
-                            <Circle className="text-muted-foreground/30 size-4" />
-                          )}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <span
-                            className={cn(
-                              "text-[13px]",
-                              task.status === "completed" &&
-                                "text-muted-foreground line-through",
-                            )}
-                          >
-                            {task.name}
-                          </span>
-                        </div>
-                        {task.isRequired && task.status !== "completed" && (
-                          <Badge
-                            variant="outline"
-                            className="border-red-200 bg-red-50 text-[8px] text-red-600"
-                          >
-                            Required
-                          </Badge>
-                        )}
-                        <Badge
-                          variant="outline"
-                          className="text-[8px] capitalize"
-                        >
-                          {task.category}
-                        </Badge>
-                        {task.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-[10px] max-lg:h-12 max-lg:px-4 max-lg:text-sm"
-                            onClick={() => {
-                              completeTask(task.id, "You");
-                              setTasks(
-                                getTasksForBooking(bookingId, allTaskTemplates),
-                              );
-                              toast.success("Task completed");
-                            }}
-                          >
-                            Done
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Tasks — the facility's routine for this service, started and
+                finished through the task board. */}
+            <BookingTasksCard
+              booking={booking}
+              templates={allTaskTemplates}
+              petName={pet?.name ?? ""}
+            />
 
             {/* Tips Section — omitted without view_booking_financials (3C) */}
             {isPaid && canSeeBookingAmounts && (

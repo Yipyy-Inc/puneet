@@ -60,6 +60,8 @@ async function send<T>(
 export interface TaskFilters {
   status?: TaskStatus | "all";
   source?: string;
+  /** Every task whose source_ref starts with this — one record's tasks. */
+  sourceRefPrefix?: string;
   assignedTo?: string;
   since?: string;
   until?: string;
@@ -73,6 +75,8 @@ export const taskQueries = {
       if (filters?.status && filters.status !== "all")
         params.set("status", filters.status);
       if (filters?.source) params.set("source", filters.source);
+      if (filters?.sourceRefPrefix)
+        params.set("sourceRefPrefix", filters.sourceRefPrefix);
       if (filters?.assignedTo) params.set("assignedTo", filters.assignedTo);
       if (filters?.since) params.set("since", filters.since);
       if (filters?.until) params.set("until", filters.until);
