@@ -159,7 +159,8 @@ function toDaycareCategories(areas: DaycarePlayArea[]): RoomCategory[] {
 // A daycare section holds many dogs and this board draws ONE guest per row,
 // so it cannot show a busy yard; the daycare check-in board is where the day's
 // dogs are. See the debt map.
-const LIVE = ["cancelled", "declined", "no_show", "completed"];
+const CLOSED = ["cancelled", "declined", "no_show", "completed"];
+const NO_BOOKINGS: Booking[] = [];
 
 function daycareDay(b: Booking): string {
   return b.daycareSelectedDates?.[0] ?? b.startDate;
@@ -173,7 +174,7 @@ function buildDaycareKennels(
   const bySection = new Map<string, Booking>();
   for (const b of bookings) {
     if (b.service !== "daycare" || !b.sectionId) continue;
-    if (LIVE.includes(b.status) || daycareDay(b) < today) continue;
+    if (CLOSED.includes(b.status) || daycareDay(b) < today) continue;
     const held = bySection.get(b.sectionId);
     if (!held || daycareDay(b) < daycareDay(held))
       bySection.set(b.sectionId, b);
@@ -267,7 +268,12 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
     () => toDaycareCategories(daycareAreas),
     [daycareAreas],
   );
-  const { data: allBookings = [] } = useQuery(bookingQueries.all());
+  // A STABLE empty list while the query loads. `= []` here is a new array on
+  // every render, the effect below depends on it and sets state, and the
+  // board re-rendered itself into React's update-depth limit — caught by the
+  // occupancy-calendar spec as "We couldn't load your board".
+  const { data: bookingsData } = useQuery(bookingQueries.all());
+  const allBookings = bookingsData ?? NO_BOOKINGS;
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const [daycareKennels, setDaycareKennels] = useState<Kennel[]>([]);
   // Rebuilt whenever the sections or the bookings change — both arrive
