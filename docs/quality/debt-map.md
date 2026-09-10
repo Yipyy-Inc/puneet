@@ -12174,3 +12174,22 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   an English weekday from `getDayName` and an English "2h 5m" countdown are
   `formatTimeOfDay`, `formatDateLong`, `formatWeekday` and
   `formatDuration`. Tuition and deposit are `formatMoney`.
+
+### Household (`/customer/household`) — **authorising someone to pick up your pet saves nothing**
+
+- **"Save changes" is an 800 ms timeout.** `handleSave` waits, leaves edit
+  mode and toasts "Contacts updated. Staff will see the change on the
+  facility side immediately." Nothing is written. A customer who adds a
+  person tagged **Pickup** is told the facility will honour it at pick-up;
+  the facility never hears of them. Of the fakes in the customer portal
+  this is the one with a physical consequence — a stranger arriving for a
+  dog, or a trusted neighbour turned away. The toast is translated only so
+  the page is not half English; it should not survive the first real save.
+- Fixed while translating: the three contact tags ("Pickup", "Drop-off",
+  "Emergency") were `ADDITIONAL_CONTACT_TAG_LABELS` — an English table in
+  `@/types/client`, indexed where it rendered — in the SHARED
+  `AdditionalContactsManager`, so the facility's client file showed them in
+  English too while the staff surface reported zero. They are keys in
+  `staff.areas.createClient` now, through `contactTagLabel`, and the table
+  is gone. Another shape the gate cannot read: a label table outside the
+  walk, indexed by a variable.

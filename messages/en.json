@@ -1657,7 +1657,10 @@
         "acContactN": "Contact {n}",
         "acName": "Name",
         "acEmailPlaceholder": "contact@example.com",
-        "acTags": "Tags"
+        "acTags": "Tags",
+        "acTagPickup": "Pickup",
+        "acTagDropoff": "Drop-off",
+        "acTagEmergency": "Emergency"
       }
     }
   },
@@ -9386,6 +9389,27 @@
         "nightVision": "Night vision",
         "accessVia": "Access via:",
         "closeCamera": "Close camera"
+      },
+      "household": {
+        "contactsUpdated": "Contacts updated. Staff will see the change on the facility side immediately.",
+        "failedToUpdate": "Failed to update contacts",
+        "householdAndContacts": "Household and contacts",
+        "householdDescription": "People your facility may contact for pickup, drop-off, or emergencies.",
+        "editContacts": "Edit contacts",
+        "cancel": "Cancel",
+        "saving": "Saving…",
+        "saveChanges": "Save changes",
+        "primaryAccountHolder": "Primary account holder",
+        "mainPointOfContact": "Your facility's main point of contact for this account. To update name, email, or phone, {link}.",
+        "editYourProfile": "edit your profile",
+        "primary": "Primary",
+        "manageInSettings": "Manage in settings",
+        "additionalContacts": "Additional contacts",
+        "additionalContactsBody": "Add family, friends, or pet transport services your facility may contact. Tag each person with what they're authorized for — the facility honors these tags at check-in and pick-up.",
+        "staysInSync": "Stays in sync with the facility",
+        "staysInSyncBody": "Your changes go to the same contact list staff see on the client file. Whoever you tag for pickup or drop-off can arrive without you needing to call ahead.",
+        "tagsLabel": "Tags:",
+        "tagsHint": "— choose one or more per contact based on what they're allowed to do."
       }
     }
   }

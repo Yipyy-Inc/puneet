@@ -17,11 +17,29 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ADDITIONAL_CONTACT_TAGS,
-  ADDITIONAL_CONTACT_TAG_LABELS,
   type AdditionalContact,
   type AdditionalContactTag,
 } from "@/types/client";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+
+// A tag's name, by CATALOGUE KEY in `staff.areas.createClient`. It was
+// `ADDITIONAL_CONTACT_TAG_LABELS[tag]` — an English table in `@/types`,
+// indexed where it rendered, which no scanner of the French gate can read. So
+// both portals showed "Pickup / Drop-off / Emergency" in English while this
+// file reported zero.
+const TAG_KEY: Record<AdditionalContactTag, string> = {
+  pickup: "acTagPickup",
+  dropoff: "acTagDropoff",
+  emergency: "acTagEmergency",
+};
+
+/** A contact tag in the reader's language; `t` is `useStaffText("createClient")`. */
+export function contactTagLabel(
+  tag: AdditionalContactTag,
+  t: (key: string) => string,
+): string {
+  return t(TAG_KEY[tag]);
+}
 
 /** value → catalogue key. The value is STORED on the contact; only the words
  *  are translated. */
@@ -345,7 +363,7 @@ function TagPicker({
           if (disabled) {
             return active ? (
               <Badge key={tag} variant="secondary">
-                {ADDITIONAL_CONTACT_TAG_LABELS[tag]}
+                {contactTagLabel(tag, t)}
               </Badge>
             ) : null;
           }
@@ -361,7 +379,7 @@ function TagPicker({
                   : "bg-background text-muted-foreground hover:bg-muted",
               )}
             >
-              {ADDITIONAL_CONTACT_TAG_LABELS[tag]}
+              {contactTagLabel(tag, t)}
             </button>
           );
         })}
