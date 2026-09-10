@@ -12294,6 +12294,22 @@ buttons announced work they never did. What changed:
     in here does not show the dog on site on the board, and vice versa. Undo
     reverses the status only.
   - Printing a care sheet, emailing the invoice and "SMS link" are still toasts.
-  - The Notes card still shows the two hard-coded `MOCK_NOTES`; notes need a
-    table (Phase 1 continues).
+  - ~~The Notes card still shows the two hard-coded `MOCK_NOTES`~~ — notes are
+    rows now (`public.notes`, 20260910201745, and `/api/notes`), see below.
   - The Tasks panel still reads fixture tasks.
+- **Notes are rows.** Every note on a pet, a client, a booking or an incident
+  went through `useNotesForEntity`, which kept them in React state seeded from
+  the `@/data/tags-notes` fixture — so "Note added" lasted until the reload,
+  and a real pet whose numeric ref matched a fixture pet showed that pet's
+  notes. The hook now reads and writes `/api/notes` with its return shape
+  unchanged; the booking page's Notes card is the shared `NotesList`. The
+  facility of a note is asserted by trigger from what it is about, and a note
+  marked "shared with the customer" is readable by that customer and nobody
+  else outside the facility (20260910202241; `supabase/tests/notes.sql`).
+  - Staff have no `ref`, so an `internal_staff` note has no seam yet;
+    nothing renders one.
+  - Incident notes resolve against `public.incidents`, but the incidents
+    screen still shows fixture incidents, so their notes list is empty until
+    incidents are converted.
+  - The in-memory `tag-note-audit` log is no longer written by notes; it was
+    read by nothing.

@@ -95,7 +95,7 @@ export const noteEditSchema = z.object({
   newContent: z.string(),
   editedAt: z.string(),
   editedBy: z.string(),
-  editedById: z.number(),
+  editedById: z.number().optional(),
 });
 export type NoteEdit = z.infer<typeof noteEditSchema>;
 
@@ -104,13 +104,13 @@ export const noteSchema = z.object({
   category: noteCategoryEnum,
   subType: petNoteSubTypeEnum.optional(),
   entityId: z.number(),
-  facilityId: z.number(),
+  facilityId: z.number().optional(),
   content: z.string(),
   visibility: noteVisibilityEnum,
   isPinned: z.boolean(),
   createdAt: z.string(),
   createdBy: z.string(),
-  createdById: z.number(),
+  createdById: z.number().optional(),
   updatedAt: z.string().optional(),
   updatedBy: z.string().optional(),
   updatedById: z.number().optional(),

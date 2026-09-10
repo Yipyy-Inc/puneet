@@ -5327,6 +5327,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      notes: {
+        Row: {
+          category: string;
+          content: string;
+          created_at: string;
+          created_by: string | null;
+          created_by_name: string | null;
+          edit_history: Json;
+          entity_id: string;
+          facility_id: string;
+          id: string;
+          is_pinned: boolean;
+          sub_type: string | null;
+          updated_at: string;
+          updated_by_name: string | null;
+          visibility: string;
+        };
+        Insert: {
+          category: string;
+          content: string;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          edit_history?: Json;
+          entity_id: string;
+          facility_id: string;
+          id?: string;
+          is_pinned?: boolean;
+          sub_type?: string | null;
+          updated_at?: string;
+          updated_by_name?: string | null;
+          visibility?: string;
+        };
+        Update: {
+          category?: string;
+          content?: string;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          edit_history?: Json;
+          entity_id?: string;
+          facility_id?: string;
+          id?: string;
+          is_pinned?: boolean;
+          sub_type?: string | null;
+          updated_at?: string;
+          updated_by_name?: string | null;
+          visibility?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notes_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       offboarding_instances: {
         Row: {
           complete_notified_at: string | null;

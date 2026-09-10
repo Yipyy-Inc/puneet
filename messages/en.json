@@ -1716,7 +1716,8 @@
         "journalOutcomeBoth": "Both",
         "journalOutcomeNothing": "Nothing",
         "journalOutcomeCompleted": "Completed",
-        "journalOutcomeIssue": "Issue reported"
+        "journalOutcomeIssue": "Issue reported",
+        "notesTitle": "Notes"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",
@@ -6775,7 +6776,15 @@
       "witnessPlaceholder": "The witness’s full name",
       "capturingSignature": "Capturing the signature…",
       "confirmSignature": "Confirm the signature",
-      "legalNotice": "By signing above, you agree that this electronic signature is as valid as a handwritten one. Your signature, the time, your IP address and your device information are recorded to verify it."
+      "legalNotice": "By signing above, you agree that this electronic signature is as valid as a handwritten one. Your signature, the time, your IP address and your device information are recorded to verify it.",
+      "noteAdded": "Note added",
+      "noteUpdated": "Note updated",
+      "noteDeleted": "Note deleted",
+      "notePinnedDone": "Note pinned",
+      "noteUnpinnedDone": "Note unpinned",
+      "noteSharedDone": "Note shared with the customer",
+      "noteInternalDone": "Note made internal",
+      "noteNotSaved": "The note was not saved"
     },
     "messaging": {
       "scheduleSend": "Schedule send",

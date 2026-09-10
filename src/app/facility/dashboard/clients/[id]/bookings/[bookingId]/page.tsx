@@ -64,7 +64,6 @@ import {
   medicationTaskKey,
 } from "@/lib/bookings/care-instructions";
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
-import { BookingNotes } from "@/components/bookings/BookingNotes";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
 import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
@@ -124,6 +123,7 @@ import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
+import { NotesList } from "@/components/shared/NotesList";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { QuickBooksSyncPanel } from "@/components/bookings/QuickBooksSyncPanel";
 import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdown";
@@ -1633,11 +1633,14 @@ export default function ClientBookingDetailPage({
             <Card className="overflow-hidden">
               <CardHeader className="bg-muted/30 pb-3">
                 <CardTitle className="text-xs font-semibold tracking-wider uppercase">
-                  Notes
+                  {detailT("notesTitle")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
-                <BookingNotes />
+                {/* The booking's own notes, from public.notes. This card used
+                    to be two hard-coded notes about a dog called Buddy, shown
+                    on every booking. */}
+                <NotesList category="booking" entityId={booking.id} compact />
               </CardContent>
             </Card>
 
