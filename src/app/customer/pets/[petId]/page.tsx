@@ -56,6 +56,14 @@ import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatMoney,
+  formatWeight,
+} from "@/lib/i18n/format";
+import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
 
 interface Pet {
   id: number;
@@ -76,6 +84,7 @@ export default function CustomerPetDetailPage({
 }: {
   params: Promise<{ petId: string }>;
 }) {
+  const { t, fill, locale } = useCustomerText("petProfile");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -212,14 +221,14 @@ export default function CustomerPetDetailPage({
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Pet not found</h2>
+          <h2 className="text-2xl font-bold">{t("notFound")}</h2>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => router.push("/customer/pets")}
           >
             <ArrowLeft className="mr-2 size-4" />
-            Back to Pets
+            {t("backToPets")}
           </Button>
         </div>
       </div>
@@ -255,12 +264,14 @@ export default function CustomerPetDetailPage({
       new Date(v.expiryDate) > now,
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const formatDate = (dateString: string) => formatDateLong(dateString, locale);
+
+  // The record's own word for a species ("Dog") and for a mood ("happy") read
+  // in the reader's language; one nobody mapped reads as recorded.
+  const lookup = (prefix: string, value: string) => {
+    const key = `${prefix}_${value.toLowerCase()}`;
+    const label = t(key);
+    return label === key ? value : label;
   };
 
   const handleSave = async () => {
@@ -271,10 +282,10 @@ export default function CustomerPetDetailPage({
       // TODO: Replace with actual API call
       await updatePetProfile(editedPet);
       setIsEditing(false);
-      toast.success("Pet profile updated successfully!");
+      toast.success(t("profileSavedToast"));
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update pet profile",
+        error instanceof Error ? error.message : t("profileSaveFailedToast"),
       );
     } finally {
       setIsSaving(false);
@@ -289,7 +300,7 @@ export default function CustomerPetDetailPage({
   const updatePetProfile = async (petData: Pet) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success(`${petData.name}'s profile updated`);
+    toast.success(fill("petProfileSavedToast", { pet: petData.name }));
   };
 
   const handleAddVaccination = async (
@@ -301,6 +312,7 @@ export default function CustomerPetDetailPage({
     notifyFacilityStaffVaccinationUploaded({
       facilityId: facilityId,
       clientId: customerId ?? 0,
+      // french-ok: a name field on a staff notification, filled by a person's name
       clientName: customer ? customer.name : "Customer",
       petName: pet.name,
       vaccineCount: newVaccinations.length,
@@ -331,13 +343,11 @@ export default function CustomerPetDetailPage({
       try {
         // TODO: Replace with actual API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        toast.success("Care instructions updated successfully!");
+        toast.success(t("careSavedToast"));
         setIsEditingCI(false);
       } catch (error: unknown) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to update care instructions",
+          error instanceof Error ? error.message : t("careSaveFailedToast"),
         );
       } finally {
         setIsSavingCI(false);
@@ -376,12 +386,9 @@ export default function CustomerPetDetailPage({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-sm font-semibold">
-                Care Instructions
+                {t("careTitle")}
               </CardTitle>
-              <CardDescription>
-                Provide care instructions for your pet. These will be shared
-                with facility staff.
-              </CardDescription>
+              <CardDescription>{t("careDescription")}</CardDescription>
             </div>
             {!isEditingCI && (
               <Button
@@ -390,7 +397,7 @@ export default function CustomerPetDetailPage({
                 onClick={() => setIsEditingCI(true)}
               >
                 <Edit className="mr-2 size-4" />
-                Edit
+                {t("editCare")}
               </Button>
             )}
           </div>
@@ -400,7 +407,9 @@ export default function CustomerPetDetailPage({
             <>
               {editableFields.feedingSchedule && (
                 <div className="space-y-2">
-                  <Label htmlFor="feedingSchedule">Feeding Schedule</Label>
+                  <Label htmlFor="feedingSchedule">
+                    {t("feedingSchedule")}
+                  </Label>
                   <Input
                     id="feedingSchedule"
                     value={editedInstructions.feedingSchedule || ""}
@@ -410,14 +419,14 @@ export default function CustomerPetDetailPage({
                         feedingSchedule: e.target.value,
                       })
                     }
-                    placeholder="e.g., 8:00 AM, 12:00 PM, 6:00 PM"
+                    placeholder={t("feedingSchedulePlaceholder")}
                   />
                 </div>
               )}
 
               {editableFields.feedingAmount && (
                 <div className="space-y-2">
-                  <Label htmlFor="feedingAmount">Feeding Amount</Label>
+                  <Label htmlFor="feedingAmount">{t("feedingAmount")}</Label>
                   <Input
                     id="feedingAmount"
                     value={editedInstructions.feedingAmount || ""}
@@ -427,7 +436,7 @@ export default function CustomerPetDetailPage({
                         feedingAmount: e.target.value,
                       })
                     }
-                    placeholder="e.g., 1.5 cups per meal"
+                    placeholder={t("feedingAmountPlaceholder")}
                   />
                 </div>
               )}
@@ -435,7 +444,7 @@ export default function CustomerPetDetailPage({
               {editableFields.medicationList && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Medications</Label>
+                    <Label>{t("medications")}</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -443,7 +452,7 @@ export default function CustomerPetDetailPage({
                       onClick={handleAddMedication}
                     >
                       <Plus className="mr-2 size-4" />
-                      Add Medication
+                      {t("addMedication")}
                     </Button>
                   </div>
                   {editedInstructions.medicationList &&
@@ -454,7 +463,7 @@ export default function CustomerPetDetailPage({
                           <div className="space-y-2">
                             <div className="grid grid-cols-2 gap-2">
                               <Input
-                                placeholder="Medication name"
+                                placeholder={t("medicationName")}
                                 value={med.name}
                                 onChange={(e) =>
                                   handleMedicationChange(
@@ -465,7 +474,7 @@ export default function CustomerPetDetailPage({
                                 }
                               />
                               <Input
-                                placeholder="Dosage"
+                                placeholder={t("dosage")}
                                 value={med.dosage}
                                 onChange={(e) =>
                                   handleMedicationChange(
@@ -477,7 +486,7 @@ export default function CustomerPetDetailPage({
                               />
                             </div>
                             <Input
-                              placeholder="Frequency (e.g., Twice daily)"
+                              placeholder={t("frequencyPlaceholder")}
                               value={med.frequency}
                               onChange={(e) =>
                                 handleMedicationChange(
@@ -489,7 +498,7 @@ export default function CustomerPetDetailPage({
                             />
                             <div className="flex items-center gap-2">
                               <Textarea
-                                placeholder="Notes (optional)"
+                                placeholder={t("notesOptional")}
                                 value={med.notes || ""}
                                 onChange={(e) =>
                                   handleMedicationChange(
@@ -506,6 +515,7 @@ export default function CustomerPetDetailPage({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveMedication(index)}
+                                aria-label={t("removeMedication")}
                               >
                                 <X className="size-4" />
                               </Button>
@@ -516,7 +526,7 @@ export default function CustomerPetDetailPage({
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm">
-                      No medications added
+                      {t("noMedicationsAdded")}
                     </p>
                   )}
                 </div>
@@ -525,7 +535,7 @@ export default function CustomerPetDetailPage({
               {editableFields.groomingSensitivities && (
                 <div className="space-y-2">
                   <Label htmlFor="groomingSensitivities">
-                    Grooming Sensitivities
+                    {t("groomingSensitivities")}
                   </Label>
                   <Textarea
                     id="groomingSensitivities"
@@ -536,7 +546,7 @@ export default function CustomerPetDetailPage({
                         groomingSensitivities: e.target.value,
                       })
                     }
-                    placeholder="e.g., Sensitive to loud noises during grooming"
+                    placeholder={t("groomingSensitivitiesPlaceholder")}
                     rows={3}
                   />
                 </div>
@@ -544,7 +554,7 @@ export default function CustomerPetDetailPage({
 
               {editableFields.behaviorNotes && (
                 <div className="space-y-2">
-                  <Label htmlFor="behaviorNotes">Behavior Notes</Label>
+                  <Label htmlFor="behaviorNotes">{t("behaviourNotes")}</Label>
                   <Textarea
                     id="behaviorNotes"
                     value={editedInstructions.behaviorNotes || ""}
@@ -554,7 +564,7 @@ export default function CustomerPetDetailPage({
                         behaviorNotes: e.target.value,
                       })
                     }
-                    placeholder="Owner-provided behavior notes"
+                    placeholder={t("behaviourNotesPlaceholder")}
                     rows={4}
                   />
                 </div>
@@ -565,12 +575,12 @@ export default function CustomerPetDetailPage({
                   {isSavingCI ? (
                     <>
                       <Loader2 className="mr-2 size-4 animate-spin" />
-                      Saving...
+                      {t("saving")}
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 size-4" />
-                      Save Changes
+                      {t("saveCare")}
                     </>
                   )}
                 </Button>
@@ -584,7 +594,7 @@ export default function CustomerPetDetailPage({
                   }}
                   disabled={isSavingCI}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
               </div>
             </>
@@ -593,10 +603,10 @@ export default function CustomerPetDetailPage({
               {editableFields.feedingSchedule && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm font-medium">
-                    Feeding Schedule
+                    {t("feedingSchedule")}
                   </p>
                   <p className="text-sm">
-                    {editedInstructions.feedingSchedule || "Not specified"}
+                    {editedInstructions.feedingSchedule || t("notSpecified")}
                   </p>
                 </div>
               )}
@@ -604,10 +614,10 @@ export default function CustomerPetDetailPage({
               {editableFields.feedingAmount && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm font-medium">
-                    Feeding Amount
+                    {t("feedingAmount")}
                   </p>
                   <p className="text-sm">
-                    {editedInstructions.feedingAmount || "Not specified"}
+                    {editedInstructions.feedingAmount || t("notSpecified")}
                   </p>
                 </div>
               )}
@@ -615,7 +625,7 @@ export default function CustomerPetDetailPage({
               {editableFields.medicationList && (
                 <div>
                   <p className="text-muted-foreground mb-2 text-sm font-medium">
-                    Medications
+                    {t("medications")}
                   </p>
                   {editedInstructions.medicationList &&
                   editedInstructions.medicationList.length > 0 ? (
@@ -638,7 +648,7 @@ export default function CustomerPetDetailPage({
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm">
-                      No medications listed
+                      {t("noMedicationsListed")}
                     </p>
                   )}
                 </div>
@@ -647,11 +657,11 @@ export default function CustomerPetDetailPage({
               {editableFields.groomingSensitivities && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm font-medium">
-                    Grooming Sensitivities
+                    {t("groomingSensitivities")}
                   </p>
                   <p className="text-sm">
                     {editedInstructions.groomingSensitivities ||
-                      "None specified"}
+                      t("noneSpecified")}
                   </p>
                 </div>
               )}
@@ -659,24 +669,24 @@ export default function CustomerPetDetailPage({
               {editableFields.behaviorNotes && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm font-medium">
-                    Behavior Notes
+                    {t("behaviourNotes")}
                   </p>
                   <p className="text-sm">
-                    {editedInstructions.behaviorNotes || "No notes provided"}
+                    {editedInstructions.behaviorNotes || t("noNotesProvided")}
                   </p>
                 </div>
               )}
 
               {!petCareInstructions && (
                 <div className="text-muted-foreground py-8 text-center">
-                  <p className="text-sm">No care instructions added yet</p>
+                  <p className="text-sm">{t("noCareYet")}</p>
                   <Button
                     variant="outline"
                     className="mt-4"
                     onClick={() => setIsEditingCI(true)}
                   >
                     <Plus className="mr-2 size-4" />
-                    Add Care Instructions
+                    {t("addCare")}
                   </Button>
                 </div>
               )}
@@ -693,19 +703,19 @@ export default function CustomerPetDetailPage({
   const vaccinationColumns: ColumnDef<(typeof vaccinationRecords)[0]>[] = [
     {
       key: "vaccineName",
-      label: "Vaccine",
+      label: t("colVaccine"),
       render: (vaccination) => (
         <div className="font-medium">{vaccination.vaccineName}</div>
       ),
     },
     {
       key: "administeredDate",
-      label: "Administered",
+      label: t("colAdministered"),
       render: (vaccination) => formatDate(vaccination.administeredDate),
     },
     {
       key: "expiryDate",
-      label: "Expires",
+      label: t("colExpires"),
       render: (vaccination) => {
         const status = getVaccinationStatus(vaccination);
         return (
@@ -722,10 +732,20 @@ export default function CustomerPetDetailPage({
               className="text-xs"
             >
               {status.status === "expired"
-                ? `Expired ${status.days}d ago`
+                ? fill(
+                    status.days === 1 ? "expiredDaysOne" : "expiredDaysMany",
+                    {
+                      days: status.days,
+                    },
+                  )
                 : status.status === "expiring-soon"
-                  ? `Expires in ${status.days}d`
-                  : `Valid`}
+                  ? fill(
+                      status.days === 1
+                        ? "expiresInDaysOne"
+                        : "expiresInDaysMany",
+                      { days: status.days },
+                    )
+                  : t("valid")}
             </Badge>
           </div>
         );
@@ -733,27 +753,27 @@ export default function CustomerPetDetailPage({
     },
     {
       key: "veterinarianName",
-      label: "Veterinarian",
+      label: t("colVeterinarian"),
       render: (vaccination) => vaccination.veterinarianName || "—",
     },
     {
       key: "status",
-      label: "Status",
+      label: t("colStatus"),
       render: (vaccination) => {
         if (vaccination.status === "approved") {
           return (
             <Badge className="bg-emerald-600 hover:bg-emerald-700">
-              Approved
+              {t("vaccineApproved")}
             </Badge>
           );
         }
         if (!vaccination.status || vaccination.status === "pending_review") {
-          return <Badge variant="secondary">Pending Review</Badge>;
+          return <Badge variant="secondary">{t("vaccinePending")}</Badge>;
         }
         if (vaccination.status === "rejected") {
           return (
             <div className="space-y-0.5">
-              <Badge variant="destructive">Rejected</Badge>
+              <Badge variant="destructive">{t("vaccineRejected")}</Badge>
               {vaccination.rejectionReason && (
                 <p className="text-muted-foreground text-[11px]">
                   {vaccination.rejectionReason}
@@ -766,7 +786,7 @@ export default function CustomerPetDetailPage({
           return (
             <div className="space-y-0.5">
               <Badge className="border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200">
-                Exception
+                {t("vaccineException")}
               </Badge>
               {vaccination.exceptionReason && (
                 <p className="text-muted-foreground text-[11px]">
@@ -776,12 +796,12 @@ export default function CustomerPetDetailPage({
             </div>
           );
         }
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{t("vaccineUnknown")}</Badge>;
       },
     },
     {
       key: "documentUrl",
-      label: "Document",
+      label: t("colDocument"),
       render: (vaccination) =>
         vaccination.documentUrl ? (
           <Button variant="ghost" size="sm" asChild>
@@ -791,7 +811,7 @@ export default function CustomerPetDetailPage({
               rel="noopener noreferrer"
             >
               <FileText className="mr-1 size-4" />
-              View
+              {t("viewDocument")}
             </a>
           </Button>
         ) : (
@@ -804,21 +824,21 @@ export default function CustomerPetDetailPage({
   const bookingColumns: ColumnDef<(typeof bookings)[0]>[] = [
     {
       key: "service",
-      label: "Service",
+      label: t("colService"),
       render: (booking) => (
-        <Badge variant="outline" className="capitalize">
-          {booking.service}
+        <Badge variant="outline">
+          {serviceTypeLabel(locale, booking.service)}
         </Badge>
       ),
     },
     {
       key: "date",
-      label: "Date",
+      label: t("colDate"),
       render: (booking) => formatDate(booking.startDate),
     },
     {
       key: "status",
-      label: "Status",
+      label: t("colStatus"),
       render: (booking) => (
         <Badge
           variant={
@@ -831,14 +851,14 @@ export default function CustomerPetDetailPage({
                   : "secondary"
           }
         >
-          {booking.status}
+          {statusLabel(locale, booking.status)}
         </Badge>
       ),
     },
     {
       key: "totalCost",
-      label: "Total",
-      render: (booking) => `$${booking.totalCost.toFixed(2)}`,
+      label: t("colTotal"),
+      render: (booking) => formatMoney(booking.totalCost, locale),
     },
   ];
 
@@ -862,7 +882,7 @@ export default function CustomerPetDetailPage({
                   breed as the owner typed it out of the locale layer. */}
               <PageHeader
                 title={pet.name}
-                description={`${pet.breed} • ${pet.age} ${pet.age === 1 ? "year" : "years"} old`}
+                description={`${pet.breed} · ${fill(pet.age === 1 ? "ageOldOne" : "ageOldMany", { count: pet.age })}`}
               />
               <div className="mt-1">
                 <TagList
@@ -878,7 +898,7 @@ export default function CustomerPetDetailPage({
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 size-4" />
-              Edit Profile
+              {t("editProfile")}
             </Button>
           ) : (
             <div className="flex gap-2">
@@ -887,18 +907,18 @@ export default function CustomerPetDetailPage({
                 onClick={handleCancel}
                 disabled={isSaving}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Save className="mr-2 size-4 animate-spin" />
-                    Saving...
+                    {t("saving")}
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 size-4" />
-                    Save Changes
+                    {t("saveProfile")}
                   </>
                 )}
               </Button>
@@ -925,22 +945,30 @@ export default function CustomerPetDetailPage({
               </div>
               <div className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-4">
                 <div>
-                  <p className="text-muted-foreground text-sm">Type</p>
-                  <p className="font-medium capitalize">{pet.type}</p>
+                  <p className="text-muted-foreground text-sm">
+                    {t("species")}
+                  </p>
+                  <p className="font-medium">{lookup("species", pet.type)}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-sm">Breed</p>
+                  <p className="text-muted-foreground text-sm">{t("breed")}</p>
                   <p className="font-medium">{pet.breed}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-sm">Age</p>
+                  <p className="text-muted-foreground text-sm">{t("age")}</p>
                   <p className="font-medium">
-                    {pet.age} {pet.age === 1 ? "year" : "years"}
+                    {fill(pet.age === 1 ? "ageOne" : "ageMany", {
+                      count: pet.age,
+                    })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-sm">Weight</p>
-                  <p className="font-medium">{pet.weight} lbs</p>
+                  <p className="text-muted-foreground text-sm">{t("weight")}</p>
+                  {/* Metric leads (§5q); the field is read as kilograms
+                      everywhere now — see the debt map, 2026-09-10. */}
+                  <p className="font-medium">
+                    {formatWeight(pet.weight, locale)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -954,19 +982,19 @@ export default function CustomerPetDetailPage({
           className="space-y-4"
         >
           <TabsList className="w-full max-w-full justify-start overflow-x-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
             <TabsTrigger value="vaccinations">
-              Vaccinations
+              {t("tabVaccinations")}
               {expiredVaccinations.length > 0 && (
                 <Badge variant="destructive" className="ml-2">
                   {expiredVaccinations.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="bookings">Booking History</TabsTrigger>
-            <TabsTrigger value="reports">Report Cards</TabsTrigger>
+            <TabsTrigger value="bookings">{t("tabBookings")}</TabsTrigger>
+            <TabsTrigger value="reports">{t("tabReports")}</TabsTrigger>
             <TabsTrigger value="forms">
-              Forms
+              {t("tabForms")}
               {requiredForms.length > 0 && (
                 <Badge variant="destructive" className="ml-2">
                   {requiredForms.length}
@@ -975,11 +1003,11 @@ export default function CustomerPetDetailPage({
             </TabsTrigger>
             {facilityConfig.careInstructions.enabled && (
               <TabsTrigger value="care-instructions">
-                Care Instructions
+                {t("careTitle")}
               </TabsTrigger>
             )}
-            <TabsTrigger value="photos">Photos</TabsTrigger>
-            <TabsTrigger value="staff-notes">Notes from Staff</TabsTrigger>
+            <TabsTrigger value="photos">{t("tabPhotos")}</TabsTrigger>
+            <TabsTrigger value="staff-notes">{t("tabStaffNotes")}</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -988,14 +1016,14 @@ export default function CustomerPetDetailPage({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold">
-                    Basic Information
+                    {t("basicInformation")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isEditing && editedPet ? (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">{t("name")}</Label>
                         <Input
                           id="name"
                           value={editedPet.name}
@@ -1005,7 +1033,7 @@ export default function CustomerPetDetailPage({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="breed">Breed</Label>
+                        <Label htmlFor="breed">{t("breed")}</Label>
                         <Input
                           id="breed"
                           value={editedPet.breed}
@@ -1019,7 +1047,7 @@ export default function CustomerPetDetailPage({
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
+                          <Label htmlFor="age">{t("ageYears")}</Label>
                           <Input
                             id="age"
                             type="number"
@@ -1033,7 +1061,7 @@ export default function CustomerPetDetailPage({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="weight">Weight (lbs)</Label>
+                          <Label htmlFor="weight">{t("weightKg")}</Label>
                           <Input
                             id="weight"
                             type="number"
@@ -1048,7 +1076,7 @@ export default function CustomerPetDetailPage({
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="color">Color</Label>
+                        <Label htmlFor="color">{t("colour")}</Label>
                         <Input
                           id="color"
                           value={editedPet.color}
@@ -1061,7 +1089,9 @@ export default function CustomerPetDetailPage({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="microchip">Microchip Number</Label>
+                        <Label htmlFor="microchip">
+                          {t("microchipNumber")}
+                        </Label>
                         <Input
                           id="microchip"
                           value={editedPet.microchip}
@@ -1078,34 +1108,46 @@ export default function CustomerPetDetailPage({
                   ) : (
                     <>
                       <div>
-                        <p className="text-muted-foreground text-sm">Name</p>
+                        <p className="text-muted-foreground text-sm">
+                          {t("name")}
+                        </p>
                         <p className="font-medium">{pet.name}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-sm">Breed</p>
+                        <p className="text-muted-foreground text-sm">
+                          {t("breed")}
+                        </p>
                         <p className="font-medium">{pet.breed}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-muted-foreground text-sm">Age</p>
+                          <p className="text-muted-foreground text-sm">
+                            {t("age")}
+                          </p>
                           <p className="font-medium">
-                            {pet.age} {pet.age === 1 ? "year" : "years"}
+                            {fill(pet.age === 1 ? "ageOne" : "ageMany", {
+                              count: pet.age,
+                            })}
                           </p>
                         </div>
                         <div>
                           <p className="text-muted-foreground text-sm">
-                            Weight
+                            {t("weight")}
                           </p>
-                          <p className="font-medium">{pet.weight} lbs</p>
+                          <p className="font-medium">
+                            {formatWeight(pet.weight, locale)}
+                          </p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-sm">Color</p>
+                        <p className="text-muted-foreground text-sm">
+                          {t("colour")}
+                        </p>
                         <p className="font-medium">{pet.color}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-sm">
-                          Microchip
+                          {t("microchip")}
                         </p>
                         <p className="font-mono text-sm font-medium">
                           {pet.microchip}
@@ -1119,14 +1161,14 @@ export default function CustomerPetDetailPage({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold">
-                    Medical & Health Information
+                    {t("medicalInformation")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isEditing && editedPet ? (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="allergies">Allergies</Label>
+                        <Label htmlFor="allergies">{t("allergies")}</Label>
                         <Textarea
                           id="allergies"
                           value={editedPet.allergies}
@@ -1136,11 +1178,13 @@ export default function CustomerPetDetailPage({
                               allergies: e.target.value,
                             })
                           }
-                          placeholder="List any allergies or leave as 'None'"
+                          placeholder={t("allergiesPlaceholder")}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="specialNeeds">Special Needs</Label>
+                        <Label htmlFor="specialNeeds">
+                          {t("specialNeeds")}
+                        </Label>
                         <Textarea
                           id="specialNeeds"
                           value={editedPet.specialNeeds}
@@ -1150,7 +1194,7 @@ export default function CustomerPetDetailPage({
                               specialNeeds: e.target.value,
                             })
                           }
-                          placeholder="Any special medical or care needs"
+                          placeholder={t("specialNeedsPlaceholder")}
                         />
                       </div>
                     </>
@@ -1158,7 +1202,7 @@ export default function CustomerPetDetailPage({
                     <>
                       <div>
                         <p className="text-muted-foreground mb-1 text-sm">
-                          Allergies
+                          {t("allergies")}
                         </p>
                         <Badge
                           variant={
@@ -1172,9 +1216,11 @@ export default function CustomerPetDetailPage({
                       </div>
                       <div>
                         <p className="text-muted-foreground mb-1 text-sm">
-                          Special Needs
+                          {t("specialNeeds")}
                         </p>
-                        <p className="text-sm">{pet.specialNeeds || "None"}</p>
+                        <p className="text-sm">
+                          {pet.specialNeeds || t("none")}
+                        </p>
                       </div>
                     </>
                   )}
@@ -1187,10 +1233,10 @@ export default function CustomerPetDetailPage({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold">
-                    Booking Eligibility
+                    {t("eligibilityTitle")}
                   </CardTitle>
                   <CardDescription>
-                    Check if your pet is eligible to book services
+                    {t("eligibilityDescription")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1211,12 +1257,9 @@ export default function CustomerPetDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <FileText className="size-5" />
-                  Forms for {pet.name}
+                  {fill("formsFor", { pet: pet.name })}
                 </CardTitle>
-                <CardDescription>
-                  Complete required forms, view submissions, and fill optional
-                  forms.
-                </CardDescription>
+                <CardDescription>{t("formsDescription")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Required (incomplete) */}
@@ -1224,7 +1267,9 @@ export default function CustomerPetDetailPage({
                   <div>
                     <h4 className="text-destructive mb-2 flex items-center gap-1 text-sm font-medium">
                       <AlertTriangle className="size-4" />
-                      Required ({requiredForms.length} incomplete)
+                      {fill("requiredIncomplete", {
+                        count: requiredForms.length,
+                      })}
                     </h4>
                     <ul className="space-y-2">
                       {requiredForms.map((form) => (
@@ -1236,8 +1281,12 @@ export default function CustomerPetDetailPage({
                             <div>
                               <span className="font-medium">{form.name}</span>
                               <p className="text-muted-foreground mt-0.5 text-xs">
-                                {form.questions.length} question
-                                {form.questions.length !== 1 ? "s" : ""}
+                                {fill(
+                                  form.questions.length === 1
+                                    ? "questionsOne"
+                                    : "questionsMany",
+                                  { count: form.questions.length },
+                                )}
                                 {form.settings?.welcomeMessage &&
                                   ` · ${form.settings.welcomeMessage.slice(0, 60)}...`}
                               </p>
@@ -1246,7 +1295,7 @@ export default function CustomerPetDetailPage({
                               variant="destructive"
                               className="shrink-0 text-xs"
                             >
-                              Fill now
+                              {t("fillNow")}
                             </Badge>
                           </Link>
                         </li>
@@ -1260,7 +1309,9 @@ export default function CustomerPetDetailPage({
                   <div>
                     <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-green-600">
                       <CheckCircle2 className="size-4" />
-                      Completed ({completedForms.length})
+                      {fill("completedCount", {
+                        count: completedForms.length,
+                      })}
                     </h4>
                     <ul className="space-y-2">
                       {completedForms.map((form) => {
@@ -1283,9 +1334,7 @@ export default function CustomerPetDetailPage({
                                 <span className="font-medium">{form.name}</span>
                                 <span className="text-muted-foreground text-xs">
                                   {sub?.createdAt
-                                    ? new Date(
-                                        sub.createdAt,
-                                      ).toLocaleDateString()
+                                    ? formatDateShort(sub.createdAt, locale)
                                     : ""}
                                 </span>
                               </div>
@@ -1321,7 +1370,7 @@ export default function CustomerPetDetailPage({
                                     sub.answers[q.id] !== "",
                                 ).length === 0 && (
                                   <p className="text-muted-foreground text-xs">
-                                    No answers recorded.
+                                    {t("noAnswers")}
                                   </p>
                                 )}
                               </div>
@@ -1337,7 +1386,7 @@ export default function CustomerPetDetailPage({
                 {optionalForms.length > 0 && (
                   <div>
                     <h4 className="text-muted-foreground mb-2 text-sm font-medium">
-                      Optional forms
+                      {t("optionalForms")}
                     </h4>
                     <ul className="space-y-2">
                       {optionalForms.map((form) => {
@@ -1351,7 +1400,7 @@ export default function CustomerPetDetailPage({
                                   <span className="text-sm">{form.name}</span>
                                 </div>
                                 <span className="text-muted-foreground text-xs">
-                                  Done
+                                  {t("done")}
                                 </span>
                               </div>
                             ) : (
@@ -1361,7 +1410,7 @@ export default function CustomerPetDetailPage({
                               >
                                 <span className="text-sm">{form.name}</span>
                                 <Badge variant="secondary" className="text-xs">
-                                  Optional
+                                  {t("optional")}
                                 </Badge>
                               </Link>
                             )}
@@ -1374,7 +1423,7 @@ export default function CustomerPetDetailPage({
 
                 {facilityForms.length === 0 && optionalForms.length === 0 && (
                   <p className="text-muted-foreground py-4 text-sm">
-                    No forms available for this facility.
+                    {t("noForms")}
                   </p>
                 )}
               </CardContent>
@@ -1389,7 +1438,7 @@ export default function CustomerPetDetailPage({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                     <Syringe className="size-5" />
-                    Facility Vaccination Requirements
+                    {t("requirementsTitle")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -1420,12 +1469,12 @@ export default function CustomerPetDetailPage({
                             <p className="font-medium">{vaccine}</p>
                             <p className="text-muted-foreground text-xs">
                               {isMissing
-                                ? "Missing - Required for booking"
+                                ? t("reqMissingHelp")
                                 : isExpired
-                                  ? "Expired - Update required"
+                                  ? t("reqExpiredHelp")
                                   : isExpiringSoon
-                                    ? "Expiring soon - Update recommended"
-                                    : "Up to date"}
+                                    ? t("reqExpiringHelp")
+                                    : t("reqUpToDateHelp")}
                             </p>
                           </div>
                         </div>
@@ -1439,12 +1488,12 @@ export default function CustomerPetDetailPage({
                           }
                         >
                           {isUpToDate
-                            ? "Current"
+                            ? t("reqCurrent")
                             : isExpiringSoon
-                              ? "Expiring Soon"
+                              ? t("reqExpiringSoon")
                               : isExpired
-                                ? "Expired"
-                                : "Missing"}
+                                ? t("reqExpired")
+                                : t("reqMissing")}
                         </Badge>
                       </div>
                     );
@@ -1457,7 +1506,7 @@ export default function CustomerPetDetailPage({
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold">
-                    Vaccination Records
+                    {t("recordsTitle")}
                   </CardTitle>
                   <Button
                     variant="outline"
@@ -1465,7 +1514,7 @@ export default function CustomerPetDetailPage({
                     onClick={() => setVaccinationModalOpen(true)}
                   >
                     <Upload className="mr-2 size-4" />
-                    Upload Record
+                    {t("uploadRecord")}
                   </Button>
                 </div>
               </CardHeader>
@@ -1473,7 +1522,7 @@ export default function CustomerPetDetailPage({
                 {vaccinations.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
                     <Syringe className="mx-auto mb-4 size-12 opacity-50" />
-                    <p>No vaccination records yet</p>
+                    <p>{t("noRecords")}</p>
                     <Button
                       variant="outline"
                       className="mt-4"
@@ -1481,7 +1530,7 @@ export default function CustomerPetDetailPage({
                       onClick={() => setVaccinationModalOpen(true)}
                     >
                       <Upload className="mr-2 size-4" />
-                      Upload First Record
+                      {t("uploadFirstRecord")}
                     </Button>
                   </div>
                 ) : (
@@ -1491,13 +1540,16 @@ export default function CustomerPetDetailPage({
                         <div className="mb-2 flex items-center gap-2">
                           <AlertTriangle className="text-destructive size-5" />
                           <p className="text-destructive font-semibold">
-                            {expiredVaccinations.length} Expired Vaccination
-                            {expiredVaccinations.length > 1 ? "s" : ""}
+                            {fill(
+                              expiredVaccinations.length === 1
+                                ? "expiredVaccinesOne"
+                                : "expiredVaccinesMany",
+                              { count: expiredVaccinations.length },
+                            )}
                           </p>
                         </div>
                         <p className="text-muted-foreground text-sm">
-                          Please update expired vaccinations to continue booking
-                          services.
+                          {t("expiredVaccinesHelp")}
                         </p>
                       </div>
                     )}
@@ -1506,13 +1558,16 @@ export default function CustomerPetDetailPage({
                         <div className="mb-2 flex items-center gap-2">
                           <AlertTriangle className="text-warning size-5" />
                           <p className="text-warning font-semibold">
-                            {upcomingVaccinations.length} Vaccination
-                            {upcomingVaccinations.length > 1 ? "s" : ""}{" "}
-                            Expiring Soon
+                            {fill(
+                              upcomingVaccinations.length === 1
+                                ? "expiringVaccinesOne"
+                                : "expiringVaccinesMany",
+                              { count: upcomingVaccinations.length },
+                            )}
                           </p>
                         </div>
                         <p className="text-muted-foreground text-sm">
-                          Update these vaccinations within the next 60 days.
+                          {t("expiringVaccinesHelp")}
                         </p>
                       </div>
                     )}
@@ -1531,16 +1586,16 @@ export default function CustomerPetDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
-                  Booking History
+                  {t("tabBookings")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {petBookings.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
                     <Calendar className="mx-auto mb-4 size-12 opacity-50" />
-                    <p>No bookings yet</p>
+                    <p>{t("noBookings")}</p>
                     <Button variant="outline" className="mt-4" asChild>
-                      <Link href="/customer/bookings">Book a Service</Link>
+                      <Link href="/customer/bookings">{t("bookService")}</Link>
                     </Button>
                   </div>
                 ) : (
@@ -1555,17 +1610,15 @@ export default function CustomerPetDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
-                  Report Cards
+                  {t("tabReports")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {reports.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
                     <FileText className="mx-auto mb-4 size-12 opacity-50" />
-                    <p>No report cards yet</p>
-                    <p className="mt-2 text-sm">
-                      Report cards will appear here after your pet&apos;s visits
-                    </p>
+                    <p>{t("noReports")}</p>
+                    <p className="mt-2 text-sm">{t("noReportsHelp")}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1584,16 +1637,21 @@ export default function CustomerPetDetailPage({
                           <CardHeader>
                             <div className="flex items-center justify-between">
                               <div>
-                                <CardTitle className="text-base capitalize">
-                                  {report.serviceType} Report Card
+                                <CardTitle className="text-base">
+                                  {fill("reportCardFor", {
+                                    service: serviceTypeLabel(
+                                      locale,
+                                      report.serviceType,
+                                    ),
+                                  })}
                                 </CardTitle>
                                 <CardDescription>
                                   {formatDate(report.visitDate)}
                                 </CardDescription>
                               </div>
                               {mood && (
-                                <Badge variant="outline" className="capitalize">
-                                  {mood}
+                                <Badge variant="outline">
+                                  {lookup("mood", mood)}
                                 </Badge>
                               )}
                             </div>
@@ -1602,7 +1660,7 @@ export default function CustomerPetDetailPage({
                             {photos.length > 0 && (
                               <div>
                                 <p className="mb-2 text-sm font-medium">
-                                  Photos
+                                  {t("tabPhotos")}
                                 </p>
                                 <div className="grid grid-cols-4 gap-2">
                                   {photos.map((photo) => (
@@ -1615,7 +1673,9 @@ export default function CustomerPetDetailPage({
                                       {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
                                       <img
                                         src={photo.url}
-                                        alt={photo.caption ?? "Report photo"}
+                                        alt={
+                                          photo.caption ?? t("reportPhotoAlt")
+                                        }
                                         className="absolute inset-0 size-full object-cover"
                                       />
                                     </div>
@@ -1660,20 +1720,16 @@ export default function CustomerPetDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
-                  Photo Gallery
+                  {t("galleryTitle")}
                 </CardTitle>
-                <CardDescription>
-                  Photos from your pet&apos;s stays, organized by date
-                </CardDescription>
+                <CardDescription>{t("galleryDescription")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {photos.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
                     <ImageIcon className="mx-auto mb-4 size-12 opacity-50" />
-                    <p>No photos yet</p>
-                    <p className="mt-2 text-sm">
-                      Photos from your pet&apos;s stays will appear here
-                    </p>
+                    <p>{t("noPhotos")}</p>
+                    <p className="mt-2 text-sm">{t("noPhotosHelp")}</p>
                   </div>
                 ) : (
                   <PhotoAlbums
@@ -1691,10 +1747,8 @@ export default function CustomerPetDetailPage({
           <TabsContent value="staff-notes" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Notes from Staff</CardTitle>
-                <CardDescription>
-                  Notes shared by the facility staff about your pet
-                </CardDescription>
+                <CardTitle className="text-lg">{t("tabStaffNotes")}</CardTitle>
+                <CardDescription>{t("staffNotesDescription")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <NotesList

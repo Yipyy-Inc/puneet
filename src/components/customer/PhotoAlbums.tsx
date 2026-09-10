@@ -21,6 +21,8 @@ import {
 import type { PetPhoto } from "@/data/pet-data";
 import type { ReportCard } from "@/types/report-card";
 import type { Booking } from "@/types/booking";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 interface UnifiedPhoto {
   id: string;
@@ -56,6 +58,7 @@ export function PhotoAlbums({
   reportCards,
   formatDate,
 }: PhotoAlbumsProps) {
+  const { t, fill, locale } = useCustomerText("petProfile");
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [viewMode, setViewMode] = useState<"albums" | "grid">("albums");
 
@@ -90,7 +93,10 @@ export function PhotoAlbums({
           thumbnail: photo.url,
           caption:
             photo.caption ??
-            `${report.serviceType} report card - ${formatDate(report.visitDate)}`,
+            fill("reportCardPhotoCaption", {
+              service: serviceTypeLabel(locale, report.serviceType),
+              date: formatDate(report.visitDate),
+            }),
           // Deliberately absent. `created_by` is the staff member's profile id,
           // and this renders as "Uploaded by {x}" — an owner should not be
           // shown a uuid, and the card does not join the name.
@@ -109,7 +115,7 @@ export function PhotoAlbums({
     });
 
     return unified;
-  }, [photos, reportCards, formatDate]);
+  }, [photos, reportCards, formatDate, fill, locale]);
 
   // Organize photos by date/stay
   const albums = useMemo(() => {
@@ -146,7 +152,7 @@ export function PhotoAlbums({
           service: matchingBooking?.service,
           photos: [],
           title: matchingBooking
-            ? `${matchingBooking.service} - ${formatDate(photoDate.toISOString())}`
+            ? `${serviceTypeLabel(locale, matchingBooking.service)} — ${formatDate(photoDate.toISOString())}`
             : formatDate(photoDate.toISOString()),
         });
       }
@@ -158,7 +164,7 @@ export function PhotoAlbums({
     return Array.from(albumsMap.values()).sort((a, b) => {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [allUnifiedPhotos, bookings, formatDate]);
+  }, [allUnifiedPhotos, bookings, formatDate, locale]);
 
   // All photos for grid view (sorted by date)
   const allPhotos = useMemo(() => {
@@ -196,10 +202,12 @@ export function PhotoAlbums({
               onClick={() => setViewMode("albums")}
             >
               <Calendar className="mr-2 size-4" />
-              View by Date
+              {t("viewByDate")}
             </Button>
             <span className="text-muted-foreground text-sm">
-              {allPhotos.length} photo{allPhotos.length !== 1 ? "s" : ""}
+              {fill(allPhotos.length === 1 ? "photosOne" : "photosMany", {
+                count: allPhotos.length,
+              })}
             </span>
           </div>
         </div>
@@ -213,7 +221,7 @@ export function PhotoAlbums({
               {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL, which next/image is configured to refuse */}
               <img
                 src={photo.thumbnail || photo.url}
-                alt={photo.caption || "Pet photo"}
+                alt={photo.caption || t("petPhotoAlt")}
                 className="absolute inset-0 size-full object-cover"
               />
               {photo.caption && (
@@ -267,7 +275,7 @@ export function PhotoAlbums({
                   {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
                   <img
                     src={selectedPhoto.url}
-                    alt={selectedPhoto.caption || "Pet photo"}
+                    alt={selectedPhoto.caption || t("petPhotoAlt")}
                     className="absolute inset-0 size-full object-contain"
                   />
                 </div>
@@ -278,12 +286,15 @@ export function PhotoAlbums({
                   <div className="text-muted-foreground flex items-center justify-between text-sm">
                     <span>{formatDate(selectedPhoto.uploadedAt)}</span>
                     <span>
-                      Photo {currentPhotoIndex + 1} of {allPhotos.length}
+                      {fill("photoOf", {
+                        n: currentPhotoIndex + 1,
+                        total: allPhotos.length,
+                      })}
                     </span>
                   </div>
                   {selectedPhoto.uploadedBy && (
                     <p className="text-muted-foreground mt-1 text-xs">
-                      Uploaded by {selectedPhoto.uploadedBy}
+                      {fill("uploadedBy", { name: selectedPhoto.uploadedBy })}
                     </p>
                   )}
                 </div>
@@ -305,12 +316,16 @@ export function PhotoAlbums({
             onClick={() => setViewMode("grid")}
           >
             <ImageIcon className="mr-2 size-4" />
-            View All
+            {t("viewAllPhotos")}
           </Button>
           <span className="text-muted-foreground text-sm">
-            {albums.length} album{albums.length !== 1 ? "s" : ""} •{" "}
-            {allUnifiedPhotos.length} photo
-            {allUnifiedPhotos.length !== 1 ? "s" : ""}
+            {fill(albums.length === 1 ? "albumsOne" : "albumsMany", {
+              count: albums.length,
+            })}{" "}
+            ·{" "}
+            {fill(allUnifiedPhotos.length === 1 ? "photosOne" : "photosMany", {
+              count: allUnifiedPhotos.length,
+            })}
           </span>
         </div>
       </div>
@@ -323,13 +338,18 @@ export function PhotoAlbums({
                 <div>
                   <CardTitle className="text-base">{album.title}</CardTitle>
                   <CardDescription>
-                    {formatDate(album.date)} • {album.photos.length} photo
-                    {album.photos.length !== 1 ? "s" : ""}
+                    {formatDate(album.date)} ·{" "}
+                    {fill(
+                      album.photos.length === 1 ? "photosOne" : "photosMany",
+                      {
+                        count: album.photos.length,
+                      },
+                    )}
                   </CardDescription>
                 </div>
                 {album.service && (
-                  <Badge variant="outline" className="capitalize">
-                    {album.service}
+                  <Badge variant="outline">
+                    {serviceTypeLabel(locale, album.service)}
                   </Badge>
                 )}
               </div>
@@ -345,7 +365,7 @@ export function PhotoAlbums({
                     {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
                     <img
                       src={photo.thumbnail || photo.url}
-                      alt={photo.caption || "Pet photo"}
+                      alt={photo.caption || t("petPhotoAlt")}
                       className="absolute inset-0 size-full object-cover"
                     />
                     {photo.caption && (
@@ -403,7 +423,7 @@ export function PhotoAlbums({
                 {/* eslint-disable-next-line @next/next/no-img-element -- may be a signed private-bucket URL */}
                 <img
                   src={selectedPhoto.url}
-                  alt={selectedPhoto.caption || "Pet photo"}
+                  alt={selectedPhoto.caption || t("petPhotoAlt")}
                   className="absolute inset-0 size-full object-contain"
                 />
               </div>
@@ -414,12 +434,15 @@ export function PhotoAlbums({
                 <div className="text-muted-foreground flex items-center justify-between text-sm">
                   <span>{formatDate(selectedPhoto.uploadedAt)}</span>
                   <span>
-                    Photo {currentPhotoIndex + 1} of {allPhotos.length}
+                    {fill("photoOf", {
+                      n: currentPhotoIndex + 1,
+                      total: allPhotos.length,
+                    })}
                   </span>
                 </div>
                 {selectedPhoto.uploadedBy && (
                   <p className="text-muted-foreground mt-1 text-xs">
-                    Uploaded by {selectedPhoto.uploadedBy}
+                    {fill("uploadedBy", { name: selectedPhoto.uploadedBy })}
                   </p>
                 )}
               </div>

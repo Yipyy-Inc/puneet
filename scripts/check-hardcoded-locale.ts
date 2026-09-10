@@ -74,7 +74,7 @@ const ANSI = {
 };
 
 /** The count on the day the rule got a gate (stage 11, 2026-09-04). */
-const BASELINE = 515;
+const BASELINE = 514;
 
 /**
  * Formatters told no locale, measured the day the pattern was added — then
@@ -84,7 +84,7 @@ const BASELINE = 515;
  * number is allowed up once in the change that sharpens it. Same rule as the
  * two widenings of `check:ui-french`.
  */
-const BASELINE_UNSPECIFIED = 432;
+const BASELINE_UNSPECIFIED = 431;
 
 /**
  * A literal BCP-47 tag handed straight to a formatter. Matching the call

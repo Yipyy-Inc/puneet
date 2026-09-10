@@ -12,6 +12,7 @@ import { useTagNotePolicy } from "@/lib/api/facility-settings";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
 import { canActOnNotes, type NoteAction } from "@/lib/settings/tag-notes";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface NotesListProps {
   category: NoteCategory;
@@ -44,12 +45,12 @@ interface NotesListProps {
   audience?: "staff" | "customer";
 }
 
-const PET_SUBTYPES: { value: PetNoteSubType | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "general", label: "General" },
-  { value: "behavior", label: "Behavior" },
-  { value: "medical", label: "Medical" },
-  { value: "feeding", label: "Feeding" },
+const PET_SUBTYPES: { value: PetNoteSubType | "all"; labelKey: string }[] = [
+  { value: "all", labelKey: "filterAll" },
+  { value: "general", labelKey: "noteGeneral" },
+  { value: "behavior", labelKey: "noteBehaviour" },
+  { value: "medical", labelKey: "noteMedical" },
+  { value: "feeding", labelKey: "noteFeeding" },
 ];
 
 export function NotesList({
@@ -61,6 +62,8 @@ export function NotesList({
   className,
   audience = "staff",
 }: NotesListProps) {
+  // Above the no-access return below, so the hook order never changes.
+  const t = useShellText("shared");
   const {
     notes,
     addNote,
@@ -134,9 +137,7 @@ export function NotesList({
         )}
       >
         <Lock className="size-6" />
-        <p className="text-sm">
-          Your role does not have access to these notes.
-        </p>
+        <p className="text-sm">{t("notesNoAccess")}</p>
       </div>
     );
   }
@@ -154,7 +155,10 @@ export function NotesList({
                   type="button"
                   role="tab"
                   aria-selected={filterSubType === st.value}
-                  aria-label={`Filter by ${st.label} notes`}
+                  aria-label={t("filterNotesBy").replace(
+                    "{kind}",
+                    t(st.labelKey).toLowerCase(),
+                  )}
                   onClick={() => setFilterSubType(st.value)}
                   className={cn(
                     "rounded-md px-2 py-1 text-xs transition-colors",
@@ -163,7 +167,7 @@ export function NotesList({
                       : `bg-muted text-muted-foreground hover:bg-accent`,
                   )}
                 >
-                  {st.label}
+                  {t(st.labelKey)}
                 </button>
               ))}
             </div>
@@ -177,7 +181,7 @@ export function NotesList({
             onClick={() => setAddModalOpen(true)}
           >
             <Plus className="size-3" />
-            Add Note
+            {t("addNote")}
           </Button>
         )}
       </div>
@@ -190,12 +194,8 @@ export function NotesList({
           ) : (
             <StickyNote className="mb-2 size-8" />
           )}
-          <p className="text-sm">No notes yet</p>
-          {canCreate && (
-            <p className="mt-1 text-xs">
-              Click &quot;Add Note&quot; to create one
-            </p>
-          )}
+          <p className="text-sm">{t("noNotesYet")}</p>
+          {canCreate && <p className="mt-1 text-xs">{t("noNotesHelp")}</p>}
         </div>
       ) : (
         <div className={cn("space-y-2", compact && "space-y-1.5")}>
@@ -232,7 +232,7 @@ export function NotesList({
                     {hasBothSections && (
                       <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
                         <Pin className="size-3" />
-                        Pinned
+                        {t("pinned")}
                       </div>
                     )}
                     {pinned.map(renderNote)}
@@ -240,7 +240,7 @@ export function NotesList({
                 )}
                 {hasBothSections && (
                   <div className="text-muted-foreground flex items-center gap-2 pt-2 text-xs font-medium tracking-wider uppercase">
-                    All Notes
+                    {t("allNotes")}
                   </div>
                 )}
                 {unpinned.map(renderNote)}
