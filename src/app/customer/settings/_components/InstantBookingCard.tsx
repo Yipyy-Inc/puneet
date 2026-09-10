@@ -10,10 +10,12 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { rich } from "@/lib/i18n/rich";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 interface InstantBookingService {
   key: "daycare" | "boarding" | "grooming";
-  label: string;
   fromSetting: boolean;
   fromMembership: boolean;
 }
@@ -30,27 +32,24 @@ export function InstantBookingCard({
   summary,
   hasAny,
 }: InstantBookingCardProps) {
+  const { t, locale } = useCustomerText("settings");
   return (
     <Card className="border-amber-200/70">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Zap className="size-5 text-amber-500" />
-          Instant Booking
+          {t("instantBooking")}
         </CardTitle>
-        <CardDescription>
-          Services with instant booking skip staff approval — your reservation
-          is auto-confirmed and you receive the confirmation email/SMS right
-          away. Your facility manages this perk; reach out to staff to request
-          changes.
-        </CardDescription>
+        <CardDescription>{t("instantBookingHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {summary.planName && (
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm">
             <Crown className="mt-0.5 size-4 shrink-0 text-amber-600" />
             <p className="flex-1 text-amber-900">
-              Your <span className="font-medium">{summary.planName}</span>{" "}
-              membership unlocks instant booking on the services below.
+              {rich(t("planUnlocksInstantBooking"), {
+                plan: <span className="font-medium">{summary.planName}</span>,
+              })}
             </p>
           </div>
         )}
@@ -66,14 +65,16 @@ export function InstantBookingCard({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{s.label}</span>
+                  <span className="text-sm font-medium">
+                    {serviceTypeLabel(locale, s.key)}
+                  </span>
                   {s.fromMembership && (
                     <Badge
                       variant="outline"
                       className="h-5 border-amber-300 bg-white px-1.5 text-[10px] text-amber-800"
                     >
                       <Crown className="mr-1 size-3" />
-                      Membership
+                      {t("membership")}
                     </Badge>
                   )}
                   {s.fromSetting && !s.fromMembership && (
@@ -81,7 +82,7 @@ export function InstantBookingCard({
                       variant="outline"
                       className="h-5 border-amber-300 bg-white px-1.5 text-[10px] text-amber-800"
                     >
-                      Granted by facility
+                      {t("grantedByFacility")}
                     </Badge>
                   )}
                 </div>
@@ -92,7 +93,7 @@ export function InstantBookingCard({
                     enabled && "bg-amber-500 hover:bg-amber-500",
                   )}
                 >
-                  {enabled ? "Instant" : "Requires approval"}
+                  {enabled ? t("instant") : t("requiresApproval")}
                 </Badge>
               </div>
             );
@@ -100,8 +101,7 @@ export function InstantBookingCard({
         </div>
         {!hasAny && (
           <p className="text-muted-foreground text-xs">
-            No instant booking is currently active for your account. Ask your
-            facility about membership plans that include this perk.
+            {t("noInstantBooking")}
           </p>
         )}
       </CardContent>

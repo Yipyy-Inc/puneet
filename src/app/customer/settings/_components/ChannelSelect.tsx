@@ -9,7 +9,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CHANNEL_LABELS, type NotificationChannel } from "./types";
+import { CHANNEL_KEYS, type NotificationChannel } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface ChannelSelectProps {
   value: NotificationChannel[];
@@ -24,6 +25,7 @@ export function ChannelSelect({
   allowed,
   disabled,
 }: ChannelSelectProps) {
+  const { t, fill } = useCustomerText("settings");
   const [open, setOpen] = useState(false);
   const ordered = allowed.filter((c) => value.includes(c));
 
@@ -44,9 +46,9 @@ export function ChannelSelect({
           disabled && "opacity-50",
         )}
       >
-        <span className="text-muted-foreground">Sent via</span>
+        <span className="text-muted-foreground">{t("sentVia")}</span>
         <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
-          {CHANNEL_LABELS[allowed[0]]}
+          {t(CHANNEL_KEYS[allowed[0]])}
         </Badge>
       </div>
     );
@@ -68,7 +70,7 @@ export function ChannelSelect({
           <div className="flex flex-1 flex-wrap items-center gap-1 overflow-hidden">
             {ordered.length === 0 ? (
               <span className="text-muted-foreground text-xs">
-                Pick a channel
+                {t("pickAChannel")}
               </span>
             ) : (
               ordered.map((c) => (
@@ -77,11 +79,13 @@ export function ChannelSelect({
                   variant="secondary"
                   className="h-6 gap-0.5 px-1.5 text-[11px]"
                 >
-                  {CHANNEL_LABELS[c]}
+                  {t(CHANNEL_KEYS[c])}
                   <span
                     role="button"
                     tabIndex={-1}
-                    aria-label={`Remove ${CHANNEL_LABELS[c]}`}
+                    aria-label={fill("removeChannel", {
+                      channel: t(CHANNEL_KEYS[c]),
+                    })}
                     className="hover:bg-foreground/10 -mr-0.5 inline-flex size-4 items-center justify-center rounded-sm"
                     onClick={(e) => {
                       e.preventDefault();
@@ -127,7 +131,7 @@ export function ChannelSelect({
                 >
                   {checked && <Check className="size-3" />}
                 </span>
-                <span>{CHANNEL_LABELS[channel]}</span>
+                <span>{t(CHANNEL_KEYS[channel])}</span>
               </button>
             );
           })}

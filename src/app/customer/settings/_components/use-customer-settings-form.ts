@@ -20,8 +20,10 @@ import {
   type PrivacyPreferences,
   type ProfileData,
 } from "./types";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 export function useCustomerSettingsForm() {
+  const { t } = useCustomerText("settings");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -102,19 +104,16 @@ export function useCustomerSettingsForm() {
       services: [
         {
           key: "daycare" as const,
-          label: "Daycare",
           fromSetting: !!cs?.instabookDaycare,
           fromMembership: fromMembership.has("daycare"),
         },
         {
           key: "boarding" as const,
-          label: "Boarding",
           fromSetting: !!cs?.instabookBoarding,
           fromMembership: fromMembership.has("boarding"),
         },
         {
           key: "grooming" as const,
-          label: "Grooming",
           fromSetting: !!cs?.instabookGrooming,
           fromMembership: fromMembership.has("grooming"),
         },
@@ -162,29 +161,33 @@ export function useCustomerSettingsForm() {
 
   const customerPets = useMemo(() => customer?.pets || [], [customer]);
 
+  // Each error is a CATALOGUE KEY; the field renders it through `t`, so a
+  // French customer reads the message in French.
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!profileData.name.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.name = "errNameRequired";
     }
 
     if (!profileData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = "errEmailRequired";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "errEmailInvalid";
     }
 
     if (profileData.phone && !/^[\d\s\-\(\)]+$/.test(profileData.phone)) {
-      newErrors.phone = "Please enter a valid phone number";
+      newErrors.phone = "errPhoneInvalid";
     }
 
     profileData.additionalContacts.forEach((contact, index) => {
       if (!contact.name.trim()) {
-        newErrors[`additionalContact-${index}-name`] = "Name is required";
+        // french-ok: an error-map key, not copy
+        newErrors[`additionalContact-${index}-name`] = "errNameRequired";
       }
       if (!contact.phone.trim()) {
-        newErrors[`additionalContact-${index}-phone`] = "Phone is required";
+        // french-ok: an error-map key, not copy
+        newErrors[`additionalContact-${index}-phone`] = "errPhoneRequired";
       }
     });
 
@@ -194,7 +197,7 @@ export function useCustomerSettingsForm() {
 
   const handleSave = async () => {
     if (!validateForm()) {
-      toast.error("Please fix the errors before saving");
+      toast.error(t("fixErrorsBeforeSaving"));
       return;
     }
 
@@ -205,12 +208,10 @@ export function useCustomerSettingsForm() {
       // This should update the customer profile and sync to all facilities
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsEditing(false);
-      toast.success(
-        "Profile updated successfully! Changes will reflect on the facility side.",
-      );
+      toast.success(t("profileUpdated"));
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update profile",
+        error instanceof Error ? error.message : t("profileUpdateFailed"),
       );
     } finally {
       setIsSaving(false);

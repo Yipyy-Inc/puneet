@@ -38,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 import { cn } from "@/lib/utils";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 /**
  * A readable name for a session, from its user agent.
@@ -92,6 +93,7 @@ export function LoginSecurityCard({
   phone,
   emailVerified = true,
 }: LoginSecurityCardProps) {
+  const { t, fill } = useCustomerText("settings");
   // Password change form
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -154,7 +156,7 @@ export function LoginSecurityCard({
         toast.error(result.error);
         return;
       }
-      toast.success("Password updated. You'll stay signed in on this device.");
+      toast.success(t("passwordUpdatedYouLlStay"));
       resetPasswordForm();
     } finally {
       setIsUpdatingPassword(false);
@@ -172,7 +174,9 @@ export function LoginSecurityCard({
       toast.error(result.error);
       return;
     }
-    toast.success(`Verification link sent to ${emailStatus?.email ?? email}.`);
+    toast.success(
+      fill("verificationLinkSentTo", { email: emailStatus?.email ?? email }),
+    );
   };
 
   const handleRevokeSession = async (id: string) => {
@@ -183,7 +187,7 @@ export function LoginSecurityCard({
       toast.error(result.error);
       return;
     }
-    toast.success("Session signed out.");
+    toast.success(t("sessionSignedOut"));
     await refetchSessions();
   };
 
@@ -196,9 +200,9 @@ export function LoginSecurityCard({
       return;
     }
     toast.success(
-      result.ended === 1
-        ? "Signed out of 1 other device."
-        : `Signed out of ${result.ended ?? 0} other devices.`,
+      fill(result.ended === 1 ? "signedOutOthersOne" : "signedOutOthersOther", {
+        n: result.ended ?? 0,
+      }),
     );
     await refetchSessions();
   };
@@ -208,16 +212,16 @@ export function LoginSecurityCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="size-5" />
-          Login & Security
+          {t("loginAndSecurity")}
         </CardTitle>
-        <CardDescription>
-          Manage how you sign in and keep your account secure.
-        </CardDescription>
+        <CardDescription>{t("manageHowYouSignIn")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Verified channels */}
         <div className="space-y-3">
-          <Label className="text-base font-semibold">Sign-in channels</Label>
+          <Label className="text-base font-semibold">
+            {t("signInChannels")}
+          </Label>
           <div className="space-y-2">
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -226,9 +230,11 @@ export function LoginSecurityCard({
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
-                    {email || "No email on file"}
+                    {email || t("noEmailOnFile")}
                   </p>
-                  <p className="text-muted-foreground text-xs">Email address</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("emailAddress")}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -238,12 +244,12 @@ export function LoginSecurityCard({
                     className="h-6 gap-1 border-emerald-300 bg-emerald-50 px-2 text-emerald-700"
                   >
                     <CheckCircle2 className="size-3" />
-                    Verified
+                    {t("verified")}
                   </Badge>
                 ) : (
                   <>
                     <Badge variant="secondary" className="h-6 px-2">
-                      Unverified
+                      {t("unverified")}
                     </Badge>
                     <Button
                       size="sm"
@@ -254,7 +260,7 @@ export function LoginSecurityCard({
                       }}
                       disabled={sendingVerification}
                     >
-                      {sendingVerification ? "Sending…" : "Send link"}
+                      {sendingVerification ? t("sending") : t("sendLink")}
                     </Button>
                   </>
                 )}
@@ -268,9 +274,11 @@ export function LoginSecurityCard({
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
-                    {phone || "No phone on file"}
+                    {phone || t("noPhoneOnFile")}
                   </p>
-                  <p className="text-muted-foreground text-xs">Phone number</p>
+                  <p className="text-muted-foreground text-xs">
+                    {t("phoneNumber")}
+                  </p>
                 </div>
               </div>
               {/*
@@ -290,10 +298,9 @@ export function LoginSecurityCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-semibold">Password</Label>
+              <Label className="text-base font-semibold">{t("password")}</Label>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Use at least 8 characters. We recommend a passphrase or a
-                password manager.
+                {t("passwordHint")}
               </p>
             </div>
             {!showPasswordForm && (
@@ -303,7 +310,7 @@ export function LoginSecurityCard({
                 onClick={() => setShowPasswordForm(true)}
               >
                 <Lock className="mr-2 size-4" />
-                Change password
+                {t("changePassword")}
               </Button>
             )}
           </div>
@@ -311,7 +318,7 @@ export function LoginSecurityCard({
           {showPasswordForm && (
             <div className="space-y-3 rounded-lg border p-4">
               <div className="space-y-1.5">
-                <Label htmlFor="current-password">Current password</Label>
+                <Label htmlFor="current-password">{t("currentPassword")}</Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -323,7 +330,7 @@ export function LoginSecurityCard({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="new-password">New password</Label>
+                <Label htmlFor="new-password">{t("newPassword")}</Label>
                 <div className="relative">
                   <Input
                     id="new-password"
@@ -331,14 +338,14 @@ export function LoginSecurityCard({
                     autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 8 characters"
+                    placeholder={t("atLeast8Characters")}
                     className="pr-10"
                     aria-invalid={passwordTooShort ? "true" : "false"}
                   />
                   <button
                     type="button"
                     aria-label={
-                      showNewPassword ? "Hide password" : "Show password"
+                      showNewPassword ? t("hidePassword") : t("showPassword")
                     }
                     className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md"
                     onClick={() => setShowNewPassword((v) => !v)}
@@ -352,25 +359,27 @@ export function LoginSecurityCard({
                 </div>
                 {passwordTooShort && (
                   <p className="text-destructive text-xs">
-                    Password must be at least 8 characters.
+                    {t("passwordMustBeAtLeast")}
                   </p>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirm-password">Confirm new password</Label>
+                <Label htmlFor="confirm-password">
+                  {t("confirmNewPassword")}
+                </Label>
                 <Input
                   id="confirm-password"
                   type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your new password"
+                  placeholder={t("reEnterYourNewPassword")}
                   aria-invalid={passwordsMismatch ? "true" : "false"}
                 />
                 {passwordsMismatch && (
                   <p className="text-destructive text-xs">
-                    Passwords don&apos;t match.
+                    {t("passwordsDontMatch")}
                   </p>
                 )}
               </div>
@@ -381,14 +390,14 @@ export function LoginSecurityCard({
                   onClick={resetPasswordForm}
                   disabled={isUpdatingPassword}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleUpdatePassword}
                   disabled={!canSubmitPassword || isUpdatingPassword}
                 >
                   <KeyRound className="mr-2 size-4" />
-                  {isUpdatingPassword ? "Updating..." : "Update password"}
+                  {isUpdatingPassword ? t("updating") : t("updatePassword")}
                 </Button>
               </div>
             </div>
@@ -401,9 +410,11 @@ export function LoginSecurityCard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-base font-semibold">Active sessions</Label>
+              <Label className="text-base font-semibold">
+                {t("activeSessions")}
+              </Label>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Devices currently signed in to your account.
+                {t("devicesCurrentlySignedInTo")}
               </p>
             </div>
             {sessions.some((s) => !s.current) && (
@@ -414,14 +425,14 @@ export function LoginSecurityCard({
                 disabled={signingOutOthers}
               >
                 <LogOut className="mr-2 size-4" />
-                {signingOutOthers ? "Signing out…" : "Sign out all others"}
+                {signingOutOthers ? t("signingOut") : t("signOutAllOthers")}
               </Button>
             )}
           </div>
           <div className="divide-border/70 divide-y overflow-hidden rounded-lg border">
             {sessions.length === 0 && (
               <p className="text-muted-foreground px-4 py-3 text-sm">
-                No active sessions to show.
+                {t("noActiveSessionsToShow")}
               </p>
             )}
             {sessions.map((session) => (
@@ -450,14 +461,14 @@ export function LoginSecurityCard({
                           variant="outline"
                           className="h-5 border-emerald-300 bg-emerald-50 px-1.5 text-[10px] text-emerald-700"
                         >
-                          This device
+                          {t("thisDevice")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-muted-foreground truncate text-xs">
                       {[session.ipAddress, session.authMethod]
                         .filter(Boolean)
-                        .join(" · ") || "No details recorded"}
+                        .join(" · ") || t("noDetailsRecorded")}
                     </p>
                   </div>
                 </div>
@@ -468,7 +479,9 @@ export function LoginSecurityCard({
                     onClick={() => handleRevokeSession(session.id)}
                     disabled={busySession === session.id}
                   >
-                    {busySession === session.id ? "Signing out…" : "Sign out"}
+                    {busySession === session.id
+                      ? t("signingOut")
+                      : t("signOut")}
                   </Button>
                 )}
               </div>

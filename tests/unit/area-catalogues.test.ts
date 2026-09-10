@@ -110,6 +110,10 @@ const SAME_IN_BOTH = new Set([
   "customerPages.packages.total", // Total / Total
   "customerPages.packages.creditsPerCycle", // {n} / cycle — "cycle" is French too
   "customerPages.packages.service", // Service / Service
+  "customerPages.settings.state", // Province / Province
+  "customerPages.settings.canada", // Canada / Canada
+  "customerPages.settings.marketing", // Marketing / Marketing
+  "customerPages.settings.channelSms", // SMS / SMS
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
