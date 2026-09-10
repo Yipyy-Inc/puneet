@@ -1,3 +1,9 @@
+import {
+  onDailyCareRecords,
+  reportDailyCareWriteError,
+  writeDailyCareRecord,
+} from "@/lib/api/daily-care-records";
+
 // ============================================================================
 // Head-count (Last Call rollcall) store — records the completed rollcall for a
 // requiresHeadCount step, keyed by facility + date + step. Components subscribe
@@ -38,9 +44,27 @@ const EMPTY_IDS: ReadonlySet<string> = new Set();
 let idsCacheKey = "";
 let idsCache: ReadonlySet<string> = EMPTY_IDS;
 
-function keyFor(facilityId: number, date: string, stepId: string): string {
-  return `${facilityId}::${date}::${stepId}`;
+// A CACHE of `daily_care_records` (kind head_count), keyed by day and step.
+// The facility is the session's, on the server; `facilityId` is kept for the
+// callers and decides nothing.
+function keyFor(_facilityId: number, date: string, stepId: string): string {
+  return `${date}::${stepId}`;
 }
+
+onDailyCareRecords((date, records) => {
+  for (const key of [...recordsByKey.keys()]) {
+    if (key.startsWith(`${date}::`)) recordsByKey.delete(key);
+  }
+  for (const r of records) {
+    if (r.kind !== "head_count") continue;
+    recordsByKey.set(`${date}::${r.subject}`, {
+      ...(r.payload as Partial<HeadCountRecord>),
+      stepId: r.subject,
+      date,
+    } as HeadCountRecord);
+  }
+  notify();
+});
 
 function notify(): void {
   // Invalidate the derived cache; the next read rebuilds it.
@@ -61,7 +85,8 @@ export const headCountStore = {
   /** Step ids with a completed head count for a (facility, date). Stable
    *  reference between mutations — safe for useSyncExternalStore. */
   getCompletedStepIds(facilityId: number, date: string): ReadonlySet<string> {
-    const key = `${facilityId}::${date}`;
+    void facilityId;
+    const key = date;
     if (key !== idsCacheKey) {
       const ids = new Set<string>();
       const prefix = `${key}::`;
@@ -90,7 +115,19 @@ export const headCountStore = {
     stepId: string,
     record: HeadCountRecord,
   ): void {
-    recordsByKey.set(keyFor(facilityId, date, stepId), record);
+    const key = keyFor(facilityId, date, stepId);
+    recordsByKey.set(key, record);
     notify();
+    // The safety record goes to the server; the step is undone if refused.
+    writeDailyCareRecord({
+      date,
+      kind: "head_count",
+      subject: stepId,
+      payload: { ...record },
+    }).catch((error: unknown) => {
+      recordsByKey.delete(key);
+      notify();
+      reportDailyCareWriteError(error);
+    });
   },
 };

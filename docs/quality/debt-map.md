@@ -12422,3 +12422,26 @@ it says the owner was not messaged.
   drawer's SMS/email buttons are still local or toast-only; external calendar
   connections are a module store. `FACILITY_ID = 11` still keys the saved
   views and visual settings in localStorage, which are per-browser by design.
+
+## 2026-09-11 — a shift note reaches the next shift
+
+The Daily Care board's shift-handoff notes, pet attention flags and head
+counts were module-level Maps under a hard-coded facility id of 11, living in
+one browser tab: "Shift note saved for the next shift" never reached it, a
+flag was gone on reload, and a head count — the record of who was counted
+and who could not be found — did not outlive the tab. They are
+`daily_care_records` rows now (20260910230626; `/api/daily-care/records`).
+
+The twenty call sites that read `shiftNotesStore`, `petFlagsStore` and
+`headCountStore` synchronously did not change: the stores are a cache,
+hydrated by `useDailyCareRecordsSync(date)` when the board loads a day, and
+each mutator writes through and puts its change back if the write is refused.
+
+"Flagged for attention — manager notified" and "Owner notified" were toasts
+over nothing; they say the flag is on the board and that nobody was
+messaged.
+
+- **Still open:** the feeding-round and schedule configuration is still an
+  in-memory store seeded from a fixture (the settings page's "Saved" badge
+  over it too); the staff filter reads `@/data/staff`; pet care notes are
+  in-memory; the HQ view's "Nudge sent" is a toast.

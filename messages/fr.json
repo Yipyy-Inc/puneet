@@ -1845,6 +1845,16 @@
         "eventNotSaved": "L’événement n’a pas été enregistré",
         "rescheduled": "Déplacé",
         "ownerNotMessaged": "Le propriétaire n’a pas été prévenu : Yipyy n’envoie pas encore d’avis de changement d’horaire."
+      },
+      "dailyCareBoard": {
+        "flaggedHealth": "Signalement pour {pet} : problème de santé",
+        "flaggedIncident": "Signalement pour {pet} : incident consigné",
+        "flagged": "Signalement pour {pet} : à surveiller",
+        "flagCleared": "Signalement retiré pour {pet}",
+        "flagHelp": "Le signalement reste au tableau pour la prochaine équipe. Personne n’est prévenu par message.",
+        "notDelivered": "« {task} » consigné comme non effectué",
+        "ownerNotMessaged": "Le propriétaire n’a pas été prévenu.",
+        "writeFailed": "Ce changement n’a pas été enregistré au tableau"
       }
     }
   },

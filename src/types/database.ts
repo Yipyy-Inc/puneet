@@ -1478,6 +1478,53 @@ export type Database = {
           },
         ];
       };
+      daily_care_records: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          created_by_name: string | null;
+          facility_id: string;
+          id: string;
+          kind: string;
+          occurred_on: string;
+          payload: Json;
+          subject: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          occurred_on: string;
+          payload?: Json;
+          subject?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          occurred_on?: string;
+          payload?: Json;
+          subject?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daily_care_records_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       daycare_attendance: {
         Row: {
           author_name: string;

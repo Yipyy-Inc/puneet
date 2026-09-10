@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -34,6 +34,11 @@ import { useDayCareLog } from "@/hooks/use-day-care-log";
 import { logCareAction } from "@/data/incidents";
 import { staffMembers } from "@/data/staff";
 import { shiftNotesStore } from "@/data/shift-notes-store";
+import {
+  setDailyCareWriteErrorHandler,
+  useDailyCareRecordsSync,
+} from "@/lib/api/daily-care-records";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { petFlagsStore } from "@/data/pet-flags-store";
 import { headCountStore } from "@/data/head-count-store";
 import { petCareNotesStore } from "@/data/pet-care-notes";
@@ -94,6 +99,17 @@ export function DailyCareView() {
   // schedule all follow it, so managers can review a past day or preview a
   // future one. Seeded from today.
   const [date, setDate] = useState(() => todayIso());
+  // Shift notes, pet flags and head counts for the day, from Postgres. The
+  // stores the board reads are filled from here and write through; they were
+  // the whole truth, in one browser tab (20260910230626).
+  useDailyCareRecordsSync(date);
+  const { t: boardT, fill: boardFill } = useStaffText("dailyCareBoard");
+  useEffect(() => {
+    setDailyCareWriteErrorHandler((message) =>
+      toast.error(boardT("writeFailed"), { description: message }),
+    );
+    return () => setDailyCareWriteErrorHandler(null);
+  }, [boardT]);
   // ── REAL GUESTS, REAL LOG ────────────────────────────────────────────────
   //
   // Both used to be fixtures, and they had to move together: the log keys on
@@ -609,7 +625,8 @@ export function DailyCareView() {
     });
 
     // An escalating log (health concern or add-on incident) raises the pet flag
-    // (A4.3) and notifies the on-shift manager (toast stands in for a real push).
+    // (A4.3). Nothing messages a manager — the flag is on the board, and the
+    // toast says exactly that. It used to say "manager notified".
     if (entry.healthObservation) {
       const obs = entry.healthObservation;
       petFlagsStore.raise(date, task.guestId, {
@@ -617,24 +634,23 @@ export function DailyCareView() {
         createdBy: entry.staffName ?? entry.staffInitials,
         createdAt: new Date().toISOString(),
       });
-      toast.warning(
-        `${task.petName} flagged for attention — manager notified of health concern.`,
-      );
+      toast.warning(boardFill("flaggedHealth", { pet: task.petName }), {
+        description: boardT("flagHelp"),
+      });
     } else if (entry.addon?.incident) {
       petFlagsStore.raise(date, task.guestId, {
         reason: `Add-on incident (${entry.addon.incident.severity}): ${task.details}`,
         createdBy: entry.staffName ?? entry.staffInitials,
         createdAt: new Date().toISOString(),
       });
-      toast.warning(
-        `${task.petName} flagged — incident logged, manager notified.`,
-      );
+      toast.warning(boardFill("flaggedIncident", { pet: task.petName }), {
+        description: boardT("flagHelp"),
+      });
     } else if (entry.missedReason) {
-      toast.warning(
-        `Logged ${task.details} as not delivered.${
-          entry.notifyOwner ? " Owner notified." : ""
-        }`,
-      );
+      // "Owner notified." — nothing messaged them.
+      toast.warning(boardFill("notDelivered", { task: task.details }), {
+        description: entry.notifyOwner ? boardT("ownerNotMessaged") : undefined,
+      });
     } else {
       toast.success(`Logged for ${task.petName}`);
     }
