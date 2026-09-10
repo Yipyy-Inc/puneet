@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { TipConfig } from "@/types/facility";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
 
 interface TipPromptDialogProps {
   open: boolean;
@@ -81,10 +83,13 @@ export function TipPromptDialog({
   petName,
   serviceLabel,
   staff,
-  confirmLabel = "Add tip & continue",
+  confirmLabel,
   contextTitle,
   contextSubtitle,
 }: TipPromptDialogProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
+  const confirmText = confirmLabel ?? t("addTipContinue");
   const tier = useMemo(() => {
     if (tipConfig.mode === "smart") {
       return subtotal < tipConfig.smart.thresholdAmount
@@ -160,7 +165,7 @@ export function TipPromptDialog({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          aria-label="Close"
+          aria-label={t("closeDialog")}
           className="hover:bg-background/80 absolute top-3 right-3 z-10 rounded-full bg-white/70 p-1.5 backdrop-blur-sm transition-colors"
         >
           <X className="size-4" />
@@ -177,14 +182,24 @@ export function TipPromptDialog({
           <DialogTitle className="text-lg font-bold tracking-tight">
             {contextTitle ??
               (petName
-                ? `${petName} had an amazing time! 🐾`
-                : "Your pet had an amazing time! 🐾")}
+                ? t("petAmazingTime").replace("{pet}", petName)
+                : t("yourPetAmazingTime"))}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground mt-1 text-[13px] leading-snug">
             {contextSubtitle ??
               (petName
-                ? `Show your appreciation for the team that cared for ${petName}${serviceLabel ? ` during ${serviceLabel.toLowerCase()}` : ""}.`
-                : "Show your appreciation for the team that provided care.")}
+                ? t("tipIntroPetPast")
+                    .replace("{pet}", petName)
+                    .replace(
+                      "{service}",
+                      serviceLabel
+                        ? t("tipDuring").replace(
+                            "{service}",
+                            serviceLabel.toLowerCase(),
+                          )
+                        : "",
+                    )
+                : t("tipIntroGenericPast"))}
           </DialogDescription>
         </div>
 
@@ -215,16 +230,15 @@ export function TipPromptDialog({
             </div>
             <div className="text-micro/tight flex-1">
               <p className="font-medium">
-                Cared for by{" "}
-                {staffList
-                  .slice(0, 3)
-                  .map((s) => s.name)
-                  .join(", ")}
-                {staffCount > 3 ? ` +${staffCount - 3}` : ""}
+                {t("caredForByNames").replace(
+                  "{names}",
+                  staffList
+                    .slice(0, 3)
+                    .map((member) => member.name)
+                    .join(", ") + (staffCount > 3 ? ` +${staffCount - 3}` : ""),
+                )}
               </p>
-              <p className="text-muted-foreground">
-                100% of your tip is split evenly among the team
-              </p>
+              <p className="text-muted-foreground">{t("tipSplitEvenly")}</p>
             </div>
           </div>
 
@@ -254,13 +268,13 @@ export function TipPromptDialog({
                 >
                   {isPreferred && (
                     <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase shadow-sm">
-                      <Sparkles className="size-2.5" /> Most popular
+                      <Sparkles className="size-2.5" /> {t("mostPopular")}
                     </span>
                   )}
                   <span className="text-lg font-bold">
                     {opt.type === "percentage"
-                      ? `${opt.value}%`
-                      : `$${opt.value.toFixed(0)}`}
+                      ? formatPercent(opt.value, locale)
+                      : formatMoney(opt.value, locale, { whole: true })}
                   </span>
                   <span
                     className={cn(
@@ -269,8 +283,8 @@ export function TipPromptDialog({
                     )}
                   >
                     {opt.type === "percentage"
-                      ? `$${amount.toFixed(2)}`
-                      : opt.label || "Thank the team"}
+                      ? formatMoney(amount, locale)
+                      : opt.label || t("thankTheTeam")}
                   </span>
                   {opt.type === "percentage" && opt.label && (
                     <span className="text-[10px] opacity-70">{opt.label}</span>
@@ -293,9 +307,9 @@ export function TipPromptDialog({
                   : "bg-muted/30 hover:border-primary/40 hover:bg-muted/50 border-transparent",
               )}
             >
-              <span className="text-sm font-bold">Custom</span>
+              <span className="text-sm font-bold">{t("custom")}</span>
               <span className="text-muted-foreground text-[11px]">
-                Pick your own
+                {t("pickYourOwn")}
               </span>
             </button>
           </div>
@@ -325,7 +339,7 @@ export function TipPromptDialog({
                 onClick={handleCustomApply}
                 className="h-10"
               >
-                Apply
+                {t("apply")}
               </Button>
             </div>
           )}
@@ -338,13 +352,16 @@ export function TipPromptDialog({
               className="border-primary/30 bg-primary/5 hover:bg-primary/10 flex w-full items-center justify-between rounded-xl border border-dashed px-3 py-2 text-left text-[12px] transition-colors"
             >
               <span className="text-muted-foreground">
-                ✨ Round up to{" "}
-                <span className="text-foreground font-semibold">
-                  ${roundTarget.toFixed(2)}
-                </span>
+                {t("roundUpTo").replace(
+                  "{amount}",
+                  formatMoney(roundTarget, locale),
+                )}
               </span>
               <span className="text-primary font-medium">
-                Add ${(roundUpAmount - localTip).toFixed(2)}
+                {t("addAmount").replace(
+                  "{amount}",
+                  formatMoney(roundUpAmount - localTip, locale),
+                )}
               </span>
             </button>
           )}
@@ -354,12 +371,14 @@ export function TipPromptDialog({
             <div className="bg-primary/5 flex items-center gap-2 rounded-xl p-3 text-[12px]">
               <Users className="text-primary size-4 shrink-0" />
               <p>
-                <span className="font-semibold">${localTip.toFixed(2)}</span>{" "}
-                goes to the team — about{" "}
                 <span className="font-semibold">
-                  ${perStaffShare.toFixed(2)}
+                  {formatMoney(localTip, locale)}
                 </span>{" "}
-                per caregiver.
+                {t("goesToTeam")}{" "}
+                <span className="font-semibold">
+                  {formatMoney(perStaffShare, locale)}
+                </span>{" "}
+                {t("perCaregiver")}
               </p>
             </div>
           )}
@@ -367,10 +386,7 @@ export function TipPromptDialog({
           {/* Trust line */}
           <div className="text-muted-foreground flex items-center justify-center gap-1.5 text-center text-[11px]">
             <ShieldCheck className="size-3" />
-            <span>
-              Tips are 100% optional and go directly to the staff. Never to the
-              facility.
-            </span>
+            <span>{t("tipsOptional")}</span>
           </div>
 
           {/* Actions */}
@@ -382,15 +398,15 @@ export function TipPromptDialog({
               disabled={localTip <= 0}
             >
               {localTip > 0
-                ? `${confirmLabel} · $${localTip.toFixed(2)}`
-                : confirmLabel}
+                ? `${confirmText} · ${formatMoney(localTip, locale)}`
+                : confirmText}
             </Button>
             <button
               type="button"
               onClick={handleSkip}
               className="text-muted-foreground hover:text-foreground w-full text-center text-[11px] underline-offset-4 transition-colors hover:underline"
             >
-              Maybe next time
+              {t("maybeNextTime")}
             </button>
           </div>
         </div>

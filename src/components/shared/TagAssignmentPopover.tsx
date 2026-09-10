@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { settingsHref } from "@/lib/settings/nav";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface TagAssignmentPopoverProps {
   entityType: TagType;
@@ -23,10 +24,12 @@ interface TagAssignmentPopoverProps {
   children: React.ReactNode;
 }
 
-const PRIORITY_LABELS: Record<string, string> = {
-  critical: "Critical",
-  warning: "Warning",
-  informational: "Info",
+// A tag's priority, by CATALOGUE KEY. These three words were English in a
+// module constant, where no gate could see them.
+const PRIORITY_KEYS: Record<string, string> = {
+  critical: "priorityCritical",
+  warning: "priorityWarning",
+  informational: "priorityInfo",
 };
 
 export function TagAssignmentPopover({
@@ -36,6 +39,7 @@ export function TagAssignmentPopover({
   onUnassign,
   children,
 }: TagAssignmentPopoverProps) {
+  const t = useShellText("shared");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -67,7 +71,7 @@ export function TagAssignmentPopover({
               aria-hidden="true"
             />
             <Input
-              placeholder="Search tags..."
+              placeholder={t("searchTags")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 pl-7 text-sm"
@@ -78,7 +82,7 @@ export function TagAssignmentPopover({
         <div className="max-h-60 overflow-y-auto p-1">
           {filtered.length === 0 && (
             <p className="text-muted-foreground py-4 text-center text-sm">
-              No tags found
+              {t("noTagsFound")}
             </p>
           )}
           {filtered.map((tag) => {
@@ -122,7 +126,9 @@ export function TagAssignmentPopover({
                           `bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400`,
                       )}
                     >
-                      {PRIORITY_LABELS[tag.priority]}
+                      {PRIORITY_KEYS[tag.priority]
+                        ? t(PRIORITY_KEYS[tag.priority])
+                        : tag.priority}
                     </span>
                   </div>
                   {tag.description && (
@@ -150,7 +156,7 @@ export function TagAssignmentPopover({
             }}
           >
             <Plus className="size-3" />
-            Create new tag
+            {t("createTag")}
           </a>
         </div>
       </PopoverContent>

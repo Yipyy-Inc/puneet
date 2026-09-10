@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface TagListProps {
   entityType: TagType;
@@ -32,6 +33,7 @@ export function TagList({
   isCustomerView = false,
   className,
 }: TagListProps) {
+  const t = useShellText("shared");
   const { tags, assignments, assign, unassign } = useTagsForEntity(
     entityType,
     entityId,
@@ -79,7 +81,10 @@ export function TagList({
           <PopoverTrigger asChild>
             <button
               type="button"
-              aria-label={`Show ${overflow.length} more tags`}
+              aria-label={t("showMoreTags").replace(
+                "{count}",
+                String(overflow.length),
+              )}
               className={cn(
                 `border-border bg-muted text-muted-foreground hover:bg-accent inline-flex shrink-0 items-center rounded-full border font-medium transition-colors`,
                 size === "sm" ? "h-5 px-1.5 text-[10px]" : "h-6 px-2 text-xs",
@@ -127,8 +132,8 @@ export function TagList({
               `border-muted-foreground/40 text-muted-foreground hover:border-primary hover:bg-primary/5 hover:text-primary inline-flex items-center justify-center rounded-full border border-dashed transition-colors`,
               size === "sm" ? "size-5" : "size-6",
             )}
-            aria-label="Add tag"
-            title="Add tag"
+            aria-label={t("addTag")}
+            title={t("addTag")}
           >
             <Plus className={size === "sm" ? "h-2.5 w-2.5" : "size-3"} />
           </button>

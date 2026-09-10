@@ -59,6 +59,8 @@ const SAME_IN_BOTH = new Set([
   "booking.date", // Date / Date
   "booking.minutesShort", // {count} min — "min" is the abbreviation in both
   "booking.methodTerminal", // Terminal / Terminal — the card machine, same word
+  "shared.note", // Note / Note
+  "shared.priorityInfo", // Info / Info — the abbreviation in both
   // Two of the six tag-colour names are the same word in French. Both are
   // spelled identically and mean the same thing; changing either to make this
   // list shorter would make the French wrong.

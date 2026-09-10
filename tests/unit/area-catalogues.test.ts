@@ -77,6 +77,8 @@ const SAME_IN_BOTH = new Set([
   "customerPages.dashboard.tileMessages", // Messages / Messages
   "customerPages.dashboard.points", // {points} pts — the abbreviation in both
   "customerPages.dashboard.tierFallback", // Bronze / Bronze
+  "customerPages.bookings.metaDate", // Date / Date
+  "customerPages.bookings.metaTotal", // Total / Total
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

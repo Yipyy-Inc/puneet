@@ -4,6 +4,9 @@ import { Calendar, Dog, GraduationCap, Home, Scissors } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { bookings } from "@/data/bookings";
 import type { Pet } from "@/types/pet";
+import type { AppLocale } from "@/lib/language-settings";
+import { formatDateLong } from "@/lib/i18n/format";
+import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
 
 export type Booking = (typeof bookings)[number];
 
@@ -28,26 +31,33 @@ export function ServiceIcon({
   }
 }
 
-export function getStatusBadge(status: string) {
-  switch (status) {
-    case "confirmed":
-      return <Badge variant="default">Confirmed</Badge>;
-    case "pending":
-      return <Badge variant="secondary">Pending</Badge>;
-    case "request_submitted":
-      return <Badge variant="secondary">Request Submitted</Badge>;
-    case "waitlisted":
-      return <Badge variant="outline">Waitlisted</Badge>;
-    case "completed":
-      return <Badge variant="outline">Completed</Badge>;
-    case "cancelled":
-      return <Badge variant="destructive">Cancelled</Badge>;
-    default:
-      return <Badge>{status}</Badge>;
-  }
+// The words come from `messages.status` by the enum the booking carries;
+// only the VARIANT is decided here. A status nobody mapped still gets words,
+// never the raw `request_submitted`.
+const STATUS_VARIANT: Record<
+  string,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
+  confirmed: "default",
+  pending: "secondary",
+  request_submitted: "secondary",
+  waitlisted: "outline",
+  completed: "outline",
+  cancelled: "destructive",
+};
+
+export function getStatusBadge(status: string, locale: AppLocale) {
+  return (
+    <Badge variant={STATUS_VARIANT[status] ?? "default"}>
+      {statusLabel(locale, status)}
+    </Badge>
+  );
 }
 
-export function getPaymentBadge(paymentStatus: string | undefined) {
+export function getPaymentBadge(
+  paymentStatus: string | undefined,
+  t: (key: string) => string,
+) {
   switch (paymentStatus) {
     case "paid":
       return (
@@ -55,7 +65,7 @@ export function getPaymentBadge(paymentStatus: string | undefined) {
           variant="outline"
           className="h-5 border-emerald-300 bg-emerald-50 px-1.5 text-[10px] text-emerald-700"
         >
-          Paid
+          {t("paymentPaid")}
         </Badge>
       );
     case "pending":
@@ -64,13 +74,13 @@ export function getPaymentBadge(paymentStatus: string | undefined) {
           variant="outline"
           className="h-5 border-amber-300 bg-amber-50 px-1.5 text-[10px] text-amber-700"
         >
-          Payment due
+          {t("paymentDue")}
         </Badge>
       );
     case "refunded":
       return (
         <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-          Refunded
+          {t("paymentRefunded")}
         </Badge>
       );
     default:
@@ -78,13 +88,13 @@ export function getPaymentBadge(paymentStatus: string | undefined) {
   }
 }
 
-export function formatDate(dateString: string, isMounted: boolean) {
+export function formatDate(
+  dateString: string,
+  isMounted: boolean,
+  locale: AppLocale,
+) {
   if (!isMounted) return dateString;
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatDateLong(dateString, locale);
 }
 
 export function getPetForBooking(
@@ -99,7 +109,13 @@ export function downloadCalendarEvent(
   booking: Booking,
   petName: string,
   facilityName: string | undefined,
+  t: (key: string) => string,
+  locale: AppLocale,
 ) {
+  // The event lands in the customer's own calendar, in their language. The
+  // ICS field names — SUMMARY, DESCRIPTION — are the format, not copy.
+  const service = serviceTypeLabel(locale, booking.service);
+  const facility = facilityName || t("facilityFallback");
   const startDateTime = new Date(
     `${booking.startDate}T${booking.checkInTime || "09:00"}`,
   );
@@ -116,12 +132,13 @@ export function downloadCalendarEvent(
     "VERSION:2.0",
     "PRODID:-//Yipyy//Booking//EN",
     "BEGIN:VEVENT",
+    // french-ok: a machine identifier the calendar app matches on, never read
     `UID:booking-${booking.id}@yipyy.com`,
     `DTSTART:${formatICSDate(startDateTime)}`,
     `DTEND:${formatICSDate(endDateTime)}`,
-    `SUMMARY:${booking.service.charAt(0).toUpperCase() + booking.service.slice(1)} - ${petName}`,
-    `DESCRIPTION:Service: ${booking.service}\\nPet: ${petName}\\nLocation: ${facilityName || "Facility"}`,
-    `LOCATION:${facilityName || "Facility"}`,
+    `SUMMARY:${service} — ${petName}`,
+    `DESCRIPTION:${t("icsService")} ${service}\\n${t("icsPet")} ${petName}\\n${t("icsLocation")} ${facility}`,
+    `LOCATION:${facility}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");

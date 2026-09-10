@@ -38,6 +38,9 @@ import {
   getStatusBadge,
   type Booking,
 } from "./booking-helpers";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { formatMoney, formatTimeOfDay } from "@/lib/i18n/format";
 
 interface UpcomingBookingCardProps {
   booking: Booking;
@@ -57,6 +60,7 @@ export function UpcomingBookingCard({
   onAddNote,
 }: UpcomingBookingCardProps) {
   const router = useRouter();
+  const { t, fill, locale } = useCustomerText("bookings");
   const pet = getPetForBooking(booking, pets);
   const PetIcon = pet?.type === "Cat" ? Cat : Dog;
 
@@ -97,8 +101,8 @@ export function UpcomingBookingCard({
                       service={booking.service}
                       className="text-muted-foreground size-5"
                     />
-                    <h3 className="text-lg font-semibold capitalize">
-                      {booking.service}
+                    <h3 className="text-lg font-semibold">
+                      {serviceTypeLabel(locale, booking.service)}
                       {booking.serviceType && (
                         <span className="text-muted-foreground ml-2 font-normal">
                           • {booking.serviceType.replace(/_/g, " ")}
@@ -107,16 +111,16 @@ export function UpcomingBookingCard({
                     </h3>
                   </div>
                   <p className="text-muted-foreground text-sm">
-                    {pet?.name || "Pet"}
+                    {pet?.name || t("petFallback")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  {getStatusBadge(booking.status)}
-                  {getPaymentBadge(booking.paymentStatus)}
+                  {getStatusBadge(booking.status, locale)}
+                  {getPaymentBadge(booking.paymentStatus, t)}
                   {booking.status === "request_submitted" && (
                     <Badge variant="outline" className="text-xs">
                       <Clock className="mr-1 size-3" />
-                      Response in ~24h
+                      {t("responseIn24h")}
                     </Badge>
                   )}
                 </div>
@@ -137,7 +141,9 @@ export function UpcomingBookingCard({
                     <blockquote
                       key={note.id}
                       className="rounded-sm border border-blue-200 bg-blue-50 p-2 text-xs dark:border-blue-800 dark:bg-blue-950/20"
-                      aria-label={`Staff note from ${note.createdBy}`}
+                      aria-label={fill("staffNoteFrom", {
+                        name: note.createdBy,
+                      })}
                     >
                       <span className="font-medium">{note.createdBy}:</span>{" "}
                       {note.content}
@@ -149,27 +155,27 @@ export function UpcomingBookingCard({
               <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                 <BookingMeta
                   icon={Calendar}
-                  label="Date"
-                  value={formatDate(booking.startDate, isMounted)}
+                  label={t("metaDate")}
+                  value={formatDate(booking.startDate, isMounted, locale)}
                 />
                 <BookingMeta
                   icon={Clock}
-                  label="Time"
+                  label={t("metaTime")}
                   value={
                     booking.checkInTime
-                      ? `${booking.checkInTime}${booking.checkOutTime ? ` - ${booking.checkOutTime}` : ""}`
+                      ? `${formatTimeOfDay(booking.checkInTime, locale)}${booking.checkOutTime ? ` – ${formatTimeOfDay(booking.checkOutTime, locale)}` : ""}`
                       : "—"
                   }
                 />
                 <BookingMeta
                   icon={MapPin}
-                  label="Location"
+                  label={t("metaLocation")}
                   value={facilityName || "—"}
                 />
                 <BookingMeta
                   icon={DollarSign}
-                  label="Total"
-                  value={`$${booking.totalCost.toFixed(2)}`}
+                  label={t("metaTotal")}
+                  value={formatMoney(booking.totalCost, locale)}
                 />
               </div>
 
@@ -190,7 +196,7 @@ export function UpcomingBookingCard({
                       }}
                     >
                       <Edit className="mr-2 size-4" />
-                      Reschedule
+                      {t("reschedule")}
                     </Button>
                     <Button
                       variant="outline"
@@ -202,7 +208,7 @@ export function UpcomingBookingCard({
                       className="text-destructive hover:text-destructive"
                     >
                       <X className="mr-2 size-4" />
-                      Cancel
+                      {t("cancelBooking")}
                     </Button>
                   </>
                 )}
@@ -215,7 +221,7 @@ export function UpcomingBookingCard({
                   >
                     <Link href="/customer/billing">
                       <CreditCard className="mr-2 size-4" />
-                      Pay now
+                      {t("payNow")}
                     </Link>
                   </Button>
                 )}
@@ -229,32 +235,34 @@ export function UpcomingBookingCard({
                     }}
                   >
                     <MessageSquare className="mr-2 size-4" />
-                    Message Facility
+                    {t("messageFacility")}
                   </Button>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm">
                       <Download className="mr-2 size-4" />
-                      More
+                      {t("more")}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onAddNote(booking)}>
                       <MessageSquare className="mr-2 size-4" />
-                      Add Note/Message
+                      {t("addNote")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() =>
                         downloadCalendarEvent(
                           booking,
-                          pet?.name ?? "Pet",
+                          pet?.name ?? t("petFallback"),
                           facilityName,
+                          t,
+                          locale,
                         )
                       }
                     >
                       <CalendarIcon className="mr-2 size-4" />
-                      Add to Calendar
+                      {t("addToCalendar")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

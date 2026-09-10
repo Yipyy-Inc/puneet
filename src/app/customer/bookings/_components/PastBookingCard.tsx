@@ -16,6 +16,9 @@ import {
   getStatusBadge,
   type Booking,
 } from "./booking-helpers";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { formatMoney, formatTimeOfDay } from "@/lib/i18n/format";
 
 interface PastBookingCardProps {
   booking: Booking;
@@ -34,6 +37,7 @@ export function PastBookingCard({
   canTip,
   onLeaveTip,
 }: PastBookingCardProps) {
+  const { t, fill, locale } = useCustomerText("bookings");
   const pet = getPetForBooking(booking, pets);
   const PetIcon = pet?.type === "Cat" ? Cat : Dog;
 
@@ -42,7 +46,7 @@ export function PastBookingCard({
 
   const handleReceipt = () => {
     // TODO: hook up to real receipt download/email when API lands.
-    toast.success("Receipt sent to your email.");
+    toast.success(t("receiptSent"));
   };
 
   return (
@@ -74,27 +78,33 @@ export function PastBookingCard({
                         service={booking.service}
                         className="text-muted-foreground size-5"
                       />
-                      <h3 className="font-semibold capitalize">
-                        {booking.service}
+                      <h3 className="font-semibold">
+                        {serviceTypeLabel(locale, booking.service)}
                       </h3>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      {pet?.name || "Pet"} ·{" "}
-                      {formatDate(booking.startDate, isMounted)}
+                      {pet?.name || t("petFallback")} ·{" "}
+                      {formatDate(booking.startDate, isMounted, locale)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    {getStatusBadge(booking.status)}
-                    {getPaymentBadge(booking.paymentStatus)}
+                    {getStatusBadge(booking.status, locale)}
+                    {getPaymentBadge(booking.paymentStatus, t)}
                   </div>
                 </div>
                 <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                  <span>${booking.totalCost.toFixed(2)}</span>
-                  {booking.checkInTime && <span>{booking.checkInTime}</span>}
+                  <span className="tabular-nums">
+                    {formatMoney(booking.totalCost, locale)}
+                  </span>
+                  {booking.checkInTime && (
+                    <span>{formatTimeOfDay(booking.checkInTime, locale)}</span>
+                  )}
                   {existingTip > 0 && (
                     <span className="text-primary inline-flex items-center gap-1 font-medium">
-                      <Heart className="size-3 fill-current" />$
-                      {existingTip.toFixed(2)} tipped
+                      <Heart className="size-3 fill-current" />
+                      {fill("tipped", {
+                        amount: formatMoney(existingTip, locale),
+                      })}
                     </span>
                   )}
                 </div>
@@ -116,14 +126,14 @@ export function PastBookingCard({
                         }}
                       >
                         <Receipt className="mr-2 size-4" />
-                        Email receipt
+                        {t("emailReceipt")}
                       </Button>
                     )}
                     {isUnpaid && (
                       <Button variant="default" size="sm" asChild>
                         <Link href="/customer/billing">
                           <CreditCard className="mr-2 size-4" />
-                          Pay outstanding balance
+                          {t("payBalance")}
                         </Link>
                       </Button>
                     )}
@@ -146,17 +156,16 @@ export function PastBookingCard({
           </div>
           <div className="flex-1 text-sm">
             <p className="font-semibold">
-              Leave a tip for{" "}
               {pet?.name
-                ? `the team that cared for ${pet.name}`
-                : "the care team"}
+                ? fill("tipForPetTeam", { pet: pet.name })
+                : t("tipForTeam")}
             </p>
             <p className="text-muted-foreground text-[12px]">
-              100% goes to the staff · takes 10 seconds
+              {t("tipAllToStaff")}
             </p>
           </div>
           <Badge className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-[11px] font-semibold transition-transform group-hover:scale-105">
-            Tip now
+            {t("tipNow")}
           </Badge>
         </button>
       )}

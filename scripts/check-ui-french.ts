@@ -1033,6 +1033,30 @@ if (process.env.UI_FRENCH_FILE) {
   process.exit(0);
 }
 
+// ── ONE PAGE, EVERY FILE: `UI_FRENCH_FROM=src/app/…/page.tsx`
+//
+// A page is its route file AND the components it pulls in — a third of the
+// customer portal's English lives in `components/`, not `app/`. This walks
+// from one route the way the page surfaces do and lists every reachable file
+// that still carries a string, with its count, so a page can be converted as
+// one piece. Also a worklist, not a check.
+if (process.env.UI_FRENCH_FROM) {
+  const root = process.env.UI_FRENCH_FROM.replace(/\\/g, "/");
+  const seen = new Set<string>();
+  walk(root, 5, seen, true);
+  const rows = [...seen]
+    .filter((f) => isReadable(f) && isComponent(f))
+    .map((f) => [f, hits(f, true).length] as const)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  for (const [f, n] of rows) console.log(`${String(n).padStart(5)}  ${f}`);
+  const sum = rows.reduce((s, [, n]) => s + n, 0);
+  console.log(
+    `\n${sum} strings in ${rows.length} files reachable from ${root}`,
+  );
+  process.exit(0);
+}
+
 console.log(`${ANSI.bold}The interface, in French${ANSI.reset}\n`);
 
 for (const surface of SURFACES) {

@@ -65,6 +65,8 @@ type ShellCatalogue = {
    * a brand-new browser, and correct after that.
    */
   meta: Record<string, string>;
+  /** `components/shared` — notes, tags: reached from every portal, owned by none. */
+  shared: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */
