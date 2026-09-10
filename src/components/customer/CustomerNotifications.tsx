@@ -40,6 +40,26 @@ export interface Notification {
   category: string;
 }
 
+// A group heading by the record's category. The category is stored as an
+// English word ("Reminders"), so it is looked up here rather than shown as
+// is; one this map does not know is shown as recorded.
+const CATEGORY_KEY: Record<string, string> = {
+  Reminders: "notifCatReminders",
+  Payments: "notifCatPayments",
+  Reports: "notifCatReports",
+  Health: "notifCatHealth",
+  Bookings: "notifCatBookings",
+  Forms: "notifCatForms",
+  Rewards: "notifCatRewards",
+};
+
+export function notificationCategoryLabel(
+  category: string,
+  t: (key: string) => string,
+): string {
+  return CATEGORY_KEY[category] ? t(CATEGORY_KEY[category]) : category;
+}
+
 const notificationIcons: Record<Notification["type"], string> = {
   reminder: "📅",
   receipt: "🧾",
@@ -121,7 +141,7 @@ export function CustomerNotifications() {
                 ([category, categoryNotifications]) => (
                   <div key={category} className="mb-4">
                     <div className="text-muted-foreground px-2 py-1 text-xs font-semibold uppercase">
-                      {category}
+                      {notificationCategoryLabel(category, t)}
                     </div>
                     {categoryNotifications.map((notif) => (
                       <div

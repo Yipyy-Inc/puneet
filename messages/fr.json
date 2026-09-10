@@ -5940,7 +5940,14 @@
       "viewAllNotifications": "Voir toutes les notifications",
       "switchFacility": "Changer d’établissement",
       "selectFacility": "Choisir un établissement",
-      "bookAService": "Réserver un service"
+      "bookAService": "Réserver un service",
+      "notifCatReminders": "Rappels",
+      "notifCatPayments": "Paiements",
+      "notifCatReports": "Bulletins",
+      "notifCatHealth": "Santé",
+      "notifCatBookings": "Réservations",
+      "notifCatForms": "Formulaires",
+      "notifCatRewards": "Récompenses"
     },
     "employee": {
       "calling": "Appels",
@@ -9313,6 +9320,22 @@
         "addedToWallet": "Ajouté à votre portefeuille !",
         "nowInWallet": "{amount} est maintenant dans votre portefeuille, prêt à être utilisé au paiement.",
         "redeemAnother": "En échanger une autre"
+      },
+      "notifications": {
+        "notifications": "Notifications",
+        "unreadOne": "{n} notification non lue",
+        "unreadMany": "{n} notifications non lues",
+        "allCaughtUp": "Vous êtes à jour !",
+        "markAllAsRead": "Tout marquer comme lu",
+        "tabAll": "Toutes",
+        "tabUnread": "Non lues",
+        "tabRead": "Lues",
+        "noUnread": "Aucune notification non lue",
+        "noRead": "Aucune notification lue",
+        "noNotifications": "Aucune notification",
+        "markAsRead": "Marquer comme lue",
+        "delete": "Supprimer",
+        "viewDetails": "Voir les détails →"
       }
     }
   }
