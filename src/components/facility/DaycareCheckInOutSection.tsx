@@ -31,21 +31,22 @@ import {
   ClipboardCheck,
   CheckCircle2,
 } from "lucide-react";
-import { DaycareCheckIn, daycareRates } from "@/data/daycare";
+import type { DaycareCheckIn } from "@/data/daycare";
 import {
   useDaycareDay,
   useDaycareCheckIn,
   useDaycareVisitUpdate,
   useDaycareRevert,
 } from "@/lib/api/daycare-attendance";
-import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { clients } from "@/data/clients";
+import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 
 interface UnifiedCheckIn {
   id: string;
   petId: number;
   petName: string;
   petBreed: string;
+  /** The owner's client ref, from the visit — what the pet links use. */
+  ownerId: number;
   ownerName: string;
   ownerPhone: string;
   serviceType: "daycare";
@@ -66,6 +67,7 @@ function normalizeToUnifiedCheckIn(
     petId: item.petId,
     petName: item.petName,
     petBreed: item.petBreed,
+    ownerId: item.ownerId,
     ownerName: item.ownerName,
     ownerPhone: item.ownerPhone,
     serviceType: "daycare" as const,
@@ -79,12 +81,6 @@ function normalizeToUnifiedCheckIn(
   }));
 
   return daycareItems;
-}
-
-function calculateDaycarePrice(rateType: string, petSize: string): number {
-  const rate = daycareRates.find((r) => r.type === rateType);
-  if (!rate) return 0;
-  return rate.sizePricing[petSize as keyof typeof rate.sizePricing] || 0;
 }
 
 const petImages: Record<number, string> = {
@@ -102,19 +98,17 @@ const getPetImage = (petId: number) => petImages[petId];
 
 export function DaycareCheckInOutSection() {
   const isMounted = useHydrated();
-  const { recordEvent } = useLoyaltyEngine();
+  const earnPoints = useEarnLoyaltyPoints();
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
     "check-in" | "check-out" | "view" | null
   >(null);
   const [selectedItem, setSelectedItem] = useState<UnifiedCheckIn | null>(null);
 
-  // Helper function to find client for a pet
-  const findClientForPet = (petId: number) => {
-    return clients.find((client) =>
-      client.pets.some((pet) => pet.id === petId),
-    );
-  };
+  // The visit's own owner. This searched the CLIENTS FIXTURE for the pet, so a
+  // real dog linked to "#" or to whichever invented client had the same pet id.
+  const clientOf = (item: UnifiedCheckIn) =>
+    item.ownerId ? { id: item.ownerId } : undefined;
 
   // Section visibility states
   const [showCheckedIn, setShowCheckedIn] = useState(true);
@@ -216,7 +210,6 @@ export function DaycareCheckInOutSection() {
     const bookingRef = Number(selectedItem.id);
     const isCheckIn = checkInOutMode === "check-in";
     const actionLabel = isCheckIn ? "Checked In" : "Checked Out";
-    const visit = daycareData.find((c) => c.id === selectedItem.id);
 
     // Loyalty belongs to a completed stay, so it runs only after the CHECK-OUT
     // lands. Firing it beside a local setState — which is what happened before
@@ -227,19 +220,12 @@ export function DaycareCheckInOutSection() {
     // A second, client-side scheduler was a second answer to "was this client
     // asked", and the one in localStorage could never be the true one.
     const afterCheckOut = () => {
-      const loyaltyClient = findClientForPet(selectedItem.petId);
-      if (loyaltyClient) {
-        recordEvent({
-          type: "booking_completed",
-          id: selectedItem.id,
-          customerId: loyaltyClient.id,
-          amount: visit
-            ? calculateDaycarePrice(visit.rateType, visit.petSize)
-            : 0,
-          serviceType: "daycare",
-          isService: true,
-        });
-      }
+      // The facility's own earning rules, on the server, for this booking —
+      // idempotent, so a second checkout earns nothing twice. It was an
+      // in-memory engine fed a price from a fixture rate card.
+      void earnPoints
+        .mutateAsync({ bookingRef: Number(selectedItem.id) })
+        .catch(() => undefined);
     };
 
     const onError = (error: Error) => toast.error(error.message);
@@ -473,7 +459,7 @@ export function DaycareCheckInOutSection() {
                   </p>
                 ) : (
                   scheduledArrivals.map((item) => {
-                    const client = findClientForPet(item.petId);
+                    const client = clientOf(item);
                     return (
                       <div
                         key={item.id}
@@ -576,7 +562,7 @@ export function DaycareCheckInOutSection() {
                   </p>
                 ) : (
                   displayedPets.map((item) => {
-                    const client = findClientForPet(item.petId);
+                    const client = clientOf(item);
                     return (
                       <div
                         key={item.id}
@@ -697,7 +683,7 @@ export function DaycareCheckInOutSection() {
                   </p>
                 ) : (
                   checkedOutToday.map((item) => {
-                    const client = findClientForPet(item.petId);
+                    const client = clientOf(item);
                     return (
                       <div
                         key={item.id}
@@ -816,7 +802,7 @@ export function DaycareCheckInOutSection() {
               <div className="space-y-4 py-4">
                 <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                   {(() => {
-                    const client = findClientForPet(selectedItem.petId);
+                    const client = clientOf(selectedItem);
                     return getPetImage(selectedItem.petId) ? (
                       <Link
                         href={
@@ -852,7 +838,7 @@ export function DaycareCheckInOutSection() {
                   <div>
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const client = findClientForPet(selectedItem.petId);
+                        const client = clientOf(selectedItem);
                         return (
                           <Link
                             href={
