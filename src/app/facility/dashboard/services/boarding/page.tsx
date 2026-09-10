@@ -1,147 +1,204 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { StatCard } from "@/components/ui/StatCard";
+import { useMemo } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
+  BookOpen,
   Bed,
-  Users,
-  LogIn,
-  LogOut,
   Clock,
   DollarSign,
+  LogIn,
+  LogOut,
   PawPrint,
   Phone,
-  Calendar,
-  AlertTriangle,
   Pill,
-  Utensils,
-  BookOpen,
 } from "lucide-react";
-// `boardingCapacity` and `getOccupancyStats` are gone from this import: both
-// counted against a hardcoded 30 kennels that matched no room list. Occupancy
-// comes from the rooms table now.
-import {
-  boardingGuests,
-  getCurrentGuests,
-  BoardingGuest,
-} from "@/data/boarding";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/ui/StatCard";
 import { useBoardingRooms, summariseOccupancy } from "@/lib/api/boarding-rooms";
-import { boardingAnalytics } from "@/lib/report-data-sources";
-import { formatCurrency, formatPercent } from "@/lib/format";
+import { useBoardingDay } from "@/lib/api/boarding-attendance";
+import { bookingQueries } from "@/lib/api/booking";
+import { clientQueries } from "@/lib/api/client";
+import {
+  formatDateShort,
+  formatMoney,
+  formatPercent,
+  formatTime,
+} from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { BoardingArrival } from "@/lib/api/mappers/boarding-arrival";
+
+// ============================================================================
+// The boarding overview: who is here, who is coming, who is going.
+//
+// ── WHAT IT REPLACES ──────────────────────────────────────────────────────
+//
+// Every list on this page read the `boardingGuests` FIXTURE, filtered against
+// a hard-coded `today = "2026-04-26"` — so a real facility saw the same
+// invented April guests forever, and the arrivals it had actually booked for
+// today appeared nowhere. Only the occupancy card was real.
+//
+// Arrivals, departures and the guests on site now come from the same
+// `/api/boarding/attendance` day the arrivals board works from, so the two
+// pages cannot disagree. Medication comes from the booking; allergies from the
+// pet record.
+// ============================================================================
+
+const DAY_MS = 86_400_000;
+
+/** A date's local YYYY-MM-DD, for "which day" questions. */
+function localDay(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function hasAllergy(text: string | undefined): boolean {
+  const value = (text ?? "").trim();
+  return value !== "" && !/^(none|no|n\/a|aucune?)$/i.test(value);
+}
 
 export default function BoardingDashboardPage() {
-  const [guests] = useState<BoardingGuest[]>(boardingGuests);
-
-  const currentGuests = getCurrentGuests();
-  // Occupancy from the kennels themselves. `getOccupancyStats()` counted
-  // fixture guests by a `packageType` STRING and divided by a hardcoded total
-  // of 30 — a number that matched no room list, in a vocabulary
-  // (standard/premium/luxury) that was not the room types
-  // (standard/deluxe/vip/cat-suite). Three names for one idea, none of which
-  // could be checked against another.
+  const { t, fill, locale } = useStaffText("boardingOverview");
   const { data: roomsPayload } = useBoardingRooms();
   const occupancy = summariseOccupancy(roomsPayload);
-  const analytics = boardingAnalytics();
+  const { data: day, isPending, isError } = useBoardingDay();
+  const { data: bookings = [] } = useQuery(bookingQueries.all());
+  const { data: clients = [] } = useQuery(clientQueries.all());
 
-  // Filter for today's arrivals and departures (using mock date for demo)
-  const today = "2026-04-26";
-  const todayArrivals = guests.filter((g) => {
-    const checkInDate = g.checkInDate.split("T")[0];
-    return checkInDate === today && g.status === "scheduled";
-  });
+  const guests = useMemo(() => day?.guests ?? [], [day]);
+  const current = guests.filter((g) => g.status === "checked-in");
+  const arrivals = guests.filter((g) => g.isArrivingToday);
+  const departures = guests.filter(
+    (g) => g.isDepartingToday && g.status !== "scheduled",
+  );
 
-  const todayDepartures = guests.filter((g) => {
-    const checkOutDate = g.checkOutDate.split("T")[0];
-    return checkOutDate === today && g.status === "checked-in";
-  });
+  const medsByBooking = useMemo(
+    () =>
+      new Set(
+        bookings
+          .filter((b) => (b.medications ?? []).length > 0)
+          .map((b) => String(b.id)),
+      ),
+    [bookings],
+  );
+  const allergicPets = useMemo(
+    () =>
+      new Set(
+        clients.flatMap((c) =>
+          (c.pets ?? [])
+            .filter((p) => hasAllergy(p.allergies))
+            .map((p) => p.id),
+        ),
+      ),
+    [clients],
+  );
+  const onMeds = current.filter((g) => medsByBooking.has(g.id));
+  const allergic = current.filter((g) => allergicPets.has(g.petId));
 
-  // Calculate revenue
-  const currentRevenue = currentGuests.reduce(
-    (acc, g) => acc + g.totalPrice,
+  const owed = current.reduce(
+    (sum, g) => sum + Math.max(0, g.amountDue - g.amountPaid),
     0,
   );
+  const totalNights = current.reduce((sum, g) => sum + g.nights, 0);
+  const nightlyRate =
+    totalNights > 0
+      ? current.reduce((sum, g) => sum + g.totalCost, 0) / totalNights
+      : 0;
+  const averageStay =
+    current.length > 0
+      ? Math.round((totalNights / current.length) * 10) / 10
+      : 0;
 
-  // Pets needing attention (medications or allergies)
-  const petsWithMedications = currentGuests.filter(
-    (g) => g.medications.length > 0,
+  const nightsLabel = (n: number) =>
+    n === 1 ? t("nightOne") : fill("nights", { n });
+  const petLabel = (g: BoardingArrival) => g.petNames.join(", ");
+  const bookingHref = (g: BoardingArrival) =>
+    `/facility/dashboard/clients/${g.ownerId}/bookings/${g.id}`;
+
+  const capacity =
+    occupancy.percentage >= 90
+      ? t("capacityFull")
+      : occupancy.percentage >= 75
+        ? t("capacityBusy")
+        : occupancy.percentage >= 50
+          ? t("capacityModerate")
+          : t("capacityAvailable");
+
+  const today = localDay(new Date().toISOString());
+  const goesHome = (g: BoardingArrival) => {
+    if (g.isOverdue) return t("overdue");
+    const days = Math.round(
+      (new Date(`${localDay(g.scheduledDeparture)}T12:00:00`).getTime() -
+        new Date(`${today}T12:00:00`).getTime()) /
+        DAY_MS,
+    );
+    if (days <= 0) return t("today");
+    if (days === 1) return t("tomorrow");
+    return fill("inDays", { n: days });
+  };
+
+  const empty = (text: string, Icon: typeof Bed) => (
+    <div className="text-ink-tertiary flex flex-col items-center gap-2 py-8 text-center">
+      <Icon className="size-6" />
+      <p className="text-sm">{text}</p>
+    </div>
   );
-  const petsWithAllergies = currentGuests.filter((g) => g.allergies.length > 0);
 
-  const getCapacityColor = (percentage: number) => {
-    if (percentage >= 90) return "bg-destructive";
-    if (percentage >= 75) return "bg-warning";
-    return "bg-success";
-  };
-
-  const getCapacityStatus = (percentage: number) => {
-    if (percentage >= 90)
-      return { label: "Almost Full", variant: "destructive" as const };
-    if (percentage >= 75) return { label: "Busy", variant: "warning" as const };
-    if (percentage >= 50)
-      return { label: "Moderate", variant: "secondary" as const };
-    return { label: "Available", variant: "success" as const };
-  };
-
-  const status = getCapacityStatus(occupancy.percentage);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
+  const listSkeleton = (
+    <div className="space-y-3">
+      <Skeleton className="h-16 w-full rounded-2xl" />
+      <Skeleton className="h-16 w-full rounded-2xl" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Capacity Overview */}
+      {/* Capacity — orange is the capacity territory, and full is not an error. */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-lg font-semibold">
-              Current Occupancy
+              {t("occupancyTitle")}
             </CardTitle>
-            <Badge variant={status.variant}>{status.label}</Badge>
+            <Badge variant="outline">{capacity}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              {occupancy.occupied} of {occupancy.total} kennels occupied
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">
+              {fill("kennelsOccupied", {
+                occupied: occupancy.occupied,
+                total: occupancy.total,
+              })}
             </span>
-            <span className="font-medium">{occupancy.percentage}%</span>
+            <span className="font-semibold tabular-nums">
+              {formatPercent(occupancy.percentage / 100, locale)}
+            </span>
           </div>
-          <div className="bg-muted relative h-4 w-full overflow-hidden rounded-full">
+          <div className="bg-primary-tint-2 h-3 w-full overflow-hidden rounded-full">
             <div
-              className={`h-full transition-all ${getCapacityColor(occupancy.percentage)} `}
-              style={{ width: `${occupancy.percentage}%` }}
+              className="bg-brand-orange h-full rounded-full"
+              style={{ width: `${Math.min(100, occupancy.percentage)}%` }}
             />
           </div>
-
-          {/* Occupancy by room type — one tile per type the facility actually
-              has, rather than three hardcoded ones named after a vocabulary no
-              room used. A facility with no kennels gets no tiles, which is the
-              honest rendering of an unbuilt room list. */}
           {Object.keys(occupancy.byType).length > 0 && (
             <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3">
               {Object.entries(occupancy.byType).map(([typeId, counts]) => (
                 <div
                   key={typeId}
-                  className="bg-muted/50 rounded-lg p-3 text-center"
+                  className="rounded-2xl border p-3 text-center"
                 >
-                  <p className="text-2xl font-bold">{counts.occupied}</p>
-                  <p className="text-muted-foreground text-xs capitalize">
+                  <p className="text-2xl font-bold tabular-nums">
+                    {counts.occupied}
+                  </p>
+                  <p className="text-ink-tertiary text-xs capitalize">
                     {typeId.replace(/-/g, " ")} / {counts.total}
                   </p>
                 </div>
@@ -151,96 +208,89 @@ export default function BoardingDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Current Guests"
-          value={currentGuests.length}
-          subtitle={`${formatPercent(analytics.occupancyRate)} occupancy`}
+          title={t("statCurrent")}
+          value={current.length}
+          subtitle={fill("statCurrentSub", {
+            pct: formatPercent(occupancy.percentage / 100, locale),
+          })}
           icon={Bed}
           variant="primary"
         />
         <StatCard
-          title="Today's Arrivals"
-          value={todayArrivals.length}
-          subtitle="Scheduled check-ins"
+          title={t("statArrivals")}
+          value={arrivals.length}
+          subtitle={fill("statArrivalsSub", {
+            n: arrivals.filter((g) => g.status === "scheduled").length,
+          })}
           icon={LogIn}
           variant="success"
         />
         <StatCard
-          title="Today's Departures"
-          value={todayDepartures.length}
-          subtitle="Scheduled check-outs"
+          title={t("statDepartures")}
+          value={departures.length}
+          subtitle={fill("statDeparturesSub", {
+            n: departures.filter((g) => g.status === "checked-in").length,
+          })}
           icon={LogOut}
           variant="warning"
         />
         <StatCard
-          title="Current Revenue"
-          value={formatCurrency(currentRevenue)}
-          subtitle="From active stays"
+          title={t("statBalance")}
+          value={formatMoney(owed, locale)}
+          subtitle={t("statBalanceSub")}
           icon={DollarSign}
           variant="info"
         />
         <StatCard
-          title="Avg Daily Rate"
-          value={formatCurrency(analytics.adr)}
-          subtitle="Per guest, per night"
+          title={t("statAdr")}
+          value={formatMoney(nightlyRate, locale)}
+          subtitle={t("statAdrSub")}
           icon={DollarSign}
           variant="primary"
         />
         <StatCard
-          title="Avg Length of Stay"
-          value={`${analytics.avgLengthOfStay} nights`}
-          subtitle="Across active guests"
+          title={t("statStay")}
+          value={nightsLabel(averageStay)}
+          subtitle={t("statAdrSub")}
           icon={Clock}
           variant="info"
         />
-        <StatCard
-          title="Booking Revenue"
-          value={formatCurrency(analytics.revenue)}
-          subtitle="On-site guests"
-          icon={DollarSign}
-          variant="success"
-        />
       </div>
 
-      {/* Alerts Section */}
-      {(petsWithMedications.length > 0 || petsWithAllergies.length > 0) && (
-        <Card className="border-warning/50 bg-warning/5">
+      {(onMeds.length > 0 || allergic.length > 0) && (
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-warning flex items-center gap-2 text-lg font-semibold">
               <AlertTriangle className="size-5" />
-              Attention Required
+              {t("attention")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
-              {petsWithMedications.length > 0 && (
-                <div className="bg-background flex items-start gap-3 rounded-lg border p-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                    <Pill className="size-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {petsWithMedications.length} pet(s) need medication
+              {onMeds.length > 0 && (
+                <div className="flex items-start gap-3 rounded-2xl border p-3">
+                  <Pill className="text-ink-secondary mt-0.5 size-5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {fill("onMeds", { n: onMeds.length })}
                     </p>
-                    <p className="text-muted-foreground text-sm">
-                      {petsWithMedications.map((p) => p.petName).join(", ")}
+                    <p className="text-ink-secondary text-sm">
+                      {onMeds.map(petLabel).join(", ")}
                     </p>
                   </div>
                 </div>
               )}
-              {petsWithAllergies.length > 0 && (
-                <div className="bg-background flex items-start gap-3 rounded-lg border p-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                    <Utensils className="size-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {petsWithAllergies.length} pet(s) have allergies
+              {allergic.length > 0 && (
+                <div className="flex items-start gap-3 rounded-2xl border p-3">
+                  <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {fill("withAllergies", { n: allergic.length })}
                     </p>
-                    <p className="text-muted-foreground text-sm">
-                      {petsWithAllergies.map((p) => p.petName).join(", ")}
+                    <p className="text-ink-secondary text-sm">
+                      {allergic.map(petLabel).join(", ")}
                     </p>
                   </div>
                 </div>
@@ -250,241 +300,218 @@ export default function BoardingDashboardPage() {
         </Card>
       )}
 
+      {isError && <p className="text-destructive text-sm">{t("loadFailed")}</p>}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Today's Arrivals */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <LogIn className="text-success size-5" />
-              Today&apos;s Arrivals
+              {t("statArrivals")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todayArrivals.length === 0 ? (
-              <div className="text-muted-foreground py-8 text-center">
-                <Calendar className="mx-auto mb-3 size-12 opacity-50" />
-                <p>No arrivals scheduled for today</p>
-              </div>
+            {isPending ? (
+              listSkeleton
+            ) : arrivals.length === 0 ? (
+              empty(t("noArrivals"), LogIn)
             ) : (
-              <div className="space-y-3">
-                {todayArrivals.map((guest) => (
-                  <div
-                    key={guest.id}
-                    className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                        <PawPrint className="text-primary size-5" />
+              <ul className="space-y-3">
+                {arrivals.map((g) => (
+                  <li key={g.id}>
+                    <Link
+                      href={bookingHref(g)}
+                      className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border p-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <PawPrint className="text-primary size-5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {petLabel(g)}
+                          </p>
+                          <p className="text-ink-tertiary truncate text-xs">
+                            {[g.petBreed, g.ownerName]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{guest.petName}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {guest.petBreed} • {guest.ownerName}
+                      <div className="shrink-0 text-right">
+                        <Badge variant="outline">
+                          {g.roomName ?? t("noKennel")}
+                        </Badge>
+                        <p className="text-ink-tertiary mt-1 text-xs tabular-nums">
+                          {g.checkedInAt
+                            ? fill("onSiteSince", {
+                                time: formatTime(g.checkedInAt, locale),
+                              })
+                            : fill("dueAt", {
+                                time: formatTime(g.scheduledArrival, locale),
+                              })}
                         </p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline">{guest.kennelName}</Badge>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        <Clock className="mr-1 inline size-3" />
-                        {formatTime(guest.checkInDate)}
-                      </p>
-                    </div>
-                  </div>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </CardContent>
         </Card>
 
-        {/* Today's Departures */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <LogOut className="text-warning size-5" />
-              Today&apos;s Departures
+              {t("statDepartures")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todayDepartures.length === 0 ? (
-              <div className="text-muted-foreground py-8 text-center">
-                <Calendar className="mx-auto mb-3 size-12 opacity-50" />
-                <p>No departures scheduled for today</p>
-              </div>
+            {isPending ? (
+              listSkeleton
+            ) : departures.length === 0 ? (
+              empty(t("noDepartures"), LogOut)
             ) : (
-              <div className="space-y-3">
-                {todayDepartures.map((guest) => (
-                  <div
-                    key={guest.id}
-                    className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="bg-warning/10 flex size-10 items-center justify-center rounded-full">
-                        <PawPrint className="text-warning size-5" />
+              <ul className="space-y-3">
+                {departures.map((g) => (
+                  <li key={g.id}>
+                    <Link
+                      href={bookingHref(g)}
+                      className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border p-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <PawPrint className="text-primary size-5 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {petLabel(g)}
+                          </p>
+                          <p className="text-ink-tertiary truncate text-xs">
+                            {[g.petBreed, nightsLabel(g.nights)]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{guest.petName}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {guest.petBreed} • {guest.totalNights} nights
+                      <div className="shrink-0 text-right">
+                        <p className="font-semibold tabular-nums">
+                          {g.checkedOutAt
+                            ? fill("leftAt", {
+                                time: formatTime(g.checkedOutAt, locale),
+                              })
+                            : fill("balanceDue", {
+                                amount: formatMoney(
+                                  Math.max(0, g.amountDue - g.amountPaid),
+                                  locale,
+                                ),
+                              })}
                         </p>
+                        {g.ownerPhone && (
+                          <p className="text-ink-tertiary mt-1 flex items-center justify-end gap-1 text-xs">
+                            <Phone className="size-3" />
+                            {g.ownerPhone}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        {formatCurrency(guest.totalPrice)}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        <Phone className="mr-1 inline size-3" />
-                        {guest.ownerPhone}
-                      </p>
-                    </div>
-                  </div>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Current Guests */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Users className="size-5" />
-              Current Boarding Guests
+              <Bed className="size-5" />
+              {t("currentTitle")}
             </CardTitle>
-            <span className="text-muted-foreground text-sm">
-              Avg. stay: {analytics.avgLengthOfStay} nights
-            </span>
+            {current.length > 0 && (
+              <span className="text-ink-tertiary text-sm">
+                {fill("averageStayLine", { nights: nightsLabel(averageStay) })}
+              </span>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          {currentGuests.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center">
-              <Bed className="mx-auto mb-3 size-12 opacity-50" />
-              <p>No pets currently boarding</p>
-            </div>
+          {isPending ? (
+            listSkeleton
+          ) : current.length === 0 ? (
+            empty(t("noneBoarding"), Bed)
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {currentGuests.map((guest) => {
-                const checkOut = new Date(guest.checkOutDate);
-                const today = new Date();
-                const daysRemaining = Math.ceil(
-                  (checkOut.getTime() - today.getTime()) /
-                    (1000 * 60 * 60 * 24),
-                );
-
-                return (
-                  <div
-                    key={guest.id}
-                    className="bg-card hover:bg-muted/50 rounded-lg border p-4 transition-colors"
-                  >
-                    <div className="mb-3 flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
-                          <PawPrint className="text-primary size-6" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">{guest.petName}</p>
-                          <p className="text-muted-foreground text-sm">
-                            {guest.petBreed}
-                          </p>
-                        </div>
+              {current.map((g) => (
+                <div key={g.id} className="rounded-2xl border p-4">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <PawPrint className="text-primary size-6 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{petLabel(g)}</p>
+                        <p className="text-ink-tertiary truncate text-sm">
+                          {g.petBreed}
+                        </p>
                       </div>
-                      <Badge
-                        variant={
-                          guest.packageType === "Luxury Suite"
-                            ? "default"
-                            : guest.packageType === "Premium Suite"
-                              ? "secondary"
-                              : "outline"
+                    </div>
+                    {g.roomName && (
+                      <Badge variant="outline">{g.roomName}</Badge>
+                    )}
+                  </div>
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-tertiary">{t("owner")}</dt>
+                      <dd className="truncate">{g.ownerName}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-tertiary">{t("stay")}</dt>
+                      <dd className="tabular-nums">
+                        {formatDateShort(localDay(g.scheduledArrival), locale)}{" "}
+                        →{" "}
+                        {formatDateShort(
+                          localDay(g.scheduledDeparture),
+                          locale,
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-ink-tertiary">{t("goesHome")}</dt>
+                      <dd
+                        className={
+                          g.isOverdue || g.isDepartingToday
+                            ? "text-warning font-semibold"
+                            : ""
                         }
                       >
-                        {guest.packageType.split(" ")[0]}
-                      </Badge>
+                        {goesHome(g)}
+                      </dd>
                     </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Kennel:</span>
-                        <span className="font-medium">{guest.kennelName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Owner:</span>
-                        <span>{guest.ownerName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Stay:</span>
-                        <span>
-                          {formatDate(guest.checkInDate)} -{" "}
-                          {formatDate(guest.checkOutDate)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Days remaining:
-                        </span>
-                        <span
-                          className={
-                            daysRemaining <= 1 ? "text-warning font-medium" : ""
-                          }
-                        >
-                          {daysRemaining} day(s)
-                        </span>
-                      </div>
+                  </dl>
+                  {(medsByBooking.has(g.id) || allergicPets.has(g.petId)) && (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                      {medsByBooking.has(g.id) && (
+                        <Badge variant="outline" className="gap-1">
+                          <Pill className="size-3" />
+                          {t("medication")}
+                        </Badge>
+                      )}
+                      {allergicPets.has(g.petId) && (
+                        <Badge variant="outline" className="text-warning gap-1">
+                          <AlertTriangle className="size-3" />
+                          {t("allergies")}
+                        </Badge>
+                      )}
                     </div>
-
-                    {(guest.medications.length > 0 ||
-                      guest.allergies.length > 0) && (
-                      <div className="mt-3 flex gap-2 border-t pt-3">
-                        {guest.medications.length > 0 && (
-                          <Badge
-                            variant="outline"
-                            className="border-purple-300 text-purple-600"
-                          >
-                            <Pill className="mr-1 size-3" />
-                            Medication
-                          </Badge>
-                        )}
-                        {guest.allergies.length > 0 && (
-                          <Badge
-                            variant="outline"
-                            className="border-red-300 text-red-600"
-                          >
-                            <AlertTriangle className="mr-1 size-3" />
-                            Allergies
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-3 border-t pt-3">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        <Link
-                          href={(() => {
-                            const numericId = guest.bookingId
-                              ? parseInt(guest.bookingId.replace(/\D/g, ""), 10)
-                              : null;
-                            if (numericId && guest.ownerId) {
-                              return `/facility/dashboard/clients/${guest.ownerId}/bookings/${numericId}`;
-                            }
-                            return `/facility/dashboard/daily-care`;
-                          })()}
-                        >
-                          <BookOpen className="mr-2 size-3.5" />
-                          View Journal
-                        </Link>
-                      </Button>
-                    </div>
+                  )}
+                  <div className="mt-3 border-t pt-3">
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href={bookingHref(g)}>
+                        <BookOpen className="size-4" />
+                        {fill("openStay", { pet: petLabel(g) })}
+                      </Link>
+                    </Button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

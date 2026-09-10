@@ -778,7 +778,6 @@
     "src/app/facility/dashboard/services/boarding/layout.tsx": 13,
     "src/app/facility/dashboard/services/boarding/ops/page.tsx": 21,
     "src/app/facility/dashboard/services/boarding/packages/page.tsx": 1,
-    "src/app/facility/dashboard/services/boarding/page.tsx": 36,
     "src/app/facility/dashboard/services/boarding/rates/page.tsx": 36,
     "src/app/facility/dashboard/services/boarding/settings/page.tsx": 54,
     "src/app/facility/dashboard/services/custom/[slug]/bookings/page.tsx": 16,

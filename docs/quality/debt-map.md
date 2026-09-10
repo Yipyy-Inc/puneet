@@ -12368,3 +12368,16 @@ existed since 20260829180000 with nothing writing it.
     fixture; neither is rendered anywhere.
   - A follow-up's assignee is a name the protocol invented; it is not a
     staff assignment on the board.
+
+## 2026-09-10 — the boarding overview shows today, not April 26th
+
+`services/boarding/page.tsx` listed the `boardingGuests` fixture filtered
+against a hard-coded `today = "2026-04-26"`: a real facility saw the same
+invented April guests forever, and none of its own arrivals. Only the
+occupancy card was real. Arrivals, departures and the guests on site now come
+from `/api/boarding/attendance` — the day the arrivals board works from — with
+medication from the booking and allergies from the pet. Money is the balance
+after payments, not a price. The page is in both languages, the capacity meter
+is orange (§2b: capacity, and full is not an error), and the tint-filled alert
+tiles are white with a glyph. `boardingAnalytics()` in report-data-sources is
+still fixture-based and still feeds the reports.
