@@ -12448,3 +12448,15 @@ messaged.
   routine as its fallback), and the settings screen's "Saved" waits for the
   save. The boarding feeding-round settings are still local; the staff filter reads `@/data/staff`; pet care notes are
   in-memory; the HQ view's "Nudge sent" is a toast.
+
+## 2026-09-11 — `= []` on a query result, feeding an effect, is a render loop
+
+`const { data: allBookings = [] } = useQuery(...)` makes a NEW array on every
+render while the query loads. On the occupancy board an effect depended on it
+and set state, so the page re-rendered into React's update-depth limit and
+showed "We couldn't load your board" — caught by `occupancy-calendar.spec.ts`,
+not by typecheck or lint. Default to a module-level constant
+(`const NO_BOOKINGS: Booking[] = []`, then `data ?? NO_BOOKINGS`) wherever the
+result reaches a dependency array. The pattern appears in older files too; it
+is only a loop when an effect sets state from it, but it always rebuilds every
+memo downstream on every render.

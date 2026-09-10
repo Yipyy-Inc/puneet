@@ -497,6 +497,8 @@ function buildCsv(
   return lines.join("\n");
 }
 
+const NO_MANUAL_EVENTS: ManualFacilityEvent[] = [];
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -743,7 +745,10 @@ export function OperationsCalendar() {
   // key with a hard-coded facility id, visible to one browser. The query's
   // cache is the list: each change below updates it at once, writes, and
   // puts it back if the write is refused.
-  const { data: manualFacilityEvents = [] } = useCalendarEvents();
+  // Stable while loading: a fresh `[]` per render would rebuild every event
+  // memo below on every render, and loop anything that sets state from them.
+  const { data: manualEventsData } = useCalendarEvents();
+  const manualFacilityEvents = manualEventsData ?? NO_MANUAL_EVENTS;
   const calendarEvents = useCalendarEventMutations();
   const { t: calT } = useStaffText("opsCalendar");
   const setManualFacilityEvents = (
