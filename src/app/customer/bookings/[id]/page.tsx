@@ -35,57 +35,65 @@ import { cn } from "@/lib/utils";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { Booking } from "@/types/booking";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatMoney,
+  formatPercent,
+  formatTimeOfDay,
+  formatWeight,
+} from "@/lib/i18n/format";
+import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
+import { rich } from "@/lib/i18n/rich";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// §5q: Intl, in the reader's locale. `fmtTime` was a hand-built "9:00 AM",
+// which French reads as "9 h 00".
+function fmtDate(dateStr: string, locale: AppLocale) {
+  return formatDateLong(dateStr, locale);
 }
 
-function fmtTime(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+function fmtTime(time: string, locale: AppLocale) {
+  return formatTimeOfDay(time, locale);
 }
 
-function getServiceName(booking: Booking) {
-  const base =
-    booking.service.charAt(0).toUpperCase() + booking.service.slice(1);
-  const types: Record<string, string> = {
-    full_groom: "Full Groom",
-    bath_only: "Bath Only",
-    standard: "Standard",
-    full_day: "Full Day",
-    half_day: "Half Day",
-    deluxe: "Deluxe Suite",
-    premium_suite: "Premium Suite",
-    private_session: "Private Session",
-    group_class: "Group Class",
-  };
-  const sub = booking.serviceType
-    ? (types[booking.serviceType] ?? booking.serviceType)
-    : null;
-  return sub ? `${base} — ${sub}` : base;
+/**
+ * "Grooming — Full groom" · "Toilettage — Toilettage complet".
+ *
+ * The service comes from `messages.serviceTypes`; the sub-type from this
+ * page's catalogue, keyed by the id the record carries. An id nobody mapped
+ * reads as the record has it, underscores turned to spaces — never raw.
+ */
+function getServiceName(
+  booking: Booking,
+  locale: AppLocale,
+  t: (key: string) => string,
+) {
+  const base = serviceTypeLabel(locale, booking.service);
+  if (!booking.serviceType) return base;
+  // french-ok: a catalogue KEY built from the id the record carries, not copy
+  const key = `serviceType_${booking.serviceType}`;
+  const translated = t(key);
+  const sub =
+    translated === key ? booking.serviceType.replace(/_/g, " ") : translated;
+  return `${base} — ${sub}`;
 }
 
-const statusConfig: Record<
+// The VARIANT per status. The words come from `messages.status` — and a
+// status this table does not know now reads as itself, where it used to be
+// labelled "Pending" whatever it actually was.
+const STATUS_VARIANT: Record<
   string,
-  {
-    variant: "default" | "secondary" | "destructive" | "outline";
-    label: string;
-  }
+  "default" | "secondary" | "destructive" | "outline"
 > = {
-  estimate_sent: { variant: "outline", label: "Estimate" },
-  declined: { variant: "destructive", label: "Declined" },
-  confirmed: { variant: "default", label: "Confirmed" },
-  completed: { variant: "secondary", label: "Completed" },
-  cancelled: { variant: "destructive", label: "Cancelled" },
-  pending: { variant: "outline", label: "Pending" },
+  estimate_sent: "outline",
+  declined: "destructive",
+  confirmed: "default",
+  completed: "secondary",
+  cancelled: "destructive",
+  pending: "outline",
 };
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -95,6 +103,7 @@ export default function BookingDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t, fill, locale } = useCustomerText("bookingDetail");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -138,11 +147,11 @@ export default function BookingDetailPage({
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="animate-in fade-in text-center duration-500">
-          <h2 className="text-2xl font-bold">Booking not found</h2>
+          <h2 className="text-2xl font-bold">{t("notFound")}</h2>
           <Button variant="outline" className="mt-4" asChild>
             <Link href="/customer/bookings">
               <ArrowLeft className="mr-2 size-4" />
-              Back to Bookings
+              {t("backToBookings")}
             </Link>
           </Button>
         </div>
@@ -166,7 +175,7 @@ export default function BookingDetailPage({
   const isCompleted = booking.status === "completed";
   const isEstimate = booking.status === "estimate_sent";
 
-  const status = statusConfig[booking.status] ?? statusConfig.pending;
+  const statusVariant = STATUS_VARIANT[booking.status] ?? "outline";
 
   // Categorize invoice items
   const serviceItems =
@@ -187,7 +196,7 @@ export default function BookingDetailPage({
       >
         <Link href="/customer/bookings">
           <ArrowLeft className="size-4" />
-          Back to Bookings
+          {t("backToBookings")}
         </Link>
       </Button>
 
@@ -195,10 +204,10 @@ export default function BookingDetailPage({
       <div className="animate-in fade-in slide-in-from-top-2 mb-6 flex items-start justify-between gap-3 duration-300">
         <PageHeader
           title={formatBookingRef(booking.id)}
-          description={fmtDate(booking.startDate)}
+          description={fmtDate(booking.startDate, locale)}
         />
-        <Badge variant={status.variant} className="text-xs">
-          {status.label}
+        <Badge variant={statusVariant} className="text-xs">
+          {statusLabel(locale, booking.status)}
         </Badge>
       </div>
 
@@ -210,37 +219,28 @@ export default function BookingDetailPage({
               <Receipt className="mt-0.5 size-5 shrink-0 text-violet-600" />
               <div className="flex-1">
                 <p className="font-semibold text-violet-900 dark:text-violet-200">
-                  Price Estimate
+                  {t("estimateTitle")}
                 </p>
                 <p className="mt-0.5 text-sm text-violet-700 dark:text-violet-300">
-                  Review the details below and let us know if you&apos;d like to
-                  proceed.
+                  {t("estimateBody")}
                 </p>
               </div>
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Button
                 className="flex-1 gap-1.5"
-                onClick={() =>
-                  toast.success(
-                    "Booking confirmed! The facility has been notified.",
-                  )
-                }
+                onClick={() => toast.success(t("estimateAcceptedToast"))}
               >
                 <CheckCircle2 className="size-4" />
-                Confirm &amp; Book
+                {t("confirmAndBook")}
               </Button>
               <Button
                 variant="outline"
                 className="flex-1 gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-                onClick={() =>
-                  toast.info(
-                    "Estimate declined. The facility has been notified.",
-                  )
-                }
+                onClick={() => toast.info(t("estimateDeclinedToast"))}
               >
                 <XCircle className="size-4" />
-                Decline
+                {t("declineEstimate")}
               </Button>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function BookingDetailPage({
             <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-500" />
             <div>
               <p className="font-semibold text-red-900 dark:text-red-200">
-                This booking was cancelled
+                {t("cancelledTitle")}
               </p>
               {booking.cancellationReason && (
                 <p className="mt-0.5 text-sm text-red-700 dark:text-red-300">
@@ -262,13 +262,20 @@ export default function BookingDetailPage({
               {booking.refundAmount != null && booking.refundAmount > 0 && (
                 <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-red-700 dark:text-red-300">
                   <RotateCcw className="size-3.5" />
-                  <span className="price-value">
-                    ${booking.refundAmount.toFixed(2)}
-                  </span>{" "}
-                  refunded
-                  {booking.refundMethod === "store_credit"
-                    ? " as store credit"
-                    : " to original payment"}
+                  {rich(
+                    t(
+                      booking.refundMethod === "store_credit"
+                        ? "refundedAsCredit"
+                        : "refundedToPayment",
+                    ),
+                    {
+                      amount: (
+                        <span className="price-value">
+                          {formatMoney(booking.refundAmount, locale)}
+                        </span>
+                      ),
+                    },
+                  )}
                 </div>
               )}
             </div>
@@ -289,9 +296,12 @@ export default function BookingDetailPage({
                   <p className="text-muted-foreground text-sm">
                     {pet.breed}
                     {pet.sex
-                      ? ` · ${pet.sex === "male" ? "Male" : "Female"}`
+                      ? ` · ${pet.sex === "male" ? t("sexMale") : t("sexFemale")}`
                       : ""}
-                    {pet.weight ? ` · ${pet.weight} lbs` : ""}
+                    {/* Metric leads, imperial follows (§5q). This read
+                        "{weight} lbs" while the booking wizard reads the SAME
+                        field as kilograms — recorded in the debt map. */}
+                    {pet.weight ? ` · ${formatWeight(pet.weight, locale)}` : ""}
                   </p>
                 </div>
               </div>
@@ -299,28 +309,46 @@ export default function BookingDetailPage({
 
             {/* Service + Times */}
             <div className="p-5">
-              <p className="text-lg font-semibold">{getServiceName(booking)}</p>
+              <p className="text-lg font-semibold">
+                {getServiceName(booking, locale, t)}
+              </p>
               <div className="mt-3 space-y-2 text-sm">
                 <DetailRow
-                  label={booking.service === "boarding" ? "Check-in" : "Date"}
-                  value={`${fmtDate(booking.startDate)}${booking.checkInTime ? ` at ${fmtTime(booking.checkInTime)}` : ""}`}
+                  label={
+                    booking.service === "boarding" ? t("checkIn") : t("date")
+                  }
+                  value={
+                    booking.checkInTime
+                      ? fill("dateAtTime", {
+                          date: fmtDate(booking.startDate, locale),
+                          time: fmtTime(booking.checkInTime, locale),
+                        })
+                      : fmtDate(booking.startDate, locale)
+                  }
                 />
                 {booking.service === "boarding" && (
                   <DetailRow
-                    label="Check-out"
-                    value={`${fmtDate(booking.endDate)}${booking.checkOutTime ? ` at ${fmtTime(booking.checkOutTime)}` : ""}`}
+                    label={t("checkOut")}
+                    value={
+                      booking.checkOutTime
+                        ? fill("dateAtTime", {
+                            date: fmtDate(booking.endDate, locale),
+                            time: fmtTime(booking.checkOutTime, locale),
+                          })
+                        : fmtDate(booking.endDate, locale)
+                    }
                   />
                 )}
                 {booking.service !== "boarding" &&
                   booking.checkInTime &&
                   booking.checkOutTime && (
                     <DetailRow
-                      label="Time"
-                      value={`${fmtTime(booking.checkInTime)} — ${fmtTime(booking.checkOutTime)}`}
+                      label={t("time")}
+                      value={`${fmtTime(booking.checkInTime, locale)} – ${fmtTime(booking.checkOutTime, locale)}`}
                     />
                   )}
                 {booking.kennel && (
-                  <DetailRow label="Room" value={booking.kennel} />
+                  <DetailRow label={t("room")} value={booking.kennel} />
                 )}
               </div>
 
@@ -330,7 +358,7 @@ export default function BookingDetailPage({
                   <div className="mb-1 flex items-center gap-1.5">
                     <ClipboardList className="text-muted-foreground size-3.5" />
                     <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                      Special Requests
+                      {t("specialRequests")}
                     </span>
                   </div>
                   <p className="text-sm/relaxed">{booking.specialRequests}</p>
@@ -347,7 +375,7 @@ export default function BookingDetailPage({
               {/* Invoice header */}
               <div className="bg-muted/30 flex items-center justify-between border-b px-5 py-3">
                 <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Invoice
+                  {t("invoice")}
                 </span>
                 <span className="text-muted-foreground font-mono text-xs">
                   #{inv.id}
@@ -357,7 +385,7 @@ export default function BookingDetailPage({
               <div className="p-5">
                 {/* Services */}
                 {serviceItems.length > 0 && (
-                  <InvoiceSection icon={Sparkles} label="Services">
+                  <InvoiceSection icon={Sparkles} label={t("services")}>
                     {serviceItems.map((item, idx) => (
                       <Row
                         key={`s${idx}`}
@@ -370,7 +398,7 @@ export default function BookingDetailPage({
 
                 {/* Add-ons */}
                 {addonItems.length > 0 && (
-                  <InvoiceSection icon={Tag} label="Add-ons">
+                  <InvoiceSection icon={Tag} label={t("addOns")}>
                     {addonItems.map((item, idx) => (
                       <Row
                         key={`a${idx}`}
@@ -383,7 +411,7 @@ export default function BookingDetailPage({
 
                 {/* Products */}
                 {productItems.length > 0 && (
-                  <InvoiceSection icon={ShoppingBag} label="Products">
+                  <InvoiceSection icon={ShoppingBag} label={t("products")}>
                     {productItems.map((item, idx) => (
                       <Row
                         key={`p${idx}`}
@@ -396,7 +424,7 @@ export default function BookingDetailPage({
 
                 {/* Fees */}
                 {inv.fees.length > 0 && (
-                  <InvoiceSection icon={CircleDollarSign} label="Fees">
+                  <InvoiceSection icon={CircleDollarSign} label={t("fees")}>
                     {inv.fees.map((fee, idx) => (
                       <Row
                         key={`f${idx}`}
@@ -410,7 +438,7 @@ export default function BookingDetailPage({
                 <Separator className="my-3" />
 
                 {/* Subtotal */}
-                <Row label="Subtotal" amount={inv.subtotal} bold />
+                <Row label={t("subtotal")} amount={inv.subtotal} bold />
 
                 {/* Discounts */}
                 {inv.discounts && inv.discounts.length > 0
@@ -424,7 +452,7 @@ export default function BookingDetailPage({
                     ))
                   : inv.discount > 0 && (
                       <Row
-                        label={inv.discountLabel ?? "Discount"}
+                        label={inv.discountLabel ?? t("discount")}
                         amount={-inv.discount}
                         green
                       />
@@ -442,16 +470,18 @@ export default function BookingDetailPage({
 
                 {/* Tax */}
                 {inv.taxes && inv.taxes.length > 0
-                  ? inv.taxes.map((t, idx) => (
+                  ? inv.taxes.map((tax, idx) => (
                       <Row
                         key={`t${idx}`}
-                        label={`${t.name} (${(t.rate * 100).toFixed((t.rate * 100) % 1 === 0 ? 0 : 3)}%)`}
-                        amount={t.amount}
+                        label={`${tax.name} (${formatPercent(tax.rate * 100, locale, (tax.rate * 100) % 1 === 0 ? 0 : 3)})`}
+                        amount={tax.amount}
                       />
                     ))
                   : inv.taxAmount > 0 && (
                       <Row
-                        label={`Tax (${(inv.taxRate * 100).toFixed(2)}%)`}
+                        label={fill("taxWithRate", {
+                          rate: formatPercent(inv.taxRate * 100, locale, 2),
+                        })}
                         amount={inv.taxAmount}
                       />
                     )}
@@ -460,9 +490,9 @@ export default function BookingDetailPage({
 
                 {/* Total — emphasized */}
                 <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
-                  <span className="text-base font-bold">Total</span>
+                  <span className="text-base font-bold">{t("total")}</span>
                   <span className="price-value text-base">
-                    ${inv.total.toFixed(2)}
+                    {formatMoney(inv.total, locale)}
                   </span>
                 </div>
 
@@ -470,12 +500,12 @@ export default function BookingDetailPage({
                 {(inv.payments.length > 0 || inv.depositCollected > 0) && (
                   <div className="mt-4">
                     <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
-                      Payments
+                      {t("payments")}
                     </p>
                     {inv.payments.map((p, idx) => (
                       <Row
                         key={`pay${idx}`}
-                        label={`${p.method === "card" ? "Card" : p.method === "cash" ? "Cash" : p.method} — ${fmtDate(p.date)}`}
+                        label={`${p.method === "card" ? t("methodCard") : p.method === "cash" ? t("methodCash") : p.method} — ${fmtDate(p.date, locale)}`}
                         amount={-p.amount}
                         green
                       />
@@ -485,7 +515,7 @@ export default function BookingDetailPage({
                         (p) => p.amount === inv.depositCollected,
                       ) && (
                         <Row
-                          label="Deposit"
+                          label={t("deposit")}
                           amount={-inv.depositCollected}
                           green
                         />
@@ -499,15 +529,15 @@ export default function BookingDetailPage({
                           : "bg-amber-50 dark:bg-amber-950/20",
                       )}
                     >
-                      <span className="font-bold">Balance</span>
+                      <span className="font-bold">{t("balance")}</span>
                       {isPaid ? (
                         <span className="flex items-center gap-1.5 font-[tabular-nums] font-bold text-emerald-600">
                           <CheckCircle2 className="size-4" />
-                          Paid in full
+                          {t("paidInFull")}
                         </span>
                       ) : (
                         <span className="price-value text-amber-700 dark:text-amber-400">
-                          ${inv.remainingDue.toFixed(2)}
+                          {formatMoney(inv.remainingDue, locale)}
                         </span>
                       )}
                     </div>
@@ -518,7 +548,9 @@ export default function BookingDetailPage({
                 {inv.membershipApplied && (
                   <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-400">
                     <Sparkles className="size-3.5" />
-                    {inv.membershipApplied} membership applied
+                    {fill("membershipApplied", {
+                      plan: inv.membershipApplied,
+                    })}
                   </div>
                 )}
               </div>
@@ -531,9 +563,7 @@ export default function BookingDetailPage({
           <Card className="animate-in fade-in slide-in-from-bottom-4 border-primary/30 bg-primary/5 duration-500">
             <CardContent className="flex flex-col items-center p-5">
               <QrCode className="text-primary mb-1 size-5" />
-              <p className="mb-3 text-sm font-medium">
-                Show at drop-off for fast check-in
-              </p>
+              <p className="mb-3 text-sm font-medium">{t("qrHelp")}</p>
               <div className="rounded-xl bg-white p-3 shadow-sm">
                 <CheckInQRCode
                   token={yipyyGoForm!.qrCheckInToken!}
@@ -542,7 +572,7 @@ export default function BookingDetailPage({
               </div>
               <Button variant="outline" size="sm" className="mt-3" asChild>
                 <Link href={`/customer/bookings/${booking.id}/check-in-qr`}>
-                  Full-screen QR
+                  {t("qrFullScreen")}
                 </Link>
               </Button>
             </CardContent>
@@ -557,7 +587,7 @@ export default function BookingDetailPage({
           booking.status === "confirmed" && (
             <Card className="animate-in fade-in border-primary/30 bg-primary/5 duration-400">
               <CardContent className="p-5">
-                <p className="mb-2 font-semibold">Ready to check in?</p>
+                <p className="mb-2 font-semibold">{t("readyToCheckIn")}</p>
                 <GroomingCheckInButton
                   bookingId={String(booking.id)}
                   clientId={customerId ?? 0}
@@ -571,14 +601,14 @@ export default function BookingDetailPage({
           <Button variant="outline" className="flex-1" asChild>
             <Link href="/customer/bookings">
               <ArrowLeft className="mr-1.5 size-4" />
-              All Bookings
+              {t("allBookings")}
             </Link>
           </Button>
           {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
             <Button className="flex-1" asChild>
               <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
                 <FileText className="mr-1.5 size-4" />
-                Complete Express Check-in Form
+                {t("completeExpressForm")}
               </Link>
             </Button>
           )}
@@ -586,7 +616,7 @@ export default function BookingDetailPage({
             <Button variant="outline" className="flex-1" asChild>
               <Link href="/customer/messages">
                 <MessageSquare className="mr-1.5 size-4" />
-                Message Us
+                {t("messageUs")}
               </Link>
             </Button>
           )}
@@ -594,7 +624,7 @@ export default function BookingDetailPage({
             <Button className="flex-1" asChild>
               <Link href="/customer/bookings/new">
                 <RotateCcw className="mr-1.5 size-4" />
-                Book Again
+                {t("bookAgain")}
               </Link>
             </Button>
           )}
@@ -648,13 +678,14 @@ function Row({
   bold?: boolean;
   green?: boolean;
 }) {
+  const { locale } = useCustomerText("bookingDetail");
   return (
     <div className="flex items-center justify-between py-1">
       <span className={cn("text-sm", bold && "font-semibold")}>{label}</span>
       <span className={cn("price-value text-sm", green && "text-emerald-600")}>
         {amount < 0
-          ? `-$${Math.abs(amount).toFixed(2)}`
-          : `$${amount.toFixed(2)}`}
+          ? `−${formatMoney(Math.abs(amount), locale)}`
+          : formatMoney(amount, locale)}
       </span>
     </div>
   );
