@@ -133,6 +133,9 @@ const SAME_IN_BOTH = new Set([
   "customerPages.estimates.dates", // Dates / Dates
   "customerPages.estimates.total", // Total / Total
   "customerPages.refer.conditions", // Conditions / Conditions
+  "customerPages.documents.docType_vaccination", // Vaccination / Vaccination
+  "customerPages.documents.questionOne", // "{n} question" in both
+  "customerPages.documents.questionMany", // "{n} questions" in both
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
 ]);
 

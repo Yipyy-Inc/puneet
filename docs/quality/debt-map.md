@@ -12065,3 +12065,27 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   own keyed sentences instead of the wizard's staff-facing
   `REFERRAL_TRIGGER_HINTS` ("Reward fires when…"). Shared libs are outside
   every French-gate surface, so none of this was visible to the gate.
+
+### Documents (`/customer/documents`) — **signing an agreement signs nothing**
+
+- **"Sign now" keeps the signature in a `useState` Set.** `handleSign`
+  receives the `SignatureResult` as `_result`, discards it, adds the waiver
+  id to `signedWaiverIds`, and toasts "Agreement signed". Reload the page
+  and the waiver is pending again; the facility never learns it was signed.
+  A signed legal agreement that is not stored is the worst version of this
+  finding in the portal.
+- **Everything listed is a fixture.** Documents are `clientDocuments`
+  (`@/data/documents`), waivers and signatures `digitalWaivers` /
+  `waiverSignatures` (`@/data/additional-features`), forms
+  `getFormsByFacility` — with facility 11's forms appended to every other
+  facility's. The download links point at `/documents/…` paths that do not
+  exist in `public/`.
+- **The facility's services are a constant** (`FACILITY_SERVICES`, "TODO:
+  read from facility settings").
+- Fixed while translating: the service tags on waivers were the shared
+  English `SERVICE_LABEL` and are `serviceTypeLabel` (with `general` in this
+  page's catalogue); "Boarding Waivers" was built in English by the shared
+  `resolveCategories` and is named on this page instead, leaving a custom
+  category's facility-written name alone. Three `en-US` date formatters —
+  including the `{{date}}` merged into the agreement text — take the
+  reader's locale.

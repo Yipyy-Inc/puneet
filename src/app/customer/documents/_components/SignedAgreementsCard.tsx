@@ -24,10 +24,13 @@ import {
 } from "@/data/additional-features";
 import {
   SERVICE_BADGE,
-  SERVICE_LABEL,
   getWaiverServices,
 } from "@/components/additional-features/waivers/service-display";
 import { cn } from "@/lib/utils";
+import type { WaiverServiceTag } from "@/data/additional-features";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import { waiverServiceLabel } from "./waiver-service-label";
 
 interface SignedAgreementsCardProps {
   agreementDocs: ClientDocument[];
@@ -44,7 +47,8 @@ interface NormalizedAgreement {
   signatureType?: string;
   agreedToTerms?: string[];
   fileUrl?: string;
-  serviceTags?: string[];
+  /** Service TAGS, named where they render — not the English label. */
+  serviceTags?: WaiverServiceTag[];
   version?: string;
 }
 
@@ -54,6 +58,7 @@ export function SignedAgreementsCard({
   hasPending,
   onDownload,
 }: SignedAgreementsCardProps) {
+  const { t, fill, locale } = useCustomerText("documents");
   const items = useMemo<NormalizedAgreement[]>(() => {
     const fromDocs: NormalizedAgreement[] = agreementDocs.map((doc) => ({
       key: `doc-${doc.id}`,
@@ -68,9 +73,7 @@ export function SignedAgreementsCard({
     const fromSignatures: NormalizedAgreement[] = waiverSignatures.map(
       (sig) => {
         const waiver = digitalWaivers.find((w) => w.id === sig.waiverId);
-        const services = waiver
-          ? getWaiverServices(waiver).map((s) => SERVICE_LABEL[s])
-          : undefined;
+        const services = waiver ? getWaiverServices(waiver) : undefined;
         return {
           key: `sig-${sig.id}`,
           name: sig.waiverName,
@@ -93,23 +96,16 @@ export function SignedAgreementsCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="size-5" />
-          Agreements & Waivers
+          {t("agreementsAndWaivers")}
         </CardTitle>
-        <CardDescription>
-          These agreements are required by your facility for services like
-          daycare and boarding. You can review what you&apos;ve signed at any
-          time.
-        </CardDescription>
+        <CardDescription>{t("requiredByFacility")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.length === 0 && !hasPending ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <AlertCircle className="text-muted-foreground mb-2 size-10" />
-            <p className="font-semibold">No agreements on file yet</p>
-            <p className="text-muted-foreground text-sm">
-              Your facility may ask you to sign agreements or waivers before
-              your next booking.
-            </p>
+            <p className="font-semibold">{t("noAgreementsYet")}</p>
+            <p className="text-muted-foreground text-sm">{t("mayAskToSign")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -131,9 +127,7 @@ export function SignedAgreementsCard({
                   {item.serviceTags && item.serviceTags.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-0.5">
                       {item.serviceTags.map((tag) => {
-                        const tagKey =
-                          tag.toLowerCase() as keyof typeof SERVICE_BADGE;
-                        const className = SERVICE_BADGE[tagKey];
+                        const className = SERVICE_BADGE[tag];
                         return (
                           <span
                             key={tag}
@@ -142,29 +136,32 @@ export function SignedAgreementsCard({
                               className,
                             )}
                           >
-                            {tag}
+                            {waiverServiceLabel(tag, locale, t)}
                           </span>
                         );
                       })}
                     </div>
                   )}
                   <p className="text-muted-foreground text-xs">
-                    Signed: {formatDateTime(item.signedAt)}
+                    {fill("signedOn", {
+                      date: `${formatDateLong(item.signedAt, locale)} · ${formatTime(item.signedAt, locale)}`,
+                    })}
                   </p>
                   {item.agreedToTerms && item.agreedToTerms.length > 0 && (
                     <p className="text-muted-foreground text-xs">
-                      Terms agreed: {item.agreedToTerms.join(" · ")}
+                      {fill("termsAgreed", {
+                        terms: item.agreedToTerms.join(" · "),
+                      })}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-center">
                   <Badge variant="outline" className="gap-1 text-xs">
                     <CheckCircle className="size-3 text-green-500" />
-                    {item.source === "digital"
-                      ? "Signed Online"
-                      : item.signatureType === "digital"
-                        ? "Signed Online"
-                        : "On File"}
+                    {item.source === "digital" ||
+                    item.signatureType === "digital"
+                      ? t("signedOnline")
+                      : t("onFile")}
                   </Badge>
                   {item.fileUrl && (
                     <Button
@@ -173,7 +170,7 @@ export function SignedAgreementsCard({
                       onClick={() => onDownload(item.fileUrl, item.name)}
                     >
                       <Download className="mr-1 size-4" />
-                      Download
+                      {t("download")}
                     </Button>
                   )}
                 </div>
@@ -184,18 +181,4 @@ export function SignedAgreementsCard({
       </CardContent>
     </Card>
   );
-}
-
-function formatDateTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
 }

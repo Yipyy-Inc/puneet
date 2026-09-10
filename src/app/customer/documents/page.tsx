@@ -26,10 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
 import type { SignatureResult } from "@/components/shared/SignaturePad";
-import {
-  SERVICE_LABEL,
-  getWaiverServices,
-} from "@/components/additional-features/waivers/service-display";
+import { getWaiverServices } from "@/components/additional-features/waivers/service-display";
 import {
   digitalWaivers,
   waiverSignatures,
@@ -42,6 +39,10 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { PendingWaiversCard } from "./_components/PendingWaiversCard";
 import { SignedAgreementsCard } from "./_components/SignedAgreementsCard";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
+import { waiverServiceLabel } from "./_components/waiver-service-label";
 
 // Services this facility offers — drives pending-waiver category grouping.
 // TODO: read from facility settings when wired to a real API.
@@ -57,6 +58,7 @@ export default function CustomerDocumentsPage() {
   const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
+  const { t, fill, locale } = useCustomerText("documents");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<
     "agreements" | "documents" | "forms"
@@ -138,7 +140,7 @@ export default function CustomerDocumentsPage() {
     if (!signingWaiver) return;
     setSignedWaiverIds((prev) => new Set([...prev, signingWaiver.id]));
     setSigningWaiver(null);
-    toast.success("Agreement signed successfully");
+    toast.success(t("agreementSigned"));
   };
 
   // Merge context fills {{customerName}}, {{facilityName}}, {{services}}, {{date}}
@@ -149,13 +151,9 @@ export default function CustomerDocumentsPage() {
       customerName: customer?.name,
       facilityName: selectedFacility?.name,
       services: getWaiverServices(signingWaiver),
-      date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
+      date: formatDateLong(new Date(), locale),
     };
-  }, [signingWaiver, customer, selectedFacility]);
+  }, [signingWaiver, customer, selectedFacility, locale]);
 
   return (
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
@@ -163,8 +161,8 @@ export default function CustomerDocumentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <PageHeader
-            title="Documents & Agreements"
-            description="View and manage your signed agreements, waivers, and uploaded documents."
+            title={t("documentsAndAgreements")}
+            description={t("viewAndManage")}
           />
         </div>
 
@@ -173,7 +171,7 @@ export default function CustomerDocumentsPage() {
           <div className="relative w-full md:max-w-sm">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
-              placeholder="Search documents..."
+              placeholder={t("searchDocuments")}
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -186,15 +184,15 @@ export default function CustomerDocumentsPage() {
           >
             <TabsList>
               <TabsTrigger value="agreements">
-                Agreements & Waivers
+                {t("agreementsAndWaivers")}
                 {pendingWaivers.length > 0 && (
                   <Badge className="ml-1.5 size-5 justify-center rounded-full bg-red-500 p-0 text-[10px] text-white">
                     {pendingWaivers.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="documents">Documents Vault</TabsTrigger>
-              <TabsTrigger value="forms">Forms</TabsTrigger>
+              <TabsTrigger value="documents">{t("documentsVault")}</TabsTrigger>
+              <TabsTrigger value="forms">{t("forms")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -221,10 +219,7 @@ export default function CustomerDocumentsPage() {
 
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="text-muted-foreground py-4 text-sm">
-                Facilities can require certain agreements to be signed before
-                new bookings are approved. If you&apos;re blocked from booking,
-                check here to see if any agreements are missing or contact the
-                facility for help.
+                {t("facilitiesCanRequire")}
               </CardContent>
             </Card>
           </TabsContent>
@@ -235,12 +230,9 @@ export default function CustomerDocumentsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ClipboardList className="size-5" />
-                  Available Forms
+                  {t("availableForms")}
                 </CardTitle>
-                <CardDescription>
-                  Fill out required and optional forms for your facility. Your
-                  progress is saved automatically.
-                </CardDescription>
+                <CardDescription>{t("fillOutForms")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <FormsList facilityId={selectedFacility?.id ?? 1} />
@@ -254,21 +246,17 @@ export default function CustomerDocumentsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="size-5" />
-                  Documents Vault
+                  {t("documentsVault")}
                 </CardTitle>
-                <CardDescription>
-                  All documents your facility has shared with you: vaccine
-                  records, medical notes, and more.
-                </CardDescription>
+                <CardDescription>{t("allSharedDocuments")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {otherDocs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <AlertCircle className="text-muted-foreground mb-2 size-10" />
-                    <p className="font-semibold">No documents yet</p>
+                    <p className="font-semibold">{t("noDocumentsYet")}</p>
                     <p className="text-muted-foreground text-sm">
-                      When your facility uploads vaccine records, medical notes,
-                      or other files, they will appear here.
+                      {t("whenFacilityUploads")}
                     </p>
                   </div>
                 ) : (
@@ -284,19 +272,26 @@ export default function CustomerDocumentsPage() {
                             {doc.name}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            Type: {doc.type}
+                            {fill("typeLabel", {
+                              // french-ok: a catalogue key, docType_<the record's type>
+                              type: t(`docType_${doc.type}`),
+                            })}
                             {doc.petId && (
                               <>
                                 {" "}
                                 · <Dog className="mr-1 inline-block size-3" />
-                                Pet ID #{doc.petId}
+                                {fill("petId", { id: doc.petId })}
                               </>
                             )}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            Uploaded: {formatDateTime(doc.uploadedAt)}
+                            {fill("uploadedOn", {
+                              date: formatDateTime(doc.uploadedAt, locale),
+                            })}
                             {doc.expiryDate &&
-                              ` · Expires: ${formatDateTime(doc.expiryDate)}`}
+                              ` · ${fill("expiresOn", {
+                                date: formatDateTime(doc.expiryDate, locale),
+                              })}`}
                           </p>
                           {doc.notes && (
                             <p className="text-muted-foreground text-xs">
@@ -313,7 +308,7 @@ export default function CustomerDocumentsPage() {
                             }
                           >
                             <Download className="mr-1 size-4" />
-                            Download
+                            {t("download")}
                           </Button>
                         )}
                       </div>
@@ -338,7 +333,7 @@ export default function CustomerDocumentsPage() {
           requiresWitness={signingWaiver.requiresWitness}
           onSigned={handleSign}
           clientName={customer?.name}
-          serviceName={SERVICE_LABEL[signingWaiver.type]}
+          serviceName={waiverServiceLabel(signingWaiver.type, locale, t)}
         />
       )}
     </div>
@@ -346,6 +341,7 @@ export default function CustomerDocumentsPage() {
 }
 
 function FormsList({ facilityId }: { facilityId: number }) {
+  const { t, fill } = useCustomerText("documents");
   const forms = useMemo(() => {
     const allForms = [
       ...getFormsByFacility(facilityId),
@@ -363,10 +359,8 @@ function FormsList({ facilityId }: { facilityId: number }) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
         <AlertCircle className="text-muted-foreground mb-2 size-10" />
-        <p className="font-semibold">No forms available</p>
-        <p className="text-muted-foreground text-sm">
-          Your facility hasn&apos;t published any forms yet. Check back later.
-        </p>
+        <p className="font-semibold">{t("noFormsAvailable")}</p>
+        <p className="text-muted-foreground text-sm">{t("noFormsPublished")}</p>
       </div>
     );
   }
@@ -384,12 +378,21 @@ function FormsList({ facilityId }: { facilityId: number }) {
               {form.name}
             </p>
             <p className="text-muted-foreground text-xs">
-              {form.questions.length} question
-              {form.questions.length !== 1 ? "s" : ""}
+              {fill(
+                form.questions.length === 1 ? "questionOne" : "questionMany",
+                { n: form.questions.length },
+              )}
               {form.type && (
                 <>
                   {" "}
-                  · <span className="capitalize">{form.type}</span>
+                  ·{" "}
+                  <span>
+                    {
+                      /* french-ok: a catalogue key */ t(
+                        `formType_${form.type}`,
+                      )
+                    }
+                  </span>
                 </>
               )}
             </p>
@@ -397,7 +400,7 @@ function FormsList({ facilityId }: { facilityId: number }) {
           <Button size="sm" asChild>
             <Link href={`/forms/${form.slug}`}>
               <ExternalLink className="mr-1 size-4" />
-              Fill out
+              {t("fillOut")}
             </Link>
           </Button>
         </div>
@@ -406,16 +409,6 @@ function FormsList({ facilityId }: { facilityId: number }) {
   );
 }
 
-function formatDateTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+function formatDateTime(iso: string, locale: AppLocale) {
+  return `${formatDateLong(iso, locale)} · ${formatTime(iso, locale)}`;
 }
