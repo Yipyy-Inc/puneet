@@ -83,6 +83,7 @@ import {
 import type { AdditionalPet, AppointmentStage } from "@/types/grooming";
 import type { PetSize } from "@/types/base";
 import { GROOMING_ADD_ONS as ADD_ONS } from "@/data/grooming-add-ons";
+import { NO_ITEMS } from "@/lib/no-items";
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 
@@ -255,7 +256,9 @@ export function NewAppointmentDialog({
   // Loaded eagerly so the seed effect can map prefillFrom (Book Again) to a
   // known client via phone match — keeps the picker in "selected" mode instead
   // of dropping the user into the new-client form with prefilled drafts.
-  const { data: clients = [] } = useQuery(clientQueries.all());
+  const { data: clientsData } = useQuery(clientQueries.all());
+  // Stable while loading — see lib/no-items.ts.
+  const clients = clientsData ?? NO_ITEMS;
 
   // Re-seed the form each time the dialog opens so quick-book picks up the
   // groomer column and time slot that was clicked.

@@ -58,6 +58,7 @@ import {
   type TodayTask,
 } from "@/lib/today-tasks";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { NO_ITEMS } from "@/lib/no-items";
 
 // ─────────────────────────────────────────────
 // Types
@@ -1023,10 +1024,12 @@ export function ModuleTasksPage({
   // getTemplatesForModule(...))` over a hardcoded array plus localStorage, so
   // a manager's edits reached exactly one browser.
   const {
-    data: templates = [],
+    data: templatesData,
     isPending: templatesPending,
     error: templatesError,
   } = useQuery(taskTemplateQueries.byModule(moduleId));
+  // Stable while loading — see lib/no-items.ts.
+  const templates = templatesData ?? NO_ITEMS;
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TaskTemplate | undefined>();
