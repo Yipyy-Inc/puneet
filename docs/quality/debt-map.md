@@ -12107,3 +12107,20 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   `Intl`. Transaction descriptions are the record's own text and pass
   through. `page.tsx` is a Server Component, so the title is a small client
   `WalletHeader`.
+
+### Redeem a gift card (`/customer/gift-cards/redeem`) — **the PIN is 1234, and the page says so**
+
+- **Every high-value card's PIN is `"1234"`.** `handlePinVerify` compares
+  the input to the literal `"1234"`, and the PIN step prints "Hint: use 1234
+  for this demo" to whoever is on it — staging included, which shares the
+  production database. It is translated only so the screen is not half
+  English; the hint and the check both have to go, together, when the flow
+  reaches the real gift-card API.
+- **Redeeming is a timeout.** `handleRedeem` waits 1.2 s and adds the
+  amount to a local number. The card's balance is not reduced and the
+  wallet is not credited; the fixture card can be redeemed again at once.
+- **The lookup reads the fixture** (`giftCards` at `FACILITY_ID = 11`), and
+  the balance shown is customer 15's fixture wallet (see "Wallet").
+- Fixed while translating: eleven `$${n.toFixed(2)}` are `formatMoney`;
+  the amount slider has an accessible name; the page's title is a small
+  client `RedeemHeader` because `page.tsx` is a Server Component.

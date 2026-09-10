@@ -20,13 +20,25 @@ import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { cn } from "@/lib/utils";
 import { giftCards, customerWallets } from "@/data/gift-cards";
 import Link from "next/link";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 const MOCK_CLIENT_ID = 15;
 const FACILITY_ID = 11;
 
 type Step = "lookup" | "amount" | "pin" | "confirm" | "done";
 
+// Why a card cannot be redeemed, by CATALOGUE KEY. A status this map does not
+// know is shown as recorded.
+const NOT_REDEEMABLE_KEY: Record<string, string> = {
+  redeemed: "statusRedeemed",
+  expired: "statusExpired",
+  cancelled: "statusCancelled",
+};
+
 export function RedeemFlow() {
+  const { t, fill, locale } = useCustomerText("giftCardRedeem");
   const [cardCode, setCardCode] = useState("");
   const [lookupState, setLookupState] = useState<
     "idle" | "searching" | "found" | "error"
@@ -62,14 +74,18 @@ export function RedeemFlow() {
 
     if (!card) {
       setLookupState("error");
-      setErrorMsg(
-        "No gift card found with that code. Please check and try again.",
-      );
+      setErrorMsg(t("noCardFound"));
       return;
     }
     if (card.status !== "active") {
       setLookupState("error");
-      setErrorMsg(`This gift card cannot be redeemed — it is ${card.status}.`);
+      setErrorMsg(
+        fill("cannotBeRedeemed", {
+          status: NOT_REDEEMABLE_KEY[card.status]
+            ? t(NOT_REDEEMABLE_KEY[card.status])
+            : card.status,
+        }),
+      );
       return;
     }
     setFoundCard(card);
@@ -83,7 +99,7 @@ export function RedeemFlow() {
     await new Promise((r) => setTimeout(r, 600));
     setLoading(false);
     if (pin !== "1234") {
-      setPinError("Incorrect PIN. Please try again.");
+      setPinError(t("incorrectPin"));
       return;
     }
     setPinError("");
@@ -109,9 +125,11 @@ export function RedeemFlow() {
               <div className="flex items-center gap-2">
                 <Wallet className="size-5 opacity-80" />
                 <div>
-                  <p className="text-xs opacity-70">Current Wallet Balance</p>
+                  <p className="text-xs opacity-70">
+                    {t("currentWalletBalance")}
+                  </p>
                   <p className="text-2xl font-bold">
-                    ${wallet.balance.toFixed(2)}
+                    {formatMoney(wallet.balance, locale)}
                   </p>
                 </div>
               </div>
@@ -121,7 +139,7 @@ export function RedeemFlow() {
                   size="sm"
                   className="text-xs text-white/80 hover:bg-white/20 hover:text-white"
                 >
-                  View Wallet
+                  {t("viewWallet")}
                 </Button>
               </Link>
             </div>
@@ -135,7 +153,7 @@ export function RedeemFlow() {
           <div className="space-y-1.5">
             <Label className="flex items-center gap-1.5 font-medium">
               <QrCode className="size-4" />
-              Gift Card Code
+              {t("giftCardCode")}
             </Label>
             <div className="flex gap-2">
               <Input
@@ -161,10 +179,7 @@ export function RedeemFlow() {
                 )}
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">
-              You can find the card code in your gift card email or on the
-              physical card
-            </p>
+            <p className="text-muted-foreground text-xs">{t("findCodeHint")}</p>
           </div>
 
           {lookupState === "error" && (
@@ -188,7 +203,7 @@ export function RedeemFlow() {
                     ****{foundCard.code.slice(-6)}
                   </span>
                   <Badge variant="default" className="bg-green-500 text-xs">
-                    Active
+                    {t("active")}
                   </Badge>
                 </div>
                 {foundCard.message && (
@@ -199,20 +214,22 @@ export function RedeemFlow() {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-green-600">
-                  ${foundCard.currentBalance.toFixed(2)}
+                  {formatMoney(foundCard.currentBalance, locale)}
                 </p>
-                <p className="text-muted-foreground text-xs">available</p>
+                <p className="text-muted-foreground text-xs">
+                  {t("available")}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <Label className="font-medium">
-              How much would you like to add to your wallet?
-            </Label>
+            <Label className="font-medium">{t("howMuchToAdd")}</Label>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">$0</span>
+                <span className="text-muted-foreground text-sm">
+                  {formatMoney(0, locale, { whole: true })}
+                </span>
                 <span
                   className={cn(
                     "text-xl font-bold",
@@ -221,10 +238,10 @@ export function RedeemFlow() {
                       : "text-primary",
                   )}
                 >
-                  ${redeemAmount.toFixed(2)}
+                  {formatMoney(redeemAmount, locale)}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  ${foundCard.currentBalance.toFixed(2)}
+                  {formatMoney(foundCard.currentBalance, locale)}
                 </span>
               </div>
               <input
@@ -234,6 +251,7 @@ export function RedeemFlow() {
                 step={1}
                 value={redeemAmount}
                 onChange={(e) => setRedeemAmount(parseFloat(e.target.value))}
+                aria-label={t("amountToRedeem")}
                 className="accent-primary w-full"
               />
             </div>
@@ -248,7 +266,7 @@ export function RedeemFlow() {
                   )
                 }
               >
-                Half
+                {t("half")}
               </Button>
               <Button
                 variant="outline"
@@ -256,7 +274,7 @@ export function RedeemFlow() {
                 className="flex-1"
                 onClick={() => setRedeemAmount(foundCard.currentBalance)}
               >
-                Full Balance
+                {t("fullBalance")}
               </Button>
             </div>
           </div>
@@ -267,10 +285,13 @@ export function RedeemFlow() {
               <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
               <Wallet className="text-primary size-4 shrink-0" />
               <span className="flex-1">
-                <span className="font-semibold text-green-600">
-                  ${redeemAmount.toFixed(2)}
-                </span>{" "}
-                will be added to your wallet
+                {rich(t("willBeAdded"), {
+                  amount: (
+                    <span className="font-semibold text-green-600">
+                      {formatMoney(redeemAmount, locale)}
+                    </span>
+                  ),
+                })}
               </span>
             </div>
           )}
@@ -284,7 +305,7 @@ export function RedeemFlow() {
                 setLookupState("idle");
               }}
             >
-              Back
+              {t("back")}
             </Button>
             <Button
               className="flex-1"
@@ -296,10 +317,10 @@ export function RedeemFlow() {
               {requiresPin ? (
                 <>
                   <Lock className="mr-2 size-4" />
-                  Continue to PIN
+                  {t("continueToPin")}
                 </>
               ) : (
-                "Review & Confirm"
+                t("reviewAndConfirm")
               )}
             </Button>
           </div>
@@ -314,16 +335,15 @@ export function RedeemFlow() {
               <Lock className="size-7 text-amber-600" />
             </div>
             <div>
-              <p className="font-semibold">PIN Required</p>
+              <p className="font-semibold">{t("pinRequired")}</p>
               <p className="text-muted-foreground text-sm">
-                This card requires a PIN for redemptions. Enter the 4-digit PIN
-                associated with this card.
+                {t("pinRequiredBody")}
               </p>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>4-Digit PIN</Label>
+            <Label>{t("fourDigitPin")}</Label>
             <Input
               type="password"
               maxLength={4}
@@ -337,14 +357,12 @@ export function RedeemFlow() {
               inputMode="numeric"
             />
             {pinError && <p className="text-destructive text-sm">{pinError}</p>}
-            <p className="text-muted-foreground text-xs">
-              Hint: use 1234 for this demo
-            </p>
+            <p className="text-muted-foreground text-xs">{t("demoPinHint")}</p>
           </div>
 
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => setStep("amount")}>
-              Back
+              {t("back")}
             </Button>
             <Button
               className="flex-1"
@@ -354,7 +372,7 @@ export function RedeemFlow() {
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                "Verify PIN"
+                t("verifyPin")
               )}
             </Button>
           </div>
@@ -364,34 +382,38 @@ export function RedeemFlow() {
       {/* Step: Confirm */}
       {step === "confirm" && foundCard && (
         <div className="space-y-4">
-          <h3 className="font-semibold">Confirm Redemption</h3>
+          <h3 className="font-semibold">{t("confirmRedemption")}</h3>
 
           <Card>
             <CardContent className="space-y-3 py-4 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Card Code</span>
+                <span className="text-muted-foreground">{t("cardCode")}</span>
                 <span className="font-mono font-medium">
                   ****{foundCard.code.slice(-6)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount to Redeem</span>
+                <span className="text-muted-foreground">
+                  {t("amountToRedeem")}
+                </span>
                 <span className="font-semibold text-green-600">
-                  ${redeemAmount.toFixed(2)}
+                  {formatMoney(redeemAmount, locale)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Remaining on Card</span>
+                <span className="text-muted-foreground">
+                  {t("remainingOnCard")}
+                </span>
                 <span className="font-medium">
-                  ${(foundCard.currentBalance - redeemAmount).toFixed(2)}
+                  {formatMoney(foundCard.currentBalance - redeemAmount, locale)}
                 </span>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-muted-foreground">
-                  New Wallet Balance
+                  {t("newWalletBalance")}
                 </span>
                 <span className="font-bold text-green-600">
-                  ${((wallet?.balance ?? 0) + redeemAmount).toFixed(2)}
+                  {formatMoney((wallet?.balance ?? 0) + redeemAmount, locale)}
                 </span>
               </div>
             </CardContent>
@@ -402,7 +424,7 @@ export function RedeemFlow() {
               variant="ghost"
               onClick={() => setStep(requiresPin ? "pin" : "amount")}
             >
-              Back
+              {t("back")}
             </Button>
             <Button
               className="flex-1"
@@ -412,12 +434,12 @@ export function RedeemFlow() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Redeeming…
+                  {t("redeeming")}
                 </>
               ) : (
                 <>
                   <Wallet className="mr-2 size-4" />
-                  Confirm & Add to Wallet
+                  {t("confirmAndAdd")}
                 </>
               )}
             </Button>
@@ -431,24 +453,31 @@ export function RedeemFlow() {
           {/* §5d2: the confirmation panel at the end of a flow. */}
           <YipyyPose name="success" size={132} />
           <div>
-            <p className="text-xl font-bold">Added to your wallet!</p>
+            <p className="text-xl font-bold">{t("addedToWallet")}</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              <span className="font-semibold text-green-600">
-                ${redeemAmount.toFixed(2)}
-              </span>{" "}
-              is now in your wallet and ready to use at checkout.
+              {rich(t("nowInWallet"), {
+                amount: (
+                  <span className="font-semibold text-green-600">
+                    {formatMoney(redeemAmount, locale)}
+                  </span>
+                ),
+              })}
             </p>
           </div>
           <div className="rounded-xl bg-linear-to-r from-violet-600 to-purple-700 px-8 py-4 text-white">
-            <p className="text-xs opacity-70">New Wallet Balance</p>
-            <p className="text-3xl font-bold">${newWalletBalance.toFixed(2)}</p>
+            <p className="text-xs opacity-70">{t("newWalletBalance")}</p>
+            <p className="text-3xl font-bold">
+              {formatMoney(newWalletBalance, locale)}
+            </p>
           </div>
           <div className="flex w-full gap-2">
             <Button variant="outline" asChild className="flex-1">
-              <Link href="/customer/gift-cards/redeem">Redeem Another</Link>
+              <Link href="/customer/gift-cards/redeem">
+                {t("redeemAnother")}
+              </Link>
             </Button>
             <Button asChild className="flex-1">
-              <Link href="/customer/wallet">View Wallet</Link>
+              <Link href="/customer/wallet">{t("viewWallet")}</Link>
             </Button>
           </div>
         </div>
