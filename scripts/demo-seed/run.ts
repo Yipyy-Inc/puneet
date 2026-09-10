@@ -45,8 +45,11 @@ import {
   GROOMING_ADD_ONS,
   GROOMING_SERVICES,
   GROOMING_STATIONS,
+  INCIDENTS,
+  NOTES,
   PETS,
   STAFF,
+  TASK_TEMPLATES,
 } from "./data";
 import { planBookings } from "./bookings";
 import { assertSafeContact } from "./safety";
@@ -465,6 +468,117 @@ try {
             returning id`;
           if (res.length) count("care log entries");
         }
+      }
+    }
+
+    // ── The facility's routine ─────────────────────────────────────────
+    for (const [i, t] of TASK_TEMPLATES.entries()) {
+      const [exists] = await tx`
+        select 1 from public.task_templates
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${t.legacyId}`;
+      if (exists) continue;
+      await tx`
+        insert into public.task_templates
+          (facility_id, legacy_id, module_id, name, description, category,
+           timing_type, timing_offset_minutes, duration_minutes, assign_to,
+           is_required, auto_create, recurring_frequency, recurring_times,
+           sort_order, created_by)
+        values
+          (${DEMO_FACILITY_ID}, ${t.legacyId}, ${t.moduleId}, ${t.name},
+           ${t.description}, ${t.category}, ${t.timingType},
+           ${t.offsetMinutes ?? null}, ${t.durationMinutes}, 'booking_staff',
+           ${t.isRequired}, true, ${t.recurringTimes ? "daily" : null},
+           ${t.recurringTimes ? `{${t.recurringTimes.join(",")}}` : null}::text[],
+           ${i + 1}, ${SEED_ACTOR_SUB})`;
+      count("task templates");
+    }
+
+    // ── Notes staff have written ────────────────────────────────────────
+    const petByName = (name: string) => PETS.find((p) => p.pet.name === name)!;
+    for (const n of NOTES) {
+      const entityId =
+        "pet" in n.about
+          ? petIds.get(petByName(n.about.pet).key)!
+          : clientIds.get(
+              CLIENTS.find(
+                (c) => c.client.name === (n.about as { client: string }).client,
+              )!.key,
+            )!;
+      const category = "pet" in n.about ? "pet" : "customer";
+      const [exists] = await tx`
+        select 1 from public.notes
+         where entity_id = ${entityId} and content = ${n.content}`;
+      if (exists) continue;
+      await tx`
+        insert into public.notes
+          (facility_id, category, sub_type, entity_id, content, visibility,
+           is_pinned, created_by_name)
+        values
+          (${DEMO_FACILITY_ID}, ${category}, ${n.subType ?? null}, ${entityId},
+           ${n.content}, ${n.shared ? "shared_with_customer" : "internal"},
+           ${n.pinned ?? false}, ${n.author})`;
+      count("notes");
+    }
+
+    // ── Incidents on record, and the follow-up one of them left ───────────
+    for (const inc of INCIDENTS) {
+      const [exists] = await tx`
+        select 1 from public.incidents
+         where facility_id = ${DEMO_FACILITY_ID} and title = ${inc.title}`;
+      if (exists) continue;
+      const pet = petByName(inc.pet);
+      const petRowId = petIds.get(pet.key)!;
+      const clientRowId = clientIds.get(pet.ownerKey)!;
+      const occurred = new Date(Date.now() - inc.daysAgo * 86_400_000);
+      occurred.setUTCHours(19, 40, 0, 0);
+      const reported = new Date(occurred.getTime() + 20 * 60_000);
+      const done = inc.status === "resolved" || inc.status === "closed";
+      const [row] = await tx`
+        insert into public.incidents
+          (facility_id, location_id, client_id, kind, severity, status, title,
+           description, internal_notes, client_notes, pet_ids, occurred_at,
+           reported_at, reported_by, resolved_at, resolved_by,
+           owner_notified_at, owner_notified_by)
+        values
+          (${DEMO_FACILITY_ID}, ${location.id}, ${clientRowId}, ${inc.kind},
+           ${inc.severity}, ${inc.status}, ${inc.title}, ${inc.description},
+           ${inc.internalNotes}, ${inc.clientNotes}, ${`{${petRowId}}`}::uuid[],
+           ${occurred.toISOString()}, ${reported.toISOString()}, ${SEED_ACTOR_SUB},
+           ${done ? new Date(reported.getTime() + 86_400_000).toISOString() : null},
+           ${done ? SEED_ACTOR_SUB : null},
+           ${inc.ownerTold ? reported.toISOString() : null},
+           ${inc.ownerTold ? SEED_ACTOR_SUB : null})
+        returning ref`;
+      count("incidents");
+      if (inc.followUp) {
+        const due = new Date(
+          reported.getTime() + inc.followUp.dueInDays * 86_400_000,
+        );
+        await tx`
+          insert into public.facility_tasks
+            (facility_id, title, description, category, priority, status,
+             due_at, source, source_ref, metadata, created_by)
+          values
+            (${DEMO_FACILITY_ID}, ${`${inc.followUp.title} — ${inc.pet}`},
+             ${inc.followUp.description}, 'follow_up',
+             ${inc.severity === "high" || inc.severity === "critical" ? "high" : "medium"},
+             'pending', ${due.toISOString()}, 'manual',
+             ${`incident:${row.ref}:1`},
+             ${{
+               incidentRef: Number(row.ref),
+               followUp: {
+                 title: `${inc.followUp.title} — ${inc.pet}`,
+                 description: inc.followUp.description,
+                 assignedTo: "",
+                 dueDate: due.toISOString(),
+                 contactMethod: "phone",
+                 stepOrder: 1,
+                 conversationLog: [],
+                 attemptCount: 0,
+                 escalated: false,
+               },
+             }}::jsonb, ${SEED_ACTOR_SUB})`;
+        count("incident follow-ups");
       }
     }
 
