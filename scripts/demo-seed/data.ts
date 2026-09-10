@@ -782,3 +782,19 @@ export const GROOMING_STATIONS = [
   { legacyId: `${SEED_PREFIX}-station-2`, name: "Table 2", type: "table" },
   { legacyId: `${SEED_PREFIX}-station-tub`, name: "Tub", type: "tub" },
 ];
+
+// ── The business itself ───────────────────────────────────────────────────
+
+export const FACILITY_PROFILE = {
+  email: "hello.pawsco@example.invalid",
+  phone: "+1 514 555-0100",
+  description:
+    "Boarding, daycare and grooming on the Plateau, in Laval and on the South Shore.",
+  address: {
+    street: "4260 rue Saint-Denis",
+    city: "Montréal",
+    state: "QC",
+    zipCode: "H2J 2K8",
+    country: "Canada",
+  },
+};

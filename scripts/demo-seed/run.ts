@@ -41,6 +41,7 @@ import {
   CATEGORIES,
   CLIENTS,
   DAYCARE_PRICE,
+  FACILITY_PROFILE,
   GROOMING_ADD_ONS,
   GROOMING_SERVICES,
   GROOMING_STATIONS,
@@ -71,6 +72,7 @@ const money = (n: number) => Math.round(n * 100) / 100;
 for (const c of CLIENTS)
   assertSafeContact(c.key, c.client.email!, c.client.phone);
 for (const s of STAFF) assertSafeContact(s.legacyId, s.email);
+assertSafeContact("facility", FACILITY_PROFILE.email, FACILITY_PROFILE.phone);
 if (REFUSED_SLUGS.includes(DEMO_FACILITY_SLUG)) {
   throw new Error(`Refusing to seed ${DEMO_FACILITY_SLUG}.`);
 }
@@ -115,6 +117,26 @@ try {
       role: "authenticated",
     })}, true)`;
     await tx.unsafe("set local role authenticated");
+
+    // ── The business profile: only what is still empty ─────────────────────
+    // Without a city the dashboard's weather card has nothing to ask about,
+    // and the invoice and receipt have no address. Fills gaps only — whatever
+    // the client has typed in Settings → Business stays.
+    const profile = await tx`
+      update public.facilities set
+        email = coalesce(nullif(email, ''), ${FACILITY_PROFILE.email}),
+        phone = coalesce(nullif(phone, ''), ${FACILITY_PROFILE.phone}),
+        description = coalesce(nullif(description, ''), ${FACILITY_PROFILE.description}),
+        address = case
+          when address is null or coalesce(address->>'city', '') = ''
+          then ${FACILITY_PROFILE.address}::jsonb
+          else address end
+      where id = ${DEMO_FACILITY_ID}
+        and (coalesce(email, '') = '' or coalesce(phone, '') = ''
+             or coalesce(description, '') = ''
+             or address is null or coalesce(address->>'city', '') = '')
+      returning id`;
+    if (profile.length) count("business profile");
 
     // ── Staff (roster only) ───────────────────────────────────────────────
     for (const s of STAFF) {
