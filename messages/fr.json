@@ -1657,7 +1657,10 @@
         "acContactN": "Contact {n}",
         "acName": "Nom",
         "acEmailPlaceholder": "contact@exemple.com",
-        "acTags": "Étiquettes"
+        "acTags": "Étiquettes",
+        "acTagPickup": "Récupération",
+        "acTagDropoff": "Dépôt",
+        "acTagEmergency": "Urgence"
       }
     }
   },
@@ -9386,6 +9389,27 @@
         "nightVision": "Vision nocturne",
         "accessVia": "Accès par :",
         "closeCamera": "Fermer la caméra"
+      },
+      "household": {
+        "contactsUpdated": "Contacts mis à jour. Le personnel verra le changement immédiatement du côté de l’établissement.",
+        "failedToUpdate": "Impossible de mettre à jour les contacts",
+        "householdAndContacts": "Foyer et contacts",
+        "householdDescription": "Les personnes que votre établissement peut joindre pour une récupération, un dépôt ou une urgence.",
+        "editContacts": "Modifier les contacts",
+        "cancel": "Annuler",
+        "saving": "Enregistrement…",
+        "saveChanges": "Enregistrer les modifications",
+        "primaryAccountHolder": "Titulaire principal du compte",
+        "mainPointOfContact": "La personne que votre établissement joint en premier pour ce compte. Pour modifier le nom, le courriel ou le téléphone, {link}.",
+        "editYourProfile": "modifiez votre profil",
+        "primary": "Principal",
+        "manageInSettings": "Gérer dans les paramètres",
+        "additionalContacts": "Contacts supplémentaires",
+        "additionalContactsBody": "Ajoutez des proches, des amis ou des services de transport d’animaux que votre établissement peut joindre. Indiquez pour chaque personne ce qu’elle est autorisée à faire — l’établissement respecte ces étiquettes à l’arrivée et au départ.",
+        "staysInSync": "Synchronisé avec l’établissement",
+        "staysInSyncBody": "Vos changements vont dans la même liste de contacts que le personnel voit au dossier client. Les personnes que vous autorisez à récupérer ou déposer votre animal peuvent se présenter sans que vous ayez à appeler.",
+        "tagsLabel": "Étiquettes :",
+        "tagsHint": "— choisissez-en une ou plusieurs par contact selon ce que la personne est autorisée à faire."
       }
     }
   }

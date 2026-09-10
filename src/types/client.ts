@@ -184,15 +184,6 @@ export type Address = z.infer<typeof addressSchema>;
 export type AdditionalContact = z.infer<typeof additionalContactSchema>;
 export type AdditionalContactTag = z.infer<typeof additionalContactTagSchema>;
 
-export const ADDITIONAL_CONTACT_TAG_LABELS: Record<
-  AdditionalContactTag,
-  string
-> = {
-  pickup: "Pickup",
-  dropoff: "Drop-off",
-  emergency: "Emergency",
-};
-
 export const ADDITIONAL_CONTACT_TAGS: AdditionalContactTag[] = [
   "pickup",
   "dropoff",

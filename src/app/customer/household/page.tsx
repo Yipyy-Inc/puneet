@@ -24,13 +24,18 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
+import {
+  AdditionalContactsManager,
+  contactTagLabel,
+} from "@/components/clients/AdditionalContactsManager";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
-  ADDITIONAL_CONTACT_TAG_LABELS,
   ADDITIONAL_CONTACT_TAGS,
   type AdditionalContact,
 } from "@/types/client";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { rich } from "@/lib/i18n/rich";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default function CustomerHouseholdPage() {
@@ -38,6 +43,7 @@ export default function CustomerHouseholdPage() {
   const customerId = customer?.id;
 
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
+  const { t } = useCustomerText("household");
 
   const initialContacts = useMemo<AdditionalContact[]>(
     () => customer?.additionalContacts ?? [],
@@ -57,13 +63,9 @@ export default function CustomerHouseholdPage() {
       // facility client file, so the two portals stay in sync.
       await new Promise((resolve) => setTimeout(resolve, 800));
       setIsEditing(false);
-      toast.success(
-        "Contacts updated. Staff will see the change on the facility side immediately.",
-      );
+      toast.success(t("contactsUpdated"));
     } catch (error: unknown) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update contacts",
-      );
+      toast.error(error instanceof Error ? error.message : t("failedToUpdate"));
     } finally {
       setIsSaving(false);
     }
@@ -80,13 +82,13 @@ export default function CustomerHouseholdPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <PageHeader
-            title="Household & Contacts"
-            description="People your facility may contact for pickup, drop-off, or emergencies."
+            title={t("householdAndContacts")}
+            description={t("householdDescription")}
           />
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 size-4" />
-              Edit Contacts
+              {t("editContacts")}
             </Button>
           ) : (
             <div className="flex gap-2">
@@ -95,18 +97,18 @@ export default function CustomerHouseholdPage() {
                 onClick={handleCancel}
                 disabled={isSaving}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Saving...
+                    {t("saving")}
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 size-4" />
-                    Save Changes
+                    {t("saveChanges")}
                   </>
                 )}
               </Button>
@@ -119,18 +121,19 @@ export default function CustomerHouseholdPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserCircle className="size-5" />
-              Primary Account Holder
+              {t("primaryAccountHolder")}
             </CardTitle>
             <CardDescription>
-              Your facility&apos;s main point of contact for this account. To
-              update name, email, or phone,{" "}
-              <Link
-                href="/customer/settings"
-                className="text-primary hover:underline"
-              >
-                edit your profile
-              </Link>
-              .
+              {rich(t("mainPointOfContact"), {
+                link: (
+                  <Link
+                    href="/customer/settings"
+                    className="text-primary hover:underline"
+                  >
+                    {t("editYourProfile")}
+                  </Link>
+                ),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -140,7 +143,7 @@ export default function CustomerHouseholdPage() {
                   <p className="text-base font-semibold">
                     {customer?.name ?? "—"}
                   </p>
-                  <Badge variant="default">Primary</Badge>
+                  <Badge variant="default">{t("primary")}</Badge>
                 </div>
                 <div className="text-muted-foreground space-y-0.5 text-sm">
                   {customer?.email && (
@@ -160,7 +163,7 @@ export default function CustomerHouseholdPage() {
               <Button variant="outline" size="sm" asChild>
                 <Link href="/customer/settings">
                   <ExternalLink className="mr-2 size-3.5" />
-                  Manage in Settings
+                  {t("manageInSettings")}
                 </Link>
               </Button>
             </div>
@@ -172,13 +175,9 @@ export default function CustomerHouseholdPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="size-5" />
-              Additional Contacts
+              {t("additionalContacts")}
             </CardTitle>
-            <CardDescription>
-              Add family, friends, or pet transport services your facility may
-              contact. Tag each person with what they&apos;re authorized for —
-              the facility honors these tags at check-in and pick-up.
-            </CardDescription>
+            <CardDescription>{t("additionalContactsBody")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <TagLegend />
@@ -198,13 +197,9 @@ export default function CustomerHouseholdPage() {
               <div className="flex items-start gap-3">
                 <ShieldCheck className="text-primary mt-0.5 size-5" />
                 <div className="flex-1">
-                  <p className="mb-1 text-sm font-medium">
-                    Stays in sync with the facility
-                  </p>
+                  <p className="mb-1 text-sm font-medium">{t("staysInSync")}</p>
                   <p className="text-muted-foreground text-sm">
-                    Your changes go to the same contact list staff see on the
-                    client file. Whoever you tag for pickup or drop-off can
-                    arrive without you needing to call ahead.
+                    {t("staysInSyncBody")}
                   </p>
                 </div>
               </div>
@@ -217,18 +212,21 @@ export default function CustomerHouseholdPage() {
 }
 
 function TagLegend() {
+  const { t } = useCustomerText("household");
+  // The tag names come from the same catalogue the contacts manager below
+  // uses, so the legend and the chips cannot disagree.
+  const { t: contactT } = useStaffText("createClient");
   return (
     <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3 text-xs">
-      <span className="text-muted-foreground font-medium">Tags:</span>
+      <span className="text-muted-foreground font-medium">
+        {t("tagsLabel")}
+      </span>
       {ADDITIONAL_CONTACT_TAGS.map((tag) => (
         <Badge key={tag} variant="secondary" className="font-normal">
-          {ADDITIONAL_CONTACT_TAG_LABELS[tag]}
+          {contactTagLabel(tag, contactT)}
         </Badge>
       ))}
-      <span className="text-muted-foreground">
-        — choose one or more per contact based on what they&apos;re allowed to
-        do.
-      </span>
+      <span className="text-muted-foreground">{t("tagsHint")}</span>
     </div>
   );
 }
