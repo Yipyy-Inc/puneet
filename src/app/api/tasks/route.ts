@@ -71,6 +71,18 @@ export async function GET(request: NextRequest) {
   const source = params.get("source");
   if (source && source !== "all") query = query.eq("source", source);
 
+  // The tasks one feature produced for one record — "booking:4127:" is every
+  // task a booking's template run has written. A prefix, not an exact ref,
+  // because the feature appends its own id for each task.
+  const sourceRefPrefix = params.get("sourceRefPrefix");
+  if (sourceRefPrefix) {
+    query = query.like(
+      "source_ref",
+      // LIKE's own wildcards and escape in the prefix are matched literally.
+      `${sourceRefPrefix.replace(/[\\%_]/g, (c) => `\\${c}`)}%`,
+    );
+  }
+
   const assignedTo = params.get("assignedTo");
   if (assignedTo) query = query.eq("assigned_to", assignedTo);
 

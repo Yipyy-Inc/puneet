@@ -12296,7 +12296,15 @@ buttons announced work they never did. What changed:
   - Printing a care sheet, emailing the invoice and "SMS link" are still toasts.
   - ~~The Notes card still shows the two hard-coded `MOCK_NOTES`~~ — notes are
     rows now (`public.notes`, 20260910201745, and `/api/notes`), see below.
-  - The Tasks panel still reads fixture tasks.
+  - ~~The Tasks panel still reads fixture tasks.~~ It read
+    `getTasksForBooking`, which looked the booking up in the BOOKINGS FIXTURE
+    and kept progress in localStorage. The plan is now generated from the
+    facility's real task templates for the booking's service, and a task
+    becomes a `facility_tasks` row (`source = template`, `source_ref =
+booking:<ref>:<task>`) the first time somebody starts or finishes it —
+    so it is on the task board too, and its status is what the panel shows.
+    A task nobody has touched is not on the board: the routine is not written
+    ahead of time, only acted on.
 - **Notes are rows.** Every note on a pet, a client, a booking or an incident
   went through `useNotesForEntity`, which kept them in React state seeded from
   the `@/data/tags-notes` fixture — so "Note added" lasted until the reload,

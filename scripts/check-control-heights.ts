@@ -143,7 +143,7 @@ const BASELINE = new Map<string, number>([
   ["src/app/dashboard/support/tickets/_components/assign-cell.tsx", 1],
   ["src/app/dashboard/support/tickets/[id]/_components/ticket-sidebar.tsx", 1],
   ["src/app/dashboard/system-admin/ai-settings/page.tsx", 1],
-  ["src/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page.tsx", 3],
+  ["src/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page.tsx", 2],
   ["src/app/facility/dashboard/clients/[id]/overview/page.tsx", 3],
   ["src/app/facility/dashboard/clients/[id]/page.tsx", 2],
   ["src/app/facility/dashboard/clients/[id]/settings/page.tsx", 1],
