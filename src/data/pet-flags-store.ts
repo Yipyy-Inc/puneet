@@ -1,9 +1,15 @@
+import {
+  onDailyCareRecords,
+  removePetFlag,
+  reportDailyCareWriteError,
+  writeDailyCareRecord,
+} from "@/lib/api/daily-care-records";
+
 // ============================================================================
-// Pet health-attention flags (A4.3) — mutable in-memory store keyed by
-// date + guest. Mirrors shift-notes-store.ts: components subscribe via
-// useSyncExternalStore. A flag marks a pet as needing attention for that day;
-// toggling it again clears it. The manager notification is represented by a
-// sonner toast at the call site (real push is a TODO there).
+// Pet health-attention flags (A4.3), keyed by date + guest — a cache of
+// `daily_care_records` that components read via useSyncExternalStore. A flag
+// marks a pet as needing attention for that day; toggling it again clears it.
+// Nothing notifies a manager: a flag is on the board for whoever looks.
 // ============================================================================
 
 export type PetFlag = {
@@ -41,6 +47,53 @@ function notify(): void {
   for (const l of listeners) l();
 }
 
+// A CACHE of `daily_care_records` (kind pet_flag): filled from the server
+// whenever the board loads a day, and every change written through. It was a
+// Map in one tab, and "manager notified" was a toast.
+onDailyCareRecords((date, records) => {
+  for (const key of [...flagsByKey.keys()]) {
+    if (key.startsWith(`${date}::`)) flagsByKey.delete(key);
+  }
+  for (const r of records) {
+    if (r.kind !== "pet_flag") continue;
+    flagsByKey.set(keyFor(date, r.subject), {
+      reason: r.payload.reason ? String(r.payload.reason) : undefined,
+      createdBy: String(r.payload.createdBy ?? r.createdByName ?? ""),
+      createdAt: String(r.payload.createdAt ?? r.createdAt),
+    });
+  }
+  notify();
+});
+
+/** Write a raised flag; on refusal, put back `before` — what was there. */
+function persist(
+  date: string,
+  guestId: string,
+  flag: PetFlag | null,
+  before: PetFlag | null,
+) {
+  const key = keyFor(date, guestId);
+  const write = flag
+    ? writeDailyCareRecord({
+        date,
+        kind: "pet_flag",
+        subject: guestId,
+        payload: { ...flag },
+      })
+    : removePetFlag(date, guestId);
+  return write.catch((error: unknown) => {
+    // Put the board back the way the server has it.
+    if (flag) {
+      if (before) flagsByKey.set(key, before);
+      else flagsByKey.delete(key);
+    } else if (before) {
+      flagsByKey.set(key, before);
+    }
+    notify();
+    reportDailyCareWriteError(error);
+  });
+}
+
 export const petFlagsStore = {
   /** The flag for one pet on one day, or null. Stable reference between changes. */
   getSnapshot(date: string, guestId: string): PetFlag | null {
@@ -63,20 +116,29 @@ export const petFlagsStore = {
    *  existing flag. Used by the health-concern path, where logging a concern
    *  must always leave the pet flagged regardless of prior state. */
   raise(date: string, guestId: string, flag: PetFlag): void {
+    const before = flagsByKey.get(keyFor(date, guestId)) ?? null;
     flagsByKey.set(keyFor(date, guestId), flag);
     notify();
+    void persist(date, guestId, flag, before);
   },
 
   /** Toggle a pet's flag for a day. Returns the new flagged state. */
   toggle(date: string, guestId: string, flag: PetFlag): boolean {
     const key = keyFor(date, guestId);
     if (flagsByKey.has(key)) {
+      const before = flagsByKey.get(key)!;
       flagsByKey.delete(key);
       notify();
+      removePetFlag(date, guestId).catch((error: unknown) => {
+        flagsByKey.set(key, before);
+        notify();
+        reportDailyCareWriteError(error);
+      });
       return false;
     }
     flagsByKey.set(key, flag);
     notify();
+    void persist(date, guestId, flag, null);
     return true;
   },
 };

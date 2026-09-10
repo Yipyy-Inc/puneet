@@ -27,6 +27,7 @@ import { UtensilsCrossed, Pill } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { petFlagsStore } from "@/data/pet-flags-store";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { ScheduledTask, TaskExecution } from "@/types/care-log";
 
 const ALERT_TONE: Record<string, string> = {
@@ -79,18 +80,20 @@ export function PetRow({ task, execution, date, onLog, onQuickLog }: Props) {
   );
   const isFlagged = flag !== null;
 
+  const { t: boardT, fill: boardFill } = useStaffText("dailyCareBoard");
   const handleFlag = () => {
     const nowFlagged = petFlagsStore.toggle(date, task.guestId, {
       createdBy: user.name,
       createdAt: new Date().toISOString(),
     });
-    // TODO: replace this toast with a real push notification to the on-shift manager.
+    // The flag is a row now (daily_care_records), on the board for the next
+    // shift. It said "manager notified"; nothing messages anybody.
     if (nowFlagged) {
-      toast.warning(
-        `${task.petName} flagged for attention — manager notified.`,
-      );
+      toast.warning(boardFill("flagged", { pet: task.petName }), {
+        description: boardT("flagHelp"),
+      });
     } else {
-      toast(`Flag cleared for ${task.petName}.`);
+      toast(boardFill("flagCleared", { pet: task.petName }));
     }
   };
 

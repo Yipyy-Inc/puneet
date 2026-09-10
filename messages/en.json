@@ -1845,6 +1845,16 @@
         "eventNotSaved": "The event was not saved",
         "rescheduled": "Rescheduled",
         "ownerNotMessaged": "The owner has not been messaged — Yipyy does not send reschedule notices yet."
+      },
+      "dailyCareBoard": {
+        "flaggedHealth": "{pet} is flagged for attention — health concern",
+        "flaggedIncident": "{pet} is flagged — incident logged",
+        "flagged": "{pet} is flagged for attention",
+        "flagCleared": "Flag cleared for {pet}",
+        "flagHelp": "The flag stays on the board for the next shift. Nobody is messaged.",
+        "notDelivered": "Logged {task} as not delivered",
+        "ownerNotMessaged": "The owner has not been messaged.",
+        "writeFailed": "That was not saved on the board"
       }
     }
   },

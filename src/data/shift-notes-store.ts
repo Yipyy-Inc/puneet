@@ -1,5 +1,14 @@
+import {
+  onDailyCareRecords,
+  reportDailyCareWriteError,
+  writeDailyCareRecord,
+} from "@/lib/api/daily-care-records";
+
 // ============================================================================
-// Shift-handoff notes — mutable in-memory store keyed by facility + date.
+// Shift-handoff notes — a CACHE of `daily_care_records` (kind shift_note),
+// keyed by date. It was the whole truth, in one browser tab, under a
+// hard-coded facility id; the server now scopes by the session's facility, so
+// `facilityId` below is kept for the callers and no longer decides anything.
 // Mirrors daily-care-config-store.ts: components subscribe via
 // useSyncExternalStore, so a note left from the dialog shows up in the banner
 // (and any other subscriber) without prop-drilling or an API round-trip.
@@ -24,9 +33,25 @@ const EMPTY: ShiftNote[] = [];
 
 let seq = 0;
 
-function keyFor(facilityId: number, date: string): string {
-  return `${facilityId}::${date}`;
+function keyFor(_facilityId: number, date: string): string {
+  return date;
 }
+
+// Filled from the server whenever the board loads a day.
+onDailyCareRecords((date, records) => {
+  notesByKey.set(
+    date,
+    records
+      .filter((r) => r.kind === "shift_note")
+      .map((r) => ({
+        id: r.id,
+        author: String(r.payload.author ?? r.createdByName ?? ""),
+        createdAt: String(r.payload.createdAt ?? r.createdAt),
+        text: String(r.payload.text ?? ""),
+      })),
+  );
+  notify();
+});
 
 function notify(): void {
   for (const l of listeners) l();
@@ -59,5 +84,22 @@ export const shiftNotesStore = {
     };
     notesByKey.set(key, [...(notesByKey.get(key) ?? []), entry]);
     notify();
+    // Written through; taken back off the board if the write is refused.
+    writeDailyCareRecord({
+      date,
+      kind: "shift_note",
+      payload: {
+        text: note.text,
+        author: note.author,
+        createdAt: note.createdAt,
+      },
+    }).catch((error: unknown) => {
+      notesByKey.set(
+        key,
+        (notesByKey.get(key) ?? []).filter((n) => n.id !== entry.id),
+      );
+      notify();
+      reportDailyCareWriteError(error);
+    });
   },
 };
