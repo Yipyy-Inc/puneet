@@ -28,6 +28,9 @@ import { useCustomerInvoiceTemplate } from "@/hooks/use-invoice-template";
 import type { Booking, Invoice } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { PaymentMethod } from "@/types/payments";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 interface CustomerInvoiceCardProps {
   booking: Booking;
@@ -37,16 +40,17 @@ interface CustomerInvoiceCardProps {
   petName: string;
 }
 
-function fmt(n: number): string {
-  return n.toFixed(2);
-}
-
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+/**
+ * The PRINTED invoice stays English end to end, for now.
+ *
+ * `buildInvoiceDocumentHtml` renders its own labels — "Invoice", "Subtotal"
+ * — and is one of the three §5u print documents already on the debt map. A
+ * French date inside an English document is worse than either, so the dates
+ * handed to it stay English until the document itself is converted. The
+ * CARD on screen is French; the document it prints is not yet.
+ */
+function formatDocumentDate(d: string): string {
+  return formatDateLong(d, "en");
 }
 
 function buildInvoiceDocumentData(
@@ -59,15 +63,15 @@ function buildInvoiceDocumentData(
     booking.startDate &&
     booking.endDate &&
     booking.startDate !== booking.endDate
-      ? `${formatDate(booking.startDate)} – ${formatDate(booking.endDate)}`
+      ? `${formatDocumentDate(booking.startDate)} – ${formatDocumentDate(booking.endDate)}`
       : booking.startDate
-        ? formatDate(booking.startDate)
+        ? formatDocumentDate(booking.startDate)
         : undefined;
 
   return {
     invoiceNumber: invoice.id,
     invoiceStatus: invoice.status,
-    issuedDate: formatDate(booking.startDate),
+    issuedDate: formatDocumentDate(booking.startDate),
     bookingDateRange: dateRange,
     clientName: client.name,
     clientEmail: client.email,
@@ -91,21 +95,21 @@ function buildInvoiceDocumentData(
   };
 }
 
-const STATUS_CONFIG: Record<string, { label: string; classes: string }> = {
+const STATUS_CONFIG: Record<string, { labelKey: string; classes: string }> = {
   estimate: {
-    label: "Estimate",
+    labelKey: "invoiceEstimate",
     classes: "border-zinc-300 bg-zinc-100 text-zinc-700",
   },
   unpaid: {
-    label: "Unpaid",
+    labelKey: "invoiceUnpaid",
     classes: "border-amber-300 bg-amber-100 text-amber-800",
   },
   overdue: {
-    label: "Overdue",
+    labelKey: "invoiceOverdue",
     classes: "border-red-300 bg-red-100 text-red-800",
   },
   paid: {
-    label: "Paid",
+    labelKey: "invoicePaid",
     classes: "border-emerald-300 bg-emerald-100 text-emerald-800",
   },
 };
@@ -117,6 +121,8 @@ export function CustomerInvoiceCard({
   savedCards,
   petName,
 }: CustomerInvoiceCardProps) {
+  const { t, fill, locale } = useCustomerText("billing");
+  const money = (n: number) => formatMoney(n, locale);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [payNowOpen, setPayNowOpen] = useState(false);
 
@@ -168,25 +174,25 @@ export function CustomerInvoiceCard({
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Receipt className="text-muted-foreground size-4" />
-                Invoice {invoice.id}
+                {fill("invoiceNumber", { id: invoice.id })}
               </CardTitle>
               <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-3 text-xs">
                 <span className="flex items-center gap-1">
                   <Calendar className="size-3" />
-                  {formatDate(booking.startDate)}
+                  {formatDateLong(booking.startDate, locale)}
                 </span>
-                <span className="capitalize">{booking.service}</span>
+                <span>{serviceTypeLabel(locale, booking.service)}</span>
                 <span>· {petName}</span>
               </p>
             </div>
             <Badge
               variant="outline"
               className={cn(
-                "px-2.5 py-0.5 text-[11px] font-semibold capitalize",
+                "px-2.5 py-0.5 text-[11px] font-semibold",
                 statusCfg.classes,
               )}
             >
-              {statusCfg.label}
+              {t(statusCfg.labelKey)}
             </Badge>
           </div>
         </CardHeader>
@@ -195,7 +201,7 @@ export function CustomerInvoiceCard({
           {/* Line items */}
           <div>
             <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
-              Services
+              {t("services")}
             </p>
             <div className="space-y-1">
               {invoice.items.map((item, i) => (
@@ -206,11 +212,11 @@ export function CustomerInvoiceCard({
                   <div className="min-w-0 flex-1">
                     <p>{item.name}</p>
                     <p className="text-muted-foreground text-[11px]">
-                      ${fmt(item.unitPrice)} × {item.quantity}
+                      {money(item.unitPrice)} × {item.quantity}
                     </p>
                   </div>
                   <span className="font-[tabular-nums]">
-                    ${fmt(item.price)}
+                    {money(item.price)}
                   </span>
                 </div>
               ))}
@@ -220,7 +226,9 @@ export function CustomerInvoiceCard({
                   className="text-muted-foreground flex justify-between text-sm"
                 >
                   <span>{fee.name}</span>
-                  <span className="font-[tabular-nums]">${fmt(fee.price)}</span>
+                  <span className="font-[tabular-nums]">
+                    {money(fee.price)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -229,19 +237,19 @@ export function CustomerInvoiceCard({
           {/* Summary */}
           <div className="space-y-1 border-t pt-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">{t("subtotal")}</span>
               <span className="font-[tabular-nums]">
-                ${fmt(invoice.subtotal)}
+                {money(invoice.subtotal)}
               </span>
             </div>
             {invoice.discount > 0 && (
               <div className="flex justify-between text-emerald-700">
                 <span>
-                  Discount
+                  {t("discount")}
                   {invoice.discountLabel ? ` (${invoice.discountLabel})` : ""}
                 </span>
                 <span className="font-[tabular-nums]">
-                  -${fmt(invoice.discount)}
+                  −{money(invoice.discount)}
                 </span>
               </div>
             )}
@@ -251,38 +259,45 @@ export function CustomerInvoiceCard({
             ).map((tax, i) => (
               <div key={i} className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {tax.name} ({(tax.rate * 100).toFixed(tax.rate < 0.1 ? 1 : 3)}
-                  %)
+                  {tax.name} (
+                  {formatPercent(
+                    tax.rate * 100,
+                    locale,
+                    tax.rate < 0.1 ? 1 : 3,
+                  )}
+                  )
                 </span>
-                <span className="font-[tabular-nums]">${fmt(tax.amount)}</span>
+                <span className="font-[tabular-nums]">{money(tax.amount)}</span>
               </div>
             ))}
             {(!invoice.taxes || invoice.taxes.length === 0) &&
               invoice.taxAmount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tax</span>
+                  <span className="text-muted-foreground">{t("tax")}</span>
                   <span className="font-[tabular-nums]">
-                    ${fmt(invoice.taxAmount)}
+                    {money(invoice.taxAmount)}
                   </span>
                 </div>
               )}
             <div className="flex justify-between border-t pt-1.5 font-semibold">
-              <span>Total</span>
-              <span className="font-[tabular-nums]">${fmt(invoice.total)}</span>
+              <span>{t("total")}</span>
+              <span className="font-[tabular-nums]">
+                {money(invoice.total)}
+              </span>
             </div>
             {invoice.depositCollected > 0 && (
               <div className="flex justify-between text-emerald-700">
-                <span>Deposit collected</span>
+                <span>{t("depositCollected")}</span>
                 <span className="font-[tabular-nums]">
-                  -${fmt(invoice.depositCollected)}
+                  −{money(invoice.depositCollected)}
                 </span>
               </div>
             )}
             {hasBalance && (
               <div className="text-destructive flex justify-between font-medium">
-                <span>Amount due</span>
+                <span>{t("amountDue")}</span>
                 <span className="font-[tabular-nums]">
-                  ${fmt(invoice.remainingDue)}
+                  {money(invoice.remainingDue)}
                 </span>
               </div>
             )}
@@ -297,7 +312,7 @@ export function CustomerInvoiceCard({
               className="gap-1.5"
             >
               <Eye className="size-3.5" />
-              View full invoice
+              {t("viewFullInvoice")}
             </Button>
             <Button
               variant="outline"
@@ -306,7 +321,7 @@ export function CustomerInvoiceCard({
               className="gap-1.5"
             >
               <Download className="size-3.5" />
-              Download PDF
+              {t("downloadPdf")}
             </Button>
             {hasBalance && (
               <Button
@@ -315,13 +330,13 @@ export function CustomerInvoiceCard({
                 onClick={() => setPayNowOpen(true)}
               >
                 <CreditCard className="size-3.5" />
-                Pay ${fmt(invoice.remainingDue)} now
+                {fill("payAmountNow", { amount: money(invoice.remainingDue) })}
               </Button>
             )}
             {invoice.status === "closed" && (
               <span className="text-muted-foreground ml-auto flex items-center gap-1 text-[11px]">
                 <FileText className="size-3" />
-                Paid in full
+                {t("paidInFull")}
               </span>
             )}
           </div>
@@ -331,11 +346,13 @@ export function CustomerInvoiceCard({
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Invoice {invoice.id}</DialogTitle>
+            <DialogTitle>
+              {fill("invoiceNumber", { id: invoice.id })}
+            </DialogTitle>
           </DialogHeader>
           <div className="rounded-md bg-zinc-100 p-3">
             <iframe
-              title="Invoice preview"
+              title={t("invoicePreview")}
               srcDoc={previewHtml}
               className="h-[70vh] w-full rounded-md border bg-white shadow-sm"
               sandbox="allow-same-origin"
@@ -348,7 +365,7 @@ export function CustomerInvoiceCard({
               className="gap-1.5"
             >
               <Download className="size-3.5" />
-              Download PDF
+              {t("downloadPdf")}
             </Button>
             {hasBalance && (
               <Button
@@ -359,7 +376,7 @@ export function CustomerInvoiceCard({
                 className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
               >
                 <CreditCard className="size-3.5" />
-                Pay ${fmt(invoice.remainingDue)} now
+                {fill("payAmountNow", { amount: money(invoice.remainingDue) })}
               </Button>
             )}
           </div>

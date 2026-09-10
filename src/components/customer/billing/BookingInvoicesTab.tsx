@@ -10,10 +10,14 @@ import { bookings as allBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { paymentMethods } from "@/data/payments";
 import { CustomerInvoiceCard } from "@/components/customer/billing/CustomerInvoiceCard";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
 
 type Filter = "all" | "paid" | "pending" | "overdue";
 
 export function BookingInvoicesTab() {
+  // Above the "sign in" return below, so the hook order never changes.
+  const { t, locale } = useCustomerText("billing");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -64,7 +68,7 @@ export function BookingInvoicesTab() {
         return {
           booking: b,
           invoice: b.invoice!,
-          petName: pet?.name ?? "Pet",
+          petName: pet?.name ?? t("petFallback"),
         };
       })
       .sort(
@@ -72,13 +76,13 @@ export function BookingInvoicesTab() {
           new Date(b.booking.startDate).getTime() -
           new Date(a.booking.startDate).getTime(),
       );
-  }, [customerId, client, filter, searchQuery]);
+  }, [customerId, client, filter, searchQuery, t]);
 
   if (!client) {
     return (
       <Card>
         <CardContent className="text-muted-foreground py-12 text-center text-sm">
-          Sign in to view your invoices.
+          {t("signInForInvoices")}
         </CardContent>
       </Card>
     );
@@ -92,19 +96,16 @@ export function BookingInvoicesTab() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">Invoices & Receipts</h2>
-          <p className="text-muted-foreground">
-            Each invoice shows the full breakdown of your booking. Pay
-            outstanding balances online with a card on file.
-          </p>
+          <h2 className="text-2xl font-semibold">{t("tabInvoices")}</h2>
+          <p className="text-muted-foreground">{t("invoicesDescription")}</p>
         </div>
         {totalDue > 0 && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-right">
             <p className="text-[10px] font-semibold tracking-wider text-amber-900/70 uppercase">
-              Outstanding
+              {t("outstanding")}
             </p>
             <p className="font-[tabular-nums] text-lg font-bold text-amber-900">
-              ${totalDue.toFixed(2)}
+              {formatMoney(totalDue, locale)}
             </p>
           </div>
         )}
@@ -114,7 +115,7 @@ export function BookingInvoicesTab() {
         <div className="relative flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Search by invoice number or service..."
+            placeholder={t("invoiceSearchPlaceholder")}
             className="pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -127,9 +128,8 @@ export function BookingInvoicesTab() {
               variant={filter === f ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter(f)}
-              className="capitalize"
             >
-              {f}
+              {t(`filter_${f}`)}
             </Button>
           ))}
         </div>
@@ -139,9 +139,9 @@ export function BookingInvoicesTab() {
         <Card>
           <CardContent className="space-y-3 py-12 text-center">
             <FileText className="text-muted-foreground mx-auto size-12 opacity-50" />
-            <p className="font-semibold">No invoices yet</p>
+            <p className="font-semibold">{t("noInvoices")}</p>
             <p className="text-muted-foreground text-sm">
-              Once you book a service, your invoice will appear here.
+              {t("noInvoicesHelp")}
             </p>
           </CardContent>
         </Card>

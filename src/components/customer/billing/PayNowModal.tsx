@@ -16,6 +16,9 @@ import { CreditCard, Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { PaymentMethod } from "@/types/payments";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface PayNowModalProps {
   open: boolean;
@@ -34,6 +37,8 @@ export function PayNowModal({
   amountDue,
   savedCards,
 }: PayNowModalProps) {
+  const { t, fill, locale } = useCustomerText("billing");
+  const amountText = formatMoney(amountDue, locale);
   const defaultCardId =
     savedCards.find((c) => c.isDefault)?.id ?? savedCards[0]?.id ?? "";
   const [selectedCardId, setSelectedCardId] = useState(defaultCardId);
@@ -56,11 +61,17 @@ export function PayNowModal({
           : null;
       const last4 =
         mode === "saved" ? card?.cardLast4 : newCardNumber.slice(-4) || "0000";
-      const brand = mode === "saved" ? card?.cardBrand?.toUpperCase() : "CARD";
+      const brand =
+        mode === "saved" ? card?.cardBrand?.toUpperCase() : t("cardFallback");
       toast.success(
-        `Payment of $${amountDue.toFixed(2)} processed for ${invoiceNumber}`,
+        fill("paymentProcessedToast", {
+          amount: amountText,
+          invoice: invoiceNumber,
+        }),
         {
-          description: `Charged to ${brand} •••• ${last4} · A receipt has been emailed`,
+          description: fill("paymentChargedToast", {
+            card: `${brand} •••• ${last4}`,
+          }),
         },
       );
       setSubmitting(false);
@@ -84,19 +95,22 @@ export function PayNowModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="size-4 text-emerald-600" />
-            Secure payment
+            {t("securePayment")}
           </DialogTitle>
           <DialogDescription>
-            Paying invoice <span className="font-medium">{invoiceNumber}</span>{" "}
-            — your card is processed over an encrypted connection.
+            {rich(t("payingInvoice"), {
+              invoice: <span className="font-medium">{invoiceNumber}</span>,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <div className="bg-muted/30 flex items-center justify-between rounded-lg border px-4 py-3">
-            <span className="text-muted-foreground text-sm">Amount due</span>
+            <span className="text-muted-foreground text-sm">
+              {t("amountDue")}
+            </span>
             <span className="font-[tabular-nums] text-lg font-semibold">
-              ${amountDue.toFixed(2)}
+              {amountText}
             </span>
           </div>
 
@@ -113,7 +127,7 @@ export function PayNowModal({
                 )}
               >
                 <CreditCard className="size-3.5" />
-                Saved card
+                {t("savedCard")}
               </button>
               <button
                 type="button"
@@ -126,14 +140,14 @@ export function PayNowModal({
                 )}
               >
                 <Plus className="size-3.5" />
-                New card
+                {t("newCard")}
               </button>
             </div>
           )}
 
           {mode === "saved" && savedCards.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs">Choose a card on file</Label>
+              <Label className="text-xs">{t("chooseSavedCard")}</Label>
               {savedCards.map((card) => (
                 <label
                   key={card.id}
@@ -156,8 +170,11 @@ export function PayNowModal({
                       {card.cardBrand?.toUpperCase()} •••• {card.cardLast4}
                     </p>
                     <p className="text-muted-foreground text-[11px]">
-                      Expires {card.cardExpMonth}/{card.cardExpYear}
-                      {card.isDefault && " · Default"}
+                      {fill("cardExpires", {
+                        month: String(card.cardExpMonth ?? "").padStart(2, "0"),
+                        year: String(card.cardExpYear ?? ""),
+                      })}
+                      {card.isDefault && ` · ${t("defaultCard")}`}
                     </p>
                   </div>
                 </label>
@@ -168,16 +185,16 @@ export function PayNowModal({
           {mode === "new" && (
             <div className="space-y-3">
               <div>
-                <Label className="text-xs">Cardholder name</Label>
+                <Label className="text-xs">{t("cardholderName")}</Label>
                 <Input
                   className="mt-1"
                   value={newCardName}
                   onChange={(e) => setNewCardName(e.target.value)}
-                  placeholder="Name on card"
+                  placeholder={t("nameOnCard")}
                 />
               </div>
               <div>
-                <Label className="text-xs">Card number</Label>
+                <Label className="text-xs">{t("cardNumber")}</Label>
                 <Input
                   className="mt-1 font-mono"
                   value={newCardNumber}
@@ -194,7 +211,7 @@ export function PayNowModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Expiry</Label>
+                  <Label className="text-xs">{t("expiry")}</Label>
                   <Input
                     className="mt-1 font-mono"
                     value={newCardExpiry}
@@ -208,7 +225,7 @@ export function PayNowModal({
                           : cleaned;
                       setNewCardExpiry(formatted);
                     }}
-                    placeholder="MM/YY"
+                    placeholder={t("expiryPlaceholder")}
                     maxLength={5}
                   />
                 </div>
@@ -234,27 +251,29 @@ export function PayNowModal({
                   onChange={(e) => setSaveCard(e.target.checked)}
                   className="accent-primary"
                 />
-                Save this card for future invoices
+                {t("saveCardForLater")}
               </label>
             </div>
           )}
 
           <p className="text-muted-foreground flex items-center gap-1.5 text-[10.5px]">
             <Lock className="size-3" />
-            Payment processed securely. Card details never touch this server.
+            {t("securelyProcessed")}
           </p>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handlePay}
             disabled={!canPay || submitting}
             className="bg-emerald-600 hover:bg-emerald-700"
           >
-            {submitting ? "Processing…" : `Pay $${amountDue.toFixed(2)}`}
+            {submitting
+              ? t("processing")
+              : fill("payAmount", { amount: amountText })}
           </Button>
         </DialogFooter>
       </DialogContent>

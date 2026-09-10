@@ -11573,3 +11573,32 @@ invent an id. Its field labels are the evidence that `pets.weight` is pounds.
 - `FormWizard` was converted for its strings only. Its dynamic-form state
   (`useState` + `evaluateLogicRules`, the localStorage draft store) is the
   handle-with-care zone above and was not touched.
+
+### Billing (`/customer/billing`) — **the customer can "pay" and nothing is charged**
+
+- **`PayNowModal` is a fake payment.** "Pay $X now" waits 600 ms and toasts
+  "Payment of $X processed for INV-… — Charged to VISA •••• 4242 · A receipt
+  has been emailed". No charge is made, no receipt is sent, the invoice stays
+  unpaid. It also takes a raw card number, expiry and CVC into React state
+  and discards them. This product takes real money through Clover elsewhere
+  (`saved-cards`, `yipyy-pay`, the deposit panel in the booking wizard), so
+  this is not a missing backend — it is a mock sitting beside the real thing.
+  **The most serious item in this section.** It appears to be reachable only
+  by customers who exist in the FIXTURE client list, because
+  `BookingInvoicesTab` looks the signed-in customer up in `@/data/clients`
+  and shows "Sign in to see your invoices" to anyone else — so a real
+  customer most likely never sees it. That is luck, not a guard.
+- **"Add a payment method" is fake the same way** — 800 ms, "Card verified and
+  added", and the card is not even added to the list on screen. It also takes
+  a raw PAN and CVC. The real saved-card flow exists; this tab should use it
+  or not exist.
+- **Every balance was formatted in US dollars.** `BalanceSummaryCards` and
+  `BalancesTab` used `Intl.NumberFormat("en-US", { currency: "USD" })`. They
+  are `formatMoney` (CAD, the reader's locale) now.
+- **All three balances read fixtures** (`customerCredits`, `giftCards`,
+  `invoices` from `src/data/payments`), and a gift card counts as the
+  customer's own if its recipient email contains `@example.com` — the
+  comment calls it a "simplified check".
+- The printed invoice (`lib/invoice-document`) is still English end to end —
+  one of the three §5u print documents. The on-screen card is French; the
+  dates handed to the document stay English so it is not half and half.
