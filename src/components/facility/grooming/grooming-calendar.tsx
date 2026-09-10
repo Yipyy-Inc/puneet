@@ -106,6 +106,7 @@ import {
   Truck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { NO_ITEMS } from "@/lib/no-items";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -391,9 +392,11 @@ function GroomingSidebar({
   // Missed tasks count — derived from the same source the Tasks tab uses,
   // which is now the facility's own task_templates rows. Gated by mount so
   // SSR/CSR match (the calculation depends on the current time).
-  const { data: groomingTaskTemplates = [] } = useQuery(
+  const { data: groomingTaskTemplatesData } = useQuery(
     taskTemplateQueries.byModule("grooming"),
   );
+  // Stable while loading — see lib/no-items.ts.
+  const groomingTaskTemplates = groomingTaskTemplatesData ?? NO_ITEMS;
   const [missedTaskCount, setMissedTaskCount] = useState(0);
   useEffect(() => {
     function refresh() {

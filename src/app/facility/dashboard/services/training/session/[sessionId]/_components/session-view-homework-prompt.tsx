@@ -51,6 +51,7 @@ import {
   nextHomeworkTemplateId,
   nextHomeworkTemplateItemId,
 } from "@/lib/training-homework-templates";
+import { NO_ITEMS } from "@/lib/no-items";
 
 interface Props {
   open: boolean;
@@ -123,9 +124,9 @@ export function SessionHomeworkPromptDialog({
 }: Props) {
   const queryClient = useQueryClient();
   const { data: exercises = [] } = useQuery(trainingQueries.exercises());
-  const { data: templates = [] } = useQuery(
-    trainingQueries.homeworkTemplates(),
-  );
+  const { data: templatesData } = useQuery(trainingQueries.homeworkTemplates());
+  // Stable while loading — see lib/no-items.ts.
+  const templates = templatesData ?? NO_ITEMS;
 
   const preferredDisciplineId = useMemo(
     () => disciplineId ?? getDisciplineIdForClassName(className),

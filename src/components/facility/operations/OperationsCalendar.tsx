@@ -126,6 +126,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { NO_ITEMS } from "@/lib/no-items";
 
 const FACILITY_ID = 11;
 const VISUAL_CONFIG_KEY = `operations-calendar-visual-config-${FACILITY_ID}`;
@@ -573,9 +574,11 @@ export function OperationsCalendar() {
   // Tasks are the task board's (`/api/tasks`). This comment used to say they
   // had no table and so stayed on the `facilityTasks` fixture — a morning of
   // invented feedings drawn on every facility's calendar.
-  const { data: bookingRecords = [], isPending: bookingsPending } = useQuery(
+  const { data: bookingRecordsData, isPending: bookingsPending } = useQuery(
     bookingQueries.all(),
   );
+  // Stable while loading — see lib/no-items.ts.
+  const bookingRecords = bookingRecordsData ?? NO_ITEMS;
   const queryClient = useQueryClient();
 
   /**

@@ -98,6 +98,7 @@ import {
   type ReportRange,
 } from "@/components/reports/report-range-picker";
 import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
+import { NO_ITEMS } from "@/lib/no-items";
 
 type MergedStylist = {
   staffId: string;
@@ -290,7 +291,9 @@ export default function StylistsPage() {
     6: { isAvailable: false, startTime: "08:00", endTime: "17:00" },
   });
 
-  const { data: stylistProfiles = [] } = useStylists();
+  const { data: stylistProfilesData } = useStylists();
+  // Stable while loading — see lib/no-items.ts.
+  const stylistProfiles = stylistProfilesData ?? NO_ITEMS;
   const { mutate: saveProfile } = useSaveStylistProfile();
   const { mutate: saveAvailability } = useSaveStylistAvailability();
   const { data: stylistHours = [] } = useQuery(
