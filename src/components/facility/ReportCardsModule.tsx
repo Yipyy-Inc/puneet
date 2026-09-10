@@ -57,11 +57,10 @@ import {
   PartyPopper,
   Star,
 } from "lucide-react";
-import { daycareCheckIns } from "@/data/daycare";
-import { boardingGuests } from "@/data/boarding";
+import { bookingQueries } from "@/lib/api/booking";
+import { clientQueries } from "@/lib/api/client";
 import { groomingAppointments } from "@/data/grooming";
 import { getReportCardPrefillFromAppointment } from "@/lib/api/grooming";
-import { enrollments as trainingEnrollments } from "@/data/training";
 import { useSettings } from "@/hooks/use-settings";
 import type { ReportCardTheme, ReportCardSectionId } from "@/types/facility";
 import { cn } from "@/lib/utils";
@@ -466,62 +465,57 @@ export function ReportCardsModule({
   const [isSaving, setIsSaving] = useState(false);
   const rcAi = useAiSummary();
 
-  const daycareOptions = useMemo(
-    () =>
-      daycareCheckIns.map((visit) => ({
-        id: visit.id,
-        petId: visit.petId,
-        petName: visit.petName,
-        ownerName: visit.ownerName,
-        visitDate: visit.checkInTime.split("T")[0],
-      })),
-    [],
-  );
+  // ── WHICH VISIT THIS CARD IS ABOUT ─────────────────────────────────────
+  //
+  // Real visits: this facility's bookings for the service, that actually
+  // happened (checked in or later), in the last 30 days, newest first. The
+  // picker listed FIXTURE visits (`daycareCheckIns`, `boardingGuests`,
+  // `groomingAppointments`, training `enrollments`), so the card was posted
+  // with a fixture pet's ref — a 422 "No pet N you can write a report card
+  // for", or a card filed against whichever real pet shared that number.
+  const { data: allBookings = [] } = useQuery(bookingQueries.all());
+  const { data: allClients = [] } = useQuery(clientQueries.all());
+  const [visitToday] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const hotelOptions = useMemo(
-    () =>
-      boardingGuests.map((guest) => ({
-        id: guest.id,
-        petId: guest.petId,
-        petName: guest.petName,
-        ownerName: guest.ownerName,
-        visitDate: guest.checkInDate.split("T")[0],
-      })),
-    [],
-  );
+  const visitOptions = useMemo(() => {
+    const service = serviceType === "hotel" ? "boarding" : serviceType;
+    const since = new Date(`${visitToday}T12:00:00Z`);
+    since.setUTCDate(since.getUTCDate() - 30);
+    const floor = since.toISOString().slice(0, 10);
+    const happened = new Set([
+      "checked_in",
+      "in_progress",
+      "ready",
+      "completed",
+    ]);
+    const clientsByRef = new Map(allClients.map((c) => [c.id, c]));
 
-  const groomingOptions = useMemo(
-    () =>
-      groomingAppointments.map((appt) => ({
-        id: appt.id,
-        petId: appt.petId,
-        petName: appt.petName,
-        ownerName: appt.ownerName,
-        visitDate: appt.date,
-      })),
-    [],
-  );
-
-  const trainingOptions = useMemo(
-    () =>
-      trainingEnrollments.map((enroll) => ({
-        id: enroll.id,
-        petId: enroll.petId,
-        petName: enroll.petName,
-        ownerName: enroll.ownerName,
-        visitDate: enroll.enrollmentDate,
-      })),
-    [],
-  );
-
-  const visitOptions =
-    serviceType === "daycare"
-      ? daycareOptions
-      : serviceType === "hotel"
-        ? hotelOptions
-        : serviceType === "grooming"
-          ? groomingOptions
-          : trainingOptions;
+    return allBookings
+      .filter(
+        (b) =>
+          b.service === service &&
+          happened.has(b.status) &&
+          b.startDate <= visitToday &&
+          (b.endDate ?? b.startDate) >= floor,
+      )
+      .sort((x, y) => (x.startDate < y.startDate ? 1 : -1))
+      .map((b) => {
+        const client = clientsByRef.get(b.clientId);
+        const petRef = Array.isArray(b.petId) ? b.petId[0] : b.petId;
+        const pet = client?.pets?.find((p) => p.id === petRef);
+        const end = b.endDate ?? b.startDate;
+        return {
+          id: String(b.id),
+          bookingRef: b.id,
+          petId: petRef ?? 0,
+          petName: pet?.name ?? `#${b.id}`,
+          ownerName: client?.name ?? "",
+          // A stay's card is about today while the guest is here, and about
+          // the last day once they have gone.
+          visitDate: end >= visitToday ? visitToday : end,
+        };
+      });
+  }, [allBookings, allClients, serviceType, visitToday]);
   const selectedVisit = visitOptions.find(
     (visit) => visit.id === selectedVisitId,
   );
@@ -698,6 +692,7 @@ export function ReportCardsModule({
       // segment of the path, so a card is a precondition of its pictures.
       const card = await createReportCard({
         petRef: selectedVisit.petId,
+        bookingRef: selectedVisit.bookingRef,
         serviceType: serviceType === "hotel" ? "boarding" : serviceType,
         visitDate: selectedVisit.visitDate,
         theme: selectedTheme,
