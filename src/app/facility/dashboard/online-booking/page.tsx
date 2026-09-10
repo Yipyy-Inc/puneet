@@ -7,7 +7,6 @@ import {
   Inbox,
   Hourglass,
   Search,
-  CheckCircle2,
   XCircle,
   X,
   LayoutGrid,
@@ -17,17 +16,27 @@ import {
   GraduationCap,
 } from "lucide-react";
 
-import { type BookingRequest } from "@/data/booking-requests";
+import { useQuery } from "@tanstack/react-query";
 import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
-import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { clients as allClients } from "@/data/clients";
-import { facilities } from "@/data/facilities";
 import { buildResumePreselection } from "@/lib/resume-booking";
+import { bookingQueries } from "@/lib/api/booking";
+import { clientQueries } from "@/lib/api/client";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import type { Client } from "@/types/client";
-import type { NewBooking } from "@/types/booking";
+import type {
+  Booking,
+  BookingRequest,
+  BookingRequestService,
+  ExtraService,
+} from "@/types/booking";
 import type { UnfinishedBooking } from "@/types/unfinished-booking";
-import type { BookingRequestService } from "@/types/booking";
+import type { NewBooking as NewBookingPayload } from "@/types/booking";
 import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
 import { BookingRequestCard } from "@/components/facility/BookingRequestCard";
 import { Button } from "@/components/ui/button";
@@ -44,12 +53,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 
-type NotifyMode = "none" | "text" | "email" | "both";
 type ConfirmAction = "decline" | "waitlist";
 type ServiceFilter = "all" | BookingRequestService;
 
@@ -64,6 +70,48 @@ const SERVICE_FILTERS: {
   { value: "grooming", label: "Grooming", icon: Scissors },
   { value: "training", label: "Training", icon: GraduationCap },
 ];
+
+/**
+ * A customer's online request, as the cards read it — made from the BOOKING it
+ * already is. A request submitted from the customer portal is a booking with
+ * status `request_submitted`; this page used to show a fixture list kept in
+ * localStorage instead, so a real request never appeared here and "Schedule"
+ * created a SECOND booking beside it.
+ */
+function toRequest(
+  b: Booking,
+  clientsByRef: Map<number, Client>,
+): BookingRequest {
+  const client = clientsByRef.get(b.clientId);
+  const petRef = Array.isArray(b.petId) ? b.petId[0] : b.petId;
+  const pet = client?.pets?.find((p) => p.id === petRef);
+  return {
+    id: String(b.id),
+    facilityId: b.facilityId,
+    createdAt: b.createdAt ?? `${b.startDate}T00:00:00`,
+    appointmentAt: `${b.startDate}T${b.checkInTime ?? "09:00"}:00`,
+    clientId: b.clientId,
+    clientName: client?.name ?? `#${b.clientId}`,
+    clientContact: client?.email ?? client?.phone ?? "",
+    petId: petRef ?? 0,
+    petName: pet?.name ?? "",
+    services: [b.service as BookingRequestService],
+    status: b.status === "waitlisted" ? "waitlisted" : "pending",
+    notes: b.specialRequests,
+    startDate: b.startDate,
+    endDate: b.endDate,
+    checkInTime: b.checkInTime,
+    checkOutTime: b.checkOutTime,
+    daycareDates: b.daycareSelectedDates,
+    roomPreference: b.unitAssignment,
+    daycareSectionId: b.sectionId,
+    extraServices: b.extraServices?.filter(
+      (x): x is ExtraService => typeof x !== "string",
+    ),
+    feedingSchedule: b.feedingSchedule,
+    medications: b.medications,
+  };
+}
 
 function matchesQuery(r: BookingRequest, q: string): boolean {
   if (!q) return true;
@@ -197,23 +245,34 @@ function EmptyState({
 }
 
 export default function OnlineBookingPage() {
+  // Still the fixture's numeric id, for the unfinished-bookings tab below —
+  // its own fixture, not yet converted (see the debt map).
   const facilityId = 11;
   const router = useRouter();
-  const { requests, setRequests } = useBookingRequestsStore();
+  const { t, fill } = useStaffText("bookingRequests");
   const { openBookingModal, closeBookingModal } = useBookingModal();
-  const facility = React.useMemo(
-    () => facilities.find((f) => f.id === facilityId),
-    [facilityId],
-  );
-  const facilityClients = React.useMemo<Client[]>(
-    () => (allClients as Client[]).filter((c) => c.facility === facility?.name),
-    [facility],
-  );
+  const { profile } = useFacilityProfile();
+  const { data: bookings = [] } = useQuery(bookingQueries.all());
+  const { data: facilityClients = [] } = useQuery(clientQueries.all());
+  const updateStatus = useUpdateBookingStatus();
+  const createBooking = useCreateBookingFromModal();
 
-  const facilityRequests = React.useMemo(
-    () => requests.filter((r) => r.facilityId === facilityId),
-    [requests, facilityId],
+  const bookingsById = React.useMemo(
+    () => new Map(bookings.map((b) => [b.id, b])),
+    [bookings],
   );
+  const facilityRequests = React.useMemo(() => {
+    const clientsByRef = new Map(facilityClients.map((c) => [c.id, c]));
+    return bookings
+      .filter(
+        (b) => b.status === "request_submitted" || b.status === "waitlisted",
+      )
+      .map((b) => toRequest(b, clientsByRef));
+  }, [bookings, facilityClients]);
+
+  // The request being scheduled: its booking, opened in the edit wizard.
+  const [scheduling, setScheduling] = React.useState<Booking | null>(null);
+  const saveEdit = useSaveBookingEdit(scheduling ?? undefined);
 
   const pending = React.useMemo(
     () => facilityRequests.filter((r) => r.status === "pending"),
@@ -249,68 +308,51 @@ export default function OnlineBookingPage() {
   const [confirmTarget, setConfirmTarget] =
     React.useState<BookingRequest | null>(null);
 
-  const [postActionOpen, setPostActionOpen] = React.useState(false);
-  const [postActionType, setPostActionType] =
-    React.useState<ConfirmAction>("decline");
-  const [postActionTarget, setPostActionTarget] =
-    React.useState<BookingRequest | null>(null);
-  const [notifyMode, setNotifyMode] = React.useState<NotifyMode>("none");
-
   const openConfirm = (action: ConfirmAction, req: BookingRequest) => {
     setConfirmAction(action);
     setConfirmTarget(req);
     setConfirmOpen(true);
   };
 
+  // "Schedule" CONFIRMS the booking the request already is — after letting
+  // staff adjust it in the same wizard the booking page edits with. It used to
+  // open a NEW-booking wizard and mark a localStorage row "scheduled".
   const schedule = (req: BookingRequest) => {
-    if (!facility) return;
+    setScheduling(bookingsById.get(Number(req.id)) ?? null);
+  };
 
-    const handleCreateBooking = (booking: NewBooking) => {
-      setRequests((prev) =>
-        prev.map((r) => (r.id === req.id ? { ...r, status: "scheduled" } : r)),
-      );
-
-      const notifyBits: string[] = [];
-      if (booking.notificationEmail) notifyBits.push("email");
-      if (booking.notificationSMS) notifyBits.push("SMS");
-      const notifyDesc =
-        notifyBits.length > 0
-          ? `Confirmation sent via ${notifyBits.join(" + ")} to ${req.clientName}`
-          : "No customer notification sent (disabled in wizard)";
-
-      toast.success(`Booking scheduled for ${req.petName}`, {
-        description: notifyDesc,
-      });
-
-      closeBookingModal();
-    };
-
-    openBookingModal({
-      clients: facilityClients,
-      facilityId,
-      facilityName: facility.name,
-      preSelectedClientId: req.clientId,
-      preSelectedPetId: req.petId,
-      preSelectedService: req.services[0],
-      preSelectedStartDate: req.startDate,
-      preSelectedEndDate: req.endDate,
-      preSelectedCheckInTime: req.checkInTime,
-      preSelectedCheckOutTime: req.checkOutTime,
-      preSelectedDaycareDates: req.daycareDates,
-      preSelectedRoomId: req.roomPreference,
-      preSelectedDaycareSectionId: req.daycareSectionId,
-      preSelectedExtraServices: req.extraServices,
-      preSelectedFeedingSchedule: req.feedingSchedule,
-      preSelectedMedications: req.medications,
-      preSelectedNotificationEmail: req.notificationEmail,
-      preSelectedNotificationSMS: req.notificationSMS,
-      onCreateBooking: handleCreateBooking,
+  const confirmScheduled = (edited: NewBookingPayload) => {
+    const booking = scheduling;
+    if (!booking) return;
+    const pet = facilityRequests.find(
+      (r) => r.id === String(booking.id),
+    )?.petName;
+    saveEdit.mutate(edited, {
+      onSuccess: async () => {
+        try {
+          await updateStatus.mutateAsync({
+            id: booking.id,
+            status: "confirmed",
+          });
+          toast.success(
+            fill("requestConfirmed", { pet: pet || `#${booking.id}` }),
+            {
+              description: t("customerNotMessaged"),
+            },
+          );
+          setScheduling(null);
+        } catch (error) {
+          toast.error(t("requestNotChanged"), {
+            description: error instanceof Error ? error.message : undefined,
+          });
+        }
+      },
+      onError: (error) =>
+        toast.error(t("requestNotChanged"), { description: error.message }),
     });
   };
 
   const handleScheduleUnfinished = (ub: UnfinishedBooking) => {
-    if (!facility) return;
-
     if (ub.clientId) {
       toast.info(`Opening ${ub.clientName}'s account — resuming their booking`);
       router.push(
@@ -326,54 +368,36 @@ export default function OnlineBookingPage() {
     openBookingModal({
       clients: facilityClients,
       facilityId,
-      facilityName: facility.name,
+      facilityName: profile.businessName,
       ...preselection,
-      onCreateBooking: () => {
-        toast.success(`Booking completed for ${ub.clientName}`);
-        closeBookingModal();
+      // It toasted "Booking completed" and wrote nothing.
+      onCreateBooking: async (booking) => {
+        if (await createBooking(booking)) closeBookingModal();
       },
     });
   };
 
-  const applyConfirm = () => {
+  // Decline and waitlist are the booking's status. They were a localStorage
+  // edit followed by a "notify the customer?" step whose text and email
+  // options sent nothing; that step is gone rather than kept as a promise.
+  const applyConfirm = async () => {
     if (!confirmTarget) return;
     const action = confirmAction;
-    const target = confirmTarget;
-
-    if (action === "decline") {
-      setRequests((prev) => prev.filter((r) => r.id !== target.id));
-    } else {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === target.id ? { ...r, status: "waitlisted" } : r,
-        ),
+    try {
+      await updateStatus.mutateAsync({
+        id: Number(confirmTarget.id),
+        status: action === "decline" ? "declined" : "waitlisted",
+      });
+      toast.success(
+        t(action === "decline" ? "requestDeclined" : "requestWaitlisted"),
+        { description: t("customerNotMessaged") },
       );
+      setConfirmOpen(false);
+    } catch (error) {
+      toast.error(t("requestNotChanged"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
-
-    setConfirmOpen(false);
-    setPostActionType(action);
-    setPostActionTarget(target);
-    setNotifyMode("none");
-    setPostActionOpen(true);
-  };
-
-  const completePostAction = () => {
-    if (!postActionTarget) return;
-    toast.success(
-      postActionType === "decline" ? "Request declined" : "Moved to waitlist",
-      {
-        description:
-          notifyMode === "none"
-            ? "No customer message sent"
-            : notifyMode === "both"
-              ? "Send text + email"
-              : notifyMode === "text"
-                ? "Send text"
-                : "Send email",
-      },
-    );
-    setPostActionOpen(false);
-    setPostActionTarget(null);
   };
 
   const filteredPending = React.useMemo(
@@ -614,8 +638,8 @@ export default function OnlineBookingPage() {
                 </AlertDialogTitle>
                 <AlertDialogDescription className="mt-1">
                   {confirmAction === "decline"
-                    ? "The request will be removed from your queue. You can choose to notify the customer on the next step."
-                    : "This request will move to the waitlist. You can choose to notify the customer on the next step."}
+                    ? t("declineBody")
+                    : t("waitlistBody")}
                 </AlertDialogDescription>
               </div>
             </div>
@@ -623,7 +647,11 @@ export default function OnlineBookingPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={applyConfirm}
+              onClick={(event) => {
+                // Stay open until the write lands; applyConfirm closes it.
+                event.preventDefault();
+                void applyConfirm();
+              }}
               className={cn(
                 confirmAction === "decline"
                   ? "bg-destructive hover:bg-destructive/90 text-white"
@@ -636,69 +664,34 @@ export default function OnlineBookingPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={postActionOpen}
-        onOpenChange={(o) => {
-          setPostActionOpen(o);
-          if (!o) setPostActionTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <div className="flex items-start gap-3">
-              <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
-                <CheckCircle2 className="size-5" />
-              </div>
-              <div className="flex-1">
-                <AlertDialogTitle>Notify the customer?</AlertDialogTitle>
-                <AlertDialogDescription className="mt-1">
-                  {postActionTarget
-                    ? `Choose how to notify ${postActionTarget.clientName} (${postActionTarget.clientContact}).`
-                    : "Choose how to notify the customer."}
-                </AlertDialogDescription>
-              </div>
-            </div>
-          </AlertDialogHeader>
-
-          <RadioGroup
-            value={notifyMode}
-            onValueChange={(v) => setNotifyMode(v as NotifyMode)}
-            className="grid grid-cols-2 gap-2"
-          >
-            {(
-              [
-                { v: "none", label: "Don't notify" },
-                { v: "text", label: "Text only" },
-                { v: "email", label: "Email only" },
-                { v: "both", label: "Text + Email" },
-              ] as { v: NotifyMode; label: string }[]
-            ).map((opt) => (
-              <Label
-                key={opt.v}
-                htmlFor={`post-notify-online-${opt.v}`}
-                className={cn(
-                  "border-border hover:border-primary/50 bg-card flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition-colors",
-                  notifyMode === opt.v &&
-                    "border-primary bg-primary/5 ring-primary/30 ring-2",
-                )}
-              >
-                <RadioGroupItem
-                  id={`post-notify-online-${opt.v}`}
-                  value={opt.v}
-                />
-                {opt.label}
-              </Label>
-            ))}
-          </RadioGroup>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-            <AlertDialogAction onClick={completePostAction}>
-              Done
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {scheduling && (
+        <BookingModal
+          open
+          onOpenChange={(open) => !open && setScheduling(null)}
+          clients={facilityClients}
+          facilityId={facilityId}
+          facilityName={profile.businessName}
+          editMode
+          preSelectedClientId={scheduling.clientId}
+          preSelectedPetId={
+            Array.isArray(scheduling.petId)
+              ? scheduling.petId[0]
+              : scheduling.petId
+          }
+          preSelectedService={scheduling.service}
+          preSelectedStartDate={scheduling.startDate}
+          preSelectedEndDate={scheduling.endDate}
+          preSelectedCheckInTime={scheduling.checkInTime}
+          preSelectedCheckOutTime={scheduling.checkOutTime}
+          preSelectedRoomId={scheduling.unitAssignment ?? undefined}
+          preSelectedDaycareSectionId={scheduling.sectionId ?? undefined}
+          preSelectedDaycareDates={scheduling.daycareSelectedDates}
+          preSelectedFeedingSchedule={scheduling.feedingSchedule}
+          preSelectedMedications={scheduling.medications}
+          preSelectedSpecialRequests={scheduling.specialRequests}
+          onCreateBooking={confirmScheduled}
+        />
+      )}
     </div>
   );
 }
