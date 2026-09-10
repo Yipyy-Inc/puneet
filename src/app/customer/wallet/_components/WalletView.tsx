@@ -20,71 +20,93 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { customerWallets, giftCards } from "@/data/gift-cards";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatMoney,
+  formatTime,
+} from "@/lib/i18n/format";
 
 const MOCK_CLIENT_ID = 15;
 const FACILITY_ID = 11;
 
+// A transaction type's words by CATALOGUE KEY in
+// `customerPages.areas.wallet`.
 const txTypeConfig: Record<
   string,
-  { icon: typeof Wallet; color: string; label: string; bg: string }
+  { icon: typeof Wallet; color: string; labelKey: string; bg: string }
 > = {
   gift_card_redeem: {
     icon: Gift,
     color: "text-green-600",
     bg: "bg-green-100 dark:bg-green-900/30",
-    label: "Gift Card Redeemed",
+    labelKey: "txGiftCardRedeemed",
   },
   service_payment: {
     icon: DollarSign,
     color: "text-blue-600",
     bg: "bg-blue-100 dark:bg-blue-900/30",
-    label: "Service Payment",
+    labelKey: "txServicePayment",
   },
   deposit_payment: {
     icon: Home,
     color: "text-violet-600",
     bg: "bg-violet-100 dark:bg-violet-900/30",
-    label: "Deposit",
+    labelKey: "txDeposit",
   },
   package_payment: {
     icon: Package,
     color: "text-purple-600",
     bg: "bg-purple-100 dark:bg-purple-900/30",
-    label: "Package Payment",
+    labelKey: "txPackagePayment",
   },
   retail_payment: {
     icon: ShoppingBag,
     color: "text-amber-600",
     bg: "bg-amber-100 dark:bg-amber-900/30",
-    label: "Retail Purchase",
+    labelKey: "txRetailPurchase",
   },
   tip_payment: {
     icon: Sparkles,
     color: "text-pink-600",
     bg: "bg-pink-100 dark:bg-pink-900/30",
-    label: "Tip",
+    labelKey: "txTip",
   },
   addon_payment: {
     icon: Plus,
     color: "text-orange-600",
     bg: "bg-orange-100 dark:bg-orange-900/30",
-    label: "Add-On",
+    labelKey: "txAddOn",
   },
   refund_in: {
     icon: ArrowUpRight,
     color: "text-teal-600",
     bg: "bg-teal-100 dark:bg-teal-900/30",
-    label: "Refund",
+    labelKey: "txRefund",
   },
   adjustment: {
     icon: Wallet,
     color: "text-gray-600",
     bg: "bg-gray-100 dark:bg-gray-900/30",
-    label: "Adjustment",
+    labelKey: "txAdjustment",
   },
 };
 
+// Where the wallet can be spent, by CATALOGUE KEY — four are services and
+// are named by serviceTypeLabel; packages and add-ons are this page's words.
+const USES: { icon: typeof Wallet; service?: string; key?: string }[] = [
+  { icon: Home, service: "boarding" },
+  { icon: Scissors, service: "grooming" },
+  { icon: GraduationCap, service: "training" },
+  { icon: ShoppingBag, service: "retail" },
+  { icon: Package, key: "usePackages" },
+  { icon: Plus, key: "useAddOns" },
+];
+
 export function WalletView() {
+  const { t, fill, locale } = useCustomerText("wallet");
   const wallet = customerWallets.find(
     (w) => w.clientId === MOCK_CLIENT_ID && w.facilityId === FACILITY_ID,
   );
@@ -117,20 +139,10 @@ export function WalletView() {
     [wallet],
   );
 
-  const formatDate = (s: string) =>
-    new Date(s).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const formatDate = (s: string) => formatDateLong(s, locale);
 
   const formatDateTime = (s: string) =>
-    new Date(s).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    `${formatDateShort(s, locale)} · ${formatTime(s, locale)}`;
 
   if (!wallet) {
     return (
@@ -138,14 +150,14 @@ export function WalletView() {
         <div className="bg-muted flex size-16 items-center justify-center rounded-full">
           <Wallet className="text-muted-foreground size-8" />
         </div>
-        <p className="mt-4 font-semibold">No wallet yet</p>
+        <p className="mt-4 font-semibold">{t("noWalletYet")}</p>
         <p className="text-muted-foreground mt-1 text-sm">
-          Redeem a gift card to set up your wallet
+          {t("redeemToSetUp")}
         </p>
         <Button asChild className="mt-4">
           <Link href="/customer/gift-cards/redeem">
             <Gift className="mr-2 size-4" />
-            Redeem a Gift Card
+            {t("redeemAGiftCard")}
           </Link>
         </Button>
       </div>
@@ -163,28 +175,34 @@ export function WalletView() {
             <div>
               <div className="flex items-center gap-2 opacity-80">
                 <Wallet className="size-4" />
-                <span className="text-sm font-medium">Account Wallet</span>
+                <span className="text-sm font-medium">
+                  {t("accountWallet")}
+                </span>
               </div>
               <p className="mt-2 text-5xl font-bold tracking-tight">
-                ${wallet.balance.toFixed(2)}
+                {formatMoney(wallet.balance, locale)}
               </p>
-              <p className="mt-1 text-sm opacity-70">Available balance</p>
+              <p className="mt-1 text-sm opacity-70">{t("availableBalance")}</p>
             </div>
             <div className="flex flex-col items-end gap-1">
               <Badge className="bg-white/20 text-xs text-white hover:bg-white/30">
-                Active
+                {t("active")}
               </Badge>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/20 pt-4">
             <div>
-              <p className="text-xs opacity-60">Total Received</p>
-              <p className="text-lg font-semibold">+${totalIn.toFixed(2)}</p>
+              <p className="text-xs opacity-60">{t("totalReceived")}</p>
+              <p className="text-lg font-semibold">
+                +{formatMoney(totalIn, locale)}
+              </p>
             </div>
             <div>
-              <p className="text-xs opacity-60">Total Spent</p>
-              <p className="text-lg font-semibold">-${totalOut.toFixed(2)}</p>
+              <p className="text-xs opacity-60">{t("totalSpent")}</p>
+              <p className="text-lg font-semibold">
+                {formatMoney(-totalOut, locale)}
+              </p>
             </div>
           </div>
         </div>
@@ -199,7 +217,7 @@ export function WalletView() {
         >
           <Link href="/customer/gift-cards/redeem">
             <Gift className="size-5 text-violet-600" />
-            <span className="text-xs font-medium">Redeem Gift Card</span>
+            <span className="text-xs font-medium">{t("redeemGiftCard")}</span>
           </Link>
         </Button>
         <Button
@@ -209,7 +227,7 @@ export function WalletView() {
         >
           <Link href="/customer/gift-cards">
             <Sparkles className="size-5 text-amber-600" />
-            <span className="text-xs font-medium">Buy Gift Card</span>
+            <span className="text-xs font-medium">{t("buyGiftCard")}</span>
           </Link>
         </Button>
       </div>
@@ -217,7 +235,7 @@ export function WalletView() {
       {/* Active gift cards */}
       {myGiftCards.length > 0 && (
         <div>
-          <h3 className="mb-3 font-semibold">My Gift Cards</h3>
+          <h3 className="mb-3 font-semibold">{t("myGiftCards")}</h3>
           <div className="space-y-2">
             {myGiftCards.map((gc) => (
               <div
@@ -233,24 +251,26 @@ export function WalletView() {
                       ****{gc.code.slice(-6)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Issued {formatDate(gc.purchaseDate)} ·{" "}
+                      {fill("issuedOn", { date: formatDate(gc.purchaseDate) })}{" "}
+                      ·{" "}
                       {gc.neverExpires
-                        ? "Never expires"
+                        ? t("neverExpires")
                         : gc.expiryDate
-                          ? `Expires ${formatDate(gc.expiryDate)}`
+                          ? fill("expiresOn", {
+                              date: formatDate(gc.expiryDate),
+                            })
                           : ""}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-green-600">
-                    ${gc.currentBalance.toFixed(2)}
+                    {formatMoney(gc.currentBalance, locale)}
                   </p>
-                  <Badge
-                    variant="outline"
-                    className="mt-0.5 text-xs capitalize"
-                  >
-                    {gc.type}
+                  <Badge variant="outline" className="mt-0.5 text-xs">
+                    {gc.type === "physical"
+                      ? t("cardPhysical")
+                      : t("cardOnline")}
                   </Badge>
                 </div>
               </div>
@@ -263,7 +283,7 @@ export function WalletView() {
             className="mt-1 w-full text-xs"
           >
             <Link href="/customer/gift-cards/redeem">
-              + Redeem another card
+              {t("redeemAnotherCard")}
             </Link>
           </Button>
         </div>
@@ -271,11 +291,13 @@ export function WalletView() {
 
       {/* Transaction history */}
       <div>
-        <h3 className="mb-3 font-semibold">Transaction History</h3>
+        <h3 className="mb-3 font-semibold">{t("transactionHistory")}</h3>
         {wallet.transactions.length === 0 ? (
           <div className="rounded-xl border py-8 text-center">
             <Wallet className="text-muted-foreground mx-auto mb-2 size-8 opacity-40" />
-            <p className="text-muted-foreground text-sm">No transactions yet</p>
+            <p className="text-muted-foreground text-sm">
+              {t("noTransactionsYet")}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -290,7 +312,7 @@ export function WalletView() {
                   icon: Wallet,
                   color: "text-muted-foreground",
                   bg: "bg-muted",
-                  label: tx.type,
+                  labelKey: "",
                 };
                 const Icon = cfg.icon;
                 const isCredit = tx.amount > 0;
@@ -309,7 +331,7 @@ export function WalletView() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {cfg.label}
+                        {cfg.labelKey ? t(cfg.labelKey) : tx.type}
                       </p>
                       <p className="text-muted-foreground truncate text-xs">
                         {tx.description}
@@ -325,10 +347,11 @@ export function WalletView() {
                           isCredit ? "text-green-600" : "text-foreground",
                         )}
                       >
-                        {isCredit ? "+" : ""}${Math.abs(tx.amount).toFixed(2)}
+                        {isCredit ? "+" : ""}
+                        {formatMoney(Math.abs(tx.amount), locale)}
                       </p>
                       <p className="text-muted-foreground text-xs">
-                        ${tx.balanceAfter.toFixed(2)}
+                        {formatMoney(tx.balanceAfter, locale)}
                       </p>
                     </div>
                   </div>
@@ -343,31 +366,29 @@ export function WalletView() {
         <CardHeader className="pt-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Sparkles className="text-primary size-4" />
-            Where can I use my wallet?
+            {t("whereCanIUse")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pb-4">
           <div className="grid grid-cols-2 gap-2 text-xs">
-            {[
-              { icon: Home, label: "Boarding" },
-              { icon: Scissors, label: "Grooming" },
-              { icon: GraduationCap, label: "Training" },
-              { icon: ShoppingBag, label: "Retail" },
-              { icon: Package, label: "Packages" },
-              { icon: Plus, label: "Add-Ons" },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="text-muted-foreground flex items-center gap-1.5"
-              >
-                <Icon className="size-3.5" />
-                <span>{label}</span>
-              </div>
-            ))}
+            {USES.map((use) => {
+              const Icon = use.icon;
+              const label = use.service
+                ? serviceTypeLabel(locale, use.service)
+                : t(use.key ?? "");
+              return (
+                <div
+                  key={label}
+                  className="text-muted-foreground flex items-center gap-1.5"
+                >
+                  <Icon className="size-3.5" />
+                  <span>{label}</span>
+                </div>
+              );
+            })}
           </div>
           <p className="text-muted-foreground mt-3 text-xs">
-            Simply select &quot;Pay with Wallet&quot; at checkout — your balance
-            will be applied automatically.
+            {t("payWithWalletAtCheckout")}
           </p>
         </CardContent>
       </Card>

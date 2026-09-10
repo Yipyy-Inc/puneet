@@ -12089,3 +12089,21 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   category's facility-written name alone. Three `en-US` date formatters —
   including the `{{date}}` merged into the agreement text — take the
   reader's locale.
+
+### Wallet (`/customer/wallet`) — **customer 15's fixture wallet, and a gift card is yours if its email contains "alice"**
+
+- `WalletView` reads `customerWallets` for `MOCK_CLIENT_ID = 15` at
+  `FACILITY_ID = 11`, so every customer sees the same balance and history —
+  and a real customer, whose wallet is not in the fixture, sees "No wallet
+  yet".
+- "My gift cards" lists fixture cards purchased by client 15 **or whose
+  `recipientEmail` includes `"alice"`**. The identity check for whose money
+  this is, is a substring of a name.
+- The page reads the same fixture the gift-cards page's "Load to my wallet"
+  pretends to credit (see "Gift cards"), so neither can show the other's
+  effect.
+- Fixed while translating: the copy said "Simply select…", which §5q bans
+  outright; two `en-US` formatters and eight `$${n.toFixed(2)}` are
+  `Intl`. Transaction descriptions are the record's own text and pass
+  through. `page.tsx` is a Server Component, so the title is a small client
+  `WalletHeader`.
