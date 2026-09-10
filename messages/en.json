@@ -9257,7 +9257,8 @@
         "pendingParen": "(pending)",
         "noReferralsYet": "No referrals yet",
         "inviteWithCode": "Invite a friend with your code {code} — when they book, you both get rewarded.",
-        "shareNow": "Share now"
+        "shareNow": "Share now",
+        "youEarnedForAFriend": "You earned {reward} for referring a friend!"
       },
       "documents": {
         "agreementSigned": "Agreement signed",

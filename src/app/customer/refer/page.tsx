@@ -64,6 +64,8 @@ const WHEN_KEY: Record<string, string> = {
 interface ReferralTracking {
   id: number;
   friendName: string;
+  /** False when the friend could not be identified — "Someone". */
+  friendKnown: boolean;
   /** Consolidated status shown to the customer. */
   pillStatus: ReferralPillStatus;
   /** True once the referrer's reward has been issued. */
@@ -246,9 +248,8 @@ export default function CustomerReferPage() {
       const friend = clients.find((c) => c.id === rel.referredCustomerId);
       // Privacy: show only the friend's first name, or "Someone" if we can't
       // identify them yet (e.g. they signed up but aren't linked to a profile).
-      const friendName = friend?.name
-        ? (friend.name.split(/\s+/)[0] ?? t("someone"))
-        : t("someone");
+      const firstName = friend?.name?.split(/\s+/)[0];
+      const friendName = firstName || t("someone");
 
       // Consolidated 3-state status: Reward Issued → Booked → Pending.
       const pillStatus: ReferralPillStatus =
@@ -261,6 +262,7 @@ export default function CustomerReferPage() {
       return {
         id: rel.referredCustomerId,
         friendName,
+        friendKnown: Boolean(firstName),
         pillStatus,
         rewardEarned: rel.referrerRewardStatus === "issued",
         referredOn: rel.createdAt,
@@ -359,6 +361,7 @@ export default function CustomerReferPage() {
       .map((r) => ({
         id: r.id,
         friendName: r.friendName,
+        friendKnown: r.friendKnown,
         rewardLabel: referrerRewardLabel,
       }));
   }, [referralTracking, dismissedRewardNotifications, referrerRewardLabel]);
@@ -432,10 +435,16 @@ export default function CustomerReferPage() {
                 {t("rewardEarned")}
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
-                {fill("youEarnedFor", {
-                  reward: notification.rewardLabel,
-                  friend: notification.friendName,
-                })}
+                {/* An unidentified friend is "a friend" mid-sentence, not a
+                    capitalised "Someone" in the middle of it. */}
+                {notification.friendKnown
+                  ? fill("youEarnedFor", {
+                      reward: notification.rewardLabel,
+                      friend: notification.friendName,
+                    })
+                  : fill("youEarnedForAFriend", {
+                      reward: notification.rewardLabel,
+                    })}
               </p>
             </div>
           </div>
@@ -455,7 +464,7 @@ export default function CustomerReferPage() {
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-muted-foreground min-h-[2.6em] text-sm font-medium">
               {t("totalReferrals")}
             </CardTitle>
           </CardHeader>
@@ -465,7 +474,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-muted-foreground min-h-[2.6em] text-sm font-medium">
               {t("friendsSignedUp")}
             </CardTitle>
           </CardHeader>
@@ -475,7 +484,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-muted-foreground min-h-[2.6em] text-sm font-medium">
               {t("friendsBooked")}
             </CardTitle>
           </CardHeader>
@@ -485,7 +494,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-muted-foreground min-h-[2.6em] text-sm font-medium">
               {t("rewardsEarned")}
             </CardTitle>
           </CardHeader>
@@ -497,7 +506,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-muted-foreground text-sm font-medium">
+            <CardTitle className="text-muted-foreground min-h-[2.6em] text-sm font-medium">
               {t("rewardsPending")}
             </CardTitle>
           </CardHeader>
