@@ -13,14 +13,16 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
+  UNCATEGORIZED_ID,
   bucketByCategory,
   resolveCategories,
 } from "@/components/additional-features/waivers/categories";
 import {
   SERVICE_BADGE,
-  SERVICE_LABEL,
   getWaiverServices,
 } from "@/components/additional-features/waivers/service-display";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { waiverServiceLabel } from "./waiver-service-label";
 import {
   customWaiverCategories,
   type DigitalWaiver,
@@ -38,6 +40,7 @@ export function PendingWaiversCard({
   onSign,
   facilityServices,
 }: PendingWaiversCardProps) {
+  const { t, fill, locale } = useCustomerText("documents");
   const grouped = useMemo(() => {
     const categories = resolveCategories(
       facilityServices,
@@ -48,6 +51,22 @@ export function PendingWaiversCard({
     );
   }, [pendingWaivers, facilityServices]);
 
+  // `resolveCategories` names a service category "Boarding Waivers" in
+  // English, for the facility's screens. A service or the catch-all is
+  // named here instead; a custom category is the facility's own name.
+  const categoryLabel = (id: string, name: string) => {
+    if (id === UNCATEGORIZED_ID) return t("uncategorized");
+    if (id.startsWith("svc-"))
+      return fill("waiversFor", {
+        service: waiverServiceLabel(
+          id.slice("svc-".length) as WaiverServiceTag,
+          locale,
+          t,
+        ),
+      });
+    return name;
+  };
+
   if (pendingWaivers.length === 0) return null;
 
   return (
@@ -55,21 +74,18 @@ export function PendingWaiversCard({
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Pen className="size-4 text-amber-600" />
-          Pending Signatures
+          {t("pendingSignatures")}
           <Badge className="ml-auto bg-amber-500 text-white">
             {pendingWaivers.length}
           </Badge>
         </CardTitle>
-        <CardDescription>
-          These agreements require your signature before you can book services.
-          Grouped by what they apply to.
-        </CardDescription>
+        <CardDescription>{t("requireYourSignature")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {grouped.map((group) => (
           <div key={group.categoryId} className="space-y-2">
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              {group.categoryName}
+              {categoryLabel(group.categoryId, group.categoryName)}
             </p>
             <div className="space-y-2">
               {group.items.map((waiver) => (
@@ -88,7 +104,9 @@ export function PendingWaiversCard({
                       {waiver.expiryDays && (
                         <>
                           <span>·</span>
-                          <span>Valid for {waiver.expiryDays} days</span>
+                          <span>
+                            {fill("validForDays", { n: waiver.expiryDays })}
+                          </span>
                         </>
                       )}
                       {waiver.requiresWitness && (
@@ -98,7 +116,7 @@ export function PendingWaiversCard({
                             variant="outline"
                             className="h-4 border-amber-300 px-1 text-[9px] text-amber-800"
                           >
-                            Witness required
+                            {t("witnessRequired")}
                           </Badge>
                         </>
                       )}
@@ -110,7 +128,7 @@ export function PendingWaiversCard({
                             className="h-4 px-1 text-[9px]"
                           >
                             <ShieldCheck className="mr-0.5 size-2.5" />
-                            Checkbox agreement
+                            {t("checkboxAgreement")}
                           </Badge>
                         </>
                       )}
@@ -123,8 +141,8 @@ export function PendingWaiversCard({
                   >
                     <Pen className="mr-1.5 size-3.5" />
                     {waiver.requireDigitalSignature
-                      ? "Sign Now"
-                      : "Review & Agree"}
+                      ? t("signNow")
+                      : t("reviewAndAgree")}
                   </Button>
                 </div>
               ))}
@@ -137,6 +155,7 @@ export function PendingWaiversCard({
 }
 
 function ServiceTagChips({ services }: { services: WaiverServiceTag[] }) {
+  const { t, locale } = useCustomerText("documents");
   return (
     <div className="flex flex-wrap gap-1">
       {services.map((tag) => (
@@ -147,7 +166,7 @@ function ServiceTagChips({ services }: { services: WaiverServiceTag[] }) {
             SERVICE_BADGE[tag],
           )}
         >
-          {SERVICE_LABEL[tag]}
+          {waiverServiceLabel(tag, locale, t)}
         </span>
       ))}
     </div>
