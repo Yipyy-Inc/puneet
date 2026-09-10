@@ -11964,3 +11964,36 @@ Replace with actual API call`, 1.5 s, then "Reward redeemed! Discount code:
   date is `formatDateLong`; every `$${n}` and `$${n.toFixed(2)}` is
   `formatMoney`. `page.tsx` is a Server Component, so the title moved into a
   small client `GiftCardsHeader` to reach the reader's locale.
+
+### Report cards (`/customer/report-cards`) — the send time read "Invalid Date" on every card
+
+This page is real: the feed is `reportCardQueries.mine()`, and the quick
+reply and the star rating write through `replyToReportCard` /
+`rateReportCard`. What it said was the problem.
+
+- **Fixed: the detail view's time was "Invalid Date".** `buildTimelineItem`
+  stored `timeLabel` as an already-FORMATTED `en-US` time ("02:30 PM"), and
+  the detail view handed that string back to `formatReportTime`, which fed
+  it to `new Date()`. The item now keeps the ISO `sentAt` and formats it
+  once, where it is shown, in the reader's locale.
+- **A French-gate blind spot, recorded rather than widened mid-page.** The
+  summary card's quick-stat chips ("Ate everything", "Potty normal",
+  "Restful day" …) were `Record<string, string>` maps from a record code to
+  English prose. `OBJECT_COPY` reads only a short list of property NAMES
+  (`label:`, `title:` …), deliberately, because the same shape carries data;
+  so a code on the left and a sentence on the right is invisible to it, and
+  the file reported 0 while every chip was English. Found by reading, not by
+  the gate. Worth a scanner of its own — a `Record<…, string>` literal whose
+  values are prose — measured across every surface before it gates anything.
+- **Section headings and moods were rendered raw.** The five section names
+  ("Today's Vibe" …) come from the fixture metadata in `@/data/settings` and
+  are the product's fixed names, not the facility's words, so they are keyed
+  by section id here, with the same French the report-card settings already
+  used. Moods were printed as the record code with CSS `capitalize`. The
+  BODY of every section is the facility's own writing and is never touched.
+- **Pet-condition rows print the category's id** (`capitalize`d), not the
+  label the facility configured — the owner cannot read `facility_settings`.
+  The values are the facility's own option words and pass through as
+  written.
+- **The quick replies are sent in the sender's language**, like a message
+  they typed; the facility reads whatever the owner tapped.

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { MoveHorizontal } from "lucide-react";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 /**
  * Drag-to-reveal before/after comparison (Table 47): a single frame with the
@@ -16,6 +17,7 @@ export function BeforeAfterSlider({
   after: string;
   alt: string;
 }) {
+  const { t, fill } = useCustomerText("reportCards");
   const [pos, setPos] = useState(50); // reveal percent (0–100)
   const containerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -31,7 +33,7 @@ export function BeforeAfterSlider({
     <div
       ref={containerRef}
       role="slider"
-      aria-label={`${alt} before and after`}
+      aria-label={fill("beforeAndAfter", { alt })}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(pos)}
@@ -83,10 +85,10 @@ export function BeforeAfterSlider({
 
       {/* Corner labels */}
       <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
-        Before
+        {t("before")}
       </span>
       <span className="absolute right-2 bottom-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
-        After
+        {t("after")}
       </span>
 
       {/* Divider + handle */}

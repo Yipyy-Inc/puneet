@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ReportCard } from "@/types/report-card";
 import { rateReportCard } from "@/lib/api/report-cards";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 // ── WHY THERE IS NO "SHARE THIS PUBLICLY" PROMPT HERE ─────────────────────
 //
@@ -41,6 +42,7 @@ export function ReportCardRating({
   petName: string;
   facilityName: string;
 }) {
+  const { t, fill } = useCustomerText("reportCards");
   // Already rated is a fact of the ROW, not of this browser. `rate_report_card`
   // refuses a second rating, so a card that arrives with a timestamp is closed.
   const alreadyRated = reportCard.ratingSubmittedAt != null;
@@ -60,13 +62,13 @@ export function ReportCardRating({
       // anything, and a refresh lost the rating.
       await rateReportCard(reportCard.id, stars, comment.trim() || undefined);
       setSubmitted(true);
-      toast.success("Thanks for your rating!", {
-        description: `Sent to ${facilityName}.`,
+      toast.success(t("thanksForYourRating"), {
+        description: fill("sentToFacility", { facility: facilityName }),
       });
     } catch (err) {
-      toast.error("That rating could not be saved.", {
+      toast.error(t("thatRatingCouldNotBe"), {
         description:
-          err instanceof Error ? err.message : "Please try again in a moment.",
+          err instanceof Error ? err.message : t("pleaseTryAgainInA"),
       });
     } finally {
       setSaving(false);
@@ -110,10 +112,13 @@ export function ReportCardRating({
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={3}
-            placeholder={`Tell ${facilityName} more about ${petName}'s visit (optional)…`}
+            placeholder={fill("tellFacilityMore", {
+              facility: facilityName,
+              pet: petName,
+            })}
           />
           <Button size="sm" onClick={handleSubmit} disabled={saving}>
-            {saving ? "Sending…" : "Submit rating"}
+            {saving ? t("sending") : t("submitRating")}
           </Button>
         </div>
       )}

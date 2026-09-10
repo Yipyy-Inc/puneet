@@ -3,6 +3,8 @@
 import { Instagram, Facebook, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { businessProfile } from "@/data/settings";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 /**
  * Social share row (Table 60) — Instagram / Facebook / WhatsApp. Facebook and
@@ -22,7 +24,12 @@ export function ReportCardShare({
   photos: string[];
   summary: string;
 }) {
-  const shareText = `${petName}'s ${serviceType} day at ${facilityName}! ${summary}`;
+  const { t, fill, locale } = useCustomerText("reportCards");
+  const shareText = `${fill("petDayAtFacility", {
+    pet: petName,
+    service: serviceTypeLabel(locale, serviceType),
+    facility: facilityName,
+  })} ${summary}`;
   const bestPhoto = photos[0]; // best photo pre-selected
 
   const getShareUrl = () =>
@@ -74,10 +81,10 @@ export function ReportCardShare({
       }
       // Desktop fallback: copy so the customer can paste into Instagram.
       await navigator.clipboard.writeText(`${shareText} ${getShareUrl()}`);
-      toast.success("Copied — open Instagram to share");
+      toast.success(t("copiedOpenInstagramToShare"));
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
-      toast.error("Couldn't share");
+      toast.error(t("couldnTShare"));
     }
   };
 
@@ -86,11 +93,13 @@ export function ReportCardShare({
 
   return (
     <div className="flex items-center justify-center gap-3 pt-1">
-      <span className="text-muted-foreground text-xs">Share the memory:</span>
+      <span className="text-muted-foreground text-xs">
+        {t("shareTheMemory")}
+      </span>
       <button
         type="button"
         onClick={shareInstagram}
-        aria-label="Share to Instagram"
+        aria-label={t("shareToInstagram")}
         className={btn}
       >
         <Instagram className="size-5 text-pink-600" />
@@ -98,7 +107,7 @@ export function ReportCardShare({
       <button
         type="button"
         onClick={shareFacebook}
-        aria-label="Share to Facebook"
+        aria-label={t("shareToFacebook")}
         className={btn}
       >
         <Facebook className="size-5 text-blue-600" />
@@ -106,8 +115,8 @@ export function ReportCardShare({
       <button
         type="button"
         onClick={shareWhatsApp}
-        aria-label="Share to WhatsApp"
-        title="WhatsApp"
+        aria-label={t("shareToWhatsapp")}
+        title={t("whatsapp")}
         className={btn}
       >
         <MessageCircle className="size-5 text-green-600" />

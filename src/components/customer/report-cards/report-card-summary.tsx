@@ -10,42 +10,54 @@ import {
   serviceHeaderColor,
   moodEmoji,
   usablePhotos,
+  moodLabel,
 } from "./report-card-shared";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 // The values the facility's form actually records. Previously these chips were
 // counted off `meals` and `pottyBreaks` arrays that nothing has ever written,
 // so every card showed none of them.
+//
+// Each map is value → CATALOGUE KEY in `customerPages.areas.reportCards`.
+// They held the English words, in a shape no scanner of the French gate
+// reads (a quoted record code on the left, prose on the right) — so the gate
+// reported this file clean while every chip on it was English.
 const APPETITE_CHIP: Record<string, string> = {
-  "ate-all": "Ate everything 🍽",
-  "ate-most": "Ate most 🍽",
-  "ate-some": "Ate a little 🍽",
-  refused: "Didn't eat 🍽",
+  "ate-all": "chipAteAll",
+  "ate-most": "chipAteMost",
+  "ate-some": "chipAteSome",
+  refused: "chipRefused",
 };
 
 const POTTY_CHIP: Record<string, string> = {
-  normal: "Potty normal ✓",
-  irregular: "Potty irregular",
-  accident: "Had an accident",
+  normal: "chipPottyNormal",
+  irregular: "chipPottyIrregular",
+  accident: "chipAccident",
 };
 
 // `not-needed` is deliberately absent: "no medication was due" is not news to
 // the owner, and a chip for it would crowd out one that is.
 const MEDS_CHIP: Record<string, string> = {
-  given: "Meds given 💊",
-  missed: "Meds missed",
+  given: "chipMedsGiven",
+  missed: "chipMedsMissed",
 };
 
 const ENERGY_CHIP: Record<string, string> = {
-  high: "High energy ⚡",
-  medium: "Steady energy",
-  low: "Restful day 😴",
+  high: "chipEnergyHigh",
+  medium: "chipEnergySteady",
+  low: "chipEnergyLow",
 };
 
 /** Compact quick-stat chips, from what the facility actually recorded (max 4). */
-function buildQuickStats(item: ReportCardTimelineItem): string[] {
+function buildQuickStats(
+  item: ReportCardTimelineItem,
+  t: (key: string) => string,
+  fill: (key: string, values: Record<string, string | number>) => string,
+): string[] {
   const input = item.card.input as Record<string, unknown>;
   const pick = (map: Record<string, string>, key: unknown) =>
-    typeof key === "string" ? map[key] : undefined;
+    typeof key === "string" && map[key] ? t(map[key]) : undefined;
 
   const chips = [
     pick(APPETITE_CHIP, input.appetite),
@@ -54,7 +66,9 @@ function buildQuickStats(item: ReportCardTimelineItem): string[] {
     item.overallFeedback ? `${item.overallFeedback} ⭐` : undefined,
     pick(ENERGY_CHIP, input.energy),
     item.photos.length > 0
-      ? `${item.photos.length} photo${item.photos.length === 1 ? "" : "s"} 📷`
+      ? fill(item.photos.length === 1 ? "chipPhoto" : "chipPhotos", {
+          n: item.photos.length,
+        })
       : undefined,
   ].filter((c): c is string => Boolean(c));
 
@@ -74,13 +88,14 @@ export function ReportCardSummary({
   onToggleFavourite: () => void;
   onOpen: () => void;
 }) {
+  const { t, fill, locale } = useCustomerText("reportCards");
   const headerBg = serviceHeaderColor[item.serviceType] ?? "bg-slate-600";
   const emoji = moodEmoji[item.mood] ?? "🐾";
   const excerpt = summaryExcerpt(item);
   // Only photos that actually signed. A private-bucket path that failed to
   // sign would render as a broken image, which reads worse than no photo.
   const photos = usablePhotos(item.photos).slice(0, 3);
-  const stats = buildQuickStats(item);
+  const stats = buildQuickStats(item, t, fill);
 
   return (
     <div
@@ -99,7 +114,7 @@ export function ReportCardSummary({
       {unread && (
         <span
           className="absolute top-3 right-3 z-10 size-2.5 rounded-full bg-teal-400 ring-2 ring-white"
-          aria-label="Unread"
+          aria-label={t("unread")}
         />
       )}
 
@@ -114,14 +129,14 @@ export function ReportCardSummary({
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-bold">{item.petName}</p>
             <span className="text-xs capitalize opacity-90">
-              · {item.serviceType}
+              · {serviceTypeLabel(locale, item.serviceType)}
             </span>
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] opacity-90">
             <span>
-              {emoji} <span className="capitalize">{item.mood}</span>
+              {emoji} <span>{moodLabel(item.mood, t)}</span>
             </span>
-            <span>· {formatReportDate(item.date)}</span>
+            <span>· {formatReportDate(item.date, locale)}</span>
             <span className="truncate">· {item.facilityName}</span>
           </div>
         </div>
@@ -198,7 +213,7 @@ export function ReportCardSummary({
               e.stopPropagation();
               onToggleFavourite();
             }}
-            aria-label={favourite ? "Remove favourite" : "Add favourite"}
+            aria-label={favourite ? t("removeFavourite") : t("addFavourite")}
             aria-pressed={favourite}
             className="text-muted-foreground transition-colors hover:text-rose-500"
           >
@@ -210,7 +225,7 @@ export function ReportCardSummary({
             />
           </button>
           <span className="text-primary inline-flex items-center gap-1 text-sm font-medium group-hover:underline">
-            View full report
+            {t("viewFullReport")}
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </span>
         </div>
