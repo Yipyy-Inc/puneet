@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { replyToReportCard } from "@/lib/api/report-cards";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 interface ReportCardQuickReplyProps {
   reportCardId: string;
@@ -16,27 +18,27 @@ interface ReportCardQuickReplyProps {
   onReplySent?: (message: string) => void;
 }
 
+// Labels and messages by CATALOGUE KEY. The message is what reaches the
+// facility, in the words of whoever tapped it — so it is in their language,
+// the same as if they had typed it.
 const QUICK_REPLIES = [
   {
     id: "thank-you",
-    label: "Awww thank you!",
+    labelKey: "qrThanks",
+    messageKey: "qrThanksMessage",
     icon: Heart,
-    message:
-      "Awww thank you so much! We're so happy to see {petName} had a great time! ❤️",
   },
   {
     id: "concerns",
-    label: "Any concerns?",
+    labelKey: "qrConcerns",
+    messageKey: "qrConcernsMessage",
     icon: MessageCircle,
-    message:
-      "Thank you for the update! Is there anything we should be aware of or any concerns?",
   },
   {
     id: "book-again",
-    label: "Can we book again?",
+    labelKey: "qrBookAgain",
+    messageKey: "qrBookAgainMessage",
     icon: Calendar,
-    message:
-      "Thank you! We'd love to book {petName} again. When would be a good time?",
   },
 ];
 
@@ -47,6 +49,7 @@ export function ReportCardQuickReply({
   date,
   onReplySent,
 }: ReportCardQuickReplyProps) {
+  const { t, fill, locale } = useCustomerText("reportCards");
   const router = useRouter();
   const [selectedQuickReply, setSelectedQuickReply] = useState<string | null>(
     null,
@@ -56,7 +59,7 @@ export function ReportCardQuickReply({
     const reply = QUICK_REPLIES.find((r) => r.id === replyId);
     if (!reply) return;
 
-    const message = reply.message.replace(/{petName}/g, petName);
+    const message = fill(reply.messageKey, { petName });
     setSelectedQuickReply(replyId);
 
     try {
@@ -66,12 +69,12 @@ export function ReportCardQuickReply({
       // card id was named `_reportCardId` to mark it deliberately unused.
       await replyToReportCard(reportCardId, message);
 
-      toast.success("Reply sent!");
+      toast.success(t("replySent"));
       onReplySent?.(message);
       setSelectedQuickReply(null);
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to send reply",
+        error instanceof Error ? error.message : t("failedToSendReply"),
       );
       setSelectedQuickReply(null);
     }
@@ -80,9 +83,10 @@ export function ReportCardQuickReply({
   // "Custom message" opens the Messages interface (pre-addressed to the
   // facility) with the report referenced in a pre-filled subject line.
   const handleCustomMessage = () => {
+    const service = serviceTypeLabel(locale, serviceType);
     const subject = date
-      ? `Re: ${petName}'s ${serviceType} report (${date})`
-      : `Re: ${petName}'s ${serviceType} report`;
+      ? fill("replySubjectDated", { pet: petName, service, date })
+      : fill("replySubject", { pet: petName, service });
     router.push(
       `/customer/messages?compose=${encodeURIComponent(`${subject}\n\n`)}`,
     );
@@ -90,7 +94,7 @@ export function ReportCardQuickReply({
 
   return (
     <div className="space-y-2 border-t pt-4">
-      <p className="text-sm font-medium">Quick Reply</p>
+      <p className="text-sm font-medium">{t("quickReply")}</p>
       <div className="flex flex-wrap gap-2">
         {QUICK_REPLIES.map((reply) => {
           const Icon = reply.icon;
@@ -104,7 +108,7 @@ export function ReportCardQuickReply({
               className="text-xs"
             >
               <Icon className="mr-1 size-3" />
-              {reply.label}
+              {t(reply.labelKey)}
             </Button>
           );
         })}
@@ -115,7 +119,7 @@ export function ReportCardQuickReply({
           className="text-xs"
         >
           <MessageCircle className="mr-1 size-3" />
-          Custom message
+          {t("customMessage")}
         </Button>
       </div>
     </div>

@@ -124,6 +124,11 @@ const SAME_IN_BOTH = new Set([
   "customerPages.giftCards.date", // Date / Date
   "customerPages.giftCards.total", // Total / Total
   "customerPages.giftCards.code", // Code / Code
+  "customerPages.reportCards.service", // Service / Service
+  "customerPages.reportCards.whatsapp", // a brand name
+  "customerPages.reportCards.themeHalloween", // Halloween / Halloween
+  "customerPages.reportCards.chipPhoto", // "{n} photo 📷" in both
+  "customerPages.reportCards.chipPhotos", // "{n} photos 📷" in both
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
 ]);
 

@@ -38,14 +38,18 @@ import {
 } from "@/components/customer/report-cards/report-card-shared";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 // Service-type filter chips — value matches ReportCard.serviceType.
+// "all" is a word of this page; the others are service ids, named by
+// serviceTypeLabel like everywhere else.
 const SERVICE_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "boarding", label: "Boarding" },
-  { value: "daycare", label: "Daycare" },
-  { value: "grooming", label: "Grooming" },
-  { value: "training", label: "Training" },
+  { value: "all" },
+  { value: "boarding" },
+  { value: "daycare" },
+  { value: "grooming" },
+  { value: "training" },
 ] as const;
 
 /** The signed-in customer's own pet shape, from the live record. */
@@ -54,6 +58,7 @@ type CustomerPet = NonNullable<
 >["pets"][number];
 
 export default function CustomerReportCardsPage() {
+  const { t, fill, locale } = useCustomerText("reportCards");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -95,7 +100,7 @@ export default function CustomerReportCardsPage() {
 
   const facilityName = selectedFacility
     ? selectedFacility.name
-    : (customer?.facility ?? "Your Facility");
+    : (customer?.facility ?? t("yourFacility"));
 
   const petById = useMemo(() => {
     const map = new Map<number, CustomerPet>();
@@ -165,12 +170,13 @@ export default function CustomerReportCardsPage() {
       filteredAndSortedCards.map((card) =>
         buildTimelineItem(card, {
           facilityName,
+          yourPet: t("yourPet"),
           petImage: card.petRef
             ? petById.get(card.petRef)?.imageUrl
             : undefined,
         }),
       ),
-    [filteredAndSortedCards, petById, facilityName],
+    [filteredAndSortedCards, petById, facilityName, t],
   );
 
   const openItem = useMemo(
@@ -221,7 +227,7 @@ export default function CustomerReportCardsPage() {
         next.delete(id);
         return next;
       });
-      toast.error("That could not be saved.");
+      toast.error(t("thatCouldNotBeSaved"));
     }
   };
 
@@ -250,8 +256,8 @@ export default function CustomerReportCardsPage() {
     <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <PageHeader
-          title="Report cards"
-          description={`A warm timeline of your pet's stays at ${facilityName}.`}
+          title={t("reportCards")}
+          description={fill("timelineOfStaysAt", { facility: facilityName })}
         />
 
         {/* Filters */}
@@ -260,7 +266,7 @@ export default function CustomerReportCardsPage() {
           <div className="flex items-center gap-3 px-5 py-3">
             <Search className="text-primary/40 size-4 shrink-0" />
             <Input
-              placeholder="Search by pet, notes, or activity…"
+              placeholder={t("searchByPetNotesOr")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="placeholder:text-muted-foreground/40 h-auto flex-1 border-none bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
@@ -277,7 +283,7 @@ export default function CustomerReportCardsPage() {
                 <ArrowDownUp className="size-3.5" />
               )}
               <span className="hidden sm:inline">
-                {sortBy === "date-desc" ? "Newest first" : "Oldest first"}
+                {sortBy === "date-desc" ? t("newestFirst") : t("oldestFirst")}
               </span>
             </button>
           </div>
@@ -289,13 +295,13 @@ export default function CustomerReportCardsPage() {
             {customer && customer.pets.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
-                  Pet
+                  {t("pet")}
                 </span>
                 <button
                   onClick={() => setSelectedPetId("all")}
                   className={pillClass(selectedPetId === "all")}
                 >
-                  All
+                  {t("all")}
                 </button>
                 {customer.pets.map((pet) => (
                   <button
@@ -313,7 +319,7 @@ export default function CustomerReportCardsPage() {
             {/* Service type */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
-                Service
+                {t("service")}
               </span>
               {SERVICE_FILTERS.map((svc) => (
                 <button
@@ -321,7 +327,9 @@ export default function CustomerReportCardsPage() {
                   onClick={() => setSelectedService(svc.value)}
                   className={pillClass(selectedService === svc.value)}
                 >
-                  {svc.label}
+                  {svc.value === "all"
+                    ? t("filterAll")
+                    : serviceTypeLabel(locale, svc.value)}
                 </button>
               ))}
             </div>
@@ -329,7 +337,7 @@ export default function CustomerReportCardsPage() {
             {/* Show */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-muted-foreground w-14 shrink-0 text-[10px] font-semibold tracking-widest uppercase">
-                Show
+                {t("show")}
               </span>
               <button
                 onClick={() => setFavOnly((v) => !v)}
@@ -337,7 +345,7 @@ export default function CustomerReportCardsPage() {
                 aria-pressed={favOnly}
               >
                 <Heart className={cn("size-3", favOnly && "fill-current")} />
-                Favourites
+                {t("favourites")}
               </button>
             </div>
           </div>
@@ -352,16 +360,16 @@ export default function CustomerReportCardsPage() {
                     {filteredAndSortedCards.length}
                   </span>{" "}
                   {filteredAndSortedCards.length === 1
-                    ? "report card"
-                    : "report cards"}{" "}
-                  found
+                    ? t("reportCard")
+                    : t("reportCardsLower")}{" "}
+                  {t("found")}
                 </p>
                 <button
                   onClick={clearFilters}
                   className="text-muted-foreground hover:text-primary flex items-center gap-1 text-xs transition-colors"
                 >
                   <X className="size-3" />
-                  Clear all filters
+                  {t("clearAllFilters")}
                 </button>
               </div>
             </>
@@ -379,7 +387,7 @@ export default function CustomerReportCardsPage() {
                 className="bg-muted mx-auto h-12 w-12 animate-pulse rounded-full"
               />
               <p className="text-muted-foreground text-sm">
-                Loading your report cards…
+                {t("loadingYourReportCards")}
               </p>
             </CardContent>
           </Card>
@@ -387,20 +395,18 @@ export default function CustomerReportCardsPage() {
           <Card>
             <CardContent className="space-y-3 py-12 text-center">
               <FileText className="mx-auto size-12 text-red-500 opacity-70" />
-              <p className="font-semibold">
-                Your report cards could not be loaded
-              </p>
+              <p className="font-semibold">{t("yourReportCardsCouldNot")}</p>
               <p className="text-muted-foreground text-sm">
                 {error instanceof Error
                   ? error.message
-                  : "Something went wrong."}
+                  : t("somethingWentWrong")}
               </p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => void refetch()}
               >
-                Try again
+                {t("tryAgain")}
               </Button>
             </CardContent>
           </Card>
@@ -410,13 +416,13 @@ export default function CustomerReportCardsPage() {
               <FileText className="text-muted-foreground mx-auto size-12 opacity-50" />
               <p className="font-semibold">
                 {hasActiveFilters
-                  ? "No report cards match your filters"
-                  : "No report cards yet"}
+                  ? t("noReportCardsMatchYour")
+                  : t("noReportCardsYet")}
               </p>
               <p className="text-muted-foreground text-sm">
                 {hasActiveFilters
-                  ? "Try adjusting your filters to see more results."
-                  : "Once your pet visits the facility, their report cards will appear here as a memory timeline."}
+                  ? t("tryAdjustingYourFiltersTo")
+                  : t("reportCardsWillAppear")}
               </p>
               {hasActiveFilters && (
                 <Button
@@ -424,7 +430,7 @@ export default function CustomerReportCardsPage() {
                   onClick={clearFilters}
                   className="mt-4"
                 >
-                  Clear filters
+                  {t("clearFilters")}
                 </Button>
               )}
             </CardContent>

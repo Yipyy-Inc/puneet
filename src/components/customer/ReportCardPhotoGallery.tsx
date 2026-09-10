@@ -19,6 +19,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { facilityConfig } from "@/data/facility-config";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 interface ReportCardPhotoGalleryProps {
   photos: string[];
@@ -97,6 +99,7 @@ export function ReportCardPhotoGallery({
   serviceType,
   date,
 }: ReportCardPhotoGalleryProps) {
+  const { t, fill, locale } = useCustomerText("reportCards");
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
@@ -148,7 +151,7 @@ export function ReportCardPhotoGallery({
 
   const handleDownloadPhoto = (photoUrl: string, index: number) => {
     if (!photoDownloadEnabled) {
-      toast.error("Photo downloads are not available");
+      toast.error(t("photoDownloadsAreNotAvailable"));
       return;
     }
     // Create a temporary link to download the photo
@@ -158,12 +161,12 @@ export function ReportCardPhotoGallery({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Photo downloaded");
+    toast.success(t("photoDownloaded"));
   };
 
   const handleSharePhoto = async (photoUrl: string) => {
     if (!photoSharingEnabled) {
-      toast.error("Photo sharing is not available");
+      toast.error(t("photoSharingIsNotAvailable"));
       return;
     }
     try {
@@ -176,28 +179,34 @@ export function ReportCardPhotoGallery({
         // Prefer sharing the image file; fall back to a text/title share.
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
-            title: `${petName}'s ${serviceType} photos`,
-            text: `Check out ${petName}'s photos from ${date}!`,
+            title: fill("petServicePhotos", {
+              pet: petName,
+              service: serviceTypeLabel(locale, serviceType),
+            }),
+            text: fill("checkOutPhotos", { pet: petName, date }),
             files: [file],
           });
         } else {
           await navigator.share({
-            title: `${petName}'s ${serviceType} photos`,
-            text: `Check out ${petName}'s photos from ${date}!`,
+            title: fill("petServicePhotos", {
+              pet: petName,
+              service: serviceTypeLabel(locale, serviceType),
+            }),
+            text: fill("checkOutPhotos", { pet: petName, date }),
             url: photoUrl,
           });
         }
-        toast.success("Photo shared");
+        toast.success(t("photoShared"));
       } else {
         // Desktop fallback: copy link to clipboard
         await navigator.clipboard.writeText(photoUrl);
-        toast.success("Photo link copied to clipboard");
+        toast.success(t("photoLinkCopiedToClipboard"));
       }
     } catch (error) {
       // AbortError = user dismissed the share sheet; don't surface an error.
       if (error instanceof Error && error.name === "AbortError") return;
       console.error("Error sharing photo:", error);
-      toast.error("Failed to share photo");
+      toast.error(t("failedToSharePhoto"));
     }
   };
 
@@ -213,7 +222,7 @@ export function ReportCardPhotoGallery({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 text-sm font-medium">
-            <ImageIcon className="size-4" /> Photos from this stay
+            <ImageIcon className="size-4" /> {t("photosFromThisStay")}
           </p>
           {photos.length > 4 && (
             <Button
@@ -222,7 +231,7 @@ export function ReportCardPhotoGallery({
               onClick={() => openAt(0)}
               className="text-xs"
             >
-              View all {photos.length} photos
+              {fill("viewAllPhotos", { n: photos.length })}
             </Button>
           )}
         </div>
@@ -233,11 +242,11 @@ export function ReportCardPhotoGallery({
               key={`${reportCardId}-photo-${idx}`}
               className="bg-muted relative aspect-4/3 cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-90"
               onClick={() => openAt(idx)}
-              aria-label={`Open photo ${idx + 1} of ${petName}`}
+              aria-label={fill("openPhotoOf", { n: idx + 1, pet: petName })}
             >
               <GalleryImage
                 src={photo}
-                alt={`${petName} at the facility`}
+                alt={fill("petAtFacility", { pet: petName })}
                 sizes="(max-width: 768px) 50vw, 200px"
                 className="object-cover"
               />
@@ -260,7 +269,7 @@ export function ReportCardPhotoGallery({
                 onClick={() => setIsGalleryOpen(false)}
               >
                 <X className="size-4" />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t("close")}</span>
               </Button>
             </DialogTitle>
           </DialogHeader>
@@ -296,7 +305,7 @@ export function ReportCardPhotoGallery({
                   }
                 >
                   <Download className="mr-2 size-4" />
-                  Download
+                  {t("download")}
                 </Button>
               )}
               {photoSharingEnabled && (
@@ -306,7 +315,7 @@ export function ReportCardPhotoGallery({
                   onClick={() => handleSharePhoto(photos[selectedPhotoIndex])}
                 >
                   <Share2 className="mr-2 size-4" />
-                  Share
+                  {t("share")}
                 </Button>
               )}
             </div>
@@ -319,7 +328,7 @@ export function ReportCardPhotoGallery({
                   size="icon"
                   className="absolute top-1/2 left-4 -translate-y-1/2 rounded-full opacity-90"
                   onClick={goPrev}
-                  aria-label="Previous photo"
+                  aria-label={t("previousPhoto")}
                 >
                   <ChevronLeft className="size-4" />
                 </Button>
@@ -328,7 +337,7 @@ export function ReportCardPhotoGallery({
                   size="icon"
                   className="absolute top-1/2 right-4 -translate-y-1/2 rounded-full opacity-90"
                   onClick={goNext}
-                  aria-label="Next photo"
+                  aria-label={t("nextPhoto")}
                 >
                   <ChevronRight className="size-4" />
                 </Button>
@@ -353,11 +362,11 @@ export function ReportCardPhotoGallery({
                         ? "border-primary"
                         : "border-transparent opacity-60 hover:opacity-100",
                     )}
-                    aria-label={`View photo ${idx + 1}`}
+                    aria-label={fill("viewPhotoN", { n: idx + 1 })}
                   >
                     <GalleryImage
                       src={photo}
-                      alt={`Thumbnail ${idx + 1}`}
+                      alt={fill("thumbnailN", { n: idx + 1 })}
                       sizes="80px"
                       className="object-cover"
                     />

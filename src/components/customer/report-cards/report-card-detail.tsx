@@ -30,8 +30,12 @@ import {
   formatReportDate,
   formatReportTime,
   usablePhotos,
+  moodLabel,
+  sectionLabel,
 } from "./report-card-shared";
 import { ReportCardShare } from "./report-card-share";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 /** Full, expanded report-card content — shown in the detail slide-over. */
 export function ReportCardDetail({
@@ -43,6 +47,7 @@ export function ReportCardDetail({
   favourite?: boolean;
   onToggleFavourite?: () => void;
 }) {
+  const { t, fill, locale } = useCustomerText("reportCards");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -97,7 +102,7 @@ export function ReportCardDetail({
           brandConfig={reportCardConfig.brand}
           profile={businessProfile}
           title={`${item.petName}'s ${item.serviceType} Report`}
-          subtitle={`${formatReportDate(item.date)} · ${item.facilityName}`}
+          subtitle={`${formatReportDate(item.date, locale)} · ${item.facilityName}`}
         />
       )}
 
@@ -109,18 +114,23 @@ export function ReportCardDetail({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-lg">{ts.emoji}</span>
             <p className="text-base font-bold">
-              {item.petName}&apos;s {item.serviceType} day
+              {fill("petServiceDay", {
+                pet: item.petName,
+                service: serviceTypeLabel(locale, item.serviceType),
+              })}
             </p>
-            <Badge className="border-0 bg-white/20 text-xs text-white capitalize">
-              {item.mood}
+            <Badge className="border-0 bg-white/20 text-xs text-white">
+              {moodLabel(item.mood, t)}
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs opacity-80">
             <span className="inline-flex items-center gap-1">
-              <Calendar className="size-3" /> {formatReportDate(item.date)}
+              <Calendar className="size-3" />{" "}
+              {formatReportDate(item.date, locale)}
             </span>
             <span className="inline-flex items-center gap-1">
-              <Clock className="size-3" /> {formatReportTime(item.timeLabel)}
+              <Clock className="size-3" />{" "}
+              {formatReportTime(item.sentAt, locale)}
             </span>
             <span className="inline-flex items-center gap-1">
               <Dog className="size-3" /> {item.facilityName}
@@ -133,7 +143,7 @@ export function ReportCardDetail({
             <button
               type="button"
               onClick={onToggleFavourite}
-              aria-label={favourite ? "Remove favourite" : "Add favourite"}
+              aria-label={favourite ? t("removeFavourite") : t("addFavourite")}
               aria-pressed={favourite}
               className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/20"
             >
@@ -168,7 +178,7 @@ export function ReportCardDetail({
                 className="rounded-lg bg-slate-50 px-4 py-3"
               >
                 <p className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">
-                  {section.label}
+                  {sectionLabel(section, t)}
                 </p>
                 <p className="mt-1 text-sm/relaxed whitespace-pre-line text-slate-700">
                   {section.body}
@@ -228,7 +238,7 @@ export function ReportCardDetail({
         {item.overallFeedback && (
           <div className="space-y-2">
             <p className="flex items-center gap-2 text-sm font-medium">
-              <ClipboardCheck className="size-4" /> Overall Feedback
+              <ClipboardCheck className="size-4" /> {t("overallFeedback")}
             </p>
             <Badge variant="outline" className="text-xs">
               {item.overallFeedback}
@@ -239,7 +249,7 @@ export function ReportCardDetail({
         {item.petConditions && Object.keys(item.petConditions).length > 0 && (
           <div className="space-y-2">
             <p className="flex items-center gap-2 text-sm font-medium">
-              <Stethoscope className="size-4" /> Pet Condition
+              <Stethoscope className="size-4" /> {t("petCondition")}
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               {Object.entries(item.petConditions).map(([category, value]) => {
@@ -279,7 +289,7 @@ export function ReportCardDetail({
           reportCardId={item.id}
           petName={item.petName}
           serviceType={item.serviceType}
-          date={formatReportDate(item.date)}
+          date={formatReportDate(item.date, locale)}
           onReplySent={(message) => {
             console.log("Reply sent:", message);
           }}
@@ -289,7 +299,7 @@ export function ReportCardDetail({
         <div className="flex justify-end pt-1">
           <Badge variant="secondary" className="gap-1 text-[10px] font-normal">
             <span aria-hidden="true">{ts.emoji}</span>
-            {ts.label} Theme
+            {fill("themeNamed", { theme: t(ts.labelKey) })}
           </Badge>
         </div>
 
