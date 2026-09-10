@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pen, Eraser, Download, Check, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatNoteDate } from "@/lib/format-utils";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ export function SignaturePad({
   onSign,
   onClear,
   agreementText,
-  label = "Signature",
+  label,
   witnessMode = false,
   disabled = false,
   initialSignature,
@@ -86,6 +88,9 @@ export function SignaturePad({
   compact = false,
   className,
 }: SignaturePadProps) {
+  const t = useShellText("shared");
+  const locale = useShellLocale();
+  const labelText = label ?? t("signature");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const padRef = useRef<SignaturePadLib | null>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -237,25 +242,21 @@ export function SignaturePad({
     return (
       <div className={cn("space-y-2", className)}>
         <Label className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          {label}
+          {labelText}
         </Label>
         <div className="rounded-xl border-2 border-slate-200 bg-white p-3">
           <img
             src={initialSignature}
-            alt="Signature"
+            alt={t("signature")}
             className={cn("w-full object-contain", compact ? "h-20" : "h-32")}
           />
         </div>
         {signedMeta && (
           <p className="text-[11px] text-slate-400">
-            Signed on{" "}
-            {new Date(signedMeta.date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {t("signedOn").replace(
+              "{date}",
+              formatNoteDate(signedMeta.date, locale),
+            )}
             {signedMeta.ip !== "unavailable" && ` · IP: ${signedMeta.ip}`}
           </p>
         )}
@@ -271,7 +272,7 @@ export function SignaturePad({
           }}
         >
           <Download className="size-3.5" />
-          Download
+          {t("downloadSignature")}
         </Button>
       </div>
     );
@@ -295,7 +296,7 @@ export function SignaturePad({
               onCheckedChange={(c) => setAgreed(c === true)}
             />
             <span className="text-xs font-medium text-slate-600">
-              I have read and agree to the terms above
+              {t("agreeToTerms")}
             </span>
           </label>
         </div>
@@ -314,7 +315,7 @@ export function SignaturePad({
           )}
         >
           <Pen className="size-3.5" />
-          Draw
+          {t("modeDraw")}
         </button>
         <button
           type="button"
@@ -327,7 +328,7 @@ export function SignaturePad({
           )}
         >
           <Type className="size-3.5" />
-          Type
+          {t("modeType")}
         </button>
       </div>
 
@@ -348,7 +349,7 @@ export function SignaturePad({
           {isEmpty && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
               <Pen className="size-5 text-slate-300" />
-              <span className="text-sm text-slate-300">Sign here</span>
+              <span className="text-sm text-slate-300">{t("signHere")}</span>
             </div>
           )}
         </div>
@@ -357,7 +358,7 @@ export function SignaturePad({
           <Input
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
-            placeholder="Type your full name"
+            placeholder={t("typeFullName")}
             disabled={!agreed}
             className="text-center"
           />
@@ -376,7 +377,7 @@ export function SignaturePad({
               </span>
             ) : (
               <span className="text-sm text-slate-300">
-                Your signature will appear here
+                {t("signatureAppearsHere")}
               </span>
             )}
           </div>
@@ -386,7 +387,7 @@ export function SignaturePad({
       {/* Controls */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium tracking-wider text-slate-400 uppercase">
-          {label}
+          {labelText}
         </span>
         {mode === "draw" && (
           <Button
@@ -396,7 +397,7 @@ export function SignaturePad({
             onClick={handleClear}
           >
             <Eraser className="size-3.5" />
-            Clear
+            {t("clearSignature")}
           </Button>
         )}
       </div>
@@ -404,11 +405,11 @@ export function SignaturePad({
       {/* Witness */}
       {witnessMode && (
         <div className="space-y-1.5">
-          <Label className="text-xs">Witness Name</Label>
+          <Label className="text-xs">{t("witnessName")}</Label>
           <Input
             value={witnessName}
             onChange={(e) => setWitnessName(e.target.value)}
-            placeholder="Full name of witness"
+            placeholder={t("witnessPlaceholder")}
           />
         </div>
       )}
@@ -420,21 +421,18 @@ export function SignaturePad({
         onClick={handleConfirm}
       >
         {signing ? (
-          "Capturing signature..."
+          t("capturingSignature")
         ) : (
           <>
             <Check className="size-4" />
-            Confirm Signature
+            {t("confirmSignature")}
           </>
         )}
       </Button>
 
       {/* Legal text */}
       <p className="text-[10px] leading-relaxed text-slate-400">
-        By signing above, you acknowledge that this electronic signature has the
-        same legal validity as a handwritten signature. Your signature,
-        timestamp, IP address, and device information are recorded for
-        verification purposes.
+        {t("legalNotice")}
       </p>
     </div>
   );

@@ -97,6 +97,9 @@ const SAME_IN_BOTH = new Set([
   "customerPages.petProfile.photosMany",
   "customerPages.petProfile.albumsOne",
   "customerPages.petProfile.albumsMany",
+  "customerPages.addPet.allergies", // Allergies / Allergies
+  "customerPages.formWizard.signatureAlt", // Signature / Signature
+  "customerPages.formWizard.addrProvince", // Province / Province
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
