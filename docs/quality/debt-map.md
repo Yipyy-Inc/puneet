@@ -12255,3 +12255,45 @@ and is a platform superadmin. Two defects surfaced together:
 - A platform admin with NO facility membership still resolves to the demo
   facility (legacy id 11) on the facility portal, as before — now scoped to it
   rather than seeing all of them.
+
+## 2026-09-10 — the booking page stops pretending (Phase 1 of making the facility side real)
+
+The client opened a booking and found it "empty" beside the old design. The
+old design was full because its panels read fixtures, and several of its
+buttons announced work they never did. What changed:
+
+- **Edit saves.** The wizard used to close and toast "{ref} updated" with no
+  write. It now PATCHes the fields an edit may change — dates, times, prices,
+  requests, feeding, medications, extras — and never the status, client, pets
+  or service (`editablePatch` in `use-save-booking-edit.ts`; the wizard's
+  payload carries a `status` that would have moved a checked-in guest back to
+  confirmed). A new kennel goes through `PUT /api/boarding/stays`, which
+  refuses a taken room with a 409. The wizard's "confirmation sent / reminder
+  scheduled / deposit applied" toasts no longer fire on an edit.
+- **Undo check-in, undo confirm, undo checkout, no-show write the status.**
+  All four were a confirmation dialog ending in a success toast. They reverse
+  what this page's own check-in/confirm/checkout write — the status —
+  and `sync_boarding_stay` releases the kennel on a no-show. The no-show
+  dialog quoted a deposit from the fixture invoice ("$0.00 will be
+  forfeited"); it no longer quotes one.
+- **Deposit and tips read the ledger.** "Deposit Required — Rule: 50%" showed
+  on every real booking forever, because it read `invoice.depositCollected`, a
+  fixture blob. It now appears only when the facility's own deposit rule
+  applies, with that rule's label and amount, and "collected" is what the
+  payments ledger says. The Tips card reads `/api/bookings/[ref]/tips`.
+- **The guest journal is real.** `BookingJournal` builds a stay's days from
+  `care_log_entries`: each day's planned meals and doses (keyed exactly as the
+  feeding and medication panels log them) against what was logged, anything
+  else logged that day, and an activity log. The fixture
+  `ReservationJournalPanel` is still what DailyCareView opens for its own
+  fixture guests.
+- **Still open, recorded:**
+  - A boarding ARRIVAL (`boarding_stays.checked_in_at`, written by the check-in
+    board through `record_boarding_arrival`) and the booking STATUS (written by
+    this page) are separate records, and nothing keeps them in step: checking
+    in here does not show the dog on site on the board, and vice versa. Undo
+    reverses the status only.
+  - Printing a care sheet, emailing the invoice and "SMS link" are still toasts.
+  - The Notes card still shows the two hard-coded `MOCK_NOTES`; notes need a
+    table (Phase 1 continues).
+  - The Tasks panel still reads fixture tasks.

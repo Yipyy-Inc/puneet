@@ -72,6 +72,8 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import type { Booking } from "@/types/booking";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
 import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
@@ -128,7 +130,7 @@ import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdo
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
-import { ReservationJournalPanel } from "@/components/guest-journal/ReservationJournalPanel";
+import { BookingJournal } from "@/components/guest-journal/BookingJournal";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { ExtraService } from "@/types/booking";
@@ -467,6 +469,8 @@ export default function ClientBookingDetailPage({
   };
 
   const [editOpen, setEditOpen] = useState(false);
+  const saveEdit = useSaveBookingEdit(booking);
+  const { t: detailT, fill: detailFill } = useStaffText("bookingDetail");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const { locations } = useLocationContext();
@@ -480,7 +484,9 @@ export default function ClientBookingDetailPage({
   // nothing else on it shows a tip allocation.
   // `bookingId` rather than `booking.id`: this runs above the guard that
   // narrows `booking`, and it is the same number — the route param IS the ref.
-  const { data: tips } = useBookingTips(tipSplitOpen ? bookingId : null);
+  // Always, not only while the split dialog is open: the Tips card reads the
+  // ledger's figure too, instead of the fixture invoice's `tipTotal`.
+  const { data: tips } = useBookingTips(bookingId);
   const setTipSplit = useSetTipSplit();
   const { data: staffProfiles } = useQuery({
     ...staffQueries.profiles(),
@@ -676,6 +682,26 @@ export default function ClientBookingDetailPage({
     }
   };
 
+  /**
+   * Reverse a step, or mark a no-show, by writing the status back.
+   *
+   * These four were confirmation dialogs that ended in a success toast and
+   * wrote nothing. What they reverse is what this page's own check-in, confirm
+   * and checkout write — the booking's status — so that is what they write.
+   * `sync_boarding_stay` releases the kennel on a no-show, and
+   * `sync_grooming_lifecycle` reopens a groom's checkout.
+   */
+  const revertTo = async (status: Booking["status"], doneKey: string) => {
+    try {
+      await updateStatus.mutateAsync({ id: booking.id, status });
+      toast.success(detailFill(doneKey, { ref: bookingRef }));
+    } catch (error) {
+      toast.error(detailFill("statusNotChanged", { ref: bookingRef }), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   const invoice = booking.invoice;
   const addedSubtotal = booking.extrasTotal ?? 0;
 
@@ -776,6 +802,14 @@ export default function ClientBookingDetailPage({
   const ruleDepositLabel = depositRule
     ? depositRule.label
     : `50% of total ($${(bookingTotalForDeposit * 0.5).toFixed(2)})`;
+
+  // What has been paid toward this booking, from the payments ledger. The
+  // banners read `invoice?.depositCollected` — a fixture blob no real booking
+  // carries — so every real booking said "Deposit Required" forever, even
+  // with the deposit paid.
+  const depositCollected = invoice?.depositCollected ?? booking.amountPaid ?? 0;
+  const remainingDue =
+    invoice?.remainingDue ?? booking.amountDue ?? booking.totalCost;
 
   // Care-completion check — surfaces unlogged meals/meds (and incident care,
   // 2B) before checkout.
@@ -932,10 +966,13 @@ export default function ClientBookingDetailPage({
 
         {/* Deposit Notice — unpaid. 5B: deposit amounts are part of the price
             breakdown, so they're omitted without view_booking_amounts. */}
+        {/* Only when the facility has a deposit rule that applies to this
+            booking — it showed a hard-coded "Rule: 50%" on every booking. */}
         {canSeeBookingAmounts &&
           !isPaid &&
           !isCancelled &&
-          (invoice?.depositCollected ?? 0) === 0 && (
+          depositRule &&
+          depositCollected === 0 && (
             <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
@@ -946,8 +983,10 @@ export default function ClientBookingDetailPage({
                     Deposit Required
                   </p>
                   <p className="text-xs text-blue-600">
-                    Rule: 50% of service total — $
-                    {(booking.totalCost * 0.5).toFixed(2)} due before check-in
+                    {detailFill("depositRuleLine", {
+                      rule: ruleDepositLabel,
+                      amount: `$${ruleDepositAmount.toFixed(2)}`,
+                    })}
                   </p>
                   <p className="text-[10px] text-blue-500">
                     Paying the deposit will auto-confirm this booking
@@ -967,41 +1006,38 @@ export default function ClientBookingDetailPage({
 
         {/* Deposit Collected — with auto-confirm note. 5B: omitted without
             view_booking_amounts (it discloses deposit + remaining balance). */}
-        {canSeeBookingAmounts &&
-          (invoice?.depositCollected ?? 0) > 0 &&
-          !isPaid && (
-            <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-emerald-800">
-                    Deposit Collected — $
-                    {(invoice?.depositCollected ?? 0).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-emerald-600">
-                    Remaining balance:{" "}
-                    <span className="font-[tabular-nums] font-medium">
-                      ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
-                    </span>{" "}
-                    · Booking auto-confirmed
-                  </p>
-                </div>
+        {canSeeBookingAmounts && depositCollected > 0 && !isPaid && (
+          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                <CheckCircle2 className="size-4 text-emerald-600" />
               </div>
-              <div className="flex gap-2">
-                {booking.status !== "confirmed" && (
-                  <Button
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => void checkIn()}
-                  >
-                    Continue to Check In
-                  </Button>
-                )}
+              <div>
+                <p className="text-sm font-medium text-emerald-800">
+                  Deposit Collected — ${depositCollected.toFixed(2)}
+                </p>
+                <p className="text-xs text-emerald-600">
+                  Remaining balance:{" "}
+                  <span className="font-[tabular-nums] font-medium">
+                    ${remainingDue.toFixed(2)}
+                  </span>{" "}
+                  · Booking auto-confirmed
+                </p>
               </div>
             </div>
-          )}
+            <div className="flex gap-2">
+              {booking.status !== "confirmed" && (
+                <Button
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void checkIn()}
+                >
+                  Continue to Check In
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Finished Notice */}
         {(booking.status === "completed" || isPaid) && !isCancelled && (
@@ -1298,6 +1334,10 @@ export default function ClientBookingDetailPage({
             }}
             onSplitTips={() => setTipSplitOpen(true)}
             onIssueRefund={() => setRefundOpen(true)}
+            onUndoCheckIn={() => void revertTo("confirmed", "checkInUndone")}
+            onUndoConfirm={() => void revertTo("pending", "confirmUndone")}
+            onUndoCheckout={() => void revertTo("confirmed", "checkoutUndone")}
+            onNoShow={() => void revertTo("no_show", "noShowRecorded")}
             requestDestructiveConfirm={(payload) =>
               setDestructiveConfirm(payload)
             }
@@ -1577,13 +1617,15 @@ export default function ClientBookingDetailPage({
               );
             })()}
 
-            {/* Guest Journal — only for boarding (the only service with multi-day care logs) */}
+            {/* Guest Journal — boarding, the service with multi-day care
+                logs. Built from `care_log_entries`; it was the fixture
+                ReservationJournalPanel, which can only ever match a fixture
+                guest and so showed "no journal yet" for every real stay. */}
             {isBoarding && !isCancelled && (
-              <ReservationJournalPanel
-                bookingId={booking.id}
-                petIds={
-                  Array.isArray(booking.petId) ? booking.petId : [booking.petId]
-                }
+              <BookingJournal
+                booking={booking}
+                petName={pet?.name ?? ""}
+                careLog={careLog}
               />
             )}
 
@@ -1726,14 +1768,14 @@ export default function ClientBookingDetailPage({
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  {(invoice?.tipTotal ?? 0) > 0 ? (
+                  {(tips?.tipCollected ?? 0) > 0 ? (
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-between">
                         <span className="text-muted-foreground text-sm">
                           Total Tip
                         </span>
                         <span className="font-[tabular-nums] text-lg font-bold">
-                          ${(invoice?.tipTotal ?? 0).toFixed(2)}
+                          ${(tips?.tipCollected ?? 0).toFixed(2)}
                         </span>
                       </div>
 
@@ -1764,6 +1806,25 @@ export default function ClientBookingDetailPage({
                         Distribution
                       </p>
                       <div className="space-y-1.5">
+                        {/* The split as RECORDED, when there is one. */}
+                        {!invoice?.items &&
+                          (tips?.allocations ?? []).map((allocation) => (
+                            <div
+                              key={allocation.id}
+                              className="flex items-center justify-between rounded-md border px-3 py-2"
+                            >
+                              <p className="text-sm font-medium">
+                                {tipStaffOptions.find(
+                                  (o) => o.id === allocation.staffId,
+                                )?.name ??
+                                  allocation.authorName ??
+                                  "—"}
+                              </p>
+                              <span className="font-[tabular-nums] text-sm font-semibold">
+                                ${allocation.amount.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
                         {(invoice?.items ?? [])
                           .filter(
                             (item) =>
@@ -1926,9 +1987,25 @@ export default function ClientBookingDetailPage({
           preSelectedFeedingSchedule={booking.feedingSchedule}
           preSelectedMedications={booking.medications}
           preSelectedSpecialRequests={booking.specialRequests}
-          onCreateBooking={() => {
-            setEditOpen(false);
-            toast.success(`${bookingRef} updated`);
+          onCreateBooking={(edited) => {
+            // It closed and said "updated" here, and wrote nothing.
+            saveEdit.mutate(edited, {
+              onSuccess: (changed) => {
+                setEditOpen(false);
+                toast.success(
+                  changed
+                    ? detailFill("bookingUpdated", { ref: bookingRef })
+                    : detailT("nothingChanged"),
+                );
+              },
+              onError: (error) =>
+                toast.error(
+                  detailFill("bookingNotUpdated", { ref: bookingRef }),
+                  {
+                    description: error.message,
+                  },
+                ),
+            });
           }}
         />
         <CancelBookingModal
