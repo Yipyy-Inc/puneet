@@ -10,14 +10,9 @@ import {
   MessageSquare,
 } from "lucide-react";
 import type { Message } from "@/types/communications";
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatTime } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 function StatusIcon({ status }: { status: Message["status"] }) {
   if (status === "sent") return <Check className="size-3 text-white/40" />;
@@ -36,10 +31,12 @@ function ChannelIcon({ type, outbound }: { type: string; outbound?: boolean }) {
   return <MessageSquare className={cls} />;
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  sms: "SMS",
-  email: "Email",
-  "in-app": "Portal",
+// A channel's name, by CATALOGUE KEY. "SMS" is the same in both languages;
+// "Email" and "Portal" are not.
+const CHANNEL_KEY: Record<string, string> = {
+  sms: "channelSms",
+  email: "channelEmail",
+  "in-app": "channelPortal",
 };
 
 const AVATAR_COLORS = [
@@ -62,6 +59,8 @@ export function MessageBubble({
   clientImage?: string;
   showAvatar?: boolean;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   if (message.type === "email") {
     return (
       <EmailCard
@@ -148,10 +147,17 @@ export function MessageBubble({
                   ? "bg-white/15 text-white/80"
                   : "bg-slate-100 text-slate-500",
               )}
-              title={`Sent via ${CHANNEL_LABEL[message.type] ?? message.type}`}
+              title={t("sentVia").replace(
+                "{channel}",
+                CHANNEL_KEY[message.type]
+                  ? t(CHANNEL_KEY[message.type])
+                  : message.type,
+              )}
             >
               <ChannelIcon type={message.type} outbound={out} />
-              {CHANNEL_LABEL[message.type] ?? message.type}
+              {CHANNEL_KEY[message.type]
+                ? t(CHANNEL_KEY[message.type])
+                : message.type}
             </span>
             <span
               className={cn(
@@ -159,7 +165,7 @@ export function MessageBubble({
                 out ? "text-white/50" : "text-slate-400",
               )}
             >
-              {formatTime(message.timestamp)}
+              {formatTime(message.timestamp, locale)}
             </span>
             {out && <StatusIcon status={message.status} />}
           </div>
@@ -173,9 +179,9 @@ export function MessageBubble({
               out ? "text-right" : "text-left",
             )}
           >
-            Not delivered ·{" "}
+            {t("notDelivered")} ·{" "}
             <button type="button" className="font-semibold underline">
-              Retry
+              {t("retry")}
             </button>
           </p>
         )}
@@ -185,18 +191,22 @@ export function MessageBubble({
 }
 
 function EmailStatusLabel({ status }: { status: Message["status"] }) {
+  const t = useShellText("messaging");
   const cfg = {
-    sent: { text: "Sent", icon: <Check className="size-3 text-slate-400" /> },
+    sent: {
+      text: t("statusSent"),
+      icon: <Check className="size-3 text-slate-400" />,
+    },
     delivered: {
-      text: "Delivered",
+      text: t("statusDelivered"),
       icon: <CheckCheck className="size-3 text-slate-400" />,
     },
     read: {
-      text: "Read",
+      text: t("statusRead"),
       icon: <CheckCheck className="size-3 text-sky-500" />,
     },
     failed: {
-      text: "Failed to send",
+      text: t("failedToSend"),
       icon: <AlertCircle className="size-3 text-red-500" />,
     },
   }[status];
@@ -224,12 +234,14 @@ function EmailCard({
   clientImage?: string;
   showAvatar?: boolean;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const out = message.direction === "outbound";
   const failed = message.status === "failed";
   const color =
     AVATAR_COLORS[(clientName?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
 
-  const senderName = out ? "You" : (clientName ?? message.from);
+  const senderName = out ? t("you") : (clientName ?? message.from);
   const senderAddress = out ? message.from : message.from;
 
   return (
@@ -293,10 +305,13 @@ function EmailCard({
                 </span>
               </div>
               <div className="text-[11px] text-slate-500">
-                to{" "}
-                <span className="text-slate-600">
-                  {out ? (clientName ?? message.to) : "you"}
-                </span>
+                {rich(t("toRecipient"), {
+                  name: (
+                    <span className="text-slate-600">
+                      {out ? (clientName ?? message.to) : t("youLower")}
+                    </span>
+                  ),
+                })}
                 {message.to && out ? (
                   <span className="ml-1 text-slate-400">
                     &lt;{message.to}&gt;
@@ -310,7 +325,7 @@ function EmailCard({
               )}
             </div>
             <span className="shrink-0 text-[10px] whitespace-nowrap text-slate-400">
-              {formatTime(message.timestamp)}
+              {formatTime(message.timestamp, locale)}
             </span>
           </div>
 
@@ -351,7 +366,7 @@ function EmailCard({
           >
             <span className="inline-flex items-center gap-1 font-semibold tracking-wide text-slate-400 uppercase">
               <Mail className="size-2.5" />
-              Email
+              {t("email")}
             </span>
             {out && <EmailStatusLabel status={message.status} />}
           </div>
@@ -364,9 +379,9 @@ function EmailCard({
               out ? "text-right" : "text-left",
             )}
           >
-            Not delivered ·{" "}
+            {t("notDelivered")} ·{" "}
             <button type="button" className="font-semibold underline">
-              Retry
+              {t("retry")}
             </button>
           </p>
         )}

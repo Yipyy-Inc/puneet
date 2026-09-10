@@ -8,13 +8,19 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export interface QuickLinkAction {
   id: "booking" | "waiver" | "intake" | "payment" | "appointment";
-  label: string;
+  labelKey: string;
   icon: typeof CalendarPlus;
   tone: string;
-  buildSnippet: (ctx: QuickLinkContext) => string;
+  /**
+   * The start of a message a person will edit and send, so it is written in
+   * the language of the person writing it — the same rule as the missed-call
+   * prefill. `t` is the messaging catalogue.
+   */
+  buildSnippet: (ctx: QuickLinkContext, t: (key: string) => string) => string;
 }
 
 export interface QuickLinkContext {
@@ -31,45 +37,63 @@ const SLUG = "yipyy.com";
 export const QUICK_LINK_ACTIONS: QuickLinkAction[] = [
   {
     id: "booking",
-    label: "Booking link",
+    labelKey: "qlBookingLink",
     icon: CalendarPlus,
     tone: "bg-blue-50 text-blue-700 hover:bg-blue-100",
-    buildSnippet: (ctx) =>
-      `Hi ${ctx.clientFirstName ?? "there"}! Book your next visit here: https://${SLUG}/book?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+    buildSnippet: (ctx, t) =>
+      t("qlBookingSnippet")
+        .replace("{name}", ctx.clientFirstName ? ` ${ctx.clientFirstName}` : "")
+        .replace(
+          "{url}",
+          `https://${SLUG}/book?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+        ),
   },
   {
     id: "waiver",
-    label: "Waiver",
+    labelKey: "qlWaiver",
     icon: FileText,
     tone: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-    buildSnippet: (ctx) =>
-      `Please sign the boarding waiver before drop-off: https://${SLUG}/forms/waiver?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+    buildSnippet: (ctx, t) =>
+      t("qlWaiverSnippet").replace(
+        "{url}",
+        `https://${SLUG}/forms/waiver?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+      ),
   },
   {
     id: "intake",
-    label: "Intake form",
+    labelKey: "qlIntakeForm",
     icon: ClipboardList,
     tone: "bg-violet-50 text-violet-700 hover:bg-violet-100",
-    buildSnippet: (ctx) =>
-      `Quick intake form for ${ctx.petName ?? "your pet"} (5 min): https://${SLUG}/forms/intake?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+    buildSnippet: (ctx, t) =>
+      t("qlIntakeSnippet")
+        .replace("{pet}", ctx.petName ?? t("yourPet"))
+        .replace(
+          "{url}",
+          `https://${SLUG}/forms/intake?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+        ),
   },
   {
     id: "payment",
-    label: "Payment link",
+    labelKey: "qlPaymentLink",
     icon: CreditCard,
     tone: "bg-amber-50 text-amber-700 hover:bg-amber-100",
-    buildSnippet: (ctx) =>
-      `Secure payment link: https://${SLUG}/pay?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+    buildSnippet: (ctx, t) =>
+      t("qlPaymentSnippet").replace(
+        "{url}",
+        `https://${SLUG}/pay?c=${encodeURIComponent(ctx.clientName ?? "")}`,
+      ),
   },
   {
     id: "appointment",
-    label: "Appointment",
+    labelKey: "qlAppointment",
     icon: CalendarClock,
     tone: "bg-pink-50 text-pink-700 hover:bg-pink-100",
-    buildSnippet: (ctx) =>
+    buildSnippet: (ctx, t) =>
       ctx.upcomingBookingSummary
-        ? `Confirming your upcoming appointment: ${ctx.upcomingBookingSummary}. Manage it here: https://${SLUG}/bookings/${ctx.bookingId ?? ""}`
-        : `Here's the link to view your bookings: https://${SLUG}/bookings`,
+        ? t("qlAppointmentSnippet")
+            .replace("{summary}", ctx.upcomingBookingSummary)
+            .replace("{url}", `https://${SLUG}/bookings/${ctx.bookingId ?? ""}`)
+        : t("qlBookingsSnippet").replace("{url}", `https://${SLUG}/bookings`),
   },
 ];
 
@@ -82,10 +106,11 @@ export function QuickLinkBar({
   onInsert: (snippet: string) => void;
   disabled?: boolean;
 }) {
+  const t = useShellText("messaging");
   return (
     <div className="flex flex-wrap items-center gap-1 border-t border-slate-100 bg-slate-50/40 px-4 py-2">
       <span className="mr-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-        Insert:
+        {t("qlInsert")}
       </span>
       {QUICK_LINK_ACTIONS.map((action) => {
         const Icon = action.icon;
@@ -94,14 +119,14 @@ export function QuickLinkBar({
             key={action.id}
             type="button"
             disabled={disabled}
-            onClick={() => onInsert(action.buildSnippet(context))}
+            onClick={() => onInsert(action.buildSnippet(context, t))}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-40",
               action.tone,
             )}
           >
             <Icon className="size-3" />
-            {action.label}
+            {t(action.labelKey)}
           </button>
         );
       })}

@@ -24,6 +24,8 @@ import {
   type SavedReply,
   type SavedReplyCategory,
 } from "@/types/saved-replies";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { rich } from "@/lib/i18n/rich";
 
 const CATEGORIES: SavedReplyCategory[] = [
   "boarding",
@@ -44,6 +46,7 @@ export function SaveAsReplyDialog({
   onClose: () => void;
   onSave: (reply: SavedReply) => void;
 }) {
+  const t = useShellText("messaging");
   const [title, setTitle] = useState("");
   const [shortcut, setShortcut] = useState("");
   const [category, setCategory] = useState<SavedReplyCategory>("general");
@@ -74,24 +77,24 @@ export function SaveAsReplyDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Bookmark className="size-4 text-emerald-600" />
-            Save as Reply
+            {t("saveAsReply")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">Title</Label>
+            <Label className="text-xs">{t("title")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Boarding rates"
+              placeholder={t("eGBoardingRates")}
               autoFocus
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Shortcut</Label>
+              <Label className="text-xs">{t("shortcut")}</Label>
               <Input
                 value={shortcut}
                 onChange={(e) =>
@@ -101,7 +104,7 @@ export function SaveAsReplyDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Category</Label>
+              <Label className="text-xs">{t("category")}</Label>
               <Select
                 value={category}
                 onValueChange={(v) => setCategory(v as SavedReplyCategory)}
@@ -121,7 +124,7 @@ export function SaveAsReplyDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Reply body</Label>
+            <Label className="text-xs">{t("replyBody")}</Label>
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -129,24 +132,27 @@ export function SaveAsReplyDialog({
               className="resize-none text-sm"
             />
             <p className="text-[10px] text-slate-400">
-              Use{" "}
-              <code className="rounded-sm bg-slate-100 px-1">{`{ClientName}`}</code>{" "}
-              and{" "}
-              <code className="rounded-sm bg-slate-100 px-1">{`{PetName}`}</code>{" "}
-              to personalize on the fly.
+              {rich(t("personalizeHint"), {
+                client: (
+                  <code className="rounded-sm bg-slate-100 px-1">{`{ClientName}`}</code>
+                ),
+                pet: (
+                  <code className="rounded-sm bg-slate-100 px-1">{`{PetName}`}</code>
+                ),
+              })}
             </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               type="button"
               onClick={submit}
               disabled={!title.trim() || !body.trim()}
             >
-              Save Reply
+              {t("saveReply")}
             </Button>
           </div>
         </div>

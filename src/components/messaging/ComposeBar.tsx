@@ -25,6 +25,8 @@ import { ScheduleSendPopover } from "./ScheduleSendPopover";
 import { QuickLinkBar, type QuickLinkContext } from "./QuickLinkBar";
 import { useSavedReplies } from "./saved-replies-context";
 import { useScheduledMessages } from "./scheduled-messages-context";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong, formatNumber, formatTime } from "@/lib/i18n/format";
 
 const SMS_SEGMENT_CHARS = 160;
 const SMS_SEGMENT_CHARS_WITH_EMOJI = 70;
@@ -42,18 +44,24 @@ type ActiveChannel = "sms" | "email" | "in-app";
 
 const CHANNEL_OPTIONS: {
   key: ActiveChannel;
-  label: string;
+  labelKey: string;
   icon: typeof Smartphone;
 }[] = [
-  { key: "sms", label: "SMS", icon: Smartphone },
-  { key: "email", label: "Email", icon: Mail },
-  { key: "in-app", label: "Chat", icon: MessageCircle },
+  { key: "sms", labelKey: "channelSms", icon: Smartphone },
+  { key: "email", labelKey: "channelEmail", icon: Mail },
+  { key: "in-app", labelKey: "channelChat", icon: MessageCircle },
 ];
 
-function applyTokens(body: string, ctx: QuickLinkContext): string {
+// `yourPet` is passed in rather than looked up: this is a plain function,
+// and a hook inside it would break the rules of hooks.
+function applyTokens(
+  body: string,
+  ctx: QuickLinkContext,
+  yourPet: string,
+): string {
   return body
     .replace(/\{ClientName\}/g, ctx.clientName ?? "")
-    .replace(/\{PetName\}/g, ctx.petName ?? "your pet")
+    .replace(/\{PetName\}/g, ctx.petName ?? yourPet)
     .replace(/\{Balance\}/g, "$0.00");
 }
 
@@ -96,6 +104,8 @@ export function ComposeBar({
   prefillKey?: string;
   prefillText?: string;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const isCustomerMode = mode === "customer";
   const [text, setText] = useState("");
   const prefillAppliedRef = useRef<string | null>(null);
@@ -166,7 +176,7 @@ export function ComposeBar({
     scheduledMessages.schedule({
       id: `sched-${Date.now()}`,
       threadId,
-      clientName: clientName ?? "Client",
+      clientName: clientName ?? t("client"),
       body: text.trim(),
       channel: activeChannel,
       scheduledFor: iso,
@@ -176,21 +186,17 @@ export function ComposeBar({
     setText("");
     setSubject("");
     toast.success(
-      `Scheduled for ${new Date(iso).toLocaleString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })}`,
+      t("scheduledFor").replace(
+        "{when}",
+        `${formatDateLong(iso, locale)} · ${formatTime(iso, locale)}`,
+      ),
     );
   };
 
   const handleAiReply = async () => {
     const result = await ai.generate({
-      clientName: clientName || "the client",
-      lastMessage: lastMessage || "General inquiry",
+      clientName: clientName || t("theClient"),
+      lastMessage: lastMessage || t("generalInquiry"),
       facilityName: "PawCare Facility",
     });
     if (result) setText(result);
@@ -224,26 +230,22 @@ export function ComposeBar({
   const handlePickSavedReply = (
     reply: import("@/types/saved-replies").SavedReply,
   ) => {
-    const body = applyTokens(reply.body, linkContext);
+    const body = applyTokens(reply.body, linkContext, t("yourPet"));
     setText(body);
     savedReplies.incrementUse(reply.id);
     setSavedRepliesOpen(false);
-    toast.success(`Inserted "${reply.title}"`);
+    toast.success(t("insertedReply").replace("{title}", reply.title));
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const channelPlaceholder: Record<ActiveChannel, string> = {
     sms: isCustomerMode
-      ? "Type an SMS…"
+      ? t("typeAnSms")
       : preferredLanguageLabel
-        ? `Type an SMS in ${preferredLanguageLabel}… or type / for saved replies`
-        : "Type an SMS… or type / for saved replies",
-    email: isCustomerMode
-      ? "Write your email…"
-      : "Write your email… or type / for saved replies",
-    "in-app": isCustomerMode
-      ? "Type a message to your facility…"
-      : "Type a chat message… or type / for saved replies",
+        ? t("typeAnSmsInLanguage").replace("{language}", preferredLanguageLabel)
+        : t("typeAnSmsOrReply"),
+    email: isCustomerMode ? t("writeYourEmail") : t("writeYourEmailOrReply"),
+    "in-app": isCustomerMode ? t("typeAMessageToYour") : t("typeAChatOrReply"),
   };
 
   const isEmail = activeChannel === "email";
@@ -273,7 +275,7 @@ export function ComposeBar({
             className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
           >
             <ImageIcon className="size-4" />
-            Photo
+            {t("photo")}
           </Button>
           <Button
             variant="ghost"
@@ -281,7 +283,7 @@ export function ComposeBar({
             className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
           >
             <Paperclip className="size-4" />
-            File
+            {t("file")}
           </Button>
           <Button
             variant="ghost"
@@ -289,7 +291,7 @@ export function ComposeBar({
             className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-600"
           >
             <Mic className="size-4" />
-            Voice
+            {t("voice")}
           </Button>
           {!isCustomerMode && (
             <>
@@ -305,7 +307,7 @@ export function ComposeBar({
                 ) : (
                   <Sparkles className="size-4" />
                 )}
-                AI Reply
+                {t("aiReply")}
               </Button>
 
               {text.trim().length > 4 && (
@@ -316,7 +318,7 @@ export function ComposeBar({
                   onClick={() => setSaveDialogOpen(true)}
                 >
                   <Save className="size-4" />
-                  Save as reply
+                  {t("saveAsReply2")}
                 </Button>
               )}
             </>
@@ -328,9 +330,9 @@ export function ComposeBar({
       {!isCustomerMode && (
         <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50/60 px-4 py-1.5">
           <span className="mr-1 shrink-0 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            Send via
+            {t("sendVia")}
           </span>
-          {CHANNEL_OPTIONS.map(({ key, label, icon: Icon }) => {
+          {CHANNEL_OPTIONS.map(({ key, labelKey, icon: Icon }) => {
             const active = activeChannel === key;
             return (
               <button
@@ -345,13 +347,13 @@ export function ComposeBar({
                 )}
               >
                 <Icon className="size-3" />
-                {label}
+                {t(labelKey)}
               </button>
             );
           })}
           {isEmail && (
             <span className="ml-auto text-[10px] text-amber-500">
-              Client may not respond instantly
+              {t("clientMayNotRespondInstantly")}
             </span>
           )}
         </div>
@@ -369,7 +371,7 @@ export function ComposeBar({
           size="icon"
           className="mb-0.5 size-9 shrink-0 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
           onClick={() => setShowExtras(!showExtras)}
-          title={showExtras ? "Hide actions" : "More actions"}
+          title={showExtras ? t("hideActions") : t("moreActions")}
         >
           <Plus
             className="size-5 transition-transform"
@@ -394,7 +396,7 @@ export function ComposeBar({
                   {recipientEmail ? (
                     <span className="text-slate-400">{`<${recipientEmail}>`}</span>
                   ) : (
-                    <span className="text-amber-500">No email on file</span>
+                    <span className="text-amber-500">{t("noEmailOnFile")}</span>
                   )}
                 </span>
               </div>
@@ -403,14 +405,14 @@ export function ComposeBar({
                   htmlFor="email-subject"
                   className="w-12 shrink-0 text-[10px] font-semibold tracking-wider text-slate-400 uppercase"
                 >
-                  Subject
+                  {t("subject")}
                 </label>
                 <input
                   id="email-subject"
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Add a subject line"
+                  placeholder={t("addASubjectLine")}
                   className="flex-1 bg-transparent text-[13px] font-medium text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-400"
                 />
               </div>
@@ -442,7 +444,7 @@ export function ComposeBar({
 
           {isEmail && senderName && (
             <p className="px-4 pb-1 text-[10px] text-slate-400 italic">
-              — {senderName} will appear as the sender
+              {t("senderAppears").replace("{name}", senderName)}
             </p>
           )}
 
@@ -451,7 +453,7 @@ export function ComposeBar({
               <button
                 type="button"
                 className="text-slate-400 transition-colors hover:text-slate-600"
-                title="Emoji"
+                title={t("emoji")}
               >
                 <Smile className="size-4" />
               </button>
@@ -466,7 +468,7 @@ export function ComposeBar({
                       : "bg-slate-100 text-slate-500 hover:bg-slate-200",
                   )}
                 >
-                  Quick links {showQuickLinks ? "on" : "off"}
+                  {t(showQuickLinks ? "quickLinksOn" : "quickLinksOff")}
                 </button>
               )}
             </div>
@@ -481,7 +483,12 @@ export function ComposeBar({
                       : "text-slate-400",
                 )}
               >
-                <span>{text.length} chars</span>
+                <span>
+                  {t("charCount").replace(
+                    "{n}",
+                    formatNumber(text.length, locale),
+                  )}
+                </span>
                 <span className="text-slate-300">·</span>
                 <span
                   className={cn(
@@ -489,16 +496,23 @@ export function ComposeBar({
                     segments > 1 ? "text-amber-600" : "text-slate-500",
                   )}
                 >
-                  {segments} SMS segment{segments !== 1 ? "s" : ""}
+                  {t(
+                    segments === 1 ? "smsSegmentOne" : "smsSegmentOther",
+                  ).replace("{n}", String(segments))}
                 </span>
                 {segments > 1 && (
-                  <span className="text-amber-500">· {segments} credits</span>
+                  <span className="text-amber-500">
+                    · {t("creditCount").replace("{n}", String(segments))}
+                  </span>
                 )}
               </div>
             )}
             {activeChannel === "email" && text.length > 0 && (
               <span className="text-[10px] text-slate-400">
-                {text.length} chars
+                {t("charCount").replace(
+                  "{n}",
+                  formatNumber(text.length, locale),
+                )}
               </span>
             )}
           </div>
@@ -520,8 +534,8 @@ export function ComposeBar({
               disabled={sendDisabled}
               title={
                 isEmail && !subject.trim()
-                  ? "Add a subject to send this email"
-                  : "Send"
+                  ? t("addASubjectToSend")
+                  : t("sendMessage")
               }
             >
               <Send className="size-[18px] text-white" />

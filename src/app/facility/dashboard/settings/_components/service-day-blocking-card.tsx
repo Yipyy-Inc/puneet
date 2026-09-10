@@ -250,7 +250,7 @@ export function ServiceDayBlockingCard() {
                                   ? t("checkInBlocked")
                                   : block.blockCheckOut
                                     ? t("checkOutBlocked")
-                                    : "Closed"}
+                                    : t("closed")}
                           </Badge>
                         ) : (
                           <Badge variant="outline">{t("closed")}</Badge>

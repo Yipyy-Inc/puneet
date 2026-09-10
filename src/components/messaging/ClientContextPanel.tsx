@@ -51,12 +51,16 @@ import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import type { Message } from "@/types/communications";
 import { Textarea } from "@/components/ui/textarea";
 import { useConversationState } from "./conversation-state-context";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong, formatTime, formatTimeOfDay } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 
 // ── Quick-send links (staff can send these into chat) ────────────────
 
 type QuickLink = {
   id: string;
-  label: string;
+  /** A key in the messaging catalogue. */
+  labelKey: string;
   icon: typeof FileText;
   color: string;
   url?: string;
@@ -66,35 +70,35 @@ type QuickLink = {
 const QUICK_LINKS: QuickLink[] = [
   {
     id: "ql-1",
-    label: "Boarding Agreement",
+    labelKey: "qlBoardingAgreement",
     url: "https://pawcare.com/forms/boarding-agreement",
     icon: FileText,
     color: "bg-blue-50 text-blue-600",
   },
   {
     id: "ql-2",
-    label: "Vaccination Form",
+    labelKey: "qlVaccinationForm",
     url: "https://pawcare.com/forms/vaccination-upload",
     icon: FileText,
     color: "bg-emerald-50 text-emerald-600",
   },
   {
     id: "ql-3",
-    label: "Intake Form",
+    labelKey: "qlIntakeForm",
     url: "https://pawcare.com/forms/intake",
     icon: FileText,
     color: "bg-violet-50 text-violet-600",
   },
   {
     id: "ql-4",
-    label: "Pricing & Packages",
+    labelKey: "qlPricingPackages",
     url: "https://pawcare.com/pricing",
     icon: Link2,
     color: "bg-amber-50 text-amber-600",
   },
   {
     id: "ql-5",
-    label: "Facility Policies",
+    labelKey: "qlFacilityPolicies",
     url: "https://pawcare.com/policies",
     icon: Link2,
     color: "bg-slate-100 text-slate-600",
@@ -104,28 +108,28 @@ const QUICK_LINKS: QuickLink[] = [
 const CUSTOMER_QUICK_LINKS: QuickLink[] = [
   {
     id: "cql-1",
-    label: "Documents & Agreements",
+    labelKey: "qlDocumentsAgreements",
     href: "/customer/documents",
     icon: FileText,
     color: "bg-blue-50 text-blue-600",
   },
   {
     id: "cql-2",
-    label: "My Bookings",
+    labelKey: "qlMyBookings",
     href: "/customer/bookings",
     icon: Calendar,
     color: "bg-emerald-50 text-emerald-600",
   },
   {
     id: "cql-3",
-    label: "My Pets",
+    labelKey: "myPets",
     href: "/customer/pets",
     icon: PawPrint,
     color: "bg-violet-50 text-violet-600",
   },
   {
     id: "cql-4",
-    label: "Billing & Payments",
+    labelKey: "qlBillingPayments",
     href: "/customer/billing",
     icon: Link2,
     color: "bg-amber-50 text-amber-600",
@@ -224,12 +228,8 @@ function initials(name: string) {
     .slice(0, 2);
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+function formatDate(iso: string, locale: AppLocale) {
+  return formatDateLong(iso, locale);
 }
 
 // ── Collapsible section ──────────────────────────────────────────────
@@ -283,6 +283,8 @@ export function ClientContextPanel({
   mode?: "facility" | "customer";
   customerId?: number;
 }) {
+  const t = useShellText("messaging");
+  const locale = useShellLocale();
   const isCustomerMode = mode === "customer";
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [conversationNote, setConversationNote] = useState("");
@@ -367,32 +369,34 @@ export function ClientContextPanel({
       : "/facility/dashboard/bookings";
 
   const profileName = isCustomerMode
-    ? (facility?.name ?? "Facility")
-    : (client?.name ?? "Client");
+    ? (facility?.name ?? t("facility"))
+    : (client?.name ?? t("client"));
   const profilePhone = isCustomerMode ? facilityContact?.phone : client?.phone;
   const profileEmail = isCustomerMode ? facilityContact?.email : client?.email;
   const profileImage = isCustomerMode
     ? ((facility as Record<string, unknown>)?.logo as string | undefined)
     : ((client as Record<string, unknown>)?.imageUrl as string | undefined);
   const pets = isCustomerMode ? (customer?.pets ?? []) : (client?.pets ?? []);
-  const infoTitle = isCustomerMode ? "Facility Info" : "Client Info";
+  const infoTitle = isCustomerMode ? t("facilityInfo") : t("clientInfo");
   const facilityWebsite = isCustomerMode ? facilityContact?.website : undefined;
-  const profileButtonLabel = isCustomerMode ? "View Website" : "View Profile";
+  const profileButtonLabel = isCustomerMode
+    ? t("viewWebsite")
+    : t("viewProfile");
   const preferredLanguageLabel =
     !isCustomerMode && client?.preferredLanguage
       ? getCustomerLanguageLabel(client.preferredLanguage)
       : null;
   const stats = isCustomerMode
     ? [
-        { n: upcoming.length, label: "Upcoming" },
-        { n: completed.length, label: "Past" },
+        { n: upcoming.length, label: t("upcoming") },
+        { n: completed.length, label: t("past") },
       ]
     : [
-        { n: upcoming.length, label: "Upcoming" },
-        { n: completed.length, label: "Past" },
+        { n: upcoming.length, label: t("upcoming") },
+        { n: completed.length, label: t("past") },
         {
           n: `$${totalSpend > 999 ? `${(totalSpend / 1000).toFixed(1)}k` : totalSpend}`,
-          label: "Spent",
+          label: t("spent"),
         },
       ];
   const quickLinks = isCustomerMode ? CUSTOMER_QUICK_LINKS : QUICK_LINKS;
@@ -437,7 +441,7 @@ export function ClientContextPanel({
   if (!profileName || (isCustomerMode ? !facility : !client)) {
     return (
       <div className="flex h-full w-80 shrink-0 flex-col items-center justify-center bg-white">
-        <p className="text-sm text-slate-400">Select a conversation</p>
+        <p className="text-sm text-slate-400">{t("selectAConversation")}</p>
       </div>
     );
   }
@@ -473,7 +477,7 @@ export function ClientContextPanel({
               )}
             >
               <User className="size-3.5" />
-              Client
+              {t("client")}
             </button>
             <button
               type="button"
@@ -486,7 +490,7 @@ export function ClientContextPanel({
               )}
             >
               <StickyNote className="size-3.5" />
-              Notes
+              {t("notes")}
               {threadNotes.length > 0 && (
                 <span
                   className={cn(
@@ -643,21 +647,21 @@ export function ClientContextPanel({
                 )}
               >
                 <Phone className="size-3.5 text-emerald-600" />
-                Call
+                {t("call")}
               </a>
               <Link
                 href={`/facility/dashboard/bookings/new${client?.id ? `?clientId=${client.id}` : ""}`}
                 className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
                 <CalendarPlus className="size-3.5 text-blue-600" />
-                New Booking
+                {t("newBooking")}
               </Link>
               <Link
                 href={`/facility/dashboard/estimates${client?.id ? `?clientId=${client.id}` : ""}`}
                 className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
                 <FileSignature className="size-3.5 text-violet-600" />
-                Send Estimate
+                {t("sendEstimate")}
               </Link>
             </div>
           )}
@@ -688,7 +692,7 @@ export function ClientContextPanel({
                       </Badge>
                     </div>
                     <p className="mt-2 text-xs font-semibold text-slate-700">
-                      {pet?.name ?? "Pet"}
+                      {pet?.name ?? t("pet")}
                       {pet?.breed && (
                         <span className="font-normal text-slate-400">
                           {" "}
@@ -697,12 +701,12 @@ export function ClientContextPanel({
                       )}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-500">
-                      {formatDate(activeBooking.startDate)}
+                      {formatDate(activeBooking.startDate, locale)}
                       {!sameDay &&
                         activeBooking.endDate &&
-                        ` → ${formatDate(activeBooking.endDate)}`}
+                        ` → ${formatDate(activeBooking.endDate, locale)}`}
                       {activeBooking.checkInTime &&
-                        ` · ${activeBooking.checkInTime}`}
+                        ` · ${formatTimeOfDay(activeBooking.checkInTime, locale)}`}
                     </p>
                   </Link>
                 </div>
@@ -711,7 +715,7 @@ export function ClientContextPanel({
 
           {/* ── Assigned staff ── */}
           {!isCustomerMode && (
-            <Section title="Assigned Staff" icon={User}>
+            <Section title={t("assignedStaff")} icon={User}>
               {assignee ? (
                 <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
                   <span
@@ -733,14 +737,17 @@ export function ClientContextPanel({
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic">
-                  Not assigned yet — use the header to assign someone.
+                  {t("notAssignedYetUseThe")}
                 </p>
               )}
             </Section>
           )}
 
           {/* ── Pets ── */}
-          <Section title={isCustomerMode ? "My Pets" : "Pets"} icon={PawPrint}>
+          <Section
+            title={isCustomerMode ? t("myPets") : t("pets")}
+            icon={PawPrint}
+          >
             <div className="space-y-1">
               {pets.map((pet) => (
                 <Link
@@ -769,7 +776,7 @@ export function ClientContextPanel({
                       {flaggedPetIds.has(pet.id) && (
                         <span
                           className="size-1.5 rounded-full bg-amber-500"
-                          title="Has medication, allergy, or behavior alert"
+                          title={t("hasMedicationAllergyOrBehavior")}
                         />
                       )}
                     </p>
@@ -791,7 +798,7 @@ export function ClientContextPanel({
               );
               if (alerts.length === 0) return null;
               return (
-                <Section title="Care Alerts" icon={AlertTriangle}>
+                <Section title={t("careAlerts")} icon={AlertTriangle}>
                   <div className="space-y-1.5">
                     {alerts.map((a, idx) => {
                       const pet = pets.find((p) => p.id === a.petId);
@@ -818,7 +825,7 @@ export function ClientContextPanel({
                           <Icon className="mt-0.5 size-3 shrink-0" />
                           <div>
                             <p className="font-semibold">
-                              {pet?.name ?? "Pet"} ·{" "}
+                              {pet?.name ?? t("pet")} ·{" "}
                               <span className="font-normal capitalize">
                                 {a.type}
                               </span>
@@ -836,7 +843,7 @@ export function ClientContextPanel({
             })()}
 
           {/* ── Next Appointment ── */}
-          <Section title="Next Appointment" icon={Calendar}>
+          <Section title={t("nextAppointment")} icon={Calendar}>
             {nextUpcomingBooking ? (
               <Link
                 href={nextAppointmentHref}
@@ -851,36 +858,37 @@ export function ClientContextPanel({
                   </span>
                 </div>
                 <p className="mt-1.5 text-xs text-slate-500">
-                  {formatDate(nextUpcomingBooking.startDate)}
+                  {formatDate(nextUpcomingBooking.startDate, locale)}
                   {nextUpcomingBooking.checkInTime &&
-                    ` · ${nextUpcomingBooking.checkInTime}`}
+                    ` · ${formatTimeOfDay(nextUpcomingBooking.checkInTime, locale)}`}
                 </p>
               </Link>
             ) : (
               <p className="text-xs text-slate-400 italic">
-                No upcoming bookings
+                {t("noUpcomingBookings")}
               </p>
             )}
           </Section>
 
           {/* ── Conversation Notes ── */}
           {!isCustomerMode && (
-            <Section title="Conversation Notes" icon={StickyNote}>
+            <Section title={t("conversationNotes")} icon={StickyNote}>
               <Textarea
                 value={conversationNote}
                 onChange={(e) => setConversationNote(e.target.value)}
-                placeholder="Add a quick note about this client or conversation…"
+                placeholder={t("addAQuickNoteAbout")}
                 className="min-h-[70px] resize-none border-slate-200 bg-slate-50 text-xs"
               />
               <div className="mt-1.5 flex items-center justify-between">
                 <span className="text-[10px] text-slate-400">
                   {savedNote
-                    ? `Last saved · ${new Date().toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}`
-                    : "Not saved yet"}
+                    ? // The RENDER time, not the save time — see the debt
+                      // map, "Messages". Translated, not fixed, here.
+                      t("lastSavedAt").replace(
+                        "{time}",
+                        formatTime(new Date(), locale),
+                      )
+                    : t("notSavedYet")}
                 </span>
                 <Button
                   size="sm"
@@ -893,11 +901,11 @@ export function ClientContextPanel({
                   className="h-7 gap-1 rounded-full text-[11px]"
                   onClick={() => {
                     setSavedNote(conversationNote);
-                    toast.success("Note saved");
+                    toast.success(t("noteSaved"));
                   }}
                 >
                   <Save className="size-3" />
-                  Save
+                  {t("save")}
                 </Button>
               </div>
             </Section>
@@ -905,7 +913,7 @@ export function ClientContextPanel({
 
           {/* ── Quick Links ── */}
           <Section
-            title={isCustomerMode ? "Quick Links" : "Quick Send"}
+            title={isCustomerMode ? t("quickLinks") : t("quickSend")}
             icon={Send}
             defaultOpen
           >
@@ -922,7 +930,7 @@ export function ClientContextPanel({
                       <link.icon className="size-3.5" />
                     </div>
                     <span className="flex-1 text-xs font-medium text-slate-600">
-                      {link.label}
+                      {t(link.labelKey)}
                     </span>
                     {link.href ? (
                       <ExternalLink className="text-muted-foreground size-3" />
@@ -951,7 +959,7 @@ export function ClientContextPanel({
                     onClick={() => {
                       navigator.clipboard.writeText(link.url ?? "");
                       toast.success(
-                        `"${link.label}" link copied — paste in chat`,
+                        t("linkCopied").replace("{label}", t(link.labelKey)),
                       );
                     }}
                     className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
@@ -964,7 +972,11 @@ export function ClientContextPanel({
           </Section>
 
           {/* ── Shared Photos ── */}
-          <Section title="Shared Photos" icon={ImageIcon} defaultOpen={false}>
+          <Section
+            title={t("sharedPhotos")}
+            icon={ImageIcon}
+            defaultOpen={false}
+          >
             <div className="grid grid-cols-3 gap-[2px] overflow-hidden rounded-lg">
               {DEMO_MEDIA.map((item) => (
                 <button
@@ -990,7 +1002,7 @@ export function ClientContextPanel({
           </Section>
 
           {/* ── Reminder History ── */}
-          <Section title="Reminder History" icon={Clock3} defaultOpen>
+          <Section title={t("reminderHistory")} icon={Clock3} defaultOpen>
             <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
               <div className="flex items-baseline justify-between">
                 <div>
@@ -998,12 +1010,15 @@ export function ClientContextPanel({
                     {reminderHistory.length}
                   </p>
                   <p className="text-[10px] font-semibold tracking-wider text-amber-700/80 uppercase">
-                    {isCustomerMode ? "Received" : "Sent"}
+                    {isCustomerMode ? t("received") : t("sent")}
                   </p>
                 </div>
                 {lastReminderAt && (
                   <p className="text-[10px] text-amber-700/80">
-                    Last · {formatDate(lastReminderAt)}
+                    {t("lastOn").replace(
+                      "{date}",
+                      formatDate(lastReminderAt, locale),
+                    )}
                   </p>
                 )}
               </div>
@@ -1013,7 +1028,7 @@ export function ClientContextPanel({
                 onClick={() => setAllRemindersOpen(true)}
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                View all reminders
+                {t("viewAllReminders")}
                 <ArrowRight className="size-3" />
               </button>
             </div>
@@ -1027,7 +1042,9 @@ export function ClientContextPanel({
           className="w-full overflow-hidden p-0 sm:max-w-2xl"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Reminder history for {profileName}</SheetTitle>
+            <SheetTitle>
+              {t("reminderHistoryFor").replace("{name}", profileName)}
+            </SheetTitle>
           </SheetHeader>
           <ReminderHistoryPanel
             counterpartyName={profileName}

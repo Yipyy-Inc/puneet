@@ -67,6 +67,13 @@ const SAME_IN_BOTH = new Set([
   // list shorter would make the French wrong.
   "primitives.tagColourInformation", // Information / Information
   "primitives.tagColourProgramme", // Programme / Programme
+  // The Messages page: two borrowings, an abbreviation, and two words that
+  // are French already.
+  "messaging.client", // Client / Client
+  "messaging.notes", // Notes / Notes
+  "messaging.photo", // Photo / Photo
+  "messaging.channelSms", // SMS / SMS — the channel's name in both
+  "messaging.tagVip", // VIP / VIP
 ]);
 
 describe("the shell namespace", () => {
@@ -112,8 +119,13 @@ describe("the shell namespace", () => {
     // "Parametres" and "a ete". Unaccented French is not a near miss; it is
     // not the word. Anything here that LOOKS like stripped French is caught
     // before it can become another thirty-five.
+    //
+    // "entente" was on this list until 2026-09-10 and is not stripped: it is
+    // the correct spelling of "agreement", with no accent to lose, and
+    // messages/fr.json already used it nineteen times outside the shell. It
+    // fired the first time the shell needed the word ("Entente de pension").
     const STRIPPED =
-      /\b(?:creer|cree|ete|parametres?|reservations?|resultats?|deconnecter|systeme|etablissements?|donnees?|succes|renouvele|echeance|etoiles?|bientot|reserves?|preferences?|proprietaire|entente|donnee)\b/i;
+      /\b(?:creer|cree|ete|parametres?|reservations?|resultats?|deconnecter|systeme|etablissements?|donnees?|succes|renouvele|echeance|etoiles?|bientot|reserves?|preferences?|proprietaire|donnee)\b/i;
     const suspect: string[] = [];
     for (const group of GROUPS)
       for (const [key, value] of Object.entries(frShell[group]))

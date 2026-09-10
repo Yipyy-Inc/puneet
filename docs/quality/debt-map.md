@@ -11602,3 +11602,87 @@ invent an id. Its field labels are the evidence that `pets.weight` is pounds.
 - The printed invoice (`lib/invoice-document`) is still English end to end —
   one of the three §5u print documents. The on-screen card is French; the
   dates handed to the document stay English so it is not half and half.
+
+### Messages (`/customer/messages`) — **Send throws the message away**
+
+- **Nothing a customer types is sent.** `ConversationThread` renders the one
+  `<ComposeBar>` in the product with no `onSend`, and `ComposeBar.handleSend`
+  calls `onSend?.(…)` and then clears the box. So the customer writes to their
+  facility, presses Send, watches the text disappear, and nothing is stored,
+  delivered or shown in the thread. There is no toast, so
+  `check:success-claims` cannot see it — the claim is the empty box. Staff
+  mode uses the same component, so it is the same for a facility writing to a
+  client. **The most serious item in this section.**
+- **The customer is always customer 15.** `customer/messages/page.tsx` passes
+  `const customerId = 15` ("static customer ID for mock mode"), and
+  `MessageCenter` defaults to 15 as well. The thread list is
+  `clientCommunications` from `@/data/communications` filtered by that id. An
+  identity question, so it wants the e2e suite, not a translation commit.
+- **Everything on the page is a fixture**: the threads, the thread tags, the
+  internal notes, the care alerts, the bookings in the side panel, the
+  facility whose SMS credits are shown (`facilities.find(f => f.id === 11)`,
+  for every viewer), and the "Assigned staff" — `CURRENT_USER_STAFF_ID =
+"staff-1"` is commented `mock: "Sarah M." is logged in`.
+- **Buying SMS credits is a toast.** "{n} credits purchased — $X" and nothing
+  is bought. Staff-side, but reachable from this page's component tree.
+- **Invented claims shown as facts:** "Typically responds within 2 hours"
+  under a facility with no phone or email on file; the `{Balance}` token in a
+  saved reply always inserts `$0.00`; the conversation note's "Last saved ·
+  {time}" shows the time of the RENDER, not of the save, so it ticks forward
+  every time the panel re-renders.
+- **Links to places that do not exist.** The staff quick-send links point at
+  `https://pawcare.com/forms/…` — a domain this product does not own, and the
+  name every staff email claims to come from is `"PawCare Facility"`,
+  hardcoded in `ConversationThread` — and
+  the quick-link snippets put the client's full name into the query string
+  of every URL (`/book?c=Jane%20Doe`).
+- **Identity stored as a word.** A new internal note is saved with
+  `author: "You"` and a scheduled message with `createdBy: "You"`. Left in
+  English on purpose: translating a stored author would make it wrong in two
+  languages instead of one. It wants the session user's name.
+- **The staff-side language badge is English.** `getCustomerLanguageLabel`
+  reads an English label table, so a French staff member sees "French" in the
+  badge and "Écrivez un SMS en French…" in the placeholder.
+  `Intl.DisplayNames` gives both forms; not done here.
+- The reminder panel sets its title in **Cormorant Garamond**, a face §4 does
+  not have.
+- Fixed while translating, because they were formatting and not behaviour:
+  the EIGHTH hand-rolled relative clock (`ConversationRow`: `5m`, `3h`, `2d`
+  — English units, and a "2d" §5q says should have been a date) is the new
+  `formatRelativeShort`; every `en-US` date and time on the page (message
+  times, date separators, reminder timestamps, schedule presets) is `Intl`
+  in the reader's locale; the SMS package prices were `$${price}` and are
+  `formatMoney` (CAD); `toFixed(1)` on the per-SMS price is `formatNumber`.
+- And one in the shared formatter: under 30 seconds `formatRelative` said
+  "this minute" / "cette minute-ci", because the minute rounds to 0 and
+  `numeric: "auto"` names a 0-minute that way. It says "now" / "maintenant".
+
+## 2026-09-10 — the French gate could not see a HALF-converted ternary
+
+`TERNARY` in `check-ui-french.ts` matches `cond ? "A" : "B"` — two literals.
+The moment a conversion turns one branch into `t("a")`, the pair stops
+matching, and the branch still in English disappears from the gate with it.
+The Messages page reported 3 hits in `ConversationThread` and rendered 9; six
+were this shape ("No history", "View client profile", "Mark conversation as
+closed", the empty-thread prompt, …). The auto-rewriter used for these
+conversions converts one branch at a time, so it was manufacturing the blind
+spot as it went.
+
+`TERNARY_HALF` catches `? t(…) : "X"` and `? "X" : t(…)`. Measured across
+`src/` the day it landed: 13 hits, 9 in messaging — and **two on the settings
+surface, which had been reporting zero with an empty baseline**: "Closed" in
+the service-day blocking card and "$ Value" in the service-bundle modal. Both
+are translated in the same change.
+
+Deliberately narrow. `? "X" : anything` is 2,497 hits across `src/`, almost
+all class lists inside `cn()`; the translated sibling is what makes the pair
+copy, so it is the whole discriminator. The broader shape — an English branch
+beside a non-literal one, like `channels.length === 0 ? "No history" : …` —
+is still invisible, and so is a lowercase one-word string (`"you"`, `"new"`,
+`"on"`), which every scanner here skips so as not to fire on enum values.
+Both were found by eye on this page. Neither is solved.
+
+Also found: the shell catalogue's accent test listed `entente` as stripped
+French. It is the correct spelling — there is no accent to lose — and
+`messages/fr.json` already used it 19 times outside the shell. It is off the
+list.

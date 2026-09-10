@@ -9,6 +9,7 @@ import {
   type SavedReply,
   type SavedReplyCategory,
 } from "@/types/saved-replies";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 const CATEGORIES: SavedReplyCategory[] = [
   "boarding",
@@ -31,6 +32,7 @@ export function SavedRepliesMenu({
   onPick: (reply: SavedReply) => void;
   onClose: () => void;
 }) {
+  const t = useShellText("messaging");
   const [activeIndex, setActiveIndex] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState<
     SavedReplyCategory | "all"
@@ -96,7 +98,7 @@ export function SavedRepliesMenu({
       <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
         <Bookmark className="size-3.5 text-emerald-600" />
         <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase">
-          Saved Replies
+          {t("savedReplies")}
         </span>
         {trimmedQuery && (
           <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
@@ -112,7 +114,7 @@ export function SavedRepliesMenu({
             ↵
           </kbd>
           <kbd className="rounded-sm border border-slate-200 bg-white px-1 py-0.5 font-mono">
-            esc
+            {t("esc")}
           </kbd>
         </span>
         <button
@@ -135,7 +137,7 @@ export function SavedRepliesMenu({
               : "bg-slate-100 text-slate-500 hover:bg-slate-200",
           )}
         >
-          All
+          {t("all")}
         </button>
         {CATEGORIES.map((cat) => (
           <button
@@ -157,9 +159,9 @@ export function SavedRepliesMenu({
       <div ref={listRef} className="max-h-[280px] overflow-y-auto p-1">
         {filtered.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-slate-400">No saved replies match.</p>
+            <p className="text-xs text-slate-400">{t("noSavedRepliesMatch")}</p>
             <p className="mt-1 text-[10px] text-slate-300">
-              Try a different search or category.
+              {t("tryADifferentSearchOr")}
             </p>
           </div>
         ) : (
