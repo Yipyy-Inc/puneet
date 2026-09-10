@@ -1825,6 +1825,17 @@
         "balanceDue": "{amount} due",
         "loadFailed": "Today’s boarding could not be loaded",
         "averageStayLine": "Average stay: {nights}"
+      },
+      "occupancy": {
+        "moved": "{pet} is now in {room}",
+        "moveFailed": "{pet} was not moved",
+        "datesChanged": "{pet}’s stay is now {from} → {to}",
+        "datesChangedHelp": "The price was not recalculated — check it on the booking.",
+        "datesFailed": "The stay was not changed",
+        "checkedIn": "{pet} is checked in",
+        "checkedOut": "{pet} is checked out",
+        "notSaved": "That was not saved",
+        "guest": "This guest"
       }
     }
   },

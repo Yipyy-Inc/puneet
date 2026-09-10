@@ -1825,6 +1825,17 @@
         "balanceDue": "{amount} à payer",
         "loadFailed": "La pension du jour n’a pas pu être chargée",
         "averageStayLine": "Séjour moyen : {nights}"
+      },
+      "occupancy": {
+        "moved": "{pet} est maintenant dans {room}",
+        "moveFailed": "Le déplacement de {pet} n’a pas été enregistré",
+        "datesChanged": "Le séjour de {pet} est maintenant du {from} au {to}",
+        "datesChangedHelp": "Le prix n’a pas été recalculé : vérifiez-le dans la réservation.",
+        "datesFailed": "Le séjour n’a pas été modifié",
+        "checkedIn": "Arrivée de {pet} enregistrée",
+        "checkedOut": "Départ de {pet} enregistré",
+        "notSaved": "Ce changement n’a pas été enregistré",
+        "guest": "Ce pensionnaire"
       }
     }
   },

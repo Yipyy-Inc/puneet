@@ -14,11 +14,19 @@ import {
   Moon,
   Sparkles,
 } from "lucide-react";
-import { clients } from "@/data/clients";
 import {
+  useAssignBoardingRoom,
   useBoardingRooms,
   type BoardingRoomsPayload,
 } from "@/lib/api/boarding-rooms";
+import {
+  useBoardingCheckIn,
+  useBoardingStayUpdate,
+} from "@/lib/api/boarding-attendance";
+import { bookingQueries } from "@/lib/api/booking";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateShort } from "@/lib/i18n/format";
+import type { Booking } from "@/types/booking";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -45,23 +53,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { OccupancyMeter } from "@/components/ui/occupancy-meter";
 
 type Kennel = OccupancyKennel;
-
-function petSizeFromWeight(
-  weight: number,
-): "small" | "medium" | "large" | "xlarge" {
-  if (weight < 20) return "small";
-  if (weight < 50) return "medium";
-  if (weight < 80) return "large";
-  return "xlarge";
-}
-
-function findPetById(petId: number) {
-  for (const c of clients) {
-    const p = c.pets?.find((p) => p.id === petId);
-    if (p) return { pet: p, client: c };
-  }
-  return null;
-}
 
 // Mock booking overlays keyed by room id — demonstrates each status colour.
 // In real wiring, this would join `bookings.ts` to rooms by kennel/room id.
@@ -157,103 +148,62 @@ function toDaycareCategories(areas: DaycarePlayArea[]): RoomCategory[] {
     }));
 }
 
-// Mock daycare reservations (1-day each) keyed by section id.
-const mockDaycareOverlays: Record<
-  string,
-  Pick<
-    Kennel,
-    | "status"
-    | "bookingStatus"
-    | "bookingId"
-    | "petId"
-    | "petName"
-    | "clientName"
-    | "clientPhone"
-    | "checkIn"
-    | "checkOut"
-  >
-> = {
-  "sec-indoor-small": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 200,
-    petId: 1,
-    petName: "Bella",
-    clientName: "Alice Johnson",
-    clientPhone: "123-456-7890",
-    checkIn: "2026-05-05",
-    checkOut: "2026-05-05",
-  },
-  "sec-indoor-medium": {
-    status: "reserved",
-    bookingStatus: "confirmed",
-    bookingId: 201,
-    petId: 3,
-    petName: "Charlie",
-    clientName: "Bob Smith",
-    clientPhone: "098-765-4321",
-    checkIn: "2026-05-06",
-    checkOut: "2026-05-06",
-  },
-  "sec-indoor-large": {
-    status: "occupied",
-    bookingStatus: "checked_in",
-    bookingId: 202,
-    petId: 5,
-    petName: "Rex",
-    clientName: "John Doe",
-    clientPhone: "123-456-7890",
-    checkIn: "2026-05-05",
-    checkOut: "2026-05-05",
-  },
-  "sec-outdoor-main": {
-    status: "reserved",
-    bookingStatus: "pending",
-    bookingId: 203,
-    petId: 7,
-    petName: "Luna",
-    clientName: "Sarah Wilson",
-    clientPhone: "555-111-2222",
-    checkIn: "2026-05-07",
-    checkOut: "2026-05-07",
-  },
-  "sec-outdoor-agility": {
-    status: "maintenance",
-  },
-};
+// ── THE DAYCARE HALF IS REAL, AND SPARSE ─────────────────────────────────
+//
+// It was `mockDaycareOverlays`: five invented guests ("Bella / Alice
+// Johnson / 123-456-7890") in May 2026, the same at every facility, with a
+// hard-coded $35 rate. A section now shows the facility's own daycare booking
+// assigned to it — the first one from today on — and a section nobody is
+// assigned to is vacant.
+//
+// A daycare section holds many dogs and this board draws ONE guest per row,
+// so it cannot show a busy yard; the daycare check-in board is where the day's
+// dogs are. See the debt map.
+const LIVE = ["cancelled", "declined", "no_show", "completed"];
 
-// The SECTIONS are real now — `facility_rooms` inside a daycare category. The
-// OCCUPANCY on this half still is not: `mockDaycareOverlays` above invents who
-// is in them. The boarding half gets its occupancy from /api/boarding/rooms,
-// which joins the stays; daycare has no equivalent yet, and inventing one here
-// would be the same mistake in a new place.
-function buildInitialDaycareKennels(
+function daycareDay(b: Booking): string {
+  return b.daycareSelectedDates?.[0] ?? b.startDate;
+}
+
+function buildDaycareKennels(
   daycareSections: DaycareSection[],
+  bookings: Booking[],
+  today: string,
 ): Kennel[] {
+  const bySection = new Map<string, Booking>();
+  for (const b of bookings) {
+    if (b.service !== "daycare" || !b.sectionId) continue;
+    if (LIVE.includes(b.status) || daycareDay(b) < today) continue;
+    const held = bySection.get(b.sectionId);
+    if (!held || daycareDay(b) < daycareDay(held))
+      bySection.set(b.sectionId, b);
+  }
   return daycareSections
     .filter((s) => s.isActive)
     .map((section) => {
-      const overlay = mockDaycareOverlays[section.id];
-      const enrichment: Partial<OccupancyKennel> = {};
-      if (overlay?.petId) {
-        const lookup = findPetById(overlay.petId);
-        if (lookup) {
-          enrichment.petPhotoUrl = lookup.pet.imageUrl;
-          enrichment.petBreed = lookup.pet.breed;
-          enrichment.petSize = petSizeFromWeight(lookup.pet.weight);
-          enrichment.petSpecies =
-            lookup.pet.type.toLowerCase() === "cat" ? "cat" : "dog";
-          enrichment.clientPhotoUrl = lookup.client.imageUrl;
-        }
-      }
-      return {
+      const booking = bySection.get(section.id);
+      const base = {
         id: section.id,
         name: section.name,
         categoryId: section.playAreaId,
-        dailyRate: 35,
-        ...(overlay ?? {}),
-        ...enrichment,
-        status: overlay?.status ?? ("vacant" as KennelStatus),
+        dailyRate: 0,
+      };
+      if (!booking) return { ...base, status: "vacant" as KennelStatus };
+      return {
+        ...base,
+        status: (booking.status === "checked_in"
+          ? "occupied"
+          : "reserved") as KennelStatus,
+        // The board draws four workflow states; anything else live is a
+        // confirmed place on the grid.
+        bookingStatus: (booking.status === "checked_in"
+          ? "checked_in"
+          : booking.status === "pending"
+            ? "pending"
+            : "confirmed") as OccupancyKennel["bookingStatus"],
+        bookingId: booking.id,
+        checkIn: daycareDay(booking),
+        checkOut: daycareDay(booking),
       };
     });
 }
@@ -317,13 +267,20 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
     () => toDaycareCategories(daycareAreas),
     [daycareAreas],
   );
+  const { data: allBookings = [] } = useQuery(bookingQueries.all());
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
   const [daycareKennels, setDaycareKennels] = useState<Kennel[]>([]);
-  // Rebuilt whenever the sections change — they arrive asynchronously, and the
-  // board carries local status edits on top, so it stays state rather than a
-  // memo.
+  // Rebuilt whenever the sections or the bookings change — both arrive
+  // asynchronously, and the board carries a move on top until the refetch.
   useEffect(() => {
-    setDaycareKennels(buildInitialDaycareKennels(daycareSections));
-  }, [daycareSections]);
+    setDaycareKennels(buildDaycareKennels(daycareSections, allBookings, today));
+  }, [daycareSections, allBookings, today]);
+  const { t, fill, locale } = useStaffText("occupancy");
+  const assignRoom = useAssignBoardingRoom();
+  const boardingCheckIn = useBoardingCheckIn();
+  const boardingStay = useBoardingStayUpdate();
+  const nameFor = (list: Kennel[], bookingId: number) =>
+    list.find((k) => k.bookingId === bookingId)?.petName ?? t("guest");
   const [filterStatus, setFilterStatus] = useState<KennelStatus | "all">("all");
   const [daycareFilterStatus, setDaycareFilterStatus] = useState<
     KennelStatus | "all"
@@ -368,29 +325,145 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
           return k;
         });
       });
-      console.log(
-        "Moved booking",
-        bookingId,
-        fromRoomId,
-        "→",
-        toRoomId,
-        "by",
-        staffInitials,
-      );
+      void staffInitials;
     },
     [],
   );
 
-  const handleMoveBooking = useCallback(
-    (b: number, f: string, t: string, s: string) =>
-      moveWithin(setKennels, b, f, t, s),
-    [moveWithin],
-  );
-  const handleDaycareMoveBooking = useCallback(
-    (b: number, f: string, t: string, s: string) =>
-      moveWithin(setDaycareKennels, b, f, t, s),
-    [moveWithin],
-  );
+  // A kennel move is the stay's room — the same write the kennels board and
+  // the booking page use. It was a `console.log("Moved booking")` over local
+  // state, so the board showed the dog in its new kennel until the reload put
+  // it back. Shown at once, written, and stepped back if the write is refused
+  // (a kennel taken in the meantime is a 409 with its own sentence).
+  const handleMoveBooking = (
+    bookingId: number,
+    from: string,
+    to: string,
+    staff: string,
+  ) => {
+    const pet = nameFor(kennels, bookingId);
+    const room = kennels.find((k) => k.id === to)?.name ?? to;
+    moveWithin(setKennels, bookingId, from, to, staff);
+    assignRoom.mutate(
+      { bookingRef: bookingId, roomId: to },
+      {
+        onSuccess: () => toast.success(fill("moved", { pet, room })),
+        onError: (error) => {
+          moveWithin(setKennels, bookingId, to, from, staff);
+          toast.error(fill("moveFailed", { pet }), {
+            description: error.message,
+          });
+        },
+      },
+    );
+  };
+  // A daycare move is the booking's section.
+  const handleDaycareMoveBooking = (
+    bookingId: number,
+    from: string,
+    to: string,
+    staff: string,
+  ) => {
+    const room = daycareKennels.find((k) => k.id === to)?.name ?? to;
+    const pet = nameFor(daycareKennels, bookingId);
+    moveWithin(setDaycareKennels, bookingId, from, to, staff);
+    bookingMutations
+      .update(bookingId, { sectionId: to })
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+        toast.success(fill("moved", { pet, room }));
+      })
+      .catch((error: unknown) => {
+        moveWithin(setDaycareKennels, bookingId, to, from, staff);
+        toast.error(fill("moveFailed", { pet }), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      });
+  };
+
+  // Stretching a stay on the grid changes the booking's dates; the stay
+  // follows by trigger. It does NOT re-price the booking, and says so.
+  const handleResizeStay = (
+    kennelId: string,
+    checkIn: string,
+    checkOut: string,
+  ) => {
+    const kennel = kennels.find((k) => k.id === kennelId);
+    if (!kennel?.bookingId) return;
+    const before = { checkIn: kennel.checkIn, checkOut: kennel.checkOut };
+    const pet = kennel.petName ?? t("guest");
+    const setDates = (dates: { checkIn?: string; checkOut?: string }) =>
+      setKennels((prev) =>
+        prev.map((k) => (k.id === kennelId ? { ...k, ...dates } : k)),
+      );
+    setDates({ checkIn, checkOut });
+    bookingMutations
+      .update(kennel.bookingId, { startDate: checkIn, endDate: checkOut })
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+        void queryClient.invalidateQueries({ queryKey: ["boarding-rooms"] });
+        toast.success(
+          fill("datesChanged", {
+            pet,
+            from: formatDateShort(checkIn, locale),
+            to: formatDateShort(checkOut, locale),
+          }),
+          { description: t("datesChangedHelp") },
+        );
+      })
+      .catch((error: unknown) => {
+        setDates(before);
+        toast.error(t("datesFailed"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      });
+  };
+
+  // The details sheet's arrival and departure — the boarding attendance the
+  // arrivals board records. Both were `console.log("check-in", id)`.
+  const handleBoardingCheckIn = (bookingId: number) => {
+    const pet = nameFor(kennels, bookingId);
+    boardingCheckIn.mutate(bookingId, {
+      onSuccess: () => {
+        setKennels((prev) =>
+          prev.map((k) =>
+            k.bookingId === bookingId
+              ? { ...k, status: "occupied", bookingStatus: "checked_in" }
+              : k,
+          ),
+        );
+        toast.success(fill("checkedIn", { pet }));
+      },
+      onError: (error) =>
+        toast.error(t("notSaved"), { description: error.message }),
+    });
+  };
+  const handleBoardingCheckOut = (bookingId: number) => {
+    const pet = nameFor(kennels, bookingId);
+    boardingStay.mutate(
+      { bookingRef: bookingId, checkOut: true },
+      {
+        onSuccess: () => {
+          setKennels((prev) =>
+            prev.map((k) =>
+              k.bookingId === bookingId
+                ? {
+                    id: k.id,
+                    name: k.name,
+                    categoryId: k.categoryId,
+                    dailyRate: k.dailyRate,
+                    status: "vacant",
+                  }
+                : k,
+            ),
+          );
+          toast.success(fill("checkedOut", { pet }));
+        },
+        onError: (error) =>
+          toast.error(t("notSaved"), { description: error.message }),
+      },
+    );
+  };
 
   const handleAddBookingFromCell = useCallback(
     (kennelId: string, date: string) => {
@@ -667,29 +740,12 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               categories={boardingCategories}
               facilityName={profile.businessName}
               onAddBooking={handleAddBookingFromCell}
-              onUpdateBooking={(kennelId, checkIn, checkOut, staffInitials) => {
-                setKennels((prev) =>
-                  prev.map((k) =>
-                    k.id === kennelId
-                      ? {
-                          ...k,
-                          checkIn,
-                          checkOut,
-                        }
-                      : k,
-                  ),
-                );
-                console.log(
-                  "Updated stay",
-                  kennelId,
-                  checkIn,
-                  "→",
-                  checkOut,
-                  "by",
-                  staffInitials,
-                );
-              }}
+              onUpdateBooking={(kennelId, checkIn, checkOut) =>
+                handleResizeStay(kennelId, checkIn, checkOut)
+              }
               onMoveBooking={handleMoveBooking}
+              onCheckIn={handleBoardingCheckIn}
+              onCheckOut={handleBoardingCheckOut}
               customServicesMap={petServicesMap}
               moduleColorMap={moduleColorMap}
               showCustomServices={showCustomServices}
