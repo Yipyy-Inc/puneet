@@ -62,6 +62,13 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 /** Facility-wide drop-in toggle. Eventually owned by Settings → Training;
  *  hardcoded for now so the demo can showcase the single-session flow. */
@@ -110,6 +117,7 @@ const VALID_CUSTOMER_TRAINING_TABS = new Set([
 ]);
 
 export default function CustomerTrainingPage() {
+  const { t, fill, locale } = useCustomerText("training");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -274,23 +282,23 @@ export default function CustomerTrainingPage() {
 
   const handleEnroll = async () => {
     if (!selectedSeries || !selectedPetId || !customer) {
-      toast.error("Please select a pet");
+      toast.error(t("pleaseSelectAPet"));
       return;
     }
 
     if (!agreedToCommitment) {
-      toast.error("You must agree to the series commitment");
+      toast.error(t("youMustAgreeToThe"));
       return;
     }
 
     if (!allRequiredWaiversSigned(agreedWaivers)) {
-      toast.error("Please sign every required waiver to continue");
+      toast.error(t("pleaseSignEveryRequiredWaiver"));
       return;
     }
 
     const pet = customer.pets.find((p) => p.id === selectedPetId);
     if (!pet) {
-      toast.error("Pet not found");
+      toast.error(t("petNotFound"));
       return;
     }
 
@@ -298,7 +306,7 @@ export default function CustomerTrainingPage() {
       (ct) => ct.id === selectedSeries.courseTypeId,
     );
     if (!courseType) {
-      toast.error("Course type not found");
+      toast.error(t("courseTypeNotFound"));
       return;
     }
 
@@ -309,7 +317,7 @@ export default function CustomerTrainingPage() {
         .filter((i) => i.severity === "error")
         .map((i) => i.message)
         .join("\n");
-      toast.error(`Enrollment not eligible:\n${errorMessages}`);
+      toast.error(`${t("enrollmentNotEligible")}\n${errorMessages}`);
       return;
     }
 
@@ -363,15 +371,20 @@ export default function CustomerTrainingPage() {
         courseType,
         paymentLabel:
           paymentOption === "full"
-            ? "Paid in full"
-            : `Deposit · $${selectedSeries.enrollmentRules.depositRequired} paid`,
+            ? t("paidInFull")
+            : fill("depositPaid", {
+                amount: formatMoney(
+                  selectedSeries.enrollmentRules.depositRequired,
+                  locale,
+                ),
+              }),
       });
       setSelectedSeries(null);
       setSelectedPetId(null);
       setAgreedToCommitment(false);
       setAgreedWaivers(new Set());
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to enroll");
+      toast.error(error instanceof Error ? error.message : t("failedToEnroll"));
     } finally {
       setIsEnrolling(false);
     }
@@ -379,13 +392,13 @@ export default function CustomerTrainingPage() {
 
   const handleJoinWaitlist = async () => {
     if (!selectedSeries || !selectedPetId || !customer) {
-      toast.error("Please select a pet");
+      toast.error(t("pleaseSelectAPet"));
       return;
     }
 
     const pet = customer.pets.find((p) => p.id === selectedPetId);
     if (!pet) {
-      toast.error("Pet not found");
+      toast.error(t("petNotFound"));
       return;
     }
 
@@ -393,14 +406,17 @@ export default function CustomerTrainingPage() {
       // TODO: API call to join waitlist
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(
-        `${pet.name} added to waitlist. Position: #${waitlistPosition}. You'll be notified when a spot opens.`,
+        fill("addedToWaitlist", {
+          pet: pet.name,
+          position: String(waitlistPosition),
+        }),
       );
       setIsWaitlistModalOpen(false);
       setSelectedSeries(null);
       setSelectedPetId(null);
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to join waitlist",
+        error instanceof Error ? error.message : t("failedToJoinWaitlist"),
       );
     }
   };
@@ -441,11 +457,21 @@ export default function CustomerTrainingPage() {
 
       return [
         "BEGIN:VEVENT",
+        // french-ok: an identifier inside the calendar file, not copy
         `UID:training-${series.id}-session-${index + 1}@yipyy.com`,
         `DTSTART:${formatICSDate(startDateTime)}`,
         `DTEND:${formatICSDate(endDateTime)}`,
-        `SUMMARY:${series.courseTypeName} - Session ${index + 1} - ${petName}`,
-        `DESCRIPTION:Training Session ${index + 1} of ${series.numberOfWeeks}\\nPet: ${petName}\\nCourse: ${series.courseTypeName}\\nInstructor: ${series.instructorName}\\nLocation: ${series.location}`,
+        // The calendar file is read by the customer, in their calendar, so
+        // its words are in their language. `\\n` is ICS's own line break.
+        `SUMMARY:${fill("icsSummary", { course: series.courseTypeName, n: index + 1, pet: petName })}`,
+        `DESCRIPTION:${fill("icsDescription", {
+          n: index + 1,
+          total: series.numberOfWeeks,
+          pet: petName,
+          course: series.courseTypeName,
+          instructor: series.instructorName,
+          location: series.location,
+        })}`,
         `LOCATION:${series.location}`,
         "END:VEVENT",
       ].join("\r\n");
@@ -475,18 +501,18 @@ export default function CustomerTrainingPage() {
   return (
     <div className="space-y-6 p-4 md:p-6">
       <PageHeader
-        title="Training"
-        description="Browse classes, enroll your pets, and manage makeup sessions"
+        title={t("training")}
+        description={t("browseClassesEnrollYourPets")}
       />
 
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="pets">My Pets</TabsTrigger>
-          <TabsTrigger value="classes">Training Classes</TabsTrigger>
-          <TabsTrigger value="homework">Homework</TabsTrigger>
-          <TabsTrigger value="report-cards">Report Cards</TabsTrigger>
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="makeup">Makeup Sessions</TabsTrigger>
+          <TabsTrigger value="pets">{t("myPets")}</TabsTrigger>
+          <TabsTrigger value="classes">{t("trainingClasses")}</TabsTrigger>
+          <TabsTrigger value="homework">{t("homework")}</TabsTrigger>
+          <TabsTrigger value="report-cards">{t("reportCards")}</TabsTrigger>
+          <TabsTrigger value="packages">{t("packages")}</TabsTrigger>
+          <TabsTrigger value="makeup">{t("makeupSessions")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pets" className="space-y-4 pt-2">
@@ -543,7 +569,7 @@ export default function CustomerTrainingPage() {
                     {selectedCourse.name}
                   </h3>
                   <p className="text-muted-foreground text-sm">
-                    Available classes for this course
+                    {t("availableClassesForThisCourse")}
                   </p>
                 </div>
               </div>
@@ -552,7 +578,7 @@ export default function CustomerTrainingPage() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Search by instructor or series name…"
+                    placeholder={t("searchByInstructorOrSeries")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -563,8 +589,9 @@ export default function CustomerTrainingPage() {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {availableSeries.length === 0 ? (
                   <div className="text-muted-foreground col-span-full rounded-xl border border-dashed py-12 text-center text-sm">
-                    No upcoming classes for {selectedCourse.name} right now —
-                    check back soon or join the waitlist on a related course.
+                    {fill("noUpcomingClassesFor", {
+                      course: selectedCourse.name,
+                    })}
                   </div>
                 ) : (
                   availableSeries.map((seriesItem) => {
@@ -602,7 +629,7 @@ export default function CustomerTrainingPage() {
           >
             <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Enroll in Training Series</DialogTitle>
+                <DialogTitle>{t("enrollInTrainingSeries")}</DialogTitle>
                 <DialogDescription>
                   {selectedSeries?.seriesName}
                 </DialogDescription>
@@ -612,14 +639,14 @@ export default function CustomerTrainingPage() {
                 {/* Pet Selection */}
                 <div className="space-y-2">
                   <Label>
-                    Select Pet <span className="text-destructive">*</span>
+                    {t("selectPet")} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={selectedPetId?.toString() || ""}
                     onValueChange={(value) => setSelectedPetId(parseInt(value))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose which pet to enroll..." />
+                      <SelectValue placeholder={t("chooseWhichPetToEnroll")} />
                     </SelectTrigger>
                     <SelectContent>
                       {customer?.pets
@@ -638,13 +665,13 @@ export default function CustomerTrainingPage() {
                   selectedCourseType &&
                   prerequisiteValidation && (
                     <div className="space-y-2">
-                      <Label>Prerequisites Check</Label>
+                      <Label>{t("prerequisitesCheck")}</Label>
                       <div className="space-y-2 rounded-lg border p-4">
                         {prerequisiteValidation.eligible ? (
                           <div className="flex items-center gap-2 text-green-600">
                             <CheckCircle2 className="size-5" />
                             <span className="font-medium">
-                              All prerequisites met!
+                              {t("allPrerequisitesMet")}
                             </span>
                           </div>
                         ) : (
@@ -652,7 +679,7 @@ export default function CustomerTrainingPage() {
                             <div className="text-destructive flex items-center gap-2">
                               <XCircle className="size-5" />
                               <span className="font-medium">
-                                Prerequisites not met
+                                {t("prerequisitesNotMet")}
                               </span>
                             </div>
                             <ul className="text-muted-foreground ml-7 list-inside list-disc space-y-1 text-sm">
@@ -671,11 +698,12 @@ export default function CustomerTrainingPage() {
                 {/* Series Commitment */}
                 {selectedSeries && (
                   <div className="space-y-2">
-                    <Label>Series Commitment</Label>
+                    <Label>{t("seriesCommitment")}</Label>
                     <div className="space-y-2 rounded-lg border p-4">
                       <p className="text-muted-foreground text-sm">
-                        By enrolling, you commit to attending all{" "}
-                        {selectedSeries.numberOfWeeks} sessions:
+                        {fill("commitToAllSessions", {
+                          n: selectedSeries.numberOfWeeks,
+                        })}
                       </p>
                       <ul className="ml-4 list-inside list-disc space-y-1 text-sm">
                         {isMounted &&
@@ -685,14 +713,14 @@ export default function CustomerTrainingPage() {
                             selectedSeries.numberOfWeeks,
                           ).map((date, index) => (
                             <li key={date}>
-                              Session {index + 1}:{" "}
-                              {new Date(date).toLocaleDateString("en-US", {
-                                weekday: "long",
-                                month: "long",
-                                day: "numeric",
-                                year: "numeric",
-                              })}{" "}
-                              at {selectedSeries.startTime}
+                              {fill("sessionOnAt", {
+                                n: index + 1,
+                                date: formatDateLong(date, locale),
+                                time: formatTimeOfDay(
+                                  selectedSeries.startTime,
+                                  locale,
+                                ),
+                              })}
                             </li>
                           ))}
                       </ul>
@@ -709,8 +737,9 @@ export default function CustomerTrainingPage() {
                         htmlFor="commitment"
                         className="cursor-pointer text-sm font-normal"
                       >
-                        I agree to the series commitment (all{" "}
-                        {selectedSeries.numberOfWeeks} weeks)
+                        {fill("agreeToCommitment", {
+                          n: selectedSeries.numberOfWeeks,
+                        })}
                       </Label>
                     </div>
                   </div>
@@ -728,7 +757,8 @@ export default function CustomerTrainingPage() {
                 {selectedSeries && (
                   <div className="space-y-2">
                     <Label>
-                      Payment Option <span className="text-destructive">*</span>
+                      {t("paymentOption")}{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
                       value={paymentOption}
@@ -743,29 +773,40 @@ export default function CustomerTrainingPage() {
                           className="flex-1 cursor-pointer"
                         >
                           <div>
-                            <div className="font-medium">Deposit</div>
+                            <div className="font-medium">{t("deposit")}</div>
                             <div className="text-muted-foreground text-sm">
-                              ${selectedSeries.enrollmentRules.depositRequired}{" "}
-                              now, remainder due before first session
+                              {formatMoney(
+                                selectedSeries.enrollmentRules.depositRequired,
+                                locale,
+                              )}{" "}
+                              {t("nowRemainderDueBeforeFirst")}
                             </div>
                           </div>
                         </Label>
-                        <div className="font-semibold">
-                          ${selectedSeries.enrollmentRules.depositRequired}
+                        <div className="font-semibold tabular-nums">
+                          {formatMoney(
+                            selectedSeries.enrollmentRules.depositRequired,
+                            locale,
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 rounded-lg border p-4">
                         <RadioGroupItem value="full" id="full" />
                         <Label htmlFor="full" className="flex-1 cursor-pointer">
                           <div>
-                            <div className="font-medium">Full Payment</div>
+                            <div className="font-medium">
+                              {t("fullPayment")}
+                            </div>
                             <div className="text-muted-foreground text-sm">
-                              Pay entire series amount upfront
+                              {t("payEntireSeriesAmountUpfront")}
                             </div>
                           </div>
                         </Label>
-                        <div className="font-semibold">
-                          ${selectedSeries.enrollmentRules.fullPaymentAmount}
+                        <div className="font-semibold tabular-nums">
+                          {formatMoney(
+                            selectedSeries.enrollmentRules.fullPaymentAmount,
+                            locale,
+                          )}
                         </div>
                       </div>
                     </RadioGroup>
@@ -782,7 +823,7 @@ export default function CustomerTrainingPage() {
                     setSelectedPetId(null);
                   }}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleEnroll}
@@ -794,7 +835,7 @@ export default function CustomerTrainingPage() {
                     isEnrolling
                   }
                 >
-                  {isEnrolling ? "Enrolling..." : "Enroll & Pay"}
+                  {isEnrolling ? t("enrolling") : t("enrollPay")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -807,7 +848,7 @@ export default function CustomerTrainingPage() {
           >
             <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Course Details</DialogTitle>
+                <DialogTitle>{t("courseDetails")}</DialogTitle>
                 <DialogDescription>
                   {selectedCourseDetails?.courseTypeName}
                 </DialogDescription>
@@ -817,10 +858,10 @@ export default function CustomerTrainingPage() {
                 <div className="space-y-6 py-4">
                   {/* Description */}
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Description</h3>
+                    <h3 className="font-semibold">{t("description")}</h3>
                     <p className="text-muted-foreground text-sm">
                       {selectedCourseType?.description ||
-                        "No description available."}
+                        t("noDescriptionAvailable")}
                     </p>
                   </div>
 
@@ -831,7 +872,9 @@ export default function CustomerTrainingPage() {
                     selectedCourseType.whatYouWillLearn.length > 0 && (
                       <>
                         <div className="space-y-2">
-                          <h3 className="font-semibold">What You Will Learn</h3>
+                          <h3 className="font-semibold">
+                            {t("whatYouWillLearn")}
+                          </h3>
                           <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
                             {selectedCourseType.whatYouWillLearn.map(
                               (item, index) => (
@@ -849,7 +892,7 @@ export default function CustomerTrainingPage() {
                     selectedCourseType.whatToBring.length > 0 && (
                       <>
                         <div className="space-y-2">
-                          <h3 className="font-semibold">What to Bring</h3>
+                          <h3 className="font-semibold">{t("whatToBring")}</h3>
                           <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
                             {selectedCourseType.whatToBring.map(
                               (item, index) => (
@@ -864,13 +907,13 @@ export default function CustomerTrainingPage() {
 
                   {/* Prerequisites */}
                   <div className="space-y-2">
-                    <h3 className="font-semibold">Prerequisites</h3>
+                    <h3 className="font-semibold">{t("prerequisites")}</h3>
                     <div className="space-y-2">
                       {selectedCourseType?.requiredVaccines &&
                         selectedCourseType.requiredVaccines.length > 0 && (
                           <div>
                             <p className="mb-1 text-sm font-medium">
-                              Required Vaccinations:
+                              {t("requiredVaccinations")}
                             </p>
                             <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
                               {selectedCourseType.requiredVaccines.map(
@@ -885,7 +928,7 @@ export default function CustomerTrainingPage() {
                         selectedCourseType.prerequisites.length > 0 && (
                           <div>
                             <p className="mb-1 text-sm font-medium">
-                              Required Courses:
+                              {t("requiredCourses")}
                             </p>
                             <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
                               {selectedCourseType.prerequisites.map(
@@ -909,7 +952,7 @@ export default function CustomerTrainingPage() {
                         (!selectedCourseType?.prerequisites ||
                           selectedCourseType.prerequisites.length === 0) && (
                           <p className="text-muted-foreground text-sm">
-                            No prerequisites required.
+                            {t("noPrerequisitesRequired")}
                           </p>
                         )}
                     </div>
@@ -921,7 +964,9 @@ export default function CustomerTrainingPage() {
                   {selectedCourseType?.cancellationPolicy && (
                     <>
                       <div className="space-y-2">
-                        <h3 className="font-semibold">Cancellation Policy</h3>
+                        <h3 className="font-semibold">
+                          {t("cancellationPolicy")}
+                        </h3>
                         <p className="text-muted-foreground text-sm">
                           {selectedCourseType.cancellationPolicy}
                         </p>
@@ -933,7 +978,7 @@ export default function CustomerTrainingPage() {
                   {/* Refund Policy */}
                   {selectedCourseType?.refundPolicy && (
                     <div className="space-y-2">
-                      <h3 className="font-semibold">Refund Policy</h3>
+                      <h3 className="font-semibold">{t("refundPolicy")}</h3>
                       <p className="text-muted-foreground text-sm">
                         {selectedCourseType.refundPolicy}
                       </p>
@@ -950,7 +995,7 @@ export default function CustomerTrainingPage() {
                     setSelectedCourseDetails(null);
                   }}
                 >
-                  Close
+                  {t("close")}
                 </Button>
                 {selectedCourseDetails &&
                   getSpotsLeft(selectedCourseDetails) > 0 && (
@@ -960,7 +1005,7 @@ export default function CustomerTrainingPage() {
                         handleEnrollClick(selectedCourseDetails);
                       }}
                     >
-                      Enroll Now
+                      {t("enrollNow")}
                     </Button>
                   )}
               </DialogFooter>
@@ -993,24 +1038,23 @@ export default function CustomerTrainingPage() {
           >
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Join Waitlist</DialogTitle>
+                <DialogTitle>{t("joinWaitlist")}</DialogTitle>
                 <DialogDescription>
-                  This series is full. Join the waitlist to be notified when a
-                  spot opens.
+                  {t("seriesFullJoinWaitlist")}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label>
-                    Select Pet <span className="text-destructive">*</span>
+                    {t("selectPet")} <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={selectedPetId?.toString() || ""}
                     onValueChange={(value) => setSelectedPetId(parseInt(value))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose which pet..." />
+                      <SelectValue placeholder={t("chooseWhichPet")} />
                     </SelectTrigger>
                     <SelectContent>
                       {customer?.pets
@@ -1027,10 +1071,9 @@ export default function CustomerTrainingPage() {
                 {waitlistPosition && (
                   <div className="bg-muted rounded-lg p-4">
                     <p className="text-sm">
-                      If you join now, your position will be{" "}
-                      <strong>#{waitlistPosition}</strong>. You&apos;ll receive
-                      an SMS notification when a spot opens, with a 24-hour
-                      window to claim it.
+                      {rich(t("waitlistPositionHint"), {
+                        position: <strong>#{waitlistPosition}</strong>,
+                      })}
                     </p>
                   </div>
                 )}
@@ -1045,10 +1088,10 @@ export default function CustomerTrainingPage() {
                     setSelectedPetId(null);
                   }}
                 >
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button onClick={handleJoinWaitlist} disabled={!selectedPetId}>
-                  Join Waitlist
+                  {t("joinWaitlist")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1085,13 +1128,13 @@ export default function CustomerTrainingPage() {
                 confirmation.series,
                 sessionDates,
                 confirmation.petName,
-                selectedFacility?.name || "Facility",
+                selectedFacility?.name || t("facility"),
               );
               downloadICSFile(
                 icsContent,
                 `${confirmation.series.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
               );
-              toast.success("Calendar file downloaded");
+              toast.success(t("calendarFileDownloaded"));
             }}
           />
         </TabsContent>

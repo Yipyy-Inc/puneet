@@ -35,17 +35,21 @@ import type { TrainingPackage } from "@/types/training";
 import type { TrainingSeries } from "@/lib/training-series";
 import type { TrainingEnrollment } from "@/lib/training-enrollment";
 import { hasCompletedPrerequisites } from "@/lib/training-program-prereqs";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import { formatDateLong } from "@/lib/i18n/format";
 
 type PreferredTimeOfDay = "morning" | "afternoon" | "no-preference";
 
+// A time of day's name, by CATALOGUE KEY.
 const TIME_OPTIONS: {
   value: PreferredTimeOfDay;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
 }[] = [
-  { value: "morning", label: "Morning", icon: Sunrise },
-  { value: "afternoon", label: "Afternoon", icon: Sunset },
-  { value: "no-preference", label: "Any time", icon: Sun },
+  { value: "morning", labelKey: "morning", icon: Sunrise },
+  { value: "afternoon", labelKey: "afternoon", icon: Sunset },
+  { value: "no-preference", labelKey: "anyTime", icon: Sun },
 ];
 
 interface Props {
@@ -67,6 +71,7 @@ export function ProgramWaitlistDialog({
   customer,
   matchingSeries,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const queryClient = useQueryClient();
   const [petId, setPetId] = useState<string>("");
   const [preferredTime, setPreferredTime] =
@@ -104,16 +109,14 @@ export function ProgramWaitlistDialog({
   function handleSubmit() {
     if (!petId || !earliest) {
       toast.error(
-        !earliest
-          ? "No upcoming series to attach the waitlist entry to."
-          : "Pick which pet you'd like to waitlist.",
+        !earliest ? t("noUpcomingSeriesToAttach") : t("pickWhichPetToWaitlist"),
       );
       return;
     }
     const numericPetId = Number(petId);
     const pet = customer.pets.find((p) => p.id === numericPetId);
     if (!pet) {
-      toast.error("Pet not found.");
+      toast.error(t("petNotFound2"));
       return;
     }
     const nowISO = new Date().toISOString();
@@ -164,9 +167,8 @@ export function ProgramWaitlistDialog({
         (prev = []) => [...prev, newEnrollment],
       );
     });
-    toast.success(`You're on the waitlist for ${programName}.`, {
-      description:
-        "We'll text and email you the moment a spot opens. Sit tight!",
+    toast.success(fill("onWaitlistFor", { program: programName }), {
+      description: t("wellTextAndEmailYou"),
       duration: 6_000,
     });
     onOpenChange(false);
@@ -178,16 +180,16 @@ export function ProgramWaitlistDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Clock className="size-5 text-amber-600" />
-            Join the waitlist for {program.name}
+            {fill("joinWaitlistFor", { program: program.name })}
           </DialogTitle>
           <DialogDescription className="text-sm/relaxed">
-            All upcoming series are at capacity. Add your dog to the waitlist
-            and we&apos;ll text + email you the moment a spot opens.
+            {t("allSeriesAtCapacity")}
             {earliest && (
               <span className="text-muted-foreground mt-1.5 inline-flex items-center gap-1 text-[11px]">
                 <GraduationCap className="size-3" />
-                You&apos;ll be queued on the earliest upcoming series, starting{" "}
-                {formatLong(earliest.startDate)}.
+                {fill("queuedOnEarliestSeries", {
+                  date: formatLong(earliest.startDate, locale),
+                })}
               </span>
             )}
           </DialogDescription>
@@ -197,11 +199,11 @@ export function ProgramWaitlistDialog({
           {/* Pet picker */}
           <div className="space-y-1.5">
             <Label htmlFor="waitlist-pet">
-              Which dog? <span className="text-rose-600">*</span>
+              {t("whichDog")} <span className="text-rose-600">*</span>
             </Label>
             <Select value={petId} onValueChange={setPetId}>
               <SelectTrigger id="waitlist-pet">
-                <SelectValue placeholder="Pick your dog…" />
+                <SelectValue placeholder={t("pickYourDog")} />
               </SelectTrigger>
               <SelectContent>
                 {customer.pets
@@ -216,7 +218,7 @@ export function ProgramWaitlistDialog({
                       >
                         {pet.name}
                         {pet.breed ? ` · ${pet.breed}` : ""}
-                        {!eligible && " (prerequisites incomplete)"}
+                        {!eligible && ` (${t("prerequisitesIncomplete")})`}
                       </SelectItem>
                     );
                   })}
@@ -224,15 +226,14 @@ export function ProgramWaitlistDialog({
             </Select>
             {eligiblePets.length === 0 && (
               <p className="text-[11px] text-rose-600">
-                None of your dogs have completed the prerequisites for this
-                program yet.
+                {t("noDogsMeetPrerequisites")}
               </p>
             )}
           </div>
 
           {/* Preferred time of day */}
           <div className="space-y-1.5">
-            <Label>Preferred time of day</Label>
+            <Label>{t("preferredTimeOfDay")}</Label>
             <div className="grid grid-cols-3 gap-1.5">
               {TIME_OPTIONS.map((opt) => {
                 const isActive = preferredTime === opt.value;
@@ -243,37 +244,36 @@ export function ProgramWaitlistDialog({
                     type="button"
                     onClick={() => setPreferredTime(opt.value)}
                     className={cn(
-                      "flex h-10 items-center justify-center gap-1.5 rounded-md border text-[12px] font-medium transition-colors",
+                      "flex min-h-10 items-center justify-center gap-1.5 rounded-md border px-1 text-[12px] font-medium transition-colors",
                       isActive
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
                     )}
                   >
                     <Icon className="size-3.5" />
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </button>
                 );
               })}
             </div>
             <p className="text-muted-foreground text-[11px]">
-              We&apos;ll prioritize you for series matching this preference when
-              possible.
+              {t("wellPrioritizePreference")}
             </p>
           </div>
 
           {/* Notes */}
           <div className="space-y-1.5">
             <Label htmlFor="waitlist-notes">
-              Anything else?{" "}
+              {t("anythingElse")}{" "}
               <span className="text-muted-foreground font-normal">
-                (optional)
+                ({t("optionalLower")})
               </span>
             </Label>
             <Textarea
               id="waitlist-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="E.g. 'Flexible on start date — please reach out anytime.'"
+              placeholder={t("eGFlexibleOnStart")}
               className="min-h-[70px] text-sm"
             />
           </div>
@@ -286,7 +286,7 @@ export function ProgramWaitlistDialog({
             onClick={() => onOpenChange(false)}
             className="h-10 w-full sm:w-auto"
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             type="button"
@@ -295,7 +295,7 @@ export function ProgramWaitlistDialog({
             className="h-10 w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
           >
             <Clock className="mr-1.5 size-4" />
-            Join Waitlist
+            {t("joinWaitlist")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -303,10 +303,8 @@ export function ProgramWaitlistDialog({
   );
 }
 
-function formatLong(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function formatLong(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }

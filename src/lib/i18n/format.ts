@@ -266,10 +266,13 @@ export function formatTimeOfDay(value: string, locale: AppLocale): string {
  * and the comma rules for both locales. The NAMES pass through untouched —
  * §5q keeps a pet's name out of the locale layer; only the glue is localised.
  */
-export function formatList(items: string[], locale: AppLocale): string {
-  return new Intl.ListFormat(TAG[locale], { type: "conjunction" }).format(
-    items,
-  );
+export function formatList(
+  items: string[],
+  locale: AppLocale,
+  /** "disjunction" for "Buddy or Max" · "Buddy ou Max". */
+  type: "conjunction" | "disjunction" = "conjunction",
+): string {
+  return new Intl.ListFormat(TAG[locale], { type }).format(items);
 }
 
 // ── MONEY, NUMBERS, PERCENT ────────────────────────────────────────────────
@@ -402,6 +405,50 @@ export function formatRelative(
   if (Math.round(absMin) === 0) return rtf.format(0, "second");
   if (absMin < 60) return rtf.format(Math.round(diffMs / 60000), "minute");
   return rtf.format(Math.round(diffMs / 3600000), "hour");
+}
+
+/**
+ * `today` · `tomorrow` · `Sep 12` — a calendar DAY, relative only while it is
+ * one of three words.
+ *
+ * For a value that is a date and not a moment: a homework's next due day, the
+ * day a session happened, the day a report card went out. `formatRelative`
+ * measures hours; this measures calendar days, so a session at 23:00 last
+ * night is "yesterday" and not "il y a 9 h".
+ *
+ * Found as THREE copies of the same hand-rolled function in the customer
+ * training page, each with its own English — "Today", "in 3d", "2w ago",
+ * "1mo ago" — and each past §5q's 24-hour line. Here the relative words stop
+ * at yesterday and tomorrow and a date takes over, in both directions.
+ *
+ * `start` capitalises the first letter, for a value that opens a label on its
+ * own; mid-sentence ("Due tomorrow") it stays lower case, as French and
+ * English both want.
+ */
+export function formatDayRelative(
+  value: string,
+  locale: AppLocale,
+  todayISO: string,
+  position: "inline" | "start" = "inline",
+): string {
+  const day = (iso: string) => {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return { utc: Date.UTC(y, m - 1, d), local: new Date(y, m - 1, d) };
+  };
+  const target = day(value);
+  if (Number.isNaN(target.utc)) return NO_DATE;
+  const days = Math.round((target.utc - day(todayISO).utc) / 86_400_000);
+
+  const out =
+    Math.abs(days) <= 1
+      ? new Intl.RelativeTimeFormat(TAG[locale], { numeric: "auto" }).format(
+          days,
+          "day",
+        )
+      : formatDateShort(target.local, locale);
+  return position === "start"
+    ? out.charAt(0).toLocaleUpperCase(TAG[locale]) + out.slice(1)
+    : out;
 }
 
 /**

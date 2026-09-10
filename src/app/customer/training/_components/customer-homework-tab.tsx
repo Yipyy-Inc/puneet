@@ -42,6 +42,15 @@ import type {
   TrainingHomework,
   TrainingHomeworkMedia,
 } from "@/lib/training-enrollment";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatDayRelative,
+  formatNumber,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   /** Customer (owner) ID — used to scope the view to that owner's pets. */
@@ -56,26 +65,15 @@ interface PetHomeworkGroup {
   completed: TrainingHomework[];
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function relativeDays(iso: string, todayISO: string): string {
-  const today = new Date(`${todayISO}T00:00:00`).getTime();
-  const target = new Date(`${iso.slice(0, 10)}T00:00:00`).getTime();
-  const days = Math.round((target - today) / 86_400_000);
-  if (days === 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days === -1) return "yesterday";
-  if (days > 0) return `in ${days}d`;
-  return `${-days}d ago`;
+// A calendar date — the value is a day, so it is read at local midnight
+// and never shifts with the zone.
+function formatDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 export function CustomerHomeworkTab({ customerId }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const queryClient = useQueryClient();
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
@@ -194,8 +192,7 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        No homework yet. Once you finish your first training session, the
-        instructor will assign exercises to practice here between classes.
+        {t("noHomeworkYet")}
       </div>
     );
   }
@@ -206,19 +203,22 @@ export function CustomerHomeworkTab({ customerId }: Props) {
         <div className="flex items-center gap-3 text-sm text-slate-700">
           <Sparkles className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold text-slate-900 tabular-nums">
-              {totalPracticedToday}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-slate-900 tabular-nums">
-              {totalActive}
-            </span>{" "}
-            practiced today
+            {rich(t("practicedTodayOf"), {
+              done: (
+                <span className="font-semibold text-slate-900 tabular-nums">
+                  {totalPracticedToday}
+                </span>
+              ),
+              total: (
+                <span className="font-semibold text-slate-900 tabular-nums">
+                  {totalActive}
+                </span>
+              ),
+            })}
           </span>
         </div>
         <p className="text-muted-foreground text-[12px]">
-          Tap &quot;Mark as Done&quot; once your dog has practiced. Your
-          instructor sees it on their end.
+          {t("tapMarkAsDone")}
         </p>
       </div>
 
@@ -234,10 +234,14 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                   {group.petName}
                 </h3>
                 <p className="text-muted-foreground text-[11px]">
-                  {group.active.length} active homework
-                  {group.active.length === 1 ? "" : "s"}
+                  {fill(
+                    group.active.length === 1
+                      ? "activeHomeworkOne"
+                      : "activeHomeworkOther",
+                    { n: group.active.length },
+                  )}
                   {group.completed.length > 0 &&
-                    ` · ${group.completed.length} done`}
+                    ` · ${fill("doneCount", { n: group.completed.length })}`}
                 </p>
               </div>
             </div>
@@ -245,8 +249,7 @@ export function CustomerHomeworkTab({ customerId }: Props) {
             {group.active.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed bg-emerald-50/30 px-4 py-6 text-center text-sm">
                 <CheckCircle2 className="mx-auto mb-1.5 size-5 text-emerald-500" />
-                No active homework right now — you&apos;ll see new exercises
-                here after the next session.
+                {t("noActiveHomeworkRightNow")}
               </div>
             ) : (
               <ul className="space-y-3">
@@ -280,14 +283,14 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                     <ChevronRight className="text-muted-foreground size-4" />
                   )}
                   <h3 className="text-sm font-semibold text-slate-700">
-                    Completed homework
+                    {t("completedHomework")}
                   </h3>
                   <span className="text-muted-foreground text-[11px] tabular-nums">
                     {totalCompleted}
                   </span>
                 </div>
                 <span className="text-muted-foreground text-[11px]">
-                  {showCompleted ? "Hide" : "Show archive"}
+                  {showCompleted ? t("hide") : t("showArchive")}
                 </span>
               </button>
             </CollapsibleTrigger>
@@ -309,8 +312,10 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                             <p className="text-muted-foreground text-[11px]">
                               {g.petName} ·{" "}
                               {hw.completedDate
-                                ? `Done ${formatDate(hw.completedDate)}`
-                                : "Done"}
+                                ? fill("doneOn", {
+                                    date: formatDate(hw.completedDate, locale),
+                                  })
+                                : t("done")}
                             </p>
                           </div>
                           <Badge
@@ -318,7 +323,7 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                             className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
                           >
                             <CheckCircle2 className="size-3" />
-                            Completed
+                            {t("completed")}
                           </Badge>
                         </div>
                       </li>
@@ -348,6 +353,7 @@ function HomeworkCard({
   onAttachVideo: (videoUrl: string) => void;
   onRemoveVideo: () => void;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
   const practiced = hasPracticedToday(homework, todayISO);
   const streak = getPracticeStreakDays(homework, todayISO);
   const lastPracticed = getLastPracticedDate(homework);
@@ -380,7 +386,7 @@ function HomeworkCard({
     const file = files?.[0];
     if (!file) return;
     if (!file.type.startsWith("video/")) {
-      toast.error("Please pick a video file.");
+      toast.error(t("pleasePickAVideoFile"));
       return;
     }
     setValidating(true);
@@ -399,7 +405,9 @@ function HomeworkCard({
       if (probe.duration > 21) {
         URL.revokeObjectURL(probeUrl);
         toast.error(
-          `That clip is ${Math.round(probe.duration)} s long. Please pick a video 20 s or shorter.`,
+          fill("clipTooLong", {
+            seconds: formatNumber(Math.round(probe.duration), locale),
+          }),
         );
         cleanup();
         return;
@@ -412,7 +420,7 @@ function HomeworkCard({
     };
     probe.onerror = () => {
       URL.revokeObjectURL(probeUrl);
-      toast.error("Couldn't read that video file. Try another clip.");
+      toast.error(t("couldnTReadThatVideo"));
       cleanup();
     };
   }
@@ -445,17 +453,25 @@ function HomeworkCard({
               <Badge
                 variant="outline"
                 className="gap-1 border-sky-200 bg-sky-50 text-sky-700"
-                title={`Next practice ${formatDate(homework.nextDueDate)}`}
+                title={fill("nextPracticeOn", {
+                  date: formatDate(homework.nextDueDate, locale),
+                })}
               >
                 <CalendarClock className="size-3" />
-                Due {relativeDays(homework.nextDueDate, todayISO)}
+                {fill("dueWhen", {
+                  when: formatDayRelative(
+                    homework.nextDueDate,
+                    locale,
+                    todayISO,
+                  ),
+                })}
               </Badge>
             )}
             {streak >= 2 && (
               <Badge
                 variant="outline"
                 className="gap-1 border-orange-200 bg-orange-50 text-orange-700"
-                title="Consecutive days of practice"
+                title={t("consecutiveDaysOfPractice")}
               >
                 <Flame className="size-3" />
                 {streak}-day streak
@@ -488,12 +504,14 @@ function HomeworkCard({
               {lastPracticed ? (
                 <>
                   <Clock className="size-3" />
-                  Last practiced {relativeDays(lastPracticed, todayISO)}
+                  {fill("lastPracticedWhen", {
+                    when: formatDayRelative(lastPracticed, locale, todayISO),
+                  })}
                 </>
               ) : (
                 <>
                   <Sparkles className="size-3" />
-                  Mark today&apos;s practice to start a streak!
+                  {t("markTodaysPracticeToStart")}
                 </>
               )}
             </div>
@@ -514,7 +532,7 @@ function HomeworkCard({
               )}
             >
               <CheckCircle2 className="size-4" />
-              {practiced ? "Done for today" : "Mark as Done for today"}
+              {practiced ? t("doneForToday") : t("markAsDoneForToday")}
             </Button>
           </div>
 
@@ -522,11 +540,10 @@ function HomeworkCard({
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
               <p className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-800 dark:text-amber-200">
                 <Video className="size-3.5" />
-                Your trainer requires a short video for this submission.
+                {t("yourTrainerRequiresAShort")}
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px]">
-                Upload a clip below — &quot;Mark as Done&quot; activates once
-                the video is attached.
+                {t("uploadClipBelow")}
               </p>
             </div>
           )}
@@ -548,10 +565,17 @@ function HomeworkCard({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
                   <PlayCircle className="size-3" />
-                  Video submitted {todayEntry?.videoAttachedAt ? "today" : ""}
-                  {todaysResponse
-                    ? " — trainer responded below"
-                    : " — your trainer can review it next session"}
+                  {t(
+                    todayEntry?.videoAttachedAt
+                      ? "videoSubmittedToday"
+                      : "videoSubmitted",
+                  )}
+                  {" — "}
+                  {t(
+                    todaysResponse
+                      ? "trainerRespondedBelow"
+                      : "trainerCanReviewNextSession",
+                  )}
                 </span>
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -563,7 +587,7 @@ function HomeworkCard({
                     disabled={validating}
                   >
                     <Video className="size-3.5" />
-                    Replace
+                    {t("replace")}
                   </Button>
                   <Button
                     type="button"
@@ -573,7 +597,7 @@ function HomeworkCard({
                     className="h-8 gap-1.5 px-2 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                   >
                     <Trash2 className="size-3.5" />
-                    Remove
+                    {t("remove")}
                   </Button>
                 </div>
               </div>
@@ -596,12 +620,12 @@ function HomeworkCard({
             >
               <Video className="size-4" />
               {validating
-                ? "Reading clip…"
+                ? t("readingClip")
                 : requireVideo
-                  ? "Upload a video (required)"
-                  : "Upload a video (optional)"}
+                  ? t("uploadAVideoRequired")
+                  : t("uploadAVideoOptional")}
               <span className="text-muted-foreground ml-1 text-[10px] font-normal">
-                · max 20 s
+                · {t("max20Seconds")}
               </span>
             </Button>
           )}
@@ -644,20 +668,17 @@ function TrainerResponseBlock({
    *  block so it's clear the response is about an older video, not today's. */
   practiceDate?: string;
 }) {
-  const when = respondedAtISO
-    ? new Date(respondedAtISO).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
-    : null;
+  const { t, fill, locale } = useCustomerText("training");
+  const when = respondedAtISO ? formatDateShort(respondedAtISO, locale) : null;
   return (
     <div className="space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 dark:border-indigo-900/40 dark:bg-indigo-950/30">
       <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
         <Sparkles className="size-3" />
-        Trainer says
+        {t("trainerSays")}
         {practiceDate && (
           <span className="text-muted-foreground ml-1 font-normal tracking-normal normal-case">
-            · about your {formatDate(practiceDate)} clip
+            ·{" "}
+            {fill("aboutYourClip", { date: formatDate(practiceDate, locale) })}
           </span>
         )}
       </p>
@@ -666,7 +687,7 @@ function TrainerResponseBlock({
       </p>
       {(trainerName || when) && (
         <p className="text-muted-foreground text-[10px]">
-          {trainerName ?? "Your trainer"}
+          {trainerName ?? t("yourTrainer")}
           {when ? ` · ${when}` : ""}
         </p>
       )}
@@ -681,6 +702,7 @@ function HomeworkMediaGallery({
   media: TrainingHomeworkMedia[];
   title: string;
 }) {
+  const { t, fill } = useCustomerText("training");
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {media.map((item, idx) => (
@@ -689,7 +711,7 @@ function HomeworkMediaGallery({
             <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
               <iframe
                 src={item.url}
-                title={item.caption ?? `${title} — demo video`}
+                title={item.caption ?? fill("demoVideoOf", { title })}
                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 className="absolute inset-0 size-full"
@@ -699,7 +721,7 @@ function HomeworkMediaGallery({
             <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-100">
               <Image
                 src={item.url}
-                alt={item.caption ?? `${title} — reference image`}
+                alt={item.caption ?? fill("referenceImageOf", { title })}
                 fill
                 sizes="(max-width: 640px) 100vw, 50vw"
                 className="object-cover"
@@ -714,7 +736,7 @@ function HomeworkMediaGallery({
               <ImageIcon className="size-3" />
             )}
             {item.caption ??
-              (item.type === "video" ? "Demo video" : "Reference photo")}
+              (item.type === "video" ? t("demoVideo") : t("referencePhoto"))}
           </figcaption>
         </figure>
       ))}

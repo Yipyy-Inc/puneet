@@ -70,6 +70,9 @@ type ShellCatalogue = {
   /** The inbox — MessageCenter and its parts, used by the facility, employee
    *  and customer portals alike. */
   messaging: Record<string, string>;
+  /** `components/training` — the progress charts and milestones, shown on the
+   *  customer's training page and the facility's student profile alike. */
+  training: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */

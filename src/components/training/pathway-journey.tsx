@@ -37,6 +37,13 @@ import type {
   TrainingPathway,
   TrainingPathwayStep,
 } from "@/data/training-pathways";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
 
 /** Loose name normalization — mirrors the helper in training-program-prereqs
  *  so a "Basic Obedience" enrollment maps to a "Basic Obedience Package"
@@ -66,6 +73,7 @@ interface Props {
 }
 
 export function PathwayJourney({ petId, petName, enrollments }: Props) {
+  const t = useShellText("training");
   void petId;
   const { data: pathways = [] } = useQuery(trainingQueries.trainingPathways());
   const { data: programs = [] } = useQuery(trainingQueries.packages());
@@ -146,7 +154,7 @@ export function PathwayJourney({ petId, petName, enrollments }: Props) {
         </div>
         <div className="min-w-0 flex-1">
           <h4 className="text-[13px] font-bold tracking-wider text-indigo-700 uppercase">
-            Pathway Journey
+            {t("pathwayJourney")}
           </h4>
           <p className="mt-0.5 text-base font-semibold text-slate-800">
             {activePathway.name}
@@ -197,6 +205,7 @@ function PathwayStepNode({
   petName: string;
   allSeries: TrainingSeries[];
 }) {
+  const t = useShellText("training");
   const [open, setOpen] = useState(false);
   const program = step.program;
 
@@ -218,19 +227,19 @@ function PathwayStepNode({
       <div className="flex items-center gap-1.5">
         <StatusBadge status={step.status} index={index} />
         <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-          Step {index + 1}
+          {t("stepN").replace("{n}", String(index + 1))}
         </span>
         {!step.required && (
           <Badge
             variant="outline"
             className="ml-auto border-slate-200 bg-slate-50 px-1.5 py-0 text-[9.5px] font-medium text-slate-600"
           >
-            Optional
+            {t("optional")}
           </Badge>
         )}
       </div>
       <p className="truncate text-[13px] font-semibold text-slate-800">
-        {program?.name ?? "Unknown program"}
+        {program?.name ?? t("unknownProgram")}
       </p>
       {step.description && (
         <p className="text-muted-foreground line-clamp-2 text-[11px]/snug">
@@ -285,17 +294,18 @@ function StatusBadge({ status, index }: { status: StepStatus; index: number }) {
 }
 
 function StatusLine({ step }: { step: PathwayStepView }) {
+  const t = useShellText("training");
   if (step.status === "completed") {
     return (
       <p className="text-[10.5px] font-semibold tracking-wider text-emerald-700 uppercase">
-        Completed
+        {t("completed")}
       </p>
     );
   }
   if (step.status === "current") {
     return (
       <p className="text-[10.5px] font-semibold tracking-wider text-indigo-700 uppercase">
-        Currently enrolled
+        {t("currentlyEnrolled")}
         {typeof step.progressPct === "number" && (
           <span className="text-muted-foreground ml-1 tracking-normal normal-case">
             · {step.progressPct}%
@@ -306,7 +316,7 @@ function StatusLine({ step }: { step: PathwayStepView }) {
   }
   return (
     <p className="text-muted-foreground text-[10.5px] font-semibold tracking-wider uppercase">
-      Upcoming
+      {t("upcoming")}
     </p>
   );
 }
@@ -322,6 +332,8 @@ function UpcomingStepDetail({
   allSeries: TrainingSeries[];
   onClose: () => void;
 }) {
+  const t = useShellText("training");
+  const locale = useShellLocale();
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // Match by normalized name overlap — same matching rule the rest of the
@@ -344,7 +356,7 @@ function UpcomingStepDetail({
     <div className="space-y-3 p-3">
       <div>
         <p className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
-          Up next for {petName}
+          {t("upNextFor").replace("{pet}", petName)}
         </p>
         <p className="mt-0.5 text-sm font-semibold text-slate-800">
           {program.name}
@@ -361,13 +373,15 @@ function UpcomingStepDetail({
           variant="outline"
           className="border-slate-200 bg-slate-50 text-slate-700"
         >
-          {program.sessions} sessions
+          {t(
+            program.sessions === 1 ? "sessionCountOne" : "sessionCountOther",
+          ).replace("{n}", String(program.sessions))}
         </Badge>
         <Badge
           variant="outline"
           className="border-slate-200 bg-slate-50 text-slate-700"
         >
-          ${program.price}
+          {formatMoney(program.price, locale)}
         </Badge>
         {program.classType === "group" && program.maxGroupSize && (
           <Badge
@@ -375,7 +389,7 @@ function UpcomingStepDetail({
             className="gap-1 border-slate-200 bg-slate-50 text-slate-700"
           >
             <Users className="size-3" />
-            Max {program.maxGroupSize}
+            {t("maxGroupSize").replace("{n}", String(program.maxGroupSize))}
           </Badge>
         )}
       </div>
@@ -383,12 +397,11 @@ function UpcomingStepDetail({
       <div className="space-y-1.5 border-t pt-2.5">
         <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
           <CalendarClock className="size-3" />
-          Available series
+          {t("availableSeries")}
         </p>
         {matchingUpcoming.length === 0 ? (
           <p className="text-muted-foreground text-[11.5px] italic">
-            No upcoming series scheduled — tap Enroll to join the waitlist or
-            see future dates.
+            {t("noUpcomingSeriesScheduled")}
           </p>
         ) : (
           <ul className="space-y-1">
@@ -398,10 +411,10 @@ function UpcomingStepDetail({
                 className="flex items-center justify-between gap-2 rounded-md border bg-slate-50/40 px-2 py-1.5 text-[11.5px]"
               >
                 <span className="min-w-0 truncate text-slate-700">
-                  {formatStartLabel(s.startDate)} · {s.instructorName}
+                  {formatStartLabel(s.startDate, locale)} · {s.instructorName}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-[10.5px]">
-                  {s.startTime}
+                  {formatTimeOfDay(s.startTime, locale)}
                 </span>
               </li>
             ))}
@@ -413,7 +426,7 @@ function UpcomingStepDetail({
         <Link
           href={`/customer/bookings/new?service=training&program=${encodeURIComponent(program.id)}`}
         >
-          Enroll {petName}
+          {t("enrollPet").replace("{pet}", petName)}
           <ArrowRight className="size-3.5" />
         </Link>
       </Button>
@@ -421,10 +434,8 @@ function UpcomingStepDetail({
   );
 }
 
-function formatStartLabel(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function formatStartLabel(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }

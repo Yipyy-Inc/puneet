@@ -34,13 +34,22 @@ import { SKILL_LEVEL_LABELS } from "@/types/training";
 import type { Pet } from "@/types/pet";
 import type { TrainingPackage } from "@/types/training";
 import { distinctEnrolledForSeries } from "@/data/training-series";
-import { getDayName, type TrainingSeries } from "@/lib/training-series";
+import type { TrainingSeries } from "@/lib/training-series";
 import {
   checkPrerequisitesWithProgress,
   hasCompletedPrerequisites,
   type PrereqDetail,
 } from "@/lib/training-program-prereqs";
 import { hexToRgba } from "@/lib/color-utils";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateShort,
+  formatMoney,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   series: TrainingSeries[];
@@ -56,11 +65,6 @@ interface Props {
    *  upcoming series is at capacity. */
   onJoinProgramWaitlist: (course: TrainingPackage) => void;
 }
-
-const CLASS_TYPE_LABEL: Record<TrainingPackage["classType"], string> = {
-  group: "Group",
-  private: "Private",
-};
 
 const CLASS_TYPE_CLS: Record<TrainingPackage["classType"], string> = {
   group: "border-indigo-200 bg-indigo-50 text-indigo-700",
@@ -112,6 +116,7 @@ export function CustomerTrainingCatalog({
   onEnrollInCourse,
   onJoinProgramWaitlist,
 }: Props) {
+  const { t } = useCustomerText("training");
   const { data: packages = [] } = useQuery(trainingQueries.packages());
   const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
   const { data: pathways = [] } = useQuery(trainingQueries.trainingPathways());
@@ -169,7 +174,7 @@ export function CustomerTrainingCatalog({
     <div className="space-y-4">
       <div>
         <Input
-          placeholder="Search by course name, discipline, or skill level…"
+          placeholder={t("searchByCourseNameDiscipline")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -179,8 +184,8 @@ export function CustomerTrainingCatalog({
         <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
           <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
           {packages.length === 0
-            ? "This facility hasn't published any training programs yet."
-            : "No courses match your search."}
+            ? t("thisFacilityHasnTPublished")
+            : t("noCoursesMatchYourSearch")}
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -271,6 +276,7 @@ function CourseCard({
   onEnroll: () => void;
   onJoinWaitlist: () => void;
 }) {
+  const { t, fill, locale } = useCustomerText("training");
   const includes = course.includes ?? [];
   const showIncludes = includes.slice(0, 4);
   const overflow = includes.length - showIncludes.length;
@@ -306,10 +312,10 @@ function CourseCard({
           <Badge
             variant="default"
             className="absolute top-2 left-2 gap-1 bg-amber-500 text-white shadow-sm"
-            title="Popular pick"
+            title={t("popularPick")}
           >
             <Star className="size-3 fill-current" />
-            Popular
+            {t("popular")}
           </Badge>
         )}
       </div>
@@ -320,7 +326,7 @@ function CourseCard({
             {course.name}
           </h3>
           <p className="text-lg/tight font-bold text-slate-900 tabular-nums">
-            ${course.price}
+            {formatMoney(course.price, locale)}
           </p>
         </div>
         {course.description && (
@@ -345,7 +351,7 @@ function CourseCard({
               <span
                 className="size-1.5 rounded-full"
                 style={{
-                  backgroundColor: disciplineColor ?? "rgb(148 163 184)",
+                  backgroundColor: disciplineColor ?? "rgb(148 163 184)", // french-ok: a colour, not copy
                 }}
               />
               {disciplineName}
@@ -373,7 +379,8 @@ function CourseCard({
             ) : (
               <Users className="size-3" />
             )}
-            {CLASS_TYPE_LABEL[course.classType]}
+            {/* The class type's key IS its catalogue key: "group", "private". */}
+            {t(course.classType)}
             {course.classType === "group" && course.maxGroupSize && (
               <span className="text-muted-foreground ml-0.5">
                 · max {course.maxGroupSize}
@@ -390,10 +397,10 @@ function CourseCard({
             <Badge
               variant="outline"
               className="gap-1 border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700"
-              title={`This program is part of the ${pathwayName} training pathway`}
+              title={fill("partOfPathwayLong", { pathway: pathwayName })}
             >
               <Route className="size-3" />
-              Part of {pathwayName}
+              {fill("partOfPathway", { pathway: pathwayName })}
             </Badge>
           )}
         </div>
@@ -403,14 +410,18 @@ function CourseCard({
         {/* What's included ────────────────────────────────────────────── */}
         <div className="flex-1">
           <p className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
-            What&apos;s included
+            {t("whatsIncluded")}
           </p>
           {showIncludes.length === 0 ? (
             <p className="text-muted-foreground text-[12px] italic">
-              {course.sessions} session
-              {course.sessions === 1 ? "" : "s"}
+              {fill(
+                course.sessions === 1 ? "sessionCountOne" : "sessionCountOther",
+                {
+                  n: course.sessions,
+                },
+              )}
               {course.validityDays
-                ? ` · valid for ${course.validityDays} days`
+                ? ` · ${fill("validForDays", { n: course.validityDays })}`
                 : ""}
             </p>
           ) : (
@@ -426,7 +437,7 @@ function CourseCard({
               ))}
               {overflow > 0 && (
                 <li className="text-muted-foreground pl-4 text-[11px] italic">
-                  + {overflow} more
+                  {fill("plusMore", { n: overflow })}
                 </li>
               )}
             </ul>
@@ -440,7 +451,7 @@ function CourseCard({
           <div className="space-y-1.5">
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
               <CalendarClock className="size-3" />
-              Upcoming sessions
+              {t("upcomingSessions")}
             </p>
             <ul className="flex flex-wrap gap-1.5">
               {upcomingWithSpots.map(({ series, spotsLeft }) => (
@@ -465,13 +476,18 @@ function CourseCard({
             onJoinWaitlist={onJoinWaitlist}
           />
           <Button onClick={onSelect} variant="outline" className="gap-1">
-            View Available Classes
+            {t("viewAvailableClasses")}
             <ArrowRight className="size-4" />
           </Button>
           <p className="text-muted-foreground text-center text-[11px]">
             {upcomingCount === 0
-              ? "No classes scheduled right now"
-              : `${upcomingCount} upcoming ${upcomingCount === 1 ? "class" : "classes"}`}
+              ? t("noClassesScheduledRightNow")
+              : fill(
+                  upcomingCount === 1
+                    ? "upcomingClassesOne"
+                    : "upcomingClassesOther",
+                  { n: upcomingCount },
+                )}
           </p>
         </div>
       </CardContent>
@@ -479,20 +495,10 @@ function CourseCard({
   );
 }
 
-function formatTime12(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  if (m === 0) return `${hour12} ${period}`;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
-}
-
-function formatShortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function formatShortDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateShort(new Date(y, m - 1, d), locale);
 }
 
 function UpcomingSessionChip({
@@ -502,9 +508,10 @@ function UpcomingSessionChip({
   series: TrainingSeries;
   spotsLeft: number;
 }) {
-  const dayShort = getDayName(series.dayOfWeek).slice(0, 3);
-  const dateLabel = formatShortDate(series.startDate);
-  const timeLabel = formatTime12(series.startTime);
+  const { t, fill, locale } = useCustomerText("training");
+  const dayShort = formatWeekday(series.dayOfWeek, locale);
+  const dateLabel = formatShortDate(series.startDate, locale);
+  const timeLabel = formatTimeOfDay(series.startTime, locale);
   const isFull = spotsLeft === 0;
   const isAlmostFull = !isFull && spotsLeft <= 3;
   return (
@@ -517,7 +524,12 @@ function UpcomingSessionChip({
             ? "border-amber-200 bg-amber-50 text-amber-800"
             : "border-emerald-200 bg-emerald-50 text-emerald-700",
       )}
-      title={`${series.seriesName} · starts ${dateLabel} · ${dayShort} ${timeLabel}`}
+      title={fill("seriesStartsTitle", {
+        series: series.seriesName,
+        date: dateLabel,
+        day: dayShort,
+        time: timeLabel,
+      })}
     >
       <span className="font-semibold tabular-nums">{dateLabel}</span>
       <span className="text-muted-foreground/80">·</span>
@@ -527,8 +539,10 @@ function UpcomingSessionChip({
       <span className="text-muted-foreground/80">—</span>
       <span className="font-medium">
         {isFull
-          ? "Full (Join waitlist)"
-          : `${spotsLeft} ${spotsLeft === 1 ? "spot" : "spots"} left`}
+          ? t("fullJoinWaitlist")
+          : fill(spotsLeft === 1 ? "spotsLeftOne" : "spotsLeftOther", {
+              n: spotsLeft,
+            })}
       </span>
     </span>
   );
@@ -555,16 +569,17 @@ function EnrollAction({
   onEnroll: () => void;
   onJoinWaitlist: () => void;
 }) {
+  const { t } = useCustomerText("training");
   // No upcoming series at all — disable both paths.
   if (upcomingCount === 0) {
     return (
       <Button
         disabled
         className="gap-1.5 bg-emerald-600 text-white"
-        title="No upcoming series — check back soon."
+        title={t("noUpcomingSeriesCheckBack")}
       >
         <GraduationCap className="size-4" />
-        Enroll
+        {t("enroll")}
       </Button>
     );
   }
@@ -578,7 +593,7 @@ function EnrollAction({
         className="gap-1.5 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
       >
         <Clock className="size-4" />
-        Join Waitlist
+        {t("joinWaitlist")}
       </Button>
     );
   }
@@ -591,7 +606,7 @@ function EnrollAction({
           <TooltipTrigger asChild>
             <Button disabled className="gap-1.5 bg-emerald-600/60 text-white">
               <Lock className="size-4" />
-              Enroll when eligible
+              {t("enrollWhenEligible")}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs text-[12px]">
@@ -607,10 +622,10 @@ function EnrollAction({
     <Button
       onClick={onEnroll}
       className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-      title="Jump into the enrollment flow with this program pre-selected."
+      title={t("jumpIntoTheEnrollmentFlow")}
     >
       <GraduationCap className="size-4" />
-      Enroll
+      {t("enroll")}
     </Button>
   );
 }
@@ -631,6 +646,7 @@ function PrereqsBadge({
   }[];
   courseName: string;
 }) {
+  const { t, fill } = useCustomerText("training");
   return (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
@@ -647,12 +663,14 @@ function PrereqsBadge({
               className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
             >
               <Lock className="size-3" />
-              Prereqs apply
+              {t("prereqsApply")}
             </Badge>
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs text-[12px]">
-          <p className="mb-1 font-semibold">Prerequisites for {courseName}</p>
+          <p className="mb-1 font-semibold">
+            {fill("prerequisitesFor", { course: courseName })}
+          </p>
           <PrereqTooltipBody eligibilityByPet={eligibilityByPet} />
         </TooltipContent>
       </Tooltip>
@@ -669,10 +687,11 @@ function PrereqTooltipBody({
     details: PrereqDetail[];
   }[];
 }) {
+  const { t, fill } = useCustomerText("training");
   if (eligibilityByPet.length === 0) {
     return (
       <span className="text-[12px]">
-        Required programs must be completed first.
+        {t("requiredProgramsMustBeCompleted")}
       </span>
     );
   }
@@ -684,8 +703,9 @@ function PrereqTooltipBody({
             <li key={pet.id} className="inline-flex items-start gap-1">
               <Check className="mt-0.5 size-3 shrink-0 text-emerald-500" />
               <span>
-                <span className="font-semibold">{pet.name}</span> meets every
-                prerequisite.
+                {rich(t("petMeetsEveryPrerequisite"), {
+                  pet: <span className="font-semibold">{pet.name}</span>,
+                })}
               </span>
             </li>
           );
@@ -694,7 +714,9 @@ function PrereqTooltipBody({
         return (
           <li key={pet.id} className="space-y-0.5">
             <p>
-              <span className="font-semibold">{pet.name}</span> still needs:
+              {rich(t("petStillNeeds"), {
+                pet: <span className="font-semibold">{pet.name}</span>,
+              })}
             </p>
             <ul className="ml-3 list-disc space-y-0.5">
               {missing.map((d) => (
@@ -705,14 +727,16 @@ function PrereqTooltipBody({
                       {" "}
                       —{" "}
                       <span className="text-emerald-700 dark:text-emerald-300">
-                        currently in {d.inProgress.seriesName} ·{" "}
-                        {d.inProgress.sessionsAttended} of{" "}
-                        {d.inProgress.totalSessions} sessions completed
+                        {fill("currentlyInSeries", {
+                          series: d.inProgress.seriesName,
+                          done: d.inProgress.sessionsAttended,
+                          total: d.inProgress.totalSessions,
+                        })}
                       </span>
-                      {". Enrollment will unlock after the series completes."}
+                      {t("enrollmentUnlocksAfter")}
                     </>
                   ) : (
-                    <> — not started yet.</>
+                    <> — {t("notStartedYet")}</>
                   )}
                 </li>
               ))}

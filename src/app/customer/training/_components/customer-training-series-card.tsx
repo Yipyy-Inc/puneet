@@ -19,7 +19,16 @@ import {
   Users,
 } from "lucide-react";
 import { trainers } from "@/data/training";
-import { getDayName, type TrainingSeries } from "@/lib/training-series";
+import type { TrainingSeries } from "@/lib/training-series";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatList,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   series: TrainingSeries;
@@ -39,21 +48,10 @@ interface Props {
   onBookDropIn: () => void;
 }
 
-function formatStartDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+// A calendar date, read at local midnight so no zone can move it.
+function formatStartDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 export function CustomerTrainingSeriesCard({
@@ -67,6 +65,7 @@ export function CustomerTrainingSeriesCard({
   onDetails,
   onBookDropIn,
 }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const isFull = spotsLeft === 0;
   const isAlmostFull = !isFull && spotsLeft <= 3;
 
@@ -95,7 +94,9 @@ export function CustomerTrainingSeriesCard({
       ? "border-amber-200 bg-amber-50 text-amber-700"
       : "border-emerald-200 bg-emerald-50 text-emerald-700";
 
-  const startsLabel = isMounted ? formatStartDate(series.startDate) : "";
+  const startsLabel = isMounted
+    ? formatStartDate(series.startDate, locale)
+    : "";
 
   return (
     <Card className="flex h-full flex-col">
@@ -105,20 +106,26 @@ export function CustomerTrainingSeriesCard({
           <li className="flex items-center gap-2">
             <CalendarDays className="text-muted-foreground size-4" />
             <span>
-              Starts{" "}
-              <span className="font-semibold text-slate-900">
-                {startsLabel}
-              </span>
+              {rich(t("startsOn"), {
+                date: (
+                  <span className="font-semibold text-slate-900">
+                    {startsLabel}
+                  </span>
+                ),
+              })}
             </span>
           </li>
           <li className="flex items-center gap-2">
             <Repeat className="text-muted-foreground size-4" />
             <span>
-              {getDayName(series.dayOfWeek)}s · {formatTime(series.startTime)}
+              {fill("everyWeekdayAt", {
+                day: formatWeekday(series.dayOfWeek, locale, "long"),
+                time: formatTimeOfDay(series.startTime, locale),
+              })}
               {series.numberOfWeeks > 0 && (
                 <span className="text-muted-foreground">
                   {" "}
-                  · {series.numberOfWeeks} weeks
+                  · {fill("weeksCount", { n: series.numberOfWeeks })}
                 </span>
               )}
             </span>
@@ -135,7 +142,7 @@ export function CustomerTrainingSeriesCard({
             />
             <span className="min-w-0">
               <span className="block text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                Instructor
+                {t("instructor")}
               </span>
               <span className="block truncate text-sm font-medium text-slate-800">
                 {displayName}
@@ -150,8 +157,11 @@ export function CustomerTrainingSeriesCard({
           <Badge variant="outline" className={cn("gap-1 border", spotsCls)}>
             <Users className="size-3" />
             {isFull
-              ? `Full — ${series.maxCapacity} of ${series.maxCapacity} enrolled`
-              : `${spotsLeft} of ${series.maxCapacity} spots left`}
+              ? fill("fullEnrolled", { n: series.maxCapacity })
+              : fill("spotsLeftOf", {
+                  n: spotsLeft,
+                  total: series.maxCapacity,
+                })}
           </Badge>
         </div>
 
@@ -159,7 +169,9 @@ export function CustomerTrainingSeriesCard({
           <div className="bg-primary/10 rounded-lg p-2 text-sm">
             <div className="text-primary flex items-center gap-2 font-medium">
               <CheckCircle2 className="size-4" />
-              Enrolled: {enrolledPetNames.join(", ")}
+              {fill("enrolledPets", {
+                pets: formatList(enrolledPetNames, locale),
+              })}
             </div>
           </div>
         )}
@@ -170,11 +182,11 @@ export function CustomerTrainingSeriesCard({
           {isFull ? (
             <Button className="w-full" variant="outline" onClick={onWaitlist}>
               <Clock className="mr-2 size-4" />
-              Join Waitlist
+              {t("joinWaitlist")}
             </Button>
           ) : (
             <Button className="w-full" onClick={onEnroll}>
-              Enroll
+              {t("enroll")}
             </Button>
           )}
           {dropInsEnabled && !isFull && (
@@ -185,7 +197,7 @@ export function CustomerTrainingSeriesCard({
               onClick={onBookDropIn}
             >
               <Ticket className="size-4" />
-              Book Drop-In Session
+              {t("bookDropInSession")}
             </Button>
           )}
           <Button
@@ -196,7 +208,7 @@ export function CustomerTrainingSeriesCard({
             onClick={onDetails}
           >
             <Info className="size-3.5" />
-            View course details
+            {t("viewCourseDetails")}
           </Button>
         </div>
       </CardContent>

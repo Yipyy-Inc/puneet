@@ -14,13 +14,13 @@ import { Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Milestone } from "@/lib/pet-milestones";
 import { MILESTONE_VISUAL } from "@/components/training/milestone-visual-table";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatDateLong } from "@/lib/i18n/format";
 
-function formatMilestoneDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function localDay(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 /** Compact single-milestone card. Renders the icon plaque + title + detail +
@@ -32,6 +32,8 @@ export function MilestoneCard({
   milestone: Milestone;
   className?: string;
 }) {
+  const t = useShellText("training");
+  const locale = useShellLocale();
   const visual = MILESTONE_VISUAL[milestone.kind];
   const Icon = visual.icon;
   return (
@@ -54,7 +56,9 @@ export function MilestoneCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[13px]/snug font-bold text-slate-800">
-            {milestone.title}
+            {/* The title is looked up by KIND: `milestone.title` is the
+                English label the milestone was computed with. */}
+            {t(`milestone_${milestone.kind}`)}
           </p>
           {milestone.detail && (
             <p className="text-muted-foreground mt-0.5 truncate text-[11.5px]">
@@ -62,7 +66,7 @@ export function MilestoneCard({
             </p>
           )}
           <p className="text-muted-foreground mt-1.5 text-[10.5px] tabular-nums">
-            {formatMilestoneDate(milestone.achievedISO)}
+            {formatDateLong(localDay(milestone.achievedISO), locale)}
           </p>
         </div>
       </div>
@@ -80,16 +84,17 @@ export function MilestoneTrophyShelf({
   petName: string;
   milestones: Milestone[];
 }) {
+  const t = useShellText("training");
   if (milestones.length === 0) return null;
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
         <Trophy className="size-4 text-amber-500" />
         <h3 className="text-sm font-semibold text-slate-800">
-          {petName}&apos;s trophy shelf
+          {t("trophyShelf").replace("{pet}", petName)}
         </h3>
         <span className="text-muted-foreground text-[11px] tabular-nums">
-          {milestones.length} unlocked
+          {t("unlockedCount").replace("{n}", String(milestones.length))}
         </span>
       </div>
       <ol className="-mx-1 flex snap-x snap-mandatory items-stretch gap-2.5 overflow-x-auto px-1 pb-1">

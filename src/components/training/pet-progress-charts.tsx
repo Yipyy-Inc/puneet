@@ -20,6 +20,8 @@ import type { TrainingSeries } from "@/lib/training-series";
 import type { ExerciseProgressPoint } from "@/components/training/exercise-progress-chart";
 import { computePetMilestones, type Milestone } from "@/lib/pet-milestones";
 import { MilestoneCard } from "@/components/training/milestone-visuals";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { rich } from "@/lib/i18n/rich";
 
 // Recharts is heavy — load it on demand so this tab doesn't pay the cost
 // until the user opens it. Matches the existing analytics-panel pattern.
@@ -35,14 +37,6 @@ const ExerciseProgressChart = dynamic(
     ),
   },
 );
-
-const TIER_LABEL: Record<number, string> = {
-  1: "Developing",
-  2: "Getting it",
-  3: "Good",
-  4: "Excellent",
-  5: "Mastered",
-};
 
 const TIER_COLOR: Record<number, string> = {
   1: "#f43f5e", // rose
@@ -149,6 +143,7 @@ export function PetProgressCharts({
   seriesById,
   audience = "facility",
 }: Props) {
+  const t = useShellText("training");
   const { data: attendances = [] } = useQuery(
     trainingQueries.attendancesForPet(petId),
   );
@@ -207,14 +202,14 @@ export function PetProgressCharts({
     let mastered = 0;
     let improved = 0;
     let biggestMover: ExerciseTrack | null = null;
-    for (const t of tracks) {
-      if (t.latestRating === 5) mastered++;
-      if (t.delta > 0) improved++;
+    for (const track of tracks) {
+      if (track.latestRating === 5) mastered++;
+      if (track.delta > 0) improved++;
       if (
-        t.points.length >= 2 &&
-        (!biggestMover || t.delta > biggestMover.delta)
+        track.points.length >= 2 &&
+        (!biggestMover || track.delta > biggestMover.delta)
       ) {
-        biggestMover = t;
+        biggestMover = track;
       }
     }
     return {
@@ -229,17 +224,11 @@ export function PetProgressCharts({
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Sparkles className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        {audience === "customer" ? (
-          <>
-            No progress data yet — {petName}&apos;s ratings will show up here
-            after the next session.
-          </>
-        ) : (
-          <>
-            No progress data yet — exercise ratings show up here once {petName}{" "}
-            has attended a session.
-          </>
-        )}
+        {t(
+          audience === "customer"
+            ? "noProgressDataCustomer"
+            : "noProgressDataFacility",
+        ).replace("{pet}", petName)}
       </div>
     );
   }
@@ -251,16 +240,22 @@ export function PetProgressCharts({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold tracking-wider text-indigo-600 uppercase">
-              {petName}&apos;s progress journey
+              {t("progressJourney").replace("{pet}", petName)}
             </p>
             <p className="mt-1 text-lg font-bold text-slate-900">
-              {summary.tracked} exercise
-              {summary.tracked === 1 ? "" : "s"} tracked
+              {t(
+                summary.tracked === 1
+                  ? "exercisesTrackedOne"
+                  : "exercisesTrackedOther",
+              ).replace("{n}", String(summary.tracked))}
               {summary.improved > 0 && (
                 <>
                   {" · "}
                   <span className="text-emerald-700">
-                    {summary.improved} improved
+                    {t("improvedCount").replace(
+                      "{n}",
+                      String(summary.improved),
+                    )}
                   </span>
                 </>
               )}
@@ -268,26 +263,33 @@ export function PetProgressCharts({
                 <>
                   {" · "}
                   <span className="text-violet-700">
-                    {summary.mastered} mastered
+                    {t("masteredCount").replace(
+                      "{n}",
+                      String(summary.mastered),
+                    )}
                   </span>
                 </>
               )}
             </p>
             {summary.biggestMover && summary.biggestMover.delta > 0 && (
               <p className="text-muted-foreground mt-1 text-xs">
-                Biggest gain:{" "}
-                <span className="font-semibold text-slate-700">
-                  {summary.biggestMover.name}
-                </span>{" "}
-                — went from{" "}
-                <span className="font-semibold">
-                  {summary.biggestMover.firstRating}/5
-                </span>{" "}
-                to{" "}
-                <span className="font-semibold">
-                  {summary.biggestMover.latestRating}/5
-                </span>
-                .
+                {rich(t("biggestGain"), {
+                  exercise: (
+                    <span className="font-semibold text-slate-700">
+                      {summary.biggestMover.name}
+                    </span>
+                  ),
+                  from: (
+                    <span className="font-semibold">
+                      {summary.biggestMover.firstRating}/5
+                    </span>
+                  ),
+                  to: (
+                    <span className="font-semibold">
+                      {summary.biggestMover.latestRating}/5
+                    </span>
+                  ),
+                })}
               </p>
             )}
           </div>
@@ -295,7 +297,7 @@ export function PetProgressCharts({
             <div className="flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1.5 text-violet-700">
               <Award className="size-4" />
               <span className="text-sm font-semibold">
-                {summary.mastered} mastered
+                {t("masteredCount").replace("{n}", String(summary.mastered))}
               </span>
             </div>
           )}
@@ -304,28 +306,34 @@ export function PetProgressCharts({
 
       {/* Chart grid ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {tracks.map((t) => {
-          const color = TIER_COLOR[t.latestRating];
-          const singlePoint = t.points.length === 1;
+        {tracks.map((track) => {
+          const color = TIER_COLOR[track.latestRating];
+          const singlePoint = track.points.length === 1;
           return (
-            <div key={t.name} className="bg-card rounded-xl border shadow-sm">
+            <div
+              key={track.name}
+              className="bg-card rounded-xl border shadow-sm"
+            >
               <div className="flex items-start justify-between gap-2 border-b px-4 py-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">
                     <Target className="mr-1 inline size-3 align-text-bottom text-slate-400" />
-                    {t.name}
+                    {track.name}
                   </p>
                   <p className="text-muted-foreground mt-0.5 text-[11px]">
-                    {t.points.length} session
-                    {t.points.length === 1 ? "" : "s"} ·{" "}
-                    {TIER_LABEL[t.latestRating]}
+                    {t(
+                      track.points.length === 1
+                        ? "sessionCountOne"
+                        : "sessionCountOther",
+                    ).replace("{n}", String(track.points.length))}{" "}
+                    · {t(`rating${track.latestRating}`)}
                   </p>
                 </div>
-                <DeltaBadge delta={t.delta} />
+                <DeltaBadge delta={track.delta} />
               </div>
 
               <div className="px-2 pt-2 pb-1">
-                <ExerciseProgressChart data={t.points} color={color} />
+                <ExerciseProgressChart data={track.points} color={color} />
               </div>
 
               <div className="text-muted-foreground flex items-center justify-between gap-3 border-t px-4 py-2 text-[11px]">
@@ -334,20 +342,20 @@ export function PetProgressCharts({
                     className={cn(
                       "inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white tabular-nums",
                     )}
-                    style={{ backgroundColor: TIER_COLOR[t.firstRating] }}
+                    style={{ backgroundColor: TIER_COLOR[track.firstRating] }}
                   >
-                    {t.firstRating}
+                    {track.firstRating}
                   </span>
-                  Started
+                  {t("started")}
                 </span>
                 <ArrowRight className="size-3 text-slate-300" />
                 <span className="inline-flex items-center gap-1.5">
-                  {singlePoint ? "Most recent" : "Now"}
+                  {singlePoint ? t("mostRecent") : t("now")}
                   <span
                     className="inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white tabular-nums"
-                    style={{ backgroundColor: TIER_COLOR[t.latestRating] }}
+                    style={{ backgroundColor: TIER_COLOR[track.latestRating] }}
                   >
-                    {t.latestRating}
+                    {track.latestRating}
                   </span>
                 </span>
               </div>
@@ -363,8 +371,11 @@ export function PetProgressCharts({
       <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
         <Sparkles className="size-3" />
         {audience === "customer"
-          ? `Each chart shows ${petName}'s journey from Developing (1) to Mastered (5) over time.`
-          : "Clients see this same view in their portal — a powerful way for owners to watch their dog's journey."}
+          ? t("eachChartShowsJourney")
+              .replace("{pet}", petName)
+              .replace("{low}", t("rating1"))
+              .replace("{high}", t("rating5"))
+          : t("clientsSeeThisView")}
       </p>
     </div>
   );
@@ -381,15 +392,16 @@ function MilestonesSection({
   petName: string;
   milestones: Milestone[];
 }) {
+  const t = useShellText("training");
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Trophy className="size-4 text-amber-500" />
         <h3 className="text-sm font-semibold text-slate-800">
-          {petName}&apos;s milestones
+          {t("milestonesOf").replace("{pet}", petName)}
         </h3>
         <span className="text-muted-foreground text-[11px] tabular-nums">
-          {milestones.length} unlocked
+          {t("unlockedCount").replace("{n}", String(milestones.length))}
         </span>
       </div>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

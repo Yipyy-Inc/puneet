@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import {
   calculateSessionDates,
-  getDayName,
   type TrainingSeries,
 } from "@/lib/training-series";
 import type { Pet } from "@/types/pet";
@@ -51,6 +50,15 @@ import {
 } from "@/lib/training-drop-ins";
 import { clients } from "@/data/clients";
 import { cn } from "@/lib/utils";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatMoney,
+  formatTimeOfDay,
+  formatWeekday,
+} from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   open: boolean;
@@ -59,20 +67,10 @@ interface Props {
   pets: Pet[];
 }
 
-function formatLongDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(time: string): string {
-  const [h, m] = time.split(":").map((p) => Number(p));
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+// A calendar date, read at local midnight so no zone can move it.
+function formatLongDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 function nowMs() {
@@ -84,6 +82,7 @@ function nowMs() {
  *  `allowDropIns: true`. Drop-ins don't propagate to the trainer's Series
  *  Students list (they're per-session, not enrollments). */
 export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const queryClient = useQueryClient();
   const [petId, setPetId] = useState<number | null>(null);
   const [sessionDate, setSessionDate] = useState<string>("");
@@ -182,7 +181,7 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
     if (!canSubmit || !series || !selectedSession) return;
     const pet = dogs.find((p) => p.id === petId);
     if (!pet) {
-      toast.error("Pet not found");
+      toast.error(t("petNotFound"));
       return;
     }
     setBusy(true);
@@ -203,12 +202,16 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
         petName: pet.name,
         petBreed: pet.breed,
         ownerId: owner?.id ?? 0,
+        // french-ok: a stored fallback name on the booking record, not copy
         ownerName: owner?.name ?? "Owner",
         ownerPhone: owner?.phone,
         ownerEmail: owner?.email,
         price: pricePerSession,
         invoiceLine: {
           id: invoiceLineId,
+          // Stored on the invoice line, which the facility reads: a record's
+          // text is not in the language of whoever happened to create it.
+          // french-ok: stored record text, not copy on this screen
           description: `Drop-in fee — ${series.seriesName} · Session ${selectedSession.sessionNumber}`,
           category: "training-drop-in",
           amount: pricePerSession,
@@ -220,13 +223,17 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
       };
       fanOutDropInUpsert(queryClient, booking);
       toast.success(
-        `${pet.name} is booked into ${series.seriesName} on ${formatLongDate(selectedSession.date)}. Confirmation email on the way.`,
+        fill("dropInBooked", {
+          pet: pet.name,
+          series: series.seriesName,
+          date: formatLongDate(selectedSession.date, locale),
+        }),
         { duration: 5000 },
       );
       onOpenChange(false);
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to book drop-in",
+        error instanceof Error ? error.message : t("failedToBookDropIn"),
       );
     } finally {
       setBusy(false);
@@ -239,14 +246,17 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="text-muted-foreground size-4" />
-            Book a Drop-In Session
+            {t("bookADropInSession")}
           </DialogTitle>
           <DialogDescription>
-            Pay for a single session of{" "}
-            <span className="font-medium text-slate-800">
-              {series.seriesName}
-            </span>{" "}
-            — no commitment to the full series.
+            {rich(t("payForASingleSessionOf"), {
+              series: (
+                <span className="font-medium text-slate-800">
+                  {series.seriesName}
+                </span>
+              ),
+            })}{" "}
+            {t("noCommitmentToTheFull")}
           </DialogDescription>
         </DialogHeader>
 
@@ -255,19 +265,19 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
               <PawPrint className="size-4" />
-              Select pet <span className="text-destructive">*</span>
+              {t("selectPet")} <span className="text-destructive">*</span>
             </Label>
             <Select
               value={petId?.toString() ?? ""}
               onValueChange={(v) => setPetId(parseInt(v, 10))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Choose which pet…" />
+                <SelectValue placeholder={t("chooseWhichPet2")} />
               </SelectTrigger>
               <SelectContent>
                 {dogs.length === 0 && (
                   <div className="text-muted-foreground px-3 py-2 text-xs">
-                    No dogs on file — add one to your profile first.
+                    {t("noDogsOnFileAdd")}
                   </div>
                 )}
                 {dogs.map((pet) => (
@@ -283,16 +293,16 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
               <CalendarDays className="size-4" />
-              Session date <span className="text-destructive">*</span>
+              {t("sessionDate")} <span className="text-destructive">*</span>
             </Label>
             {upcomingSessions.length === 0 ? (
               <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[12px] italic">
-                No upcoming sessions available for drop-in right now.
+                {t("noUpcomingSessionsAvailableFor")}
               </p>
             ) : (
               <Select value={sessionDate} onValueChange={setSessionDate}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pick a session…" />
+                  <SelectValue placeholder={t("pickASession")} />
                 </SelectTrigger>
                 <SelectContent>
                   {upcomingSessions.map((s) => {
@@ -305,8 +315,8 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
                           <span className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
                             S{s.sessionNumber}
                           </span>
-                          {formatLongDate(s.date)} ·{" "}
-                          {formatTime(series.startTime)}
+                          {formatLongDate(s.date, locale)} ·{" "}
+                          {formatTimeOfDay(series.startTime, locale)}
                           <span
                             className={cn(
                               "ml-auto text-[10px]",
@@ -318,8 +328,13 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
                             )}
                           >
                             {full
-                              ? "Drop-in full"
-                              : `${left} drop-in${left === 1 ? "" : "s"} left`}
+                              ? t("dropInFull")
+                              : fill(
+                                  left === 1
+                                    ? "dropInsLeftOne"
+                                    : "dropInsLeftOther",
+                                  { n: left },
+                                )}
                           </span>
                         </span>
                       </SelectItem>
@@ -340,14 +355,22 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
                 )}
               >
                 {selectedFull
-                  ? "This session is already at its drop-in cap. Pick another."
-                  : `${selectedSeatsLeft} of ${dropInMax} drop-in seat${dropInMax === 1 ? "" : "s"} still open.`}
+                  ? t("sessionAtDropInCap")
+                  : fill(
+                      dropInMax === 1
+                        ? "dropInSeatsOpenOne"
+                        : "dropInSeatsOpenOther",
+                      { n: selectedSeatsLeft, total: dropInMax },
+                    )}
               </p>
             )}
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Clock className="size-3" />
-              {getDayName(series.dayOfWeek)}s · {formatTime(series.startTime)} –{" "}
-              {formatTime(series.endTime)} · {series.location}
+              {fill("everyWeekdayAt", {
+                day: formatWeekday(series.dayOfWeek, locale, "long"),
+                time: `${formatTimeOfDay(series.startTime, locale)} – ${formatTimeOfDay(series.endTime, locale)}`,
+              })}{" "}
+              · {series.location}
             </p>
           </div>
 
@@ -363,27 +386,26 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
           <div className="space-y-1.5">
             <Label className="inline-flex items-center gap-1.5">
               <DollarSign className="size-4" />
-              Single session
+              {t("singleSession")}
             </Label>
             <div className="flex items-center justify-between rounded-lg border bg-slate-50/40 px-3 py-2.5">
               <div className="text-[12.5px] text-slate-700">
-                Drop-in fee — one session
+                {t("dropInFeeOneSession")}
               </div>
               <span className="text-lg font-bold text-slate-900 tabular-nums">
-                ${pricePerSession}
+                {formatMoney(pricePerSession, locale)}
               </span>
             </div>
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Info className="size-3" />
-              Drop-ins don&apos;t carry over to the rest of the series — you can
-              book additional sessions individually.
+              {t("dropInsDontCarryOver")}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -391,7 +413,11 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
             className="gap-1.5"
           >
             <CalendarCheck className="size-4" />
-            {busy ? "Booking…" : `Book drop-in · $${pricePerSession}`}
+            {busy
+              ? t("booking")
+              : fill("bookDropInFor", {
+                  price: formatMoney(pricePerSession, locale),
+                })}
           </Button>
         </DialogFooter>
         {!waiversOk && (
@@ -399,7 +425,7 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
             variant="outline"
             className="mx-auto mt-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
           >
-            Sign every required waiver to continue
+            {t("signEveryRequiredWaiverTo")}
           </Badge>
         )}
       </DialogContent>

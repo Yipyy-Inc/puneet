@@ -26,20 +26,23 @@ import {
   totalSessionsRemainingForClient,
 } from "@/lib/client-training-packages";
 import { clients } from "@/data/clients";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import type { AppLocale } from "@/lib/language-settings";
+import { formatDateLong } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 interface Props {
   customerId: number;
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// A calendar date, read at local midnight so no zone can move it.
+function formatDate(iso: string, locale: AppLocale): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
 export function CustomerTrainingPackagesTab({ customerId }: Props) {
+  const { t, fill, locale } = useCustomerText("training");
   const [nowMs] = useState(() => Date.now());
   const todayISO = useMemo(
     () => new Date(nowMs).toISOString().split("T")[0]!,
@@ -71,8 +74,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
     return (
       <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
         <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        No training packages yet — once you buy a pack of sessions, you&apos;ll
-        track your balance here.
+        {t("noTrainingPackagesYet")}
       </div>
     );
   }
@@ -83,15 +85,25 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
         <div className="flex items-center gap-3 text-sm text-slate-700">
           <Package className="size-4 text-indigo-500" />
           <span>
-            <span className="font-semibold text-slate-900 tabular-nums">
-              {totalSessions}
-            </span>{" "}
-            training session{totalSessions === 1 ? "" : "s"} remaining
+            {rich(
+              t(
+                totalSessions === 1
+                  ? "trainingSessionsRemainingOne"
+                  : "trainingSessionsRemainingOther",
+              ),
+              {
+                n: (
+                  <span className="font-semibold text-slate-900 tabular-nums">
+                    {totalSessions}
+                  </span>
+                ),
+              },
+            )}
           </span>
         </div>
         <p className="text-muted-foreground inline-flex items-center gap-1 text-[12px]">
           <Sparkles className="size-3" />
-          Your balance updates the moment a session completes.
+          {t("yourBalanceUpdatesTheMoment")}
         </p>
       </div>
 
@@ -136,10 +148,10 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                     </p>
                     <p className="text-muted-foreground mt-0.5 inline-flex items-center gap-1.5 text-[11px]">
                       <PawPrint className="size-3" />
-                      For {pkg.petName}
+                      {fill("forPet", { pet: pkg.petName })}
                       <span className="text-muted-foreground/50">·</span>
                       <ClassIcon className="size-3" />
-                      {pkg.classType === "private" ? "Private" : "Group"}
+                      {pkg.classType === "private" ? t("private") : t("group")}
                     </p>
                   </div>
                   {row.exhausted ? (
@@ -148,7 +160,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                       className="gap-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
                     >
                       <AlertTriangle className="size-3" />
-                      Out
+                      {t("out")}
                     </Badge>
                   ) : row.lowBalance ? (
                     <Badge
@@ -156,7 +168,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                       className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
                     >
                       <AlertTriangle className="size-3" />
-                      Low
+                      {t("low")}
                     </Badge>
                   ) : (
                     <Badge
@@ -164,7 +176,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                       className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
                     >
                       <CheckCircle2 className="size-3" />
-                      Active
+                      {t("active")}
                     </Badge>
                   )}
                 </div>
@@ -184,7 +196,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                       </span>
                     </span>
                     <span className="text-muted-foreground text-[11px]">
-                      sessions left
+                      {t("sessionsLeft")}
                     </span>
                   </div>
                   <Progress
@@ -198,8 +210,11 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
 
                 <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-[11px]">
                   <span>
-                    Purchased {formatDate(pkg.purchaseDate)}
-                    {pkg.expiresAt && ` · Expires ${formatDate(pkg.expiresAt)}`}
+                    {fill("purchasedOn", {
+                      date: formatDate(pkg.purchaseDate, locale),
+                    })}
+                    {pkg.expiresAt &&
+                      ` · ${fill("expiresOn", { date: formatDate(pkg.expiresAt, locale) })}`}
                   </span>
                   {row.expiringSoon && (
                     <Badge
@@ -207,7 +222,7 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                       className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
                     >
                       <CalendarClock className="size-3" />
-                      Expiring soon
+                      {t("expiringSoon")}
                     </Badge>
                   )}
                 </div>
@@ -223,20 +238,27 @@ export function CustomerTrainingPackagesTab({ customerId }: Props) {
                   >
                     <p className="text-[12.5px]/relaxed text-slate-700">
                       {row.exhausted
-                        ? `${pkg.petName} is out of sessions on this package. Renew to keep training going.`
-                        : `Heads up — ${pkg.petName} has ${row.sessionsRemaining} session${row.sessionsRemaining === 1 ? "" : "s"} left. Renew now to avoid a gap.`}
+                        ? fill("outOfSessions", { pet: pkg.petName })
+                        : fill(
+                            row.sessionsRemaining === 1
+                              ? "sessionsLeftOne"
+                              : "sessionsLeftOther",
+                            { pet: pkg.petName, n: row.sessionsRemaining },
+                          )}
                     </p>
                     <Button
                       size="sm"
                       className="mt-2 h-8 gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
                       onClick={() =>
                         toast.info(
-                          `Renewal flow for ${pkg.packageName} — coming soon. Your instructor was notified.`,
+                          fill("renewalComingSoon", {
+                            package: pkg.packageName,
+                          }),
                         )
                       }
                     >
                       <RefreshCcw className="size-3.5" />
-                      Renew package
+                      {t("renewPackage")}
                     </Button>
                   </div>
                 )}

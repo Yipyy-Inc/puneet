@@ -74,6 +74,9 @@ const SAME_IN_BOTH = new Set([
   "messaging.photo", // Photo / Photo
   "messaging.channelSms", // SMS / SMS — the channel's name in both
   "messaging.tagVip", // VIP / VIP
+  // The training rating and level vocabulary: "Excellent" is the French word.
+  "training.rating4", // Excellent / Excellent
+  "training.level_excellent", // Excellent / Excellent
 ]);
 
 describe("the shell namespace", () => {

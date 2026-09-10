@@ -4,6 +4,7 @@ import {
   formatDateISO,
   formatDateLong,
   formatDateShort,
+  formatDayRelative,
   formatDuration,
   formatMoney,
   formatNumber,
@@ -193,6 +194,20 @@ describe("§5q — relative time expires at 24 hours", () => {
     expect(formatRelative(tenSecondsAgo, "en", now)).toBe("now");
     expect(formatRelative(tenSecondsAgo, "fr", now)).toBe("maintenant");
     expect(formatRelativeShort(tenSecondsAgo, "fr", now)).toBe("maintenant");
+  });
+
+  test("a calendar day is relative for three words, then a date", () => {
+    const today = "2026-09-10";
+    expect(formatDayRelative("2026-09-10", "en", today)).toBe("today");
+    expect(formatDayRelative("2026-09-11", "fr", today)).toBe("demain");
+    expect(formatDayRelative("2026-09-09T23:00:00Z", "fr", today)).toBe("hier");
+    expect(formatDayRelative("2026-09-10", "fr", today, "start")).toBe(
+      "Aujourd’hui",
+    );
+    // Past a day either way it is a date, never "in 3d" or "2w ago".
+    expect(formatDayRelative("2026-09-13", "en", today)).toBe("Sep 13");
+    expect(formatDayRelative("2026-08-27", "fr", today)).toBe("27 août");
+    expect(formatDayRelative("not a date", "en", today)).toBe("—");
   });
 
   test("the short form keeps 'il y a' and the same expiry", () => {
