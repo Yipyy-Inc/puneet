@@ -639,6 +639,65 @@ export type Database = {
           },
         ];
       };
+      calendar_events: {
+        Row: {
+          all_day: boolean;
+          created_at: string;
+          created_by: string | null;
+          created_by_name: string | null;
+          deleted_at: string | null;
+          ends_at: string;
+          event: Json;
+          facility_id: string;
+          id: string;
+          kind: string;
+          private_to: string | null;
+          starts_at: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          all_day?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          deleted_at?: string | null;
+          ends_at: string;
+          event?: Json;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          private_to?: string | null;
+          starts_at: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          all_day?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          deleted_at?: string | null;
+          ends_at?: string;
+          event?: Json;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          private_to?: string | null;
+          starts_at?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       call_event: {
         Row: {
           created_at: string;

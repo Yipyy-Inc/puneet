@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  useCalendarEventMutations,
+  useCalendarEvents,
+} from "@/lib/api/calendar-events";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useQuery } from "@tanstack/react-query";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,7 +27,6 @@ import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
-import { type ManualEventDraft } from "@/components/facility/operations/OperationsCalendarConfigPanel";
 import { OperationsCalendarContent } from "@/components/facility/operations/OperationsCalendarContent";
 import {
   type BookingDrawerAddOnItem,
@@ -121,7 +125,6 @@ import { Button } from "@/components/ui/button";
 const FACILITY_ID = 11;
 const VISUAL_CONFIG_KEY = `operations-calendar-visual-config-${FACILITY_ID}`;
 const SAVED_VIEWS_KEY = `operations-calendar-saved-views-${FACILITY_ID}`;
-const MANUAL_EVENTS_KEY = `operations-calendar-manual-events-${FACILITY_ID}`;
 const CALENDAR_AXIS_KEY = `operations-calendar-axis-${FACILITY_ID}`;
 const CALENDAR_RESOURCE_TYPE_KEY = `operations-calendar-resource-type-${FACILITY_ID}`;
 
@@ -346,18 +349,6 @@ const TASK_COMPLETION_RULES: Record<
     overdueReminderMinutes: 30,
     createEscalationTask: false,
   },
-};
-
-const DEFAULT_DRAFT: ManualEventDraft = {
-  title: "",
-  subtype: "blocked-time",
-  date: formatDateKey(new Date()),
-  startTime: "09:00",
-  endTime: "10:00",
-  allDay: false,
-  privateToUser: false,
-  location: "Front Desk",
-  staff: "Management",
 };
 
 function parseUserNameFromCookie(): string {
@@ -760,10 +751,26 @@ export function OperationsCalendar() {
     return false;
   });
 
-  const [manualEventDraft, setManualEventDraft] = useState(DEFAULT_DRAFT);
-  const [manualFacilityEvents, setManualFacilityEvents] = useState<
-    ManualFacilityEvent[]
-  >(() => loadStoredJson<ManualFacilityEvent[]>(MANUAL_EVENTS_KEY, []));
+  // The facility's own events, from Postgres. They were localStorage under a
+  // key with a hard-coded facility id, visible to one browser. The query's
+  // cache is the list: each change below updates it at once, writes, and
+  // puts it back if the write is refused.
+  const { data: manualFacilityEvents = [] } = useCalendarEvents();
+  const calendarEvents = useCalendarEventMutations();
+  const { t: calT } = useStaffText("opsCalendar");
+  const setManualFacilityEvents = (
+    update: (previous: ManualFacilityEvent[]) => ManualFacilityEvent[],
+  ) =>
+    queryClient.setQueryData<ManualFacilityEvent[]>(
+      ["calendar-events"],
+      (previous = []) => update(previous),
+    );
+  const eventWriteFailed = (error: unknown) => {
+    void queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    toast.error(calT("eventNotSaved"), {
+      description: error instanceof Error ? error.message : undefined,
+    });
+  };
 
   const [savedViews, setSavedViews] = useState<OperationsCalendarSavedView[]>(
     () => loadStoredJson<OperationsCalendarSavedView[]>(SAVED_VIEWS_KEY, []),
@@ -819,13 +826,6 @@ export function OperationsCalendar() {
   useEffect(() => {
     localStorage.setItem(VISUAL_CONFIG_KEY, JSON.stringify(visualConfig));
   }, [visualConfig]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      MANUAL_EVENTS_KEY,
-      JSON.stringify(manualFacilityEvents),
-    );
-  }, [manualFacilityEvents]);
 
   useEffect(() => {
     localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(savedViews));
@@ -1988,42 +1988,6 @@ export function OperationsCalendar() {
     }));
   };
 
-  const createManualFacilityEvent = () => {
-    if (!permissions.canCreateCustomEvents) {
-      toast.error("You do not have permission to create custom events");
-      return;
-    }
-
-    if (manualEventDraft.title.trim().length === 0) {
-      return;
-    }
-
-    const event: ManualFacilityEvent = {
-      id: `manual-${Date.now()}`,
-      title: manualEventDraft.title.trim(),
-      subtype: manualEventDraft.subtype,
-      start: `${manualEventDraft.date}T${manualEventDraft.startTime}:00`,
-      end: `${manualEventDraft.date}T${manualEventDraft.endTime}:00`,
-      allDay: manualEventDraft.allDay,
-      location: manualEventDraft.location,
-      staff: manualEventDraft.staff,
-      status: "Scheduled",
-      privateToUser: manualEventDraft.privateToUser ? userId : undefined,
-      createdAt: new Date().toISOString(),
-      createdByRole: userRole,
-      createdByName: userName,
-    };
-
-    setManualFacilityEvents((previous) => [event, ...previous]);
-    setManualEventDraft(DEFAULT_DRAFT);
-    appendAuditEntry("custom_event_created", {
-      eventId: event.id,
-      title: event.title,
-      subtype: event.subtype,
-    });
-    toast.success("Facility event created");
-  };
-
   const appendCustomEvent = (event: ManualFacilityEvent) => {
     if (!permissions.canCreateCustomEvents) {
       toast.error("You do not have permission to create custom events");
@@ -2031,23 +1995,24 @@ export function OperationsCalendar() {
     }
 
     const eventId = event.id;
-    setManualFacilityEvents((previous) => [
-      {
-        ...event,
-        createdAt: new Date().toISOString(),
-        createdByRole: userRole,
-        createdByName: userName,
-        privateToUser:
-          event.visibility === "internal-only" ? userId : undefined,
+    const draft = {
+      ...event,
+      kind: "custom-event" as const,
+      createdByRole: userRole,
+      createdByName: userName,
+    };
+    setManualFacilityEvents((previous) => [draft, ...previous]);
+    calendarEvents.create.mutate(draft, {
+      onSuccess: () => {
+        appendAuditEntry("custom_event_created", {
+          eventId,
+          title: event.title,
+          subtype: event.subtype,
+        });
+        toast.success("Custom event added to calendar");
       },
-      ...previous,
-    ]);
-    appendAuditEntry("custom_event_created", {
-      eventId,
-      title: event.title,
-      subtype: event.subtype,
+      onError: eventWriteFailed,
     });
-    toast.success("Custom event added to calendar");
   };
 
   const appendBlockTime = (event: ManualFacilityEvent) => {
@@ -2057,24 +2022,27 @@ export function OperationsCalendar() {
     }
 
     const eventId = event.id;
-    setManualFacilityEvents((previous) => [
-      {
-        ...event,
-        visibility: "all-staff",
-        createdAt: new Date().toISOString(),
-        createdByRole: userRole,
-        createdByName: userName,
+    const draft = {
+      ...event,
+      kind: "block-time" as const,
+      visibility: "all-staff" as const,
+      createdByRole: userRole,
+      createdByName: userName,
+    };
+    setManualFacilityEvents((previous) => [draft, ...previous]);
+    calendarEvents.create.mutate(draft, {
+      onSuccess: () => {
+        appendAuditEntry("block_time_created", {
+          eventId,
+          title: event.title,
+          location: event.location,
+          start: event.start,
+          end: event.end,
+        });
+        toast.success("Block time created");
       },
-      ...previous,
-    ]);
-    appendAuditEntry("block_time_created", {
-      eventId,
-      title: event.title,
-      location: event.location,
-      start: event.start,
-      end: event.end,
+      onError: eventWriteFailed,
     });
-    toast.success("Block time created");
   };
 
   const recoverLastDeletedEvent = () => {
@@ -2100,13 +2068,20 @@ export function OperationsCalendar() {
       ),
     );
 
-    appendAuditEntry("custom_event_created", {
-      eventId: latest.id,
-      title: latest.title,
-      restored: true,
-    });
-
-    toast.success(`Recovered ${latest.title}`);
+    calendarEvents.update.mutate(
+      { id: latest.id, deleted: false },
+      {
+        onSuccess: () => {
+          appendAuditEntry("custom_event_created", {
+            eventId: latest.id,
+            title: latest.title,
+            restored: true,
+          });
+          toast.success(`Recovered ${latest.title}`);
+        },
+        onError: eventWriteFailed,
+      },
+    );
   };
 
   const saveCurrentView = (scope: "personal" | "facility") => {
@@ -2911,12 +2886,20 @@ export function OperationsCalendar() {
       ),
     );
 
-    appendAuditEntry("custom_event_edited", {
-      eventId,
-      title: updates.title ?? existing.title,
-      subtype: existing.subtype,
-    });
-    toast.success("Event updated");
+    calendarEvents.update.mutate(
+      { id: eventId, event: { ...existing, ...updates } },
+      {
+        onSuccess: () => {
+          appendAuditEntry("custom_event_edited", {
+            eventId,
+            title: updates.title ?? existing.title,
+            subtype: existing.subtype,
+          });
+          toast.success("Event updated");
+        },
+        onError: eventWriteFailed,
+      },
+    );
   };
 
   const deleteManualEvent = (eventId: string) => {
@@ -2942,19 +2925,26 @@ export function OperationsCalendar() {
       ),
     );
 
-    appendAuditEntry(
-      existing.subtype === "blocked-time"
-        ? "block_time_removed"
-        : "custom_event_deleted",
+    setDrawerOpen(false);
+    calendarEvents.update.mutate(
+      { id: eventId, deleted: true },
       {
-        eventId,
-        title: existing.title,
-        subtype: existing.subtype,
+        onSuccess: () => {
+          appendAuditEntry(
+            existing.subtype === "blocked-time"
+              ? "block_time_removed"
+              : "custom_event_deleted",
+            {
+              eventId,
+              title: existing.title,
+              subtype: existing.subtype,
+            },
+          );
+          toast.success("Event deleted (recoverable for 30 days)");
+        },
+        onError: eventWriteFailed,
       },
     );
-
-    toast.success("Event deleted (recoverable for 30 days)");
-    setDrawerOpen(false);
   };
 
   const openLinkedBookingFromTask = (bookingId: number) => {
@@ -3039,16 +3029,36 @@ export function OperationsCalendar() {
       });
     }
 
+    // A facility event dragged to a new slot keeps its length. It used to
+    // toast success and save nothing.
+    const manual =
+      event.type === "facility-event"
+        ? manualFacilityEvents.find((m) => m.id === event.sourceId)
+        : undefined;
+    if (manual) {
+      const durationMs = event.end.getTime() - event.start.getTime();
+      const newEnd = new Date(newStart.getTime() + durationMs);
+      const wall = (date: Date) =>
+        `${formatDateKey(date)}T${`${date.getHours()}`.padStart(2, "0")}:${`${date.getMinutes()}`.padStart(2, "0")}:00`;
+      updateManualEvent(manual.id, {
+        start: wall(newStart),
+        end: wall(newEnd),
+        ...(newStaff ? { staff: newStaff } : {}),
+      });
+      setPendingReschedule(null);
+      return;
+    }
+
     appendAuditEntry("booking_rescheduled", {
       bookingId: event.bookingId,
       source: "calendar-drag-drop",
       notify,
     });
-    toast.success(
-      notify
-        ? "Rescheduled — owner notified via SMS/email"
-        : "Rescheduled silently",
-    );
+    // "Rescheduled — owner notified via SMS/email" sent nothing; nothing here
+    // sends a reschedule notice, so it does not say one went out.
+    toast.success(calT("rescheduled"), {
+      description: notify ? calT("ownerNotMessaged") : undefined,
+    });
     setPendingReschedule(null);
   };
 

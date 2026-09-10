@@ -1840,6 +1840,11 @@
         "checkedOut": "{pet} is checked out",
         "notSaved": "That was not saved",
         "guest": "This guest"
+      },
+      "opsCalendar": {
+        "eventNotSaved": "The event was not saved",
+        "rescheduled": "Rescheduled",
+        "ownerNotMessaged": "The owner has not been messaged — Yipyy does not send reschedule notices yet."
       }
     }
   },
