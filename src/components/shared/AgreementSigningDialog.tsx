@@ -16,6 +16,7 @@ import {
   WaiverContentRenderer,
   type WaiverMergeContext,
 } from "@/components/additional-features/waivers/WaiverContentRenderer";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface AgreementSigningDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ export function AgreementSigningDialog({
   petName,
   serviceName,
 }: AgreementSigningDialogProps) {
+  const t = useShellText("booking");
   const ctx: WaiverMergeContext = {
     customerName: mergeContext?.customerName ?? clientName,
     petName: mergeContext?.petName ?? petName,
@@ -92,7 +94,7 @@ export function AgreementSigningDialog({
         {/* Agreement content */}
         <div className="px-6 pt-4">
           <p className="mb-2 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-            Agreement
+            {t("agreement")}
           </p>
           <ScrollArea className="h-[250px] rounded-xl border bg-slate-50/50">
             <div className="p-5">
@@ -110,7 +112,7 @@ export function AgreementSigningDialog({
         {/* Signature */}
         <div className="px-6 pt-3 pb-6">
           <SignaturePad
-            label="Client Signature"
+            label={t("clientSignature")}
             witnessMode={requiresWitness}
             onSign={(result) => {
               onSigned(result);

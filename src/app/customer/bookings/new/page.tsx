@@ -190,18 +190,23 @@ export default function NewBookingPage() {
               // it means a second, permitted act that confirms the booking,
               // and a customer cannot update their own booking's status. It is
               // in the debt map. Until then this says what happened.
-              toast.success(`Request sent to ${selectedFacility.name}`, {
-                description: `Booking #${created.id} for ${pet?.name ?? "your pet"} is awaiting confirmation.`,
-              });
+              toast.success(
+                t("requestSentTo").replace("{facility}", selectedFacility.name),
+                {
+                  description: t("bookingAwaitingConfirmation")
+                    .replace("{id}", String(created.id))
+                    .replace("{pet}", pet?.name ?? t("yourPetLower")),
+                },
+              );
 
               router.push("/customer/bookings");
             } catch (error) {
               // The modal stays where it is, holding what was entered. There
               // is no row, so saying anything else would be the claim this
               // whole change removed.
-              toast.error("Could not send that booking", {
+              toast.error(t("couldNotSendBooking"), {
                 description:
-                  error instanceof Error ? error.message : "Please try again.",
+                  error instanceof Error ? error.message : t("tryAgainPlain"),
               });
             }
           }}
