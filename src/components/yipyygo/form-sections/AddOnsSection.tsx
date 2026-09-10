@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { DollarSign } from "lucide-react";
 import type { YipyyGoAddOn, YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 
 type AddOnsSectionProps = YipyyGoFormSectionProps;
 
@@ -21,21 +23,21 @@ const AVAILABLE_ADD_ONS: YipyyGoAddOn[] = [
   {
     id: "extra-playtime",
     name: "Extra Playtime",
-    description: "Additional 30 minutes of play",
+    description: "Additional 30 minutes of play", // french-ok: stand-in for facility-configured service text (debt map)
     price: 15,
     selected: false,
   },
   {
     id: "enrichment",
     name: "Enrichment Activities",
-    description: "Puzzle toys and mental stimulation",
+    description: "Puzzle toys and mental stimulation", // french-ok: stand-in for facility-configured service text
     price: 20,
     selected: false,
   },
   {
     id: "grooming-addon",
     name: "Grooming Add-on",
-    description: "Bath and brush during stay",
+    description: "Bath and brush during stay", // french-ok: stand-in for facility-configured service text
     price: 35,
     selected: false,
   },
@@ -62,6 +64,8 @@ export function AddOnsSection({
   onBack,
   isLastSection,
 }: AddOnsSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   // Initialize add-ons if not set
   const addOns =
     formData.addOns.length > 0
@@ -97,9 +101,9 @@ export function AddOnsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add-ons & Upsells</CardTitle>
+        <CardTitle>{t("addOnsTitle")}</CardTitle>
         <CardDescription>
-          Enhance {formData.petName}&apos;s stay with optional services
+          {t("enhanceStay").replace("{pet}", formData.petName)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -128,12 +132,14 @@ export function AddOnsSection({
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">${addOn.price.toFixed(2)}</p>
+                  <p className="font-semibold tabular-nums">
+                    {formatMoney(addOn.price, locale)}
+                  </p>
                 </div>
               </div>
               {addOn.selected && (
                 <div className="mt-3 flex items-center gap-2">
-                  <Label className="text-sm">Quantity:</Label>
+                  <Label className="text-sm">{t("quantity")}</Label>
                   <Input
                     type="number"
                     min="1"
@@ -147,7 +153,7 @@ export function AddOnsSection({
                     className="w-20"
                   />
                   <span className="text-muted-foreground text-sm">
-                    = ${((addOn.quantity || 1) * addOn.price).toFixed(2)}
+                    = {formatMoney((addOn.quantity || 1) * addOn.price, locale)}
                   </span>
                 </div>
               )}
@@ -158,23 +164,25 @@ export function AddOnsSection({
         {totalAddOnsPrice > 0 && (
           <div className="bg-muted rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="font-medium">Total Add-ons:</span>
+              <span className="font-medium">{t("totalAddOns")}</span>
               <span className="text-lg font-bold">
                 <DollarSign className="inline size-4" />
                 {totalAddOnsPrice.toFixed(2)}
               </span>
             </div>
             <p className="text-muted-foreground mt-2 text-sm">
-              These will be added to your booking as pending line items
+              {t("theseWillBeAddedTo")}
             </p>
           </div>
         )}
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
-          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
+          <Button onClick={onNext}>
+            {isLastSection ? t("review") : t("next")}
+          </Button>
         </div>
       </CardContent>
     </Card>

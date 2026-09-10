@@ -16,18 +16,20 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BelongingItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
 import { getFormTemplateForService } from "@/data/yipyygo-config";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 type BelongingsSectionProps = YipyyGoFormSectionProps;
 
-const BELONGING_TYPES: { value: BelongingItem["type"]; label: string }[] = [
-  { value: "food", label: "Food" },
-  { value: "treats", label: "Treats" },
-  { value: "bedding", label: "Bedding" },
-  { value: "toys", label: "Toys" },
-  { value: "crate", label: "Crate" },
-  { value: "leash_collar", label: "Leash/Collar" },
-  { value: "medication_bag", label: "Medication Bag" },
-  { value: "other", label: "Other" },
+// An item's name, by CATALOGUE KEY; the value stored is `value`.
+const BELONGING_TYPES: { value: BelongingItem["type"]; labelKey: string }[] = [
+  { value: "food", labelKey: "belongFood" },
+  { value: "treats", labelKey: "belongTreats" },
+  { value: "bedding", labelKey: "belongBedding" },
+  { value: "toys", labelKey: "belongToys" },
+  { value: "crate", labelKey: "belongCrate" },
+  { value: "leash_collar", labelKey: "belongLeashCollar" },
+  { value: "medication_bag", labelKey: "belongMedicationBag" },
+  { value: "other", labelKey: "other" },
 ];
 
 export function BelongingsSection({
@@ -39,6 +41,7 @@ export function BelongingsSection({
   onBack,
   isLastSection,
 }: BelongingsSectionProps) {
+  const t = useShellText("yipyygo");
   const [otherNote, setOtherNote] = useState("");
   const [showOtherInput, setShowOtherInput] = useState(false);
   const effectiveTemplate = config
@@ -109,15 +112,13 @@ export function BelongingsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Belongings</CardTitle>
-        <CardDescription>
-          Tap to add what you’re bringing — no typing needed
-        </CardDescription>
+        <CardTitle>{t("belongings")}</CardTitle>
+        <CardDescription>{t("tapToAddWhatYou")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Chips: one-tap add/remove */}
         <div className="flex flex-wrap gap-2">
-          {BELONGING_TYPES.map(({ value, label }) => {
+          {BELONGING_TYPES.map(({ value, labelKey }) => {
             const isSelected =
               value === "other"
                 ? showOtherInput ||
@@ -135,7 +136,7 @@ export function BelongingsSection({
                     : `border-input bg-background hover:bg-accent hover:text-accent-foreground`,
                 )}
               >
-                {label}
+                {t(labelKey)}
                 {value === "other" &&
                   formData.belongings.some((b) => b.type === "other") && (
                     <span className="bg-background/20 rounded-full px-1.5 text-xs">
@@ -159,7 +160,7 @@ export function BelongingsSection({
               <Input
                 value={otherNote}
                 onChange={(e) => setOtherNote(e.target.value)}
-                placeholder="e.g., Blanket, special toy"
+                placeholder={t("eGBlanketSpecialToy")}
                 onKeyDown={(e) =>
                   e.key === "Enter" && (e.preventDefault(), handleAddOther())
                 }
@@ -170,7 +171,7 @@ export function BelongingsSection({
                 onClick={handleAddOther}
                 disabled={!otherNote.trim()}
               >
-                Add
+                {t("add")}
               </Button>
             </div>
           </div>
@@ -179,7 +180,7 @@ export function BelongingsSection({
         {/* Selected items with optional qty */}
         {formData.belongings.length > 0 && (
           <div className="space-y-2">
-            <Label className="text-muted-foreground">Bringing</Label>
+            <Label className="text-muted-foreground">{t("bringing")}</Label>
             <ul className="space-y-2">
               {formData.belongings.map((item) => (
                 <li
@@ -188,8 +189,12 @@ export function BelongingsSection({
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="font-medium">
-                      {BELONGING_TYPES.find((t) => t.value === item.type)
-                        ?.label ?? item.type}
+                      {(() => {
+                        const type = BELONGING_TYPES.find(
+                          (entry) => entry.value === item.type,
+                        );
+                        return type ? t(type.labelKey) : item.type;
+                      })()}
                     </span>
                     {item.notes && item.type === "other" && (
                       <span className="text-muted-foreground truncate">
@@ -209,7 +214,7 @@ export function BelongingsSection({
                             : undefined,
                         )
                       }
-                      placeholder="Qty"
+                      placeholder={t("qty")}
                       className="bg-background w-14 rounded-sm border px-2 py-1 text-sm"
                     />
                   </div>
@@ -230,7 +235,7 @@ export function BelongingsSection({
         {effectiveTemplate?.features.photoUploads && (
           <div className="space-y-2">
             <Label className="text-muted-foreground">
-              Photo of labeled bags (optional)
+              {t("photoOfLabeledBagsOptional")}
             </Label>
             <Input
               type="file"
@@ -247,7 +252,7 @@ export function BelongingsSection({
               <div className="relative size-32 overflow-hidden rounded-lg border">
                 <Image
                   src={formData.belongingsPhotoUrl}
-                  alt="Belongings"
+                  alt={t("belongings")}
                   width={128}
                   height={128}
                   className="size-full object-cover"
@@ -270,9 +275,11 @@ export function BelongingsSection({
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
-          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
+          <Button onClick={onNext}>
+            {isLastSection ? t("review") : t("next")}
+          </Button>
         </div>
       </CardContent>
     </Card>

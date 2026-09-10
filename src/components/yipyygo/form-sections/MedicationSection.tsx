@@ -42,46 +42,49 @@ import type {
   MedAdminInstruction,
   MissedDoseAction,
 } from "@/types/booking";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney, formatTimeOfDay } from "@/lib/i18n/format";
 
 type MedicationSectionProps = YipyyGoFormSectionProps;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const MED_FORMS: { value: MedForm; label: string }[] = [
-  { value: "pill", label: "Pill / Tablet" },
-  { value: "liquid", label: "Liquid" },
-  { value: "topical", label: "Topical" },
-  { value: "injection", label: "Injection" },
-  { value: "powder", label: "Powder" },
-  { value: "ear_drops", label: "Ear Drops" },
-  { value: "eye_drops", label: "Eye Drops" },
+// Option tables carry CATALOGUE KEYS; the value stored is `value`.
+const MED_FORMS: { value: MedForm; labelKey: string }[] = [
+  { value: "pill", labelKey: "formPill" },
+  { value: "liquid", labelKey: "formLiquid" },
+  { value: "topical", labelKey: "formTopical" },
+  { value: "injection", labelKey: "formInjection" },
+  { value: "powder", labelKey: "formPowder" },
+  { value: "ear_drops", labelKey: "formEarDrops" },
+  { value: "eye_drops", labelKey: "formEyeDrops" },
 ];
 
-const MED_FREQUENCIES: { value: MedFrequency; label: string }[] = [
-  { value: "once_daily", label: "Once daily" },
-  { value: "twice_daily", label: "Twice daily" },
-  { value: "every_8hrs", label: "Every 8 hours" },
-  { value: "every_other_day", label: "Every other day" },
-  { value: "specific_days", label: "Specific days" },
-  { value: "prn", label: "As needed (PRN)" },
-  { value: "other", label: "Other" },
+const MED_FREQUENCIES: { value: MedFrequency; labelKey: string }[] = [
+  { value: "once_daily", labelKey: "freqOnceDaily" },
+  { value: "twice_daily", labelKey: "freqTwiceDaily" },
+  { value: "every_8hrs", labelKey: "freqEvery8Hours" },
+  { value: "every_other_day", labelKey: "freqEveryOtherDay" },
+  { value: "specific_days", labelKey: "freqSpecificDays" },
+  { value: "prn", labelKey: "freqAsNeeded" },
+  { value: "other", labelKey: "other" },
 ];
 
-const ADMIN_INSTRUCTIONS: { value: MedAdminInstruction; label: string }[] = [
-  { value: "with_food", label: "With food" },
-  { value: "empty_stomach", label: "Empty stomach" },
-  { value: "hide_in_treat", label: "Hide in treat" },
-  { value: "crush_and_mix", label: "Crush and mix" },
-  { value: "give_whole", label: "Give whole" },
-  { value: "after_cleaning", label: "After cleaning ears" },
-  { value: "refrigerate", label: "Refrigerate after opening" },
+const ADMIN_INSTRUCTIONS: { value: MedAdminInstruction; labelKey: string }[] = [
+  { value: "with_food", labelKey: "adminWithFood" },
+  { value: "empty_stomach", labelKey: "adminEmptyStomach" },
+  { value: "hide_in_treat", labelKey: "adminHideInTreat" },
+  { value: "crush_and_mix", labelKey: "adminCrushAndMix" },
+  { value: "give_whole", labelKey: "adminGiveWhole" },
+  { value: "after_cleaning", labelKey: "adminAfterCleaningEars" },
+  { value: "refrigerate", labelKey: "adminRefrigerate" },
 ];
 
-const MISSED_DOSE_OPTIONS: { value: MissedDoseAction; label: string }[] = [
-  { value: "skip_continue", label: "Skip and continue next dose" },
-  { value: "give_when_remembered", label: "Give when remembered" },
-  { value: "call_parent", label: "Call me" },
-  { value: "do_not_double", label: "Do not double dose" },
+const MISSED_DOSE_OPTIONS: { value: MissedDoseAction; labelKey: string }[] = [
+  { value: "skip_continue", labelKey: "missedSkip" },
+  { value: "give_when_remembered", labelKey: "missedGiveWhenRemembered" },
+  { value: "call_parent", labelKey: "callMe" },
+  { value: "do_not_double", labelKey: "missedDoNotDouble" },
 ];
 
 const COMMON_MED_TIMES = ["08:00", "12:00", "18:00", "20:00"];
@@ -97,18 +100,6 @@ const HIGH_RISK_KEYWORDS = [
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function formatTime(time: string) {
-  try {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return time;
-  }
-}
 
 function isLikelyHighRisk(name: string): boolean {
   const lower = name.toLowerCase();
@@ -126,6 +117,8 @@ export function MedicationSection({
   onBack,
   isLastSection,
 }: MedicationSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const [expandedMed, setExpandedMed] = useState<string | null>(
     formData.medications.length > 0 ? formData.medications[0].id : null,
   );
@@ -204,9 +197,9 @@ export function MedicationSection({
             <Pill className="h-4.5 w-4.5 text-red-600" />
           </div>
           <div>
-            <CardTitle>Medication Instructions</CardTitle>
+            <CardTitle>{t("medicationInstructions")}</CardTitle>
             <CardDescription>
-              List any medications {formData.petName} is currently taking
+              {t("listMedicationsFor").replace("{pet}", formData.petName)}
             </CardDescription>
           </div>
         </div>
@@ -215,9 +208,9 @@ export function MedicationSection({
         {/* ── No Medications Toggle ── */}
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div>
-            <Label className="text-sm font-medium">No Medications</Label>
+            <Label className="text-sm font-medium">{t("noMedications")}</Label>
             <p className="text-muted-foreground text-xs">
-              {formData.petName} is not taking any medications
+              {t("petNotTakingMedications").replace("{pet}", formData.petName)}
             </p>
           </div>
           <Switch
@@ -233,15 +226,22 @@ export function MedicationSection({
               <DollarSign className="mt-0.5 size-4 shrink-0 text-amber-600" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                  {config.medicationFee.label ??
-                    "Medication administration fee"}
-                  : ${config.medicationFee.amount.toFixed(2)}{" "}
+                  {t("feeLabelAmount")
+                    .replace(
+                      "{label}",
+                      config.medicationFee.label ?? t("medicationAdminFee"),
+                    )
+                    .replace(
+                      "{amount}",
+                      formatMoney(config.medicationFee.amount, locale),
+                    )}{" "}
                   <span className="font-normal">
                     {config.medicationFee.billing === "per_dose" &&
-                      "per dose administered"}
-                    {config.medicationFee.billing === "per_day" && "per day"}
+                      t("feePerDose")}
+                    {config.medicationFee.billing === "per_day" &&
+                      t("feePerDay")}
                     {config.medicationFee.billing === "per_stay" &&
-                      "flat for the stay"}
+                      t("feePerStay")}
                   </span>
                 </p>
                 {config.medicationFee.description && (
@@ -296,7 +296,7 @@ export function MedicationSection({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">
-                            {med.name || "New Medication"}
+                            {med.name || t("newMedication")}
                           </span>
                           {showHighRisk && (
                             <Badge
@@ -304,7 +304,7 @@ export function MedicationSection({
                               className="px-1.5 py-0 text-[10px]"
                             >
                               <ShieldAlert className="mr-0.5 size-3" />
-                              High Risk
+                              {t("highRisk")}
                             </Badge>
                           )}
                         </div>
@@ -314,9 +314,12 @@ export function MedicationSection({
                           {med.frequency && (
                             <span>
                               &middot;{" "}
-                              {MED_FREQUENCIES.find(
-                                (f) => f.value === med.frequency,
-                              )?.label || med.frequency}
+                              {(() => {
+                                const freq = MED_FREQUENCIES.find(
+                                  (f) => f.value === med.frequency,
+                                );
+                                return freq ? t(freq.labelKey) : med.frequency;
+                              })()}
                             </span>
                           )}
                         </div>
@@ -349,24 +352,26 @@ export function MedicationSection({
                       {/* Name + Purpose */}
                       <div className="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-2">
                         <div className="space-y-1">
-                          <Label className="text-xs">Medication Name *</Label>
+                          <Label className="text-xs">
+                            {t("medicationName")}
+                          </Label>
                           <Input
                             value={med.name}
                             onChange={(e) =>
                               updateMed(med.id, { name: e.target.value })
                             }
-                            placeholder="e.g., Apoquel"
+                            placeholder={t("eGApoquel")}
                             className="h-9"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Purpose</Label>
+                          <Label className="text-xs">{t("purpose")}</Label>
                           <Input
                             value={med.purpose || ""}
                             onChange={(e) =>
                               updateMed(med.id, { purpose: e.target.value })
                             }
-                            placeholder="e.g., Allergy, Joint, Heart"
+                            placeholder={t("eGAllergyJointHeart")}
                             className="h-9"
                           />
                         </div>
@@ -375,7 +380,7 @@ export function MedicationSection({
                       {/* Dosing section */}
                       <div className="space-y-3 rounded-md border bg-white p-3">
                         <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                          Dosage
+                          {t("dosage")}
                         </h5>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                           <div className="space-y-1">
@@ -385,12 +390,12 @@ export function MedicationSection({
                               onChange={(e) =>
                                 updateMed(med.id, { dosage: e.target.value })
                               }
-                              placeholder="e.g., 1 tablet"
+                              placeholder={t("eG1Tablet")}
                               className="h-8 text-xs"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Strength</Label>
+                            <Label className="text-xs">{t("strength")}</Label>
                             <Input
                               value={med.strength || ""}
                               onChange={(e) =>
@@ -401,7 +406,7 @@ export function MedicationSection({
                             />
                           </div>
                           <div className="col-span-2 space-y-1">
-                            <Label className="text-xs">Form</Label>
+                            <Label className="text-xs">{t("form")}</Label>
                             <Select
                               value={med.form || "pill"}
                               onValueChange={(v) =>
@@ -414,7 +419,7 @@ export function MedicationSection({
                               <SelectContent>
                                 {MED_FORMS.map((f) => (
                                   <SelectItem key={f.value} value={f.value}>
-                                    {f.label}
+                                    {t(f.labelKey)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -423,14 +428,13 @@ export function MedicationSection({
                         </div>
                         {med.form === "liquid" && (
                           <p className="text-muted-foreground text-xs">
-                            Use ml for liquid dosage amount
+                            {t("useMlForLiquidDosage")}
                           </p>
                         )}
                         {(med.form === "ear_drops" ||
                           med.form === "eye_drops") && (
                           <p className="text-muted-foreground text-xs">
-                            Specify number of drops and per ear/eye in the
-                            amount field
+                            {t("specifyDropsHint")}
                           </p>
                         )}
                       </div>
@@ -438,10 +442,10 @@ export function MedicationSection({
                       {/* Timing section */}
                       <div className="space-y-3 rounded-md border bg-white p-3">
                         <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                          Schedule
+                          {t("schedule")}
                         </h5>
                         <div className="space-y-2">
-                          <Label className="text-xs">Frequency</Label>
+                          <Label className="text-xs">{t("frequency")}</Label>
                           <div className="flex flex-wrap gap-1.5">
                             {MED_FREQUENCIES.map((freq) => (
                               <button
@@ -457,7 +461,7 @@ export function MedicationSection({
                                     : `border-input text-muted-foreground hover:bg-muted/50`,
                                 )}
                               >
-                                {freq.label}
+                                {t(freq.labelKey)}
                               </button>
                             ))}
                           </div>
@@ -471,7 +475,7 @@ export function MedicationSection({
                                 frequencyNotes: e.target.value,
                               })
                             }
-                            placeholder="Describe schedule..."
+                            placeholder={t("describeSchedule")}
                             className="h-8 text-xs"
                           />
                         )}
@@ -480,7 +484,7 @@ export function MedicationSection({
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
                               <Label className="text-xs">
-                                Max times per day
+                                {t("maxTimesPerDay")}
                               </Label>
                               <Input
                                 type="number"
@@ -497,7 +501,9 @@ export function MedicationSection({
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Trigger reason</Label>
+                              <Label className="text-xs">
+                                {t("triggerReason")}
+                              </Label>
                               <Input
                                 value={med.prnTrigger || ""}
                                 onChange={(e) =>
@@ -505,7 +511,7 @@ export function MedicationSection({
                                     prnTrigger: e.target.value,
                                   })
                                 }
-                                placeholder="e.g., Itching, Anxiety"
+                                placeholder={t("eGItchingAnxiety")}
                                 className="h-8 text-xs"
                               />
                             </div>
@@ -515,7 +521,7 @@ export function MedicationSection({
                         {/* Times */}
                         <div className="space-y-2">
                           <Label className="text-xs">
-                            Administration Times
+                            {t("administrationTimes")}
                           </Label>
                           <div className="flex flex-wrap gap-1.5">
                             {COMMON_MED_TIMES.map((time) => (
@@ -526,7 +532,7 @@ export function MedicationSection({
                                 disabled={med.times.includes(time)}
                                 className="border-input hover:bg-muted/50 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40"
                               >
-                                + {formatTime(time)}
+                                + {formatTimeOfDay(time, locale)}
                               </button>
                             ))}
                             <Input
@@ -548,7 +554,7 @@ export function MedicationSection({
                                   className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-700"
                                 >
                                   <Clock className="size-3" />
-                                  {formatTime(time)}
+                                  {formatTimeOfDay(time, locale)}
                                   <button
                                     type="button"
                                     onClick={() => removeTime(med.id, idx)}
@@ -565,7 +571,7 @@ export function MedicationSection({
                       {/* Administration instructions */}
                       <div className="space-y-3 rounded-md border bg-white p-3">
                         <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                          How to Give
+                          {t("howToGive")}
                         </h5>
                         <div className="flex flex-wrap gap-1.5">
                           {ADMIN_INSTRUCTIONS.map((inst) => {
@@ -586,7 +592,7 @@ export function MedicationSection({
                                     : `border-input text-muted-foreground hover:bg-muted/50`,
                                 )}
                               >
-                                {inst.label}
+                                {t(inst.labelKey)}
                               </button>
                             );
                           })}
@@ -596,7 +602,7 @@ export function MedicationSection({
                           onChange={(e) =>
                             updateMed(med.id, { adminNotes: e.target.value })
                           }
-                          placeholder="Other administration notes..."
+                          placeholder={t("otherAdministrationNotes")}
                           className="h-8 text-xs"
                         />
                       </div>
@@ -604,7 +610,7 @@ export function MedicationSection({
                       {/* If dose is missed */}
                       <div className="space-y-2">
                         <Label className="text-xs font-medium">
-                          If a dose is missed
+                          {t("ifADoseIsMissed")}
                         </Label>
                         <div className="flex flex-wrap gap-1.5">
                           {MISSED_DOSE_OPTIONS.map((opt) => (
@@ -621,7 +627,7 @@ export function MedicationSection({
                                   : `border-input text-muted-foreground hover:bg-muted/50`,
                               )}
                             >
-                              {opt.label}
+                              {t(opt.labelKey)}
                             </button>
                           ))}
                         </div>
@@ -631,11 +637,10 @@ export function MedicationSection({
                       <div className="flex items-center justify-between rounded-lg border p-3">
                         <div>
                           <Label className="text-xs font-medium">
-                            High-risk medication
+                            {t("highRiskMedication")}
                           </Label>
                           <p className="text-muted-foreground text-[11px]">
-                            Mark if this requires extra caution (insulin,
-                            seizure meds, etc.)
+                            {t("highRiskHint")}
                           </p>
                         </div>
                         <Switch
@@ -650,7 +655,7 @@ export function MedicationSection({
                       {effectiveTemplate?.features.photoUploads && (
                         <div className="space-y-1">
                           <Label className="text-xs">
-                            Photo of Medication Label (optional)
+                            {t("photoOfMedicationLabelOptional")}
                           </Label>
                           <Input
                             type="file"
@@ -668,7 +673,7 @@ export function MedicationSection({
                           {med.photoUrl && (
                             <Image
                               src={med.photoUrl}
-                              alt="Medication label"
+                              alt={t("medicationLabelPhoto")}
                               width={112}
                               height={112}
                               className="mt-2 h-28 w-28 rounded-sm border object-cover"
@@ -684,7 +689,7 @@ export function MedicationSection({
                         onChange={(e) =>
                           updateMed(med.id, { methodNotes: e.target.value })
                         }
-                        placeholder="Additional notes for this medication..."
+                        placeholder={t("additionalNotesForThisMedication")}
                         className="h-8 text-xs"
                       />
                     </div>
@@ -701,7 +706,7 @@ export function MedicationSection({
               className="w-full"
             >
               <Plus className="mr-2 size-4" />
-              Add Medication
+              {t("addMedication")}
             </Button>
 
             {/* Parent confirmation */}
@@ -724,11 +729,10 @@ export function MedicationSection({
                     htmlFor="med-confirm"
                     className="cursor-pointer text-sm font-medium"
                   >
-                    I confirm all medication dosages are correct
+                    {t("iConfirmAllMedicationDosages")}
                   </Label>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    Please verify each medication name, dosage, and frequency
-                    before continuing
+                    {t("verifyEachMedication")}
                   </p>
                 </div>
               </div>
@@ -739,9 +743,11 @@ export function MedicationSection({
         {/* ── Navigation ── */}
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
-          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
+          <Button onClick={onNext}>
+            {isLastSection ? t("review") : t("next")}
+          </Button>
         </div>
       </CardContent>
     </Card>

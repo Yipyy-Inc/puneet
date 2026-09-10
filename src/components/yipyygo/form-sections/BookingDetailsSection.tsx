@@ -10,18 +10,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, PawPrint, Building2 } from "lucide-react";
 import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatTimeOfDay,
+  formatWeightFromLb,
+} from "@/lib/i18n/format";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 type BookingDetailsSectionProps = YipyyGoFormSectionProps;
 
-function formatDate(dateStr?: string) {
+function formatDate(locale: AppLocale, dateStr?: string) {
   if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  // A bare YYYY-MM-DD is a calendar day: read it at LOCAL midnight, or it
+  // parses as UTC and shows the day before anywhere in Canada.
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? (() => {
+        const [y, m, day] = dateStr.split("-").map(Number);
+        return new Date(y, m - 1, day);
+      })()
+    : new Date(dateStr);
+  return formatDateLong(d, locale);
 }
 
 export function BookingDetailsSection({
@@ -30,6 +40,8 @@ export function BookingDetailsSection({
   onNext,
   onBack,
 }: BookingDetailsSectionProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const isMultiDay = booking.endDate && booking.endDate !== booking.startDate;
 
   return (
@@ -37,61 +49,65 @@ export function BookingDetailsSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="text-primary size-5" />
-          Confirm booking details
+          {t("confirmBookingDetails")}
         </CardTitle>
-        <CardDescription>
-          Double-check the booking below. If anything looks wrong, contact the
-          facility before continuing.
-        </CardDescription>
+        <CardDescription>{t("doubleCheckBooking")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-3 md:grid-cols-2">
           <div className="bg-muted/40 rounded-lg border p-4">
             <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-              <PawPrint className="size-3" /> Pet
+              <PawPrint className="size-3" /> {t("pet")}
             </div>
             <p className="text-lg font-semibold">{pet.name}</p>
             <p className="text-muted-foreground text-sm">
               {pet.breed}
-              {pet.weight ? ` · ${pet.weight} lb` : ""}
+              {pet.weight ? ` · ${formatWeightFromLb(pet.weight, locale)}` : ""}
             </p>
           </div>
           <div className="bg-muted/40 rounded-lg border p-4">
             <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-              <Building2 className="size-3" /> Service
-            </div>
-            <p className="text-lg font-semibold capitalize">
-              {booking.service ?? "—"}
-            </p>
-          </div>
-          <div className="bg-muted/40 rounded-lg border p-4">
-            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-              <Calendar className="size-3" /> {isMultiDay ? "Dates" : "Date"}
+              <Building2 className="size-3" /> {t("service")}
             </div>
             <p className="text-lg font-semibold">
-              {formatDate(booking.startDate)}
+              {booking.service
+                ? serviceTypeLabel(locale, booking.service)
+                : "—"}
+            </p>
+          </div>
+          <div className="bg-muted/40 rounded-lg border p-4">
+            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+              <Calendar className="size-3" />{" "}
+              {isMultiDay ? t("dates") : t("date")}
+            </div>
+            <p className="text-lg font-semibold">
+              {formatDate(locale, booking.startDate)}
               {isMultiDay && (
                 <>
                   {" → "}
-                  {formatDate(booking.endDate)}
+                  {formatDate(locale, booking.endDate)}
                 </>
               )}
             </p>
           </div>
           <div className="bg-muted/40 rounded-lg border p-4">
             <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-              <Clock className="size-3" /> Check-in / Check-out
+              <Clock className="size-3" /> {t("checkInCheckOut")}
             </div>
             <p className="text-lg font-semibold">
-              {booking.checkInTime ?? "TBD"}
-              {booking.checkOutTime ? ` → ${booking.checkOutTime}` : ""}
+              {booking.checkInTime
+                ? formatTimeOfDay(booking.checkInTime, locale)
+                : t("toBeDecided")}
+              {booking.checkOutTime
+                ? ` → ${formatTimeOfDay(booking.checkOutTime, locale)}`
+                : ""}
             </p>
           </div>
         </div>
 
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onBack}>
-            Back
+            {t("back")}
           </Button>
           <Button onClick={onNext}>Next: Feeding</Button>
         </div>

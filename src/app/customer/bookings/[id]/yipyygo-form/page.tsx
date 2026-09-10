@@ -59,14 +59,28 @@ import { Separator } from "@/components/ui/separator";
 import type { TipSelection } from "@/types/yipyygo";
 import { CheckCircle2, PartyPopper } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong, formatTimeOfDay } from "@/lib/i18n/format";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { rich } from "@/lib/i18n/rich";
 
 type AuthState = "checking" | "authenticated" | "login" | "verification";
+
+// A booking's start is a calendar day. A bare YYYY-MM-DD handed to `new Date`
+// parses as UTC midnight — the day before, anywhere in Canada — so it is read
+// at local midnight; a full timestamp is left to `new Date`.
+function localDay(value: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(value);
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
 
 export default function YipyyGoFormPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { t, fill, locale } = useCustomerText("yipyygo");
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
 
@@ -209,7 +223,7 @@ export default function YipyyGoFormPage({
 
     generateVerificationCode(booking.id, customer.email, customer.phone);
     setCodeSent(true);
-    toast.success("Verification code sent to your email/SMS");
+    toast.success(t("verificationCodeSentToYour"));
   };
 
   // Handle verification code submission
@@ -219,7 +233,7 @@ export default function YipyyGoFormPage({
     const result = verifyCode(verificationCode, booking.id);
     if (result.valid) {
       setAuthState("authenticated");
-      toast.success("Verified successfully!");
+      toast.success(t("verifiedSuccessfully"));
 
       // Initialize form data
       const existingForm = getYipyyGoForm(booking.id);
@@ -230,7 +244,7 @@ export default function YipyyGoFormPage({
         // ... (same initialization logic)
       }
     } else {
-      toast.error(result.error || "Invalid code");
+      toast.error(result.error || t("invalidCode"));
     }
   };
 
@@ -286,6 +300,7 @@ export default function YipyyGoFormPage({
       notifyFacilityStaffYipyyGoSubmitted({
         facilityId: booking.facilityId,
         bookingId: Number(booking.id),
+        // french-ok: a fallback inside a staff notification payload, not copy
         petName: pet?.name ?? "Pet",
         clientName: customer?.name,
         arrivalTime,
@@ -294,12 +309,9 @@ export default function YipyyGoFormPage({
 
       // Mock customer confirmation email (would go through a real email provider)
       if (yipyyGoConfig?.confirmationEmail?.enabled) {
-        const dateStr = new Date(booking.startDate).toLocaleDateString(
-          "en-US",
-          { weekday: "long", month: "long", day: "numeric" },
-        );
+        const dateStr = formatDateLong(localDay(booking.startDate), locale);
         const message = yipyyGoConfig.confirmationEmail.message
-          .replace(/\{petName\}/g, pet?.name ?? "your pet")
+          .replace(/\{petName\}/g, pet?.name ?? t("yourPet"))
           .replace(/\{date\}/g, dateStr);
         console.info(
           "[YipyyGo confirmation email]",
@@ -311,9 +323,9 @@ export default function YipyyGoFormPage({
 
       setShowTipDialog(false);
       setIsSubmitted(true);
-      toast.success("Express Check-in submitted. Confirmation email sent.");
+      toast.success(t("expressCheckInSubmittedConfirmation"));
     } catch (error) {
-      toast.error("Failed to submit form. Please try again.");
+      toast.error(t("failedToSubmitFormPlease"));
       console.error("Error submitting Express Check-in form:", error);
     } finally {
       setIsSubmitting(false);
@@ -366,21 +378,21 @@ export default function YipyyGoFormPage({
         ? lastStayForm.addOns.map((a) => ({ ...a, selected: a.selected }))
         : formData.addOns,
     });
-    toast.success("Last stay preferences applied. Review and edit if needed.");
+    toast.success(t("lastStayPreferencesAppliedReview"));
   };
 
   if (!booking || !customer || !pet) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Booking not found</h2>
+          <h2 className="text-2xl font-bold">{t("bookingNotFound")}</h2>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => router.push("/customer/bookings")}
           >
             <ArrowLeft className="mr-2 size-4" />
-            Back to Bookings
+            {t("backToBookings")}
           </Button>
         </div>
       </div>
@@ -401,11 +413,8 @@ export default function YipyyGoFormPage({
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Access Express Check-in Form</CardTitle>
-            <CardDescription>
-              Please log in or verify with a code to access the pre-check-in
-              form
-            </CardDescription>
+            <CardTitle>{t("accessExpressCheckInForm")}</CardTitle>
+            <CardDescription>{t("logInOrVerifyToAccess")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
@@ -416,7 +425,7 @@ export default function YipyyGoFormPage({
                 )
               }
             >
-              Log In to Portal
+              {t("logInToPortal")}
             </Button>
             <div className="relative">
               <Separator />
@@ -432,11 +441,11 @@ export default function YipyyGoFormPage({
                 className="w-full"
                 onClick={handleRequestCode}
               >
-                Send Verification Code
+                {t("sendVerificationCode")}
               </Button>
             ) : (
               <div className="space-y-2">
-                <Label>Enter Verification Code</Label>
+                <Label>{t("enterVerificationCode")}</Label>
                 <Input
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
@@ -448,7 +457,7 @@ export default function YipyyGoFormPage({
                   onClick={handleVerifyCode}
                   disabled={verificationCode.length !== 6}
                 >
-                  Verify Code
+                  {t("verifyCode")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -458,7 +467,7 @@ export default function YipyyGoFormPage({
                     setVerificationCode("");
                   }}
                 >
-                  Request New Code
+                  {t("requestNewCode")}
                 </Button>
               </div>
             )}
@@ -473,14 +482,14 @@ export default function YipyyGoFormPage({
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Verify Access</CardTitle>
+            <CardTitle>{t("verifyAccess")}</CardTitle>
             <CardDescription>
-              Enter the verification code sent to your email/SMS
+              {t("enterTheVerificationCodeSent")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Verification Code</Label>
+              <Label>{t("verificationCode")}</Label>
               <Input
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value)}
@@ -493,7 +502,7 @@ export default function YipyyGoFormPage({
               onClick={handleVerifyCode}
               disabled={verificationCode.length !== 6}
             >
-              Verify
+              {t("verify")}
             </Button>
           </CardContent>
         </Card>
@@ -509,18 +518,17 @@ export default function YipyyGoFormPage({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="size-5" />
-              Form Locked
+              {t("formLocked")}
             </CardTitle>
             <CardDescription>
-              The deadline for submitting this form has passed.
+              {t("theDeadlineForSubmittingThis")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <AlertCircle className="size-4" />
               <AlertDescription>
-                Please contact the facility directly to provide this
-                information.
+                {t("contactFacilityDirectly")}
               </AlertDescription>
             </Alert>
             <Button
@@ -528,7 +536,7 @@ export default function YipyyGoFormPage({
               className="mt-4 w-full"
               onClick={() => router.push(`/customer/bookings/${booking.id}`)}
             >
-              Back to Booking
+              {t("backToBooking")}
             </Button>
           </CardContent>
         </Card>
@@ -538,10 +546,7 @@ export default function YipyyGoFormPage({
 
   // Success screen after submission
   if (isSubmitted) {
-    const arrivalDate = new Date(booking.startDate).toLocaleDateString(
-      "en-US",
-      { weekday: "long", month: "long", day: "numeric" },
-    );
+    const arrivalDate = formatDateLong(localDay(booking.startDate), locale);
     return (
       <div className="from-background via-primary/5 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
         <Card className="w-full max-w-lg border-green-200 shadow-lg">
@@ -550,22 +555,30 @@ export default function YipyyGoFormPage({
               <PartyPopper className="size-8 text-green-600" />
             </div>
             <CardTitle className="text-2xl">
-              You&apos;re all set, {customer.name.split(" ")[0]}!
+              {fill("youreAllSet", { name: customer.name.split(" ")[0] })}
             </CardTitle>
             <CardDescription className="text-base">
-              Thank you for completing your Express Check-in. We&apos;re excited
-              to meet <strong className="text-foreground">{pet.name}</strong> on{" "}
-              <strong className="text-foreground">{arrivalDate}</strong>
-              {booking.checkInTime ? ` at ${booking.checkInTime}` : ""}.
+              {rich(
+                t(booking.checkInTime ? "excitedToMeetAt" : "excitedToMeet"),
+                {
+                  pet: <strong className="text-foreground">{pet.name}</strong>,
+                  date: (
+                    <strong className="text-foreground">{arrivalDate}</strong>
+                  ),
+                  time: booking.checkInTime
+                    ? formatTimeOfDay(booking.checkInTime, locale)
+                    : "",
+                },
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert>
               <CheckCircle2 className="size-4 text-green-600" />
               <AlertDescription>
-                A confirmation email has been sent to{" "}
-                <strong>{customer.email}</strong>. Show your check-in QR code
-                when you arrive for a fast-track drop-off.
+                {rich(t("confirmationEmailSentTo"), {
+                  email: <strong>{customer.email}</strong>,
+                })}
               </AlertDescription>
             </Alert>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -575,14 +588,14 @@ export default function YipyyGoFormPage({
                   router.push(`/customer/bookings/${booking.id}/check-in-qr`)
                 }
               >
-                View check-in QR
+                {t("viewCheckInQr")}
               </Button>
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => router.push("/customer/dashboard")}
               >
-                Back to dashboard
+                {t("backToDashboard")}
               </Button>
             </div>
           </CardContent>
@@ -615,7 +628,7 @@ export default function YipyyGoFormPage({
       ? [
           {
             id: "contact",
-            label: "Contact Info",
+            label: t("contactInfo"),
             component: ContactInfoSection,
           },
         ]
@@ -624,7 +637,7 @@ export default function YipyyGoFormPage({
       ? [
           {
             id: "pet-details",
-            label: "Pet Details",
+            label: t("petDetails"),
             component: PetDetailsSection,
           },
         ]
@@ -633,36 +646,36 @@ export default function YipyyGoFormPage({
       ? [
           {
             id: "booking-details",
-            label: "Booking",
+            label: t("booking"),
             component: BookingDetailsSection,
           },
         ]
       : []),
     ...(sectionEnabled("feeding")
-      ? [{ id: "feeding", label: "Feeding", component: FeedingSection }]
+      ? [{ id: "feeding", label: t("feeding"), component: FeedingSection }]
       : []),
     ...(sectionEnabled("medication")
       ? [
           {
             id: "medication",
-            label: "Medications",
+            label: t("medications"),
             component: MedicationSection,
           },
         ]
       : []),
     ...(features?.addOnsSection
-      ? [{ id: "addons", label: "Add-ons", component: AddOnsSection }]
+      ? [{ id: "addons", label: t("addOns"), component: AddOnsSection }]
       : []),
     ...(sectionEnabled("belongings")
       ? [
           {
             id: "belongings",
-            label: "Belongings",
+            label: t("belongings"),
             component: BelongingsSection,
           },
         ]
       : []),
-    { id: "review", label: "Review", component: ReviewSection },
+    { id: "review", label: t("review"), component: ReviewSection },
   ];
 
   const CurrentSectionComponent = sections[currentSection]?.component;
@@ -670,8 +683,8 @@ export default function YipyyGoFormPage({
   const totalSections = sections.length;
   const stepLabel =
     currentSection === totalSections - 1
-      ? "Review"
-      : `Step ${currentSection + 1} of ${totalSections - 1}`;
+      ? t("review")
+      : fill("stepOf", { n: currentSection + 1, total: totalSections - 1 });
 
   return (
     <div className="bg-background min-h-screen p-4">
@@ -685,14 +698,14 @@ export default function YipyyGoFormPage({
               onClick={() => router.push(`/customer/bookings/${booking.id}`)}
             >
               <ArrowLeft className="mr-2 size-4" />
-              Back
+              {t("back")}
             </Button>
             {/* "Yipyy" here is the product, not the mascot — CLAUDE.md's
                 asset rule: he is "Yipyy" only where a character is plainly
                 meant, and never let one sentence mean both. */}
             <PageHeader
               className="mt-2"
-              title="Yipyy express check-in"
+              title={t("yipyyExpressCheckIn")}
               inline={
                 <span className="bg-surface-inset text-primary inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
                   <Zap className="size-3" />
@@ -720,15 +733,14 @@ export default function YipyyGoFormPage({
                     <RotateCcw className="text-primary size-5" />
                   </div>
                   <div>
-                    <p className="font-medium">Use same as last time</p>
+                    <p className="font-medium">{t("useSameAsLastTime")}</p>
                     <p className="text-muted-foreground text-sm">
-                      Copy belongings, feeding, meds & behavior from your last
-                      stay
+                      {t("copyFromLastStay")}
                     </p>
                   </div>
                 </div>
                 <Button onClick={applyLastStayPreferences} variant="default">
-                  Apply
+                  {t("apply")}
                 </Button>
               </div>
             </CardContent>
@@ -740,22 +752,28 @@ export default function YipyyGoFormPage({
           <CardContent className="pt-6">
             <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
-                <p className="text-muted-foreground">Pet</p>
+                <p className="text-muted-foreground">{t("pet")}</p>
                 <p className="font-medium">{pet.name}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Service</p>
-                <p className="font-medium capitalize">{booking.service}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Date</p>
+                <p className="text-muted-foreground">{t("service")}</p>
                 <p className="font-medium">
-                  {new Date(booking.startDate).toLocaleDateString()}
+                  {serviceTypeLabel(locale, booking.service)}
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Check-in Time</p>
-                <p className="font-medium">{booking.checkInTime || "TBD"}</p>
+                <p className="text-muted-foreground">{t("date")}</p>
+                <p className="font-medium">
+                  {formatDateLong(localDay(booking.startDate), locale)}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">{t("checkInTime")}</p>
+                <p className="font-medium">
+                  {booking.checkInTime
+                    ? formatTimeOfDay(booking.checkInTime, locale)
+                    : t("toBeDecided")}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -765,7 +783,7 @@ export default function YipyyGoFormPage({
         <div className="bg-card rounded-xl border p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Step {currentSection + 1} of {totalSections}
+              {fill("stepOf", { n: currentSection + 1, total: totalSections })}
             </p>
             <p className="text-primary text-xs font-medium">
               {sections[currentSection]?.label}
@@ -834,7 +852,7 @@ export default function YipyyGoFormPage({
               onClick={() => setCurrentSection(Math.max(0, currentSection - 1))}
               disabled={currentSection === 0}
             >
-              Back
+              {t("back")}
             </Button>
             <Button
               onClick={() =>
@@ -843,7 +861,9 @@ export default function YipyyGoFormPage({
                 )
               }
             >
-              Next: {sections[currentSection + 1]?.label}
+              {fill("nextSection", {
+                section: sections[currentSection + 1]?.label ?? "",
+              })}
             </Button>
           </div>
         )}

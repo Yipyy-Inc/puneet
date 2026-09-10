@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Heart, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TipPopupConfig, TipSelection } from "@/types/yipyygo";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { formatMoney } from "@/lib/i18n/format";
 
 interface TipPromptDialogProps {
   open: boolean;
@@ -38,6 +40,8 @@ export function TipPromptDialog({
   onConfirm,
   isSubmitting,
 }: TipPromptDialogProps) {
+  const t = useShellText("yipyygo");
+  const locale = useShellLocale();
   const [selection, setSelection] = useState<Selection>({ kind: "none" });
   const [customInput, setCustomInput] = useState("");
 
@@ -131,8 +135,8 @@ export function TipPromptDialog({
                   )}
                 >
                   <span className="text-base font-bold">{preset.label}</span>
-                  <span className="text-muted-foreground text-xs">
-                    ${amount.toFixed(2)}
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    {formatMoney(amount, locale)}
                   </span>
                 </button>
               );
@@ -141,7 +145,7 @@ export function TipPromptDialog({
 
           {config.allowCustomAmount && (
             <div className="space-y-1.5">
-              <Label htmlFor="tip-custom-amount">Custom amount ($)</Label>
+              <Label htmlFor="tip-custom-amount">{t("customAmount")}</Label>
               <Input
                 id="tip-custom-amount"
                 type="number"
@@ -149,7 +153,7 @@ export function TipPromptDialog({
                 step={0.5}
                 value={customInput}
                 onChange={(e) => handleCustomChange(e.target.value)}
-                placeholder="Enter amount"
+                placeholder={t("enterAmount")}
               />
             </div>
           )}
@@ -158,10 +162,10 @@ export function TipPromptDialog({
             <div className="bg-primary/5 flex items-center justify-between rounded-lg border p-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="text-primary size-4" />
-                <span className="text-sm font-medium">Tip amount</span>
+                <span className="text-sm font-medium">{t("tipAmount")}</span>
               </div>
-              <span className="text-primary text-lg font-bold">
-                ${computedAmount.toFixed(2)}
+              <span className="text-primary text-lg font-bold tabular-nums">
+                {formatMoney(computedAmount, locale)}
               </span>
             </div>
           )}
@@ -177,8 +181,11 @@ export function TipPromptDialog({
             className="w-full"
           >
             {selection.kind === "none"
-              ? "Submit Express Check-in without tip"
-              : `Add $${computedAmount.toFixed(2)} tip & submit`}
+              ? t("submitWithoutTip")
+              : t("addTipAndSubmit").replace(
+                  "{amount}",
+                  formatMoney(computedAmount, locale),
+                )}
           </Button>
           {config.allowSkip && selection.kind !== "none" && (
             <Button
@@ -190,7 +197,7 @@ export function TipPromptDialog({
               className="w-full"
               disabled={isSubmitting}
             >
-              Clear selection
+              {t("clearSelection")}
             </Button>
           )}
         </DialogFooter>
