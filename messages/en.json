@@ -1734,7 +1734,11 @@
         "taskCatCleanup": "Cleanup",
         "taskCatTransport": "Transport",
         "taskCatCare": "Care",
-        "taskCatCustom": "Custom"
+        "taskCatCustom": "Custom",
+        "declinedDone": "{ref} is declined",
+        "earlyCheckoutDone": "{ref} now ends {date}",
+        "earlyCheckoutHelp": "A refund, credit or fee from the early-checkout policy is not applied for you — settle it at the till.",
+        "earlyCheckoutFailed": "The early checkout was not recorded"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",

@@ -63,6 +63,12 @@ import {
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { bookingMutations } from "@/lib/api/booking";
+import { useBoardingStayUpdate } from "@/lib/api/boarding-attendance";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { formatDateLong as formatDateLongIn } from "@/lib/i18n/format";
 import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
@@ -461,7 +467,11 @@ export default function ClientBookingDetailPage({
 
   const [editOpen, setEditOpen] = useState(false);
   const saveEdit = useSaveBookingEdit(booking);
-  const { t: detailT, fill: detailFill } = useStaffText("bookingDetail");
+  const {
+    t: detailT,
+    fill: detailFill,
+    locale: detailLocale,
+  } = useStaffText("bookingDetail");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const { locations } = useLocationContext();
@@ -581,6 +591,10 @@ export default function ClientBookingDetailPage({
   // Above the early returns below — a hook after a conditional return is
   // called in a different order on the render where the booking is loading.
   const updateStatus = useUpdateBookingStatus();
+  const boardingStay = useBoardingStayUpdate();
+  const { openBookingModal, closeBookingModal } = useBookingModal();
+  const createBooking = useCreateBookingFromModal();
+  const { profile: facilityProfile } = useFacilityProfile();
   // The printed invoice/receipt: the facility's own identity and its own tax,
   // not the template fixture's "Example Pet Care Facility" and its fabricated
   // GST number.
@@ -840,7 +854,24 @@ export default function ClientBookingDetailPage({
               <Button
                 size="sm"
                 className="gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
-                onClick={() => toast.success("Evaluation appointment created")}
+                // It toasted "Evaluation appointment created" and created
+                // nothing. It opens the booking wizard on an evaluation for
+                // this pet, and the wizard creates it.
+                onClick={() =>
+                  openBookingModal({
+                    clients: client ? [client] : [],
+                    facilityId: booking.facilityId,
+                    facilityName: facilityProfile.businessName,
+                    preSelectedClientId: client?.id,
+                    preSelectedPetId: Array.isArray(booking.petId)
+                      ? booking.petId[0]
+                      : booking.petId,
+                    preSelectedService: "evaluation",
+                    onCreateBooking: async (created) => {
+                      if (await createBooking(created)) closeBookingModal();
+                    },
+                  })
+                }
               >
                 <ClipboardList className="size-3.5" />
                 Add Evaluation
@@ -921,7 +952,7 @@ export default function ClientBookingDetailPage({
                 variant="outline"
                 size="sm"
                 className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-                onClick={() => toast.info("Booking marked as declined")}
+                onClick={() => void revertTo("declined", "declinedDone")}
               >
                 <XCircle className="size-3.5" />
                 Decline
@@ -1936,10 +1967,48 @@ export default function ClientBookingDetailPage({
             open={earlyCheckoutOpen}
             onOpenChange={setEarlyCheckoutOpen}
             isEarlyCheckout
-            onConfirm={({ reason }) => {
-              toast.success(
-                `Early checkout recorded for ${bookingRef}${reason ? ` · "${reason}"` : ""}`,
-              );
+            // It toasted "Early checkout recorded" and recorded nothing. The
+            // stay is shortened to the day they left (the stay follows by
+            // trigger), a boarding guest's departure is stamped, and the till
+            // opens on the balance. The policy's refund, credit or fee is a
+            // money write this dialog does not make — the toast says so.
+            onConfirm={async ({ timestamp, reason, earlyCheckout }) => {
+              // The LOCAL day they left — an evening checkout is tomorrow in UTC.
+              const left = new Date(timestamp);
+              const leftOn = [
+                left.getFullYear(),
+                String(left.getMonth() + 1).padStart(2, "0"),
+                String(left.getDate()).padStart(2, "0"),
+              ].join("-");
+              try {
+                await bookingMutations.update(booking.id, {
+                  endDate: leftOn,
+                  earlyCheckout: {
+                    at: timestamp,
+                    reason: reason || undefined,
+                    unusedNights: earlyCheckout?.unusedNights,
+                  },
+                } as Partial<Booking>);
+                if (booking.service === "boarding") {
+                  await boardingStay
+                    .mutateAsync({ bookingRef: booking.id, checkOut: true })
+                    .catch(() => undefined);
+                }
+                await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+                toast.success(
+                  detailFill("earlyCheckoutDone", {
+                    ref: bookingRef,
+                    date: formatDateLongIn(leftOn, detailLocale),
+                  }),
+                  { description: detailT("earlyCheckoutHelp") },
+                );
+                openCheckout();
+              } catch (error) {
+                toast.error(detailT("earlyCheckoutFailed"), {
+                  description:
+                    error instanceof Error ? error.message : undefined,
+                });
+              }
             }}
           />
         )}
