@@ -12193,3 +12193,22 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   `staff.areas.createClient` now, through `contactTagLabel`, and the table
   is gone. Another shape the gate cannot read: a label table outside the
   walk, indexed by a variable.
+
+### Estimate account setup (`/customer/estimates/[token]/setup`) — **the password is thrown away, and a new link goes to whoever asked**
+
+- **"Set password and view estimate" stores no password.** `handleSubmit`
+  checks length and match, then `activateEstimateAccount` sets
+  `accountActivatedAt` on the FIXTURE estimate and toasts "Account activated
+  — welcome!". Identity is WorkOS (ADR 0004); nothing here reaches it, so
+  the customer has an account they cannot sign in to with the password they
+  just chose.
+- **"Send me a new link" sends nothing — it hands the link over.**
+  `refreshEstimateMagicLink` rotates the fixture token and the page
+  `router.push`es straight to the new setup URL, after toasting "A new link
+  has been sent to {email}". Whoever holds an expired link gets a live one
+  for any email they type. Harmless while it reads the fixture; the shape
+  must not survive into the real version, where the link should go only to
+  the address on file.
+- Fixed while translating: "Welcome, there." — the fallback when the
+  estimate has no name — is a plain "Welcome." now; the copy said "Click
+  here" above a form with no link in it.

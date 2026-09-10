@@ -15,12 +15,14 @@ import {
   refreshEstimateMagicLink,
 } from "@/lib/estimates/account-provisioning";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 export default function AccountSetupPage() {
   // How long a re-issued magic link lives is the facility's setting, not the
   // browser's — it used to come from localStorage, so the same customer got a
   // different window depending on who sent it.
   const { settings: estimateSettings } = useEstimateSettings();
+  const { t, fill } = useCustomerText("estimates");
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;
@@ -39,14 +41,14 @@ export default function AccountSetupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center p-6">
         <PageHeader
-          title="Link Not Found"
-          description="This account-setup link is invalid."
+          title={t("setupLinkNotFound")}
+          description={t("setupLinkInvalid")}
         />
       </div>
     );
   }
 
-  const firstName = (estimate.guestName || estimate.clientName || "there")
+  const firstName = (estimate.guestName || estimate.clientName || "")
     .trim()
     .split(/\s+/)[0];
 
@@ -58,16 +60,16 @@ export default function AccountSetupPage() {
 
   const handleSubmit = () => {
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("setupPasswordTooShort"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("setupPasswordsDontMatch"));
       return;
     }
     setError("");
     activateEstimateAccount(estimate, new Date());
-    toast.success("Account activated — welcome!");
+    toast.success(t("setupActivated"));
     // Redirect into the customer portal with the estimate visible.
     router.push(`/customer/estimates/${token}?activated=1`);
   };
@@ -80,7 +82,7 @@ export default function AccountSetupPage() {
       estimateSettings,
       new Date(),
     );
-    toast.success(`A new link has been sent to ${email}`);
+    toast.success(fill("setupNewLinkSent", { email }));
     router.push(`/customer/estimates/${newToken}/setup`);
   };
 
@@ -101,14 +103,14 @@ export default function AccountSetupPage() {
               <div className="flex size-12 items-center justify-center rounded-full bg-amber-100">
                 <Clock className="size-6 text-amber-600" />
               </div>
-              <h1 className="text-lg font-bold">This link has expired</h1>
+              <h1 className="text-lg font-bold">{t("setupLinkExpired")}</h1>
               <p className="text-muted-foreground text-sm">
-                Click here to request a new link. Your estimate is still valid.
+                {t("setupRequestNewLink")}
               </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="request-email" className="text-sm">
-                Email address
+                {t("setupEmailAddress")}
               </Label>
               <div className="relative">
                 <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -117,7 +119,7 @@ export default function AccountSetupPage() {
                   type="email"
                   value={requestEmail}
                   onChange={(e) => setRequestEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t("setupEmailPlaceholder")}
                   className="pl-10"
                 />
               </div>
@@ -127,7 +129,7 @@ export default function AccountSetupPage() {
               onClick={handleRequestNewLink}
               disabled={!requestEmail.trim()}
             >
-              Send me a new link
+              {t("setupSendNewLink")}
             </Button>
           </div>
         ) : (
@@ -137,16 +139,20 @@ export default function AccountSetupPage() {
               <div className="flex size-12 items-center justify-center rounded-full bg-blue-100">
                 <ShieldCheck className="size-6 text-blue-600" />
               </div>
-              <h1 className="text-lg font-bold">Welcome, {firstName}.</h1>
+              <h1 className="text-lg font-bold">
+                {firstName
+                  ? fill("setupWelcomeName", { name: firstName })
+                  : t("setupWelcome")}
+              </h1>
               <p className="text-muted-foreground text-sm">
-                Set your password to access your account.
+                {t("setupSetPassword")}
               </p>
             </div>
 
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-sm">
-                  Password
+                  {t("setupPassword")}
                 </Label>
                 <div className="relative">
                   <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -155,14 +161,14 @@ export default function AccountSetupPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
+                    placeholder={t("setupAtLeast8")}
                     className="pl-10"
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="confirm" className="text-sm">
-                  Confirm password
+                  {t("setupConfirmPassword")}
                 </Label>
                 <div className="relative">
                   <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -171,7 +177,7 @@ export default function AccountSetupPage() {
                     type="password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Re-enter your password"
+                    placeholder={t("setupReenterPassword")}
                     className="pl-10"
                   />
                 </div>
@@ -184,15 +190,17 @@ export default function AccountSetupPage() {
               onClick={handleSubmit}
               disabled={!password || !confirm}
             >
-              Set Password &amp; View Estimate
+              {t("setupSetPasswordAndView")}
             </Button>
           </div>
         )}
 
         {/* Footer */}
         <div className="text-muted-foreground border-t px-6 py-4 text-center text-xs">
-          Questions? Call {businessProfile.phone} or email{" "}
-          {businessProfile.email}
+          {fill("questionsCallOrEmail", {
+            phone: businessProfile.phone,
+            email: businessProfile.email,
+          })}
         </div>
       </div>
     </div>
