@@ -12416,8 +12416,10 @@ placed relative to whichever day was being viewed; they are gone. A booking
 dragged with "notify" said "owner notified via SMS/email"; nothing sends, so
 it says the owner was not messaged.
 
-- **Still open:** the calendar's tasks still come from the `facilityTasks`
-  fixture (the real board is `/api/tasks`); add-ons attached, notes updated,
+- **Still open:** ~~the calendar's tasks still come from the `facilityTasks`
+  fixture~~ — they are the task board's now (`/api/tasks`), completed and
+  added through it; the fixture custom-service check-ins no longer invent
+  tasks either. Add-ons attached, notes updated,
   waitlist offers, lead conversions, recurring-series cancellations and the
   drawer's SMS/email buttons are still local or toast-only; external calendar
   connections are a module store. `FACILITY_ID = 11` still keys the saved

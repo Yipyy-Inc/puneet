@@ -19,13 +19,18 @@ import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { useTagCatalogue } from "@/lib/api/tags";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
-import { facilityTasks, type FacilityTask } from "@/data/facility-tasks";
+import type { FacilityTask } from "@/data/facility-tasks";
+import {
+  taskQueries,
+  useCreateTask,
+  useUpdateTask,
+  type TaskRow,
+} from "@/lib/api/facility-tasks";
 import { getAllTransactions } from "@/data/retail";
 import { users } from "@/data/users";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
-import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { OperationsCalendarContent } from "@/components/facility/operations/OperationsCalendarContent";
 import {
@@ -471,16 +476,6 @@ function buildTaskAuditEntry(input: {
   };
 }
 
-function mapWorkflowTaskTypeToCategory(
-  taskType: "feeding" | "medication" | "activity" | "care" | "cleanup",
-): FacilityTask["category"] {
-  return taskType;
-}
-
-function shiftMinutes(base: Date, minutes: number): Date {
-  return new Date(base.getTime() + minutes * 60 * 1000);
-}
-
 function escapeCsvCell(
   value: string | number | boolean | null | undefined,
 ): string {
@@ -502,73 +497,58 @@ function buildCsv(
   return lines.join("\n");
 }
 
-function generateTasksFromCustomServiceWorkflow(
-  checkIns: typeof customServiceCheckIns,
-  modules: CustomServiceModule[],
-): FacilityTask[] {
-  const moduleById = new Map(
-    modules.map((serviceModule) => [serviceModule.id, serviceModule]),
-  );
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  return checkIns.flatMap((checkIn, checkInIndex) => {
-    const serviceModule = moduleById.get(checkIn.moduleId);
-    if (!serviceModule) return [];
-
-    const workflow = getModuleWorkflowQuestionnaire(serviceModule);
-    if (!workflow.generatesTasks || workflow.taskTemplates.length === 0)
-      return [];
-
-    const start = new Date(checkIn.checkInTime);
-    const checkoutBase = checkIn.checkOutTime
-      ? new Date(checkIn.checkOutTime)
-      : new Date(checkIn.scheduledCheckOut);
-
-    return workflow.taskTemplates.map((template, templateIndex) => {
-      let scheduledAt = start;
-      if (template.timingRule === "before_start") {
-        scheduledAt = shiftMinutes(start, -(template.offsetMinutes || 0));
-      }
-      if (template.timingRule === "after_check_out") {
-        scheduledAt = shiftMinutes(checkoutBase, template.offsetMinutes || 0);
-      }
-
-      const bookingIdSeed = Number.parseInt(
-        checkIn.id.replace(/[^0-9]/g, ""),
-        10,
-      );
-      const bookingId = Number.isFinite(bookingIdSeed)
-        ? bookingIdSeed
-        : 900000 + checkInIndex;
-
-      return {
-        id: `csm-auto-${checkIn.id}-${template.id}-${templateIndex}`,
-        bookingId,
-        petId: checkIn.petId,
-        petName: checkIn.petName,
-        ownerName: checkIn.ownerName,
-        name: template.taskName,
-        description: `${checkIn.moduleName} auto-task (${template.timingRule})${template.requiresCompletionNote ? " | note required" : ""}${template.requiresPhotoProof ? " | photo required" : ""}`,
-        category: mapWorkflowTaskTypeToCategory(template.taskType),
-        assignmentType: "specific_staff",
-        assignedToName: checkIn.staffAssigned,
-        autoAssigned: true,
-        scheduledDate: formatDateKey(scheduledAt),
-        scheduledTime: `${`${scheduledAt.getHours()}`.padStart(2, "0")}:${`${scheduledAt.getMinutes()}`.padStart(2, "0")}`,
-        shiftPeriod: inferShiftFromHour(scheduledAt.getHours()),
-        status: "pending",
-        isOverdue: false,
-        isCritical:
-          template.requiresPhotoProof || template.requiresCompletionNote,
-      } as FacilityTask;
-    });
-  });
+/**
+ * A task-board row, in the calendar's task shape. Only a task with a due time
+ * has a place on a calendar; the rest stay on the board.
+ */
+function taskRowToCalendarTask(row: TaskRow): FacilityTask[] {
+  if (!row.dueAt) return [];
+  const due = new Date(row.dueAt);
+  const meta = row.metadata ?? {};
+  const category = (
+    ["feeding", "medication", "activity", "care", "cleanup"] as const
+  ).find((c) => c === row.category);
+  return [
+    {
+      id: row.id,
+      bookingId: Number(meta.bookingRef) || 0,
+      petId: 0,
+      petName: typeof meta.petName === "string" ? meta.petName : "",
+      ownerName: typeof meta.ownerName === "string" ? meta.ownerName : "",
+      name: row.title,
+      description: row.description ?? undefined,
+      category: category ?? "care",
+      assignmentType: row.assignedToId ? "specific_staff" : "unassigned",
+      assignedToId: row.assignedToId ?? undefined,
+      assignedToName: row.assignedToName ?? undefined,
+      autoAssigned: false,
+      scheduledDate: formatDateKey(due),
+      scheduledTime: `${`${due.getHours()}`.padStart(2, "0")}:${`${due.getMinutes()}`.padStart(2, "0")}`,
+      shiftPeriod: inferShiftFromHour(due.getHours()),
+      status:
+        row.status === "completed"
+          ? "completed"
+          : row.status === "cancelled"
+            ? "skipped"
+            : row.overdue
+              ? "overdue"
+              : "pending",
+      isOverdue: row.overdue,
+      isCritical: row.priority === "urgent" || row.priority === "high",
+      completedAt: row.completedAt ?? undefined,
+      completedByName: row.completedByName ?? undefined,
+      completionNotes: row.notes ?? undefined,
+    },
+  ];
 }
 
 export function OperationsCalendar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { activeModules, modules, resources } = useCustomServices();
+  const { activeModules, resources } = useCustomServices();
   const {
     daycare,
     boarding,
@@ -588,9 +568,9 @@ export function OperationsCalendar() {
   // action on them (check in, check out, cancel, reassign) edited the copy in
   // this component's memory and was gone on the next navigation.
   //
-  // `taskRecords` below is still `facilityTasks`, and deliberately: facility
-  // tasks have no table at all. That is a build, not a wiring job, and it is
-  // not quietly included here.
+  // Tasks are the task board's (`/api/tasks`). This comment used to say they
+  // had no table and so stayed on the `facilityTasks` fixture — a morning of
+  // invented feedings drawn on every facility's calendar.
   const { data: bookingRecords = [], isPending: bookingsPending } = useQuery(
     bookingQueries.all(),
   );
@@ -617,7 +597,15 @@ export function OperationsCalendar() {
       }),
   });
 
-  const [taskRecords, setTaskRecords] = useState<FacilityTask[]>(facilityTasks);
+  const { data: taskPayload } = useQuery(taskQueries.all({ status: "all" }));
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const [taskRecords, setTaskRecords] = useState<FacilityTask[]>([]);
+  useEffect(() => {
+    if (taskPayload) {
+      setTaskRecords(taskPayload.tasks.flatMap(taskRowToCalendarTask));
+    }
+  }, [taskPayload]);
   const [bookingAddOnState, setBookingAddOnState] = useState<
     Record<number, BookingDrawerAddOnItem[]>
   >({});
@@ -843,30 +831,6 @@ export function OperationsCalendar() {
     () => buildPermissionSet(permissionLevel),
     [permissionLevel],
   );
-
-  const generatedWorkflowTasks = useMemo(
-    () =>
-      generateTasksFromCustomServiceWorkflow(customServiceCheckIns, modules),
-    [modules],
-  );
-
-  useEffect(() => {
-    if (generatedWorkflowTasks.length === 0) return;
-
-    setTaskRecords((previous) => {
-      const existingById = new Map(previous.map((task) => [task.id, task]));
-      let changed = false;
-
-      for (const generatedTask of generatedWorkflowTasks) {
-        if (!existingById.has(generatedTask.id)) {
-          existingById.set(generatedTask.id, generatedTask);
-          changed = true;
-        }
-      }
-
-      return changed ? Array.from(existingById.values()) : previous;
-    });
-  }, [generatedWorkflowTasks]);
 
   // Real clients, for the same reason as real bookings: a calendar drawing
   // Postgres bookings and naming their customers from `src/data/clients` would
@@ -2405,7 +2369,33 @@ export function OperationsCalendar() {
       });
     }
 
-    toast.success("Task marked complete");
+    const announce = () => toast.success("Task marked complete");
+    // Written to the task board. A task the calendar made up itself (an
+    // escalation, say) has no row and stays local.
+    if (UUID.test(taskId)) {
+      updateTask.mutate(
+        {
+          id: taskId,
+          status: "completed",
+          ...(finalizedAuditEntry.completionNote
+            ? { notes: finalizedAuditEntry.completionNote }
+            : {}),
+        },
+        {
+          onSuccess: announce,
+          onError: (error: unknown) => {
+            void queryClient.invalidateQueries({
+              queryKey: ["facility-tasks"],
+            });
+            toast.error(calT("taskNotSaved"), {
+              description: error instanceof Error ? error.message : undefined,
+            });
+          },
+        },
+      );
+      return;
+    }
+    announce();
   };
 
   const markAllBookingTasksComplete = (bookingId: number) => {
@@ -2580,13 +2570,44 @@ export function OperationsCalendar() {
     };
 
     setTaskRecords((previous) => [nextTask, ...previous]);
-    appendAuditEntry("booking_edited", {
-      bookingId,
-      field: "task-added",
-      taskId: nextTask.id,
-      taskName: nextTask.name,
-    });
-    toast.success("Task linked to booking");
+    // A task on the board, linked to the booking by its ref. It was pushed onto
+    // local state and toasted "Task linked to booking".
+    const [hours, minutes] = nextTask.scheduledTime.split(":").map(Number);
+    const due = parseDateKey(nextTask.scheduledDate) ?? new Date();
+    due.setHours(hours || 0, minutes || 0, 0, 0);
+    createTask.mutate(
+      {
+        title: `${nextTask.name} — ${nextTask.petName}`,
+        description: nextTask.description ?? null,
+        category: nextTask.category,
+        dueAt: due.toISOString(),
+        source: "manual",
+        metadata: {
+          bookingRef: bookingId,
+          petName: nextTask.petName,
+          ownerName: nextTask.ownerName,
+        },
+      },
+      {
+        onSuccess: () => {
+          appendAuditEntry("booking_edited", {
+            bookingId,
+            field: "task-added",
+            taskId: nextTask.id,
+            taskName: nextTask.name,
+          });
+          toast.success("Task linked to booking");
+        },
+        onError: (error: unknown) => {
+          setTaskRecords((previous) =>
+            previous.filter((item) => item.id !== nextTask.id),
+          );
+          toast.error(calT("taskNotSaved"), {
+            description: error instanceof Error ? error.message : undefined,
+          });
+        },
+      },
+    );
   };
 
   const addBookingAddOn = (
