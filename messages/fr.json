@@ -1734,7 +1734,11 @@
         "taskCatCleanup": "Nettoyage",
         "taskCatTransport": "Transport",
         "taskCatCare": "Soins",
-        "taskCatCustom": "Personnalisée"
+        "taskCatCustom": "Personnalisée",
+        "declinedDone": "{ref} est refusée",
+        "earlyCheckoutDone": "{ref} se termine maintenant le {date}",
+        "earlyCheckoutHelp": "Le remboursement, le crédit ou les frais prévus pour un départ anticipé ne sont pas appliqués automatiquement : réglez-les à la caisse.",
+        "earlyCheckoutFailed": "Le départ anticipé n’a pas été enregistré"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
