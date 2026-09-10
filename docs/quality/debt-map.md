@@ -11851,3 +11851,35 @@ locale)` hands on a copy and the errors go. Only per-file lint against HEAD
   `YYYY-MM-DD` at local midnight: `new Date("2026-09-10")` is UTC, which is
   the 9th in every Canadian zone, and this was the fourth file this afternoon
   to need a local fix for it. One fix in `asDate`, with a test.
+
+## 2026-09-10 — the French gate could not see "Login & Security", or a sentence with a semicolon
+
+Found converting the customer settings page, whose three card titles —
+"Login & Security", "Privacy & Consent", "Visibility & sharing" — and whose
+instant-booking description ("Your facility manages this perk; reach out to
+staff") were all invisible to `check:ui-french`. Both were `looksLikeCode`
+calling prose code:
+
+- **An ampersand title.** Prose was "a letter, whitespace, a letter"
+  somewhere in the run. "Login & Security" has no such pair — its only gap is
+  `&` — so it read as code. The test now allows one connector (`&`, `+`,
+  `/`, `·`, a dash) between the two words.
+- **A semicolon in a sentence.** Any bare `;` meant "statement terminator".
+  It still does, unless the run carries no `=` or bracket and every `;` is
+  followed by a space and a lowercase word — which is what prose does and
+  code in this position never does.
+
+Measured the day it landed, the widening found **six strings on surfaces
+that were claiming zero with an empty baseline**: "Dates & Times" in the
+booking wizard (all four portal shells), "Validity & expiration" and "iOS &
+Android" in settings, "PDF, JPG, PNG — max 10 MB" twice in the staff area,
+and a whole training-cart line ("Mondays · 6:00 PM · 8 weeks · starts …")
+built from an English weekday array and a hand-rolled 12-hour clock. All six
+are translated in the same change.
+
+On the four page surfaces it raised the baseline once, the way the gate's
+earlier widenings did — the ratchet measures code, and the code did not get
+worse, the gate got sharper: customer +11 strings in 10 files, admin +34 in
+30, employee +26 in 19, facility +83 in 52. Every raised count is the count
+the gate itself measures for that file, set by a throwaway script that only
+touches files the gate calls NEW.

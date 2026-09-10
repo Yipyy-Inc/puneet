@@ -493,7 +493,7 @@ function MobileAppEditor({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{t("whiteLabelReady")}</Badge>
-          <Badge variant="outline">iOS & Android</Badge>
+          <Badge variant="outline">{t("iosAndAndroid")}</Badge>
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (

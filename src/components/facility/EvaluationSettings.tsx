@@ -478,7 +478,7 @@ export function EvaluationSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Clock className="size-4" />
-                Validity & expiration
+                {t("validityAndExpiration")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

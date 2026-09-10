@@ -781,7 +781,8 @@
         "uploading": "Téléversement…",
         "documentAdded": "Document ajouté au dossier permanent",
         "couldNotUpdateTask": "Impossible de mettre à jour cette tâche.",
-        "couldNotUploadFile": "Impossible de téléverser ce fichier."
+        "couldNotUploadFile": "Impossible de téléverser ce fichier.",
+        "fileTypesMax": "PDF, JPG, PNG — max. 10 Mo"
       },
       "documents": {
         "typeWorkPermit": "Permis de travail",
@@ -853,7 +854,8 @@
         "bannerExpiring": "{count} expirent d’ici 90 jours",
         "bannerAction": ". Ouvrez le profil de l’employé pour téléverser les versions renouvelées.",
         "countExpiringSoonOne": "{count} expire bientôt",
-        "countExpiringSoonOther": "{count} expirent bientôt"
+        "countExpiringSoonOther": "{count} expirent bientôt",
+        "fileTypesMax": "PDF, JPG, PNG — max. 10 Mo"
       },
       "writeUps": {
         "catVerbalWarning": "Avertissement verbal",
@@ -3111,7 +3113,8 @@
         "saving": "Enregistrement…",
         "save": "Enregistrer les paramètres de l’application",
         "saved": "Paramètres de l’application mobile enregistrés",
-        "notSaved": "Ces paramètres d’application mobile n’ont pas été enregistrés."
+        "notSaved": "Ces paramètres d’application mobile n’ont pas été enregistrés.",
+        "iosAndAndroid": "iOS et Android"
       },
       "pet-breeds": {
         "speciesDogs": "Chiens",
@@ -4700,7 +4703,8 @@
         "removeNamed": "Retirer {name}",
         "customLengthHint": "p. ex. 1 h 45 min pour une évaluation de 105 minutes",
         "to": "à",
-        "windowLabel": "Libellé"
+        "windowLabel": "Libellé",
+        "validityAndExpiration": "Validité et expiration"
       },
       "addons": {
         "svcDaycare": "Garderie",
@@ -6591,7 +6595,10 @@
       "outsideServiceAreaOnDay": "Hors de votre secteur de service ce jour-là.",
       "noMobileCoverageOnDay": "Aucun service mobile ce jour-là.",
       "full": "Complet",
-      "openCount": "{n} libres"
+      "openCount": "{n} libres",
+      "datesAndTimes": "Dates et heures",
+      "cartSeriesLine": "Chaque {day} · {time} · {weeks} semaines · début le {date}",
+      "dropInBadge": "À l’unité"
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",
