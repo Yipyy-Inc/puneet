@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Booking } from "@/types/booking";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 interface CancelBookingDialogProps {
   open: boolean;
@@ -25,31 +26,31 @@ export function CancelBookingDialog({
   booking,
   onConfirm,
 }: CancelBookingDialogProps) {
+  // Above the early return: the hook runs whether or not there is a booking.
+  const { t } = useCustomerText("bookings");
   if (!booking) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Cancel Booking</AlertDialogTitle>
+          <AlertDialogTitle>{t("cancelTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to cancel this booking? This action cannot be
-            undone.
+            {t("cancelBody")}
             {booking.paymentStatus === "paid" && (
               <span className="mt-2 block text-sm font-medium">
-                A refund will be processed according to the facility&apos;s
-                cancellation policy.
+                {t("cancelRefundNote")}
               </span>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+          <AlertDialogCancel>{t("keepBooking")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Cancel Booking
+            {t("cancelBooking")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

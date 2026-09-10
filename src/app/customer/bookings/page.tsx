@@ -32,11 +32,15 @@ import { UpcomingBookingCard } from "./_components/UpcomingBookingCard";
 import { PastBookingCard } from "./_components/PastBookingCard";
 import { getPetForBooking, type Booking } from "./_components/booking-helpers";
 import { PageHeader } from "@/components/ui/page-header";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 // WHO THIS PAGE IS FOR comes from the session. It was MOCK_CUSTOMER_ID = 15
 // (Alice Johnson), so every signed-in pet owner saw her bookings.
 
 export default function CustomerBookingsPage() {
+  const { t, fill, locale } = useCustomerText("bookings");
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const { tipConfig } = useSettings();
@@ -143,12 +147,12 @@ export default function CustomerBookingsPage() {
     try {
       // TODO: Replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Booking cancelled successfully");
+      toast.success(t("cancelledToast"));
       setCancelDialogOpen(false);
       setBookingToCancel(null);
     } catch (error: unknown) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to cancel booking",
+        error instanceof Error ? error.message : t("cancelFailedToast"),
       );
     }
   };
@@ -166,13 +170,13 @@ export default function CustomerBookingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <PageHeader
-            title="My Bookings"
-            description="View and manage your service bookings"
+            title={t("pageTitle")}
+            description={t("pageDescription")}
           />
           <Button asChild variant="default" size="lg">
             <Link href="/customer/bookings/new">
               <Plus className="mr-2 size-4" />
-              Book a Service
+              {t("bookService")}
             </Link>
           </Button>
         </div>
@@ -180,22 +184,22 @@ export default function CustomerBookingsPage() {
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard
-            title="Upcoming"
+            title={t("statUpcoming")}
             value={upcomingBookings.length}
-            subtitle="Confirmed bookings"
+            subtitle={t("statUpcomingHelp")}
             icon={Calendar}
           />
           <StatCard
-            title="Completed"
+            title={t("statCompleted")}
             value={pastBookings.filter((b) => b.status === "completed").length}
-            subtitle="Past bookings"
+            subtitle={t("statCompletedHelp")}
             icon={CheckCircle}
           />
           {myUnfinishedBookings.length > 0 && (
             <StatCard
-              title="Unfinished"
+              title={t("statUnfinished")}
               value={myUnfinishedBookings.length}
-              subtitle="Incomplete reservations"
+              subtitle={t("statUnfinishedHelp")}
               icon={Clock}
               tone="amber"
             />
@@ -205,10 +209,8 @@ export default function CustomerBookingsPage() {
         {/* Bookings list */}
         <Card>
           <CardHeader>
-            <CardTitle>Bookings</CardTitle>
-            <CardDescription>
-              Manage your upcoming and past service bookings
-            </CardDescription>
+            <CardTitle>{t("listTitle")}</CardTitle>
+            <CardDescription>{t("listDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <BookingFilters
@@ -221,13 +223,13 @@ export default function CustomerBookingsPage() {
             <Tabs defaultValue="upcoming" className="w-full">
               <TabsList>
                 <TabsTrigger value="upcoming">
-                  Upcoming ({upcomingBookings.length})
+                  {fill("tabUpcoming", { count: upcomingBookings.length })}
                 </TabsTrigger>
                 <TabsTrigger value="past">
-                  Past ({pastBookings.length})
+                  {fill("tabPast", { count: pastBookings.length })}
                 </TabsTrigger>
                 <TabsTrigger value="unfinished" className="relative">
-                  Unfinished
+                  {t("tabUnfinished")}
                   {myUnfinishedBookings.length > 0 && (
                     <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                       {myUnfinishedBookings.length}
@@ -255,14 +257,10 @@ export default function CustomerBookingsPage() {
                   <EmptyState
                     icon={Calendar}
                     title={
-                      filtersActive
-                        ? "No matching upcoming bookings"
-                        : "No upcoming bookings"
+                      filtersActive ? t("noMatchingUpcoming") : t("noUpcoming")
                     }
                     body={
-                      filtersActive
-                        ? "Try clearing your filters or search."
-                        : "Book your first service to get started"
+                      filtersActive ? t("clearFilters") : t("bookFirstService")
                     }
                     showBookCTA={!filtersActive}
                   />
@@ -295,15 +293,9 @@ export default function CustomerBookingsPage() {
                 ) : (
                   <EmptyState
                     icon={Clock}
-                    title={
-                      filtersActive
-                        ? "No matching past bookings"
-                        : "No past bookings"
-                    }
+                    title={filtersActive ? t("noMatchingPast") : t("noPast")}
                     body={
-                      filtersActive
-                        ? "Try clearing your filters or search."
-                        : "Your completed bookings will appear here"
+                      filtersActive ? t("clearFilters") : t("pastEmptyHelp")
                     }
                   />
                 )}
@@ -333,9 +325,13 @@ export default function CustomerBookingsPage() {
             setAddNoteDialogOpen(open);
             if (!open) setBookingForNote(null);
           }}
-          title={`Add Note — ${getPetForBooking(bookingForNote, customerPets)?.name ?? "Booking"}`}
+          title={fill("addNoteFor", {
+            name:
+              getPetForBooking(bookingForNote, customerPets)?.name ??
+              t("bookingFallback"),
+          })}
           onSave={() => {
-            toast.success("Note added to booking");
+            toast.success(t("noteAddedToast"));
             setAddNoteDialogOpen(false);
             setBookingForNote(null);
           }}
@@ -356,20 +352,24 @@ export default function CustomerBookingsPage() {
             if (amount > 0) {
               setTipsGiven((prev) => ({ ...prev, [tipBooking.id]: amount }));
               toast.success(
-                `Thank you! $${amount.toFixed(2)} sent to the team.`,
+                fill("tipThanksToast", {
+                  amount: formatMoney(amount, locale),
+                }),
               );
             }
             setTipBooking(null);
           }}
           petName={getPetForBooking(tipBooking, customerPets)?.name}
-          serviceLabel={tipBooking.service}
-          confirmLabel="Send tip"
+          serviceLabel={serviceTypeLabel(locale, tipBooking.service)}
+          confirmLabel={t("sendTip")}
           contextTitle={
             getPetForBooking(tipBooking, customerPets)?.name
-              ? `${getPetForBooking(tipBooking, customerPets)!.name} is home safe 🏠`
-              : "Your pet is home safe 🏠"
+              ? fill("petHomeSafe", {
+                  pet: getPetForBooking(tipBooking, customerPets)!.name,
+                })
+              : t("yourPetHomeSafe")
           }
-          contextSubtitle="The team would love to hear how they did. Your tip goes straight to them."
+          contextSubtitle={t("tipContextSubtitle")}
         />
       )}
     </div>
@@ -440,6 +440,7 @@ function EmptyState({
   body: string;
   showBookCTA?: boolean;
 }) {
+  const { t } = useCustomerText("bookings");
   return (
     <div className="py-12 text-center">
       <Icon className="text-muted-foreground mx-auto mb-4 size-12" />
@@ -449,7 +450,7 @@ function EmptyState({
         <Button asChild>
           <Link href="/customer/bookings/new">
             <Plus className="mr-2 size-4" />
-            Book a Service
+            {t("bookService")}
           </Link>
         </Button>
       )}

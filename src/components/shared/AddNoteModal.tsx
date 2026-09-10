@@ -16,6 +16,7 @@ import { Eye, EyeOff, Pin } from "lucide-react";
 import type { Note, NoteVisibility, PetNoteSubType } from "@/data/tags-notes";
 import { useAiText } from "@/hooks/use-ai-text";
 import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 interface AddNoteModalProps {
   open: boolean;
@@ -41,6 +42,7 @@ export function AddNoteModal({
   showSubType = false,
   title,
 }: AddNoteModalProps) {
+  const t = useShellText("shared");
   const [content, setContent] = useState(editNote?.content ?? "");
   const [visibility, setVisibility] = useState<NoteVisibility>(
     editNote?.visibility ?? "internal",
@@ -52,7 +54,7 @@ export function AddNoteModal({
   const ai = useAiText({ type: "staff_note", maxWords: 80 });
 
   const isEdit = !!editNote;
-  const modalTitle = title ?? (isEdit ? "Edit Note" : "Add Note");
+  const modalTitle = title ?? (isEdit ? t("editNote") : t("addNote"));
 
   function handleSave() {
     if (!content.trim()) return;
@@ -79,12 +81,12 @@ export function AddNoteModal({
       size="md"
       actions={{
         primary: {
-          label: isEdit ? "Save Changes" : "Add Note",
+          label: isEdit ? t("saveChanges") : t("addNote"),
           onClick: handleSave,
           disabled: !content.trim(),
         },
         secondary: {
-          label: "Cancel",
+          label: t("cancel"),
           onClick: () => onOpenChange(false),
         },
       }}
@@ -94,7 +96,7 @@ export function AddNoteModal({
         {showSubType && (
           <div className="space-y-1.5">
             <Label htmlFor="note-subtype" className="text-sm">
-              Note Type
+              {t("noteType")}
             </Label>
             <Select
               value={subType}
@@ -104,10 +106,10 @@ export function AddNoteModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="behavior">Behavior</SelectItem>
-                <SelectItem value="medical">Medical</SelectItem>
-                <SelectItem value="feeding">Feeding</SelectItem>
+                <SelectItem value="general">{t("noteGeneral")}</SelectItem>
+                <SelectItem value="behavior">{t("noteBehaviour")}</SelectItem>
+                <SelectItem value="medical">{t("noteMedical")}</SelectItem>
+                <SelectItem value="feeding">{t("noteFeeding")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -117,12 +119,13 @@ export function AddNoteModal({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="note-content" className="text-sm">
-              Note
+              {t("note")}
             </Label>
             <AiGenerateButton
               onClick={async () => {
                 const result = await ai.generate({
                   noteType: showSubType ? subType : "general",
+                  // french-ok: the AI prompt's subject, never rendered
                   subjectName: title ?? "Note",
                 });
                 if (result) setContent(result);
@@ -134,7 +137,7 @@ export function AddNoteModal({
             id="note-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write your note here..."
+            placeholder={t("notePlaceholder")}
             rows={5}
             className="min-h-[140px] resize-y text-sm/7"
           />
@@ -150,8 +153,8 @@ export function AddNoteModal({
             )}
             <Label className="cursor-pointer text-sm" htmlFor="note-visibility">
               {visibility === "internal"
-                ? "Internal only"
-                : "Visible to customer"}
+                ? t("internalOnly")
+                : t("visibleToCustomer")}
             </Label>
             <Switch
               id="note-visibility"
@@ -164,7 +167,7 @@ export function AddNoteModal({
           <div className="flex items-center gap-2">
             <Pin className="text-muted-foreground size-4" />
             <Label className="cursor-pointer text-sm" htmlFor="note-pin">
-              Pin
+              {t("pin")}
             </Label>
             <Switch
               id="note-pin"

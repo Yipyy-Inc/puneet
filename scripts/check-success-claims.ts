@@ -250,6 +250,23 @@ const BASELINE = new Set<string>([
   "src/components/system-health/notification-recipients-card.tsx",
   "src/components/yipyygo/YipyyGoStaffReviewModal.tsx",
   "src/lib/express-checkin-reminder.tsx",
+
+  // ── BACK ON 2026-09-10, BECAUSE IT NEVER SHOULD HAVE LEFT ───────────────
+  //
+  // Removed on 2026-09-09 when the gate reported it "no longer claims". It
+  // still did. `toast.success("Task added")` had become
+  // `toast.success(t("taskAdded"))`, and this gate resolved keys against the
+  // settings and shell catalogues only — not `staff.areas`, where the staff
+  // area had just been converted. So the claim went invisible, the ratchet
+  // asked for its entry back, and it was given. Nothing had been fixed:
+  // `addOnboardingTask()` still writes to an in-memory Map in
+  // `src/data/staff-onboarding.ts`, and the task is gone on reload.
+  //
+  // The key resolver reads `staff.areas` and `customerPages.areas` now. This
+  // is the detector-widened exception above, and the widening that revealed it
+  // is named here. (The file's second claim, "Note saved", sits in `NotesTab`,
+  // which nothing imports — dead code, recorded in the debt map.)
+  "src/app/facility/dashboard/staff/[id]/staff-profile-tabs.tsx",
 ]);
 
 /**
@@ -355,6 +372,8 @@ const CATALOGUE_STRINGS: Map<string, string> = (() => {
   const en = JSON.parse(readFileSync("messages/en.json", "utf8")) as {
     settings?: { sections?: Record<string, Record<string, string>> };
     shell?: Record<string, Record<string, string>>;
+    staff?: { areas?: Record<string, Record<string, string>> };
+    customerPages?: { areas?: Record<string, Record<string, string>> };
   };
   const add = (key: string, value: unknown) => {
     if (typeof value !== "string") return;
@@ -368,16 +387,43 @@ const CATALOGUE_STRINGS: Map<string, string> = (() => {
     for (const [key, value] of Object.entries(section)) add(key, value);
   for (const group of Object.values(en.shell ?? {}))
     for (const [key, value] of Object.entries(group)) add(key, value);
+  // ── AND THE TWO AREA CATALOGUES, SINCE 2026-09-10 ──────────────────────
+  //
+  // The paragraph above says this gate would "quietly empty itself as the
+  // conversion finished". It was doing exactly that, one catalogue over: the
+  // staff area converted into `staff.areas` on 2026-09-09 and the customer
+  // portal into `customerPages.areas` on 2026-09-10, and neither was read
+  // here. The customer bookings page still fakes "Receipt sent to your email."
+  // behind a TODO — and the moment that sentence moved into the catalogue, this
+  // gate reported the file as fixed and asked for its baseline entry back.
+  for (const area of Object.values(en.staff?.areas ?? {}))
+    for (const [key, value] of Object.entries(area)) add(key, value);
+  for (const area of Object.values(en.customerPages?.areas ?? {}))
+    for (const [key, value] of Object.entries(area)) add(key, value);
   return out;
 })();
 
-/** `t("someKey")` → `"the English sentence"`, so the regexes can read it. */
-const TRANSLATE_CALL = /\b(?:t|text|tr)\s*\(\s*"([A-Za-z][\w.]*)"\s*\)/g;
+/**
+ * `t("someKey")` → `"the English sentence"`, so the regexes can read it.
+ *
+ * `fill("someKey", { … })` too — the staff and customer hooks put a value
+ * into a sentence that way, and "Thank you! {amount} sent to the team." is as
+ * much a claim with its value filled in as without. Only the KEY is replaced;
+ * the values object after it is left alone.
+ */
+const TRANSLATE_CALL =
+  /\b(?:t|text|tr)\s*\(\s*"([A-Za-z][\w.]*)"\s*\)|\bfill\s*\(\s*"([A-Za-z][\w.]*)"\s*,/g;
 function resolveKeys(line: string): string {
-  return line.replace(TRANSLATE_CALL, (whole, key: string) => {
-    const english = CATALOGUE_STRINGS.get(key);
-    return english === undefined ? whole : JSON.stringify(english);
-  });
+  return line.replace(
+    TRANSLATE_CALL,
+    (whole, tKey: string | undefined, fillKey: string | undefined) => {
+      const key = tKey ?? fillKey ?? "";
+      const english = CATALOGUE_STRINGS.get(key);
+      if (english === undefined) return whole;
+      // A fill() keeps its trailing comma, so the call still parses as one.
+      return fillKey ? `${JSON.stringify(english)},` : JSON.stringify(english);
+    },
+  );
 }
 
 const SOURCE_CACHE = new Map<string, string>();
