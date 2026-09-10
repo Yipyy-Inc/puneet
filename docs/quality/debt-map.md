@@ -12159,3 +12159,18 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
 - Fixed while translating: the access-reason badges capitalised a service
   id by hand ("Active Boarding Stay") and use `serviceTypeLabel`; the
   close button on the full-screen view had no accessible name.
+
+### Training waitlist offer (`/customer/training/accept-offer/[enrollmentId]`) — **confirming enrols nobody, and promises an email**
+
+- `handleConfirm` rewrites the enrollment in the TanStack Query cache —
+  status `enrolled`, payment `deposit` — and toasts "You're in! … We'll
+  send a confirmation email shortly." Nothing is sent to a server and no
+  email exists; a reload restores the offer. The enrollments and series are
+  the training fixtures behind `trainingQueries` (see "Training" above,
+  which has the same cache-only write for "Enroll and pay").
+- The payment card says "A $X deposit is due to confirm" and then confirms
+  without taking it.
+- Fixed while translating: a hand-rolled 12-hour clock, an `en-US` date,
+  an English weekday from `getDayName` and an English "2h 5m" countdown are
+  `formatTimeOfDay`, `formatDateLong`, `formatWeekday` and
+  `formatDuration`. Tuition and deposit are `formatMoney`.
