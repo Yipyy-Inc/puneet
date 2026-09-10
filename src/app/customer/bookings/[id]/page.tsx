@@ -42,7 +42,7 @@ import {
   formatMoney,
   formatPercent,
   formatTimeOfDay,
-  formatWeight,
+  formatWeightFromLb,
 } from "@/lib/i18n/format";
 import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
 import { rich } from "@/lib/i18n/rich";
@@ -298,10 +298,10 @@ export default function BookingDetailPage({
                     {pet.sex
                       ? ` · ${pet.sex === "male" ? t("sexMale") : t("sexFemale")}`
                       : ""}
-                    {/* Metric leads, imperial follows (§5q). This read
-                        "{weight} lbs" while the booking wizard reads the SAME
-                        field as kilograms — recorded in the debt map. */}
-                    {pet.weight ? ` · ${formatWeight(pet.weight, locale)}` : ""}
+                    {/* Metric leads, imperial follows (§5q). pets.weight is POUNDS — see formatWeightFromLb for how that was established. */}
+                    {pet.weight
+                      ? ` · ${formatWeightFromLb(pet.weight, locale)}`
+                      : ""}
                   </p>
                 </div>
               </div>

@@ -11479,11 +11479,8 @@ call`. The cancel dialog also promises "a refund is processed according to
 - **"Confirm and book" and "Decline the estimate" do nothing** but toast —
   "Booking confirmed! The facility has been notified." Nothing is confirmed
   and nobody is notified.
-- **`pet.weight` is labelled in pounds here and kilograms in the booking
-  wizard.** Same field. The seed values (a golden retriever at 25) only make
-  sense as kilograms, so the page now formats it with `formatWeight` —
-  "25 kg (55 lb)" — and the underlying unit needs deciding in the schema, not
-  at each screen.
+- ~~`pet.weight` is kilograms.~~ **WRONG, corrected the same day — it is
+  pounds.** See "pets.weight is pounds" below.
 - A status the badge table did not know used to be labelled "Pending"
   whatever it was. It reads as itself now.
 
@@ -11496,8 +11493,7 @@ call`. The cancel dialog also promises "a refund is processed according to
   `TODO: Get from facility config`. So the badge a customer reads on every pet
   card, and the "Action required" on the pet profile, say nothing about their
   actual pet.
-- The same `pet.weight` read as pounds here too; formatted with `formatWeight`
-  like the detail page (see above).
+- Weight is `formatWeightFromLb` — see "pets.weight is pounds" below.
 
 ### Pet profile (`/customer/pets/[petId]`)
 
@@ -11517,5 +11513,44 @@ call`. The cancel dialog also promises "a refund is processed according to
 - It reads bookings and photos from `@/data` fixtures, and the vaccination
   requirements from `facilityConfig`, while its report cards come from
   Postgres.
-- The edit form labelled weight "(lbs)" over the field the rest of the product
-  reads as kilograms; it reads "Weight (kg)" now, consistent with the display.
+- The edit field was relabelled "(kg)" on the same wrong reading, and is
+  "Weight (lb)" again — see below.
+
+## 2026-09-10 — `pets.weight` is pounds, and I shipped it as kilograms
+
+**The mistake.** On 2026-09-09 the booking wizard's pet card changed from
+`{pet.weight}kg` to `formatWeight(pet.weight)` — a function that takes
+KILOGRAMS — and on 2026-09-10 the booking detail page, the pets list and the
+pet profile followed. The reasoning was one seed row: a golden retriever at
+25, which "only made sense as kilograms". The pet profile's edit field was
+relabelled from "(lbs)" to "(kg)" on the same reading. The wizard change had
+already reached staging.
+
+**The evidence that settles it, which was one grep away the whole time:**
+
+- `pricing-rules.ts` — the code that charges money — does
+  `const weightKg = Number(pet.weight) / 2.20462` before comparing against a
+  rule's kilogram bounds.
+- The grooming size tiers compare `pet.weight` to `max_weight_lbs`.
+- `pet-size.ts` bands it at 20 / 40 / 80, which is pounds for small / medium /
+  large / giant and absurd in kilograms.
+- The add-pet form that WRITES the column — through `POST /api/pets`, to
+  Postgres — labels the input "Weight (lbs)".
+
+So every one of those screens rendered a 50 lb dog as "50 kg (110 lb)" — the
+wrong number, on the field a dose is worked out from. §5q's own warning about
+weight is that a single unit "is the version that gets a dog the wrong dose";
+getting the conversion backwards is worse than showing one unit.
+
+**The fix.** `formatWeightFromLb(lb, locale)` — the pounds kept exactly as
+entered, the kilograms derived, metric still first: "23 kg (50 lb)". All four
+screens call it, the edit field reads "Weight (lb)" again, and three unit
+tests pin the direction, including one asserting it never produces the
+string the mistake produced.
+
+**What would have caught it.** Not the seed data — asking what the code that
+MOVES money does with the field. When a unit is ambiguous at the screen, the
+pricing engine, the API route and the form that writes the column are the
+authorities; a fixture value is the weakest possible evidence. The column is
+still named `weight` with no unit, which is how this was possible; renaming it
+`weight_lb` is a schema change worth making and is not made here.

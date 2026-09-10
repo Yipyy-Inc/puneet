@@ -336,6 +336,32 @@ export function formatWeight(kg: number, locale: AppLocale): string {
   return `${formatNumber(kg, locale, decimals)} kg (${formatNumber(lb, locale, 0)} lb)`;
 }
 
+/**
+ * `11.3 kg (25 lb)` — for a weight STORED IN POUNDS, which `pets.weight` is.
+ *
+ * ── WHY THIS EXISTS, AND THE MISTAKE IT CORRECTS ─────────────────────────
+ *
+ * `pets.weight` is pounds. The code that charges money says so —
+ * `pricing-rules.ts` converts it with `/ 2.20462` before comparing against a
+ * rule's kilograms — and so do the grooming tiers (`maxWeightLbs`), the size
+ * bands in `pet-size.ts` (20 / 40 / 80) and the add-pet form that writes it.
+ *
+ * On 2026-09-09 and 2026-09-10 four screens were changed to pass it to
+ * `formatWeight`, which takes KILOGRAMS, on the strength of one seed value
+ * that "only made sense" in kilograms. A 50 lb dog read "50 kg (110 lb)" —
+ * the wrong number, on the field a dose is worked out from. This is the
+ * formatter those screens should have called.
+ *
+ * The pounds are shown exactly as entered, not round-tripped through
+ * kilograms; the kilograms are derived. §5q still wants metric first.
+ */
+export function formatWeightFromLb(lb: number, locale: AppLocale): string {
+  const kg = lb / 2.20462;
+  const decimals = kg < 20 ? 1 : 0;
+  const lbDigits = Number.isInteger(lb) ? 0 : 1;
+  return `${formatNumber(kg, locale, decimals)} kg (${formatNumber(lb, locale, lbDigits)} lb)`;
+}
+
 /** `1h 30m` · `1 h 30`. */
 export function formatDuration(minutes: number, locale: AppLocale): string {
   const h = Math.floor(minutes / 60);

@@ -24,7 +24,7 @@ import { TagList } from "@/components/shared/TagList";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { PageHeader } from "@/components/ui/page-header";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
-import { formatWeight } from "@/lib/i18n/format";
+import { formatWeightFromLb } from "@/lib/i18n/format";
 
 export default function CustomerPetsPage() {
   const { t, fill, locale } = useCustomerText("pets");
@@ -208,11 +208,9 @@ export default function CustomerPetsPage() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">{t("weight")}</p>
-                        {/* Metric leads, imperial follows (§5q). This read
-                            "{weight} lbs" over a field the booking wizard reads
-                            as kilograms — see the debt map, 2026-09-10. */}
+                        {/* Metric leads, imperial follows (§5q). pets.weight is POUNDS — see formatWeightFromLb for how that was established. */}
                         <p className="font-medium">
-                          {formatWeight(pet.weight, locale)}
+                          {formatWeightFromLb(pet.weight, locale)}
                         </p>
                       </div>
                       <div>
