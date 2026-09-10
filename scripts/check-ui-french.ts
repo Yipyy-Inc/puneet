@@ -735,6 +735,14 @@ function shellSurface(root: string): Offender[] {
  */
 const STAFF = "src/app/facility/dashboard/staff";
 
+/** Every portal whose PAGES are a surface: [name, route dir, cut-outs]. */
+const PAGE_ROOTS: [string, string, string[]][] = [
+  ["customer", "src/app/customer", []],
+  ["admin", "src/app/dashboard", []],
+  ["employee", "src/app/employee", []],
+  ["facility", "src/app/facility", [SETTINGS, STAFF]],
+];
+
 /** Every `page.tsx` and `layout.tsx` under a route, at any depth. */
 function routeRoots(dir: string): string[] {
   const out: string[] = [];
@@ -801,6 +809,41 @@ function staffSurface(): Offender[] {
         // reachable from here — the roles studio is rendered by both. Pinning
         // its strings on `staff` too would make one fix look like two.
         !file.startsWith(SETTINGS),
+    )
+    .sort()
+    .map((file) => ({ id: file, hits: hits(file, true) }))
+    .filter((entry) => entry.hits.length > 0);
+}
+
+/**
+ * A portal's PAGES — derived from its route tree, one entry per file.
+ *
+ * ── WHY THIS EXISTS, 2026-09-10 ──────────────────────────────────────────
+ *
+ * A shell surface is derived from `layout.tsx`, and a layout does not import
+ * its pages — so no walk from a layout reaches a page body at ANY depth. With
+ * all eight surfaces at zero, the customer dashboard read "Welcome back,
+ * Alice!" and quoted an estimate as "$458.85" behind a fully French sidebar,
+ * and the admin one read "Command Center". The chrome was measured; the
+ * screens it wraps were nobody's.
+ *
+ * Same hole, same fix, as `staff` a day earlier: start from every
+ * `page.tsx` and `layout.tsx` under the portal and walk down. Settings and
+ * the staff area are their own surfaces and are cut out here, so one fix
+ * never counts twice within a portal.
+ */
+function pagesSurface(dir: string, exclude: string[] = []): Offender[] {
+  const seen = new Set<string>();
+  for (const root of routeRoots(dir)) {
+    if (exclude.some((x) => root.startsWith(x))) continue;
+    walk(root, 5, seen, true);
+  }
+  return [...seen]
+    .filter(
+      (file) =>
+        isReadable(file) &&
+        isComponent(file) &&
+        !exclude.some((x) => file.startsWith(x)),
     )
     .sort()
     .map((file) => ({ id: file, hits: hits(file, true) }))
@@ -909,6 +952,26 @@ const BASELINE: Record<string, Map<string, number>> = {
   primitives: new Map<string, number>(),
 };
 
+/**
+ * The page surfaces' baseline — a SIDECAR, not a map in this file.
+ *
+ * The shells, settings and staff were each converted to zero before, or as,
+ * their surface landed, so their maps above are empty and short. The page
+ * surfaces landed at ~24,700 strings in ~1,080 files (2026-09-10), and a
+ * sample of forty was forty real labels, so there was nothing to annotate
+ * away: this is weeks of conversion, and the gate has to come first or the
+ * number grows while the work happens.
+ *
+ * It is a COUNT per file, like every other entry here, so a baselined file
+ * that gains a string fails. There is deliberately no command that writes it:
+ * a writer makes raising a baseline one keystroke, and the only direction this
+ * file should ever move by hand is down — the "lower its baseline" note below
+ * says when.
+ */
+const PAGE_BASELINE: Record<string, Record<string, number>> = JSON.parse(
+  readFileSync("scripts/check-ui-french.baseline.json", "utf8"),
+);
+
 const SURFACES: {
   name: string;
   label: string;
@@ -935,6 +998,14 @@ const SURFACES: {
       "Route it through usePermissionText() for the permission catalogue, " +
       "useStaffRoleLabel() for a role name, or a settings catalogue block",
   },
+  ...PAGE_ROOTS.map(([portal, dir, exclude]) => ({
+    name: `pages:${portal}`,
+    label: `${portal} pages (derived from its route tree)`,
+    run: () => pagesSurface(dir, exclude),
+    advice:
+      "Route it through the portal's text hook — useShellText, useStaffText " +
+      "or useSettingsText — or a catalogue block of its own",
+  })),
   {
     name: "primitives",
     label: "shadcn primitives",
@@ -950,7 +1021,9 @@ console.log(`${ANSI.bold}The interface, in French${ANSI.reset}\n`);
 
 for (const surface of SURFACES) {
   const offenders = surface.run();
-  const baseline = BASELINE[surface.name] ?? new Map<string, number>();
+  const baseline =
+    BASELINE[surface.name] ??
+    new Map<string, number>(Object.entries(PAGE_BASELINE[surface.name] ?? {}));
   // ── A BASELINE THAT IS A COUNT, NOT JUST A NAME ─────────────────────────
   //
   // It was a Set of file ids, and a file already in it could absorb any amount
