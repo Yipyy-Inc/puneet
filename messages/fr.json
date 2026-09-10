@@ -9336,6 +9336,31 @@
         "markAsRead": "Marquer comme lue",
         "delete": "Supprimer",
         "viewDetails": "Voir les détails →"
+      },
+      "cameras": {
+        "reasonActiveStay": "Séjour en cours — {service}",
+        "reasonMember": "Membre",
+        "reasonPackage": "Forfait",
+        "reasonServiceCustomer": "Client — {service}",
+        "reasonOpenHours": "Heures d’ouverture",
+        "notAvailableTitle": "Caméras en direct non disponibles",
+        "notAvailableBody": "L’accès aux caméras en direct n’est pas activé dans cet établissement pour le moment.",
+        "liveCameras": "Caméras en direct",
+        "watchInRealTime": "Regardez votre animal en temps réel chez {facility}",
+        "theFacility": "l’établissement",
+        "noCamerasTitle": "Aucune caméra disponible",
+        "noCamerasBody": "L’accès aux caméras exige un séjour en cours, un abonnement admissible ou un forfait de services dans cet établissement.",
+        "camerasOne": "{n} caméra disponible",
+        "camerasMany": "{n} caméras disponibles",
+        "peaceOfMind": "Les caméras sont là pour votre tranquillité d’esprit pendant que votre animal est avec nous. Les diffusions en direct ne sont visibles que par vous et le personnel autorisé — jamais enregistrées pour un usage public.",
+        "qualityAdjusts": "La qualité vidéo s’ajuste automatiquement selon la vitesse de votre connexion.",
+        "liveBadge": "EN DIRECT",
+        "live": "En direct",
+        "audio": "Audio",
+        "panTilt": "Orientation",
+        "nightVision": "Vision nocturne",
+        "accessVia": "Accès par :",
+        "closeCamera": "Fermer la caméra"
       }
     }
   }

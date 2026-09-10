@@ -12143,3 +12143,19 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   screens now name them through `notificationCategoryLabel`. The page's
   hand-rolled "2 hours ago" is `formatRelative`, which expires at 24 hours
   as §5q asks.
+
+### Live cameras (`/customer/cameras`) — **"LIVE" over a placeholder icon; there is no stream**
+
+- A camera card and the full-screen view both render a `<Video>` glyph on a
+  dark box with a pulsing "LIVE" badge. No player, no stream URL, nothing
+  connects to a camera. A customer who qualifies is told they can watch
+  their pet in real time and is shown an icon.
+- **Who qualifies is decided from fixtures**: `petCams` and the access
+  rules (`@/data/camera-integration`), active stays from the `bookings`
+  fixture, memberships from `@/data/services-pricing`. Only the packages
+  are real (`groomingQueries.customerPackagesForClient`). The "open hours"
+  rule reads `facilityConfig`'s fixture hours and compares them with the
+  BROWSER's clock, not the facility's time zone.
+- Fixed while translating: the access-reason badges capitalised a service
+  id by hand ("Active Boarding Stay") and use `serviceTypeLabel`; the
+  close button on the full-screen view had no accessible name.
