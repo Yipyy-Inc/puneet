@@ -26,8 +26,15 @@ import {
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { addOnPriceLabel } from "./addon-price-label";
+import type { AppLocale } from "@/lib/language-settings";
+import {
+  formatDateLong,
+  formatDuration,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -55,20 +62,11 @@ const nowInMinutes = (): number => {
   return now.getHours() * 60 + now.getMinutes();
 };
 
-const fmtTime = (t: string) => {
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-
-const fmtDate = (dateStr: string) => {
+// A calendar date, read at local midnight so no zone can move it. The
+// 12-hour clock that sat beside this is formatTimeOfDay now (§5q).
+const fmtDate = (dateStr: string, locale: AppLocale) => {
   const [y, mo, d] = dateStr.split("-").map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateLong(new Date(y, mo - 1, d), locale);
 };
 
 const timeToMinutes = (value: string) => {
@@ -81,20 +79,6 @@ const minutesToTime = (minutes: number) => {
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
-
-function getAddonPriceLabel(addon: ServiceAddOn): string {
-  const base = `$${addon.price.toFixed(2)}`;
-  switch (addon.pricingType) {
-    case "per_day":
-      return `${base}/${addon.unitLabel || "day"}`;
-    case "per_session":
-      return `${base}/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `${base}/${addon.unitLabel || "hr"}`;
-    default:
-      return base;
-  }
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -127,6 +111,8 @@ export function EvaluationDetails({
   setExtraServices,
   selectedPets,
 }: EvaluationDetailsProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const {
     hours,
     rules,
@@ -236,12 +222,12 @@ export function EvaluationDetails({
         : [
             {
               id: "all-day",
-              label: "All day",
+              label: t("allDay"),
               startTime: "00:00",
               endTime: "23:59",
             },
           ],
-    [evaluation.schedule.timeWindows],
+    [evaluation.schedule.timeWindows, t],
   );
 
   const slots = React.useMemo(() => {
@@ -331,10 +317,9 @@ export function EvaluationDetails({
               <ClipboardCheck className="size-5 text-violet-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Schedule Your Evaluation</h3>
+              <h3 className="font-semibold">{t("scheduleYourEvaluation")}</h3>
               <p className="text-muted-foreground text-sm">
-                {evaluation.description ||
-                  "Choose a date and time for your pet's assessment session."}
+                {evaluation.description || t("chooseEvaluationDateTime")}
               </p>
             </div>
           </div>
@@ -377,16 +362,19 @@ export function EvaluationDetails({
                   </div>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-violet-800">
-                      {fmtDate(startDate)}
+                      {fmtDate(startDate, locale)}
                     </p>
                     <p className="text-[11px] text-violet-500">
-                      {availableSlots.length} time slot
-                      {availableSlots.length !== 1 ? "s" : ""} available
+                      {t(
+                        availableSlots.length === 1
+                          ? "timeSlotsAvailableOne"
+                          : "timeSlotsAvailableOther",
+                      ).replace("{n}", String(availableSlots.length))}
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-medium text-violet-400 group-hover:text-violet-600">
-                  Change
+                  {t("change")}
                 </span>
               </button>
             )}
@@ -395,7 +383,9 @@ export function EvaluationDetails({
             {startDate && !showCalendar && durationOptions.length > 1 && (
               <div className="flex items-center gap-3 rounded-xl border px-4 py-3">
                 <Clock className="text-muted-foreground size-4" />
-                <span className="text-muted-foreground text-sm">Duration</span>
+                <span className="text-muted-foreground text-sm">
+                  {t("duration")}
+                </span>
                 <Select
                   value={String(selectedDuration)}
                   onValueChange={(v) => {
@@ -406,14 +396,15 @@ export function EvaluationDetails({
                   }}
                 >
                   <SelectTrigger className="ml-auto h-8 w-36 text-xs">
-                    <SelectValue placeholder="Session length" />
+                    <SelectValue placeholder={t("sessionLength")} />
                   </SelectTrigger>
                   <SelectContent>
                     {durationOptions.map((opt) => (
                       <SelectItem key={opt} value={String(opt)}>
-                        {opt >= 60
-                          ? `${opt / 60}h session`
-                          : `${opt} min session`}
+                        {t("sessionOfDuration").replace(
+                          "{duration}",
+                          formatDuration(opt, locale),
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -426,23 +417,26 @@ export function EvaluationDetails({
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between px-1">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                    Available times
+                    {t("availableTimes")}
                   </p>
                   {availableSlots.length > 0 && (
                     <span className="text-muted-foreground text-[10px]">
-                      {availableSlots.length} slot
-                      {availableSlots.length !== 1 ? "s" : ""}
+                      {t(
+                        availableSlots.length === 1
+                          ? "slotCountOne"
+                          : "slotCountOther",
+                      ).replace("{n}", String(availableSlots.length))}
                     </span>
                   )}
                 </div>
 
                 {availableSlots.length === 0 ? (
                   <div className="space-y-3 rounded-xl border border-dashed px-4 py-8 text-center">
-                    <p className="text-sm font-medium">No availability</p>
+                    <p className="text-sm font-medium">{t("noAvailability")}</p>
                     <p className="text-muted-foreground text-xs">
                       {isToday
-                        ? "All times have passed for today."
-                        : "This date has no open slots."}
+                        ? t("allTimesHavePassedFor")
+                        : t("noOpenSlotsOnDate")}
                     </p>
                     <Button
                       variant="outline"
@@ -451,7 +445,7 @@ export function EvaluationDetails({
                       onClick={() => setShowCalendar(true)}
                     >
                       <ArrowLeft className="size-3" />
-                      Choose another date
+                      {t("chooseAnotherDate")}
                     </Button>
                   </div>
                 ) : (
@@ -480,7 +474,7 @@ export function EvaluationDetails({
                                   : "text-slate-700",
                               )}
                             >
-                              {fmtTime(slot.startTime)}
+                              {formatTimeOfDay(slot.startTime, locale)}
                             </span>
                             <span
                               className={cn(
@@ -490,7 +484,7 @@ export function EvaluationDetails({
                                   : "text-slate-400",
                               )}
                             >
-                              {fmtTime(slot.endTime)}
+                              {formatTimeOfDay(slot.endTime, locale)}
                             </span>
                           </button>
                         );
@@ -507,27 +501,27 @@ export function EvaluationDetails({
                 <div className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-0.5">
                   <div>
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      Date
+                      {t("date")}
                     </p>
                     <p className="text-sm font-semibold text-violet-800">
-                      {fmtDate(startDate)}
+                      {fmtDate(startDate, locale)}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      Time
+                      {t("timeLabel")}
                     </p>
                     <p className="text-sm font-semibold text-violet-800">
-                      {fmtTime(selectedSlotData.startTime)} –{" "}
-                      {fmtTime(selectedSlotData.endTime)}
+                      {formatTimeOfDay(selectedSlotData.startTime, locale)} –{" "}
+                      {formatTimeOfDay(selectedSlotData.endTime, locale)}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      Duration
+                      {t("duration")}
                     </p>
                     <p className="text-sm font-semibold text-violet-800">
-                      {selectedSlotData.duration} min
+                      {formatDuration(selectedSlotData.duration, locale)}
                     </p>
                   </div>
                 </div>
@@ -565,6 +559,8 @@ function EvaluationAddOnsSubStep({
   ) => void;
   selectedPets: Pet[];
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // Show add-ons applicable to evaluation OR daycare (since eval is a daycare trial)
   // The facility's own extras, from `facility_settings`. One of thirteen
   // copies of a localStorage loader, so what a booking could be upsold
@@ -600,10 +596,9 @@ function EvaluationAddOnsSubStep({
           <Sparkles className="size-5 text-amber-600" />
         </div>
         <div>
-          <h3 className="font-semibold">Add-ons</h3>
+          <h3 className="font-semibold">{t("addOnsHeading")}</h3>
           <p className="text-muted-foreground text-sm">
-            Optional extras for your pet&apos;s evaluation visit. Treats,
-            grooming, playtime, and more.
+            {t("evaluationAddOnsHint")}
           </p>
         </div>
       </div>
@@ -611,7 +606,7 @@ function EvaluationAddOnsSubStep({
       {!accessible && (
         <div className="bg-muted/50 rounded-xl border border-dashed p-8 text-center">
           <p className="text-muted-foreground text-sm">
-            Please complete the schedule step first
+            {t("pleaseCompleteTheScheduleStep2")}
           </p>
         </div>
       )}
@@ -619,7 +614,7 @@ function EvaluationAddOnsSubStep({
       {accessible && addOns.length === 0 && (
         <div className="rounded-xl border border-dashed p-8 text-center">
           <p className="text-muted-foreground text-sm">
-            No add-ons available for evaluations yet
+            {t("noAddOnsAvailableFor")}
           </p>
         </div>
       )}
@@ -631,7 +626,7 @@ function EvaluationAddOnsSubStep({
               .filter((es) => es.serviceId === service.id)
               .reduce((sum, es) => sum + es.quantity, 0);
             const isAdded = totalQty > 0;
-            const priceLabel = getAddonPriceLabel(service);
+            const priceLabel = addOnPriceLabel(service, t, locale);
             const hasUnits = service.pricingType !== "flat";
             const petId = selectedPets[0]?.id ?? 0;
 
@@ -748,12 +743,12 @@ function EvaluationAddOnsSubStep({
                         {isAdded ? (
                           <>
                             <Check className="size-3" />
-                            Added
+                            {t("added")}
                           </>
                         ) : (
                           <>
                             <Plus className="size-3" />
-                            Add
+                            {t("add")}
                           </>
                         )}
                       </Button>

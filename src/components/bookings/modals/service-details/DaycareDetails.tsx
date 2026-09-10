@@ -20,8 +20,14 @@ import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
-import type { ServiceAddOn } from "@/types/facility";
 import { daycareRates } from "@/data/daycare";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { addOnPriceLabel } from "./addon-price-label";
+import {
+  formatDuration,
+  formatMoney,
+  formatWeightFromLb,
+} from "@/lib/i18n/format";
 
 interface DaycareDetailsProps {
   currentSubStep: number;
@@ -53,23 +59,6 @@ interface DaycareDetailsProps {
   skipEligibility?: boolean;
 }
 
-function getAddonPriceLabel(addon: ServiceAddOn): string {
-  switch (addon.pricingType) {
-    case "flat":
-      return `$${addon.price}`;
-    case "per_day":
-      return `$${addon.price}/day`;
-    case "per_session":
-      return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `$${addon.price}/${addon.unitLabel || "hr"}`;
-    case "per_item":
-      return `$${addon.price}/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking":
-      return `${addon.price}% of booking`;
-  }
-}
-
 // Sections are loaded dynamically from daycare-areas.ts and the capacity engine
 
 export function DaycareDetails({
@@ -91,6 +80,7 @@ export function DaycareDetails({
   selectedPets,
   skipEligibility,
 }: DaycareDetailsProps) {
+  const t = useShellText("booking");
   const {
     hours,
     rules,
@@ -170,10 +160,9 @@ export function DaycareDetails({
                 <Sun className="size-5 text-amber-600" />
               </div>
               <div>
-                <h3 className="font-semibold">Select Daycare Days</h3>
+                <h3 className="font-semibold">{t("selectDaycareDays")}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Pick one or more days and set drop-off/pick-up times. Half Day
-                  or Full Day is determined automatically.
+                  {t("daycareDaysHint")}
                 </p>
               </div>
             </div>
@@ -246,17 +235,18 @@ export function DaycareDetails({
         {currentSubStep === 3 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Feeding Schedule</h3>
+              <h3 className="text-base font-semibold">
+                {t("feedingSchedule")}
+              </h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                Add feeding times, portions, and dietary notes for your pet
-                (optional)
+                {t("feedingScheduleHint")}
               </p>
             </div>
 
             {!isStepAccessible(3) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
-                  Please complete the previous steps first
+                  {t("pleaseCompleteThePreviousSteps")}
                 </p>
               </div>
             )}
@@ -289,16 +279,16 @@ export function DaycareDetails({
         {currentSubStep === 4 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Medication</h3>
+              <h3 className="text-base font-semibold">{t("medication")}</h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                Add any medications your pet needs during their stay (optional)
+                {t("addAnyMedicationsYourPet")}
               </p>
             </div>
 
             {!isStepAccessible(4) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
-                  Please complete the previous steps first
+                  {t("pleaseCompleteThePreviousSteps")}
                 </p>
               </div>
             )}
@@ -357,6 +347,8 @@ function DaycareSectionAssignmentStep({
     checkOutTime: string;
   }>;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // Derive which sections the selected rate allows (empty = all sections allowed)
   const allowedSectionIds = React.useMemo<string[]>(() => {
     const firstDt = daycareDateTimes[0];
@@ -436,7 +428,7 @@ function DaycareSectionAssignmentStep({
     return (
       <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground">
-          Please complete the Schedule step first
+          {t("pleaseCompleteTheScheduleStep")}
         </p>
       </div>
     );
@@ -481,11 +473,10 @@ function DaycareSectionAssignmentStep({
         </div>
         <div>
           <h3 className="text-base font-semibold tracking-tight">
-            Section Assignment
+            {t("sectionAssignment")}
           </h3>
           <p className="text-muted-foreground mt-0.5 text-xs/relaxed">
-            Drag a pet onto a section, or click to assign. The system
-            auto-matches by eligibility &amp; capacity on booking creation.
+            {t("sectionAssignmentHint")}
           </p>
         </div>
       </div>
@@ -494,9 +485,8 @@ function DaycareSectionAssignmentStep({
         <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
           <Sun className="mt-0.5 size-3.5 shrink-0 text-blue-600" />
           <p className="text-xs text-blue-800">
-            <span className="font-semibold">Rate restriction:</span> The
-            selected rate is configured for specific rooms. Rooms outside the
-            rate are dimmed — you can still assign them manually.
+            <span className="font-semibold">{t("rateRestriction")}</span>{" "}
+            {t("rateRestrictionHint")}
           </p>
         </div>
       )}
@@ -505,7 +495,7 @@ function DaycareSectionAssignmentStep({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
-            Unassigned Pets
+            {t("unassignedPets")}
           </Label>
           <span className="text-muted-foreground text-[11px] tabular-nums">
             {
@@ -566,7 +556,7 @@ function DaycareSectionAssignmentStep({
           ).length === 0 && (
             <p className="text-muted-foreground flex items-center gap-1.5 px-1 text-sm">
               <Check className="size-3.5 text-emerald-500" />
-              All pets assigned
+              {t("allPetsAssigned")}
             </p>
           )}
         </div>
@@ -748,7 +738,7 @@ function DaycareSectionAssignmentStep({
                             {/* Rate restriction badge */}
                             {isOutsideRate && (
                               <p className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200 ring-inset">
-                                Not in selected rate&#39;s rooms
+                                {t("notInSelectedRate39")}
                               </p>
                             )}
 
@@ -772,12 +762,15 @@ function DaycareSectionAssignmentStep({
                                         )}
                                       >
                                         {rule.type === "max_weight"
-                                          ? `≤${rule.value} lbs`
+                                          ? `≤ ${formatWeightFromLb(Number(rule.value), locale)}`
                                           : rule.type === "min_weight"
-                                            ? `≥${rule.value} lbs`
+                                            ? `≥ ${formatWeightFromLb(Number(rule.value), locale)}`
                                             : rule.type === "pet_type"
-                                              ? `${rule.value}s only`
-                                              : "Rule"}
+                                              ? t("petTypeOnly").replace(
+                                                  "{type}",
+                                                  String(rule.value),
+                                                )
+                                              : t("rule")}
                                       </span>
                                     ))}
                                 </div>
@@ -814,8 +807,15 @@ function DaycareSectionAssignmentStep({
                               </div>
                               <div className="flex items-center justify-between text-[10px]">
                                 <span className="text-muted-foreground tabular-nums">
-                                  {section.capacity - remaining} of{" "}
-                                  {section.capacity} used
+                                  {t("capacityUsed")
+                                    .replace(
+                                      "{n}",
+                                      String(section.capacity - remaining),
+                                    )
+                                    .replace(
+                                      "{total}",
+                                      String(section.capacity),
+                                    )}
                                 </span>
                                 <span
                                   className={cn(
@@ -827,7 +827,12 @@ function DaycareSectionAssignmentStep({
                                         : "text-emerald-600",
                                   )}
                                 >
-                                  {isFull ? "Full" : `${remaining} open`}
+                                  {isFull
+                                    ? t("full")
+                                    : t("openCount").replace(
+                                        "{n}",
+                                        String(remaining),
+                                      )}
                                 </span>
                               </div>
                             </div>
@@ -866,7 +871,7 @@ function DaycareSectionAssignmentStep({
                             {/* Full / blocked overlays */}
                             {isFull && !hasAssigned && (
                               <p className="text-destructive flex items-center gap-1 text-[10px] font-semibold">
-                                Section full — waitlist only
+                                {t("sectionFullWaitlistOnly")}
                               </p>
                             )}
                           </div>
@@ -905,6 +910,8 @@ function DaycareAddOnsSubStep({
     checkOutTime: string;
   }>;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // Derive rate type from session duration to find included free add-ons
   const injectedRef = useRef(false);
   useEffect(() => {
@@ -972,14 +979,14 @@ function DaycareAddOnsSubStep({
       <div>
         <h3 className="text-base font-semibold">Add-ons</h3>
         <p className="text-muted-foreground mt-1 text-xs">
-          Add optional services to enhance your pet&apos;s daycare experience
+          {t("addOptionalServicesToEnhance2")}
         </p>
       </div>
 
       {!isStepAccessible(2) && (
         <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground">
-            Please complete the previous steps first
+            {t("pleaseCompleteThePreviousSteps")}
           </p>
         </div>
       )}
@@ -995,9 +1002,11 @@ function DaycareAddOnsSubStep({
           return (
             subtotal > 0 && (
               <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
-                <span className="text-sm font-medium">Add-ons subtotal</span>
+                <span className="text-sm font-medium">
+                  {t("addOnsSubtotal")}
+                </span>
                 <span className="text-base font-bold tabular-nums">
-                  ${subtotal.toFixed(2)}
+                  {formatMoney(subtotal, locale)}
                 </span>
               </div>
             )
@@ -1016,7 +1025,7 @@ function DaycareAddOnsSubStep({
               .filter((es) => es.serviceId === service.id && es.quantity > 0)
               .reduce((sum, es) => sum + es.quantity, 0);
             const isAdded = isIncludedFree || totalQuantity > 0;
-            const priceLabel = getAddonPriceLabel(service);
+            const priceLabel = addOnPriceLabel(service, t, locale);
             const hasUnits = service.pricingType !== "flat";
 
             return (
@@ -1050,7 +1059,7 @@ function DaycareAddOnsSubStep({
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     {isIncludedFree ? (
                       <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
-                        <Gift className="size-3" /> Included Free
+                        <Gift className="size-3" /> {t("includedFree")}
                       </div>
                     ) : (
                       <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
@@ -1060,19 +1069,19 @@ function DaycareAddOnsSubStep({
                     {service.isRequired && !isIncludedFree && (
                       <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
                         <Lock className="size-3" />
-                        Required
+                        {t("required")}
                       </div>
                     )}
                     {service.isDefault &&
                       !service.isRequired &&
                       !isIncludedFree && (
                         <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                          Default
+                          {t("default")}
                         </div>
                       )}
                     {service.duration && (
                       <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
-                        {service.duration}min
+                        {formatDuration(service.duration, locale)}
                       </div>
                     )}
                   </div>
@@ -1103,10 +1112,10 @@ function DaycareAddOnsSubStep({
                       <div className="flex items-center justify-between rounded-md bg-emerald-50 px-2 py-1.5">
                         <span className="flex items-center gap-1 text-xs text-emerald-700">
                           <Gift className="size-3" />
-                          Included with this rate
+                          {t("includedWithThisRate")}
                         </span>
                         <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                          <Check className="size-3" /> Free
+                          <Check className="size-3" /> {t("priceFree")}
                         </span>
                       </div>
                     ) : (
@@ -1208,7 +1217,7 @@ function DaycareAddOnsSubStep({
                             ) : service.isRequired ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
                                 <Lock className="size-3" />
-                                Included
+                                {t("included")}
                               </span>
                             ) : (
                               <Button
@@ -1242,10 +1251,10 @@ function DaycareAddOnsSubStep({
                                 {quantity > 0 ? (
                                   <>
                                     <Check className="size-3" />
-                                    Added
+                                    {t("added")}
                                   </>
                                 ) : (
-                                  "Add"
+                                  t("add")
                                 )}
                               </Button>
                             )}

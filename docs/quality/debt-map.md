@@ -11776,3 +11776,45 @@ list.
   rather than a lowercase id with `capitalize`; and the booking's start date,
   a bare `YYYY-MM-DD`, was parsed as UTC — the day before in Canada — in
   three places.
+
+### New booking (`/customer/bookings/new`) — the service-details steps
+
+The wizard itself went French at depth 5 earlier; what was left was the five
+per-service detail steps it opens (`service-details/*Details.tsx`), shared
+with the facility's booking modal, so they read `shell.booking`.
+
+- **"We'll text you when we're ~15 min away"** under mobile grooming. The
+  only thing that could send it is `handleMobileGroomerArrival` in
+  `lib/grooming-post-booking.ts`, which is `// TODO: Send notification to
+client` and a `console.log` — and its message says 10 minutes, not 15.
+- **Staff controls with no staff gate.** `GroomingService` renders the
+  groomer picker, the station picker, the stage editor and the price
+  override ("Edit to override", "Save this price and duration as {pet}'s
+  rate") unconditionally once a package is chosen — nothing in the component
+  checks who is booking. This change did not establish whether the customer
+  wizard reaches `GroomingDetails` for grooming or routes it elsewhere; worth
+  a look before the price override is assumed to be staff-only.
+- **Resuming an unfinished booking reads a fixture** — the page looks the
+  draft up in `@/data/unfinished-bookings`.
+- A section rule that restricts by pet type renders the stored value raw
+  ("Dogs only" becomes "Dog seulement" in French) — the value is an English
+  word in the data, not a key.
+- Fixed while translating, because they were formatting and not behaviour:
+  three copies of an add-on price label that built `$15/day` by hand are one
+  `addOnPriceLabel` (`formatMoney`, `formatPercent`, the unit in the reader's
+  language); the evaluation step's 12-hour clock is `formatTimeOfDay`; the
+  grooming calendar's `toLocaleDateString("en-CA")` — a hard-coded tag, so
+  English for a French reader — is `formatDateLong`; every
+  `$${n.toFixed(2)}` and every `{n} min` is `formatMoney` / `formatDuration`;
+  and the daycare section weight limits in pounds lead with kilograms
+  (`formatWeightFromLb`).
+- **A React Compiler trap this conversion hit, worth knowing before the
+  next one.** `formatDuration(packageDuration, locale)` in `GroomingSchedule`'s
+  JSX made the compiler skip the WHOLE component ("Existing memoization could
+  not be preserved", four errors at memos that had not changed).
+  `packageDuration` derives from `serviceDurationForSlots`, a dependency of
+  `getDensityForDate` and `slotGrid` above; the compiler cannot see that an
+  imported formatter leaves its argument alone, so it treats the call as a
+  possible mutation of a memo dependency. `formatDuration(+packageDuration,
+locale)` hands on a copy and the errors go. Only per-file lint against HEAD
+  caught it — typecheck and the gates were green.

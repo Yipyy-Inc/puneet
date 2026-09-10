@@ -84,6 +84,10 @@ const SAME_IN_BOTH = new Set([
   "yipyygo.service", // Service / Service
   "yipyygo.dates", // Dates / Dates
   "yipyygo.date", // Date / Date
+  // The booking wizard's service details.
+  "booking.salon", // Salon / Salon — a grooming salon, same word
+  "booking.mobile", // Mobile / Mobile — the grooming van, same word
+  "booking.pricePerUnit", // {price}/{unit} — placeholders and a slash
 ]);
 
 describe("the shell namespace", () => {

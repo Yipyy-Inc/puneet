@@ -19,24 +19,10 @@ import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useRooms } from "@/hooks/use-rooms";
-import type { ServiceAddOn } from "@/types/facility";
-
-function getAddonPriceLabel(addon: ServiceAddOn): string {
-  switch (addon.pricingType) {
-    case "flat":
-      return `$${addon.price}`;
-    case "per_day":
-      return `$${addon.price}/day`;
-    case "per_session":
-      return `$${addon.price}/${addon.unitLabel || "session"}`;
-    case "per_hour":
-      return `$${addon.price}/${addon.unitLabel || "hr"}`;
-    case "per_item":
-      return `$${addon.price}/${addon.unitLabel || "item"}`;
-    case "percentage_of_booking":
-      return `${addon.price}% of booking`;
-  }
-}
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { addOnPriceLabel } from "./addon-price-label";
+import { formatDuration, formatMoney } from "@/lib/i18n/format";
+import { rich } from "@/lib/i18n/rich";
 
 // Boarding categories are rendered dynamically inside the component
 // with live availability via getBoardingCategoryAvailability()
@@ -105,6 +91,7 @@ export function BoardingDetails({
   selectedPets,
   skipEligibility,
 }: BoardingDetailsProps) {
+  const t = useShellText("booking");
   const {
     hours,
     rules,
@@ -193,10 +180,9 @@ export function BoardingDetails({
                 <Bed className="size-5 text-indigo-600" />
               </div>
               <div>
-                <h3 className="font-semibold">Select Boarding Dates</h3>
+                <h3 className="font-semibold">{t("selectBoardingDates")}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Click the check-in date, then click the check-out date to
-                  select a range. Set drop-off and pick-up times for the stay.
+                  {t("boardingDatesHint")}
                 </p>
               </div>
             </div>
@@ -270,17 +256,18 @@ export function BoardingDetails({
         {currentSubStep === 3 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Feeding Schedule</h3>
+              <h3 className="text-base font-semibold">
+                {t("feedingSchedule")}
+              </h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                Add feeding times, portions, and dietary notes for your pet
-                (optional)
+                {t("feedingScheduleHint")}
               </p>
             </div>
 
             {!isStepAccessible(3) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
-                  Please complete the previous steps first
+                  {t("pleaseCompleteThePreviousSteps")}
                 </p>
               </div>
             )}
@@ -313,16 +300,16 @@ export function BoardingDetails({
         {currentSubStep === 4 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Medication</h3>
+              <h3 className="text-base font-semibold">{t("medication")}</h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                Add any medications your pet needs during their stay (optional)
+                {t("addAnyMedicationsYourPet")}
               </p>
             </div>
 
             {!isStepAccessible(4) && (
               <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
-                  Please complete the previous steps first
+                  {t("pleaseCompleteThePreviousSteps")}
                 </p>
               </div>
             )}
@@ -384,6 +371,8 @@ function BoardingRoomSelectionStep({
   boardingRangeEnd,
   skipEligibility,
 }: BoardingRoomSelectionStepProps) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const [activePet, setActivePet] = React.useState<Pet | null>(null);
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [dragOverCatId, setDragOverCatId] = React.useState<string | null>(null);
@@ -442,7 +431,7 @@ function BoardingRoomSelectionStep({
     return (
       <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground">
-          Please complete the previous steps first
+          {t("pleaseCompleteThePreviousSteps")}
         </p>
       </div>
     );
@@ -452,7 +441,7 @@ function BoardingRoomSelectionStep({
     return (
       <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground">
-          Please select boarding dates first
+          {t("pleaseSelectBoardingDatesFirst")}
         </p>
       </div>
     );
@@ -470,11 +459,11 @@ function BoardingRoomSelectionStep({
           <Bed className="size-5 text-indigo-600" />
         </div>
         <div>
-          <h3 className="font-semibold">Select Room Type</h3>
+          <h3 className="font-semibold">{t("selectRoomType")}</h3>
           <p className="text-muted-foreground text-sm">
             {selectedPets.length > 1
-              ? "Click a pet below, then click a room to assign it. You can also drag pets onto rooms."
-              : "Choose the room type for your pet's stay."}
+              ? t("clickAPetBelowThen")
+              : t("chooseRoomTypeHint")}
           </p>
         </div>
       </div>
@@ -561,7 +550,9 @@ function BoardingRoomSelectionStep({
             {activePet.name[0]}
           </span>
           <span>
-            Select a room for <strong>{activePet.name}</strong>
+            {rich(t("selectRoomFor"), {
+              pet: <strong>{activePet.name}</strong>,
+            })}
           </span>
           <button
             type="button"
@@ -576,7 +567,7 @@ function BoardingRoomSelectionStep({
       {allAssigned && selectedPets.length > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <Check className="size-4 shrink-0" />
-          All pets assigned — you can continue to the next step.
+          {t("allPetsAssignedYouCan")}
         </div>
       )}
 
@@ -586,9 +577,9 @@ function BoardingRoomSelectionStep({
           <div className="bg-muted mx-auto mb-3 flex size-12 items-center justify-center rounded-xl">
             <Bed className="text-muted-foreground/60 size-6" />
           </div>
-          <p className="text-sm font-semibold">No room categories set up yet</p>
+          <p className="text-sm font-semibold">{t("noRoomCategoriesSetUp")}</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Add categories in Boarding → Rooms & Suites to enable bookings.
+            {t("addCategoriesInBoardingRooms")}
           </p>
         </div>
       ) : (
@@ -672,7 +663,14 @@ function BoardingRoomSelectionStep({
                     {category.defaultBasePrice != null && (
                       <div className="absolute top-2.5 left-2.5">
                         <span className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                          ${category.defaultBasePrice}/night
+                          {t("pricePerNight").replace(
+                            "{price}",
+                            formatMoney(category.defaultBasePrice, locale, {
+                              whole: Number.isInteger(
+                                category.defaultBasePrice,
+                              ),
+                            }),
+                          )}
                         </span>
                       </div>
                     )}
@@ -695,7 +693,7 @@ function BoardingRoomSelectionStep({
                     {isFullyBooked && (
                       <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
                         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 shadow-sm">
-                          No rooms available
+                          {t("noRoomsAvailable")}
                         </span>
                       </div>
                     )}
@@ -704,7 +702,7 @@ function BoardingRoomSelectionStep({
                     {isDragOver && canDrop && (
                       <div className="border-primary/60 absolute inset-0 flex items-center justify-center border-4 border-dashed bg-white/20">
                         <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-semibold shadow-sm">
-                          Drop here
+                          {t("dropHere")}
                         </span>
                       </div>
                     )}
@@ -727,7 +725,7 @@ function BoardingRoomSelectionStep({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="text-muted-foreground">
-                          Availability
+                          {t("availability")}
                         </span>
                         <span
                           className={cn(
@@ -739,7 +737,9 @@ function BoardingRoomSelectionStep({
                                 : "text-emerald-600",
                           )}
                         >
-                          {availableUnits} / {totalActive} rooms free
+                          {t("roomsFree")
+                            .replace("{n}", String(availableUnits))
+                            .replace("{total}", String(totalActive))}
                         </span>
                       </div>
                       <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
@@ -796,6 +796,8 @@ function BoardingAddOnsSubStep({
   selectedPets: Pet[];
   serviceType: string;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   // ── THE "INCLUDED ADD-ONS" INJECTION WAS REMOVED ─────────────────────────
   //
   // A block here matched the `boardingRates` fixture by keyword in its name
@@ -835,14 +837,14 @@ function BoardingAddOnsSubStep({
       <div>
         <h3 className="text-base font-semibold">Add-ons</h3>
         <p className="text-muted-foreground mt-1 text-xs">
-          Add optional services to enhance your pet&apos;s boarding experience
+          {t("addOptionalServicesToEnhance")}
         </p>
       </div>
 
       {!isStepAccessible(2) && (
         <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground">
-            Please complete the previous steps first
+            {t("pleaseCompleteThePreviousSteps")}
           </p>
         </div>
       )}
@@ -858,9 +860,11 @@ function BoardingAddOnsSubStep({
           return (
             subtotal > 0 && (
               <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
-                <span className="text-sm font-medium">Add-ons subtotal</span>
+                <span className="text-sm font-medium">
+                  {t("addOnsSubtotal")}
+                </span>
                 <span className="text-base font-bold tabular-nums">
-                  ${subtotal.toFixed(2)}
+                  {formatMoney(subtotal, locale)}
                 </span>
               </div>
             )
@@ -878,7 +882,7 @@ function BoardingAddOnsSubStep({
               .filter((es) => es.serviceId === service.id && es.quantity > 0)
               .reduce((sum, es) => sum + es.quantity, 0);
             const isAdded = isIncludedFree || totalQuantity > 0;
-            const priceLabel = getAddonPriceLabel(service);
+            const priceLabel = addOnPriceLabel(service, t, locale);
             const hasUnits = service.pricingType !== "flat";
 
             return (
@@ -912,7 +916,7 @@ function BoardingAddOnsSubStep({
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                     {isIncludedFree ? (
                       <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
-                        <Gift className="size-3" /> Included Free
+                        <Gift className="size-3" /> {t("includedFree")}
                       </div>
                     ) : (
                       <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
@@ -922,19 +926,19 @@ function BoardingAddOnsSubStep({
                     {service.isRequired && !isIncludedFree && (
                       <div className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-bold text-white">
                         <Lock className="size-3" />
-                        Required
+                        {t("required")}
                       </div>
                     )}
                     {service.isDefault &&
                       !service.isRequired &&
                       !isIncludedFree && (
                         <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
-                          Default
+                          {t("default")}
                         </div>
                       )}
                     {service.duration && (
                       <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
-                        {service.duration}min
+                        {formatDuration(service.duration, locale)}
                       </div>
                     )}
                   </div>
@@ -963,10 +967,10 @@ function BoardingAddOnsSubStep({
                       <div className="flex items-center justify-between rounded-md bg-emerald-50 px-2 py-1.5">
                         <span className="flex items-center gap-1 text-xs text-emerald-700">
                           <Gift className="size-3" />
-                          Included with this rate
+                          {t("includedWithThisRate")}
                         </span>
                         <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                          <Check className="size-3" /> Free
+                          <Check className="size-3" /> {t("priceFree")}
                         </span>
                       </div>
                     ) : (
@@ -1068,7 +1072,7 @@ function BoardingAddOnsSubStep({
                             ) : service.isRequired ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[11px] font-semibold text-emerald-800">
                                 <Lock className="size-3" />
-                                Included
+                                {t("included")}
                               </span>
                             ) : (
                               <Button
@@ -1102,10 +1106,10 @@ function BoardingAddOnsSubStep({
                                 {quantity > 0 ? (
                                   <>
                                     <Check className="size-3" />
-                                    Added
+                                    {t("added")}
                                   </>
                                 ) : (
-                                  "Add"
+                                  t("add")
                                 )}
                               </Button>
                             )}

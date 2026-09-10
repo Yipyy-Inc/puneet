@@ -14,6 +14,7 @@ import {
   TrainingScheduleStep,
   type TrainingSelection,
 } from "./TrainingScheduleStep";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // Module-level constants
 const TIME_SLOTS: string[] = [];
@@ -73,6 +74,7 @@ export function CustomServiceDetails({
   onRequestClose,
   onTrainingSelectionChange,
 }: CustomServiceDetailsProps) {
+  const t = useShellText("booking");
   const { getModuleBySlug } = useCustomServices();
   const serviceModule = getModuleBySlug(serviceId);
 
@@ -114,7 +116,7 @@ export function CustomServiceDetails({
     }
     return (
       <div className="text-muted-foreground py-8 text-center">
-        Service configuration not found.
+        {t("serviceConfigurationNotFound")}
       </div>
     );
   }
@@ -164,6 +166,7 @@ function ScheduleStep({
   selectedPets: Pet[];
   Icon: React.ComponentType<{ className?: string }>;
 }) {
+  const t = useShellText("booking");
   const { hours, rules, serviceDateBlocks, scheduleTimeOverrides, holidays } =
     useSettings();
 
@@ -206,7 +209,9 @@ function ScheduleStep({
           <Icon className="text-primary size-5" />
         </div>
         <div>
-          <h3 className="font-semibold">Schedule {serviceModule.name}</h3>
+          <h3 className="font-semibold">
+            {t("scheduleService").replace("{service}", serviceModule.name)}
+          </h3>
           <p className="text-muted-foreground text-sm">
             {serviceModule.description}
           </p>
@@ -272,6 +277,7 @@ function BuiltinServiceSchedule({
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
 }) {
+  const t = useShellText("booking");
   const { hours, rules, serviceDateBlocks, scheduleTimeOverrides, holidays } =
     useSettings();
 
@@ -324,11 +330,13 @@ function BuiltinServiceSchedule({
         </div>
         <div>
           <h3 className="font-semibold">
-            Schedule {serviceInfo?.name ?? "Service"}
+            {t("scheduleService").replace(
+              "{service}",
+              serviceInfo?.name ?? t("service"),
+            )}
           </h3>
           <p className="text-muted-foreground text-sm">
-            {serviceInfo?.description ??
-              "Choose a date and time for your appointment."}
+            {serviceInfo?.description ?? t("chooseAppointmentDateTime")}
           </p>
         </div>
       </div>

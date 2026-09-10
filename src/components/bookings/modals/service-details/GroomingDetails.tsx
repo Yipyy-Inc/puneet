@@ -70,11 +70,26 @@ import { checkPostalCodeOnDay } from "@/lib/service-areas";
 import { GroomingWaitlistDialog } from "./GroomingWaitlistDialog";
 import { cn } from "@/lib/utils";
 import { getPetSize, petsMatchEligibleSizes } from "@/lib/pet-size";
+
+// A pet size's word, by CATALOGUE KEY — "small" / "petite".
+const SIZE_WORD_KEY: Record<string, string> = {
+  small: "sizeWord_small",
+  medium: "sizeWord_medium",
+  large: "sizeWord_large",
+  giant: "sizeWord_giant",
+};
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { coatTypeEnum, type AppointmentStage } from "@/types/grooming";
 import type { GroomingStationPetSize } from "@/types/rooms";
 import type { ServiceAddOn } from "@/types/facility";
+import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import {
+  formatDateLong,
+  formatDuration,
+  formatMoney,
+  formatTimeOfDay,
+} from "@/lib/i18n/format";
 
 const formatDateString = (date: Date): string => {
   const y = date.getFullYear();
@@ -279,6 +294,7 @@ function GroomingService({
   savePriceToPet: boolean;
   setSavePriceToPet: (next: boolean) => void;
 }) {
+  const t = useShellText("booking");
   return (
     <div className="space-y-6">
       <GroomingPackagePicker
@@ -329,7 +345,7 @@ function GroomingService({
         </>
       ) : (
         <p className="text-muted-foreground text-xs italic">
-          Pick a service above to assign a groomer, station, and pricing.
+          {t("pickAServiceAboveTo")}
         </p>
       )}
     </div>
@@ -348,6 +364,8 @@ function GroomingPackagePicker({
   selectedPets?: Pet[];
   applyEligibilityFilter?: boolean;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const accent = SERVICE_ACCENTS.grooming;
   // The facility's own menu, from Postgres. This used to read a query factory
   // backed by a fixture, and the comment here claimed the Rates editor kept it
@@ -383,10 +401,9 @@ function GroomingPackagePicker({
           <Scissors className={cn("size-5", accent.icon)} />
         </div>
         <div>
-          <h3 className="font-semibold">Choose your grooming</h3>
+          <h3 className="font-semibold">{t("chooseYourGrooming")}</h3>
           <p className="text-muted-foreground text-sm">
-            Final price depends on your pet&rsquo;s size and coat. Starting
-            prices shown are for small dogs.
+            {t("finalPriceDependsOnSize")}
           </p>
         </div>
       </div>
@@ -395,7 +412,7 @@ function GroomingPackagePicker({
         {packages.map((pkg) => {
           const active = selectedPackageId === pkg.id;
 
-          let displayPriceLabel = "From";
+          let displayPriceLabel = t("priceFromLabel");
           let displayPrice = pkg.sizePricing.small;
           let displayDuration = pkg.duration;
 
@@ -417,7 +434,7 @@ function GroomingPackagePicker({
               package: pkg,
               petPricingOverrides: [],
             });
-            displayPriceLabel = "Price";
+            displayPriceLabel = t("price");
             displayPrice = pricing.price;
             displayDuration = pricing.durationMin;
           }
@@ -460,7 +477,7 @@ function GroomingPackagePicker({
                 {pkg.isPopular && (
                   <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                     <Flame className="size-3" />
-                    Popular
+                    {t("popular")}
                   </span>
                 )}
                 {active && (
@@ -483,8 +500,13 @@ function GroomingPackagePicker({
                     <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
                       {displayPriceLabel}
                     </p>
-                    <p className={cn("text-base font-bold", accent.price)}>
-                      ${displayPrice}
+                    <p
+                      className={cn(
+                        "text-base font-bold tabular-nums",
+                        accent.price,
+                      )}
+                    >
+                      {formatMoney(displayPrice, locale)}
                     </p>
                   </div>
                 </div>
@@ -493,13 +515,13 @@ function GroomingPackagePicker({
                 </p>
                 <div className="text-muted-foreground flex items-center gap-1 text-[11px]">
                   <Clock className="size-3" />
-                  {displayDuration} min
+                  {formatDuration(displayDuration, locale)}
                   {pkg.requiresEvaluation && (
                     <>
                       <span className="mx-1">·</span>
                       <span className="inline-flex items-center gap-1 text-amber-700">
                         <Sparkles className="size-3" />
-                        Evaluation required
+                        {t("evaluationRequired")}
                       </span>
                     </>
                   )}
@@ -519,7 +541,7 @@ function GroomingPackagePicker({
                     ))}
                     {extraCount > 0 && (
                       <li className="text-muted-foreground/80 text-[10px]">
-                        +{extraCount} more
+                        {t("plusMore").replace("{n}", String(extraCount))}
                       </li>
                     )}
                   </ul>
@@ -549,6 +571,7 @@ function GroomingStylistPicker({
   additionalStylistIds: string[];
   setAdditionalStylistIds: (ids: string[]) => void;
 }) {
+  const t = useShellText("booking");
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
@@ -623,11 +646,14 @@ function GroomingStylistPicker({
       <div className="flex items-start justify-between gap-3">
         <div>
           <Label className="text-sm font-semibold">
-            Groomer <span className="text-destructive">*</span>
+            {t("roleGroomer")} <span className="text-destructive">*</span>
           </Label>
           {selectedPackage?.requiredSkillLevel && (
             <p className="text-muted-foreground mt-0.5 text-[10px]">
-              Requires {selectedPackage.requiredSkillLevel}+ skill level
+              {t("requiresSkillLevel").replace(
+                "{level}",
+                selectedPackage.requiredSkillLevel,
+              )}
             </p>
           )}
         </div>
@@ -635,12 +661,12 @@ function GroomingStylistPicker({
       </div>
       <Select value={stylistId} onValueChange={setStylistId}>
         <SelectTrigger className="mt-2">
-          <SelectValue placeholder="Assign groomer" />
+          <SelectValue placeholder={t("assignGroomer")} />
         </SelectTrigger>
         <SelectContent>
           {orderedStylists.length === 0 ? (
             <div className="text-muted-foreground px-2 py-1.5 text-xs">
-              No groomers qualified for this service.
+              {t("noGroomersQualifiedForThis")}
             </div>
           ) : (
             orderedStylists.map((s) => {
@@ -652,7 +678,7 @@ function GroomingStylistPicker({
                     <span className="flex items-center gap-1">
                       {isLast && (
                         <span className="rounded-full bg-emerald-100 px-1.5 py-px text-[9px] font-semibold tracking-wide text-emerald-800 uppercase dark:bg-emerald-900/40 dark:text-emerald-200">
-                          Last groomer
+                          {t("lastGroomer")}
                         </span>
                       )}
                       <span className="text-muted-foreground text-[10px] capitalize">
@@ -673,10 +699,13 @@ function GroomingStylistPicker({
         <div className="flex items-center justify-between">
           <Label className="text-muted-foreground flex items-center gap-1 text-[10px] tracking-wide uppercase">
             <Users className="size-3" />
-            Additional groomers
+            {t("additionalGroomers")}
           </Label>
           <span className="text-muted-foreground text-[10px]">
-            {additionalStylistIds.length} selected
+            {t("selectedCount").replace(
+              "{n}",
+              String(additionalStylistIds.length),
+            )}
           </span>
         </div>
         <div className="mt-1.5 flex flex-wrap gap-1">
@@ -708,7 +737,7 @@ function GroomingStylistPicker({
             })}
         </div>
         <p className="text-muted-foreground mt-1 text-[10px]">
-          For big-dog jobs or shadowing — payroll credits everyone selected.
+          {t("forBigDogJobsOr")}
         </p>
       </div>
     </div>
@@ -725,6 +754,7 @@ function GroomingStationPicker({
   stationId: string;
   setStationId: (id: string) => void;
 }) {
+  const t = useShellText("booking");
   const { stations } = useGroomingStations();
 
   // The wizard supports multi-pet selection — pick the largest pet so the
@@ -770,9 +800,12 @@ function GroomingStationPicker({
     <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Label className="text-sm font-semibold">Station</Label>
+          <Label className="text-sm font-semibold">{t("station")}</Label>
           <p className="text-muted-foreground mt-0.5 text-[10px]">
-            Tables/tubs that fit {largestPetSize} dogs.
+            {t("tablesThatFit").replace(
+              "{size}",
+              t(SIZE_WORD_KEY[largestPetSize] ?? largestPetSize),
+            )}
           </p>
         </div>
         <Building2 className="text-muted-foreground size-4" />
@@ -782,17 +815,17 @@ function GroomingStationPicker({
         onValueChange={(v) => setStationId(v === "__none__" ? "" : v)}
       >
         <SelectTrigger className="mt-2">
-          <SelectValue placeholder="Auto-assign at check-in" />
+          <SelectValue placeholder={t("autoAssignAtCheckIn")} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="__none__">
             <span className="text-muted-foreground italic">
-              Auto-assign at check-in
+              {t("autoAssignAtCheckIn")}
             </span>
           </SelectItem>
           {eligibleStations.length === 0 ? (
             <div className="text-muted-foreground px-2 py-1.5 text-xs">
-              No eligible stations for this pet size.
+              {t("noEligibleStationsForThis")}
             </div>
           ) : (
             eligibleStations.map((s) => (
@@ -824,6 +857,7 @@ function GroomingStagesEditor({
   stages: AppointmentStage[];
   setStages: (stages: AppointmentStage[]) => void;
 }) {
+  const t = useShellText("booking");
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
   const selectedPackage = menu.find((p) => p.id === selectedPackageId);
@@ -851,11 +885,13 @@ function GroomingStagesEditor({
       {
         id: `stage-${Date.now()}-${stages.length + 1}`,
         label:
+          // A stage's name is editable text on the booking, so it starts in
+          // the language of whoever is building the booking.
           stages.length === 0
-            ? "Bath"
+            ? t("stageBath")
             : stages.length === 1
-              ? "Dry"
-              : `Stage ${stages.length + 1}`,
+              ? t("stageDry")
+              : t("stageN").replace("{n}", String(stages.length + 1)),
         stylistId: sid,
         stylistName: stylistName(sid),
         startTime: fmt(startMins),
@@ -886,11 +922,10 @@ function GroomingStagesEditor({
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-sm font-semibold text-violet-700 dark:text-violet-300">
-            Split into sequential stages
+            {t("splitIntoSequentialStages")}
           </Label>
           <p className="text-muted-foreground mt-0.5 text-[10px]">
-            Optional. Chain stages across multiple groomers — e.g., bath by
-            Sarah, then cut by Marcus.
+            {t("chainStagesHint")}
           </p>
         </div>
         <Button
@@ -901,13 +936,13 @@ function GroomingStagesEditor({
           onClick={addStage}
         >
           <Plus className="mr-1 size-3" />
-          Add stage
+          {t("addStage")}
         </Button>
       </div>
 
       {stages.length === 0 ? (
         <p className="text-muted-foreground mt-2 text-[11px] italic">
-          One continuous block by default. Add a stage to split.
+          {t("oneContinuousBlockByDefault")}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
@@ -917,7 +952,7 @@ function GroomingStagesEditor({
               className="bg-card grid grid-cols-12 items-end gap-2 rounded-lg border p-2.5"
             >
               <div className="col-span-3">
-                <Label className="text-[10px]">Label</Label>
+                <Label className="text-[10px]">{t("label")}</Label>
                 <Input
                   value={stage.label}
                   onChange={(e) => updateStage(idx, { label: e.target.value })}
@@ -925,7 +960,7 @@ function GroomingStagesEditor({
                 />
               </div>
               <div className="col-span-4">
-                <Label className="text-[10px]">Groomer</Label>
+                <Label className="text-[10px]">{t("groomer")}</Label>
                 <Select
                   value={stage.stylistId}
                   onValueChange={(v) => updateStage(idx, { stylistId: v })}
@@ -945,7 +980,7 @@ function GroomingStagesEditor({
                 </Select>
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px]">Start</Label>
+                <Label className="text-[10px]">{t("start")}</Label>
                 <Input
                   type="time"
                   value={stage.startTime}
@@ -956,7 +991,7 @@ function GroomingStagesEditor({
                 />
               </div>
               <div className="col-span-2">
-                <Label className="text-[10px]">End</Label>
+                <Label className="text-[10px]">{t("end")}</Label>
                 <Input
                   type="time"
                   value={stage.endTime}
@@ -1007,6 +1042,8 @@ function GroomingPriceOverride({
   savePriceToPet: boolean;
   setSavePriceToPet: (next: boolean) => void;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const { data: allPetPricing = [] } = useQuery(
     groomingQueries.allPetServicePricing(),
   );
@@ -1040,10 +1077,14 @@ function GroomingPriceOverride({
     <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Label className="text-sm font-semibold">Pricing & duration</Label>
+          <Label className="text-sm font-semibold">
+            {t("pricingAndDuration")}
+          </Label>
           <p className="text-muted-foreground mt-0.5 text-[10px]">
-            Resolved from {primaryPet.name} / {getPetSize(primaryPet)} /{" "}
-            {selectedPackage!.name}. Edit to override.
+            {t("resolvedFrom")
+              .replace("{pet}", primaryPet.name)
+              .replace("{size}", t(SIZE_WORD_KEY[getPetSize(primaryPet)]))
+              .replace("{package}", selectedPackage!.name)}
           </p>
         </div>
         <DollarSign className="text-muted-foreground size-4" />
@@ -1052,7 +1093,7 @@ function GroomingPriceOverride({
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
           <Label className="flex items-center gap-1 text-[11px]">
-            Price <span className="text-muted-foreground">($)</span>
+            {t("price")} <span className="text-muted-foreground">($)</span>
           </Label>
           <Input
             type="number"
@@ -1073,13 +1114,16 @@ function GroomingPriceOverride({
           />
           {manualPrice !== undefined && manualPrice !== resolved.price && (
             <p className="mt-1 text-[10px] text-amber-700">
-              Override · resolved was ${resolved.price.toFixed(2)}
+              {t("overrideResolvedWas").replace(
+                "{value}",
+                formatMoney(resolved.price, locale),
+              )}
             </p>
           )}
         </div>
         <div>
           <Label className="flex items-center gap-1 text-[11px]">
-            Duration <span className="text-muted-foreground">(min)</span>
+            {t("duration")} <span className="text-muted-foreground">(min)</span>
           </Label>
           <Input
             type="number"
@@ -1101,7 +1145,10 @@ function GroomingPriceOverride({
           {manualDuration !== undefined &&
             manualDuration !== resolved.durationMin && (
               <p className="mt-1 text-[10px] text-amber-700">
-                Override · resolved was {resolved.durationMin} min
+                {t("overrideResolvedWas").replace(
+                  "{value}",
+                  formatDuration(resolved.durationMin, locale),
+                )}
               </p>
             )}
         </div>
@@ -1127,8 +1174,9 @@ function GroomingPriceOverride({
           onCheckedChange={(v) => setSavePriceToPet(!!v)}
         />
         <span>
-          Save this price/duration as {primaryPet.name}&rsquo;s rate for{" "}
-          {selectedPackage!.name}
+          {t("savePriceAsPetRate")
+            .replace("{pet}", primaryPet.name)
+            .replace("{package}", selectedPackage!.name)}
         </span>
       </label>
     </div>
@@ -1167,6 +1215,8 @@ function GroomingSchedule({
   /** Manual duration override (minutes) — flows into slot sizing. */
   manualDuration: number | undefined;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const { hours, rules, serviceDateBlocks, scheduleTimeOverrides, holidays } =
     useSettings();
   const mobile = useMobileGrooming();
@@ -1295,7 +1345,7 @@ function GroomingSchedule({
       ? {
           coord: pseudoCoord(newAddressSeed),
           label: stops.length + 1,
-          petName: primaryPet?.name ?? "New appointment",
+          petName: primaryPet?.name ?? t("newAppointment"),
         }
       : undefined;
     return { stops, tentativeStop };
@@ -1306,12 +1356,13 @@ function GroomingSchedule({
     primaryPet,
     allAppointments,
     newAddressSeed,
+    t,
   ]);
 
   // Pick a sensible default min-date for the calendar — today, in local tz.
   const todayIso = useMemo(() => {
-    const t = new Date();
-    return formatDateString(t);
+    const now = new Date();
+    return formatDateString(now);
   }, []);
 
   // Client postal code (used by coverage checks). For mobile bookings without
@@ -1344,7 +1395,7 @@ function GroomingSchedule({
         const r = checkPostalCodeOnDay(mobile.serviceAreas, postalCode, dow);
         if (r.status === "not-covered") {
           disabled.push(d);
-          messages[ds] = "Outside your service area on this day.";
+          messages[ds] = t("outsideServiceAreaOnDay");
         }
       } else {
         // No postal code on file — only block days where there's no active
@@ -1354,7 +1405,7 @@ function GroomingSchedule({
         );
         if (!anyActive) {
           disabled.push(d);
-          messages[ds] = "No mobile coverage on this day.";
+          messages[ds] = t("noMobileCoverageOnDay");
         }
       }
     }
@@ -1362,7 +1413,7 @@ function GroomingSchedule({
       coverageDisabledDates: disabled,
       coverageDisabledMessages: messages,
     };
-  }, [isMobile, postalCode, mobile.serviceAreas]);
+  }, [isMobile, postalCode, mobile.serviceAreas, t]);
 
   const scheduleOverrides = React.useMemo(
     () =>
@@ -1461,11 +1512,9 @@ function GroomingSchedule({
           <Scissors className={cn("size-5", accent.icon)} />
         </div>
         <div>
-          <h3 className="font-semibold">Schedule grooming</h3>
+          <h3 className="font-semibold">{t("scheduleGrooming")}</h3>
           <p className="text-muted-foreground text-sm">
-            {isMobile
-              ? "We&rsquo;ll send a van to your address."
-              : "Pick the date and time that works for you."}
+            {isMobile ? t("wellSendAVanTo") : t("pickDateAndTime")}
           </p>
         </div>
       </div>
@@ -1487,7 +1536,7 @@ function GroomingSchedule({
               )}
             >
               <Building2 className="size-4" />
-              Salon
+              {t("salon")}
             </button>
             <button
               type="button"
@@ -1502,7 +1551,7 @@ function GroomingSchedule({
               )}
             >
               <Truck className="size-4" />
-              Mobile
+              {t("mobile")}
             </button>
           </div>
         </div>
@@ -1511,10 +1560,7 @@ function GroomingSchedule({
       {isMobile && !postalCode && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
           <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
-          <p className="text-xs text-amber-900">
-            We don&rsquo;t have a postal code on file — staff will confirm
-            coverage after submission.
-          </p>
+          <p className="text-xs text-amber-900">{t("noPostalCodeOnFile")}</p>
         </div>
       )}
 
@@ -1522,8 +1568,7 @@ function GroomingSchedule({
         <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2">
           <MapPin className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
           <p className="text-xs text-sky-900">
-            Showing dates the van covers your area ({postalCode}). Other dates
-            are dimmed.
+            {t("vanCoversArea").replace("{postal}", postalCode)}
           </p>
         </div>
       )}
@@ -1550,15 +1595,15 @@ function GroomingSchedule({
             <div className="text-muted-foreground mt-2 flex items-center gap-3 px-1 text-[10px]">
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                Plenty
+                {t("plenty")}
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block size-1.5 rounded-full bg-amber-500" />
-                Limited
+                {t("limited")}
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block size-1.5 rounded-full bg-red-500" />
-                Waitlist
+                {t("waitlist")}
               </span>
             </div>
           </div>
@@ -1566,14 +1611,16 @@ function GroomingSchedule({
             <div className="mb-2 flex items-center justify-between">
               <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                 {startDate
-                  ? new Date(startDate + "T00:00:00").toLocaleDateString(
-                      "en-CA",
-                      { weekday: "long", month: "short", day: "numeric" },
-                    )
-                  : "Pick a date"}
+                  ? formatDateLong(new Date(startDate + "T00:00:00"), locale)
+                  : t("pickADate")}
               </p>
               <span className="text-muted-foreground text-[10px]">
-                {packageDuration} min slots
+                {t("minuteSlots").replace(
+                  "{duration}",
+                  // `+` hands on a copy: the compiler cannot see that formatDuration
+                  // leaves its argument alone, and packageDuration feeds memos above.
+                  formatDuration(+packageDuration, locale),
+                )}
               </span>
             </div>
             {startDate ? (
@@ -1594,7 +1641,7 @@ function GroomingSchedule({
               />
             ) : (
               <div className="bg-muted/30 text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
-                Pick a day on the calendar to see open times.
+                {t("pickADayOnThe")}
               </div>
             )}
           </div>
@@ -1642,9 +1689,13 @@ function GroomingSchedule({
           vanColor={vanColorForStylist}
           stops={routePreviewData.stops}
           tentativeStop={routePreviewData.tentativeStop}
-          caption={`Route preview for ${startDate}${
-            checkInTime ? ` · arriving ${checkInTime}` : ""
-          }`}
+          caption={
+            checkInTime
+              ? t("routePreviewArriving")
+                  .replace("{date}", startDate)
+                  .replace("{time}", formatTimeOfDay(checkInTime, locale))
+              : t("routePreviewFor").replace("{date}", startDate)
+          }
         />
       )}
 
@@ -1653,7 +1704,7 @@ function GroomingSchedule({
       {isMobile && startDate && arrivalWindows.length > 0 && (
         <div className="space-y-2">
           <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-            Choose an arrival window
+            {t("chooseAnArrivalWindow")}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {arrivalWindows.map((w) => {
@@ -1683,15 +1734,14 @@ function GroomingSchedule({
                     {formatClockLabel(w.start)} – {formatClockLabel(w.end)}
                   </p>
                   <p className="text-muted-foreground text-[10px]">
-                    Arrival window
+                    {t("arrivalWindow")}
                   </p>
                 </button>
               );
             })}
           </div>
           <p className="text-muted-foreground text-[10px]">
-            Exact time depends on the van&rsquo;s route — we&rsquo;ll text you
-            when we&rsquo;re ~15 min away.
+            {t("exactTimeDependsOnRoute")}
           </p>
         </div>
       )}
@@ -1700,9 +1750,7 @@ function GroomingSchedule({
           when no time works for them. */}
       {showWaitlist && (
         <div className="bg-muted/30 flex items-center justify-between rounded-xl border border-dashed px-3 py-2.5">
-          <p className="text-muted-foreground text-xs">
-            Can&rsquo;t find a time?
-          </p>
+          <p className="text-muted-foreground text-xs">{t("cantFindATime")}</p>
           <Button
             type="button"
             variant="outline"
@@ -1710,7 +1758,7 @@ function GroomingSchedule({
             className="h-7 gap-1 text-[11px]"
             onClick={() => setWaitlistOpen(true)}
           >
-            Join the Waitlist
+            {t("joinTheWaitlist")}
           </Button>
         </div>
       )}
@@ -1759,6 +1807,8 @@ function GroomingAddOns({
   autoAttachedAddOnIds: string[];
   setAutoAttachedAddOnIds: (ids: string[]) => void;
 }) {
+  const t = useShellText("booking");
+  const locale = useShellLocale();
   const accent = SERVICE_ACCENTS.grooming;
   const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
   const selectedPackage = menu.find((p) => p.id === packageId);
@@ -1878,15 +1928,14 @@ function GroomingAddOns({
   if (selectedPets.length === 0) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-dashed p-6 text-center text-sm">
-        Select a pet first to see available add-ons.
+        {t("selectAPetFirstTo")}
       </div>
     );
   }
   if (available.length === 0) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-dashed p-6 text-center text-sm">
-        No add-ons are configured for grooming. You&rsquo;re all set — continue
-        to schedule.
+        {t("noGroomingAddOns")}
       </div>
     );
   }
@@ -1903,11 +1952,8 @@ function GroomingAddOns({
           <Sparkle className={cn("size-5", accent.icon)} />
         </div>
         <div>
-          <h3 className="font-semibold">Optional add-ons</h3>
-          <p className="text-muted-foreground text-sm">
-            Toggle the extras you&rsquo;d like. Required items are included
-            automatically.
-          </p>
+          <h3 className="font-semibold">{t("optionalAddOns")}</h3>
+          <p className="text-muted-foreground text-sm">{t("toggleExtras")}</p>
         </div>
       </div>
 
@@ -1917,7 +1963,7 @@ function GroomingAddOns({
       {selectedPackage && (
         <div className="space-y-2">
           <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-            For this {selectedPackage.name}
+            {t("forThisPackage").replace("{package}", selectedPackage.name)}
           </p>
           <div className="space-y-1.5">
             {groomingAddOnCatalog.map((ao) => {
@@ -1938,19 +1984,19 @@ function GroomingAddOns({
                       {isAuto && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-pink-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                           <Sparkles className="size-2.5" />
-                          Auto-attached
+                          {t("autoAttached")}
                         </span>
                       )}
                     </div>
                     {ao.duration > 0 && (
                       <p className="text-muted-foreground line-clamp-1 text-[11px]">
-                        +{ao.duration} min
+                        +{formatDuration(ao.duration, locale)}
                       </p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className={cn("text-xs font-semibold", accent.price)}>
-                      +${ao.price}
+                      +{formatMoney(ao.price, locale)}
                     </span>
                     <Switch
                       checked={checked}
@@ -1965,10 +2011,10 @@ function GroomingAddOns({
           {groomingAddOnSubtotal > 0 && (
             <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2">
               <span className="text-xs font-medium">
-                Package add-ons subtotal
+                {t("packageAddOnsSubtotal")}
               </span>
               <span className="text-sm font-bold tabular-nums">
-                ${groomingAddOnSubtotal.toFixed(2)}
+                {formatMoney(groomingAddOnSubtotal, locale)}
               </span>
             </div>
           )}
@@ -1982,7 +2028,7 @@ function GroomingAddOns({
           <div key={pet.id} className="space-y-2">
             {selectedPets.length > 1 && (
               <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                For {pet.name}
+                {t("forPet").replace("{pet}", pet.name)}
               </p>
             )}
             <div className="space-y-1.5">
@@ -2010,13 +2056,13 @@ function GroomingAddOns({
                         {addon.isRequired && addon.price === 0 && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                             <Lock className="size-2.5" />
-                            Included
+                            {t("included")}
                           </span>
                         )}
                         {addon.isRequired && addon.price > 0 && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold text-white uppercase">
                             <Lock className="size-2.5" />
-                            Required
+                            {t("required")}
                           </span>
                         )}
                         {addon.isDefault && !addon.isRequired && (
@@ -2036,11 +2082,14 @@ function GroomingAddOns({
                         <span
                           className={cn("text-xs font-semibold", accent.price)}
                         >
-                          +${addon.price}
+                          +{formatMoney(addon.price, locale)}
                         </span>
                         {addon.duration && addon.duration > 0 && (
                           <span className="text-muted-foreground text-[10px] tabular-nums">
-                            adds {addon.duration} min
+                            {t("addsDuration").replace(
+                              "{duration}",
+                              formatDuration(addon.duration, locale),
+                            )}
                           </span>
                         )}
                       </div>
@@ -2048,7 +2097,9 @@ function GroomingAddOns({
                         checked={checked}
                         disabled={addon.isRequired}
                         onCheckedChange={(v) => toggle(addon, pet.id, v)}
-                        aria-label={`${addon.name} for ${pet.name}`}
+                        aria-label={t("addOnForPet")
+                          .replace("{addOn}", addon.name)
+                          .replace("{pet}", pet.name)}
                       />
                     </div>
                   </div>
@@ -2060,9 +2111,9 @@ function GroomingAddOns({
       </div>
 
       <div className="bg-muted/40 flex items-center justify-between rounded-xl border px-4 py-2.5">
-        <span className="text-sm font-medium">Add-ons subtotal</span>
+        <span className="text-sm font-medium">{t("addOnsSubtotal")}</span>
         <span className="text-base font-bold tabular-nums">
-          ${subtotal.toFixed(2)}
+          {formatMoney(subtotal, locale)}
         </span>
       </div>
     </div>
