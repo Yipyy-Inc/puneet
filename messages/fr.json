@@ -9257,7 +9257,8 @@
         "pendingParen": "(en attente)",
         "noReferralsYet": "Aucun parrainage pour l’instant",
         "inviteWithCode": "Invitez un ami avec votre code {code} — quand il réserve, vous êtes récompensés tous les deux.",
-        "shareNow": "Partager maintenant"
+        "shareNow": "Partager maintenant",
+        "youEarnedForAFriend": "Vous avez obtenu {reward} pour avoir parrainé un ami !"
       },
       "documents": {
         "agreementSigned": "Entente signée",
