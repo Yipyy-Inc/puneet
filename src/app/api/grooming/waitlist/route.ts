@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   WAITLIST_SELECT,
   rowToWaitlistEntry,
@@ -88,10 +92,12 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data, error } = await supabase
     .from("grooming_waitlist_entries")
     .select(WAITLIST_SELECT)
+    .match(inFacility(scope))
     // `removed` is a status, not a delete (20260806100000), so the queue keeps
     // the row and the list drops it — the provider filtered these out too.
     .neq("status", "removed")

@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import type { GroomingStation } from "@/types/rooms";
 
 // ============================================================================
@@ -63,6 +67,7 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data, error } = await supabase
     .from("grooming_stations")
@@ -71,6 +76,7 @@ export async function GET() {
        allowed_pet_sizes, pet_types, max_weight_lbs, staff_notes,
        image_url, display_order`,
     )
+    .match(inFacility(scope))
     .order("display_order", { ascending: true });
 
   if (error) {
@@ -88,6 +94,7 @@ export async function GET() {
        booking:booking_id ( status, assigned_staff_name,
                             booking_pets ( pets ( name ) ) )`,
     )
+    .match(inFacility(scope))
     .not("station_id", "is", null);
 
   type OccRow = {

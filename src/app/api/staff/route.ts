@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { STAFF_SELECT, staffToRow } from "@/lib/api/mappers/staff";
 import { staffResponder } from "@/lib/api/staff-response";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import type { StaffProfile } from "@/types/facility-staff";
 
 // ============================================================================
@@ -36,9 +40,14 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const [{ data, error }, responder] = await Promise.all([
-    supabase.from("staff").select(STAFF_SELECT).order("legacy_id"),
+    supabase
+      .from("staff")
+      .select(STAFF_SELECT)
+      .match(inFacility(scope))
+      .order("legacy_id"),
     staffResponder(user.email),
   ]);
 

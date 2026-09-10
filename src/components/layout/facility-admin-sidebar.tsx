@@ -11,6 +11,7 @@ import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
+import { FacilitySwitcher } from "@/components/layout/FacilitySwitcher";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
 import { useNavText } from "@/lib/nav/use-nav-text";
@@ -123,35 +124,37 @@ export function FacilitySidebar() {
   return (
     <GenericSidebar
       header={
-        <div className="flex items-center gap-3">
-          {profile.logo ? (
-            <Image
-              src={profile.logo}
-              alt={profile.businessName}
-              width={40}
-              height={40}
-              className="size-8 rounded-lg object-contain md:size-10"
-            />
-          ) : (
-            <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold md:size-10 md:text-sm">
-              {initials(profile.businessName)}
-            </div>
-          )}
-          <div className="min-w-0">
-            {/* A skeleton, not a placeholder name. The profile arrives blank
+        <FacilitySwitcher>
+          <div className="flex items-center gap-3">
+            {profile.logo ? (
+              <Image
+                src={profile.logo}
+                alt={profile.businessName}
+                width={40}
+                height={40}
+                className="size-8 rounded-lg object-contain md:size-10"
+              />
+            ) : (
+              <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold md:size-10 md:text-sm">
+                {initials(profile.businessName)}
+              </div>
+            )}
+            <div className="min-w-0">
+              {/* A skeleton, not a placeholder name. The profile arrives blank
                 before the query resolves, and any word rendered in its place —
                 "Facility Dashboard", the old fixture name — is a statement
                 about whose business this is, made before we know. */}
-            {profilePending ? (
-              <Skeleton className="h-5 w-32" />
-            ) : (
-              <h2 className="truncate text-sm font-semibold md:text-base">
-                {profile.businessName || t("yourFacility")}
-              </h2>
-            )}
-            <p className="text-muted-foreground text-xs">{dateLabel}</p>
+              {profilePending ? (
+                <Skeleton className="h-5 w-32" />
+              ) : (
+                <h2 className="truncate text-sm font-semibold md:text-base">
+                  {profile.businessName || t("yourFacility")}
+                </h2>
+              )}
+              <p className="text-muted-foreground text-xs">{dateLabel}</p>
+            </div>
           </div>
-        </div>
+        </FacilitySwitcher>
       }
       locationSelector={<LocationContextSelector />}
       menuSections={filteredMenuSections}

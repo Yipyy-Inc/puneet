@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   ROOM_CATEGORY_SELECT,
   FACILITY_ROOM_SELECT,
@@ -33,6 +37,7 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   // A LABEL, not a scope. `RoomCategory.facilityId` and `FacilityRoom.facilityId`
   // are the app's numeric ref, which these rows do not carry — they key on the
@@ -47,6 +52,7 @@ export async function GET() {
   const { data: categoryRows, error: categoryError } = await supabase
     .from("room_categories")
     .select(ROOM_CATEGORY_SELECT)
+    .match(inFacility(scope))
     .order("sort_order", { ascending: true });
 
   if (categoryError) {
@@ -62,6 +68,7 @@ export async function GET() {
   const { data: roomRows, error: roomError } = await supabase
     .from("facility_rooms")
     .select(FACILITY_ROOM_SELECT)
+    .match(inFacility(scope))
     .order("sort_order", { ascending: true });
 
   if (roomError) {

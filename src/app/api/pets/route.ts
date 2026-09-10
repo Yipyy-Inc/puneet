@@ -4,6 +4,10 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { PET_SELECT, petToRow, rowToPet } from "@/lib/api/mappers/client";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { Pet } from "@/types/pet";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Pets.
@@ -31,9 +35,14 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { searchParams } = new URL(request.url);
 
-  let query = supabase.from("pets").select(PET_SELECT).order("ref");
+  let query = supabase
+    .from("pets")
+    .select(PET_SELECT)
+    .match(inFacility(scope))
+    .order("ref");
 
   const clientRef = searchParams.get("clientRef");
   if (clientRef) {

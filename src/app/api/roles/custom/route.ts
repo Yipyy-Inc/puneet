@@ -8,6 +8,10 @@ import type {
   CustomRolesById,
   PermissionKey,
 } from "@/types/facility-staff";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Custom roles — the facility's own roles, and who holds them.
@@ -84,6 +88,7 @@ export async function GET() {
   if (!user) return unauthorised();
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const [roleRows, permRows, assignRows] = await Promise.all([
     supabase
@@ -91,6 +96,7 @@ export async function GET() {
       .select(
         "id, legacy_id, label, description, accent, ring, icon, created_at",
       )
+      .match(inFacility(scope))
       .order("created_at"),
     supabase
       .from("facility_custom_role_permissions")

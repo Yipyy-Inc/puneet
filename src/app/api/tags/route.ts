@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import {
   TAG_ASSIGNMENT_SELECT,
@@ -90,16 +94,21 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const [tagResult, assignmentResult] = await Promise.all([
     supabase
       .from("facility_tags")
       .select(TAG_SELECT)
+      .match(inFacility(scope))
       // Alphabetical. Creation order means nothing to anybody, and a tag row is
       // read by its name — the priority ordering the badges need is the
       // components' job, where `critical` sorts ahead of a word beginning c.
       .order("name", { ascending: true }),
-    supabase.from("facility_tag_assignments").select(TAG_ASSIGNMENT_SELECT),
+    supabase
+      .from("facility_tag_assignments")
+      .select(TAG_ASSIGNMENT_SELECT)
+      .match(inFacility(scope)),
   ]);
 
   if (tagResult.error) {

@@ -5,7 +5,11 @@ import {
   hrConfigToRow,
   rowToStaffHrConfig,
 } from "@/lib/api/mappers/staff-onboarding";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { StaffHrConfig } from "@/data/staff-onboarding";
 
@@ -32,9 +36,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("staff_hr_config")
     .select("*")
+    .match(inFacility(scope))
     .maybeSingle();
 
   if (error) {

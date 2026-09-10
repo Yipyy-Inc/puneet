@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 
 // ============================================================================
@@ -63,12 +67,14 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const url = new URL(request.url);
   const clientRef = url.searchParams.get("clientRef");
 
   const { data: clientRows, error: clientError } = await supabase
     .from("clients")
-    .select("id, ref, name, email");
+    .select("id, ref, name, email")
+    .match(inFacility(scope));
   if (clientError) {
     return NextResponse.json({ error: clientError.message }, { status: 500 });
   }
@@ -83,6 +89,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("store_credit_entries")
     .select("id, client_id, amount, reason, note, author_name, created_at")
+    .match(inFacility(scope))
     .order("created_at", { ascending: false });
 
   if (clientRef) {

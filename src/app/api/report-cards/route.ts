@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
+  activeFacilityIdForStaff,
+  inFacility,
   facilityContextForClient,
   getFacilityContext,
 } from "@/lib/api/facility-context";
@@ -74,6 +76,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { searchParams } = new URL(request.url);
 
   // Both narrow through an EMBEDDED column, which only works against an inner
@@ -87,6 +90,7 @@ export async function GET(request: NextRequest) {
     .select(
       reportCardSelect({ pet: Boolean(petRef), client: Boolean(clientRef) }),
     )
+    .match(inFacility(scope))
     .order("visit_date", { ascending: false });
 
   if (petRef) query = query.eq("pets.ref", Number(petRef));

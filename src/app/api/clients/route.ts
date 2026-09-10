@@ -6,7 +6,11 @@ import {
   clientToRow,
   rowToClient,
 } from "@/lib/api/mappers/client";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { Client } from "@/types/client";
 
@@ -51,9 +55,14 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const [{ data, error }, name] = await Promise.all([
-    supabase.from("clients").select(CLIENT_SELECT).order("ref"),
+    supabase
+      .from("clients")
+      .select(CLIENT_SELECT)
+      .match(inFacility(scope))
+      .order("ref"),
     facilityName(),
   ]);
 

@@ -10,6 +10,10 @@ import {
   type StylistProfileRow,
   type StylistStatsRow,
 } from "@/lib/api/mappers/stylists";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Groomers and the hours they work.
@@ -44,9 +48,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("grooming_stylist_profiles")
     .select(STYLIST_PROFILE_SELECT)
+    .match(inFacility(scope))
     .order("legacy_id", { ascending: true, nullsFirst: false });
 
   if (error) {
@@ -63,10 +69,12 @@ export async function GET() {
     supabase
       .from("grooming_stylist_stats")
       .select("staff_id, total_appointments")
+      .match(inFacility(scope))
       .in("staff_id", staffIds),
     supabase
       .from("grooming_stylist_availability")
       .select("id, staff_id, day_of_week, start_time, end_time, is_available")
+      .match(inFacility(scope))
       .in("staff_id", staffIds)
       .order("day_of_week", { ascending: true })
       .order("start_time", { ascending: true }),

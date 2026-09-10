@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { holds, myPermissions } from "@/lib/auth/permissions";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -77,9 +81,11 @@ export async function GET(request: Request) {
   const canSeeQa = holds(await myPermissions(), "view_staff_performance");
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   let query = supabase
     .from("call_record")
     .select(CALL_SELECT)
+    .match(inFacility(scope))
     .order("started_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 

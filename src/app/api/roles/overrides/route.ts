@@ -9,6 +9,10 @@ import type {
   PermissionSetting,
   RolePresetOverrides,
 } from "@/types/facility-staff";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // The role editor's write path.
@@ -99,13 +103,15 @@ export async function GET() {
   if (!user) return unauthorised();
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   // RLS scopes both selects to the caller's facility; no filter is needed for
   // correctness, and adding one would not be what keeps other tenants out.
   const [roleRows, staffRows] = await Promise.all([
     supabase
       .from("facility_role_permissions")
-      .select("role, permission_key, scope"),
+      .select("role, permission_key, scope")
+      .match(inFacility(scope)),
     supabase
       .from("staff_permissions")
       .select("permission_key, scope, staff:staff_id (legacy_id)"),

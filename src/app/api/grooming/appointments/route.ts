@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   APPOINTMENT_SELECT,
   GROOMING_STATUS_TO_BOOKING,
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const context = await getFacilityContext();
   const timeZone = context?.timeZone ?? "UTC";
 
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest) {
   const { data: config } = await supabase
     .from("grooming_config")
     .select("pet_size_tiers")
+    .match(inFacility(scope))
     .maybeSingle();
   const tiers = ((config?.pet_size_tiers as SizeTier[] | null) ??
     DEFAULT_TIERS) as SizeTier[];
@@ -71,6 +77,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("bookings")
     .select(APPOINTMENT_SELECT)
+    .match(inFacility(scope))
     .eq("service", "grooming")
     .order("start_at", { ascending: true });
 
@@ -106,6 +113,7 @@ export async function GET(request: NextRequest) {
       .select(
         "id, booking_id, kind, description, field, before_value, after_value, author_name, created_at",
       )
+      .match(inFacility(scope))
       .in("booking_id", bookingIds)
       .order("created_at", { ascending: true });
 

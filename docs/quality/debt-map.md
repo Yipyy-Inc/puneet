@@ -12223,3 +12223,35 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   "by SMS reminder"; neither sender exists for it.
 - Fixed while translating: the date and check-in time were printed raw
   (`2026-09-14 · 14:00`) and are `formatDateLong` / `formatTimeOfDay`.
+
+## 2026-09-10 — a platform admin saw every facility's clients, merged
+
+**Found while giving the client a demo facility.** His account
+(`admin@yipyy.com`) owns a real facility (Doggieville Mtl) and now a demo one,
+and is a platform superadmin. Two defects surfaced together:
+
+- **He could only ever open one of them.** On `staging.yipyy.com` no hostname
+  names a facility, so `getFacilityContext()` fell back to `memberIds[0]` —
+  whichever membership Postgres returned first. The staff side had no facility
+  switcher. It has one now (`FacilitySwitcher` in the sidebar header, for
+  anyone with two or more memberships): the choice is a `yipyy-facility`
+  cookie holding a SLUG, read only when the hostname names none, and only ever
+  used to pick among the caller's own memberships — it grants nothing.
+- **Lists were not scoped to the facility on screen.** 41 GET handlers (clients,
+  bookings, pets, payments, rooms, staff, grooming, tags, training, onboarding
+  …) filtered on nothing but RLS. Every read policy opens with
+  `private.is_platform_admin() or …`, so a platform admin on the facility
+  portal read EVERY tenant's rows under one facility's name — including the e2e
+  tenant's hundreds of test bookings — and a staff member in two facilities
+  read both. Each now filters on `activeFacilityIdForStaff()` via
+  `.match(inFacility(scope))`; a customer gets `null` and reads through RLS as
+  before. `bun run check:facility-scoped-reads` holds it (eight exemptions,
+  each with its reason; routes with a dynamic segment read the row they name).
+- Not fixed, recorded: the super-admin facility page's `SetupProgressCard`
+  counts bookings through `bookingQueries.byFacility`, which sends no facility
+  and so counted every facility's bookings; it now counts the admin's ACTIVE
+  facility's instead. It wants a platform route that takes the facility it is
+  showing.
+- A platform admin with NO facility membership still resolves to the demo
+  facility (legacy id 11) on the facility portal, as before — now scoped to it
+  rather than seeing all of them.

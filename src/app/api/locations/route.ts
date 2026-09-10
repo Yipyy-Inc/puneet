@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   LOCATION_SELECT,
   newLocationSchema,
@@ -44,10 +48,12 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data, error } = await supabase
     .from("locations")
     .select(LOCATION_SELECT)
+    .match(inFacility(scope))
     // Primary first, then alphabetical: the branch a facility defaults to is
     // the one people look for, and creation order means nothing to anybody.
     .order("is_primary", { ascending: false })

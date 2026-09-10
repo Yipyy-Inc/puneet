@@ -8,6 +8,10 @@ import {
   rowToBoardingArrival,
   type BoardingArrivalRow,
 } from "@/lib/api/mappers/boarding-arrival";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Who is arriving, who is here, and who should have gone home.
@@ -41,6 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const url = new URL(request.url);
   const date =
     url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest) {
   const { data: overlapping, error: overlapError } = await supabase
     .from("bookings")
     .select(BOARDING_ARRIVAL_SELECT)
+    .match(inFacility(scope))
     .eq("service", "boarding")
     .not("status", "in", "(cancelled,declined,no_show)")
     .lte("start_at", dayEnd)
@@ -75,6 +81,7 @@ export async function GET(request: NextRequest) {
   const { data: onSite, error: onSiteError } = await supabase
     .from("bookings")
     .select(BOARDING_ON_SITE_SELECT)
+    .match(inFacility(scope))
     .eq("service", "boarding")
     .not("boarding_stays.checked_in_at", "is", null)
     .is("boarding_stays.checked_out_at", null);

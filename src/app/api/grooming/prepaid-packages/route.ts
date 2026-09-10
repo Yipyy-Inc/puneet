@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   PREPAID_PACKAGE_SELECT,
   packageAppId,
@@ -151,9 +155,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("prepaid_packages")
     .select(PREPAID_PACKAGE_SELECT)
+    .match(inFacility(scope))
     .order("created_at", { ascending: true });
 
   if (error) {

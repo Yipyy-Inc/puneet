@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Every staff member's home branch, in one request.
@@ -27,10 +31,12 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   const { data: staff, error } = await supabase
     .from("staff")
     .select("id, legacy_id, first_name, last_name, membership_id")
+    .match(inFacility(scope))
     .order("legacy_id");
 
   if (error) {
@@ -46,6 +52,7 @@ export async function GET() {
     const { data: memberships, error: membershipError } = await supabase
       .from("facility_memberships")
       .select("id, home_location_id")
+      .match(inFacility(scope))
       .in("id", membershipIds);
     if (membershipError) {
       return NextResponse.json(

@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Recording a payment.
@@ -59,6 +63,7 @@ export async function GET(request: NextRequest) {
   const clientRef = request.nextUrl.searchParams.get("clientRef");
   const bookingRef = request.nextUrl.searchParams.get("bookingRef");
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
 
   // The client's uuid, resolved separately rather than through a PostgREST
   // embed. `clients!inner(ref)` filters correctly but collapses the row type to
@@ -125,6 +130,7 @@ export async function GET(request: NextRequest) {
     .select(
       "id, booking_id, client_id, method, grand_total, tip, amount_charged, card_brand, card_last4, entry_method, processor, author_name, note, created_at, refund_of_payment_id",
     )
+    .match(inFacility(scope))
     .order("created_at", { ascending: false })
     .limit(200);
 

@@ -4,6 +4,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // Signatures: record what a person agreed to, as it was when they agreed.
@@ -136,6 +140,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const staffId = new URL(request.url).searchParams.get("staffId");
 
   let query = supabase
@@ -143,12 +148,14 @@ export async function GET(request: NextRequest) {
     .select(
       "id, staff_id, task_key, agreement_key, agreement_title, agreement_text, agreement_hash, signature_name, signed_at",
     )
+    .match(inFacility(scope))
     .order("signed_at", { ascending: false });
 
   if (staffId) {
     const { data: staff } = await supabase
       .from("staff")
       .select("id")
+      .match(inFacility(scope))
       .eq("legacy_id", staffId)
       .maybeSingle();
     if (!staff) return NextResponse.json([]);

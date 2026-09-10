@@ -1,6 +1,6 @@
 import "server-only";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
@@ -222,7 +222,79 @@ async function facilitySlugFromRequest(): Promise<string> {
   // remove. Both callers have already read cookies by this point, so the
   // request is dynamic and this cannot be the call that trips it.
   const requestHeaders = await headers();
-  return requestHeaders.get("x-facility-slug") ?? "";
+  const fromHost = requestHeaders.get("x-facility-slug") ?? "";
+  if (fromHost) return fromHost;
+
+  // ── A HOSTNAME THAT NAMES NO FACILITY ─────────────────────────────────────
+  //
+  // staging.yipyy.com serves every facility from one address, so for someone
+  // who belongs to two of them the slug was always "" and the answer was
+  // always `memberIds[0]` — the owner of a real business and a demo facility
+  // could only ever open whichever membership Postgres returned first. The
+  // facility switcher writes the chosen slug here instead.
+  //
+  // It is a PREFERENCE, never a grant: both callers only ever pick among the
+  // caller's own memberships, so naming a facility you are not in changes
+  // nothing — the same posture as `preferFacilityId`. The hostname, when it
+  // names one, still wins.
+  const jar = await cookies();
+  return jar.get(FACILITY_CHOICE_COOKIE)?.value ?? "";
+}
+
+/** The facility switcher's choice, by slug — see `facilitySlugFromRequest`. */
+export const FACILITY_CHOICE_COOKIE = "yipyy-facility";
+
+/**
+ * The facility a STAFF request is about, or null for anyone else.
+ *
+ * ── WHY LIST ROUTES NEED THIS ─────────────────────────────────────────────
+ *
+ * RLS answers "which rows may this person read", and for someone in two
+ * facilities — or a platform admin, whose read policies open with
+ * `is_platform_admin() or …` — that is BOTH facilities, or every one. A list
+ * route that filters on nothing but RLS therefore returned every tenant's
+ * clients, bookings and pets, merged, under whichever facility's name the
+ * header showed. Harmless while each person belonged to one facility; wrong
+ * the first time anyone belonged to two.
+ *
+ * So a facility-portal list is scoped to the facility the portal is showing.
+ * A customer (no membership, not a platform admin) gets null and keeps reading
+ * through RLS alone — their own client row is the scope there.
+ */
+export async function activeFacilityIdForStaff(): Promise<string | null> {
+  const viewer = await getViewer().catch(() => null);
+  if (!viewer) return null;
+  if (viewer.memberships.length === 0 && !viewer.isPlatformAdmin) return null;
+  return (await getFacilityContext())?.facilityId ?? null;
+}
+
+/**
+ * A PostgREST `.match()` argument that scopes a query to the active facility —
+ * `{ facility_id }` for staff, `{}` (a no-op) for everyone else — so it can sit
+ * anywhere in a chain: `.from("bookings").select(…).match(inFacility(scope))`.
+ */
+export function inFacility(facilityId: string | null): Record<string, string> {
+  return facilityId ? { facility_id: facilityId } : {};
+}
+
+/** The caller's own facilities, for the switcher. Empty for non-members. */
+export async function myFacilities(): Promise<
+  { id: string; name: string; slug: string }[]
+> {
+  const viewer = await getViewer().catch(() => null);
+  const ids = (viewer?.memberships ?? []).map((m) => m.facilityId);
+  if (ids.length === 0) return [];
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("facilities")
+    .select("id, name, slug")
+    .in("id", ids)
+    .order("name");
+  return (data ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    slug: f.slug ?? "",
+  }));
 }
 
 /**

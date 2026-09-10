@@ -7,7 +7,11 @@ import {
   offboardingTemplateToRow,
   rowToOffboardingTemplate,
 } from "@/lib/api/mappers/staff-onboarding";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { OffboardingTemplate } from "@/data/staff-onboarding";
 
@@ -29,9 +33,11 @@ export async function GET() {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("offboarding_templates")
     .select(OFFBOARDING_TEMPLATE_SELECT)
+    .match(inFacility(scope))
     .order("name");
 
   if (error) {

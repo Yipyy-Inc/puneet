@@ -8,8 +8,10 @@ import {
   rowToBooking,
 } from "@/lib/api/mappers/booking";
 import {
+  activeFacilityIdForStaff,
   facilityContextForClient,
   getFacilityContext,
+  inFacility,
 } from "@/lib/api/facility-context";
 import type { NewBooking } from "@/types/booking";
 
@@ -22,10 +24,12 @@ import type { NewBooking } from "@/types/booking";
 // invariants RLS cannot express (capacity, ledger balance, handover) have
 // somewhere to live.
 //
-// Scoped entirely by RLS: staff see their facility's bookings, a customer sees
-// their own, and nobody has to pass a facility id for that to hold. A filter
-// here narrows what you asked for; it is not what keeps you out. Likewise the
-// POST below is authorised by the `bookings_insert` policy, not by this file.
+// RLS is what keeps you out: staff read their facilities' bookings, a customer
+// their own. It is not what picks the facility — for someone in two
+// facilities, or a platform admin, RLS admits them all — so the GET list is
+// also narrowed to the facility on screen (`activeFacilityIdForStaff`, null
+// for a customer). The POST below is authorised by the `bookings_insert`
+// policy, not by this file.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -40,11 +44,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { searchParams } = new URL(request.url);
 
   let query = supabase
     .from("bookings")
     .select(BOOKING_SELECT)
+    .match(inFacility(scope))
     .order("start_at", { ascending: false });
 
   const clientRef = searchParams.get("clientRef");
@@ -68,13 +74,33 @@ export async function GET(request: NextRequest) {
   // training and custom services — they have no attendance table at all — and
   // for a boarding booking whose kennel has not been assigned yet.
   const bookings = data.map(rowToBooking);
-  const { data: presenceRows } = await supabase
-    .from("booking_presence")
-    .select("booking_id, presence, arrived_at, departed_at");
+  // Only the bookings in this list: the view has no facility_id, so an
+  // unfiltered read returns presence for every booking RLS lets the caller
+  // see — every facility's, for a platform admin.
+  //
+  // In BATCHES. `.in()` is a query-string filter, and one with every id of a
+  // facility holding hundreds of bookings is a URL PostgREST refuses — which
+  // the first version of this did, silently, and every booking read `unknown`
+  // (caught by booking-presence.spec against the e2e tenant's 400+ rows).
+  const ids = (data as unknown as { id: string }[]).map((row) => row.id);
+  const presenceRows: unknown[] = [];
+  for (let i = 0; i < ids.length; i += 150) {
+    const { data: batch, error: presenceError } = await supabase
+      .from("booking_presence")
+      .select("booking_id, presence, arrived_at, departed_at")
+      .in("booking_id", ids.slice(i, i + 150));
+    if (presenceError) {
+      return NextResponse.json(
+        { error: presenceError.message },
+        { status: 500 },
+      );
+    }
+    presenceRows.push(...(batch ?? []));
+  }
 
   const presenceById = new Map(
     (
-      (presenceRows ?? []) as unknown as {
+      presenceRows as {
         booking_id: string;
         presence: string;
         arrived_at: string | null;

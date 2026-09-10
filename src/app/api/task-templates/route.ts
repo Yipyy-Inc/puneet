@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import {
   TASK_TEMPLATE_SELECT,
   rowToTaskTemplate,
@@ -28,11 +32,13 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
   const { searchParams } = new URL(request.url);
 
   let query = supabase
     .from("task_templates")
     .select(TASK_TEMPLATE_SELECT)
+    .match(inFacility(scope))
     .order("sort_order", { ascending: true });
 
   // A real column on this table, not an embedded one — so unlike the report
