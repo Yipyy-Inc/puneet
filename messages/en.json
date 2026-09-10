@@ -9095,7 +9095,21 @@
         "estimateDeclined": "Your estimate has been declined.",
         "contactAnytime": "You can contact {facility} anytime if you have questions or change your mind.",
         "messageFacility": "Message {facility}",
-        "close": "Close"
+        "close": "Close",
+        "yourEstimates": "Your estimates",
+        "reviewAndRespond": "Review and respond to service estimates from {facility}.",
+        "tabAll": "All",
+        "statusAwaiting": "Awaiting response",
+        "statusAccepted": "Accepted",
+        "statusDeclined": "Declined",
+        "statusExpired": "Expired",
+        "statusConverted": "Converted",
+        "noEstimatesInCategory": "No estimates in this category.",
+        "estimateNumber": "Estimate {id}",
+        "expiredOn": "Expired on {date}",
+        "validUntil": "Valid until {date}",
+        "viewDetails": "View details",
+        "accept": "Accept"
       }
     }
   }

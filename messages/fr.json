@@ -9095,7 +9095,21 @@
         "estimateDeclined": "Votre estimation a été refusée.",
         "contactAnytime": "Vous pouvez joindre {facility} en tout temps si vous avez des questions ou si vous changez d’avis.",
         "messageFacility": "Écrire à {facility}",
-        "close": "Fermer"
+        "close": "Fermer",
+        "yourEstimates": "Vos estimations",
+        "reviewAndRespond": "Consultez les estimations de {facility} et répondez-y.",
+        "tabAll": "Toutes",
+        "statusAwaiting": "En attente de réponse",
+        "statusAccepted": "Acceptée",
+        "statusDeclined": "Refusée",
+        "statusExpired": "Expirée",
+        "statusConverted": "Convertie",
+        "noEstimatesInCategory": "Aucune estimation dans cette catégorie.",
+        "estimateNumber": "Estimation {id}",
+        "expiredOn": "Expirée le {date}",
+        "validUntil": "Valide jusqu’au {date}",
+        "viewDetails": "Voir les détails",
+        "accept": "Accepter"
       }
     }
   }

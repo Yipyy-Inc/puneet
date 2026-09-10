@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 import { AcceptEstimateDialog } from "./AcceptEstimateDialog";
 import { DeclineEstimateDialog } from "./DeclineEstimateDialog";
 import type { Estimate } from "@/types/booking";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
+import { formatDateShort, formatList, formatMoney } from "@/lib/i18n/format";
 
 type CustomerStatus =
   | "sent"
@@ -27,30 +30,36 @@ type CustomerStatus =
 
 type TabKey = "all" | CustomerStatus;
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "sent", label: "Awaiting Response" },
-  { key: "accepted", label: "Accepted" },
-  { key: "declined", label: "Declined" },
-  { key: "expired", label: "Expired" },
-  { key: "converted", label: "Converted" },
+// Tab and status words by CATALOGUE KEY in `customerPages.areas.estimates`.
+const TABS: { key: TabKey; labelKey: string }[] = [
+  { key: "all", labelKey: "tabAll" },
+  { key: "sent", labelKey: "statusAwaiting" },
+  { key: "accepted", labelKey: "statusAccepted" },
+  { key: "declined", labelKey: "statusDeclined" },
+  { key: "expired", labelKey: "statusExpired" },
+  { key: "converted", labelKey: "statusConverted" },
 ];
 
-const STATUS_META: Record<CustomerStatus, { label: string; badge: string }> = {
-  sent: { label: "Awaiting Response", badge: "bg-blue-100 text-blue-700" },
-  accepted: { label: "Accepted", badge: "bg-emerald-100 text-emerald-700" },
-  declined: { label: "Declined", badge: "bg-slate-100 text-slate-600" },
-  expired: { label: "Expired", badge: "bg-amber-100 text-amber-700" },
-  converted: { label: "Converted", badge: "bg-emerald-100 text-emerald-700" },
-};
-
-function fmtDate(d: string) {
-  return new Date(d + "T12:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+const STATUS_META: Record<CustomerStatus, { labelKey: string; badge: string }> =
+  {
+    sent: { labelKey: "statusAwaiting", badge: "bg-blue-100 text-blue-700" },
+    accepted: {
+      labelKey: "statusAccepted",
+      badge: "bg-emerald-100 text-emerald-700",
+    },
+    declined: {
+      labelKey: "statusDeclined",
+      badge: "bg-slate-100 text-slate-600",
+    },
+    expired: {
+      labelKey: "statusExpired",
+      badge: "bg-amber-100 text-amber-700",
+    },
+    converted: {
+      labelKey: "statusConverted",
+      badge: "bg-emerald-100 text-emerald-700",
+    },
+  };
 
 interface Props {
   estimates: Estimate[];
@@ -63,7 +72,8 @@ export function CustomerEstimatesClient({
   facilityName,
   facilityLogo,
 }: Props) {
-  // "Awaiting Response" (sent, not yet acted on) is the default view.
+  const { t, fill, locale } = useCustomerText("estimates");
+  // "Awaiting response" (sent, not yet acted on) is the default view.
   const [activeTab, setActiveTab] = useState<TabKey>("sent");
   const [now] = useState(() => Date.now());
   // Local status overrides after a customer accepts (accepted or auto-converted).
@@ -144,7 +154,7 @@ export function CustomerEstimatesClient({
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200",
               )}
             >
-              {tab.label}
+              {t(tab.labelKey)}
               {count > 0 && (
                 <span
                   className={cn(
@@ -165,7 +175,7 @@ export function CustomerEstimatesClient({
         <div className="flex flex-col items-center rounded-2xl border bg-white py-16 text-center">
           <FileText className="text-muted-foreground/20 size-12" />
           <p className="text-muted-foreground mt-3 text-sm">
-            No estimates in this category.
+            {t("noEstimatesInCategory")}
           </p>
         </div>
       ) : (
@@ -174,8 +184,8 @@ export function CustomerEstimatesClient({
             const meta = STATUS_META[status];
             const petLabel =
               estimate.petNames.length > 0
-                ? estimate.petNames.join(", ")
-                : (estimate.guestPetInfo?.name ?? "Your pet");
+                ? formatList(estimate.petNames, locale)
+                : (estimate.guestPetInfo?.name ?? t("yourPet"));
             const expiryDays = estimate.expiresAt
               ? Math.ceil(
                   (new Date(estimate.expiresAt).getTime() - now) / 86_400_000,
@@ -204,7 +214,7 @@ export function CustomerEstimatesClient({
                         {facilityName}
                       </p>
                       <p className="text-muted-foreground text-[11px]">
-                        Estimate {estimate.estimateId}
+                        {fill("estimateNumber", { id: estimate.estimateId })}
                       </p>
                     </div>
                   </div>
@@ -212,7 +222,7 @@ export function CustomerEstimatesClient({
                     {status === "converted" && (
                       <CalendarCheck className="size-2.5" />
                     )}
-                    {meta.label}
+                    {t(meta.labelKey)}
                   </Badge>
                 </div>
 
@@ -224,7 +234,7 @@ export function CustomerEstimatesClient({
                       {petLabel}
                     </span>
                     <span>·</span>
-                    <span className="capitalize">{estimate.service}</span>
+                    <span>{serviceTypeLabel(locale, estimate.service)}</span>
                     {estimate.serviceType && (
                       <>
                         <span>·</span>
@@ -235,16 +245,16 @@ export function CustomerEstimatesClient({
 
                   <div className="text-muted-foreground flex items-center gap-1 text-xs">
                     <CalendarDays className="size-3" />
-                    {fmtDate(estimate.startDate)}
+                    {formatDateShort(estimate.startDate, locale)}
                     {estimate.endDate &&
                       estimate.endDate !== estimate.startDate &&
-                      ` – ${fmtDate(estimate.endDate)}`}
+                      ` – ${formatDateShort(estimate.endDate, locale)}`}
                   </div>
 
                   <div className="flex items-end justify-between">
                     <div>
                       <p className="text-2xl font-bold tabular-nums">
-                        ${estimate.total.toFixed(2)}
+                        {formatMoney(estimate.total, locale)}
                       </p>
                       {estimate.expiresAt && (
                         <p
@@ -257,8 +267,15 @@ export function CustomerEstimatesClient({
                                 : "text-muted-foreground",
                           )}
                         >
-                          {status === "expired" ? "Expired on" : "Valid until"}{" "}
-                          {fmtDate(estimate.expiresAt.slice(0, 10))}
+                          {fill(
+                            status === "expired" ? "expiredOn" : "validUntil",
+                            {
+                              date: formatDateShort(
+                                estimate.expiresAt.slice(0, 10),
+                                locale,
+                              ),
+                            },
+                          )}
                         </p>
                       )}
                     </div>
@@ -276,7 +293,7 @@ export function CustomerEstimatesClient({
                     >
                       <Link href={detailHref}>
                         <Eye className="size-3.5" />
-                        View Details
+                        {t("viewDetails")}
                       </Link>
                     </Button>
                     {status === "sent" && (
@@ -286,7 +303,7 @@ export function CustomerEstimatesClient({
                         onClick={() => setAcceptTarget(estimate)}
                       >
                         <Check className="size-3.5" />
-                        Accept
+                        {t("accept")}
                       </Button>
                     )}
                   </div>
@@ -296,7 +313,7 @@ export function CustomerEstimatesClient({
                       onClick={() => setDeclineTarget(estimate)}
                       className="text-muted-foreground w-full text-center text-xs hover:text-red-600"
                     >
-                      Decline this estimate
+                      {t("declineThisEstimate")}
                     </button>
                   )}
                 </div>

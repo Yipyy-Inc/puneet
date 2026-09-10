@@ -12026,3 +12026,17 @@ reply and the star rating write through `replyToReportCard` /
   the gate's text scanner read two CSS selectors as copy.
 - The estimate emails' own helpers (`components/estimates/emails/`) stay in
   English and baselined — they are the email pipeline's, not the page's.
+
+### Estimates (`/customer/estimates`) — **every customer is customer 15, and the list is the fixture**
+
+- `page.tsx` filters `estimates` from `@/data/estimates` by
+  `CUSTOMER_ID = 15` ("Mock logged-in customer — TODO: derive from
+  auth/session"), so whoever is signed in sees customer 15's estimates, and a
+  real customer's estimates never appear. An identity problem, for the e2e
+  suite — the same one as Messages and Gift cards.
+- Accept and decline here are the same dialogs as the public link (see
+  "Estimate, public link" above): the status change is a local override on
+  top of the fixture, and nothing is saved.
+- Fixed while translating: `page.tsx` is a Server Component, so its title
+  moved into a small client `EstimatesHeader`; the `en-US` date formatter
+  and `$${n.toFixed(2)}` are `formatDateShort` / `formatMoney`.
