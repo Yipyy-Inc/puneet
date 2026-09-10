@@ -6,6 +6,7 @@ import { Gift, Send, Inbox } from "lucide-react";
 import { BuyGiftCardFlow } from "./BuyGiftCardFlow";
 import { SentGiftCardsList } from "./SentGiftCardsList";
 import { ReceivedGiftCardsList } from "./ReceivedGiftCardsList";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
 
 type GiftCardsTab = "send" | "sent" | "received";
 
@@ -21,6 +22,7 @@ export function GiftCardsTabs({
   customerId,
   initialTab = "send",
 }: GiftCardsTabsProps) {
+  const { t } = useCustomerText("giftCards");
   const [tab, setTab] = useState<GiftCardsTab>(initialTab);
 
   return (
@@ -28,15 +30,15 @@ export function GiftCardsTabs({
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="send" className="gap-1.5 text-xs sm:text-sm">
           <Gift className="hidden size-4 sm:inline" />
-          Send a gift card
+          {t("sendAGiftCard")}
         </TabsTrigger>
         <TabsTrigger value="sent" className="gap-1.5 text-xs sm:text-sm">
           <Send className="hidden size-4 sm:inline" />
-          Cards I sent
+          {t("cardsISent")}
         </TabsTrigger>
         <TabsTrigger value="received" className="gap-1.5 text-xs sm:text-sm">
           <Inbox className="hidden size-4 sm:inline" />
-          Cards I received
+          {t("cardsIReceived")}
         </TabsTrigger>
       </TabsList>
 

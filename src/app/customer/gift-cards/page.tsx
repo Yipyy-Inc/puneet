@@ -1,5 +1,5 @@
 import { GiftCardsTabs } from "./_components/GiftCardsTabs";
-import { PageHeader } from "@/components/ui/page-header";
+import { GiftCardsHeader } from "./_components/GiftCardsHeader";
 
 // Hardcoded facility + current customer for now — replace with context/auth.
 const FACILITY_ID = 11;
@@ -19,10 +19,7 @@ export default async function CustomerGiftCardsPage({
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4 md:p-6">
-      <PageHeader
-        title="Gift Cards"
-        description="Give the gift of happy pets — beautiful digital gift cards sent straight to the inbox"
-      />
+      <GiftCardsHeader />
       <GiftCardsTabs
         facilityId={FACILITY_ID}
         customerId={CUSTOMER_ID}

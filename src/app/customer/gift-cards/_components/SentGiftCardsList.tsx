@@ -39,15 +39,25 @@ import {
   Thumb,
   fmtDate,
 } from "./gift-card-list-shared";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatMoney } from "@/lib/i18n/format";
 
 type SortKey = "newest" | "oldest" | "highest" | "lowest";
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "newest", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
-  { value: "highest", label: "Highest amount" },
-  { value: "lowest", label: "Lowest amount" },
+// A sort's name, by CATALOGUE KEY.
+const SORT_OPTIONS: { value: SortKey; labelKey: string }[] = [
+  { value: "newest", labelKey: "sortNewest" },
+  { value: "oldest", labelKey: "sortOldest" },
+  { value: "highest", labelKey: "sortHighest" },
+  { value: "lowest", labelKey: "sortLowest" },
 ];
+
+// A transaction's type, by CATALOGUE KEY.
+const TXN_TYPE_KEY: Record<string, string> = {
+  purchase: "txnPurchase",
+  redemption: "txnRedemption",
+  refund: "txnRefund",
+};
 
 interface SentGiftCardsListProps {
   facilityId: number;
@@ -60,6 +70,7 @@ export function SentGiftCardsList({
   customerId,
   onSendFirst,
 }: SentGiftCardsListProps) {
+  const { t, fill, locale } = useCustomerText("giftCards");
   const sent = useMemo(
     () =>
       giftCards.filter(
@@ -109,7 +120,11 @@ export function SentGiftCardsList({
 
   const handleResend = (gc: GiftCard) => {
     setResentIds((prev) => new Set(prev).add(gc.id));
-    toast.success(`Gift card resent to ${gc.recipientEmail ?? "recipient"}.`);
+    toast.success(
+      fill("giftCardResentTo", {
+        email: gc.recipientEmail ?? t("recipientLower"),
+      }),
+    );
   };
 
   // True empty (nothing ever sent) → CTA to Tab 1.
@@ -122,7 +137,7 @@ export function SentGiftCardsList({
           onSendFirst && (
             <Button onClick={onSendFirst} className="gap-1.5">
               <Send className="size-4" />
-              Send your first gift card
+              {t("sendYourFirstGiftCard")}
             </Button>
           )
         }
@@ -140,7 +155,7 @@ export function SentGiftCardsList({
             className="pl-9"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by recipient name"
+            placeholder={t("searchByRecipientName")}
           />
         </div>
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
@@ -150,7 +165,7 @@ export function SentGiftCardsList({
           <SelectContent>
             {SORT_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>
-                {o.label}
+                {t(o.labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -159,7 +174,7 @@ export function SentGiftCardsList({
 
       {visible.length === 0 ? (
         <p className="text-muted-foreground py-8 text-center text-sm">
-          No cards match &ldquo;{query}&rdquo;.
+          {fill("noCardsMatch", { query })}
         </p>
       ) : (
         <div className="space-y-2">
@@ -172,26 +187,35 @@ export function SentGiftCardsList({
                   <Thumb id={gc.id} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
-                      To {gc.recipientName ?? gc.recipientEmail ?? "Recipient"}
+                      {fill("toRecipient", {
+                        name:
+                          gc.recipientName ??
+                          gc.recipientEmail ??
+                          t("recipient"),
+                      })}
                     </p>
                     <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                      Sent {fmtDate(gc.purchaseDate)}
+                      {fill("sentOn", {
+                        date: fmtDate(locale, gc.purchaseDate),
+                      })}
                       <Badge
                         className={cn(
                           "text-[10px]",
                           STATUS_META[gc.status].className,
                         )}
                       >
-                        {STATUS_META[gc.status].label}
+                        {t(STATUS_META[gc.status].labelKey)}
                       </Badge>
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-semibold">
-                      ${gc.initialAmount.toFixed(2)}
+                      {formatMoney(gc.initialAmount, locale)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      ${gc.currentBalance.toFixed(2)} left
+                      {fill("amountLeft", {
+                        amount: formatMoney(gc.currentBalance, locale),
+                      })}
                     </p>
                   </div>
                   <DropdownMenu>
@@ -200,7 +224,7 @@ export function SentGiftCardsList({
                         variant="ghost"
                         size="icon"
                         className="size-8 shrink-0"
-                        aria-label="Card actions"
+                        aria-label={t("cardActions")}
                       >
                         <MoreHorizontal className="size-4" />
                       </Button>
@@ -216,11 +240,11 @@ export function SentGiftCardsList({
                               className="opacity-50"
                             >
                               <Send className="size-4" />
-                              Resend email
+                              {t("resendEmail")}
                             </DropdownMenuItem>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-56 text-xs">
-                            Physical cards cannot be resent by email.
+                            {t("physicalCardsCannotBeResent")}
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -230,13 +254,13 @@ export function SentGiftCardsList({
                         >
                           <Send className="size-4" />
                           {resentIds.has(gc.id)
-                            ? "Email resent"
-                            : "Resend email"}
+                            ? t("emailResent")
+                            : t("resendEmail")}
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onSelect={() => setDetailCard(gc)}>
                         <Eye className="size-4" />
-                        View details
+                        {t("viewDetails")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={(e) => {
@@ -245,16 +269,16 @@ export function SentGiftCardsList({
                         }}
                       >
                         <DollarSign className="size-4" />
-                        {checked ? "Hide balance" : "Check balance"}
+                        {checked ? t("hideBalance") : t("checkBalance")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
                 {checked && (
                   <p className="text-muted-foreground mt-2 pl-15 text-xs">
-                    Current balance:{" "}
+                    {t("currentBalanceLabel")}{" "}
                     <span className="text-foreground font-medium">
-                      ${gc.currentBalance.toFixed(2)}
+                      {formatMoney(gc.currentBalance, locale)}
                     </span>
                   </p>
                 )}
@@ -276,70 +300,79 @@ export function SentGiftCardsList({
                 <DialogTitle className="flex items-center gap-2">
                   <Thumb id={detailCard.id} />
                   <span>
-                    Card to{" "}
-                    {detailCard.recipientName ??
-                      detailCard.recipientEmail ??
-                      "Recipient"}
+                    {fill("cardTo", {
+                      name:
+                        detailCard.recipientName ??
+                        detailCard.recipientEmail ??
+                        t("recipient"),
+                    })}
                   </span>
                 </DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Detail label="Code" value={detailCard.code} mono />
+                <Detail label={t("code")} value={detailCard.code} mono />
                 <Detail
-                  label="Status"
-                  value={STATUS_META[detailCard.status].label}
+                  label={t("status")}
+                  value={t(STATUS_META[detailCard.status].labelKey)}
                 />
                 <Detail
-                  label="Original amount"
-                  value={`$${detailCard.initialAmount.toFixed(2)}`}
+                  label={t("originalAmount")}
+                  value={`${formatMoney(detailCard.initialAmount, locale)}`}
                 />
                 <Detail
-                  label="Remaining"
-                  value={`$${detailCard.currentBalance.toFixed(2)}`}
+                  label={t("remaining")}
+                  value={`${formatMoney(detailCard.currentBalance, locale)}`}
                 />
-                <Detail label="Sent" value={fmtDate(detailCard.purchaseDate)} />
                 <Detail
-                  label="Expires"
+                  label={t("sent")}
+                  value={fmtDate(locale, detailCard.purchaseDate)}
+                />
+                <Detail
+                  label={t("expires")}
                   value={
                     detailCard.neverExpires
                       ? "Never"
-                      : fmtDate(detailCard.expiryDate)
+                      : fmtDate(locale, detailCard.expiryDate)
                   }
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium">Transaction history</p>
+                <p className="text-sm font-medium">{t("transactionHistory")}</p>
                 {detailCard.transactionHistory.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
-                    No transactions yet.
+                    {t("noTransactionsYet")}
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {detailCard.transactionHistory.map((t) => (
+                    {detailCard.transactionHistory.map((txn) => (
                       <div
-                        key={t.id}
+                        key={txn.id}
                         className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
                       >
                         <div>
-                          <p className="font-medium capitalize">{t.type}</p>
+                          <p className="font-medium">
+                            {t(TXN_TYPE_KEY[txn.type] ?? "txnOther")}
+                          </p>
                           <p className="text-muted-foreground">
-                            {fmtDate(t.timestamp)}
+                            {fmtDate(locale, txn.timestamp)}
                           </p>
                         </div>
                         <div className="text-right">
                           <p
                             className={cn(
                               "font-semibold",
-                              t.type === "redemption"
+                              txn.type === "redemption"
                                 ? "text-red-600"
                                 : "text-green-600",
                             )}
                           >
-                            {t.type === "redemption" ? "−" : "+"}$
-                            {Math.abs(t.amount).toFixed(2)}
+                            {txn.type === "redemption" ? "−" : "+"}
+                            {formatMoney(Math.abs(txn.amount), locale)}
                           </p>
                           <p className="text-muted-foreground">
-                            Bal ${t.balanceAfter.toFixed(2)}
+                            {fill("balanceAfter", {
+                              amount: formatMoney(txn.balanceAfter, locale),
+                            })}
                           </p>
                         </div>
                       </div>

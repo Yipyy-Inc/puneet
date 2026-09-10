@@ -11943,3 +11943,24 @@ Replace with actual API call`, 1.5 s, then "Reward redeemed! Discount code:
   libs are deliberately outside them — so the gate could not have asked for
   either. Twenty-one `toLocaleString()` calls with no locale and a handful of
   `$${n.toFixed(2)}` are `formatNumber` / `formatMoney`.
+
+### Gift cards (`/customer/gift-cards`) — **buying one charges a card that does not exist**
+
+- **Every customer is customer 15.** `page.tsx` passes `CUSTOMER_ID = 15`
+  and `FACILITY_ID = 11` ("Hardcoded facility + current customer for now")
+  to both lists, so whoever is signed in sees customer 15's sent and received
+  cards. An identity problem; it wants the e2e suite, not a translation.
+- **"Purchase $X" is a timeout.** `handlePurchase` waits 1.8 s, makes up a
+  `GIFT-2026-…` code, and shows "Gift card sent to {name}! A branded email
+  has been sent" — no charge, no card created, no email. The payment step
+  offers two saved cards that are a constant (`SAVED_CARDS`, "VISA •••• 4242",
+  "Mastercard •••• 8888"). The real gift-card flow — the `gift-cards` e2e gate
+  covers it — lives on the facility side; this screen does not use it.
+- **"Resend email" and "Load to my wallet" are local state.** Resend adds the
+  id to a Set and toasts "Gift card resent"; loading moves money between two
+  `useState` numbers and says "is now available to spend".
+- Fixed while translating: the delivery time slots were a hand-rolled 12-hour
+  clock ("9 AM") and are `formatTimeOfDay`; the schedule preview's `en-US`
+  date is `formatDateLong`; every `$${n}` and `$${n.toFixed(2)}` is
+  `formatMoney`. `page.tsx` is a Server Component, so the title moved into a
+  small client `GiftCardsHeader` to reach the reader's locale.
