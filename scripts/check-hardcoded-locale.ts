@@ -84,7 +84,7 @@ const BASELINE = 442;
  * number is allowed up once in the change that sharpens it. Same rule as the
  * two widenings of `check:ui-french`.
  */
-const BASELINE_UNSPECIFIED = 400;
+const BASELINE_UNSPECIFIED = 397;
 
 /**
  * A literal BCP-47 tag handed straight to a formatter. Matching the call

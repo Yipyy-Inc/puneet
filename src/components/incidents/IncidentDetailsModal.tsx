@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { useUpdateIncident } from "@/lib/api/incidents";
 import { useIncidentFollowUps } from "@/lib/incidents/use-incident-follow-ups";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
 import type { FollowUpTask, Incident } from "@/types/incidents";
 
 interface IncidentDetailsModalProps {
@@ -75,7 +76,11 @@ export function IncidentDetailsModal({
   const [showAddTask, setShowAddTask] = useState(false);
   // Status, close and follow-ups are written now. Every one of them was
   // `setState` plus a `console.log("In a real app, would save to backend")`.
-  const { t, fill } = useStaffText("incidentReport");
+  const { t, fill, locale } = useStaffText("incidentReport");
+  // Long form and the viewer's own clock — `toLocaleString()` printed
+  // "9/8/2026", which Canada reads three ways (§6 rule 8).
+  const when = (iso: string) =>
+    `${formatDateLong(iso, locale)} · ${formatTime(iso, locale)}`;
   const updateIncident = useUpdateIncident();
   const {
     followUps: tasks,
@@ -298,9 +303,7 @@ export function IncidentDetailsModal({
               <div className="bg-muted mt-3 rounded-lg p-3">
                 <p className="text-muted-foreground text-sm">
                   Closed by <strong>{incident.closedBy}</strong> on{" "}
-                  {incident.closedDate
-                    ? new Date(incident.closedDate).toLocaleString()
-                    : "N/A"}
+                  {incident.closedDate ? when(incident.closedDate) : "N/A"}
                 </p>
               </div>
             )}
@@ -358,7 +361,7 @@ export function IncidentDetailsModal({
                     </Label>
                     <div className="mt-1 flex items-center gap-2 font-medium">
                       <Calendar className="size-4" />
-                      {new Date(incident.incidentDate).toLocaleString()}
+                      {when(incident.incidentDate)}
                     </div>
                   </div>
                   <div>
@@ -460,9 +463,7 @@ export function IncidentDetailsModal({
                     {incident.clientNotified &&
                       incident.clientNotificationDate && (
                         <span className="text-muted-foreground text-xs">
-                          {new Date(
-                            incident.clientNotificationDate,
-                          ).toLocaleString()}
+                          {when(incident.clientNotificationDate)}
                         </span>
                       )}
                   </div>
