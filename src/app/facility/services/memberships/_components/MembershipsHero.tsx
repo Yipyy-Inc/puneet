@@ -1,6 +1,12 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
+import { monthlyRevenue } from "@/lib/memberships/figures";
+import { useStoreCredit } from "@/lib/api/store-credit";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 import {
   Crown,
   Users,
@@ -9,21 +15,17 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import {
-  membershipPlans,
-  memberships,
-  prepaidCredits,
-} from "@/data/services-pricing";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
+// The four figures were the fixture's plans, members and prepaid credits —
+// another facility's. They are counted from this facility's rows now: its
+// plans, its subscriptions (revenue per month, lib/memberships/figures) and
+// its store-credit ledger, which is what the Prepaid Credits tab shows.
 export function MembershipsHero() {
+  const { locale } = useStaffText("memberships");
+  const formatCurrency = (value: number) =>
+    formatMoney(value, locale, { whole: true });
+  const membershipPlans = useMembershipPlans().data ?? NO_ITEMS;
+  const memberships = useMemberships().data ?? NO_ITEMS;
+  const credit = useStoreCredit().data;
   const activePlans = membershipPlans.filter((p) => p.isActive).length;
   const activeSubscribers = memberships.filter(
     (m) => m.status === "active",
@@ -31,10 +33,8 @@ export function MembershipsHero() {
   const pausedSubscribers = memberships.filter(
     (m) => m.status === "paused",
   ).length;
-  const mrr = memberships
-    .filter((m) => m.status === "active")
-    .reduce((sum, m) => sum + m.monthlyPrice, 0);
-  const outstandingCredits = prepaidCredits.reduce(
+  const mrr = monthlyRevenue(memberships);
+  const outstandingCredits = (credit?.accounts ?? NO_ITEMS).reduce(
     (sum, c) => sum + c.balance,
     0,
   );

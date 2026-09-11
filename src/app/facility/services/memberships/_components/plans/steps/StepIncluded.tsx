@@ -13,8 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Gift, Plus, Trash2 } from "lucide-react";
-import { services } from "@/data/services-pricing";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
+import { usePackageServiceOptions } from "@/lib/api/package-services";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   MembershipIncludedItem,
   IncludedItemKind,
@@ -35,9 +36,26 @@ export function StepIncluded({ data, update }: Props) {
   // offer the facility's own list, not the one Yipyy ships.
   const { addOns: facilityAddOns } = useServiceAddOns();
 
+  // The same for a service: `services` from `@/data/services-pricing` was
+  // another facility's price list. These are what this facility sells, the
+  // options its package editors offer — one list per module, prefixed so a
+  // grooming "Bath" and a daycare "Full day" cannot share an id.
+  const { t: tPk } = useStaffText("modulePackages");
+  const labels = { fullDay: tPk("fullDay") };
+  const grooming = usePackageServiceOptions("grooming", labels);
+  const boarding = usePackageServiceOptions("boarding", labels);
+  const daycare = usePackageServiceOptions("daycare", labels);
+  const training = usePackageServiceOptions("training", labels);
+  const services = [
+    ...grooming.map((s) => ({ id: `grooming:${s.id}`, name: s.name })),
+    ...boarding.map((s) => ({ id: `boarding:${s.id}`, name: s.name })),
+    ...daycare.map((s) => ({ id: `daycare:${s.id}`, name: s.name })),
+    ...training.map((s) => ({ id: `training:${s.id}`, name: s.name })),
+  ];
+
   const catalog =
     kind === "service"
-      ? services.filter((s) => !s.isAddOn)
+      ? services
       : kind === "addon"
         ? facilityAddOns.map((a) => ({ id: a.id, name: a.name }))
         : [];

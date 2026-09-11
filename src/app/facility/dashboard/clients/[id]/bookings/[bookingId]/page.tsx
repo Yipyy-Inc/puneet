@@ -88,6 +88,8 @@ import { TagList } from "@/components/shared/TagList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
+import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
+import { memberDiscount } from "@/lib/memberships/figures";
 import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
@@ -302,6 +304,19 @@ export default function ClientBookingDetailPage({
   const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
     null,
   );
+  // ── THE MEMBERSHIP DISCOUNT COMES OFF THE BILL ─────────────────────────
+  //
+  // A member was sold "10% off" and nothing on the facility side ever took it
+  // off anything: the checkout read no membership at all, and the booking
+  // modal's "benefits applied" box read a fixture and changed no amount. The
+  // client's ACTIVE membership (customer_memberships), for a service its plan
+  // covers, is offered here like the loyalty reward — and written onto the
+  // bill as a negative line before the money moves, so `amount_due` agrees.
+  // Once the line is on the bill it is not offered again: a second payment on
+  // the same booking must not take the discount twice.
+  const { data: clientMembershipRows } = useMemberships(clientId);
+  const { data: membershipPlanRows } = useMembershipPlans();
+  const { fill: fillJoin } = useStaffText("joinMembership");
   const client = useMemo(
     () => allClients.find((c) => c.id === clientId),
     [allClients, clientId],
@@ -640,6 +655,35 @@ export default function ClientBookingDetailPage({
     staleTime: 30_000,
   });
   const bookingLineItems = bookingLineItemsData ?? [];
+  const membershipOffer = booking
+    ? memberDiscount(
+        clientMembershipRows ?? [],
+        membershipPlanRows ?? [],
+        String(booking.service ?? ""),
+        booking.totalCost ?? 0,
+      )
+    : null;
+  const membershipLabel = membershipOffer
+    ? fillJoin("discountLine", {
+        plan: membershipOffer.planName,
+        pct: membershipOffer.percent,
+      })
+    : "";
+  const membershipDiscount =
+    membershipOffer &&
+    !bookingLineItems.some((line) => line.name === membershipLabel)
+      ? {
+          label: membershipLabel,
+          amount: Math.min(
+            membershipOffer.amount,
+            Math.max(
+              0,
+              (booking?.amountDue ?? booking?.totalCost ?? 0) -
+                (loyaltyDiscount?.amount ?? 0),
+            ),
+          ),
+        }
+      : null;
 
   // The facility's task routine, which the generator needs to build this
   // booking's task list. Every module's, because the booking's service decides
@@ -2133,9 +2177,38 @@ export default function ClientBookingDetailPage({
               amount: b.invoice?.remainingDue ?? b.totalCost,
             }))}
           loyaltyDiscount={loyaltyDiscount ?? undefined}
+          membershipDiscount={membershipDiscount ?? undefined}
           onConfirm={async (payment) => {
             const lateFee = pendingLateFee;
             const reward = loyaltyDiscount;
+            const memberOff = membershipDiscount;
+
+            // The membership discount goes on the bill FIRST, before either
+            // tender: a terminal charge is computed server-side from
+            // `amount_due`, so a discount that is not a line yet is not part
+            // of it. It is a standing entitlement, not a voucher — if the
+            // charge then fails, the line is still right.
+            if (memberOff && memberOff.amount > 0) {
+              try {
+                await addLineItems.mutateAsync({
+                  bookingRef: booking.id,
+                  items: [
+                    {
+                      kind: "item",
+                      name: memberOff.label,
+                      unitPrice: -memberOff.amount,
+                      quantity: 1,
+                    },
+                  ],
+                });
+              } catch (error) {
+                toast.error(fillJoin("discountRefused", {}), {
+                  description:
+                    error instanceof Error ? error.message : undefined,
+                });
+                return;
+              }
+            }
 
             // ── THE REWARD IS SPENT BEFORE THE MONEY MOVES ────────────────
             //
@@ -2312,7 +2385,8 @@ export default function ClientBookingDetailPage({
                         0,
                         (booking.amountDue ?? booking.totalCost) +
                           (lateFee?.amount ?? 0) -
-                          (reward?.amount ?? 0),
+                          (reward?.amount ?? 0) -
+                          (memberOff?.amount ?? 0),
                       ),
                     },
                     amount: charged,

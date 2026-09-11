@@ -51,6 +51,8 @@ import {
   GROOMING_STATIONS,
   GROOMING_STYLISTS,
   INCIDENTS,
+  MEMBERS,
+  MEMBERSHIP_PLANS,
   NOTES,
   PETS,
   STAFF,
@@ -931,6 +933,130 @@ try {
           (${DEMO_FACILITY_ID}, ${clientRowId}, ${sc.amount}, ${sc.reason},
            ${sc.note}, 'Valérie Lacroix', ${daysAgoIso(sc.daysAgo)})`;
       count("store credit entries");
+    }
+
+    // ── Membership plans, and who is on them ─────────────────────────────
+    // The plan's editor shape rides in `plan` (as the Plans tab writes it);
+    // each carries its seed key there, and a subscription in `detail`.
+    const planIds = new Map<string, string>();
+    for (const [i, p] of MEMBERSHIP_PLANS.entries()) {
+      const [exists] = await tx`
+        select id from public.membership_plans
+         where facility_id = ${DEMO_FACILITY_ID} and plan->>'demoSeedKey' = ${p.key}`;
+      if (exists) {
+        planIds.set(p.key, exists.id);
+        continue;
+      }
+      const tail = {
+        demoSeedKey: p.key,
+        tierLabel: p.tierLabel,
+        description: p.description,
+        quarterlyPrice: p.quarterlyPrice,
+        annualPrice: p.annualPrice,
+        credits: p.credits,
+        perks: p.perks,
+        applicableServices: p.applicableServices,
+        isPopular: p.isPopular,
+        taxAmount: 0,
+        discountRules: [],
+        includedItems: [],
+        availableOnline: true,
+        gracePeriodDays: 7,
+        cancellationPolicy: "end_of_cycle",
+        badgeColor: "#1668E3",
+      };
+      const [created] = await tx`
+        insert into public.membership_plans
+          (facility_id, name, billing_cycle, monthly_price, discount_percent,
+           plan, sort_order)
+        values
+          (${DEMO_FACILITY_ID}, ${p.name}, ${p.billingCycle}, ${p.monthlyPrice},
+           ${p.discountPercentage}, ${tail}::jsonb, ${i})
+        returning id`;
+      planIds.set(p.key, created.id);
+      count("membership plans");
+    }
+    const cycleMonths = (cycle: string) => (cycle === "quarterly" ? 3 : 1);
+    const addMonths = (iso: string, n: number) => {
+      const d = new Date(`${iso}T12:00:00Z`);
+      d.setUTCMonth(d.getUTCMonth() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    for (const m of MEMBERS) {
+      const clientRowId = clientIds.get(CLIENTS[m.client].key)!;
+      const [exists] = await tx`
+        select 1 from public.customer_memberships
+         where client_id = ${clientRowId} and detail->>'demoSeedKey' = ${m.key}`;
+      if (exists) continue;
+      const p = MEMBERSHIP_PLANS.find((x) => x.key === m.plan)!;
+      const startsOn = shiftDay(today, -m.startedDaysAgo);
+      // The next cycle after today, counted from the start.
+      let next = startsOn;
+      while (next <= today) next = addMonths(next, cycleMonths(p.billingCycle));
+      const price =
+        p.billingCycle === "quarterly" ? p.quarterlyPrice : p.monthlyPrice;
+      const log: {
+        id: string;
+        type: string;
+        date: string;
+        description: string;
+      }[] = [
+        {
+          id: `${m.key}-created`,
+          type: "created",
+          date: daysAgoIso(m.startedDaysAgo),
+          description: `Joined ${p.name}`,
+        },
+      ];
+      if (m.status === "paused") {
+        log.push({
+          id: `${m.key}-paused`,
+          type: "paused",
+          date: daysAgoIso(m.changedDaysAgo ?? 0),
+          description: "Paused until restarted by hand",
+        });
+      }
+      if (m.status === "cancelled") {
+        log.push({
+          id: `${m.key}-cancelled`,
+          type: "cancelled",
+          date: daysAgoIso(m.changedDaysAgo ?? 0),
+          description: "Cancelled — moving out of town",
+        });
+      }
+      const detail = {
+        demoSeedKey: m.key,
+        creditsTotal: p.credits,
+        creditsRemaining: Math.max(0, p.credits - (m.client % 3)),
+        autoRenew: m.status === "active",
+        activityLog: log,
+        ...(m.status === "paused"
+          ? {
+              pauseDetails: {
+                mode: "manual",
+                pausedAt: daysAgoIso(m.changedDaysAgo ?? 0),
+              },
+            }
+          : {}),
+        ...(m.status === "cancelled"
+          ? { cancelReason: "Moving out of town" }
+          : {}),
+      };
+      const endsOn =
+        m.status === "cancelled"
+          ? shiftDay(today, -(m.changedDaysAgo ?? 0) + 20)
+          : null;
+      await tx`
+        insert into public.customer_memberships
+          (facility_id, client_id, plan_id, plan_name, status, starts_on,
+           ends_on, billing_cycle, price, discount_percent, next_billing_on,
+           detail, created_at)
+        values
+          (${DEMO_FACILITY_ID}, ${clientRowId}, ${planIds.get(p.key)!}, ${p.name},
+           ${m.status}, ${startsOn}, ${endsOn}, ${p.billingCycle}, ${price},
+           ${p.discountPercentage}, ${m.status === "cancelled" ? null : next},
+           ${detail}::jsonb, ${daysAgoIso(m.startedDaysAgo)})`;
+      count("memberships");
     }
 
     if (ROLLBACK) {

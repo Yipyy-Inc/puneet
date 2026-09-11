@@ -167,6 +167,21 @@ export function formatDateShort(
 }
 
 /**
+ * `Sep` · `sept.` — a chart axis month, from `YYYY-MM`.
+ *
+ * Read in UTC from the first of the month, so no zone can move it into the
+ * month before.
+ */
+export function formatMonthShort(month: string, locale: AppLocale): string {
+  const d = new Date(`${month}-01T00:00:00Z`);
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, "monthShort", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/**
  * `2026-09-01`, in both locales.
  *
  * The ONE numeric form rule 8 allows, because ISO reads the same in every

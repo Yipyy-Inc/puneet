@@ -1471,3 +1471,146 @@ export const STORE_CREDIT = [
     daysAgo: 11,
   },
 ];
+
+// ── Memberships (20260911161036) ───────────────────────────────────────────
+// Three plans the Memberships page shows, and the clients on them — active,
+// one paused, one who left — so the Subscribers tab, Insights' months and a
+// member's discount at checkout all have something true to draw.
+export type SeedMembershipPlan = {
+  key: string;
+  name: string;
+  tierLabel: string;
+  description: string;
+  billingCycle: "monthly" | "quarterly";
+  monthlyPrice: number;
+  quarterlyPrice: number;
+  annualPrice: number;
+  discountPercentage: number;
+  credits: number;
+  applicableServices: ("daycare" | "grooming" | "boarding" | "training")[];
+  perks: string[];
+  isPopular: boolean;
+};
+
+export const MEMBERSHIP_PLANS: SeedMembershipPlan[] = [
+  {
+    key: `${SEED_PREFIX}-plan-daycare`,
+    name: "Daycare Regular",
+    tierLabel: "Silver",
+    description:
+      "For dogs who come most weekdays: eight daycare days a month and 10% off any extra day.",
+    billingCycle: "monthly",
+    monthlyPrice: 249,
+    quarterlyPrice: 0,
+    annualPrice: 0,
+    discountPercentage: 10,
+    credits: 8,
+    applicableServices: ["daycare"],
+    perks: [
+      "Eight daycare days a month",
+      "10% off extra days",
+      "Priority drop-off",
+    ],
+    isPopular: true,
+  },
+  {
+    key: `${SEED_PREFIX}-plan-grooming`,
+    name: "Grooming Club",
+    tierLabel: "Silver",
+    description: "A bath and tidy every month, and 15% off any other groom.",
+    billingCycle: "monthly",
+    monthlyPrice: 65,
+    quarterlyPrice: 0,
+    annualPrice: 0,
+    discountPercentage: 15,
+    credits: 1,
+    applicableServices: ["grooming"],
+    perks: ["One bath and tidy a month", "15% off grooming", "Free nail trim"],
+    isPopular: false,
+  },
+  {
+    key: `${SEED_PREFIX}-plan-premium`,
+    name: "Paws Premium",
+    tierLabel: "Gold",
+    description:
+      "Billed each quarter: 10% off every service, and first pick of holiday boarding.",
+    billingCycle: "quarterly",
+    monthlyPrice: 180,
+    quarterlyPrice: 510,
+    annualPrice: 0,
+    discountPercentage: 10,
+    credits: 0,
+    applicableServices: [],
+    perks: [
+      "10% off every service",
+      "Holiday boarding booked first",
+      "Free first evaluation",
+    ],
+    isPopular: false,
+  },
+];
+
+export type SeedMember = {
+  key: string;
+  client: number;
+  plan: string;
+  /** Days before today it started. */
+  startedDaysAgo: number;
+  status: "active" | "paused" | "cancelled";
+  /** For a pause or a cancellation: how long ago it happened. */
+  changedDaysAgo?: number;
+};
+
+export const MEMBERS: SeedMember[] = [
+  {
+    key: `${SEED_PREFIX}-member-01`,
+    client: 0,
+    plan: `${SEED_PREFIX}-plan-daycare`,
+    startedDaysAgo: 190,
+    status: "active",
+  },
+  {
+    key: `${SEED_PREFIX}-member-02`,
+    client: 2,
+    plan: `${SEED_PREFIX}-plan-grooming`,
+    startedDaysAgo: 120,
+    status: "active",
+  },
+  {
+    key: `${SEED_PREFIX}-member-03`,
+    client: 5,
+    plan: `${SEED_PREFIX}-plan-premium`,
+    startedDaysAgo: 250,
+    status: "active",
+  },
+  {
+    key: `${SEED_PREFIX}-member-04`,
+    client: 8,
+    plan: `${SEED_PREFIX}-plan-daycare`,
+    startedDaysAgo: 75,
+    status: "active",
+  },
+  {
+    key: `${SEED_PREFIX}-member-05`,
+    client: 11,
+    plan: `${SEED_PREFIX}-plan-grooming`,
+    startedDaysAgo: 14,
+    status: "active",
+  },
+  {
+    key: `${SEED_PREFIX}-member-06`,
+    client: 13,
+    plan: `${SEED_PREFIX}-plan-daycare`,
+    startedDaysAgo: 160,
+    status: "paused",
+    changedDaysAgo: 9,
+  },
+  {
+    key: `${SEED_PREFIX}-member-07`,
+    client: 15,
+    plan: `${SEED_PREFIX}-plan-grooming`,
+    startedDaysAgo: 210,
+    status: "cancelled",
+    changedDaysAgo: 40,
+  },
+];
