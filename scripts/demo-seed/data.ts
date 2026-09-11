@@ -1694,6 +1694,43 @@ export const NOTES: SeedNote[] = [
       "Prefers a text over a call during the day. Picks up after 17:30 on weekdays.",
     author: "Valérie Lacroix",
   },
+  // Phase 5: about the pets and clients added since.
+  {
+    about: { pet: "Loki" },
+    subType: "behavior",
+    content:
+      "Escape artist. Check the suite latch twice and never leave him in the yard alone.",
+    pinned: true,
+    author: "Kevin Tran",
+  },
+  {
+    about: { pet: "Frida" },
+    subType: "medical",
+    content:
+      "Chicken allergy — own food only, and no chicken treats from the jar.",
+    pinned: true,
+    shared: true,
+    author: "Valérie Lacroix",
+  },
+  {
+    about: { pet: "Rex" },
+    subType: "behavior",
+    content: "Gentle with people, wary of small dogs. Big-dog group only.",
+    author: "Maude Gauthier",
+  },
+  {
+    about: { pet: "Nova" },
+    subType: "feeding",
+    content: "Puppy: three small meals, and a Kong at noon keeps her settled.",
+    shared: true,
+    author: "Léa Moreau",
+  },
+  {
+    about: { client: "Félix Desjardins" },
+    content:
+      "Travels for work most months; his sister Julie is on file to pick up.",
+    author: "Sarah Lindsay",
+  },
 ];
 
 // ── Incidents on record ───────────────────────────────────────────────────
@@ -2964,5 +3001,84 @@ export const REPORT_CARDS: {
         "Eating habits: Ate everything\nPotty habits: All normal\nMedication: Not needed",
       closingNote: "",
     },
+  },
+];
+
+// ── The to-do list: manual tasks on the Tasks board ────────────────────────
+// Tagged through `source_ref` (`<prefix>-todo-…`) so the teardown finds them;
+// the board shows the title, not the ref.
+export const FACILITY_TASKS: {
+  ref: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  status: "pending" | "in_progress" | "completed";
+  /** Days from today it is due (negative is overdue or done). */
+  dueInDays: number;
+  dueTime: string;
+}[] = [
+  {
+    ref: `${SEED_PREFIX}-todo-maple-refill`,
+    title: "Call the vet about Maple's Vetmedin refill",
+    description:
+      "Two days of pills left in her bag. Ask them to fax the refill to the pharmacy.",
+    category: "follow_up",
+    priority: "high",
+    status: "pending",
+    dueInDays: 0,
+    dueTime: "16:00",
+  },
+  {
+    ref: `${SEED_PREFIX}-todo-shampoo`,
+    title: "Reorder oatmeal shampoo",
+    description: "Down to one gallon. Same supplier as last time.",
+    category: "custom",
+    priority: "medium",
+    status: "pending",
+    dueInDays: 2,
+    dueTime: "12:00",
+  },
+  {
+    ref: `${SEED_PREFIX}-todo-deluxe-03`,
+    title: "Deep-clean Deluxe suite 03 after Biscuit goes home",
+    description:
+      "Wash the bedding, disinfect the floor, air it out before Nala arrives.",
+    category: "cleanup",
+    priority: "medium",
+    status: "pending",
+    dueInDays: 2,
+    dueTime: "15:00",
+  },
+  {
+    ref: `${SEED_PREFIX}-todo-coco-dates`,
+    title: "Confirm Coco's suite for the 22nd",
+    description:
+      "The family may add a night — hold Deluxe 01 until they call back.",
+    category: "follow_up",
+    priority: "low",
+    status: "in_progress",
+    dueInDays: 5,
+    dueTime: "10:00",
+  },
+  {
+    ref: `${SEED_PREFIX}-todo-holiday-signup`,
+    title: "Post the holiday boarding sign-up",
+    description: "Front desk poster and the newsletter; members book first.",
+    category: "custom",
+    priority: "medium",
+    status: "in_progress",
+    dueInDays: 6,
+    dueTime: "17:00",
+  },
+  {
+    ref: `${SEED_PREFIX}-todo-gate-latch`,
+    title: "Fix the latch on the big-dog yard gate",
+    description: "Loki found the gap. New spring latch fitted and tested.",
+    category: "care",
+    priority: "urgent",
+    status: "completed",
+    dueInDays: -3,
+    dueTime: "09:00",
   },
 ];
