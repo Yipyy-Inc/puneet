@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import type { TrainingSession } from "@/types/training";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
 import { TrainingCalendarSidebar } from "./training-calendar-sidebar";
 import { TrainingCalendarDayView } from "./training-calendar-day-view";
 import { TrainingCalendarWeekView } from "./training-calendar-week-view";
@@ -198,15 +197,6 @@ export function TrainingCalendar() {
         if (!enroll) continue;
         if (enroll.petName.toLowerCase().includes(q)) return true;
         if (enroll.ownerName.toLowerCase().includes(q)) return true;
-      }
-      // Also search clients/pets directly in case a private session hasn't
-      // been formalized as an enrollment yet.
-      for (const c of clients) {
-        if (c.name.toLowerCase().includes(q)) {
-          // Only count if any of their dogs are in this session — skip otherwise
-          // to avoid noisy false positives.
-          continue;
-        }
       }
       return false;
     });

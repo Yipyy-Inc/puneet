@@ -12783,3 +12783,30 @@ records.
 
 - **Still open:** pinning a profile note from the appointment page is still a
   local override; the card's "Vet phone" is a dash (no field holds it).
+
+## 2026-09-11 — the training calendar is the facility's own book (Phase 3)
+
+The training landing page — the calendar — and everything that reads
+`trainingQueries.trainers / classes / sessions / enrollments` (session view,
+students roll-ups, make-ups, today's tasks) ran on `@/data/training`: four
+invented trainers teaching classes nobody created. A series created on the
+Series tab (real since 20260826110000) never reached the calendar.
+
+`GET /api/training/book` reads the facility's `training_series`, their
+sessions and enrollments, plus attendance, and maps them onto the shapes
+those screens draw (`buildTrainingBook`, src/lib/api/mappers/training-book.ts,
+unit-tested): a series is a class, a series session a calendar session, and
+a series with room for one dog is a private class. Trainers are the staff
+with the trainer role. The four queries keep their keys and share one
+request (src/lib/api/training-book.ts).
+
+- **The success-claims gate needed care here.** Putting the fetch inside
+  src/lib/api/training.ts made thirteen baselined screens look as if they had
+  a writer — the gate follows one import — while every one of them still
+  toasts over `setQueryData`. The fetch lives in its own module so the gate
+  still sees those screens for what they are.
+- **Still open:** trainer notes, progress, homework, report cards, make-ups,
+  drop-ins, disciplines, exercises and course types are still fixtures;
+  their rows reference fixture ids, so on a real facility they are simply
+  empty. The session view's roster details, the students list and the
+  booking modal's training step are converted in the commits that follow.
