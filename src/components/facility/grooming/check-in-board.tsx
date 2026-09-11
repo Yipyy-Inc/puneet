@@ -17,7 +17,6 @@ import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
 import { findZipTaxRate } from "@/lib/service-areas";
-import { clients as initialClients } from "@/data/clients";
 import {
   CheckInConfirmationDialog,
   type CheckInConfirmation,
@@ -34,6 +33,7 @@ import { WaitlistRow } from "./check-in-board-waitlist";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
+import { useClientRecord } from "@/lib/api/client";
 import {
   useRecordPayment,
   useSaveAppointmentIntake,
@@ -117,6 +117,12 @@ export function CheckInBoard() {
   const activeAppt = activeId
     ? (appointments.find((a) => a.id === activeId) ?? null)
     : null;
+  // The owner of the groom being worked on, from Postgres. The check-in,
+  // ready and payment helpers were handed `@/data/clients` and looked the
+  // owner up in it by numeric id, so for a real client they found nobody —
+  // and the payment dialog's tax came from nobody's postcode.
+  const { client: activeOwner } = useClientRecord(activeAppt?.ownerId);
+  const ownerClients = activeOwner ? [activeOwner] : [];
 
   const todayAppointments = useMemo(
     () => appointments.filter((a) => a.date === todayStr),
@@ -236,7 +242,7 @@ export function CheckInBoard() {
     }
     const next = { ...activeAppt };
     const summary = applyCheckInResult(next, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify,
     });
@@ -278,7 +284,7 @@ export function CheckInBoard() {
     if (!activeAppt) return;
     const next = { ...activeAppt };
     applyMarkReadyResult(next, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify,
       facilityName: "Yipyy",
@@ -293,7 +299,7 @@ export function CheckInBoard() {
     if (!activeAppt) return;
     const next = { ...activeAppt };
     const summary = applyPaymentResult(next, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify,
       facilityName: "Yipyy",
@@ -320,9 +326,7 @@ export function CheckInBoard() {
   }
 
   // Payment dialog dependencies for the active appointment.
-  const paymentClient = activeAppt
-    ? initialClients.find((c) => c.id === activeAppt.ownerId)
-    : undefined;
+  const paymentClient = activeAppt ? activeOwner : undefined;
   const matchedTax = findZipTaxRate(
     zipTaxRates,
     paymentClient?.address?.zip ?? "",
