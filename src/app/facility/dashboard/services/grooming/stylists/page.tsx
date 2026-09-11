@@ -57,7 +57,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { groomingAppointments } from "@/data/grooming";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type {
   Stylist,
@@ -76,13 +75,7 @@ import {
   buildTomorrowSummary,
   type TomorrowSummary,
 } from "@/lib/grooming-tomorrow-summary";
-import {
-  buildMorningReminder,
-  buildUpcomingReminder,
-  selectUpcomingReminderTarget,
-} from "@/lib/grooming-groomer-reminders";
-import { notifyGroomerReminder } from "@/data/facility-notifications";
-import { facilityStaff } from "@/data/facility-staff";
+import { staffQueries, useCreateStaff } from "@/lib/api/staff";
 import type { StaffProfile } from "@/types/facility-staff";
 import { toast } from "sonner";
 import {
@@ -161,7 +154,12 @@ function buildMergedStylists(
   staffList: StaffProfile[],
   profiles: Stylist[],
 ): MergedStylist[] {
-  const groomers = staffList.filter((s) => s.primaryRole === "groomer");
+  // A groomer by role, or anybody who already has a grooming profile — a
+  // manager who also grooms has one, and was missing from this table.
+  const groomers = staffList.filter(
+    (s) =>
+      s.primaryRole === "groomer" || profiles.some((p) => p.staffId === s.id),
+  );
   return groomers.map((staff) => {
     const profile = profiles.find((s) => s.staffId === staff.id);
     return {
@@ -222,13 +220,11 @@ export default function StylistsPage() {
     null,
   );
 
-  // "+ Add Groomer" — mock-creates a staff account + sends an invite. New
-  // groomers are appended locally so they appear in the table immediately.
+  // "+ Add Groomer" puts the person on the roster, gives them a grooming
+  // profile and their working week — three writes, see handleAddGroomer.
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [addedGroomers, setAddedGroomers] = useState<MergedStylist[]>([]);
-  const [addedSchedules, setAddedSchedules] = useState<Record<string, string>>(
-    {},
-  );
+  const [adding, setAdding] = useState(false);
+  const { mutateAsync: createStaff } = useCreateStaff();
   const [addForm, setAddForm] = useState({
     name: "",
     email: "",
@@ -294,14 +290,25 @@ export default function StylistsPage() {
   const { data: stylistProfilesData } = useStylists();
   // Stable while loading — see lib/no-items.ts.
   const stylistProfiles = stylistProfilesData ?? NO_ITEMS;
-  const { mutate: saveProfile } = useSaveStylistProfile();
-  const { mutate: saveAvailability } = useSaveStylistAvailability();
+  const { mutate: saveProfile, mutateAsync: saveProfileAsync } =
+    useSaveStylistProfile();
+  const { mutate: saveAvailability, mutateAsync: saveAvailabilityAsync } =
+    useSaveStylistAvailability();
   const { data: stylistHours = [] } = useQuery(
     groomingQueries.allStylistAvailability(),
   );
+  // ── THE ROSTER AND THE BOOK ARE THE FACILITY'S ─────────────────────────
+  //
+  // This merged the grooming profiles into `@/data/facility-staff` and
+  // measured everybody against `@/data/grooming`'s appointments: a real
+  // facility's groomers were not in the table at all, and the numbers beside
+  // the fixture's belonged to a book nobody kept.
+  const { data: staffData } = useQuery(staffQueries.profiles());
+  const { data: appointmentData } = useQuery(groomingQueries.appointments());
+  const groomingAppointments = appointmentData ?? NO_ITEMS;
   const mergedStylists = useMemo(
-    () => buildMergedStylists(facilityStaff, stylistProfiles),
-    [stylistProfiles],
+    () => buildMergedStylists(staffData ?? NO_ITEMS, stylistProfiles),
+    [staffData, stylistProfiles],
   );
 
   // The visibility toggles follow the roster once it arrives. Keyed on staff
@@ -337,7 +344,7 @@ export default function StylistsPage() {
       }
     });
     return metricsMap;
-  }, [mergedStylists]);
+  }, [mergedStylists, groomingAppointments]);
 
   const thirtyDayStats = useMemo(() => {
     const m = new Map<
@@ -353,7 +360,7 @@ export default function StylistsPage() {
       }
     });
     return m;
-  }, [mergedStylists]);
+  }, [mergedStylists, groomingAppointments]);
 
   // Quick read of this stylist's weekly availability for the inline schedule
   // summary. Mirrors the data shape used by the Manage Availability modal.
@@ -572,52 +579,68 @@ export default function StylistsPage() {
     setIsProfileOpen(true);
   };
 
-  const handleAddGroomer = () => {
+  const handleAddGroomer = async () => {
+    if (adding) return;
     if (!addForm.name.trim() || !addForm.email.trim()) {
       toast.error("Name and email are required.");
+      return;
+    }
+    const [firstName, ...rest] = addForm.name.trim().split(/\s+/);
+    const lastName = rest.join(" ");
+    if (!lastName) {
+      toast.error("Enter a first and a last name.");
       return;
     }
     if (addForm.workDays.length === 0) {
       toast.error("Pick at least one working day.");
       return;
     }
-    const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const days = [...addForm.workDays].sort((a, b) => a - b);
-    const contiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
-    const dayLabel = contiguous
-      ? days.length === 1
-        ? DAY_SHORT[days[0]]
-        : `${DAY_SHORT[days[0]]}–${DAY_SHORT[days[days.length - 1]]}`
-      : days.map((d) => DAY_SHORT[d]).join(", ");
-    const scheduleSummary = `${dayLabel} ${addForm.startTime}–${addForm.endTime}`;
 
-    const staffId = `groomer-new-${Date.now()}`;
-    const newGroomer: MergedStylist = {
-      staffId,
-      stylistId: staffId,
-      name: addForm.name.trim(),
-      email: addForm.email.trim(),
-      phone: addForm.phone.trim(),
-      status: "inactive", // pending invite acceptance
-      specializations: addForm.title.trim() ? [addForm.title.trim()] : [],
-      certifications: [],
-      yearsExperience: 0,
-      bio: "",
-      rating: 0,
-      totalAppointments: 0,
-      hireDate: new Date().toISOString().split("T")[0],
-      capacity: { ...defaultCapacity, skillLevel: addForm.skillLevel },
-      visibleOnline: false,
-      hasGroomingProfile: true,
-      calendarColor: fallbackColorFor(staffId),
-      qualifiedPackageIds: addForm.qualifiedPackageIds,
-    };
-
-    setAddedGroomers((prev) => [...prev, newGroomer]);
-    setAddedSchedules((prev) => ({ ...prev, [staffId]: scheduleSummary }));
+    // This appended a made-up row to local state and toasted "Invite sent"
+    // with "(mock)" in the description. It writes the three things a groomer
+    // is now: a staff row, a grooming profile, and a working week. No email
+    // goes out from here — the sign-in invite is sent from the staff page,
+    // where the rest of the roster's invites live.
+    const name = addForm.name.trim();
+    setAdding(true);
+    try {
+      const staff = await createStaff({
+        firstName,
+        lastName,
+        email: addForm.email.trim(),
+        phone: addForm.phone.trim() || undefined,
+        jobTitle: addForm.title.trim() || undefined,
+        primaryRole: "groomer",
+      });
+      await saveProfileAsync({
+        staffId: staff.id,
+        patch: {
+          specializations: addForm.title.trim() ? [addForm.title.trim()] : [],
+          qualifiedPackageIds: addForm.qualifiedPackageIds,
+          calendarColor: fallbackColorFor(staff.id),
+          capacity: { ...defaultCapacity, skillLevel: addForm.skillLevel },
+        },
+      });
+      await saveAvailabilityAsync({
+        staffId: staff.id,
+        availability: [0, 1, 2, 3, 4, 5, 6].map((day) => ({
+          dayOfWeek: day,
+          startTime: addForm.startTime,
+          endTime: addForm.endTime,
+          isAvailable: addForm.workDays.includes(day),
+        })),
+      });
+    } catch (error) {
+      toast.error(`${name} was not added`, {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      setAdding(false);
+      return;
+    }
+    setAdding(false);
     setIsAddOpen(false);
-    toast.success(`Invite sent to ${newGroomer.email}`, {
-      description: `${newGroomer.name} will appear as Active once they accept the setup link (mock).`,
+    toast.success(`${name} is on the grooming team`, {
+      description: "Send the sign-in invite from the Staff page.",
     });
     setAddForm({
       name: "",
@@ -632,69 +655,7 @@ export default function StylistsPage() {
     });
   };
 
-  const displayedStylists = useMemo(
-    () => [...mergedStylists, ...addedGroomers],
-    [mergedStylists, addedGroomers],
-  );
-
-  // Demo facility id — matches the mocked groomer-booking notifications.
-  const DEMO_FACILITY_ID = 11;
-
-  const handleSendMorningReminder = (groomer: MergedStylist) => {
-    if (!groomer.stylistId) {
-      toast.error("This groomer has no stylist profile yet.");
-      return;
-    }
-    const todayStr = new Date().toISOString().split("T")[0];
-    const reminder = buildMorningReminder({
-      stylistId: groomer.stylistId,
-      stylistName: groomer.name,
-      dateStr: todayStr,
-      appointments: groomingAppointments,
-    });
-    notifyGroomerReminder({
-      facilityId: DEMO_FACILITY_ID,
-      kind: "morning",
-      message: reminder.message,
-      petName: reminder.firstPetName,
-    });
-    toast.success(`Morning reminder sent to ${groomer.name}`, {
-      description: reminder.message,
-    });
-  };
-
-  const handleSendUpcomingReminder = (groomer: MergedStylist) => {
-    if (!groomer.stylistId) {
-      toast.error("This groomer has no stylist profile yet.");
-      return;
-    }
-    const now = new Date();
-    const todayStr = now.toISOString().split("T")[0];
-    const target = selectUpcomingReminderTarget({
-      stylistId: groomer.stylistId,
-      dateStr: todayStr,
-      appointments: groomingAppointments,
-      nowMinutes: now.getHours() * 60 + now.getMinutes(),
-    });
-    if (!target) {
-      toast.info(`${groomer.name} has no appointments scheduled today.`);
-      return;
-    }
-    const message = buildUpcomingReminder({
-      appointment: target.appointment,
-      minutesUntil: target.minutesUntil,
-    });
-    notifyGroomerReminder({
-      facilityId: DEMO_FACILITY_ID,
-      kind: "upcoming",
-      message,
-      petName: target.appointment.petName,
-      appointmentId: target.appointment.id,
-    });
-    toast.success(`30-minute reminder sent to ${groomer.name}`, {
-      description: message,
-    });
-  };
+  const displayedStylists = mergedStylists;
 
   const handleEditNotifPrefs = (groomer: MergedStylist) => {
     const current =
@@ -942,9 +903,7 @@ export default function StylistsPage() {
       defaultVisible: true,
       render: (groomer) => (
         <span className="text-muted-foreground text-xs">
-          {addedSchedules[groomer.staffId] ??
-            scheduleSummaries.get(groomer.staffId) ??
-            "No schedule set"}
+          {scheduleSummaries.get(groomer.staffId) ?? "No schedule set"}
         </span>
       ),
     },
@@ -1172,18 +1131,6 @@ export default function StylistsPage() {
             <DropdownMenuItem onClick={() => handlePreviewSummary(groomer)}>
               <Send className="mr-2 size-4" />
               Preview tomorrow&apos;s summary
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleSendMorningReminder(groomer)}
-            >
-              <Send className="mr-2 size-4" />
-              Send test morning reminder
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleSendUpcomingReminder(groomer)}
-            >
-              <Send className="mr-2 size-4" />
-              Send test 30-min reminder
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEditNotifPrefs(groomer)}>
               <Bell className="mr-2 size-4" />
@@ -1806,18 +1753,6 @@ export default function StylistsPage() {
             <Button variant="outline" onClick={() => setIsSummaryOpen(false)}>
               Close
             </Button>
-            <Button
-              onClick={() => {
-                if (!summary) return;
-                toast.success(
-                  `Summary sent to ${summary.stylistName} by SMS & email (mock)`,
-                );
-                setIsSummaryOpen(false);
-              }}
-            >
-              <Send className="mr-2 size-4" />
-              Send now
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2087,11 +2022,8 @@ export default function StylistsPage() {
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>
               Cancel
             </Button>
-            <Button
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-              onClick={handleAddGroomer}
-            >
-              Create &amp; Send Invite
+            <Button onClick={() => void handleAddGroomer()} disabled={adding}>
+              Add to the grooming team
             </Button>
           </DialogFooter>
         </DialogContent>

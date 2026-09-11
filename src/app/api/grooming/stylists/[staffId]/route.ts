@@ -7,6 +7,9 @@ import {
   deniedIfUntouched,
 } from "@/lib/api/rls-write";
 
+/** A staff member with no legacy id is addressed by uuid (`legacy_id ?? id`). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ============================================================================
 // Editing a groomer's grooming profile.
 //
@@ -181,7 +184,7 @@ export async function PUT(
   const { data: staff } = await supabase
     .from("staff")
     .select("id, facility_id")
-    .eq("legacy_id", staffRef)
+    .eq(UUID.test(staffRef) ? "id" : "legacy_id", staffRef)
     .maybeSingle();
   if (!staff) {
     return NextResponse.json(
@@ -296,7 +299,7 @@ export async function PATCH(
   const { data: staff } = await supabase
     .from("staff")
     .select("id, facility_id")
-    .eq("legacy_id", staffRef)
+    .eq(UUID.test(staffRef) ? "id" : "legacy_id", staffRef)
     .maybeSingle();
   if (!staff) {
     return NextResponse.json(
