@@ -12890,3 +12890,23 @@ writes new ones against a real visit (the table has accepted `training` since
   view's completion still build training cards into the fixture cache
   (`buildTrainingReportCard`); the shared module has no training-specific
   sections (exercise ratings, homework).
+
+## 2026-09-11 — every module's Packages tab is the real package catalogue (Phase 4)
+
+Only grooming's Packages tab wrote anything. Boarding and training rendered
+`ModulePackagesPage` over `@/data/services-pricing` — Save closed the dialog,
+Delete did nothing, "apply to upcoming bookings" was a toast — and daycare
+copied `daycarePackages` from `@/data/daycare` into state. None of their
+packages could be sold, because none existed.
+
+The grooming editor is now the editor for all four (`module` prop), the
+package route takes `?module=` and files every line under the module the
+screen names (`/api/grooming/prepaid-packages`, grooming when absent), and a
+bundle's services are the facility's own: grooming services, boarding room
+categories at their nightly price, a daycare full day at the daycare base
+price, and each training course at its cheapest running series' per-session
+price (`usePackageServiceOptions`). ModulePackagesPage is deleted.
+
+- **Still open:** the route still lives under `/api/grooming/`; a daycare
+  half day has no price anywhere to offer; selling a package to a client from
+  the facility side comes in the next commit.

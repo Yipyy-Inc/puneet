@@ -49,12 +49,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { groomingQueries } from "@/lib/api/grooming";
-import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import {
   useDeletePrepaidPackage,
   usePrepaidPackages,
   useSavePrepaidPackage,
+  type PackageModule,
 } from "@/lib/api/prepaid-packages";
+import { usePackageServiceOptions } from "@/lib/api/package-services";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   defaultGroomingPrepaidPackagePolicy,
   type GroomingPrepaidPackage,
@@ -62,7 +65,6 @@ import {
   type GroomingPrepaidPackageService,
   type GroomingPrepaidPackageStatus,
 } from "@/data/grooming-prepaid-packages";
-import { clients } from "@/data/clients";
 
 type PackageRecord = GroomingPrepaidPackage & Record<string, unknown>;
 
@@ -113,11 +115,31 @@ function PolicyToggle({
   );
 }
 
-export function GroomingPrepaidPackages() {
+// ── ONE EDITOR, EVERY MODULE ─────────────────────────────────────────────
+//
+// This was the grooming screen's, and the only real package editor: boarding
+// and training used ModulePackagesPage over `@/data/services-pricing`, whose
+// Save closed the dialog and whose Delete did nothing, and daycare edited a
+// copy of `@/data/daycare` in state. Every module's Packages tab mounts this
+// now with its own `module`: the packages are that module's rows in
+// `prepaid_packages`, and the services a bundle can hold are the facility's
+// own (usePackageServiceOptions). Grooming keeps its own words and its
+// grooming_manage_styles gate; the others use the catalogue's words and
+// manage_services, the permission the table's write policy checks.
+export function GroomingPrepaidPackages({
+  module = "grooming",
+}: { module?: PackageModule } = {}) {
+  const isGrooming = module === "grooming";
+  const { t: tPk } = useStaffText("modulePackages");
   // Section 3B / Table 4 — package (grooming style/bundle) management requires
   // grooming_manage_styles (all-access fallback keeps it for admin).
-  const canManageStyles = usePermission("grooming_manage_styles");
-  const { data: services = [] } = useQuery(groomingCatalogueQueries.services());
+  const canManageGrooming = usePermission("grooming_manage_styles");
+  const canManageServices = usePermission("manage_services");
+  const canManageStyles = isGrooming ? canManageGrooming : canManageServices;
+  const services = usePackageServiceOptions(module, {
+    fullDay: tPk("fullDay"),
+  });
+  const { clients } = useFacilityClientList();
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
@@ -126,7 +148,7 @@ export function GroomingPrepaidPackages() {
   // was gone on reload — and the four derived figures it wrote (regularPrice,
   // savings, savingsPercentage, purchaseCount) were the editor's own
   // arithmetic rather than anything the database would stand behind.
-  const { data: packages = [] } = usePrepaidPackages();
+  const { data: packages = [] } = usePrepaidPackages(module);
   const { mutate: savePackage } = useSavePrepaidPackage();
   const { mutate: deletePackage } = useDeletePrepaidPackage();
 
@@ -256,7 +278,7 @@ export function GroomingPrepaidPackages() {
     // payload builder drops them: they are the database's, derived from the
     // lines and the package price.
     savePackage(
-      { pkg: payload, isNew: !editing },
+      { pkg: payload, isNew: !editing, module },
       {
         onSuccess: () => {
           toast.success(editing ? "Package updated" : "Package created");
@@ -415,11 +437,12 @@ export function GroomingPrepaidPackages() {
       <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-800">
-            Prepaid Grooming Packages
+            {isGrooming ? "Prepaid Grooming Packages" : tPk(`title_${module}`)}
           </h2>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            Bundle multiple grooming sessions at a discount with a fixed
-            validity window — like a daycare pass for grooming.
+            {isGrooming
+              ? "Bundle multiple grooming sessions at a discount with a fixed validity window — like a daycare pass for grooming."
+              : tPk(`intro_${module}`)}
           </p>
         </div>
         {canManageStyles && (
@@ -530,8 +553,9 @@ export function GroomingPrepaidPackages() {
               {editing ? "Edit Package" : "Create Prepaid Package"}
             </DialogTitle>
             <DialogDescription>
-              Bundle one or more grooming services at a discount. Customers
-              prepay and redeem sessions over the validity window.
+              {isGrooming
+                ? "Bundle one or more grooming services at a discount. Customers prepay and redeem sessions over the validity window."
+                : tPk("dialogIntro")}
             </DialogDescription>
           </DialogHeader>
 
@@ -613,18 +637,18 @@ export function GroomingPrepaidPackages() {
                           placeholder={
                             form.services.length > 0
                               ? "Add another service to this bundle…"
-                              : "Select a grooming service…"
+                              : isGrooming
+                                ? "Select a grooming service…"
+                                : tPk("pick")
                           }
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {services
-                          .filter((s) => s.isActive)
-                          .map((svc) => (
-                            <SelectItem key={svc.id} value={svc.id}>
-                              {svc.name} — ${svc.basePrice}
-                            </SelectItem>
-                          ))}
+                        {services.map((svc) => (
+                          <SelectItem key={svc.id} value={svc.id}>
+                            {svc.name} — ${svc.basePrice}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Input
@@ -686,7 +710,9 @@ export function GroomingPrepaidPackages() {
                     </div>
                   ) : (
                     <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-4 text-center text-xs">
-                      Add at least one grooming service to this package.
+                      {isGrooming
+                        ? "Add at least one grooming service to this package."
+                        : tPk("empty")}
                     </div>
                   )}
                 </div>

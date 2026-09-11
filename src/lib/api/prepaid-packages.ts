@@ -22,12 +22,17 @@ const BASE = "/api/grooming/prepaid-packages";
 
 export const prepaidPackageKeys = {
   all: ["prepaid-packages"] as const,
+  module: (module: PackageModule) => ["prepaid-packages", module] as const,
 };
+
+/** The service a package's passes are spent on — one per Packages screen. */
+export type PackageModule = "grooming" | "boarding" | "daycare" | "training";
 
 /** The subset the API accepts. Built from the package the editor produced, so
  *  the call sites keep passing the shape they already have. */
-function toPayload(pkg: GroomingPrepaidPackage) {
+function toPayload(pkg: GroomingPrepaidPackage, module: PackageModule) {
   return {
+    module,
     name: pkg.name,
     description: pkg.description,
     packagePrice: pkg.packagePrice,
@@ -63,10 +68,10 @@ async function json<T>(
   return parsed as T;
 }
 
-export function usePrepaidPackages() {
+export function usePrepaidPackages(module: PackageModule = "grooming") {
   return useQuery({
-    queryKey: prepaidPackageKeys.all,
-    queryFn: () => json<GroomingPrepaidPackage[]>(BASE),
+    queryKey: prepaidPackageKeys.module(module),
+    queryFn: () => json<GroomingPrepaidPackage[]>(`${BASE}?module=${module}`),
   });
 }
 
@@ -83,16 +88,18 @@ export function useSavePrepaidPackage() {
     mutationFn: async (input: {
       pkg: GroomingPrepaidPackage;
       isNew: boolean;
+      module?: PackageModule;
     }) => {
+      const serviceModule = input.module ?? "grooming";
       if (input.isNew) {
         return json<{ id: string }>(BASE, {
           method: "POST",
-          body: toPayload(input.pkg),
+          body: toPayload(input.pkg, serviceModule),
         });
       }
       await json<void>(`${BASE}/${encodeURIComponent(input.pkg.id)}`, {
         method: "PATCH",
-        body: toPayload(input.pkg),
+        body: toPayload(input.pkg, serviceModule),
       });
       return { id: input.pkg.id };
     },
