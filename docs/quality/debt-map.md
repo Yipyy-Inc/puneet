@@ -12765,3 +12765,21 @@ appointment mappers and `/api/grooming/stylists/[staffId]`.
 
 - **Still open:** the analytics card still reads `groomingAnalytics` from the
   report fixtures; the page's labels are still English (ratchet entry).
+
+## 2026-09-11 — a groom's printed card and its page show the pet's own records
+
+The appointment page's pet and client profile notes came from
+`groomingQueries.petNotes` / `.clientNotes`, which filtered `@/data/pet-notes`
+by numeric ref — invented notes shown against a real pet. The printable
+appointment card read the owner and pet from `@/data/clients`, the notes from
+the same fixture and the vaccinations from `@/data/pet-data`, so a real groom
+printed another pet's record ("Vet name" printed "On file" whenever the pet
+had special needs).
+
+Both queries read `/api/notes` (pet / customer) now; the card reads the
+client record, the notes and `usePetVaccinations`, judges expiry with the
+calendar-day rule the vaccinations tab uses, and prints the vet named on the
+records.
+
+- **Still open:** pinning a profile note from the appointment page is still a
+  local override; the card's "Vet phone" is a dash (no field holds it).

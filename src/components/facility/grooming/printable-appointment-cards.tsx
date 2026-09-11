@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import type { GroomingAppointment } from "@/types/grooming";
-import { getEffectiveAlertNotes } from "@/lib/api/grooming";
-import { clients } from "@/data/clients";
-import { petNotes } from "@/data/pet-notes";
-import { vaccinationRecords } from "@/data/pet-data";
+import { getEffectiveAlertNotes, groomingQueries } from "@/lib/api/grooming";
+import { useClientRecord } from "@/lib/api/client";
+import { usePetVaccinations } from "@/lib/api/vaccinations";
+import { expiryState, localToday } from "@/lib/vaccinations";
+import { NO_ITEMS } from "@/lib/no-items";
 
 function formatDateLong(dateStr: string): string {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-CA", {
@@ -104,10 +106,21 @@ function AppointmentCard({
   origin: string;
   forcePageBreak: boolean;
 }) {
-  // Resolve owner + pet from clients data; tolerate missing data without
-  // crashing the print layout.
-  const client = clients.find((c) => c.id === appointment.ownerId);
+  // The owner, the pet, their notes and the pet's vaccination records — all
+  // from Postgres. The card read the clients, pet-notes and vaccination
+  // fixtures by numeric ref, so a real groom printed somebody else's pet.
+  // Missing data prints as a dash rather than breaking the page.
+  const { client } = useClientRecord(appointment.ownerId);
   const pet = client?.pets.find((p) => p.id === appointment.petId);
+  const { data: petNoteData } = useQuery(
+    groomingQueries.petNotes(appointment.petId),
+  );
+  const { data: clientNoteData } = useQuery(
+    groomingQueries.clientNotes(appointment.ownerId),
+  );
+  const { vaccinations: vaccinationData } = usePetVaccinations(
+    appointment.petId,
+  );
 
   const effectiveAlerts = useMemo(
     () => getEffectiveAlertNotes(appointment, allAppointments),
@@ -135,36 +148,26 @@ function AppointmentCard({
 
   const petProfileNotes = useMemo(
     () =>
-      petNotes
-        .filter((n) => n.scope === "pet" && n.petId === appointment.petId)
-        .sort((a, b) => {
-          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-          return b.createdAt.localeCompare(a.createdAt);
-        }),
-    [appointment],
+      [...(petNoteData ?? NO_ITEMS)].sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return b.createdAt.localeCompare(a.createdAt);
+      }),
+    [petNoteData],
   );
-  const clientProfileNotes = useMemo(
-    () =>
-      petNotes.filter(
-        (n) => n.scope === "client" && n.clientId === appointment.ownerId,
-      ),
-    [appointment],
-  );
+  const clientProfileNotes = clientNoteData ?? NO_ITEMS;
 
   // Vaccination status for the pet — flag expired or expiring soon.
   const vaccinations = useMemo(() => {
-    const recs = vaccinationRecords.filter(
-      (v) => v.petId === appointment.petId,
-    );
-    const now = Date.now();
+    const recs = vaccinationData.filter((v) => v.status !== "rejected");
+    const today = localToday();
     const status =
       recs.length === 0
         ? "Unknown"
-        : recs.every((v) => new Date(v.expiryDate).getTime() > now)
+        : recs.every((v) => expiryState(v.expiryDate, today) !== "expired")
           ? "Up to date"
           : "Expired";
     return { recs, status };
-  }, [appointment.petId]);
+  }, [vaccinationData]);
 
   const qrUrl =
     origin &&
@@ -289,7 +292,10 @@ function AppointmentCard({
           />
           <FieldRow
             label="Vet name"
-            value={pet?.specialNeeds ? "On file" : "—"}
+            value={
+              vaccinations.recs.find((v) => v.veterinarianName)
+                ?.veterinarianName ?? "—"
+            }
           />
           <FieldRow label="Vet phone" value="—" />
         </div>
