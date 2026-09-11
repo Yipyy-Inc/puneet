@@ -12700,3 +12700,26 @@ nothing behind it and is gone.
 
 - **Still open:** "Send ETA SMS" still toasts "SMS sent" and sends nothing;
   the panel's labels are still English (ratchet entry).
+
+## 2026-09-11 — a grooming appointment's own page writes what it shows
+
+The appointment detail page (`/facility/dashboard/services/grooming/appointments/[id]`)
+kept its status in `useState`: check in, ready, check out, cancel, no-show and
+"move to waitlist" all changed the page and wrote nothing, so the groom was
+back where it started on the next visit. **Reschedule** moved a
+`scheduleOverride` in the same state. **Edit** opened the New appointment
+dialog — harmless while that dialog saved nothing, a second booking once it
+did. **Repeat** was a toast; **Send SMS** said "SMS sent" and sent nothing. The
+check-in, mark-ready and payment helpers looked the owner up in
+`@/data/clients`.
+
+Every transition goes through `useSetGroomingAppointmentStatus` and a refused
+write puts the status back; Reschedule moves the booking through
+`PATCH /api/bookings/[ref]`; the owner is `useClientRecord`. Edit and Repeat
+are gone; Message owner opens an email with the draft.
+
+- **Still open:** the "notification sent" toasts after cancel / no-show /
+  reschedule (`toastClientNotification`) send nothing; the waitlist offer
+  after a freed slot says "SMS+email sent" and sends nothing; the invoice card
+  uses a hard-coded 15% tax; a real Edit (service and add-ons) needs a write
+  for `grooming_appointments` the PATCH route does not have.

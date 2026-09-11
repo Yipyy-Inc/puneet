@@ -3,14 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useAddAppointmentNote,
   useRecordAppointmentHistory,
   useRemoveAppointmentAlert,
   useRecordPayment,
   useSaveAppointmentIntake,
+  useSetGroomingAppointmentStatus,
 } from "@/lib/api/grooming-appointments";
+import { bookingMutations } from "@/lib/api/booking";
+import { useClientRecord } from "@/lib/api/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,11 +50,9 @@ import {
   History,
   DollarSign,
   Printer,
-  Pencil,
   CalendarClock,
   XCircle,
   UserX,
-  Repeat,
   ChevronDown,
   LogIn,
   LogOut,
@@ -68,7 +70,6 @@ import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { applyCheckInResult } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { clients as initialClients } from "@/data/clients";
 import type {
   GroomingAppointment,
   GroomingStatus,
@@ -325,6 +326,15 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const { mutate: recordTrail } = useRecordAppointmentHistory();
   const { mutate: saveIntake } = useSaveAppointmentIntake();
   const { mutate: recordPayment } = useRecordPayment();
+  const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
+  const queryClient = useQueryClient();
+  const { t: tAppt } = useStaffText("groomingAppointment");
+  // The owner, from Postgres. The check-in, mark-ready and payment helpers
+  // were handed the `@/data/clients` fixture and looked the owner up in it by
+  // numeric id — so for a real client they found nobody, and the payment
+  // dialog's tax came from nobody's postcode.
+  const { client: ownerClient } = useClientRecord(apt?.ownerId);
+  const ownerClients = ownerClient ? [ownerClient] : [];
 
   function autoMatchAndOffer(reason: "cancellation" | "no-show") {
     if (!apt) return;
@@ -386,7 +396,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const [noShowOpen, setNoShowOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [bookAgainOpen, setBookAgainOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [msgOpen, setMsgOpen] = useState(false);
   const [smsDraft, setSmsDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -567,12 +576,36 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     );
   }
 
+  // ── THE STATUS IS WRITTEN ───────────────────────────────────────────────
+  //
+  // Every transition on this page — check in, ready, check out, cancel,
+  // no-show, move to the waitlist — set a `useState` and wrote nothing, so the
+  // appointment was back where it started on the next visit and the board
+  // never heard. The local state still moves at once, so the page answers the
+  // click; the write follows, and a refused one puts the status back.
+  function commitStatus(next: GroomingStatus, onSaved?: () => void) {
+    if (!apt) return;
+    const previous = status ?? apt.status;
+    setStatus(next);
+    setAppointmentStatus(
+      { id: apt.id, status: next },
+      {
+        onSuccess: onSaved,
+        onError: (error) => {
+          setStatus(previous);
+          toast.error(
+            error instanceof Error ? error.message : tAppt("notSaved"),
+          );
+        },
+      },
+    );
+  }
+
   function advanceStatus(next: GroomingStatus, verb: string) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
-    setStatus(next);
+    commitStatus(next, () => toast.success(`${apt.petName} — ${verb}`));
     recordFieldChange("Status", before, STATUS_META[next].label);
-    toast.success(`${apt.petName} — ${verb}`);
   }
 
   function handleCheckInConfirm(result: CheckInConfirmation) {
@@ -580,13 +613,13 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     // No-show path — staff ticked "Mark as No-Show" in the check-in dialog.
     if (result.markNoShow) {
       const beforeNoShow = STATUS_META[status ?? apt.status].label;
-      setStatus("no-show");
+      commitStatus("no-show");
       recordFieldChange("Status", beforeNoShow, STATUS_META["no-show"].label);
       toast.warning(`${apt.petName} — No-Show`);
       return;
     }
     const before = STATUS_META[status ?? apt.status].label;
-    setStatus("in-progress");
+    commitStatus("in-progress");
     recordFieldChange("Status", before, STATUS_META["in-progress"].label);
     recordHistory(`Assigned to ${result.stationName} at check-in`);
     if (result.dropOffObservations) {
@@ -624,7 +657,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     // All the side effects live in one place — apt mutations, station board
     // update, pet visitPhoto write, alert-note promotion, add-on SMS.
     const summary = applyCheckInResult(apt, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
     });
@@ -660,10 +693,10 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function handleMarkReadyConfirm(result: MarkReadyConfirmation) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
-    setStatus("ready-for-pickup");
+    commitStatus("ready-for-pickup");
     recordFieldChange("Status", before, STATUS_META["ready-for-pickup"].label);
     const summary = applyMarkReadyResult(apt, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
       facilityName: "Yipyy",
@@ -695,10 +728,10 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function handlePaymentConfirm(result: PaymentResult) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
-    setStatus("completed");
+    commitStatus("completed");
     recordFieldChange("Status", before, STATUS_META.completed.label);
     const summary = applyPaymentResult(apt, result, {
-      clients: initialClients,
+      clients: ownerClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
       facilityName: "Yipyy",
@@ -746,7 +779,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function handleCancelConfirm(r: CancelResult) {
     if (!apt) return;
     const beforeStatus = STATUS_META[status ?? apt.status].label;
-    setStatus("cancelled");
+    commitStatus("cancelled");
     setFeeOverride(r.fee);
     const reasonLabel =
       r.reason === "other" ? r.reasonNote || "other" : r.reason;
@@ -767,7 +800,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function handleNoShowConfirm(r: NoShowResult) {
     if (!apt) return;
     const beforeStatus = STATUS_META[status ?? apt.status].label;
-    setStatus("no-show");
+    commitStatus("no-show");
     setFeeOverride(r.fee);
     setNoShowRiskFlag(r.newCount >= NO_SHOW_RISK_THRESHOLD);
     recordFieldChange("Status", beforeStatus, "No Show");
@@ -785,8 +818,24 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     setNoShowOpen(false);
   }
 
-  function handleRescheduleConfirm(r: RescheduleResult) {
+  // Reschedule moved a `scheduleOverride` in this page's state and nothing
+  // else: the calendar kept the old slot. It moves the booking now — the
+  // appointment's date and times ARE the booking's.
+  async function handleRescheduleConfirm(r: RescheduleResult) {
     if (!apt) return;
+    try {
+      await bookingMutations.update(Number(apt.id), {
+        startDate: r.date,
+        endDate: r.date,
+        checkInTime: r.startTime,
+        checkOutTime: r.endTime,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : tAppt("notSaved"));
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["grooming"] });
+    void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     const beforeDate = scheduleOverride?.date ?? apt.date;
     const beforeStart = scheduleOverride?.startTime ?? apt.startTime;
     const beforeEnd = scheduleOverride?.endTime ?? apt.endTime;
@@ -837,7 +886,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       addedAt: new Date().toISOString(),
       status: "waiting",
     });
-    setStatus("cancelled");
+    commitStatus("cancelled");
     recordHistory(
       `Moved to waitlist · originally ${apt.date} ${apt.startTime}`,
     );
@@ -1066,7 +1115,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
               <PopoverContent align="end" className="w-80">
                 <p className="text-sm font-semibold">Message {apt.ownerName}</p>
                 <p className="text-muted-foreground mb-2 text-xs">
-                  To: {apt.ownerPhone}
+                  To: {apt.ownerEmail}
                 </p>
                 <Textarea
                   value={smsDraft}
@@ -1076,20 +1125,20 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                   placeholder="Type a message to the owner…"
                 />
                 <div className="mt-2 flex justify-end">
+                  {/* A mail link, not a pretend send: this said "SMS sent"
+                      and sent nothing. */}
                   <Button
                     size="sm"
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
-                    disabled={!smsDraft.trim()}
-                    onClick={() => {
-                      toast.success(`SMS sent to ${apt.ownerName}`, {
-                        description: smsDraft.trim(),
-                      });
-                      recordHistory(`SMS sent to owner (${apt.ownerPhone})`);
-                      setMsgOpen(false);
-                    }}
+                    disabled={!smsDraft.trim() || !apt.ownerEmail}
+                    asChild={!!smsDraft.trim() && !!apt.ownerEmail}
                   >
-                    <MessageSquare className="mr-1.5 size-4" />
-                    Send SMS
+                    <a
+                      href={`mailto:${apt.ownerEmail}?body=${encodeURIComponent(smsDraft.trim())}`}
+                      onClick={() => setMsgOpen(false)}
+                    >
+                      <Mail className="mr-1.5 size-4" />
+                      Open in email
+                    </a>
                   </Button>
                 </div>
               </PopoverContent>
@@ -1102,10 +1151,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                  <Pencil className="mr-2 size-4" />
-                  Edit
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setRescheduleOpen(true)}>
                   <CalendarClock className="mr-2 size-4" />
                   Reschedule
@@ -1113,12 +1158,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                 <DropdownMenuItem onClick={() => setBookAgainOpen(true)}>
                   <Plus className="mr-2 size-4" />
                   Book Again
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => toast.info("Repeat — same time next week")}
-                >
-                  <Repeat className="mr-2 size-4" />
-                  Repeat
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleMoveToWaitlist}
@@ -1736,16 +1775,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         onOpenChange={setBookAgainOpen}
         prefillFrom={apt}
       />
-      {/* Edit — the full booking pre-filled with THIS appointment's date, time,
-          groomer, service and add-ons, all editable. */}
-      <NewAppointmentDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        prefillFrom={apt}
-        defaultDate={apt.date}
-        defaultStartTime={apt.startTime}
-        defaultStylistId={apt.stylistId}
-      />
       <CheckInConfirmationDialog
         open={checkInOpen}
         onOpenChange={setCheckInOpen}
@@ -1760,7 +1789,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         onConfirm={handleMarkReadyConfirm}
       />
       {(() => {
-        const paymentClient = initialClients.find((c) => c.id === apt.ownerId);
+        const paymentClient = ownerClient;
         // Step 7 — ZIP-prefix tax lookup. Same helper BookingModal uses on
         // ConfirmStep so the two displays agree to the cent.
         const matchedTax = findZipTaxRate(
