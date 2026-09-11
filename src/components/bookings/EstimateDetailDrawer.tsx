@@ -25,14 +25,12 @@ import {
   Bell,
   CheckCircle2,
   Clock,
-  Smartphone,
   Link2,
   type LucideIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { sendEstimateReminder } from "@/lib/estimates/email-sends";
 import { ConvertEstimateReviewDialog } from "@/components/bookings/ConvertEstimateReviewDialog";
+import { useEstimateActions } from "@/components/bookings/use-estimate-actions";
 import type { Estimate } from "@/types/booking";
 import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload";
 import { RevisionHistoryButton } from "@/components/estimates/EstimateRevisionHistory";
@@ -48,17 +46,7 @@ interface EstimateDetailDrawerProps {
   estimate: Estimate;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSend?: (id: string) => void;
-  onConvert?: (id: string) => void;
-  onDecline?: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (id: string) => void;
-  onAcceptOnBehalf?: (id: string) => void;
 }
-
-// The staff member recording a verbal/phone acceptance. A real app would read
-// this from the authenticated session.
-const ACCEPTING_STAFF = "Front Desk";
 
 interface ActionDesc {
   key: string;
@@ -88,42 +76,13 @@ export function EstimateDetailDrawer({
   estimate,
   open,
   onOpenChange,
-  onSend,
-  onConvert,
-  onDecline,
-  onDelete,
-  onDuplicate,
-  onAcceptOnBehalf,
 }: EstimateDetailDrawerProps) {
-  const customerName =
-    estimate.clientName || estimate.guestName || "the customer";
-
-  // Local record of a verbal "accept on behalf" so the drawer reflects the new
-  // accepted state (and Convert becomes primary) without a backend.
-  const [onBehalfAccept, setOnBehalfAccept] = useState<{
-    acceptedAt: string;
-    acceptedBy: string;
-  } | null>(null);
+  // Every action is a write through useEstimateActions; the drawer re-renders
+  // from the refreshed row. It kept a local "accepted on behalf" copy, stamped
+  // "Front Desk" for whoever pressed it, and forgot it on close.
+  const actions = useEstimateActions(estimate);
   const [convertReviewOpen, setConvertReviewOpen] = useState(false);
-
-  const est: Estimate = onBehalfAccept
-    ? {
-        ...estimate,
-        status: "accepted",
-        acceptedOnBehalf: true,
-        acceptedBy: onBehalfAccept.acceptedBy,
-        acceptedAt: onBehalfAccept.acceptedAt,
-        activityLog: [
-          ...(estimate.activityLog ?? []),
-          {
-            at: onBehalfAccept.acceptedAt,
-            type: "Accepted",
-            actor: onBehalfAccept.acceptedBy,
-            detail: `on behalf of ${customerName}`,
-          },
-        ],
-      }
-    : estimate;
+  const est: Estimate = estimate;
 
   const status = getEffectiveStatus(est);
   const config = STATUS_CONFIG[status];
@@ -135,10 +94,8 @@ export function EstimateDetailDrawer({
       key: "send",
       label,
       icon: Send,
-      onClick: () => {
-        onSend?.(estimate.id);
-        toast.success("Estimate sent to customer");
-      },
+      disabled: actions.busy,
+      onClick: () => void actions.send(),
     }),
     convert: (): ActionDesc => ({
       key: "convert",
@@ -151,91 +108,53 @@ export function EstimateDetailDrawer({
       key: "accept-on-behalf",
       label: "Accept on Behalf of Customer",
       icon: CheckCircle2,
-      onClick: () => {
-        const acceptedAt = new Date().toISOString();
-        setOnBehalfAccept({ acceptedAt, acceptedBy: ACCEPTING_STAFF });
-        onAcceptOnBehalf?.(estimate.id);
-        toast.success(
-          `Accepted by ${ACCEPTING_STAFF} on behalf of ${customerName} on ${formatDate(acceptedAt)}`,
-        );
-      },
+      disabled: actions.busy,
+      onClick: () => void actions.acceptOnBehalf(),
     }),
-    sendReminder: (): ActionDesc => ({
-      key: "send-reminder",
-      label: "Send Reminder",
-      icon: Bell,
-      onClick: () => {
-        const variant = estimate.viewedAt ? "viewed" : "not_viewed";
-        sendEstimateReminder(estimate, variant);
-        toast.success(
-          variant === "viewed"
-            ? "Viewed-but-not-booked reminder sent"
-            : "Reminder sent",
-        );
-      },
-    }),
-    sendSms: (): ActionDesc => ({
-      key: "send-sms",
-      label: "Send via SMS",
-      icon: Smartphone,
-      // Enabled only when the client has a phone number on file.
-      disabled: !estimate.clientPhone,
-      onClick: () => {
-        toast.success(
-          `Estimate sent via SMS to ${estimate.clientPhone} with a link to view & accept`,
-        );
-      },
-    }),
+    // "Send reminder" recorded to an in-memory outbox and "Send via SMS"
+    // toasted a text that was never sent; neither survives. The link is what
+    // reaches the customer, and staff share it themselves.
     copyLink: (): ActionDesc => ({
       key: "copy-link",
       label: "Copy Estimate Link",
       icon: Link2,
       disabled: !estimate.estimateToken,
-      onClick: () => {
-        const url = `${window.location.origin}/customer/estimates/${estimate.estimateToken}`;
-        navigator.clipboard?.writeText(url).then(
-          () => toast.success("Estimate link copied to clipboard"),
-          () => toast.error("Couldn't copy the link"),
-        );
-      },
+      onClick: () => void actions.copyLink(),
     }),
     duplicate: (): ActionDesc => ({
       key: "duplicate",
       label: "Duplicate",
       icon: Copy,
-      onClick: () => {
-        onDuplicate?.(estimate.id);
-        toast.success("Estimate duplicated");
-      },
+      disabled: actions.busy,
+      onClick: () => void actions.duplicate(),
     }),
     decline: (): ActionDesc => ({
       key: "decline",
       label: "Decline",
       icon: XCircle,
       destructive: true,
-      onClick: () => {
-        onDecline?.(estimate.id);
-        toast.success("Estimate declined");
-      },
+      disabled: actions.busy,
+      onClick: () => void actions.decline(),
     }),
     remove: (): ActionDesc => ({
       key: "delete",
       label: "Delete",
       icon: Trash2,
       destructive: true,
-      onClick: () => {
-        onDelete?.(estimate.id);
-        toast.success("Estimate deleted");
+      disabled: actions.busy,
+      onClick: async () => {
+        await actions.remove();
+        onOpenChange(false);
       },
     }),
   };
 
+  // Only a DRAFT can be deleted: an estimate a customer has seen is kept as
+  // the record of what they were quoted (the table's delete policy says so).
   const actionsByStatus: Record<typeof status, ActionDesc[]> = {
     draft: [act.send("Send"), act.duplicate(), act.remove()],
     sent: [
       act.send("Resend"),
-      act.sendReminder(),
-      act.sendSms(),
       act.copyLink(),
       act.acceptOnBehalf(),
       act.convert(),
@@ -243,8 +162,8 @@ export function EstimateDetailDrawer({
       act.decline(),
     ],
     accepted: [act.convert(), act.duplicate()],
-    declined: [act.duplicate(), act.remove()],
-    expired: [act.duplicate(), act.send("Resend"), act.remove()],
+    declined: [act.duplicate()],
+    expired: [act.send("Resend"), act.duplicate()],
     converted: [act.duplicate()],
   };
 
@@ -572,10 +491,7 @@ export function EstimateDetailDrawer({
         estimate={estimate}
         open={convertReviewOpen}
         onOpenChange={setConvertReviewOpen}
-        onConverted={() => {
-          onConvert?.(estimate.id);
-          onOpenChange(false);
-        }}
+        onConverted={() => onOpenChange(false)}
       />
     </>
   );

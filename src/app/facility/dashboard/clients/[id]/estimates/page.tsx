@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
-import { estimates } from "@/data/estimates";
+import { useClientEstimates } from "@/lib/api/estimates";
 import { EstimateCard } from "@/components/bookings/EstimateCard";
 import { Badge } from "@/components/ui/badge";
 import { FileText } from "lucide-react";
@@ -15,7 +15,8 @@ export default function ClientEstimatesPage({
   const clientId = parseInt(id);
   const [filter, setFilter] = useState<string>("all");
 
-  const clientEstimates = estimates.filter((e) => e.clientId === clientId);
+  // This client's estimates, from Postgres (was the fixture, by numeric id).
+  const { estimates: clientEstimates } = useClientEstimates(clientId);
   const filtered =
     filter === "all"
       ? clientEstimates

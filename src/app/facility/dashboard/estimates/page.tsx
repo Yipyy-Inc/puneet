@@ -29,8 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { estimates } from "@/data/estimates";
+import { useFacilityEstimates } from "@/lib/api/estimates";
 import { EstimateCard } from "@/components/bookings/EstimateCard";
 import { EstimateWizard } from "@/components/estimates/EstimateWizard";
 import { formatBookingRef } from "@/lib/booking-id";
@@ -123,6 +122,9 @@ function formatRangeDate(iso: string): string {
 }
 
 export default function EstimatesPage() {
+  // The facility's estimates, from Postgres. This was seven invented rows from
+  // `@/data/estimates` that nothing could add to.
+  const { estimates, pending } = useFacilityEstimates();
   const searchParams = useSearchParams();
   const searchFromUrl = searchParams.get("q") ?? "";
   const [searchQuery, setSearchQuery] = useState(searchFromUrl);
@@ -241,6 +243,7 @@ export default function EstimatesPage() {
     }
     return list;
   }, [
+    estimates,
     activeTab,
     searchQuery,
     dateFrom,
@@ -288,7 +291,10 @@ export default function EstimatesPage() {
     () =>
       estimates.filter((e) => {
         if (e.status !== "converted") return false;
-        const at = e.activityLog?.find((a) => a.type === "Converted")?.at;
+        // The log writes "converted"; the fixture wrote "Converted".
+        const at = e.activityLog?.find(
+          (a) => a.type.toLowerCase() === "converted",
+        )?.at;
         if (!at) return false;
         const d = new Date(at);
         return (
@@ -296,7 +302,7 @@ export default function EstimatesPage() {
           d.getMonth() === now.getMonth()
         );
       }),
-    [now],
+    [estimates, now],
   );
 
   const stats = {
@@ -316,7 +322,7 @@ export default function EstimatesPage() {
       const t = new Date(e.expiresAt).getTime();
       return t > nowMs && t <= in7Days;
     });
-  }, [now]);
+  }, [estimates, now]);
   const atRiskTotal = atRisk.reduce((s, e) => s + e.total, 0);
 
   const followUpAtRisk = useCallback(() => {
@@ -337,12 +343,6 @@ export default function EstimatesPage() {
   }, []);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-
-  const resendSelected = useCallback(() => {
-    const n = selectedIds.size;
-    toast.success(`Resent ${n} estimate${n === 1 ? "" : "s"} to customers`);
-    clearSelection();
-  }, [selectedIds, clearSelection]);
 
   const exportSelected = useCallback(() => {
     const rows: (string | number)[][] = [
@@ -376,7 +376,7 @@ export default function EstimatesPage() {
         ]),
     ];
     downloadReportCsv(`estimates-${toISODate(now)}.csv`, rows);
-  }, [selectedIds, now]);
+  }, [estimates, selectedIds, now]);
 
   return (
     <div className="flex-1 space-y-6 p-4 pt-6">
@@ -644,7 +644,13 @@ export default function EstimatesPage() {
       )}
 
       {/* Estimate list */}
-      {sorted.length === 0 ? (
+      {pending ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="bg-muted h-28 animate-pulse rounded-3xl" />
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center py-16 text-center">
           <AlertCircle className="text-muted-foreground/20 size-12" />
           <p className="text-muted-foreground mt-3">No estimates found</p>
@@ -655,20 +661,6 @@ export default function EstimatesPage() {
             <EstimateCard
               key={estimate.id}
               estimate={estimate}
-              // Mock seams — the card surfaces toast feedback on each action;
-              // a real API would mutate the estimate / create the booking here.
-              onSend={() => {
-                /* mark the estimate as (re)sent */
-              }}
-              onConvert={() => {
-                /* create a booking from the estimate */
-              }}
-              onDecline={() => {
-                /* mark the estimate as declined */
-              }}
-              onDuplicate={() => {
-                /* duplicate the estimate as a new draft */
-              }}
               selected={selectedIds.has(estimate.id)}
               onToggleSelect={toggleSelect}
             />
@@ -684,15 +676,6 @@ export default function EstimatesPage() {
               {selectedIds.size} selected
             </span>
             <span className="text-muted-foreground">—</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={resendSelected}
-            >
-              <Send className="size-3.5" />
-              Resend All
-            </Button>
             <Button
               size="sm"
               variant="outline"

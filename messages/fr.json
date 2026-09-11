@@ -2008,6 +2008,34 @@
         "cancel": "Annuler",
         "filedToast": "{name} classé pour {client}",
         "fileFailed": "Le document n’a pas été classé"
+      },
+      "estimateActions": {
+        "sentToast": "{number} est ouvert au client",
+        "sentCopied": "Son lien est copié — collez-le dans un courriel ou un texto. Aucun message n’a été envoyé d’ici.",
+        "sentNotCopied": "Copiez son lien depuis l’estimation pour la partager. Aucun message n’a été envoyé d’ici.",
+        "sendFailed": "L’estimation n’a pas été ouverte au client",
+        "linkCopied": "Lien de l’estimation copié",
+        "linkNotCopied": "Le lien n’a pas pu être copié",
+        "acceptedToast": "{number} accepté au nom de {client}",
+        "theCustomer": "le client",
+        "acceptFailed": "L’acceptation n’a pas été enregistrée",
+        "declinedToast": "{number} marqué comme refusé",
+        "declineFailed": "L’estimation n’a pas été refusée",
+        "duplicatedToast": "{number} copié dans un nouveau brouillon, {copy}",
+        "duplicateFailed": "L’estimation n’a pas été copiée",
+        "deletedToast": "Brouillon {number} supprimé",
+        "deleteFailed": "Le brouillon n’a pas été supprimé",
+        "convertedToast": "Réservation no {booking} créée à partir de {number}",
+        "convertFailed": "La réservation n’a pas été créée",
+        "confirmBooking": "Créer la réservation",
+        "guestNeedsClient": "{name} n’est pas encore client. Ajoutez cette personne comme cliente, puis utilisez Modifier pour réserver.",
+        "draftSavedToast": "{number} enregistré comme brouillon",
+        "saveFailed": "L’estimation n’a pas été enregistrée",
+        "readyTitle": "Estimation ouverte au client",
+        "readyBody": "{number} est ouvert à {client}. Aucun courriel n’a été envoyé d’ici — partagez le lien ci-dessous.",
+        "linkCopiedShare": "Copié dans le presse-papiers :",
+        "linkToShare": "Le lien à partager :",
+        "clientCreated": "Un dossier client a été créé pour {name}, afin que cette estimation puisse devenir une réservation."
       }
     }
   },
@@ -6477,8 +6505,8 @@
       "confirmedWithPass": "Votre réservation — {service} — est confirmée et 1 passe a été appliquée : aucun paiement requis.",
       "confirmedPending": "Merci. Nous avons reçu votre demande de réservation et vérifierons les détails. Vous recevrez un courriel de confirmation sous peu, une fois le tout révisé et approuvé.",
       "done": "Terminé",
-      "estimateSent": "Soumission envoyée",
-      "estimateSentTo": "La soumission a été envoyée à {who}",
+      "estimateSent": "Estimation ouverte au client",
+      "estimateSentTo": "{who} peut l’ouvrir depuis son lien, copié dans votre presse-papiers. Aucun courriel n’a été envoyé d’ici.",
       "inquiryContact": "la personne-ressource de la demande",
       "estimatedTotal": "Total estimé",
       "estimateCreated": "Soumission créée",
@@ -6958,7 +6986,10 @@
       "openCount": "{n} libres",
       "datesAndTimes": "Dates et heures",
       "cartSeriesLine": "Chaque {day} · {time} · {weeks} semaines · début le {date}",
-      "dropInBadge": "À l’unité"
+      "dropInBadge": "À l’unité",
+      "estimateLineAddOns": "Options",
+      "estimateLineFees": "Frais et ajustements",
+      "estimateSaveFailed": "L’estimation n’a pas été enregistrée"
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",

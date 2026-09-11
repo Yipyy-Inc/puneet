@@ -23,9 +23,10 @@ import {
   MoreHorizontal,
   Eye,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { Estimate } from "@/types/booking";
 import { EstimateDetailDrawer } from "@/components/bookings/EstimateDetailDrawer";
+import { ConvertEstimateReviewDialog } from "@/components/bookings/ConvertEstimateReviewDialog";
+import { useEstimateActions } from "@/components/bookings/use-estimate-actions";
 import {
   STATUS_CONFIG,
   type EstimateStatusKey,
@@ -36,26 +37,20 @@ import {
 
 interface EstimateCardProps {
   estimate: Estimate;
-  onSend?: (id: string) => void;
-  onConvert?: (id: string) => void;
-  onDecline?: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (id: string) => void;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
+// The menu used to call optional callbacks the list passed as empty
+// functions, then toast success. It acts through useEstimateActions now.
 export function EstimateCard({
   estimate,
-  onSend,
-  onConvert,
-  onDecline,
-  onDelete,
-  onDuplicate,
   selected = false,
   onToggleSelect,
 }: EstimateCardProps) {
   const [open, setOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
+  const actions = useEstimateActions(estimate);
   const expiryDays = estimate.expiresAt ? daysUntil(estimate.expiresAt) : null;
   // An estimate past its expiry that hasn't reached a terminal outcome
   // (accepted/declined/converted) is shown as "Expired" even when its stored
@@ -251,10 +246,8 @@ export function EstimateCard({
                   </DropdownMenuItem>
                   {estimate.status === "sent" && (
                     <DropdownMenuItem
-                      onSelect={() => {
-                        onSend?.(estimate.id);
-                        toast.success("Estimate sent to customer");
-                      }}
+                      disabled={actions.busy}
+                      onSelect={() => void actions.send()}
                     >
                       <Send className="size-3.5" />
                       Resend
@@ -262,21 +255,14 @@ export function EstimateCard({
                   )}
                   {(estimate.status === "accepted" ||
                     estimate.status === "sent") && (
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        onConvert?.(estimate.id);
-                        toast.success("Converting to booking...");
-                      }}
-                    >
+                    <DropdownMenuItem onSelect={() => setConvertOpen(true)}>
                       <ArrowRight className="size-3.5" />
                       Convert to Booking
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
-                    onSelect={() => {
-                      onDuplicate?.(estimate.id);
-                      toast.success("Estimate duplicated");
-                    }}
+                    disabled={actions.busy}
+                    onSelect={() => void actions.duplicate()}
                   >
                     <Copy className="size-3.5" />
                     Duplicate
@@ -286,10 +272,8 @@ export function EstimateCard({
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         variant="destructive"
-                        onSelect={() => {
-                          onDecline?.(estimate.id);
-                          toast.success("Estimate declined");
-                        }}
+                        disabled={actions.busy}
+                        onSelect={() => void actions.decline()}
                       >
                         <XCircle className="size-3.5" />
                         Mark as Declined
@@ -307,12 +291,14 @@ export function EstimateCard({
         estimate={estimate}
         open={open}
         onOpenChange={setOpen}
-        onSend={onSend}
-        onConvert={onConvert}
-        onDecline={onDecline}
-        onDelete={onDelete}
-        onDuplicate={onDuplicate}
       />
+      {convertOpen && (
+        <ConvertEstimateReviewDialog
+          estimate={estimate}
+          open
+          onOpenChange={setConvertOpen}
+        />
+      )}
     </>
   );
 }

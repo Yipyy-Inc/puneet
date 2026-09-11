@@ -39,10 +39,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
-import { getNextEstimateId } from "@/data/estimates";
+import { useQuery } from "@tanstack/react-query";
 import { trainingClasses } from "@/data/training";
-import { taxRates } from "@/data/settings";
+import { clientQueries, useCreateClient, useCreatePet } from "@/lib/api/client";
+import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 import {
   computeDepositAmount,
@@ -55,14 +59,9 @@ import {
 } from "@/lib/api/facility-settings";
 import { addOnsForService } from "@/lib/settings/addons";
 import type { ServiceAddOn } from "@/types/facility";
-import { provisionAccountForEstimate } from "@/lib/estimates/account-provisioning";
-import {
-  sendStandardEstimateEmail,
-  sendWelcomeEstimateEmail,
-} from "@/lib/estimates/email-sends";
 import { GuestContactForm } from "./GuestContactForm";
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
-import type { Estimate, EstimateLineItem } from "@/types/booking";
+import type { EstimateLineItem } from "@/types/booking";
 
 interface EstimateWizardProps {
   open: boolean;
@@ -114,6 +113,20 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // which machine wrote it.
   const { settings: estimateSettings } = useEstimateSettings();
   const { addOns: facilityAddOns } = useServiceAddOns();
+  const { t: wizT, fill: wizFill } = useStaffText("estimateActions");
+  // The roster. This was `clients` from `@/data/clients` filtered by an
+  // invented facility name, so a real client could not be quoted at all.
+  const { data: rosterData } = useQuery(clientQueries.all());
+  const { create: createEstimate, act: actOnEstimate } = useEstimateMutations();
+  const createClientMutation = useCreateClient();
+  const createPetMutation = useCreatePet();
+  // The facility's own tax setup, not `taxRates` from `@/data/settings`.
+  const taxConfig = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [savedLink, setSavedLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [step, setStep] = useState(0);
 
   // Client selection
@@ -185,12 +198,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   );
 
   const facilityClients = useMemo(
-    () =>
-      clients.filter(
-        (c) =>
-          c.facility === "Example Pet Care Facility" && c.status !== "prospect",
-      ),
-    [],
+    () => (rosterData ?? []).filter((c) => c.status !== "prospect"),
+    [rosterData],
   );
 
   const filteredClients = useMemo(() => {
@@ -364,14 +373,12 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       ? Math.round(subtotal * ((Number(discountValue) || 0) / 100) * 100) / 100
       : Number(discountValue) || 0;
 
-  // Tax — auto-applied from settings: service-specific rate, else the default.
-  const taxRatePct =
-    taxRates.find((t) => t.applicableServices.includes(selectedService))
-      ?.rate ??
-    taxRates.find((t) => t.applicableServices.includes("all"))?.rate ??
-    taxRates.find((t) => t.isDefault)?.rate ??
-    0;
-  const taxRate = taxRatePct / 100;
+  // Tax — the facility's own taxes on a service, as one effective fraction
+  // (compound taxes included). Inclusive pricing adds nothing on top.
+  const taxRate = taxConfig.pricesIncludeTax
+    ? 0
+    : computeTax(1_000_000, taxConfig).totalCents / 1_000_000;
+  const taxRatePct = taxRate * 100;
   const taxable = Math.max(0, subtotal - discountAmount);
   const taxAmount = taxable * taxRate;
   const total = taxable + taxAmount;
@@ -466,29 +473,83 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     if (step < STEPS.length - 1) setStep(step + 1);
   };
 
-  // Send-time context (spec 4.6): recipient + welcome-email eligibility.
-  const recipientEmail = (
-    isGuest ? guestEmail : (selectedClient?.email ?? "")
-  ).trim();
-  const welcomeEmailSent =
-    accountProvisioned && estimateSettings.sendWelcomeEmail;
+  // ── Saving ────────────────────────────────────────────────────────────────
+  //
+  // "Save as Draft" and "Send" both used to mint a number from the fixture and
+  // store the estimate NOWHERE; "Send" then wrote a pretend email and, for a
+  // guest, pushed an invented client onto `@/data/clients`. Both write
+  // /api/estimates now. "Send" sends no message: it opens the estimate to the
+  // customer and copies the link for staff to share, and the screen says so.
+  //
+  // Who it is for is settled first. Pets added in this wizard are created on
+  // the client's record; a guest with "create an account" ticked becomes a
+  // client (so the estimate can later become a booking), otherwise the
+  // estimate carries their contact as a guest.
+  const resolveRecipient = async (): Promise<
+    Pick<EstimateCreate, "clientRef" | "guest" | "petRefs">
+  > => {
+    if (isGuest) {
+      if (!createAccount) {
+        return {
+          guest: {
+            name: guestName.trim(),
+            email: guestEmail.trim() || undefined,
+            phone: guestPhone.trim() || undefined,
+            pet: guestPetSummary[0] ? { name: guestPetSummary[0] } : undefined,
+          },
+          petRefs: [],
+        };
+      }
+      const { client } = await createClientMutation.mutateAsync({
+        name: guestName.trim(),
+        email: guestEmail.trim(),
+        phone: guestPhone.trim() || undefined,
+        status: "active",
+        pets: guestPetSummary.map((name) => ({ name, type: "Dog" })),
+      });
+      setAccountProvisioned(true);
+      return {
+        clientRef: client.id,
+        petRefs: (client.pets ?? []).map((p) => p.id),
+      };
+    }
+    const refs: number[] = [];
+    for (const id of selectedPetIds) {
+      if (id > 0) {
+        refs.push(id);
+        continue;
+      }
+      const draft = addedPets.find((p) => p.id === id);
+      if (!draft || !selectedClientId) continue;
+      const pet = await createPetMutation.mutateAsync({
+        clientId: selectedClientId,
+        name: draft.name,
+        type: draft.species,
+        breed: draft.breed,
+        weight: Number(draft.weight) || undefined,
+      });
+      refs.push(pet.id);
+    }
+    return { clientRef: selectedClientId ?? undefined, petRefs: refs };
+  };
 
-  // Assemble the estimate object from wizard state (used on send).
-  const buildEstimate = (id: string, now: Date): Estimate => ({
-    id,
-    estimateId: id,
-    clientId: selectedClientId ?? 0,
-    clientName: isGuest ? guestName : (selectedClient?.name ?? ""),
-    clientEmail: recipientEmail,
-    clientPhone: isGuest ? guestPhone : selectedClient?.phone,
-    petIds: isGuest ? [] : selectedPetIds,
-    petNames: estimatePetLabels,
+  const estimateBody = (): Omit<
+    EstimateCreate,
+    "clientRef" | "guest" | "petRefs"
+  > => ({
     service: selectedService,
     serviceType: roomType || undefined,
-    startDate,
-    endDate: endDate || startDate,
-    lineItems: allLineItems,
-    subtotal,
+    startDate: startDate || undefined,
+    endDate: endDate || startDate || undefined,
+    checkInTime,
+    checkOutTime,
+    roomType: roomType || undefined,
+    lineItems: allLineItems.map((li) => ({
+      label: li.label,
+      description: li.description,
+      amount: li.amount,
+      quantity: li.quantity,
+    })),
     discount: discountAmount,
     discountReason: discountType
       ? discountType === "Custom"
@@ -496,60 +557,79 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         : discountType
       : undefined,
     taxRate,
-    taxAmount,
-    total,
     depositRequired:
       depositOverride.trim() !== ""
         ? Number(depositOverride) || 0
-        : depositAuto,
-    status: "sent",
-    sentAt: now.toISOString(),
-    sentVia: "email",
-    expiresAt: expiryDate || undefined,
-    createdAt: now.toISOString(),
-    createdBy: "Front Desk",
-    isGuestEstimate: isGuest || undefined,
-    guestName: isGuest ? guestName : undefined,
-    guestEmail: isGuest ? guestEmail : undefined,
-    guestPhone: isGuest ? guestPhone : undefined,
+        : depositAuto || undefined,
     publicNote: publicNote || undefined,
     internalNote: internalNote || undefined,
-    roomType: roomType || undefined,
-    checkInTime,
-    checkOutTime,
-    guestPetInfo:
-      isGuest && guestPetSummary[0] ? { name: guestPetSummary[0] } : undefined,
   });
 
-  // "Save as Draft" — persists the estimate without sending (spec 4.6). Never
-  // triggers account provisioning.
-  const handleSaveDraft = () => {
-    const id = generatedEstimateId ?? getNextEstimateId(estimateSettings);
-    setGeneratedEstimateId(id);
-    setCreated(true);
-    toast.success(`Estimate ${id} saved as draft`);
+  const copyLink = async (token: string | undefined) => {
+    if (!token) return false;
+    const link = customerEstimateLink({ estimateToken: token });
+    setSavedLink(link);
+    try {
+      await navigator.clipboard.writeText(link);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
-  // "Send Estimate" — saves + sends. Runs the account auto-creation flow (Area
-  // 4) when the email isn't already in the CRM; the estimate email goes out
-  // (Area 6). Reuses the id if saved as draft first.
-  const handleSendEstimate = () => {
-    const id = generatedEstimateId ?? getNextEstimateId(estimateSettings);
-    const now = new Date();
-    const estimate = buildEstimate(id, now);
-    const outcome = provisionAccountForEstimate(estimate, estimateSettings, {
-      facilityName: "Example Pet Care Facility",
-      now,
-    });
-    // Mocked send: combined welcome+estimate email for a new account (6.2),
-    // otherwise the standard estimate email (6.1).
-    if (outcome.accountCreated) sendWelcomeEstimateEmail(estimate);
-    else sendStandardEstimateEmail(estimate);
-    setGeneratedEstimateId(id);
-    setAccountProvisioned(outcome.accountCreated);
-    setCreated(true);
-    setSent(true);
-    toast.success(`Estimate ${id} sent to ${recipientEmail}`);
+  const handleSaveDraft = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const recipient = await resolveRecipient();
+      const saved = await createEstimate.mutateAsync({
+        ...recipient,
+        ...estimateBody(),
+        send: false,
+      });
+      setSavedId(saved.id);
+      setGeneratedEstimateId(saved.estimateId);
+      setCreated(true);
+      toast.success(wizFill("draftSavedToast", { number: saved.estimateId }));
+    } catch (error) {
+      toast.error(wizT("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSendEstimate = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = savedId
+        ? await actOnEstimate.mutateAsync({
+            id: savedId,
+            patch: { action: "send", via: "link" },
+          })
+        : await createEstimate.mutateAsync({
+            ...(await resolveRecipient()),
+            ...estimateBody(),
+            send: true,
+          });
+      setSavedId(saved.id);
+      setGeneratedEstimateId(saved.estimateId);
+      const copied = await copyLink(saved.estimateToken);
+      setLinkCopied(copied);
+      setCreated(true);
+      setSent(true);
+      toast.success(wizFill("sentToast", { number: saved.estimateId }), {
+        description: wizT(copied ? "sentCopied" : "sentNotCopied"),
+      });
+    } catch (error) {
+      toast.error(wizT("sendFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleClose = () => {
@@ -579,6 +659,9 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     setSent(false);
     setAccountProvisioned(false);
     setGeneratedEstimateId(null);
+    setSavedId(null);
+    setSavedLink(null);
+    setLinkCopied(false);
     setGuestFirstName("");
     setGuestLastName("");
     setGuestName("");
@@ -701,7 +784,11 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                   <Button variant="outline" onClick={handleClose}>
                     Done
                   </Button>
-                  <Button className="gap-1.5" onClick={handleSendEstimate}>
+                  <Button
+                    className="gap-1.5"
+                    onClick={handleSendEstimate}
+                    disabled={saving}
+                  >
                     <Send className="size-4" />
                     Send Estimate
                   </Button>
@@ -714,24 +801,27 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                 <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
                   <Check className="size-7 text-emerald-600" />
                 </div>
-                <h3 className="text-lg font-bold">Estimate Sent!</h3>
-                <p className="text-muted-foreground max-w-sm text-sm">
-                  Estimate{" "}
-                  <span className="font-medium text-slate-700">
-                    {generatedEstimateId}
-                  </span>{" "}
-                  sent to{" "}
-                  <span className="font-medium text-slate-700">
-                    {recipientEmail}
-                  </span>
-                  . They will receive a link to view and accept it.
+                <h3 className="text-heading text-lg font-bold">
+                  {wizT("readyTitle")}
+                </h3>
+                <p className="text-ink-secondary max-w-sm text-sm">
+                  {wizFill("readyBody", {
+                    number: generatedEstimateId ?? "",
+                    client: isGuest ? guestName : (selectedClient?.name ?? ""),
+                  })}
                 </p>
+                {savedLink && (
+                  <p className="text-ink-tertiary max-w-sm text-sm break-all">
+                    {linkCopied ? wizT("linkCopiedShare") : wizT("linkToShare")}{" "}
+                    <span className="text-foreground font-mono text-xs">
+                      {savedLink}
+                    </span>
+                  </p>
+                )}
                 {accountProvisioned && (
-                  <div className="max-w-sm rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                    A new account was created for{" "}
-                    <span className="font-medium">{recipientEmail}</span>.
-                    {welcomeEmailSent ? " A welcome email has been sent." : ""}
-                  </div>
+                  <p className="text-ink-secondary max-w-sm rounded-2xl border px-4 py-3 text-sm">
+                    {wizFill("clientCreated", { name: guestName })}
+                  </p>
                 )}
                 <Button className="mt-2" onClick={handleClose}>
                   Done
@@ -1961,7 +2051,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                   <Button
                     variant="outline"
                     onClick={handleSaveDraft}
-                    disabled={!canProceed}
+                    disabled={!canProceed || saving}
                     className="gap-1.5"
                   >
                     <FileText className="size-4" />
@@ -1969,7 +2059,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                   </Button>
                   <Button
                     onClick={handleSendEstimate}
-                    disabled={!canProceed}
+                    disabled={!canProceed || saving}
                     className="gap-1.5 bg-blue-500 hover:bg-blue-600"
                   >
                     <Send className="size-4" />
