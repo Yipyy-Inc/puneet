@@ -12503,3 +12503,26 @@ caller — and was the only reader of three fixture helpers; it is gone.
   blob URL); a certificate cannot be attached yet (no storage bucket for client
   files — Phase 2 documents); grooming, training and the printable
   appointment cards still read the fixture (Phase 3).
+
+## 2026-09-11 — the client file's Edit, Block, Email and Call do what they say
+
+On the profile a client row opens, **Edit → Save** closed the editor and
+saved nothing ("In a real app, this would save to the backend"), the editor
+was seeded before the client loaded (a cold load opened it empty), the
+**Banned** badge came from the `banRecords` fixture by numeric id (a real
+client or pet whose ref matched was shown as banned), and **Email** / **Call**
+had no handler. On the client Settings page, **Block this client** was a
+600 ms timer and a toast, and its switch was seeded before the record loaded,
+so a blocked client opened unblocked with the form already dirty.
+
+Save now goes through `useUpdateClient` (PATCH `/api/clients/[ref]`), seeding
+when editing starts; the badge reads `clients.is_blocked` and its reason;
+Email and Call are `mailto:` / `tel:` links, hidden when the record has no
+address or number; the Settings form mounts once the client has arrived and
+saves the block columns and `details.customerSettings` together, reporting
+the block as the database returned it (the write trigger silently keeps the
+block for a caller without `edit_clients`).
+
+- **Still open:** pet bans have no column, so the pet cards no longer show
+  the fixture's; the Settings page's membership instabook list still reads
+  `@/data/services-pricing` (Phase 4).

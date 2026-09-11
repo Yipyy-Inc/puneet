@@ -13,7 +13,8 @@ import {
   getAlertStatusVariant,
   formatAlertChannel,
 } from "@/data/marketing";
-import { petPhotos, banRecords } from "@/data/pet-data";
+import { petPhotos } from "@/data/pet-data";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useClientVaccinations } from "@/lib/api/vaccinations";
 import { expiryState, localToday } from "@/lib/vaccinations";
 import { reportCardQueries } from "@/lib/api/report-cards";
@@ -36,7 +37,11 @@ import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModa
 import { useFieldMask } from "@/lib/staff/mask";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
-import { useAssignedClientRefs, useClientRecord } from "@/lib/api/client";
+import {
+  useAssignedClientRefs,
+  useClientRecord,
+  useUpdateClient,
+} from "@/lib/api/client";
 import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { paymentQueries } from "@/lib/api/payments";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
@@ -71,6 +76,7 @@ import {
   FileText,
   MessageSquare,
   PhoneCall,
+  Loader2,
   MessageCircle,
   Download,
   ExternalLink,
@@ -170,6 +176,8 @@ export default function ClientDetailPage({
   const { refs: assignedRefs, pending: assignedPending } =
     useAssignedClientRefs(assignedClientScope);
   const resumedBookingRef = useRef<string | null>(null);
+  const { t: profileT } = useStaffText("clientProfile");
+  const updateClient = useUpdateClient();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   // Grooming-appointment dialog state. Opened from the "Book Grooming" entry
@@ -487,11 +495,6 @@ export default function ClientDetailPage({
     // src/lib/api/mappers/tag.ts for why the translation lives in the route.
     const tags = tagsFor("pet", pet.id);
 
-    // Get ban record
-    const banRecord = banRecords.find(
-      (b) => b.entityType === "pet" && b.entityId === pet.id && b.isBanned,
-    );
-
     return {
       photos,
       vaccinations,
@@ -501,21 +504,10 @@ export default function ClientDetailPage({
       expiredVaccinations,
       upcomingVaccinations,
       tags,
-      banRecord,
     };
   };
 
-  // Get client ban status
-  const clientBanRecord = banRecords.find(
-    (b) => b.entityType === "client" && b.entityId === client.id && b.isBanned,
-  );
-
-  const handleSave = () => {
-    // In a real app, this would save to the backend
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
+  const seedFromClient = () =>
     setEditedClient({
       name: client.name,
       email: client.email,
@@ -530,6 +522,43 @@ export default function ClientDetailPage({
       },
       additionalContacts: client.additionalContacts ?? [],
     });
+
+  const startEditing = () => {
+    seedFromClient();
+    setIsEditing(true);
+  };
+
+  // It closed the editor and saved nothing ("In a real app, this would save
+  // to the backend"). PATCH /api/clients/[ref] stores it; the editor closes
+  // only once the row has changed, and keeps what was typed if it did not.
+  const handleSave = async () => {
+    if (!editedClient.name.trim()) {
+      toast.error(profileT("nameRequired"));
+      return;
+    }
+    try {
+      await updateClient.mutateAsync({
+        id: client.id,
+        patch: {
+          name: editedClient.name.trim(),
+          email: editedClient.email.trim(),
+          phone: editedClient.phone.trim(),
+          status: editedClient.status,
+          address: editedClient.address,
+          additionalContacts: editedClient.additionalContacts,
+        },
+      });
+      toast.success(profileT("savedToast"));
+      setIsEditing(false);
+    } catch (error) {
+      toast.error(profileT("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    seedFromClient();
     setIsEditing(false);
   };
 
@@ -569,10 +598,10 @@ export default function ClientDetailPage({
               inline={
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusBadge type="status" value={client.status} />
-                  {clientBanRecord && (
-                    <Badge variant="destructive" className="gap-1">
-                      <AlertTriangle className="size-3" />
-                      Banned
+                  {client.isBlocked && (
+                    <Badge variant="overdue">
+                      <AlertTriangle aria-hidden />
+                      {profileT("blocked")}
                     </Badge>
                   )}
                 </div>
@@ -584,39 +613,41 @@ export default function ClientDetailPage({
                 </span>
               }
             />
-            {clientBanRecord && (
-              <div className="border-destructive/20 bg-destructive/10 mt-2 rounded-md border p-2">
-                <p className="text-destructive text-xs font-medium">
-                  Ban Reason: {clientBanRecord.reason}
-                </p>
-                {clientBanRecord.notes && (
-                  <p className="text-destructive/80 mt-1 text-xs">
-                    {clientBanRecord.notes}
-                  </p>
-                )}
-              </div>
+            {client.isBlocked && client.blockedReason && (
+              <p className="text-destructive mt-2 text-sm">
+                {client.blockedReason}
+              </p>
             )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" size="sm" onClick={handleCancel}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                disabled={updateClient.isPending}
+              >
                 <X className="mr-1 size-4" />
-                Cancel
+                {profileT("cancel")}
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                <Save className="mr-1 size-4" />
-                Save
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={updateClient.isPending}
+              >
+                {updateClient.isPending ? (
+                  <Loader2 className="mr-1 size-4 animate-spin" />
+                ) : (
+                  <Save className="mr-1 size-4" />
+                )}
+                {profileT("saveClient")}
               </Button>
             </>
           ) : (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
+              <Button variant="outline" size="sm" onClick={startEditing}>
                 <Edit className="mr-1 size-4" />
                 Edit
               </Button>
@@ -628,16 +659,20 @@ export default function ClientDetailPage({
                   Settings
                 </Link>
               </Button>
-              {canMessageClient && (
-                <Button variant="outline" size="sm">
-                  <Mail className="mr-1 size-4" />
-                  Email
+              {canMessageClient && client.email && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`mailto:${client.email}`}>
+                    <Mail className="mr-1 size-4" />
+                    {profileT("email")}
+                  </a>
                 </Button>
               )}
-              {canMessageClient && (
-                <Button variant="outline" size="sm">
-                  <PhoneCall className="mr-1 size-4" />
-                  Call
+              {canMessageClient && client.phone && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={`tel:${client.phone.replace(/[^\d+]/g, "")}`}>
+                    <PhoneCall className="mr-1 size-4" />
+                    {profileT("call")}
+                  </a>
                 </Button>
               )}
               <Button
@@ -1091,14 +1126,6 @@ export default function ClientDetailPage({
                                 <h4 className="text-sm font-semibold">
                                   {pet.name}
                                 </h4>
-                                {petData.banRecord && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="px-1 py-0 text-[10px]"
-                                  >
-                                    Banned
-                                  </Badge>
-                                )}
                               </div>
                               <p className="text-muted-foreground text-xs">
                                 {pet.breed} • {pet.age}{" "}
@@ -1501,15 +1528,6 @@ export default function ClientDetailPage({
                                     <Badge variant="outline">
                                       {pet.weight} kg
                                     </Badge>
-                                    {petData.banRecord && (
-                                      <Badge
-                                        variant="destructive"
-                                        className="gap-1"
-                                      >
-                                        <AlertTriangle className="size-3" />
-                                        Banned
-                                      </Badge>
-                                    )}
                                   </div>
                                   <div className="mt-2">
                                     <TagList
@@ -1520,21 +1538,6 @@ export default function ClientDetailPage({
                                   </div>
                                 </div>
                               </div>
-                              {petData.banRecord && (
-                                <div className="bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-sm p-2 text-xs">
-                                  <AlertTriangle className="mt-0.5 size-3 shrink-0" />
-                                  <div>
-                                    <span className="font-medium">
-                                      {petData.banRecord.reason}
-                                    </span>
-                                    {petData.banRecord.notes && (
-                                      <p className="mt-0.5 opacity-80">
-                                        {petData.banRecord.notes}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
                               <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4">
                                 <div className="text-center">
                                   <div className="text-lg font-bold">
