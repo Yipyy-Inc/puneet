@@ -1857,6 +1857,15 @@
         "ownerNotMessaged": "The owner has not been messaged.",
         "writeFailed": "That was not saved on the board",
         "routineNotSaved": "The routine was not saved"
+      },
+      "checkoutGiftCard": {
+        "tender": "Gift card",
+        "codeLabel": "Gift card code",
+        "codePlaceholder": "Type or scan the code",
+        "codeHelp": "The card is charged when you confirm. If it holds less than the bill, it is refused — nothing is taken.",
+        "paid": "{amount} paid by gift card",
+        "remaining": "{amount} left on the card",
+        "noTip": "A tip cannot go on a gift card — take it with another tender."
       }
     }
   },

@@ -18,7 +18,9 @@ import {
   ArrowLeftRight,
   Wallet,
   Check,
+  Gift,
 } from "lucide-react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -66,6 +68,12 @@ interface PaymentCheckoutFlowProps {
   /** "19 Aug 2026, 8:00 a.m. - 6:00 p.m." — already in the facility's clock. */
   receiptServiceWindow?: string | null;
   clientStoreCreditBalance?: number;
+  /**
+   * Offer "Gift card" as a tender. Opt-in: it pays through
+   * `pay_booking_with_gift_card`, which only a caller that knows the booking
+   * can call — so a till that cannot handle it never shows it.
+   */
+  giftCardTender?: boolean;
   otherUnpaidInvoices?: OtherUnpaidInvoice[];
   /** Auto-applied loyalty discount voucher — shown as a line and netted off the
    *  amount due. The caller marks it used in its onConfirm handler. */
@@ -84,6 +92,8 @@ interface PaymentCheckoutFlowProps {
     includedInvoices?: string[];
     /** Which terminal to charge on, when the tender is `terminal`. */
     deviceSerial?: string;
+    /** The card to charge, when the tender is `gift_card`. */
+    giftCardCode?: string;
   }) => void | Promise<void>;
 }
 
@@ -93,6 +103,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Smartphone,
   ArrowLeftRight,
   Wallet,
+  Gift,
   MoreHorizontal: CreditCard,
 };
 
@@ -106,11 +117,15 @@ export function PaymentCheckoutFlow({
   receiptReference,
   receiptServiceWindow,
   clientStoreCreditBalance = 0,
+  giftCardTender = false,
   otherUnpaidInvoices = [],
   loyaltyDiscount,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const { t: gcT } = useStaffText("checkoutGiftCard");
+  const isGiftCard = method === "gift_card";
   const [cashCollected, setCashCollected] = useState("");
   const [tipAmount, setTipAmount] = useState(0);
   const [customTip, setCustomTip] = useState("");
@@ -214,6 +229,7 @@ export function PaymentCheckoutFlow({
         includedInvoices:
           includedInvoices.size > 0 ? [...includedInvoices] : undefined,
         ...(isTerminal && terminal ? { deviceSerial: terminal.serial } : {}),
+        ...(isGiftCard ? { giftCardCode: giftCardCode.trim() } : {}),
       });
     } catch (error) {
       setProblem(
@@ -332,7 +348,9 @@ export function PaymentCheckoutFlow({
             <div className="grid grid-cols-3 gap-2">
               {PAYMENT_METHODS.filter(
                 (m) =>
-                  m.value !== "store_credit" || clientStoreCreditBalance > 0,
+                  (m.value !== "store_credit" ||
+                    clientStoreCreditBalance > 0) &&
+                  (m.value !== "gift_card" || giftCardTender),
               ).map((m) => {
                 const Icon = ICONS[m.icon] ?? CreditCard;
                 return (
@@ -347,7 +365,9 @@ export function PaymentCheckoutFlow({
                     )}
                   >
                     <Icon className="size-5" />
-                    <span className="text-[11px] font-medium">{m.label}</span>
+                    <span className="text-[11px] font-medium">
+                      {m.value === "gift_card" ? gcT("tender") : m.label}
+                    </span>
                   </button>
                 );
               })}
@@ -478,6 +498,24 @@ export function PaymentCheckoutFlow({
             placeholder="Payment note (optional)"
             className="h-8 text-xs"
           />
+
+          {/* Gift card: the code to charge. */}
+          {isGiftCard && (
+            <div className="space-y-1.5 rounded-2xl border p-3">
+              <label htmlFor="gift-card-code" className="text-sm font-semibold">
+                {gcT("codeLabel")}
+              </label>
+              <Input
+                id="gift-card-code"
+                value={giftCardCode}
+                onChange={(e) => setGiftCardCode(e.target.value)}
+                placeholder={gcT("codePlaceholder")}
+                autoComplete="off"
+                className="font-mono"
+              />
+              <p className="text-ink-tertiary text-xs">{gcT("codeHelp")}</p>
+            </div>
+          )}
 
           {/* Store credit info */}
           {method === "store_credit" && (
@@ -792,6 +830,7 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                 disabled={
                   busy ||
                   (isCash && !splitMode && cashNum < remaining) ||
+                  (isGiftCard && giftCardCode.trim().length === 0) ||
                   (splitMode && Math.abs(splitLeftToPay) > 0.01) ||
                   // A terminal payment with no terminal is not a payment.
                   (isTerminal && !terminal)

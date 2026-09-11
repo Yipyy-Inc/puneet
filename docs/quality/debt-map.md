@@ -12460,3 +12460,19 @@ not by typecheck or lint. Default to a module-level constant
 result reaches a dependency array. The pattern appears in older files too; it
 is only a loop when an effect sets state from it, but it always rebuilds every
 memo downstream on every render.
+
+## 2026-09-11 — the till takes a gift card
+
+`useRedeemGiftCard` had no caller, the checkout listed no gift card, and
+`redeem_gift_card` — which took money off a card — wrote nothing to
+`payments`, so a booking "paid" by gift card would still have owed its
+balance. The booking page's checkout now offers a Gift card tender (opt-in on
+`PaymentCheckoutFlow`, so tills that cannot take one never show it), asks for
+the code, and pays through `/api/payments/gift-card` →
+`pay_booking_with_gift_card` (20260911003221): card redeemed and payment
+recorded in one transaction, more than the booking owes or the card holds
+refused with nothing moved. `gift-card-payment.spec.ts` joins the gate.
+
+- **Still open:** a tip cannot go on a gift card (the checkout says so and
+  refuses); split payments still send one tender; package passes are not yet
+  a tender at checkout.

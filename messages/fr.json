@@ -1857,6 +1857,15 @@
         "ownerNotMessaged": "Le propriétaire n’a pas été prévenu.",
         "writeFailed": "Ce changement n’a pas été enregistré au tableau",
         "routineNotSaved": "La routine n’a pas été enregistrée"
+      },
+      "checkoutGiftCard": {
+        "tender": "Carte-cadeau",
+        "codeLabel": "Code de la carte-cadeau",
+        "codePlaceholder": "Saisissez ou scannez le code",
+        "codeHelp": "La carte est débitée à la confirmation. Si son solde est inférieur au montant, elle est refusée et rien n’est prélevé.",
+        "paid": "{amount} payés par carte-cadeau",
+        "remaining": "Il reste {amount} sur la carte",
+        "noTip": "Un pourboire ne peut pas être payé par carte-cadeau : prenez-le avec un autre mode de paiement."
       }
     }
   },

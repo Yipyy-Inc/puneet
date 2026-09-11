@@ -64,12 +64,16 @@ import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
 import { useStoreCredit } from "@/lib/api/store-credit";
+import { usePayWithGiftCard } from "@/lib/api/booking-money";
 import { bookingMutations } from "@/lib/api/booking";
 import { useBoardingStayUpdate } from "@/lib/api/boarding-attendance";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
-import { formatDateLong as formatDateLongIn } from "@/lib/i18n/format";
+import {
+  formatDateLong as formatDateLongIn,
+  formatMoney as formatMoneyIn,
+} from "@/lib/i18n/format";
 import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
@@ -595,6 +599,12 @@ export default function ClientBookingDetailPage({
   // and record_payment spends the ledger correctly, but the page never passed
   // a balance, so the checkout filtered store credit out for everybody.
   const { data: storeCredit } = useStoreCredit();
+  const payWithGiftCard = usePayWithGiftCard();
+  const {
+    t: gcT,
+    fill: gcFill,
+    locale: gcLocale,
+  } = useStaffText("checkoutGiftCard");
   const { openBookingModal, closeBookingModal } = useBookingModal();
   const createBooking = useCreateBookingFromModal();
   const { profile: facilityProfile } = useFacilityProfile();
@@ -2048,6 +2058,7 @@ export default function ClientBookingDetailPage({
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
           clientStoreCreditBalance={storeCreditBalance}
+          giftCardTender
           // What the customer is being charged FOR. The printed receipt used to
           // show a single "Amount" line — a total with no evidence behind it.
           receiptReference={bookingRef}
@@ -2267,24 +2278,45 @@ export default function ClientBookingDetailPage({
                   payment.method === "store_credit"
                     ? Math.min(payment.amount, storeCreditBalance)
                     : payment.amount;
-                await chargeBooking.mutateAsync({
-                  booking: {
-                    ...booking,
-                    // The lines just added are not in `booking` yet — the
-                    // refetch has not landed — and `useChargeBooking` refuses
-                    // more than the balance. Tell it what the bill now is.
-                    amountDue: Math.max(
-                      0,
-                      (booking.amountDue ?? booking.totalCost) +
-                        (lateFee?.amount ?? 0) -
-                        (reward?.amount ?? 0),
-                    ),
-                  },
-                  amount: charged,
-                  // Throws on "Custom", which has no ledger meaning.
-                  method: checkoutTender(payment.method),
-                  ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
-                });
+                if (payment.method === "gift_card") {
+                  // The card is redeemed and the payment recorded in ONE
+                  // database transaction (pay_booking_with_gift_card), so it
+                  // is never spent without the booking being paid.
+                  if (payment.tip > 0) throw new Error(gcT("noTip"));
+                  const { cardBalance } = await payWithGiftCard.mutateAsync({
+                    bookingRef: booking.id,
+                    code: payment.giftCardCode ?? "",
+                    amount: charged,
+                  });
+                  toast.success(
+                    gcFill("paid", {
+                      amount: formatMoneyIn(charged, gcLocale),
+                    }),
+                    {
+                      description: gcFill("remaining", {
+                        amount: formatMoneyIn(cardBalance, gcLocale),
+                      }),
+                    },
+                  );
+                } else
+                  await chargeBooking.mutateAsync({
+                    booking: {
+                      ...booking,
+                      // The lines just added are not in `booking` yet — the
+                      // refetch has not landed — and `useChargeBooking` refuses
+                      // more than the balance. Tell it what the bill now is.
+                      amountDue: Math.max(
+                        0,
+                        (booking.amountDue ?? booking.totalCost) +
+                          (lateFee?.amount ?? 0) -
+                          (reward?.amount ?? 0),
+                      ),
+                    },
+                    amount: charged,
+                    // Throws on "Custom", which has no ledger meaning.
+                    method: checkoutTender(payment.method),
+                    ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
+                  });
                 setPendingLateFee(null);
 
                 // ── THE POINTS THIS BOOKING EARNED ────────────────────────
@@ -2341,9 +2373,11 @@ export default function ClientBookingDetailPage({
                 const extra = payment.includedInvoices?.length
                   ? ` + ${payment.includedInvoices.length} other invoices`
                   : "";
-                toast.success(
-                  `Charged $${charged.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
-                );
+                // The gift card said its own sentence above.
+                if (payment.method !== "gift_card")
+                  toast.success(
+                    `Charged $${charged.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
+                  );
               } catch (error) {
                 // The reward is already spent and no money moved. Give it back
                 // before saying so.
