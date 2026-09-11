@@ -186,6 +186,22 @@ try {
       if (ts.count) removed["public.training_series"] = ts.count;
     }
 
+    // ── Memberships the seed wrote ──────────────────────────────────────────
+    // Found by the seed key in the subscription's `detail` and the plan's
+    // `plan`. A client the client put on a seeded plan keeps their row: the
+    // plan goes (plan_id is ON DELETE SET NULL) and they stay on its name.
+    const membersGone = await tx`
+      delete from public.customer_memberships
+       where facility_id = ${DEMO_FACILITY_ID}
+         and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (membersGone.count)
+      removed["public.customer_memberships"] = membersGone.count;
+    const plansGone = await tx`
+      delete from public.membership_plans
+       where facility_id = ${DEMO_FACILITY_ID}
+         and plan->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (plansGone.count) removed["public.membership_plans"] = plansGone.count;
+
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even
     // for the owner), and that is a guard to respect, not to route around. So

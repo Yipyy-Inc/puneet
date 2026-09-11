@@ -6,10 +6,19 @@ import { useClientVaccinations } from "@/lib/api/vaccinations";
 import { NotesList } from "@/components/shared/NotesList";
 import { expiryState, localToday } from "@/lib/vaccinations";
 import { clientCommunications } from "@/data/communications";
+import type { Membership, PauseDetails } from "@/data/services-pricing";
 import {
-  memberships as allMemberships,
-  membershipPlans,
-} from "@/data/services-pricing";
+  describePause,
+  useMembershipAction,
+  useMembershipPlans,
+  useMemberships,
+  type MembershipAction,
+} from "@/lib/api/memberships";
+import { JoinMembershipDialog } from "@/components/clients/memberships/JoinMembershipDialog";
+import { PauseSubscriptionDialog } from "@/app/facility/services/memberships/_components/subscribers/PauseSubscriptionDialog";
+import { CancelSubscriptionDialog } from "@/app/facility/services/memberships/_components/subscribers/CancelSubscriptionDialog";
+import { formatDateLong } from "@/lib/i18n/format";
+import { NO_ITEMS } from "@/lib/no-items";
 import { useQuery } from "@tanstack/react-query";
 import { groomingQueries } from "@/lib/api/grooming";
 import { clientQueries } from "@/lib/api/client";
@@ -78,6 +87,44 @@ export default function ClientOverviewPage({
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
   const { t: tSell } = useStaffText("sellPackage");
+  // ── THE CLIENT'S MEMBERSHIP IS A ROW ───────────────────────────────────
+  //
+  // The card read `client.membership` — a `details` blob nothing writes —
+  // and the section below it `memberships` from `@/data/services-pricing`,
+  // another facility's members matched by a numeric id. Both read
+  // `customer_memberships` now (20260911161036); a client can be put on a
+  // plan from here, and paused or cancelled, each a write the toast waits for.
+  const { data: membershipRows } = useMemberships(clientId);
+  const clientMemberships = (membershipRows ?? NO_ITEMS).filter(
+    (m) => m.status === "active" || m.status === "paused",
+  );
+  const currentMembership = clientMemberships[0];
+  const membershipPlans = useMembershipPlans().data ?? NO_ITEMS;
+  const {
+    t: tJoin,
+    fill: fillJoin,
+    locale: joinLocale,
+  } = useStaffText("joinMembership");
+  const { t: tMem, fill: fillMem } = useStaffText("memberships");
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [pausing, setPausing] = useState<Membership | null>(null);
+  const [cancelling, setCancelling] = useState<Membership | null>(null);
+  const membershipChange = useMembershipAction();
+  const changeMembership = (id: string, input: MembershipAction) =>
+    new Promise<boolean>((resolve) => {
+      membershipChange.mutate(
+        { id, ...input },
+        {
+          onSuccess: () => resolve(true),
+          onError: (error) => {
+            toast.error(tMem("notChanged"), {
+              description: error instanceof Error ? error.message : undefined,
+            });
+            resolve(false);
+          },
+        },
+      );
+    });
   const settleBookings = useSettleBookings();
   // Above the early return: hooks run in the same order on every render, and
   // a client id that matches nothing is a render this component still does.
@@ -96,11 +143,6 @@ export default function ClientOverviewPage({
 
   if (!client) return null;
 
-  // Memberships & packages — keyed by string customerId in the pricing data layer
-  const customerIdStr = String(clientId);
-  const clientMemberships = allMemberships.filter(
-    (m) => m.customerId === customerIdStr,
-  );
   // The same rows as `ownedPackages`, projected into the shape
   // PurchasedPackageCard renders. Previously a separate fixture, which meant
   // this page could show a client packages the grooming till had never heard
@@ -659,47 +701,75 @@ export default function ClientOverviewPage({
           {/* Membership & Packages — always shown, so a package can be sold
               to a client who has none yet. */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
               <CardTitle className="text-sm font-semibold">
                 Membership & Packages
               </CardTitle>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSellOpen(true)}
-              >
-                {tSell("open")}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {/* Not until the rows are in: offered while they load, it invites a
+                    second plan the database then refuses. */}
+                {membershipRows && !currentMembership && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setJoinOpen(true)}
+                  >
+                    {tJoin("open")}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSellOpen(true)}
+                >
+                  {tSell("open")}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {!client.membership &&
+              {!currentMembership &&
                 !client.packages?.length &&
                 activePrepaidPackages.length === 0 && (
                   <p className="text-muted-foreground text-sm">
                     {tSell("noneYet")}
                   </p>
                 )}
-              {client.membership && (
-                <div className="bg-muted/20 flex items-center justify-between rounded-lg border px-3 py-2.5">
-                  <div>
+              {currentMembership && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+                  <div className="min-w-0">
                     <p className="text-sm font-medium">
-                      {client.membership.plan} Plan
+                      {currentMembership.planName}
                     </p>
-                    <p className="text-muted-foreground text-xs capitalize">
-                      {client.membership.status}
-                      {client.membership.benefits.discountPercent &&
-                        ` · ${client.membership.benefits.discountPercent}% off`}
+                    <p className="text-muted-foreground text-xs">
+                      {[
+                        currentMembership.discountPercentage > 0
+                          ? fillJoin("discountOff", {
+                              pct: currentMembership.discountPercentage,
+                            })
+                          : null,
+                        currentMembership.nextBillingDate
+                          ? fillJoin("nextCycle", {
+                              date: formatDateLong(
+                                `${currentMembership.nextBillingDate}T12:00:00`,
+                                joinLocale,
+                              ),
+                            })
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                   <Badge
                     variant={
-                      client.membership.status === "active"
+                      currentMembership.status === "active"
                         ? "default"
                         : "secondary"
                     }
-                    className="capitalize"
                   >
-                    {client.membership.status}
+                    {currentMembership.status === "active"
+                      ? tJoin("statusActive")
+                      : tJoin("statusPaused")}
                   </Badge>
                 </div>
               )}
@@ -778,10 +848,8 @@ export default function ClientOverviewPage({
                         "Downgrade requests are initiated by the customer",
                       )
                     }
-                    onPause={() => toast.success("Pause applied")}
-                    onCancel={() =>
-                      toast.success("Membership cancellation scheduled")
-                    }
+                    onPause={() => setPausing(m)}
+                    onCancel={() => setCancelling(m)}
                   />
                 );
               })}
@@ -910,6 +978,41 @@ export default function ClientOverviewPage({
         onOpenChange={setSellOpen}
         clientRef={clientId}
         clientName={client.name}
+      />
+      <JoinMembershipDialog
+        open={joinOpen}
+        onOpenChange={setJoinOpen}
+        clientRef={clientId}
+        clientName={client.name}
+      />
+      <PauseSubscriptionDialog
+        open={!!pausing}
+        onOpenChange={(o) => !o && setPausing(null)}
+        membership={pausing}
+        onPause={(details: PauseDetails) =>
+          pausing
+            ? changeMembership(pausing.id, {
+                action: "pause",
+                pause: details,
+                description: describePause(details, fillMem, tMem),
+              })
+            : Promise.resolve(false)
+        }
+      />
+      <CancelSubscriptionDialog
+        open={!!cancelling}
+        onOpenChange={(o) => !o && setCancelling(null)}
+        membership={cancelling}
+        onCancel={() =>
+          cancelling
+            ? changeMembership(cancelling.id, {
+                action: "cancel",
+                description: fillMem("cancelledUntil", {
+                  date: cancelling.nextBillingDate,
+                }),
+              })
+            : Promise.resolve(false)
+        }
       />
       <BulkPaymentModal
         open={bulkPayOpen}

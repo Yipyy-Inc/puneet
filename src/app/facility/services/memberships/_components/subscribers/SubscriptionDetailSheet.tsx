@@ -29,12 +29,21 @@ import {
   Infinity as InfinityIcon,
   CircleDot,
 } from "lucide-react";
-import {
-  membershipPlans,
-  type Membership,
-  type MembershipStatus,
-  type MembershipActivityEvent,
+import type {
+  Membership,
+  MembershipStatus,
+  MembershipActivityEvent,
+  PauseDetails,
 } from "@/data/services-pricing";
+import {
+  describePause,
+  useMembershipAction,
+  useMembershipPlans,
+  type MembershipAction,
+} from "@/lib/api/memberships";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import { PauseSubscriptionDialog } from "./PauseSubscriptionDialog";
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
 import { toast } from "sonner";
@@ -43,7 +52,6 @@ interface Props {
   membership: Membership | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (m: Membership) => void;
 }
 
 const statusTone: Record<
@@ -87,65 +95,52 @@ export function SubscriptionDetailSheet({
   membership,
   open,
   onOpenChange,
-  onUpdate,
 }: Props) {
+  // Above the early return: hooks run in the same order every render.
   const [pauseOpen, setPauseOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const { t, fill, locale } = useStaffText("memberships");
+  const { data: plans } = useMembershipPlans();
+  const change = useMembershipAction();
 
   if (!membership) return null;
 
-  const plan = membershipPlans.find((p) => p.id === membership.planId);
+  const plan = plans?.find((p) => p.id === membership.planId);
   const tone = statusTone[membership.status];
 
-  const addActivity = (
-    type: MembershipActivityEvent["type"],
-    description: string,
-  ) => {
-    const event: MembershipActivityEvent = {
-      id: `act-${Date.now()}`,
-      type,
-      date: new Date().toISOString(),
-      description,
-    };
-    onUpdate({
-      ...membership,
-      activityLog: [event, ...membership.activityLog],
+  // ── EVERY CHANGE IS A WRITE, AND THE TOAST WAITS FOR IT ───────────────
+  //
+  // Pause, resume, cancel and auto-renew each rewrote this row in the parent's
+  // `useState`. They PATCH /api/memberships/[id] now, which appends the event
+  // to the row's own activity log; the sheet re-renders from the refetch.
+  //
+  // "Retry payment" is gone: it set the row to `pending` and toasted
+  // "Retrying payment" with no payment anywhere. Memberships are not billed
+  // automatically yet — a cycle is charged at the till like anything else.
+  const act = (input: MembershipAction, done?: string) =>
+    new Promise<boolean>((resolve) => {
+      change.mutate(
+        { id: membership.id, ...input },
+        {
+          onSuccess: () => {
+            if (done) toast.success(done);
+            resolve(true);
+          },
+          onError: (error) => {
+            toast.error(t("notChanged"), {
+              description: error instanceof Error ? error.message : undefined,
+            });
+            resolve(false);
+          },
+        },
+      );
     });
-  };
 
   const handleResume = () => {
-    onUpdate({
-      ...membership,
-      status: "active",
-      pauseDetails: undefined,
-      activityLog: [
-        {
-          id: `act-${Date.now()}`,
-          type: "resumed",
-          date: new Date().toISOString(),
-          description: "Subscription resumed",
-        },
-        ...membership.activityLog,
-      ],
-    });
-    toast.success("Subscription resumed");
-  };
-
-  const handleRetry = () => {
-    onUpdate({
-      ...membership,
-      status: "pending",
-      activityLog: [
-        {
-          id: `act-${Date.now()}`,
-          type: "payment_retried",
-          date: new Date().toISOString(),
-          description: "Payment retry initiated",
-        },
-        ...membership.activityLog,
-      ],
-    });
-    toast.success("Retrying payment");
+    void act(
+      { action: "resume", description: t("resumedEvent") },
+      "Subscription resumed",
+    );
   };
 
   return (
@@ -253,7 +248,7 @@ export function SubscriptionDetailSheet({
                   {membership.graceEndsAt && (
                     <Kv
                       label="Grace ends"
-                      value={new Date(membership.graceEndsAt).toLocaleString()}
+                      value={`${formatDateLong(membership.graceEndsAt, locale)} ${formatTime(membership.graceEndsAt, locale)}`}
                     />
                   )}
                 </div>
@@ -267,12 +262,15 @@ export function SubscriptionDetailSheet({
                   </div>
                   <Switch
                     checked={membership.autoRenew}
+                    disabled={
+                      change.isPending || membership.status === "cancelled"
+                    }
                     onCheckedChange={(v) => {
-                      onUpdate({ ...membership, autoRenew: v });
-                      addActivity(
-                        "reminder_sent",
-                        v ? "Auto-renew enabled" : "Auto-renew disabled",
-                      );
+                      void act({
+                        action: "autoRenew",
+                        autoRenew: v,
+                        description: v ? t("autoRenewOn") : t("autoRenewOff"),
+                      });
                     }}
                   />
                 </div>
@@ -288,33 +286,33 @@ export function SubscriptionDetailSheet({
                     </Button>
                   )}
                   {membership.status === "paused" && (
-                    <Button variant="outline" onClick={handleResume}>
+                    <Button
+                      variant="outline"
+                      onClick={handleResume}
+                      disabled={change.isPending}
+                    >
                       <Play className="mr-2 size-4" />
                       Resume
                     </Button>
                   )}
-                  {membership.status === "expired" && (
-                    <Button variant="outline" onClick={handleRetry}>
-                      <RefreshCw className="mr-2 size-4" />
-                      Retry payment
+                  {/* "Send reminder" toasted "Reminder sent" and sent nothing.
+                      It opens the staff member's own email, addressed. */}
+                  {membership.customerEmail && (
+                    <Button variant="outline" asChild>
+                      <a
+                        href={`mailto:${membership.customerEmail}?subject=${encodeURIComponent(membership.planName)}`}
+                      >
+                        <Mail className="mr-2 size-4" />
+                        {fill("emailClient", { name: membership.customerName })}
+                      </a>
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      toast.success("Reminder sent", {
-                        description: membership.customerEmail,
-                      })
-                    }
-                  >
-                    <Mail className="mr-2 size-4" />
-                    Send reminder
-                  </Button>
                   {membership.status !== "cancelled" && (
                     <Button
                       variant="ghost"
                       className="text-destructive hover:text-destructive ml-auto"
                       onClick={() => setCancelOpen(true)}
+                      disabled={change.isPending}
                     >
                       <X className="mr-2 size-4" />
                       Cancel
@@ -337,13 +335,16 @@ export function SubscriptionDetailSheet({
               </TabsContent>
 
               <TabsContent value="activity" className="mt-0">
-                <ActivityTimeline events={membership.activityLog} />
+                <ActivityTimeline
+                  events={membership.activityLog}
+                  locale={locale}
+                />
               </TabsContent>
 
               <TabsContent value="invoices" className="mt-0 space-y-2">
                 {membership.invoices.length === 0 ? (
-                  <div className="text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
-                    No invoices yet.
+                  <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
+                    {t("noInvoices")}
                   </div>
                 ) : (
                   membership.invoices.map((inv) => (
@@ -459,48 +460,26 @@ export function SubscriptionDetailSheet({
         open={pauseOpen}
         onOpenChange={setPauseOpen}
         membership={membership}
-        onPause={(details) => {
-          onUpdate({
-            ...membership,
-            status: "paused",
-            pauseDetails: details,
-            activityLog: [
-              {
-                id: `act-${Date.now()}`,
-                type: "paused",
-                date: new Date().toISOString(),
-                description:
-                  details.mode === "cycles"
-                    ? `Paused for ${details.cycles} cycle(s)`
-                    : details.mode === "date"
-                      ? `Paused until ${details.resumeDate}`
-                      : "Paused — manual restart",
-              },
-              ...membership.activityLog,
-            ],
-          });
-        }}
+        onPause={(details: PauseDetails) =>
+          act({
+            action: "pause",
+            pause: details,
+            description: describePause(details, fill, t),
+          })
+        }
       />
       <CancelSubscriptionDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         membership={membership}
-        onCancel={() => {
-          onUpdate({
-            ...membership,
-            status: "cancelled",
-            autoRenew: false,
-            activityLog: [
-              {
-                id: `act-${Date.now()}`,
-                type: "cancelled",
-                date: new Date().toISOString(),
-                description: `Cancelled — access continues until ${membership.nextBillingDate}`,
-              },
-              ...membership.activityLog,
-            ],
-          });
-        }}
+        onCancel={() =>
+          act({
+            action: "cancel",
+            description: fill("cancelledUntil", {
+              date: membership.nextBillingDate,
+            }),
+          })
+        }
       />
     </>
   );
@@ -547,7 +526,15 @@ function InvoiceBadge({
   );
 }
 
-function ActivityTimeline({ events }: { events: MembershipActivityEvent[] }) {
+// A numeric date here read 9/11/2026 — the month-or-day ambiguity §6 rule 8
+// bans outright. Long form, in the viewer's language.
+function ActivityTimeline({
+  events,
+  locale,
+}: {
+  events: MembershipActivityEvent[];
+  locale: AppLocale;
+}) {
   if (events.length === 0) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
@@ -594,7 +581,7 @@ function ActivityTimeline({ events }: { events: MembershipActivityEvent[] }) {
                 {e.type.replace("_", " ")}
               </span>
               <span className="text-muted-foreground text-xs">
-                {new Date(e.date).toLocaleString()}
+                {formatDateLong(e.date, locale)} · {formatTime(e.date, locale)}
               </span>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">

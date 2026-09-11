@@ -17,11 +17,11 @@ import {
   CreditCard,
   Mail as MailIcon,
 } from "lucide-react";
-import {
-  memberships as seedMemberships,
-  type Membership,
-  type MembershipStatus,
-} from "@/data/services-pricing";
+import type { Membership, MembershipStatus } from "@/data/services-pricing";
+import { useMemberships } from "@/lib/api/memberships";
+import { monthlyRevenue } from "@/lib/memberships/figures";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 import { SubscriptionDetailSheet } from "./SubscriptionDetailSheet";
 
 type Row = Membership & Record<string, unknown>;
@@ -108,27 +108,28 @@ const exportToCSV = (data: Membership[]) => {
   document.body.removeChild(link);
 };
 
+// ── WHO IS ON A PLAN, FROM `customer_memberships` ─────────────────────────
+//
+// This was `memberships` from `@/data/services-pricing` in `useState` —
+// another facility's members — and every pause, resume and cancel in the
+// sheet rewrote the row in memory. The rows are the facility's now and the
+// sheet writes through /api/memberships/[id]; the open sheet follows the row
+// by id, so it shows what the database said after each change.
+//
+// Revenue is a MONTHLY figure: each subscription's price is per cycle, so a
+// quarterly plan counts a third of its price (lib/memberships/figures).
 export function SubscribersTab() {
-  const [rows, setRows] = useState<Membership[]>(seedMemberships);
-  const [active, setActive] = useState<Membership | null>(null);
+  const { t } = useStaffText("memberships");
+  const { data } = useMemberships();
+  const rows = data ?? NO_ITEMS;
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = rows.find((r) => r.id === activeId) ?? null;
   const [open, setOpen] = useState(false);
-
-  const handleUpdate = (m: Membership) => {
-    setRows((prev) => prev.map((r) => (r.id === m.id ? m : r)));
-    setActive(m);
-  };
 
   const activeCount = rows.filter((r) => r.status === "active").length;
   const pausedCount = rows.filter((r) => r.status === "paused").length;
-  const monthlyRevenue = rows
-    .filter((r) => r.status === "active")
-    .reduce((sum, r) => sum + r.monthlyPrice, 0);
-  const avgPrice =
-    rows.length > 0
-      ? Math.round(
-          rows.reduce((sum, r) => sum + r.monthlyPrice, 0) / rows.length,
-        )
-      : 0;
+  const revenue = monthlyRevenue(rows);
+  const avgPrice = activeCount > 0 ? Math.round(revenue / activeCount) : 0;
 
   const columns: ColumnDef<Row>[] = [
     {
@@ -405,9 +406,7 @@ export function SubscribersTab() {
             <TrendingUp className="size-4 text-violet-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${monthlyRevenue.toFixed(0)}
-            </div>
+            <div className="text-2xl font-bold">${revenue.toFixed(0)}</div>
             <p className="text-muted-foreground text-xs">From active plans</p>
           </CardContent>
         </Card>
@@ -445,8 +444,13 @@ export function SubscribersTab() {
                   filters={filters}
                   searchKey={"customerName" as keyof Row}
                   searchPlaceholder="Search subscribers by name..."
+                  emptyState={{
+                    pose: "presenting",
+                    title: t("noSubscribers"),
+                    description: t("noSubscribersHint"),
+                  }}
                   onRowClick={(item) => {
-                    setActive(item as Membership);
+                    setActiveId((item as Membership).id);
                     setOpen(true);
                   }}
                   rowClassName={(item) =>
@@ -465,7 +469,6 @@ export function SubscribersTab() {
         membership={active}
         open={open}
         onOpenChange={setOpen}
-        onUpdate={handleUpdate}
       />
     </div>
   );

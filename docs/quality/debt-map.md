@@ -12954,3 +12954,45 @@ price), the tab writes the whole list and the toast waits for the write, and
   `ClientPetStep`, `lib/training-program-prereqs.ts`,
   `lib/training-report-cards.ts` and `lib/operations-calendar.ts` still import
   the fixture `trainingPackages` directly.
+
+## 2026-09-11 — membership plans and subscribers are rows
+
+The Memberships page was `membershipPlans`, `memberships` and
+`prepaidCredits` from `@/data/services-pricing` in `useState` — another
+facility's plans and members. Creating, editing, duplicating, activating and
+deleting a plan, and pausing, resuming and cancelling a subscriber, changed
+the screen and toasted. The Insights tab drew a "12-month trend" that was
+today's total times 0.55, 0.59, 0.63… beside "+12.4% vs last mo", typed in.
+
+`membership_plans` is a table now (20260911161036: columns for what the
+database reasons about, the editor's long tail in `plan`), and
+`customer_memberships` gained the plan it is on, the cycle and price it was
+sold at, its next billing date, `detail` (activity log, pause) and a
+`paused` status. Routes under `/api/memberships`; hooks in
+`src/lib/api/memberships.ts`; every figure on the hero, the Subscribers tab
+and Insights is counted from rows by `src/lib/memberships/figures.ts`
+(revenue normalised to a month — a subscription's price is per cycle).
+`supabase/tests/membership-plans.sql` holds the policies (M1–M10).
+
+- A client is put on a plan from the client file (**Put on a plan**): the
+  subscription, then `record_payment` for the first cycle — or "Not paid
+  yet". The card and the section below it read the client's real membership;
+  pause and cancel there write.
+- The booking checkout takes the member's discount off: an ACTIVE membership
+  whose plan covers the booking's service is written onto the bill as a
+  negative line before either tender, so a terminal charge (computed from
+  `amount_due`) includes it; a line already on the bill is not offered twice.
+- Cancelling is end of cycle: `cancelled` at once, `ends_on` = the next
+  billing date.
+- **Still open:** nothing bills a membership automatically — no renewal
+  charge, no invoice history (the sheet says so), and "Retry payment" was
+  removed rather than faked. Credits are shown but nothing spends them. The
+  customer portal's billing page, `MembershipCreditPanel` in the booking
+  modal's customer mode, `AutoAppliedBenefits`, `InvoicePanel`, the camera
+  access rules and the QuickBooks catalogue still read the fixture plans. The
+  plan's `discountRules` and included items are stored but only
+  `discountPercentage` comes off a bill.
+- **Found, not fixed (bookings checkout):** on the terminal tender the
+  booking page consumes the loyalty reward and drops a pending late fee
+  without writing either onto the bill — the line items are added only on
+  the other tenders — so a Clover charge is for `amount_due` without them.

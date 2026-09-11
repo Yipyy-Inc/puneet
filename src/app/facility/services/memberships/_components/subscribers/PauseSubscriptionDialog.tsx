@@ -21,7 +21,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   membership: Membership | null;
-  onPause: (details: PauseDetails) => void;
+  /** Resolves true once the pause is saved; the dialog stays open if not. */
+  onPause: (details: PauseDetails) => Promise<boolean>;
 }
 
 export function PauseSubscriptionDialog({
@@ -33,15 +34,19 @@ export function PauseSubscriptionDialog({
   const [mode, setMode] = useState<Mode>("cycles");
   const [cycles, setCycles] = useState(1);
   const [resumeDate, setResumeDate] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const base: PauseDetails = {
       mode,
       pausedAt: new Date().toISOString(),
     };
     if (mode === "cycles") base.cycles = cycles;
     if (mode === "date") base.resumeDate = resumeDate || undefined;
-    onPause(base);
+    setSaving(true);
+    const saved = await onPause(base);
+    setSaving(false);
+    if (!saved) return;
     toast.success("Subscription paused", {
       description: membership?.customerName,
     });
@@ -117,7 +122,12 @@ export function PauseSubscriptionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>Pause subscription</Button>
+          <Button
+            onClick={() => void handleConfirm()}
+            disabled={saving || (mode === "date" && !resumeDate)}
+          >
+            Pause subscription
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

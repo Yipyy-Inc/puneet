@@ -1374,47 +1374,69 @@ export type Database = {
       customer_memberships: {
         Row: {
           benefits: Json;
+          billing_cycle: string | null;
           client_id: string;
           created_at: string;
           created_by: string | null;
+          detail: Json;
           discount_percent: number | null;
           ends_on: string | null;
           facility_id: string;
           id: string;
+          next_billing_on: string | null;
+          plan_id: string | null;
           plan_name: string;
+          price: number | null;
           starts_on: string | null;
           status: string;
           updated_at: string;
         };
         Insert: {
           benefits?: Json;
+          billing_cycle?: string | null;
           client_id: string;
           created_at?: string;
           created_by?: string | null;
+          detail?: Json;
           discount_percent?: number | null;
           ends_on?: string | null;
           facility_id: string;
           id?: string;
+          next_billing_on?: string | null;
+          plan_id?: string | null;
           plan_name: string;
+          price?: number | null;
           starts_on?: string | null;
           status?: string;
           updated_at?: string;
         };
         Update: {
           benefits?: Json;
+          billing_cycle?: string | null;
           client_id?: string;
           created_at?: string;
           created_by?: string | null;
+          detail?: Json;
           discount_percent?: number | null;
           ends_on?: string | null;
           facility_id?: string;
           id?: string;
+          next_billing_on?: string | null;
+          plan_id?: string | null;
           plan_name?: string;
+          price?: number | null;
           starts_on?: string | null;
           status?: string;
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "customer_memberships_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "membership_plans";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "customer_memberships_client_id_fkey";
             columns: ["client_id"];
@@ -5072,6 +5094,59 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "permissions";
             referencedColumns: ["key"];
+          },
+        ];
+      };
+      membership_plans: {
+        Row: {
+          billing_cycle: string;
+          created_at: string;
+          created_by: string | null;
+          discount_percent: number;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          monthly_price: number;
+          name: string;
+          plan: Json;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          billing_cycle?: string;
+          created_at?: string;
+          created_by?: string | null;
+          discount_percent?: number;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          monthly_price?: number;
+          name: string;
+          plan?: Json;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          billing_cycle?: string;
+          created_at?: string;
+          created_by?: string | null;
+          discount_percent?: number;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          monthly_price?: number;
+          name?: string;
+          plan?: Json;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "membership_plans_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
           },
         ];
       };

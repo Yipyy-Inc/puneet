@@ -138,7 +138,8 @@ export interface MembershipActivityEvent {
     | "payment_retried"
     | "perk_redeemed"
     | "credit_used"
-    | "reminder_sent";
+    | "reminder_sent"
+    | "updated";
   date: string;
   amount?: number;
   description: string;
@@ -331,6 +332,8 @@ export interface Membership {
   rolloverCredits?: number;
   creditsUsedThisCycle?: number;
   creditsPerCycle?: number;
+  /** The last day its perks apply, once it has been cancelled. */
+  endDate?: string;
 }
 
 export interface MembershipPlan {

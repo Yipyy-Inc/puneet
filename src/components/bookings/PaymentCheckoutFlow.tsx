@@ -32,6 +32,7 @@ import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { formatMoney } from "@/lib/i18n/format";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { TerminalPicker } from "./TerminalPicker";
 import { TipSelector } from "./TipSelector";
@@ -78,6 +79,9 @@ interface PaymentCheckoutFlowProps {
   /** Auto-applied loyalty discount voucher — shown as a line and netted off the
    *  amount due. The caller marks it used in its onConfirm handler. */
   loyaltyDiscount?: { label: string; amount: number };
+  /** The client's membership discount — a line, netted off like the reward.
+   *  The caller puts it on the bill in its onConfirm handler. */
+  membershipDiscount?: { label: string; amount: number };
   /**
    * May return a promise. When it does, the dialog waits — a terminal payment
    * is held open while the customer finds their card, and a receipt printed
@@ -120,11 +124,12 @@ export function PaymentCheckoutFlow({
   giftCardTender = false,
   otherUnpaidInvoices = [],
   loyaltyDiscount,
+  membershipDiscount,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
   const [giftCardCode, setGiftCardCode] = useState("");
-  const { t: gcT } = useStaffText("checkoutGiftCard");
+  const { t: gcT, locale: gcLocale } = useStaffText("checkoutGiftCard");
   const isGiftCard = method === "gift_card";
   const [cashCollected, setCashCollected] = useState("");
   const [tipAmount, setTipAmount] = useState(0);
@@ -152,7 +157,11 @@ export function PaymentCheckoutFlow({
     .reduce((s, i) => s + i.amount, 0);
 
   const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
-  const netAmountDue = Math.max(0, amountDue - loyaltyDiscountAmount);
+  const membershipDiscountAmount = membershipDiscount?.amount ?? 0;
+  const netAmountDue = Math.max(
+    0,
+    amountDue - loyaltyDiscountAmount - membershipDiscountAmount,
+  );
   // Tax is part of what is COLLECTED, not a note on the receipt. The terminal
   // charges subtotal + tax server-side, so a dialog that totalled the pre-tax
   // figure would print "$49.01" on its own button while the customer was asked
@@ -265,6 +274,12 @@ export function PaymentCheckoutFlow({
               <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 {loyaltyDiscount.label}: −${loyaltyDiscountAmount.toFixed(2)}{" "}
                 applied
+              </p>
+            )}
+            {membershipDiscount && membershipDiscountAmount > 0 && (
+              <p className="text-success mt-1 text-xs font-medium tabular-nums">
+                {membershipDiscount.label}: −
+                {formatMoney(membershipDiscountAmount, gcLocale)}
               </p>
             )}
             {depositPaid > 0 && (

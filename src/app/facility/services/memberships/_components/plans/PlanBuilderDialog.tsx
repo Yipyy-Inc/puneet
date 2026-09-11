@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan?: MembershipPlan;
-  onSave?: (planData: ReturnType<typeof usePlanBuilder>["data"]) => void;
+  /** Resolves true once the plan is saved; the dialog stays open otherwise. */
+  onSave: (
+    planData: ReturnType<typeof usePlanBuilder>["data"],
+  ) => Promise<boolean>;
 }
 
 const steps: Step[] = [
@@ -48,6 +51,7 @@ export function PlanBuilderDialog({ open, onOpenChange, plan, onSave }: Props) {
   const builder = usePlanBuilder(plan);
   const { data, update, currentStep, setCurrentStep, canProceedFrom, reset } =
     builder;
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) reset(plan);
@@ -59,8 +63,14 @@ export function PlanBuilderDialog({ open, onOpenChange, plan, onSave }: Props) {
     setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
   };
   const handlePrev = () => setCurrentStep(Math.max(currentStep - 1, 0));
-  const handleComplete = () => {
-    onSave?.(data);
+  // The toast waits for the write, and a refused save keeps the editor
+  // open with everything the user typed.
+  const handleComplete = async () => {
+    if (saving) return;
+    setSaving(true);
+    const saved = await onSave(data);
+    setSaving(false);
+    if (!saved) return;
     toast.success(plan ? "Plan updated" : "Plan created", {
       description: `${data.name} has been saved.`,
     });
@@ -108,10 +118,10 @@ export function PlanBuilderDialog({ open, onOpenChange, plan, onSave }: Props) {
             <StepperNavigation
               currentStep={currentStep}
               totalSteps={steps.length}
-              canProceed={canProceedFrom(currentStep)}
+              canProceed={canProceedFrom(currentStep) && !saving}
               onNext={handleNext}
               onPrevious={handlePrev}
-              onComplete={handleComplete}
+              onComplete={() => void handleComplete()}
               completeLabel={plan ? "Save changes" : "Create plan"}
             />
           </div>

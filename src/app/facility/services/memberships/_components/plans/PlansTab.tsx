@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableEmptyState } from "@/components/ui/table-empty-state";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,11 +22,17 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import {
-  membershipPlans as seedPlans,
-  type MembershipPlan,
-  type MembershipBillingCycle,
+import type {
+  MembershipPlan,
+  MembershipBillingCycle,
 } from "@/data/services-pricing";
+import {
+  useDeleteMembershipPlan,
+  useMembershipPlans,
+  useSaveMembershipPlan,
+} from "@/lib/api/memberships";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 import { PlanCard } from "./PlanCard";
 import { PlanBuilderDialog } from "./PlanBuilderDialog";
 import type { PlanBuilderData } from "./use-plan-builder";
@@ -35,18 +43,17 @@ const BILLING_OPTIONS: { value: MembershipBillingCycle; label: string }[] = [
   { value: "annually", label: "Annual" },
 ];
 
-function makeId() {
-  return `plan-${Math.random().toString(36).slice(2, 8)}`;
-}
+// ── THE PLANS ARE THE FACILITY'S ─────────────────────────────────────────
+//
+// This tab copied `membershipPlans` from `@/data/services-pricing` into
+// `useState`: creating, editing, duplicating, activating and deleting a plan
+// changed the screen, toasted, and was gone on reload. Each is a write to
+// `membership_plans` now (20260911161036), the toast waits for it, and the
+// subscriber count is counted by the route from who is actually on the plan.
 
-function dataToPlan(
-  data: PlanBuilderData,
-  base?: MembershipPlan,
-): MembershipPlan {
+/** What the editor produced, as the plan the route stores. */
+function dataToPlan(data: PlanBuilderData): Partial<MembershipPlan> {
   return {
-    id: base?.id ?? makeId(),
-    subscriberCount: base?.subscriberCount ?? 0,
-    createdAt: base?.createdAt ?? new Date().toISOString(),
     name: data.name,
     tierLabel: data.tierLabel,
     description: data.description,
@@ -72,11 +79,18 @@ function dataToPlan(
     cancellationPolicy: data.cancellationPolicy,
     badgeColor: data.badgeColor,
     instabookServices: data.instabookServices,
+    changePolicy: data.changePolicy,
+    upgradePlanIds: data.upgradePlanIds,
+    downgradePlanIds: data.downgradePlanIds,
   };
 }
 
 export function PlansTab() {
-  const [plans, setPlans] = useState<MembershipPlan[]>(seedPlans);
+  const { t } = useStaffText("memberships");
+  const { data, isPending, isError } = useMembershipPlans();
+  const plans = data ?? NO_ITEMS;
+  const savePlan = useSaveMembershipPlan();
+  const deletePlan = useDeleteMembershipPlan();
   const [query, setQuery] = useState("");
   const [cycleView, setCycleView] = useState<MembershipBillingCycle>("monthly");
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -104,39 +118,58 @@ export function PlansTab() {
     setEditingPlan(plan);
     setBuilderOpen(true);
   };
+  const failed = (key: string) => (error: unknown) =>
+    toast.error(t(key), {
+      description: error instanceof Error ? error.message : undefined,
+    });
   const duplicate = (plan: MembershipPlan) => {
-    const copy: MembershipPlan = {
-      ...plan,
-      id: makeId(),
-      name: `${plan.name} (copy)`,
-      subscriberCount: 0,
-      isPopular: false,
-      createdAt: new Date().toISOString(),
-    };
-    setPlans((prev) => [copy, ...prev]);
-    toast.success("Plan duplicated", { description: copy.name });
+    const {
+      id: _id,
+      subscriberCount: _count,
+      createdAt: _createdAt,
+      ...rest
+    } = plan;
+    const name = `${plan.name} (copy)`;
+    savePlan.mutate(
+      { plan: { ...rest, name, isPopular: false } },
+      {
+        onSuccess: () =>
+          toast.success("Plan duplicated", { description: name }),
+        onError: failed("notSaved"),
+      },
+    );
   };
   const toggleActive = (plan: MembershipPlan) => {
-    setPlans((prev) =>
-      prev.map((p) => (p.id === plan.id ? { ...p, isActive: !p.isActive } : p)),
+    savePlan.mutate(
+      { id: plan.id, plan: { isActive: !plan.isActive } },
+      {
+        onSuccess: () =>
+          toast.success(plan.isActive ? "Plan deactivated" : "Plan activated"),
+        onError: failed("notSaved"),
+      },
     );
-    toast.success(plan.isActive ? "Plan deactivated" : "Plan activated");
   };
   const confirmDelete = () => {
     if (!deletingPlan) return;
-    setPlans((prev) => prev.filter((p) => p.id !== deletingPlan.id));
-    toast.success("Plan deleted", { description: deletingPlan.name });
-    setDeletingPlan(null);
+    const gone = deletingPlan;
+    deletePlan.mutate(gone.id, {
+      onSuccess: () => {
+        toast.success("Plan deleted", { description: gone.name });
+        setDeletingPlan(null);
+      },
+      onError: failed("notDeleted"),
+    });
   };
-  const handleSave = (data: PlanBuilderData) => {
-    if (editingPlan) {
-      setPlans((prev) =>
-        prev.map((p) =>
-          p.id === editingPlan.id ? dataToPlan(data, editingPlan) : p,
-        ),
-      );
-    } else {
-      setPlans((prev) => [dataToPlan(data), ...prev]);
+  const handleSave = async (data: PlanBuilderData): Promise<boolean> => {
+    try {
+      await savePlan.mutateAsync({
+        id: editingPlan?.id,
+        plan: dataToPlan(data),
+      });
+      return true;
+    } catch (error) {
+      failed("notSaved")(error);
+      return false;
     }
   };
 
@@ -176,7 +209,26 @@ export function PlansTab() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {isPending ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-72 rounded-3xl" />
+          ))}
+        </div>
+      ) : isError ? (
+        <TableEmptyState
+          pose="error"
+          title={t("plansFailed")}
+          description={t("plansFailedHint")}
+        />
+      ) : plans.length === 0 ? (
+        <TableEmptyState
+          pose="presenting"
+          title={t("noPlans")}
+          description={t("noPlansHint")}
+          action={{ label: t("createFirstPlan"), onClick: openNew, icon: Plus }}
+        />
+      ) : filtered.length === 0 ? (
         <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
           No plans match your search.
         </div>
@@ -221,7 +273,11 @@ export function PlansTab() {
             <Button variant="outline" onClick={() => setDeletingPlan(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deletePlan.isPending}
+            >
               Delete plan
             </Button>
           </DialogFooter>

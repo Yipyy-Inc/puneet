@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,8 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   membership: Membership | null;
-  onCancel: () => void;
+  /** Resolves true once the cancellation is saved. */
+  onCancel: () => Promise<boolean>;
 }
 
 export function CancelSubscriptionDialog({
@@ -26,6 +28,7 @@ export function CancelSubscriptionDialog({
   membership,
   onCancel,
 }: Props) {
+  const [saving, setSaving] = useState(false);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -66,8 +69,12 @@ export function CancelSubscriptionDialog({
           </Button>
           <Button
             variant="destructive"
-            onClick={() => {
-              onCancel();
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              const saved = await onCancel();
+              setSaving(false);
+              if (!saved) return;
               toast.success("Subscription cancelled", {
                 description: `Access ends ${membership?.nextBillingDate}`,
               });
