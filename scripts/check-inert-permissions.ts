@@ -136,9 +136,6 @@ const BASELINE = new Set([
   "daycare_incident_report",
   "add_training_notes",
   "training_issue_certificates",
-  "retail_manage_inventory",
-  "retail_manage_products",
-  "retail_manage_suppliers",
   "retail_view_reports",
 
   // ── Communication.

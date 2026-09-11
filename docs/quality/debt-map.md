@@ -13026,3 +13026,48 @@ it checks retail_process_sale itself; `supabase/tests/promo-codes.sql`
   (`booking-card.tsx`) does not offer the field; the retail till still reads
   the fixture codes (with retail); `/facility/services/promo-codes` and
   `/facility/services/packages` are orphaned fixture pages.
+
+## 2026-09-11 — retail is rows: products, stock, sales, suppliers, orders
+
+Every retail screen read `@/data/retail`: thirteen products, five suppliers,
+four purchase orders, six sales in module memory. A product created on the
+Products tab never reached the till; a cash sale wrote nothing (only a card
+charge did); stock never came off; "Adjust stock" was a no-op; Create Order
+and Save Supplier did nothing; receiving changed the fixture and threw the
+order's new status away; the Recent Sales panel was five typed-in rows.
+
+20260911180840 adds `retail_products` (variants and the editor's long tail
+in jsonb), `retail_stock_movements` (THE count: a trigger moves `stock`, the
+product row cannot move it by an edit, a new product's opening count is on
+the ledger), `retail_suppliers`, `retail_purchase_orders`
+(`receive_purchase_order` moves stock and decides the status) and
+`retail_sales`. `record_retail_sale` writes the sale, takes each line off the
+shelf and records the money — cash, e-transfer, store credit, a gift card —
+through `record_payment`, all or nothing; a Clover card charged first is
+linked by its payment id; payments that do not meet the total are refused.
+`quote_promo_code` holds the till's promo codes to the booking checkout's
+rules for the service `retail`. `supabase/tests/retail.sql` (R1–R10). The
+role editor's `retail_manage_products`, `retail_manage_inventory` and
+`retail_manage_suppliers` are consulted now (they were inert).
+
+- The till reads the facility's products, clients, bookings, gift cards and
+  store credit; charges the facility's own tax (`tax_config`); Add to
+  booking / Charge to active stay put the basket on the booking's bill (line
+  items with the product as `source_id`) and take it off the shelf. "Charge
+  to Account / Card on File" is gone (no account ledger; cards on file are a
+  fixture the charge route refuses). A card taken by the Tap to Pay
+  SIMULATOR has no payment behind it, so its sale is refused, not recorded.
+- Settings → Retail and the brand margin rules on the retail Settings tab
+  save the `retail_config` settings domain; a brand rename or merge renames
+  the brand on the real products. A supplier's portal password is never
+  stored.
+- **Still open:** refunds and returns — the card refund is real, but a return
+  does not set `retail_sales.status`, restock, or record store credit or a
+  gift card through the ledger (those three still write fixtures); account
+  discounts have no table; custom tenders cannot be recorded; the card
+  charge route stores tax inside the subtotal (`tax = 0`); the invoice-import
+  flow is hidden (its extraction was a mock); the retail Settings tab's other
+  preferences still save nothing; Settings → Retail keeps its own supplier
+  list beside `retail_suppliers`; reports, analytics, the operations calendar,
+  smart insights, `AddRetailItemModal` on the booking page and the QuickBooks
+  catalogue still read the fixture products and sales.

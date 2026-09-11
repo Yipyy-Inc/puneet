@@ -23,7 +23,13 @@ import {
   SEED_AUTHOR,
   SEED_PREFIX,
 } from "./config";
-import { CATEGORIES, INCIDENTS, NOTES, TRAINING_SERIES } from "./data";
+import {
+  CATEGORIES,
+  INCIDENTS,
+  NOTES,
+  RETAIL_PURCHASE_ORDER,
+  TRAINING_SERIES,
+} from "./data";
 
 const ROLLBACK = process.argv.includes("--rollback");
 class Rollback extends Error {}
@@ -207,6 +213,26 @@ try {
        where facility_id = ${DEMO_FACILITY_ID}
          and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
     if (promosGone.count) removed["public.promo_codes"] = promosGone.count;
+    // The seeded shelf: the open order (by its notes), the suppliers and the
+    // products by their seed key. A product's stock ledger goes with it; a
+    // sale the client rang up keeps its lines (they are copied onto the sale).
+    const posGone = await tx`
+      delete from public.retail_purchase_orders
+       where facility_id = ${DEMO_FACILITY_ID}
+         and notes = ${RETAIL_PURCHASE_ORDER.notes}`;
+    if (posGone.count) removed["public.retail_purchase_orders"] = posGone.count;
+    const suppliersGone = await tx`
+      delete from public.retail_suppliers
+       where facility_id = ${DEMO_FACILITY_ID}
+         and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (suppliersGone.count)
+      removed["public.retail_suppliers"] = suppliersGone.count;
+    const productsGone = await tx`
+      delete from public.retail_products
+       where facility_id = ${DEMO_FACILITY_ID}
+         and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (productsGone.count)
+      removed["public.retail_products"] = productsGone.count;
 
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even

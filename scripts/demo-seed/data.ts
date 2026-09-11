@@ -1656,3 +1656,110 @@ export const PROMO_CODES = [
     validDays: 45,
   },
 ];
+
+// ── Retail (20260911180840) ────────────────────────────────────────────────
+// The shelf behind the till: products with an opening count (written to the
+// stock ledger by the database), two suppliers and one open purchase order.
+// No sales are seeded — a sale is money, and money cannot be taken back out.
+export const RETAIL_PRODUCTS = [
+  {
+    sku: "PC-KIB-LG",
+    name: "Grain-free kibble, 11 kg",
+    category: "Food",
+    brand: "Acana",
+    price: 104.99,
+    cost: 68,
+    stock: 14,
+    minStock: 5,
+  },
+  {
+    sku: "PC-KIB-SM",
+    name: "Grain-free kibble, 2 kg",
+    category: "Food",
+    brand: "Acana",
+    price: 29.99,
+    cost: 18.5,
+    stock: 22,
+    minStock: 8,
+  },
+  {
+    sku: "PC-TRT-SAL",
+    name: "Salmon training treats",
+    category: "Treats",
+    brand: "Zuke's",
+    price: 11.49,
+    cost: 6.2,
+    stock: 40,
+    minStock: 12,
+  },
+  {
+    sku: "PC-TRT-CHW",
+    name: "Bully sticks, 6-pack",
+    category: "Treats",
+    brand: "Pawstruck",
+    price: 18.99,
+    cost: 10.4,
+    stock: 4,
+    minStock: 6,
+  },
+  {
+    sku: "PC-LSH-6FT",
+    name: "Rope leash, 6 ft",
+    category: "Accessories",
+    brand: "Paws & Co",
+    price: 24.0,
+    cost: 9.5,
+    stock: 11,
+    minStock: 4,
+  },
+  {
+    sku: "PC-SHM-OAT",
+    name: "Oatmeal shampoo, 500 ml",
+    category: "Grooming",
+    brand: "Earthbath",
+    price: 16.5,
+    cost: 8.75,
+    stock: 9,
+    minStock: 4,
+  },
+  {
+    sku: "PC-TOY-KNG",
+    name: "Classic chew toy, medium",
+    category: "Toys",
+    brand: "Kong",
+    price: 17.99,
+    cost: 9.1,
+    stock: 3,
+    minStock: 5,
+  },
+];
+
+export const RETAIL_SUPPLIERS = [
+  {
+    name: "Distribution Animalerie Québec",
+    contactName: "Martine Lafleur",
+    email: "orders@example.invalid",
+    phone: "+1 514 555-0181",
+    paymentTerms: "Net 30",
+    leadTimeDays: 5,
+  },
+  {
+    name: "Pet Supply Wholesale Canada",
+    contactName: "Owen Price",
+    email: "wholesale@example.invalid",
+    phone: "+1 514 555-0182",
+    paymentTerms: "Net 15",
+    leadTimeDays: 8,
+  },
+];
+
+/** The open order: to the first supplier, for the two products running low. */
+export const RETAIL_PURCHASE_ORDER = {
+  supplier: 0,
+  lines: [
+    { sku: "PC-TRT-CHW", quantity: 18 },
+    { sku: "PC-TOY-KNG", quantity: 12 },
+  ],
+  expectedInDays: 4,
+  notes: "Restock before the weekend open house.",
+};

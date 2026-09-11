@@ -75,16 +75,10 @@ import {
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  purchaseOrders,
-  suppliers,
-  products,
-  getActiveSuppliers,
-  getPendingOrders,
   createReturn,
   createStoreCredit,
   createGiftCard,
   customPaymentMethods,
-  inventoryMovements,
   type PurchaseOrder,
   type Supplier,
   type PurchaseOrderItem,
@@ -95,10 +89,6 @@ import {
   type RefundMethod,
   type ReturnReason,
   type CartItem,
-  getAllTransactions,
-  type InventoryMovement,
-  type Product,
-  type ProductVariant,
   type PricingMethod,
 } from "@/data/retail";
 // `processFiservRefund` and the two transaction lookups that fed it are gone
@@ -115,7 +105,20 @@ import {
 } from "@/lib/api/retail-payments";
 import { sellingFromMargin } from "@/lib/retail-pricing";
 import { resolveBrandRule } from "@/lib/api/retail";
-import { retailConfig } from "@/data/retail-config";
+import { useRetailConfig } from "@/hooks/use-retail-config";
+import {
+  usePurchaseOrders,
+  useReceivePurchaseOrder,
+  useRetailProducts,
+  useRetailSales,
+  useSavePurchaseOrder,
+  useSaveRetailProduct,
+  useSaveSupplier,
+  useSuppliers,
+} from "@/lib/api/retail-store";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
+import { toast } from "sonner";
 import { InvoiceImportDialog } from "@/components/retail/InvoiceImportDialog";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
@@ -318,8 +321,37 @@ export default function OrdersPage() {
   });
   const [showPortalPassword, setShowPortalPassword] = useState(false);
 
-  const activeSuppliers = getActiveSuppliers();
-  const pendingOrders = getPendingOrders();
+  // ── ORDERS AND SUPPLIERS ARE THE FACILITY'S ─────────────────────────────
+  //
+  // Purchase orders, suppliers and the products an order can hold were
+  // `purchaseOrders`, `suppliers` and `products` from @/data/retail. Create
+  // Order and Save Supplier closed their dialogs and saved nothing; the order
+  // form's quantity boxes were bound to nothing; receiving pushed onto the
+  // fixture and threw the order's new status away. They are rows now
+  // (20260911180840): an order is created, a supplier saved, and receiving is
+  // receive_purchase_order — stock onto the ledger, the status the
+  // database's own.
+  const { t: tR, fill: fillR } = useStaffText("retailStore");
+  const retailConfig = useRetailConfig().config;
+  const products = useRetailProducts().data ?? NO_ITEMS;
+  const purchaseOrders = usePurchaseOrders().data ?? NO_ITEMS;
+  const suppliers = useSuppliers().data ?? NO_ITEMS;
+  const retailSales = useRetailSales().data ?? NO_ITEMS;
+  const saveOrder = useSavePurchaseOrder();
+  const saveSupplier = useSaveSupplier();
+  const receiveOrder = useReceivePurchaseOrder();
+  const saveProduct = useSaveRetailProduct();
+  const [orderQuantities, setOrderQuantities] = useState<
+    Record<string, number>
+  >({});
+  const activeSuppliers = suppliers.filter((x) => x.status === "active");
+  const pendingOrders = purchaseOrders.filter(
+    (o) =>
+      o.status === "pending" ||
+      o.status === "ordered" ||
+      o.status === "shipped" ||
+      o.status === "partially_received",
+  );
   // ── THE SALES THAT ACTUALLY HAPPENED ──────────────────────────────────
   //
   // `getAllTransactions()` reads a module array in `src/data/retail.ts` that is
@@ -331,17 +363,35 @@ export default function OrdersPage() {
   const queryClient = useQueryClient();
   const { data: realSales = [] } = useQuery(retailSaleQueries.all());
 
-  const realTransactions = useMemo(
-    () => realSales.map(saleAsTransaction),
-    [realSales],
-  );
+  // A counter payment that paid for a till sale is named by that sale — its
+  // number and what was on it — rather than "Counter sale".
+  const realTransactions = useMemo(() => {
+    const saleByPayment = new Map<string, Transaction>();
+    for (const sale of retailSales) {
+      for (const paymentId of (sale as Transaction & { paymentIds?: string[] })
+        .paymentIds ?? []) {
+        saleByPayment.set(paymentId, sale);
+      }
+    }
+    return realSales.map((row) => {
+      const txn = saleAsTransaction(row);
+      const sale = saleByPayment.get(row.paymentId);
+      if (!sale) return txn;
+      return {
+        ...txn,
+        transactionNumber: sale.transactionNumber,
+        items: txn.items.map((line) => ({
+          ...line,
+          productName: sale.items
+            .map((i) => `${i.productName} ×${i.quantity}`)
+            .join(", "),
+        })),
+      };
+    });
+  }, [realSales, retailSales]);
 
-  // Real first: a sale somebody can actually give money back for outranks a
-  // fixture that will vanish on refresh.
-  const allTransactions = useMemo(
-    () => [...realTransactions, ...getAllTransactions()],
-    [realTransactions],
-  );
+  // The fixture's sales are gone: every row here is money that moved.
+  const allTransactions = realTransactions;
 
   const handleCreateOrder = () => {
     setOrderForm({
@@ -787,13 +837,91 @@ ${outcome.message}`);
   };
 
   const handleSaveOrder = () => {
-    // In a real app, this would save to the backend
-    setIsOrderModalOpen(false);
+    const supplier = suppliers.find((x) => x.id === orderForm.supplierId);
+    const items = products
+      .filter((p) => (orderQuantities[p.id] ?? 0) > 0)
+      .map((p) => ({
+        productId: p.id,
+        productName: p.name,
+        sku: p.sku,
+        quantity: orderQuantities[p.id],
+        unitCost: p.baseCostPrice,
+        totalCost: orderQuantities[p.id] * p.baseCostPrice,
+        receivedQuantity: 0,
+      }));
+    if (items.length === 0) {
+      toast.error(tR("orderNeedsLines"));
+      return;
+    }
+    saveOrder.mutate(
+      {
+        order: {
+          supplierId: orderForm.supplierId,
+          supplierName: supplier?.name ?? "",
+          status: "ordered",
+          expectedDelivery: orderForm.expectedDelivery,
+          notes: orderForm.notes,
+          items,
+        },
+      },
+      {
+        onSuccess: (order) => {
+          toast.success(
+            fillR("orderCreated", {
+              number: order.orderNumber,
+              count: items.length,
+            }),
+          );
+          setOrderQuantities({});
+          setIsOrderModalOpen(false);
+        },
+        onError: (error) =>
+          toast.error(tR("orderNotCreated"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
+  // The portal password is not kept: a supplier's login in plain text beside
+  // its phone number is a credential nobody meant to store. The rest is.
   const handleSaveSupplier = () => {
-    // In a real app, this would save to the backend
-    setIsSupplierModalOpen(false);
+    const {
+      portalUrl,
+      portalUsername,
+      portalPassword: _portalPassword,
+      ...fields
+    } = supplierForm;
+    saveSupplier.mutate(
+      {
+        id: editingSupplier?.id,
+        supplier: {
+          ...fields,
+          preferredPaymentMethod: (fields.preferredPaymentMethod ||
+            undefined) as Supplier["preferredPaymentMethod"],
+          ...(portalUrl || portalUsername
+            ? {
+                orderingPortal: {
+                  url: portalUrl,
+                  username: portalUsername,
+                  password: "",
+                },
+              }
+            : {}),
+          status: editingSupplier?.status ?? "active",
+        },
+      },
+      {
+        onSuccess: (saved) => {
+          toast.success(fillR("supplierSaved", { name: saved.name }));
+          setIsSupplierModalOpen(false);
+        },
+        onError: (error) =>
+          toast.error(tR("supplierNotSaved"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const handleOpenReceiveOrder = (order: PurchaseOrder) => {
@@ -842,96 +970,35 @@ ${outcome.message}`);
       return;
     }
 
-    // Update stock levels and create inventory movements
-    itemsToReceive.forEach((item) => {
-      const quantityToReceive =
-        item.newReceivedQuantity - item.receivedQuantity;
-
-      // Find product/variant
-      let product: Product | undefined;
-      let variant: ProductVariant | undefined;
-
-      if (item.variantId) {
-        product = products.find((p) => p.id === item.productId);
-        variant = product?.variants.find((v) => v.id === item.variantId);
-      } else {
-        product = products.find((p) => p.id === item.productId);
-      }
-
-      if (!product) {
-        console.error(`Product not found: ${item.productId}`);
-        return;
-      }
-
-      // Update stock
-      const previousStock = variant?.stock ?? product.stock;
-      const newStock = previousStock + quantityToReceive;
-
-      if (variant) {
-        variant.stock = newStock;
-      } else {
-        product.stock = newStock;
-      }
-
-      // Create inventory movement
-      const movement: InventoryMovement = {
-        id: `mov-${Date.now()}-${item.sku}`,
-        productId: item.productId,
-        productName: product.name,
-        variantId: item.variantId,
-        variantName: variant?.name,
-        sku: item.sku,
-        movementType: "purchase",
-        quantity: quantityToReceive,
-        previousStock,
-        newStock,
-        reason: `Purchase order received: ${selectedOrder.orderNumber}`,
-        referenceId: selectedOrder.id,
-        referenceType: "purchase_order",
-        createdBy: "Current User", // TODO: Get from auth
-        createdAt: new Date().toISOString(),
-      };
-
-      inventoryMovements.push(movement);
-    });
-
-    // Update order items with new received quantities
-    const updatedItems = selectedOrder.items.map((orderItem) => {
-      const receivingItem = receivingForm.items.find(
-        (item) => item.sku === orderItem.sku,
-      );
-      if (receivingItem) {
-        return {
-          ...orderItem,
-          receivedQuantity: receivingItem.newReceivedQuantity,
-        };
-      }
-      return orderItem;
-    });
-
-    // Update order status based on received quantities
-    const allItemsReceived = updatedItems.every(
-      (item) => item.receivedQuantity >= item.quantity,
+    // Each line that arrived is a `received` movement on the stock ledger, and
+    // the order's status is what the database decides from what has arrived
+    // in total — see receive_purchase_order (20260911180840). The fixture's
+    // stock was written in place here and the new status thrown away.
+    const order = selectedOrder;
+    receiveOrder.mutate(
+      {
+        id: order.id,
+        lines: receivingForm.items
+          .map((item, index) => ({
+            index,
+            quantity: item.newReceivedQuantity - item.receivedQuantity,
+          }))
+          .filter((line) => line.quantity > 0),
+      },
+      {
+        onSuccess: () => {
+          if (candidates.length === 0) {
+            toast.success(
+              fillR("orderReceived", { number: order.orderNumber }),
+            );
+          }
+        },
+        onError: (error) =>
+          toast.error(tR("orderNotReceived"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
     );
-    const someItemsReceived = updatedItems.some(
-      (item) => item.receivedQuantity > 0,
-    );
-
-    let updatedStatus = selectedOrder.status;
-    let updatedReceivedAt = selectedOrder.receivedAt;
-    if (allItemsReceived) {
-      updatedStatus = "received";
-      updatedReceivedAt = new Date().toISOString();
-    } else if (someItemsReceived) {
-      updatedStatus = "partially_received";
-    }
-
-    const _updatedOrder = {
-      ...selectedOrder,
-      items: updatedItems,
-      status: updatedStatus,
-      receivedAt: updatedReceivedAt,
-    };
 
     // Detect margin/brand products whose received cost differs from the stored
     // baseCostPrice — their selling price is margin-derived, so a cost change
@@ -958,7 +1025,10 @@ ${outcome.message}`);
         product.pricingMethod === "margin"
           ? sellingFromMargin(newCost, product.marginPercent ?? 0, rounding)
           : (() => {
-              const rule = resolveBrandRule(product.brand);
+              const rule = resolveBrandRule(
+                product.brand,
+                retailConfig.brandMarginRules,
+              );
               return rule
                 ? sellingFromMargin(newCost, rule.marginPercent, rounding)
                 : product.basePrice;
@@ -985,25 +1055,33 @@ ${outcome.message}`);
       // Never re-price silently — hand off to the confirmation modal.
       setCostUpdates(candidates);
       setIsCostUpdateModalOpen(true);
-    } else {
-      alert(
-        `Order ${selectedOrder.orderNumber} received successfully. Stock levels updated.`,
-      );
     }
   };
 
-  const handleApplyCostUpdates = () => {
+  const handleApplyCostUpdates = async () => {
     const now = new Date().toISOString().slice(0, 10);
-    costUpdates.forEach((c) => {
-      if (!c.checked) return;
+    for (const c of costUpdates) {
+      if (!c.checked) continue;
       const product = products.find((p) => p.id === c.productId);
-      if (!product) return;
-      product.baseCostPrice = c.newCost;
-      if (c.newSelling !== product.basePrice) {
-        product.basePrice = c.newSelling;
-        product.priceUpdatedAt = now;
+      if (!product) continue;
+      try {
+        await saveProduct.mutateAsync({
+          id: product.id,
+          product: {
+            baseCostPrice: c.newCost,
+            ...(c.newSelling !== product.basePrice
+              ? { basePrice: c.newSelling, priceUpdatedAt: now }
+              : {}),
+          },
+        });
+      } catch (error) {
+        toast.error(tR("productNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return;
       }
-    });
+    }
+    toast.success(tR("pricesUpdated"));
     setIsCostUpdateModalOpen(false);
     setCostUpdates([]);
   };
@@ -1567,7 +1645,6 @@ ${outcome.message}`);
                   >
                     View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem>Edit Order</DropdownMenuItem>
                   {(item.status === "shipped" ||
                     item.status === "ordered" ||
                     item.status === "partially_received") && (
@@ -1581,7 +1658,32 @@ ${outcome.message}`);
                     </DropdownMenuItem>
                   )}
                   {(item.status === "pending" || item.status === "ordered") && (
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() =>
+                        saveOrder.mutate(
+                          {
+                            id: item.id as string,
+                            order: { status: "cancelled" },
+                          },
+                          {
+                            onSuccess: () =>
+                              toast.success(
+                                fillR("orderCancelled", {
+                                  number: item.orderNumber as string,
+                                }),
+                              ),
+                            onError: (error) =>
+                              toast.error(tR("orderNotCancelled"), {
+                                description:
+                                  error instanceof Error
+                                    ? error.message
+                                    : undefined,
+                              }),
+                          },
+                        )
+                      }
+                    >
                       Cancel Order
                     </DropdownMenuItem>
                   )}
@@ -1652,9 +1754,40 @@ ${outcome.message}`);
                   >
                     Edit Supplier
                   </DropdownMenuItem>
-                  <DropdownMenuItem>View Orders</DropdownMenuItem>
-                  <DropdownMenuItem>Create New Order</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      handleCreateOrder();
+                      setOrderForm((prev) => ({
+                        ...prev,
+                        supplierId: item.id as string,
+                      }));
+                    }}
+                  >
+                    Create New Order
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() =>
+                      saveSupplier.mutate(
+                        {
+                          id: item.id as string,
+                          supplier: {
+                            status:
+                              item.status === "active" ? "inactive" : "active",
+                          },
+                        },
+                        {
+                          onError: (error) =>
+                            toast.error(tR("supplierNotSaved"), {
+                              description:
+                                error instanceof Error
+                                  ? error.message
+                                  : undefined,
+                            }),
+                        },
+                      )
+                    }
+                  >
                     {item.status === "active" ? "Deactivate" : "Activate"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -1717,12 +1850,17 @@ ${outcome.message}`);
                 below.
               </p>
               <div className="space-y-2 rounded-lg border p-4">
-                {products.slice(0, 5).map((product) => (
+                {products.length === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {tR("noProductsYet")}
+                  </p>
+                )}
+                {products.map((product) => (
                   <div
                     key={product.id}
-                    className="bg-muted/30 flex items-center justify-between rounded-sm border p-2"
+                    className="bg-muted/30 flex items-center justify-between gap-3 rounded-sm border p-2"
                   >
-                    <div>
+                    <div className="min-w-0">
                       <span className="font-medium">{product.name}</span>
                       <span className="text-muted-foreground ml-2 text-sm">
                         (Cost: ${product.baseCostPrice.toFixed(2)})
@@ -1732,7 +1870,18 @@ ${outcome.message}`);
                       type="number"
                       min={0}
                       placeholder="Qty"
-                      className="w-20"
+                      className="w-24"
+                      aria-label={fillR("quantityOf", { name: product.name })}
+                      value={orderQuantities[product.id] ?? ""}
+                      onChange={(e) =>
+                        setOrderQuantities((prev) => ({
+                          ...prev,
+                          [product.id]: Math.max(
+                            0,
+                            parseInt(e.target.value) || 0,
+                          ),
+                        }))
+                      }
                     />
                   </div>
                 ))}
@@ -1758,7 +1907,12 @@ ${outcome.message}`);
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveOrder}>Create Order</Button>
+            <Button
+              onClick={handleSaveOrder}
+              disabled={saveOrder.isPending || !orderForm.supplierId}
+            >
+              Create Order
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2085,7 +2239,7 @@ ${outcome.message}`);
                           })
                         }
                         placeholder="your_username"
-                        className="bg-background pr-9 pl-9"
+                        className="bg-background px-9"
                       />
                       {supplierForm.portalUsername && (
                         <button
@@ -2491,9 +2645,6 @@ ${outcome.message}`);
             >
               Close
             </Button>
-            {selectedOrder?.status === "shipped" && (
-              <Button>Mark as Received</Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -3291,6 +3442,7 @@ ${outcome.message}`);
             <Button
               onClick={handleProcessReceiving}
               disabled={
+                receiveOrder.isPending ||
                 receivingForm.items.filter(
                   (item) => item.newReceivedQuantity > item.receivedQuantity,
                 ).length === 0
@@ -3388,8 +3540,10 @@ ${outcome.message}`);
               Keep prices as-is
             </Button>
             <Button
-              onClick={handleApplyCostUpdates}
-              disabled={costUpdates.every((c) => !c.checked)}
+              onClick={() => void handleApplyCostUpdates()}
+              disabled={
+                saveProduct.isPending || costUpdates.every((c) => !c.checked)
+              }
             >
               Apply selected
             </Button>

@@ -249,6 +249,7 @@ export function PromoCodeModal({ code, onClose }: PromoCodeModalProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("allServices")}</SelectItem>
+                <SelectItem value="retail">{t("service_retail")}</SelectItem>
                 {SERVICES.map((s) => (
                   <SelectItem key={s} value={s}>
                     {t(`service_${s}`)}

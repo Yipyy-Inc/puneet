@@ -39,13 +39,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { customPaymentMethods, type CustomPaymentMethod } from "@/data/retail";
+import type { BrandMarginRule } from "@/data/retail-config";
+import { resolveBrandRule } from "@/lib/api/retail";
+import { useRetailConfig } from "@/hooks/use-retail-config";
 import {
-  customPaymentMethods,
-  products,
-  type CustomPaymentMethod,
-} from "@/data/retail";
-import { retailConfig, type BrandMarginRule } from "@/data/retail-config";
-import { retailMutations, resolveBrandRule } from "@/lib/api/retail";
+  retailKeys,
+  useRetailProducts,
+  useSaveRetailProduct,
+} from "@/lib/api/retail-store";
+import { useQueryClient } from "@tanstack/react-query";
+import { NO_ITEMS } from "@/lib/no-items";
 import { sellingFromMargin } from "@/lib/retail-pricing";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -147,10 +151,22 @@ export default function RetailSettingsPage() {
   });
 
   // ── Brand Margin Rules (spec 1.7) ─────────────────────────────────────────
+  //
+  // The rules lived in `retailConfig` (a module object) and "Apply to
+  // existing" repriced the fixture's products in place. They are part of the
+  // facility's `retail_config` now, the same the Products tab prices from,
+  // and repricing edits the real products. Read from the saved configuration
+  // every render — there is no copy here to drift from it.
   const ADD_NEW_BRAND = "__add_new_brand__";
-  const [brandRules, setBrandRules] = useState<BrandMarginRule[]>(
-    retailConfig.brandMarginRules,
-  );
+  const queryClient = useQueryClient();
+  const {
+    config: retailConfig,
+    pending: configPending,
+    save: saveRetailConfig,
+  } = useRetailConfig();
+  const products = useRetailProducts().data ?? NO_ITEMS;
+  const saveProduct = useSaveRetailProduct();
+  const brandRules = retailConfig.brandMarginRules;
   const [brandRuleModalOpen, setBrandRuleModalOpen] = useState(false);
   const [editingBrandRule, setEditingBrandRule] =
     useState<BrandMarginRule | null>(null);
@@ -169,7 +185,7 @@ export default function RetailSettingsPage() {
     products.filter(
       (p) =>
         p.pricingMethod === "brand_rule" &&
-        resolveBrandRule(p.brand)?.id === rule.id,
+        resolveBrandRule(p.brand, brandRules)?.id === rule.id,
     ).length;
 
   const openAddBrandRule = () => {
@@ -199,26 +215,32 @@ export default function RetailSettingsPage() {
     const name = brandRuleForm.brandName.trim();
     if (!name) return;
 
-    const updated = await retailMutations
-      .upsertBrandMarginRule({
-        id: editingBrandRule?.id,
-        brandName: name,
-        marginPercent: brandRuleForm.marginPercent,
-      })
-      .mutationFn();
-    setBrandRules([...updated]);
+    if (configPending) return;
+    const savedRule: BrandMarginRule = {
+      id: editingBrandRule?.id ?? `rule-${crypto.randomUUID()}`,
+      brandName: name,
+      marginPercent: brandRuleForm.marginPercent,
+    };
+    const updated = editingBrandRule
+      ? brandRules.map((r) => (r.id === savedRule.id ? savedRule : r))
+      : [...brandRules, savedRule];
+    try {
+      await saveRetailConfig({ ...retailConfig, brandMarginRules: updated });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
 
     // On "Apply to existing", recompute basePrice for every product of this
     // brand that is currently priced by brand_rule, and stamp priceUpdatedAt.
-    const savedRule = resolveBrandRule(name);
-    if (brandRuleForm.applyToExisting && savedRule) {
+    if (brandRuleForm.applyToExisting) {
       const now = new Date().toISOString().slice(0, 10);
       const rounding = retailConfig.pricingConfig.rounding;
       let affected = 0;
       for (const p of products) {
         if (
           p.pricingMethod === "brand_rule" &&
-          resolveBrandRule(p.brand)?.id === savedRule.id
+          resolveBrandRule(p.brand, updated)?.id === savedRule.id
         ) {
           const newPrice = sellingFromMargin(
             p.baseCostPrice,
@@ -226,12 +248,22 @@ export default function RetailSettingsPage() {
             rounding,
           );
           if (newPrice !== p.basePrice) {
-            p.basePrice = newPrice;
-            p.priceUpdatedAt = now;
-            affected += 1;
+            try {
+              await saveProduct.mutateAsync({
+                id: p.id,
+                product: { basePrice: newPrice, priceUpdatedAt: now },
+              });
+              affected += 1;
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : String(error),
+              );
+              break;
+            }
           }
         }
       }
+      void queryClient.invalidateQueries({ queryKey: retailKeys.all });
       toast.success(
         `Brand rule saved — repriced ${affected} product${affected === 1 ? "" : "s"}.`,
       );
@@ -246,11 +278,16 @@ export default function RetailSettingsPage() {
   };
 
   const handleDeleteBrandRule = async (rule: BrandMarginRule) => {
-    const updated = await retailMutations
-      .deleteBrandMarginRule(rule.id)
-      .mutationFn();
-    setBrandRules([...updated]);
-    toast.success("Brand rule deleted.");
+    if (configPending) return;
+    try {
+      await saveRetailConfig({
+        ...retailConfig,
+        brandMarginRules: brandRules.filter((r) => r.id !== rule.id),
+      });
+      toast.success("Brand rule deleted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const handleSave = () => {

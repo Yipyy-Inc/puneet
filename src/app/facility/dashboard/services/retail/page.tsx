@@ -102,14 +102,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
-  products,
-  getProductByBarcode,
-  getRetailStats,
-  addRetailTransaction,
-  getPromoCodeByCode,
-  getAccountDiscount,
-  applyPromoCode,
-  getStoreCreditBalance,
   type Product,
   type ProductVariant,
   type CartItem,
@@ -117,11 +109,28 @@ import {
   type CartDiscount,
   type PromoCode,
   type AccountDiscount,
-} from "@/data/retail";
-import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
-import { giftCards } from "@/data/payments";
-import { retailConfig } from "@/data/retail-config";
+} from "@/types/retail";
+import { useRetailConfig } from "@/hooks/use-retail-config";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  RetailRefused,
+  recordRetailSale,
+  quoteRetailPromo,
+  retailKeys,
+  useRetailProducts,
+  useRetailSales,
+  type RetailSaleInput,
+} from "@/lib/api/retail-store";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
+import { bookingQueries } from "@/lib/api/booking";
+import { giftCardQueries } from "@/lib/api/gift-cards";
+import { useStoreCredit } from "@/lib/api/store-credit";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { useAddLineItems } from "@/lib/api/booking-line-items";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { formatDateISO, formatTime } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
@@ -145,20 +154,26 @@ import {
 } from "@/lib/yipyy-pay-service";
 import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
 import { logPaymentAction } from "@/lib/payment-audit";
-import { syncCheckoutToQuickBooks } from "@/lib/quickbooks/checkout-sync";
 
-// Every completed sale goes through here so the QuickBooks hop lives in ONE
-// place rather than being repeated at each payment path. syncCheckoutToQuickBooks
-// never throws and never blocks — a bookkeeping problem must not fail a sale
-// the client has already paid for.
-function recordSale(
-  input: Parameters<typeof addRetailTransaction>[0],
-  options?: { staffName?: string },
-) {
-  const txn = addRetailTransaction(input);
-  syncCheckoutToQuickBooks({ facilityId: "11" }, txn, options);
-  return txn;
-}
+/** What every payment path hands to `recordSale`. */
+type SaleRecord = {
+  items: CartItem[];
+  subtotal: number;
+  discountTotal: number;
+  taxTotal: number;
+  tipAmount?: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  payments: { method: PaymentMethod; amount: number }[];
+  customerId?: string;
+  promoCodeUsed?: string;
+  notes?: string;
+  cashierName?: string;
+  /** The ledger rows a Clover card charge already wrote, to link. */
+  cardPaymentIds?: string[];
+  /** The rest of what the payment paths describe a sale with. */
+  [detail: string]: unknown;
+};
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -190,6 +205,44 @@ export default function POSPage() {
   const lastProcessedScanRef = useRef({ code: "", at: 0 });
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+
+  // ── THE TILL READS AND WRITES THE FACILITY'S ROWS ─────────────────────
+  //
+  // The catalogue was `products` from @/data/retail, the client picker
+  // `clients` from @/data/clients, the bookings `@/data/bookings`, the gift
+  // cards `@/data/payments` and the promo codes two 2024 fixtures — and a
+  // completed cash sale was `addRetailTransaction`, a push onto a module
+  // array. Every sale is `record_retail_sale` now (20260911180840): the sale,
+  // each line off the shelf, and the money, in one transaction; a Clover card
+  // charged first is linked by its payment id. See `recordSale` below.
+  const { t: tR, locale: tLocale } = useStaffText("retailStore");
+  // Categories (and which are tax-exempt) and the receipt, as Settings →
+  // Retail saved them — not the module object that section used to write.
+  const retailConfig = useRetailConfig().config;
+  const queryClient = useQueryClient();
+  const products = useRetailProducts().data ?? NO_ITEMS;
+  const { clients } = useFacilityClientList();
+  const bookings = useQuery(bookingQueries.all()).data ?? NO_ITEMS;
+  const giftCardRows = useQuery(giftCardQueries.all()).data ?? NO_ITEMS;
+  const storeCreditAccounts = useStoreCredit().data?.accounts ?? NO_ITEMS;
+  const salesRows = useRetailSales().data ?? NO_ITEMS;
+  const facilityTax = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
+  const addLineItems = useAddLineItems();
+  const getStoreCreditBalance = (clientRef: string) =>
+    storeCreditAccounts.find((a) => String(a.clientRef) === clientRef)
+      ?.balance ?? 0;
+  const getProductByBarcode = (
+    code: string,
+  ): Product | ProductVariant | null => {
+    for (const product of products) {
+      if (product.barcode === code) return product;
+      for (const variant of product.variants) {
+        if (variant.barcode === code) return variant;
+      }
+    }
+    return null;
+  };
 
   const [cart, setCart] = useState<CartItemWithId[]>([]);
   const [heldSales, setHeldSales] = useState<
@@ -237,16 +290,13 @@ export default function POSPage() {
         setCustomerEmail(client.email || "");
       }
     }
-  }, [searchParams]);
+  }, [searchParams, clients]);
 
   // Check for account discount when client is selected
   useEffect(() => {
-    if (selectedClientId && selectedClientId !== "__walk_in__") {
-      const accDiscount = getAccountDiscount(selectedClientId);
-      setAccountDiscount(accDiscount);
-    } else {
-      setAccountDiscount(null);
-    }
+    // Account discounts were `accountDiscounts` from @/data/retail — one
+    // fixture row, and no table behind it. None applies until one exists.
+    setAccountDiscount(null);
   }, [selectedClientId]);
 
   const [discountForm, setDiscountForm] = useState({
@@ -411,7 +461,27 @@ export default function POSPage() {
   const [tapToPayResponse, setTapToPayResponse] =
     useState<YipyyPayResponse | null>(null);
 
-  const stats = getRetailStats();
+  const todayIso = formatDateISO(new Date());
+  const todaysSales = salesRows.filter(
+    (sale) =>
+      sale.status === "completed" &&
+      formatDateISO(new Date(sale.createdAt)) === todayIso,
+  );
+  const lowStockCount = products.filter((p) =>
+    p.hasVariants
+      ? p.variants.some((v) => v.stock <= v.minStock)
+      : p.stock <= p.minStock,
+  ).length;
+  const stats = {
+    todayRevenue: todaysSales.reduce((sum, sale) => sum + sale.total, 0),
+    todayTransactions: todaysSales.length,
+    todayItems: todaysSales.reduce(
+      (sum, sale) => sum + sale.items.reduce((n, i) => n + i.quantity, 0),
+      0,
+    ),
+    lowStockCount,
+    pendingAlerts: lowStockCount,
+  };
 
   // Calculate subtotal (before any discounts)
   const subtotal = cart.reduce(
@@ -530,9 +600,12 @@ export default function POSPage() {
           taxableSubtotal - discountTotal * (taxableSubtotal / subtotal),
         )
       : 0;
-  const taxTotal =
-    Math.round(taxableAfterDiscount * (taxConfig.defaultRate / 100) * 100) /
-    100;
+  // The facility's own tax (Settings → Taxes), the same the booking checkout
+  // charges — not the retail fixture's flat 5%.
+  const taxTotal = facilityTax.pricesIncludeTax
+    ? 0
+    : computeTax(Math.round(taxableAfterDiscount * 100), facilityTax)
+        .totalCents / 100;
 
   // Determine service type for tips configuration
   const detectedServiceType = useMemo(() => {
@@ -551,7 +624,7 @@ export default function POSPage() {
     // Check cart items for service indicators (could be extended)
     // For now, default to "retail" if no service detected
     return "retail";
-  }, [selectedBookingId]);
+  }, [selectedBookingId, bookings]);
 
   // Get tips configuration based on service type
   // Default configuration (in a real app, this would come from settings/API)
@@ -793,32 +866,52 @@ export default function POSPage() {
     setCartDiscountForm({ type: "percent", value: 0, reason: "" });
   };
 
-  const handleApplyPromoCode = () => {
+  // The code is asked of the database (quote_promo_code) — dates, limits,
+  // the retail service, the minimum — and the sale asks again, under lock,
+  // when it is rung up. The amount it quoted comes off as a fixed discount.
+  const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
-
-    const promo = getPromoCodeByCode(promoCode.trim());
-    if (!promo) {
-      alert("Invalid or expired promo code");
-      return;
+    try {
+      const quote = await quoteRetailPromo({
+        code: promoCode.trim(),
+        amount: Math.max(0, subtotal - lineItemDiscountTotal),
+        clientRef:
+          selectedClientId && /^\d+$/.test(selectedClientId)
+            ? Number(selectedClientId)
+            : undefined,
+      });
+      const promo: PromoCode = {
+        id: quote.promoCodeId,
+        code: quote.code,
+        description: "",
+        discountType: "fixed",
+        discountValue: quote.amount,
+        validFrom: "",
+        validTo: "",
+        usageCount: 0,
+        isActive: true,
+        createdBy: "",
+        createdAt: "",
+      };
+      setAppliedPromoCode(promo);
+      setCartDiscount({
+        type: "promo_code",
+        value: quote.amount,
+        promoCode: quote.code,
+        appliedBy: currentUserId || undefined,
+      });
+      setIsPromoCodeModalOpen(false);
+      setPromoCode("");
+    } catch (error) {
+      const reason = error instanceof RetailRefused ? error.reason : null;
+      toast.error(tR("promoRefused"), {
+        description: reason
+          ? tR(reason)
+          : error instanceof Error
+            ? error.message
+            : undefined,
+      });
     }
-
-    // Check minimum purchase
-    if (promo.minPurchase && subtotal < promo.minPurchase) {
-      alert(
-        `Minimum purchase of $${promo.minPurchase} required for this promo code`,
-      );
-      return;
-    }
-
-    setAppliedPromoCode(promo);
-    setCartDiscount({
-      type: "promo_code",
-      value: promo.discountValue,
-      promoCode: promo.code,
-      appliedBy: currentUserId || undefined,
-    });
-    setIsPromoCodeModalOpen(false);
-    setPromoCode("");
   };
 
   const _removeCartDiscount = () => {
@@ -895,8 +988,141 @@ export default function POSPage() {
     setEditPriceForm({ unitPrice: 0, discount: 0, discountType: "fixed" });
   };
 
+  // ── EVERY PAYMENT PATH RECORDS THROUGH HERE ─────────────────────────────
+  //
+  // Cash, e-transfer, store credit and a gift card are RECORDED with the
+  // sale; a card must already have been charged (its ledger rows are linked
+  // by id). A card taken any other way — the Tap to Pay simulator — has no
+  // payment behind it, and the sale is refused rather than recorded as paid.
+  // Throws on refusal, so no receipt is shown for a sale that was not kept.
+  const recordSale = async (input: SaleRecord) => {
+    const cardMethods = new Set(["credit", "debit"]);
+    const hasCard = input.payments.some((p) => cardMethods.has(p.method));
+    if (hasCard && !input.cardPaymentIds?.length) {
+      throw new RetailRefused(tR("cardUnrecorded"), "card_unrecorded");
+    }
+    const payments: NonNullable<RetailSaleInput["payments"]> = [];
+    for (const p of input.payments) {
+      if (cardMethods.has(p.method)) continue;
+      if (p.method === "cash") {
+        payments.push({ method: "cash", amount: p.amount });
+      } else if (p.method === "store_credit") {
+        payments.push({ method: "store-credit", amount: p.amount });
+      } else if (p.method === "gift_card") {
+        payments.push({
+          method: "gift-card",
+          amount: p.amount,
+          giftCardCode: selectedGiftCard?.code ?? "",
+        });
+      } else {
+        throw new RetailRefused(tR("tenderUnrecorded"), "tender_unrecorded");
+      }
+    }
+    const clientRef =
+      input.customerId && /^\d+$/.test(input.customerId)
+        ? Number(input.customerId)
+        : undefined;
+    const result = await recordRetailSale({
+      items: input.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        name: item.productName,
+        variantName: item.variantName,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount,
+        total: item.total,
+      })),
+      subtotal: input.subtotal,
+      discount: input.discountTotal,
+      tax: input.taxTotal,
+      tip: input.tipAmount ?? 0,
+      total: input.total,
+      tender: input.paymentMethod,
+      clientRef,
+      paymentIds: input.cardPaymentIds ?? [],
+      payments,
+      promoCode: input.promoCodeUsed,
+      note: input.notes,
+      cashierName: input.cashierName,
+    });
+    void queryClient.invalidateQueries({ queryKey: retailKeys.all });
+    void queryClient.invalidateQueries({ queryKey: ["payments"] });
+    void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
+    void queryClient.invalidateQueries({ queryKey: ["gift-cards"] });
+    return result;
+  };
+
+  // "Add to booking" and "Charge to active stay" set a charge type that
+  // nothing read — the sale went down whichever tender was selected. The
+  // basket goes onto the booking's bill now, line by line (the booking's
+  // checkout collects it), and each product comes off the shelf.
+  const addCartToBooking = async (bookingRef: number) => {
+    await addLineItems.mutateAsync({
+      bookingRef,
+      items: cart.map((item) => ({
+        kind: "item" as const,
+        name: item.variantName
+          ? `${item.productName} — ${item.variantName}`
+          : item.productName,
+        unitPrice:
+          Math.round((item.total / Math.max(1, item.quantity)) * 100) / 100,
+        quantity: item.quantity,
+        sourceId: item.productId,
+      })),
+    });
+    for (const item of cart) {
+      if (!item.productId) continue;
+      await fetch("/api/retail/stock-movements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: item.productId,
+          variantId: item.variantId,
+          delta: -item.quantity,
+          reason: "sale",
+          note: `Booking #${bookingRef}`,
+        }),
+      });
+    }
+    void queryClient.invalidateQueries({ queryKey: retailKeys.all });
+  };
+
   const handlePayment = async () => {
     setIsProcessingPayment(true);
+
+    if (
+      (paymentForm.chargeType === "add_to_booking" ||
+        paymentForm.chargeType === "charge_to_active_stay") &&
+      paymentForm.selectedBookingId
+    ) {
+      try {
+        await addCartToBooking(paymentForm.selectedBookingId);
+        toast.success(
+          tR("addedToBooking").replace(
+            "{ref}",
+            String(paymentForm.selectedBookingId),
+          ),
+        );
+        setCart([]);
+        setCartDiscount(null);
+        setAppliedPromoCode(null);
+        setIsPaymentModalOpen(false);
+        setPaymentForm({
+          ...paymentForm,
+          chargeType: "pay_now",
+          selectedBookingId: null,
+        });
+      } catch (error) {
+        toast.error(tR("notAddedToBooking"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      } finally {
+        setIsProcessingPayment(false);
+      }
+      return;
+    }
 
     try {
       const facilityId = 11; // TODO: Get from context
@@ -1096,6 +1322,7 @@ export default function POSPage() {
                 processedPayments.push({
                   method: payment.method,
                   amount: payment.amount,
+                  transactionId: cloverResponse.transactionId,
                   cloverTransactionId: cloverResponse.cloverTransactionId,
                   fiservTransactionId: cloverResponse.transactionId, // Clover transaction ID is used as Fiserv transaction ID
                   notes: `Clover Terminal (${terminal.terminalName})`,
@@ -1163,6 +1390,7 @@ export default function POSPage() {
                 processedPayments.push({
                   method: payment.method,
                   amount: payment.amount,
+                  transactionId: fiservResponse.transactionId,
                   fiservTransactionId: fiservResponse.fiservTransactionId,
                   notes: `Card Payment (Fiserv)`,
                 });
@@ -1210,7 +1438,7 @@ export default function POSPage() {
           )
           .join(" | ");
 
-        recordSale({
+        await recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1246,6 +1474,9 @@ export default function POSPage() {
           fiservTransactionId: processedPayments.find(
             (p) => p.fiservTransactionId,
           )?.fiservTransactionId,
+          cardPaymentIds: processedPayments
+            .map((p) => p.transactionId)
+            .filter((id): id is string => !!id),
           locationId: "loc-001", // TODO: Get from context
         });
       }
@@ -1311,7 +1542,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Clover details
-        recordSale({
+        await recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1336,6 +1567,7 @@ export default function POSPage() {
           notes: `Clover Terminal (${cloverResponse.paymentMethod.toUpperCase()}): ${cloverResponse.cloverTransactionId}${cloverResponse.receiptPrinted ? " - Receipt printed" : ""}`,
           cloverTransactionId: cloverResponse.cloverTransactionId,
           fiservTransactionId: cloverResponse.transactionId, // Clover transaction ID is used as Fiserv transaction ID
+          cardPaymentIds: [cloverResponse.transactionId],
           locationId: "loc-001", // TODO: Get from context
         });
       }
@@ -1385,7 +1617,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Yipyy Pay details
-        recordSale({
+        await recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1487,7 +1719,7 @@ export default function POSPage() {
         }
 
         // Payment successful - record transaction with Fiserv details
-        recordSale({
+        await recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1516,6 +1748,9 @@ export default function POSPage() {
           notes: `Fiserv Transaction: ${fiservResponse.fiservTransactionId}`,
           fiservTransactionId: fiservResponse.fiservTransactionId,
           tokenizedCardId: fiservResponse.tokenizedCardId,
+          cardPaymentIds: fiservResponse.transactionId
+            ? [fiservResponse.transactionId]
+            : [],
           locationId: "loc-001", // TODO: Get from context
         });
       } else {
@@ -1555,7 +1790,7 @@ export default function POSPage() {
         }
 
         // Non-card payment or Fiserv not enabled - process normally
-        recordSale({
+        await recordSale({
           items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
@@ -1591,14 +1826,6 @@ export default function POSPage() {
         });
       }
 
-      // Apply promo code usage count (increment usage in data)
-      if (appliedPromoCode) {
-        const promo = getPromoCodeByCode(appliedPromoCode.code);
-        if (promo) {
-          applyPromoCode(appliedPromoCode.code);
-        }
-      }
-
       // Clear cart and discounts
       setCart([]);
       setCartDiscount(null);
@@ -1620,10 +1847,15 @@ export default function POSPage() {
       setIsPaymentModalOpen(false);
       setIsReceiptModalOpen(true);
     } catch (error) {
-      console.error("Payment processing error:", error);
-      alert(
-        "An error occurred while processing the payment. Please try again.",
-      );
+      const reason = error instanceof RetailRefused ? error.reason : null;
+      toast.error(tR("saleNotRecorded"), {
+        description:
+          reason && tR(reason) !== reason
+            ? tR(reason)
+            : error instanceof Error
+              ? error.message
+              : undefined,
+      });
     } finally {
       setIsProcessingPayment(false);
     }
@@ -1699,14 +1931,15 @@ export default function POSPage() {
 
   const filteredCustomers = useMemo(() => {
     return searchCustomers(linkSearchQuery);
-  }, [linkSearchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkSearchQuery, clients]);
 
   // Get pets for selected client
   const clientPets = useMemo(() => {
     if (!selectedClientId || selectedClientId === "__walk_in__") return [];
     const client = clients.find((c) => String(c.id) === selectedClientId);
     return client?.pets || [];
-  }, [selectedClientId]);
+  }, [selectedClientId, clients]);
 
   // Get bookings for selected client/pet
   const clientBookings = useMemo(() => {
@@ -1727,7 +1960,7 @@ export default function POSPage() {
           new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         );
       });
-  }, [selectedClientId, selectedPetId]);
+  }, [selectedClientId, selectedPetId, bookings]);
 
   // Get active stays (currently checked in) for charge to active stay option
   const activeStays = useMemo(() => {
@@ -1756,7 +1989,7 @@ export default function POSPage() {
     return checkedInBookings.sort((a, b) => {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
-  }, [selectedClientId, selectedPetId]);
+  }, [selectedClientId, selectedPetId, bookings]);
 
   // Get all bookable bookings (for "Add to Booking" option)
   const bookableBookings = useMemo(() => {
@@ -1775,7 +2008,7 @@ export default function POSPage() {
           new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         );
       });
-  }, [selectedClientId, selectedPetId]);
+  }, [selectedClientId, selectedPetId, bookings]);
 
   const filteredProducts = products.filter(
     (p) =>
@@ -2166,78 +2399,48 @@ export default function POSPage() {
               <Receipt className="text-muted-foreground size-4" />
               Recent Sales
               <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
-                5
+                {todaysSales.length}
               </span>
             </span>
             <ChevronDown className="text-muted-foreground size-4" />
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
             <div className="space-y-1.5">
-              {[
-                {
-                  id: "TXN-001",
-                  time: "2:30 PM",
-                  items: 3,
-                  total: 87.45,
-                  method: "Card",
-                },
-                {
-                  id: "TXN-002",
-                  time: "1:15 PM",
-                  items: 1,
-                  total: 24.99,
-                  method: "Cash",
-                },
-                {
-                  id: "TXN-003",
-                  time: "11:40 AM",
-                  items: 5,
-                  total: 142.5,
-                  method: "Card",
-                },
-                {
-                  id: "TXN-004",
-                  time: "10:20 AM",
-                  items: 2,
-                  total: 36.98,
-                  method: "E-Transfer",
-                },
-                {
-                  id: "TXN-005",
-                  time: "9:05 AM",
-                  items: 1,
-                  total: 54.99,
-                  method: "Card",
-                },
-              ].map((txn) => (
-                <div
-                  key={txn.id}
-                  className="bg-background flex items-center justify-between rounded-lg border px-3 py-2"
-                >
-                  <div>
-                    <p className="text-xs font-medium">{txn.id}</p>
-                    <p className="text-muted-foreground text-[10px]">
-                      {txn.time} · {txn.items} item{txn.items !== 1 ? "s" : ""}{" "}
-                      · {txn.method}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
+              {/* These five rows were typed in — "TXN-001 · 2:30 PM ·
+                  $87.45" on every till, every day — and the reprint toasted
+                  "Reprinting receipt" and printed nothing. They are today's
+                  sales now; the reprint button is gone with the fiction. */}
+              {todaysSales.length === 0 && (
+                <p className="text-muted-foreground px-1 py-2 text-xs">
+                  {tR("noSalesToday")}
+                </p>
+              )}
+              {todaysSales
+                .slice(0, 5)
+                .map((sale) => ({
+                  id: sale.transactionNumber,
+                  time: formatTime(sale.createdAt, tLocale),
+                  items: sale.items.reduce((n, i) => n + i.quantity, 0),
+                  total: sale.total,
+                  method: tR(`tender_${sale.paymentMethod}`),
+                }))
+                .map((txn) => (
+                  <div
+                    key={txn.id}
+                    className="bg-background flex items-center justify-between rounded-lg border px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-xs font-medium">{txn.id}</p>
+                      <p className="text-muted-foreground text-[10px]">
+                        {txn.time} · {txn.items} item
+                        {txn.items !== 1 ? "s" : ""} · {txn.method}
+                      </p>
+                    </div>
                     <span className="font-[tabular-nums] text-sm font-semibold">
                       ${txn.total.toFixed(2)}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[10px]"
-                      onClick={() =>
-                        toast.success(`Reprinting receipt ${txn.id}`)
-                      }
-                    >
-                      <Printer className="size-3" />
-                    </Button>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -3125,23 +3328,6 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                             </Badge>
                           </Button>
                         )}
-
-                        {/* Charge to Account */}
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start gap-2"
-                          disabled={cart.length === 0}
-                          onClick={() => {
-                            setPaymentForm({
-                              ...paymentForm,
-                              chargeType: "charge_to_account",
-                            });
-                            setIsPaymentModalOpen(true);
-                          }}
-                        >
-                          <CreditCard className="size-4" />
-                          Charge to Account / Card on File
-                        </Button>
                       </div>
                     </>
                   )}
@@ -4863,22 +5049,20 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              const facilityId = 11; // TODO: Get from context
-                              const giftCard = giftCards.find(
+                              const giftCard = giftCardRows.find(
                                 (gc) =>
                                   gc.code === selectedGiftCardCode &&
-                                  gc.facilityId === facilityId &&
-                                  gc.status === "active",
+                                  gc.effectiveStatus === "active",
                               );
                               if (giftCard) {
                                 setSelectedGiftCard({
                                   id: giftCard.id,
-                                  balance: giftCard.currentBalance,
+                                  balance: giftCard.balance,
                                   code: giftCard.code,
                                 });
-                                if (giftCard.currentBalance < grandTotal) {
+                                if (giftCard.balance < grandTotal) {
                                   alert(
-                                    `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
+                                    `Gift card balance ($${giftCard.balance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
                                   );
                                 }
                               } else {
@@ -4892,22 +5076,20 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                           type="button"
                           variant="outline"
                           onClick={() => {
-                            const facilityId = 11; // TODO: Get from context
-                            const giftCard = giftCards.find(
+                            const giftCard = giftCardRows.find(
                               (gc) =>
                                 gc.code === selectedGiftCardCode &&
-                                gc.facilityId === facilityId &&
-                                gc.status === "active",
+                                gc.effectiveStatus === "active",
                             );
                             if (giftCard) {
                               setSelectedGiftCard({
                                 id: giftCard.id,
-                                balance: giftCard.currentBalance,
+                                balance: giftCard.balance,
                                 code: giftCard.code,
                               });
-                              if (giftCard.currentBalance < grandTotal) {
+                              if (giftCard.balance < grandTotal) {
                                 alert(
-                                  `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
+                                  `Gift card balance ($${giftCard.balance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
                                 );
                               }
                             } else {
@@ -5503,7 +5685,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                             setTapToPayStatus("success");
 
                             // Record transaction
-                            recordSale({
+                            await recordSale({
                               items: cart.map(({ id: _id, ...item }) => item),
                               subtotal,
                               discountTotal,
@@ -5553,16 +5735,6 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                               notes: `Yipyy Pay Transaction: ${response.yipyyTransactionId}`,
                               yipyyPayTransactionId: response.transactionId, // Store Yipyy Pay transaction ID
                             });
-
-                            // Apply promo code usage
-                            if (appliedPromoCode) {
-                              const promo = getPromoCodeByCode(
-                                appliedPromoCode.code,
-                              );
-                              if (promo) {
-                                applyPromoCode(appliedPromoCode.code);
-                              }
-                            }
 
                             // Clear cart
                             setCart([]);
