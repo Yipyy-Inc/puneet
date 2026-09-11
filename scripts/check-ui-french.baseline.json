@@ -1051,7 +1051,7 @@
     "src/components/facility/dashboard/SmartInsightsWidget.tsx": 6,
     "src/components/facility/DaycareCheckInOutSection.tsx": 55,
     "src/components/facility/grooming/appointment-detail-page.tsx": 115,
-    "src/components/facility/grooming/appointment-panel.tsx": 54,
+    "src/components/facility/grooming/appointment-panel.tsx": 53,
     "src/components/facility/grooming/appointment-workflow-dialogs.tsx": 38,
     "src/components/facility/grooming/bulk-actions-dialog.tsx": 25,
     "src/components/facility/grooming/calendar-filters.tsx": 18,

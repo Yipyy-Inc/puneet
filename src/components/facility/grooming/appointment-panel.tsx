@@ -259,13 +259,15 @@ export function AppointmentPanel({
       : 0;
   const ownerEtaAlreadySent = etaSent || !!appointment.ownerEtaNotifiedAt;
 
-  function handleSendEtaSms() {
-    if (!appointment) return;
-    const smsBody = `${appointment.petName}'s groom is taking a little longer than expected. We'll notify you as soon as they're ready!`;
-    toast.message(`SMS sent to ${appointment.ownerName}`, {
-      description: smsBody,
-      duration: 8000,
-    });
+  // "Send ETA SMS" toasted "SMS sent" and sent nothing. There is no text
+  // sender behind this panel, so it opens the owner's email with the note
+  // written — a send the staff member actually makes.
+  function handleSendEtaEmail() {
+    if (!appointment?.ownerEmail) return;
+    const body = `${appointment.petName}'s groom is taking a little longer than expected. We'll let you know as soon as they're ready.`;
+    window.location.href = `mailto:${appointment.ownerEmail}?subject=${encodeURIComponent(
+      appointment.petName,
+    )}&body=${encodeURIComponent(body)}`;
     setEtaSent(true);
   }
   const priceAdjTotal = appointment.priceAdjustments.reduce(
@@ -410,23 +412,23 @@ export function AppointmentPanel({
                       Elapsed {elapsedMin} min of ~{sessionEstimatedMin} min
                       estimated.
                       {ownerEtaAlreadySent
-                        ? ` ETA SMS sent to ${appointment.ownerName}.`
+                        ? ` ETA email opened for ${appointment.ownerName}.`
                         : ` Send ${appointment.ownerName} a heads-up?`}
                     </p>
                   </div>
-                  {!ownerEtaAlreadySent ? (
+                  {!ownerEtaAlreadySent && appointment.ownerEmail ? (
                     <Button
                       size="sm"
-                      className="shrink-0 bg-amber-600 text-white hover:bg-amber-700"
-                      onClick={handleSendEtaSms}
+                      className="shrink-0"
+                      onClick={handleSendEtaEmail}
                     >
                       <MessageCircle className="mr-1.5 size-3.5" />
-                      Send ETA SMS
+                      Email the ETA
                     </Button>
-                  ) : (
+                  ) : !ownerEtaAlreadySent ? null : (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white">
                       <CheckCircle2 className="size-3" />
-                      ETA sent
+                      ETA emailed
                     </span>
                   )}
                 </div>
