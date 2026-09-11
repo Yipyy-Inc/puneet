@@ -2098,6 +2098,9 @@
       },
       "daycareRates": {
         "notSaved": "The rates were not saved"
+      },
+      "trainingRates": {
+        "notSaved": "The programs were not saved"
       }
     }
   },

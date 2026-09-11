@@ -1,14 +1,11 @@
-import {
-  trainerNotes,
-  progressRecords,
-  trainingPackages,
-} from "@/data/training";
+import { trainerNotes, progressRecords } from "@/data/training";
 // trainers, classes, sessions and enrollments are the facility's own — see
 // src/lib/api/training-book.ts, where they are fetched.
 import {
   fetchFacilityVaccinations,
   fetchTrainers,
   fetchTrainingBook,
+  fetchTrainingPrograms,
 } from "@/lib/api/training-book";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
@@ -106,9 +103,10 @@ export const trainingQueries = {
     queryFn: async () =>
       progressRecords.filter((p) => p.enrollmentId === enrollmentId),
   }),
+  // The facility's programs (training_programs), not @/data/training's.
   packages: () => ({
     queryKey: ["training", "packages"] as const,
-    queryFn: async () => trainingPackages,
+    queryFn: fetchTrainingPrograms,
   }),
   /** Active course types from the Course Catalog — the single source of truth
    *  for what a client can book/enroll in. The booking flow scopes its series

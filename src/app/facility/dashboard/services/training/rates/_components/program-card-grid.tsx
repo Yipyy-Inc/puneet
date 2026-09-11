@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   DndContext,
   KeyboardSensor,
@@ -17,7 +17,6 @@ import {
   rectSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { toast } from "sonner";
 import { trainingQueries } from "@/lib/api/training";
 import type { TrainingPackage } from "@/types/training";
 import { ProgramCard } from "./program-card";
@@ -27,6 +26,8 @@ interface Props {
   onToggleActive: (id: string) => void;
   onEdit: (program: TrainingPackage) => void;
   onDelete: (program: TrainingPackage) => void;
+  /** The new order, to be saved — the page owns the write. */
+  onReorder: (programs: TrainingPackage[]) => void;
 }
 
 /** Stable ordering: sortOrder ascending, then alphabetical fallback for any
@@ -45,9 +46,8 @@ export function ProgramCardGrid({
   onToggleActive,
   onEdit,
   onDelete,
+  onReorder,
 }: Props) {
-  const queryClient = useQueryClient();
-
   const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
   const { data: series = [] } = useQuery(trainingQueries.series());
 
@@ -98,11 +98,8 @@ export function ProgramCardGrid({
       (p, idx): TrainingPackage => ({ ...p, sortOrder: idx + 1 }),
     );
 
-    queryClient.setQueryData<TrainingPackage[]>(
-      ["training", "packages"],
-      reordered,
-    );
-    toast.success("Reordered — this is the new booking-page order.");
+    // This wrote the cache and toasted; the page saves it now.
+    onReorder(reordered);
   }
 
   if (ordered.length === 0) return null;

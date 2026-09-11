@@ -5,6 +5,10 @@ import {
   daycareRatesSchema,
   NO_DAYCARE_RATES,
 } from "@/lib/settings/daycare-rates";
+import {
+  NO_TRAINING_PROGRAMS,
+  trainingProgramsSchema,
+} from "@/lib/settings/training-programs";
 
 import {
   NO_LOYALTY_PROGRAM,
@@ -418,6 +422,15 @@ export const SETTING_DOMAINS = {
   // until 2026-09-11. Money, so the fallback is empty; see the banner in
   // lib/settings/daycare-rates.ts.
   daycare_rates: { schema: daycareRatesSchema, fallback: NO_DAYCARE_RATES },
+  // ── TRAINING PROGRAMS ──────────────────────────────────────────────────
+  //
+  // The priced offers on the training Rates tab. Written into the query cache
+  // until 2026-09-11 and gone on reload. Money, so the fallback is empty; see
+  // the banner in lib/settings/training-programs.ts.
+  training_programs: {
+    schema: trainingProgramsSchema,
+    fallback: NO_TRAINING_PROGRAMS,
+  },
   // ── TAGS AND NOTES ─────────────────────────────────────────────────────
   //
   // Which tag types the facility uses, what a new tag or note defaults to, and
