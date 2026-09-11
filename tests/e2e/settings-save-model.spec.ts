@@ -185,7 +185,19 @@ test.describe("the settings save model", () => {
 
     await expiry.fill(String(target));
     await expect(save).toBeEnabled();
+    // The write itself, awaited. Waiting for `data-loading` to be ABSENT was
+    // not enough: checked in the instant after the click, before React has
+    // rendered the pending state, it is already absent — and a loading button
+    // is disabled too, so the next assertion passed with the PATCH still in
+    // flight and the read below saw the old value (2026-09-11, every fresh
+    // run of this file; a trace slowed it down enough to hide it).
+    const written = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/facility/settings") &&
+        r.request().method() === "PATCH",
+    );
     await save.click();
+    expect((await written).ok(), "the save was refused").toBe(true);
 
     // SETTLED, not merely disabled: `data-loading` is the attribute Button sets
     // while writing, so its absence is what says the mutation finished.
