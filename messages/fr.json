@@ -1926,6 +1926,20 @@
         "expiredAlertMany": "{n} vaccinations sont expirées — demander une mise à jour",
         "expiringAlertOne": "{n} vaccination expire d’ici 30 jours",
         "expiringAlertMany": "{n} vaccinations expirent d’ici 30 jours"
+      },
+      "clientProfile": {
+        "nameRequired": "Un client doit avoir un nom.",
+        "savedToast": "Coordonnées du client enregistrées",
+        "saveFailed": "Les modifications n’ont pas été enregistrées",
+        "blocked": "Bloqué",
+        "cancel": "Annuler",
+        "saveClient": "Enregistrer le client",
+        "email": "Courriel",
+        "call": "Appeler",
+        "blockNotAllowed": "Votre rôle ne permet pas de bloquer ou débloquer un client ; le reste a été enregistré.",
+        "blockedToast": "{name} est bloqué",
+        "unblockedToast": "{name} est débloqué",
+        "settingsSavedToast": "Paramètres du client enregistrés"
       }
     }
   },

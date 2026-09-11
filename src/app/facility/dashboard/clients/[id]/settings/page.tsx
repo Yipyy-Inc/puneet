@@ -6,8 +6,13 @@ import {
   memberships as allMemberships,
   membershipPlans,
 } from "@/data/services-pricing";
-import { defaultCustomerSettings, type CustomerSettings } from "@/types/client";
-import { useClientRecord } from "@/lib/api/client";
+import {
+  defaultCustomerSettings,
+  type Client,
+  type CustomerSettings,
+} from "@/types/client";
+import { useClientRecord, useUpdateClient } from "@/lib/api/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   Card,
   CardContent,
@@ -123,24 +128,50 @@ export default function FacilityClientSettingsPage({
   // told they did not exist on their own file.
   const { client, pending: clientPending } = useClientRecord(clientId);
 
+  // Pending is not absent. These pages answered instantly from a fixture
+  // and never had to tell the two apart; against the database, saying the
+  // client does not exist while the request is open is a claim nobody has
+  // established.
+  if (clientPending) return null;
+
+  if (!client) {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">Client not found.</p>
+      </div>
+    );
+  }
+
+  // The form mounts once the record has arrived, and is keyed by it: its
+  // `useState` initialisers ran on the FIRST render, before the client
+  // loaded, so a blocked client opened with the switch off and the form
+  // already dirty. Saving that would have unblocked them.
+  return <ClientSettingsForm key={client.id} client={client} />;
+}
+
+function ClientSettingsForm({ client }: { client: Client }) {
+  const clientId = client.id;
+  const { t, fill } = useStaffText("clientProfile");
+  const updateClient = useUpdateClient();
+
   const initialSettings: CustomerSettings = useMemo(
     () => ({
       ...defaultCustomerSettings,
       preferredLanguage:
-        client?.preferredLanguage ?? defaultCustomerSettings.preferredLanguage,
-      ...(client?.customerSettings ?? {}),
+        client.preferredLanguage ?? defaultCustomerSettings.preferredLanguage,
+      ...(client.customerSettings ?? {}),
     }),
     [client],
   );
 
   const [settings, setSettings] = useState<CustomerSettings>(initialSettings);
   const [isBlocked, setIsBlocked] = useState<boolean>(
-    client?.isBlocked ?? false,
+    client.isBlocked ?? false,
   );
   const [blockedReason, setBlockedReason] = useState<string>(
-    client?.blockedReason ?? "",
+    client.blockedReason ?? "",
   );
-  const [isSaving, setIsSaving] = useState(false);
+  const isSaving = updateClient.isPending;
 
   const customerIdStr = String(clientId);
   const activeMembership = useMemo(
@@ -159,24 +190,10 @@ export default function FacilityClientSettingsPage({
   );
   const planInstabookServices = activePlan?.instabookServices ?? [];
 
-  // Pending is not absent. These pages answered instantly from a fixture
-  // and never had to tell the two apart; against the database, saying the
-  // client does not exist while the request is open is a claim nobody has
-  // established.
-  if (clientPending) return null;
-
-  if (!client) {
-    return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Client not found.</p>
-      </div>
-    );
-  }
-
   const dirty =
     JSON.stringify(settings) !== JSON.stringify(initialSettings) ||
-    isBlocked !== (client?.isBlocked ?? false) ||
-    blockedReason !== (client?.blockedReason ?? "");
+    isBlocked !== (client.isBlocked ?? false) ||
+    blockedReason !== (client.blockedReason ?? "");
 
   const update = (patch: Partial<CustomerSettings>) =>
     setSettings((prev) => ({ ...prev, ...patch }));
@@ -187,30 +204,49 @@ export default function FacilityClientSettingsPage({
       autoTip: { ...prev.autoTip, ...patch },
     }));
 
+  // "TODO: persist to backend" — a 600 ms timer and a toast. The block
+  // columns and the preferences (in `details.customerSettings`, which the
+  // customer's own settings page and instabook both read) go through
+  // PATCH /api/clients/[ref]; the database lets only `edit_clients` change
+  // the block and silently keeps it for anyone else, so the toast reports
+  // what came BACK, not what was sent.
   const handleSave = async () => {
-    setIsSaving(true);
+    const wasBlocked = client.isBlocked ?? false;
     try {
-      // TODO: persist to backend
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const wasBlocked = client?.isBlocked ?? false;
-      if (isBlocked !== wasBlocked) {
+      const saved = await updateClient.mutateAsync({
+        id: client.id,
+        patch: {
+          customerSettings: settings,
+          preferredLanguage: settings.preferredLanguage,
+          isBlocked,
+          blockedReason: isBlocked ? blockedReason.trim() : "",
+          ...(isBlocked !== wasBlocked
+            ? { blockedAt: isBlocked ? new Date().toISOString() : "" }
+            : {}),
+        },
+      });
+      if (Boolean(saved.isBlocked) !== isBlocked) {
+        toast.error(t("blockNotAllowed"));
+      } else if (isBlocked !== wasBlocked) {
         toast.success(
-          isBlocked
-            ? `${client?.name ?? "Client"} has been blocked`
-            : `${client?.name ?? "Client"} has been unblocked`,
+          fill(isBlocked ? "blockedToast" : "unblockedToast", {
+            name: client.name,
+          }),
         );
       } else {
-        toast.success("Customer settings updated");
+        toast.success(t("settingsSavedToast"));
       }
-    } finally {
-      setIsSaving(false);
+    } catch (error) {
+      toast.error(t("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
   const handleReset = () => {
     setSettings(initialSettings);
-    setIsBlocked(client?.isBlocked ?? false);
-    setBlockedReason(client?.blockedReason ?? "");
+    setIsBlocked(client.isBlocked ?? false);
+    setBlockedReason(client.blockedReason ?? "");
   };
 
   return (
