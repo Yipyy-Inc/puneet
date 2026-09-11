@@ -29,6 +29,7 @@ import { SQL } from "bun";
 import { bookingToRow } from "../../src/lib/api/mappers/booking";
 import { clientToRow, petToRow } from "../../src/lib/api/mappers/client";
 import { courseOf } from "../../src/lib/api/mappers/training-book";
+import { shiftInstants } from "../../src/lib/api/mappers/scheduling";
 import {
   DEMO_FACILITY_ID,
   DEMO_FACILITY_SLUG,
@@ -42,6 +43,13 @@ import {
 import {
   CATEGORIES,
   CLIENTS,
+  DEPARTMENTS,
+  GIFT_CARDS,
+  OPEN_SHIFTS,
+  POSITIONS,
+  REPORT_CARDS,
+  SHIFT_PATTERNS,
+  SHIFT_WEEKS,
   DAYCARE_PRICE,
   DAYCARE_RATES,
   ESTIMATES,
@@ -1302,6 +1310,217 @@ try {
              ${daysAgoIso(sale.daysAgo - gap * (i + 1), 10)})`;
       }
       count("packages sold");
+    }
+
+    // ── The schedule ──────────────────────────────────────────────────────
+    const departmentIds = new Map<string, string>();
+    for (const d of DEPARTMENTS) {
+      const [exists] = await tx`
+        select id from public.facility_departments
+         where facility_id = ${DEMO_FACILITY_ID} and lower(name) = lower(${d.name})`;
+      if (exists) {
+        departmentIds.set(d.name, exists.id);
+        continue;
+      }
+      const [created] = await tx`
+        insert into public.facility_departments (facility_id, name, color)
+        values (${DEMO_FACILITY_ID}, ${d.name}, ${d.color})
+        returning id`;
+      departmentIds.set(d.name, created.id);
+      count("departments");
+    }
+    const positionIds = new Map<string, string>();
+    for (const p of POSITIONS) {
+      const [exists] = await tx`
+        select id from public.facility_positions
+         where facility_id = ${DEMO_FACILITY_ID} and lower(name) = lower(${p.name})`;
+      if (exists) {
+        positionIds.set(p.name, exists.id);
+        continue;
+      }
+      const [created] = await tx`
+        insert into public.facility_positions (facility_id, department_id, name)
+        values (${DEMO_FACILITY_ID}, ${departmentIds.get(p.department)!}, ${p.name})
+        returning id`;
+      await tx`
+        insert into public.facility_position_pay
+          (position_id, facility_id, pay_type, hourly_rate)
+        values (${created.id}, ${DEMO_FACILITY_ID}, 'hourly', ${p.hourly})`;
+      positionIds.set(p.name, created.id);
+      count("positions");
+    }
+    const departmentOf = (position: string) =>
+      departmentIds.get(
+        POSITIONS.find((p) => p.name === position)!.department,
+      )!;
+    const staffRowIds: string[] = [];
+    for (const s of STAFF) {
+      const [row] = await tx`
+        select id from public.staff
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${s.legacyId}`;
+      staffRowIds.push(row.id);
+    }
+    for (const pattern of SHIFT_PATTERNS) {
+      await tx`
+        insert into public.staff_departments (staff_id, department_id, facility_id)
+        values (${staffRowIds[pattern.staff]}, ${departmentOf(pattern.position)},
+                ${DEMO_FACILITY_ID})
+        on conflict do nothing`;
+    }
+    const weekStart = shiftDay(
+      today,
+      -new Date(`${today}T12:00:00Z`).getUTCDay(),
+    );
+    const draftWeek = Math.max(...SHIFT_WEEKS);
+    for (const week of SHIFT_WEEKS) {
+      for (const pattern of SHIFT_PATTERNS) {
+        for (const day of pattern.days) {
+          const date = shiftDay(weekStart, week * 7 + day);
+          const at = shiftInstants(
+            date,
+            pattern.start,
+            pattern.end,
+            DEMO_TIMEZONE,
+          );
+          const staffId = staffRowIds[pattern.staff];
+          const [exists] = await tx`
+            select 1 from public.staff_shifts
+             where staff_id = ${staffId} and starts_at = ${at.starts_at}`;
+          if (exists) continue;
+          await tx`
+            insert into public.staff_shifts
+              (facility_id, staff_id, department_id, position_id, starts_at,
+               ends_at, break_minutes, status)
+            values
+              (${DEMO_FACILITY_ID}, ${staffId}, ${departmentOf(pattern.position)},
+               ${positionIds.get(pattern.position)!}, ${at.starts_at}, ${at.ends_at},
+               ${pattern.breakMinutes},
+               ${week === draftWeek ? "draft" : "published"}::public.shift_status)`;
+          count("shifts");
+        }
+      }
+    }
+    for (const open of OPEN_SHIFTS) {
+      const date = shiftDay(weekStart, draftWeek * 7 + open.day);
+      const at = shiftInstants(date, open.start, open.end, DEMO_TIMEZONE);
+      const [exists] = await tx`
+        select 1 from public.staff_shifts
+         where facility_id = ${DEMO_FACILITY_ID} and staff_id is null
+           and position_id = ${positionIds.get(open.position)!}
+           and starts_at = ${at.starts_at}`;
+      if (exists) continue;
+      await tx`
+        insert into public.staff_shifts
+          (facility_id, staff_id, department_id, position_id, starts_at,
+           ends_at, break_minutes, status, urgent)
+        values
+          (${DEMO_FACILITY_ID}, null, ${departmentOf(open.position)},
+           ${positionIds.get(open.position)!}, ${at.starts_at}, ${at.ends_at},
+           30, 'draft'::public.shift_status, ${open.urgent})`;
+      count("open shifts");
+    }
+
+    // ── Gift cards ────────────────────────────────────────────────────────
+    //
+    // The one place the seed steps out of `authenticated`: gift_cards has no
+    // INSERT policy and the ledger no write policy (issue_gift_card is the
+    // only door, and it stamps now()). The TRIGGERS still apply to the owner
+    // — the ledger sets the balance, a direct balance write is refused — so
+    // what goes in is a card at zero and its entries in date order, exactly
+    // what issue_gift_card and redeem_gift_card write, with their dates.
+    await tx.unsafe("reset role");
+    for (const g of GIFT_CARDS) {
+      const [exists] = await tx`
+        select 1 from public.gift_cards
+         where facility_id = ${DEMO_FACILITY_ID} and code = ${g.code}`;
+      if (exists) continue;
+      if (g.recipientEmail) assertSafeContact(g.code, g.recipientEmail);
+      const issuedAt = daysAgoIso(g.daysAgo, 13);
+      const expiresAt =
+        g.validDays === undefined
+          ? null
+          : new Date(
+              Date.parse(issuedAt) + g.validDays * 86_400_000,
+            ).toISOString();
+      const [card] = await tx`
+        insert into public.gift_cards
+          (facility_id, code, kind, initial_amount, status,
+           purchased_by_client_id, recipient_name, recipient_email, message,
+           expires_at, issued_by, issued_at, created_at)
+        values
+          (${DEMO_FACILITY_ID}, ${g.code}, ${g.kind}, ${g.amount}, 'active',
+           ${g.buyer === undefined ? null : clientIds.get(CLIENTS[g.buyer].key)!},
+           ${g.recipientName ?? null}, ${g.recipientEmail ?? null},
+           ${g.message ?? null}, ${expiresAt}, ${SEED_ACTOR_SUB}, ${issuedAt},
+           ${issuedAt})
+        returning id`;
+      await tx`
+        insert into public.gift_card_transactions
+          (gift_card_id, facility_id, kind, amount, balance_after, note,
+           created_by, created_at)
+        values
+          (${card.id}, ${DEMO_FACILITY_ID}, 'issued', ${g.amount}, 0,
+           ${g.message ?? null}, ${SEED_ACTOR_SUB}, ${issuedAt})`;
+      for (const spend of g.spends) {
+        await tx`
+          insert into public.gift_card_transactions
+            (gift_card_id, facility_id, kind, amount, balance_after, note,
+             created_by, created_at)
+          values
+            (${card.id}, ${DEMO_FACILITY_ID}, 'redeemed', ${-spend.amount}, 0,
+             ${spend.note}, ${SEED_ACTOR_SUB}, ${daysAgoIso(spend.daysAgo, 11)})`;
+      }
+      // The spend trigger stamps last_used_at with now(); give it the day.
+      const lastSpend = g.spends.at(-1);
+      if (lastSpend) {
+        await tx`
+          update public.gift_cards
+             set last_used_at = ${daysAgoIso(lastSpend.daysAgo, 11)}
+           where id = ${card.id}`;
+      }
+      count("gift cards");
+    }
+    await tx.unsafe("set local role authenticated");
+
+    // ── Report cards ──────────────────────────────────────────────────────
+    for (const rc of REPORT_CARDS) {
+      const pet = PETS.find((p) => p.pet.name === rc.pet)!;
+      const petRowId = petIds.get(pet.key)!;
+      const [exists] = await tx`
+        select 1 from public.report_cards
+         where facility_id = ${DEMO_FACILITY_ID} and input->>'demoSeedKey' = ${rc.key}`;
+      if (exists) continue;
+      const [visit] = await tx`
+        select b.id,
+               (b.start_at at time zone ${DEMO_TIMEZONE})::date::text as day
+          from public.bookings b
+          join public.booking_pets bp on bp.booking_id = b.id
+         where b.facility_id = ${DEMO_FACILITY_ID} and bp.pet_id = ${petRowId}
+           and b.service = ${rc.service} and b.status = 'completed'
+         order by b.start_at desc limit 1`;
+      const visitDate: string = visit?.day ?? shiftDay(today, -rc.daysAgo);
+      const sentAt =
+        rc.delivery === "sent" ? `${visitDate}T22:30:00.000Z` : null;
+      const readAt =
+        rc.delivery === "sent" && rc.viewed
+          ? `${shiftDay(visitDate, 1)}T12:15:00.000Z`
+          : null;
+      await tx`
+        insert into public.report_cards
+          (facility_id, pet_id, client_id, booking_id, service_type, visit_date,
+           theme, input, generated, delivery_status, sent_at, viewed_at,
+           favourite, reply_message, replied_at, rating_stars, rating_comment,
+           rating_submitted_at, created_by, created_at)
+        values
+          (${DEMO_FACILITY_ID}, ${petRowId}, ${clientIds.get(pet.ownerKey)!},
+           ${visit?.id ?? null}, ${rc.service}, ${visitDate}, 'everyday',
+           ${{ ...rc.input, demoSeedKey: rc.key }}::jsonb,
+           ${rc.generated}::jsonb, ${rc.delivery}, ${sentAt}, ${readAt},
+           ${rc.favourite ?? false}, ${rc.reply ?? null},
+           ${rc.reply && readAt ? readAt : null}, ${rc.rating?.stars ?? null},
+           ${rc.rating?.comment ?? null}, ${rc.rating && readAt ? readAt : null},
+           ${SEED_ACTOR_SUB}, ${sentAt ?? `${visitDate}T21:00:00.000Z`})`;
+      count("report cards");
     }
 
     if (ROLLBACK) {
