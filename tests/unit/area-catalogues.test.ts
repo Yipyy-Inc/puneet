@@ -42,6 +42,8 @@ const SAME_IN_BOTH = new Set([
   "staff.boardingOverview.allergies", // Allergies / Allergies
   "staff.bookingDetail.taskCatExecution", // Service / Service
   "staff.bookingDetail.taskCatTransport", // Transport / Transport
+  "staff.vaccinations.notesLabel", // Notes / Notes
+  "staff.vaccinations.statusException", // Exception / Exception
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",
   "staff.profile.tabDocuments",

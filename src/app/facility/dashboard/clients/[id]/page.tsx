@@ -13,11 +13,10 @@ import {
   getAlertStatusVariant,
   formatAlertChannel,
 } from "@/data/marketing";
-import { petPhotos, vaccinationRecords, banRecords } from "@/data/pet-data";
+import { petPhotos, banRecords } from "@/data/pet-data";
+import { useClientVaccinations } from "@/lib/api/vaccinations";
+import { expiryState, localToday } from "@/lib/vaccinations";
 import { reportCardQueries } from "@/lib/api/report-cards";
-import { sectionsOf } from "@/lib/report-cards/sections";
-import { usablePhotos } from "@/lib/report-cards/photos";
-import type { ReportCard } from "@/types/report-card";
 import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
@@ -42,8 +41,7 @@ import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { paymentQueries } from "@/lib/api/payments";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Booking, NewBooking } from "@/types/booking";
-import { useAssignedBookingRefs } from "@/lib/api/booking";
+import type { NewBooking } from "@/types/booking";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
 import type { Incident } from "@/types/incidents";
@@ -62,12 +60,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -81,15 +74,12 @@ import {
   MessageCircle,
   Download,
   ExternalLink,
-  Clock,
   CheckCircle,
   AlertCircle,
   Play,
   User,
   Dog,
   Cat,
-  Syringe,
-  Image as ImageIcon,
   Camera,
   Upload,
   Award,
@@ -180,8 +170,6 @@ export default function ClientDetailPage({
   const { refs: assignedRefs, pending: assignedPending } =
     useAssignedClientRefs(assignedClientScope);
   const resumedBookingRef = useRef<string | null>(null);
-  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
-  const [petActiveTab, setPetActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   // Grooming-appointment dialog state. Opened from the "Book Grooming" entry
@@ -237,6 +225,13 @@ export default function ClientDetailPage({
   // Every report card across this client's pets, narrowed server-side. Fetched
   // once for the whole file rather than per pet: `getPetData` below is a plain
   // function called inside a render, and a hook cannot go there.
+  // Every vaccination record across this client's pets, from Postgres. The
+  // pet cards counted `vaccinationRecords` from the fixture by numeric id.
+  const { vaccinations: clientVaccinations } = useClientVaccinations(
+    client?.id ?? 0,
+  );
+  const [today] = useState(localToday);
+
   const { data: clientReportCards = [] } = useQuery({
     ...reportCardQueries.byClient(client?.id ?? 0),
     enabled: Boolean(client),
@@ -472,19 +467,19 @@ export default function ClientDetailPage({
   // Pet modal helpers
   const getPetData = (pet: Pet) => {
     const photos = petPhotos.filter((p) => p.petId === pet.id);
-    const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
+    const vaccinations = clientVaccinations.filter((v) => v.petId === pet.id);
     const petBookingsList = clientBookings.filter((b) => b.petId === pet.id);
     const reports = clientReportCards.filter((r) => r.petRef === pet.id);
     const totalStays = petBookingsList.filter(
       (b) => b.status === "completed",
     ).length;
-    const expiredVaccinations = vaccinations.filter(
-      (v) => new Date(v.expiryDate) < new Date(),
+    // A rejected certificate did not lapse; it never counted.
+    const live = vaccinations.filter((v) => v.status !== "rejected");
+    const expiredVaccinations = live.filter(
+      (v) => expiryState(v.expiryDate, today) === "expired",
     );
-    const upcomingVaccinations = vaccinations.filter(
-      (v) =>
-        new Date(v.expiryDate) <=
-        new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    const upcomingVaccinations = live.filter(
+      (v) => expiryState(v.expiryDate, today) === "expiring",
     );
 
     // `pet.id` here is the pet's numeric ref; `tagsFor` matches it against the
@@ -514,49 +509,6 @@ export default function ClientDetailPage({
   const clientBanRecord = banRecords.find(
     (b) => b.entityType === "client" && b.entityId === client.id && b.isBanned,
   );
-
-  const getVaccinationStatus = (
-    vaccination: (typeof vaccinationRecords)[0],
-  ) => {
-    const expiryDate = new Date(vaccination.expiryDate);
-    const now = new Date();
-    const daysUntilExpiry = Math.floor(
-      (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (daysUntilExpiry < 0) {
-      return {
-        status: "expired",
-        color: "destructive",
-        days: Math.abs(daysUntilExpiry),
-      };
-    } else if (daysUntilExpiry <= 30) {
-      return {
-        status: "expiring-soon",
-        color: "warning",
-        days: daysUntilExpiry,
-      };
-    } else {
-      return { status: "valid", color: "success", days: daysUntilExpiry };
-    }
-  };
-
-  const getMoodColor = (mood: string) => {
-    switch (mood) {
-      case "happy":
-        return "bg-green-100 text-green-800";
-      case "calm":
-        return "bg-blue-100 text-blue-800";
-      case "energetic":
-        return "bg-orange-100 text-orange-800";
-      case "anxious":
-        return "bg-yellow-100 text-yellow-800";
-      case "tired":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   const handleSave = () => {
     // In a real app, this would save to the backend
@@ -595,7 +547,7 @@ export default function ClientDetailPage({
         <div className="flex min-w-0 flex-1 items-center gap-4">
           {/* Client Avatar */}
           <div className="relative">
-            <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
+            <div className="bg-muted flex size-16 items-center justify-center overflow-hidden rounded-full">
               <User className="text-muted-foreground size-8" />
             </div>
             {isEditing && (
@@ -2965,629 +2917,6 @@ export default function ClientDetailPage({
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Pet Details Modal */}
-      <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>
-        <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-6xl">
-          <div className="flex-1 overflow-y-auto p-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="sr-only">
-                {selectedPet?.name} - Pet Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedPet && (
-              <PetDetailContent
-                pet={selectedPet}
-                activeTab={petActiveTab}
-                setActiveTab={setPetActiveTab}
-                getPetData={getPetData}
-                getVaccinationStatus={getVaccinationStatus}
-                getMoodColor={getMoodColor}
-                formatDate={formatDate}
-                formatDateTime={formatDateTime}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function PetDetailContent({
-  pet,
-  activeTab,
-  setActiveTab,
-  getPetData,
-  getVaccinationStatus,
-  getMoodColor,
-  formatDate,
-  formatDateTime,
-}: {
-  pet: Pet;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  getPetData: (pet: Pet) => {
-    photos: typeof petPhotos;
-    vaccinations: typeof vaccinationRecords;
-    petBookings: Booking[];
-    reports: ReportCard[];
-    totalStays: number;
-    expiredVaccinations: typeof vaccinationRecords;
-    upcomingVaccinations: typeof vaccinationRecords;
-  };
-  getVaccinationStatus: (vaccination: (typeof vaccinationRecords)[0]) => {
-    status: string;
-    color: string;
-    days: number;
-  };
-  getMoodColor: (mood: string) => string;
-  formatDate: (dateString: string) => string;
-  formatDateTime: (dateString: string) => string;
-}) {
-  const {
-    photos,
-    vaccinations,
-    petBookings,
-    reports,
-    totalStays,
-    expiredVaccinations,
-    upcomingVaccinations,
-  } = getPetData(pet);
-
-  // Section 5C — pet-level gates.
-  // • view_pet_medical: the Medical & Diet card is only visible when granted.
-  // • add_pet_notes: "Add Note" shows only when granted, and when the key is
-  //   assigned_only, only on pets the viewer is actually assigned to.
-  const canSeePetMedical = usePermission("view_pet_medical");
-  const canAddPetNotes = usePermission("add_pet_notes");
-  const petNotesScope = useAssignedScope("add_pet_notes");
-  // Null until known — a note control that appears and then vanishes is worse
-  // than one that arrives a moment late.
-  const { petIds: assignedPetIds } = useAssignedBookingRefs(petNotesScope);
-  const petIsAssigned =
-    petNotesScope == null || (assignedPetIds?.has(pet.id) ?? false);
-  const canAddNoteForThisPet = canAddPetNotes && petIsAssigned;
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-lg">
-            {pet.type === "Dog" ? (
-              <Dog className="text-muted-foreground size-8" />
-            ) : (
-              <Cat className="text-muted-foreground size-8" />
-            )}
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">{pet.name}</h2>
-            <div className="mt-2 flex items-center gap-2">
-              <Badge variant="outline">
-                {pet.type} • {pet.breed}
-              </Badge>
-              <Badge variant="secondary">
-                {pet.age} {pet.age === 1 ? "year" : "years"}
-              </Badge>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <FileText className="mr-1 size-4" />
-            Report
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <KpiTile
-          label="Total Stays"
-          value={totalStays}
-          icon={CalendarDays}
-          tone="indigo"
-        />
-        <KpiTile
-          label="Photos"
-          value={photos.length}
-          icon={Camera}
-          tone="rose"
-        />
-        <KpiTile
-          label="Vaccinations"
-          value={vaccinations.length}
-          icon={Syringe}
-          tone="emerald"
-        />
-        <KpiTile
-          label="Report Cards"
-          value={reports.length}
-          icon={Award}
-          tone="amber"
-        />
-      </div>
-
-      {/* Alerts */}
-      {(expiredVaccinations.length > 0 || upcomingVaccinations.length > 0) && (
-        <div className="space-y-2">
-          {expiredVaccinations.length > 0 && (
-            <div className="border-destructive/20 bg-destructive/10 flex items-center gap-2 rounded-lg border p-3">
-              <AlertCircle className="text-destructive size-4" />
-              <span className="text-destructive text-sm font-medium">
-                {expiredVaccinations.length} vaccination
-                {expiredVaccinations.length > 1 ? "s" : ""} expired - Update
-                required
-              </span>
-            </div>
-          )}
-          {upcomingVaccinations.length > 0 &&
-            expiredVaccinations.length === 0 && (
-              <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <Clock className="size-4 text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-800">
-                  {upcomingVaccinations.length} vaccination
-                  {upcomingVaccinations.length > 1 ? "s" : ""} expiring within
-                  60 days
-                </span>
-              </div>
-            )}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="photos">Photos</TabsTrigger>
-          <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="history">Stay History</TabsTrigger>
-          <TabsTrigger value="reports">Report Cards</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-muted-foreground text-sm">Type</p>
-                  <p className="font-medium">{pet.type}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Breed</p>
-                  <p className="font-medium">{pet.breed}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Age</p>
-                  <p className="font-medium">
-                    {pet.age} {pet.age === 1 ? "year" : "years"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Weight</p>
-                  <p className="font-medium">{pet.weight} kg</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Color</p>
-                  <p className="font-medium">{pet.color}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm">Microchip</p>
-                  <p className="font-mono text-sm font-medium">
-                    {pet.microchip}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 5C: medical records visible only with view_pet_medical. */}
-          {canSeePetMedical && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold">
-                  Medical & Diet Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-muted-foreground mb-1 text-sm">
-                    Allergies
-                  </p>
-                  <Badge
-                    variant={
-                      pet.allergies !== "None" ? "destructive" : "secondary"
-                    }
-                  >
-                    {pet.allergies}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1 text-sm">
-                    Special Needs
-                  </p>
-                  <p className="text-sm">{pet.specialNeeds}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Photos Tab */}
-        <TabsContent value="photos" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
-                Photo Gallery
-              </CardTitle>
-              <Button variant="outline" size="sm">
-                <Upload className="mr-1 size-4" />
-                Upload Photo
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {photos.length > 0 ? (
-                <div className="grid grid-cols-3 gap-4">
-                  {photos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="group relative cursor-pointer"
-                    >
-                      <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-                        <ImageIcon className="text-muted-foreground size-12" />
-                      </div>
-                      {photo.isPrimary && (
-                        <Badge className="absolute top-2 right-2 text-xs">
-                          Primary
-                        </Badge>
-                      )}
-                      <div className="mt-2">
-                        {photo.caption && (
-                          <p className="text-muted-foreground truncate text-xs">
-                            {photo.caption}
-                          </p>
-                        )}
-                        <p className="text-muted-foreground text-xs">
-                          {formatDate(photo.uploadedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <Camera className="text-muted-foreground mx-auto mb-2 size-12" />
-                  <p className="text-muted-foreground text-sm">No photos yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notes Tab */}
-        <TabsContent value="notes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">Pet Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* 5C: "Add Note" only when add_pet_notes is granted — and, when
-                  assigned_only, only on the viewer's own assigned pets. */}
-              <NotesList
-                category="pet"
-                entityId={pet.id}
-                readOnly={!canAddNoteForThisPet}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Vaccinations Tab */}
-        <TabsContent value="vaccinations" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
-                Vaccination Records
-              </CardTitle>
-              <Button variant="outline" size="sm">
-                <Upload className="mr-1 size-4" />
-                Add Record
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {vaccinations.length > 0 ? (
-                <div className="space-y-3">
-                  {vaccinations
-                    .sort(
-                      (a, b) =>
-                        new Date(b.administeredDate).getTime() -
-                        new Date(a.administeredDate).getTime(),
-                    )
-                    .map((vacc) => {
-                      const status = getVaccinationStatus(vacc);
-                      return (
-                        <div
-                          key={vacc.id}
-                          className="bg-card space-y-2 rounded-lg border p-4"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <Syringe className="text-muted-foreground mt-1 size-4" />
-                              <div className="flex-1">
-                                <h4 className="text-sm font-semibold">
-                                  {vacc.vaccineName}
-                                </h4>
-                                {vacc.veterinarianName && (
-                                  <p className="text-muted-foreground mt-1 text-xs">
-                                    Dr. {vacc.veterinarianName}
-                                    {vacc.veterinaryClinic &&
-                                      ` • ${vacc.veterinaryClinic}`}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <Badge
-                              variant={
-                                status.status === "expired"
-                                  ? "destructive"
-                                  : status.status === "expiring-soon"
-                                    ? "default"
-                                    : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {status.status === "expired"
-                                ? "Expired"
-                                : status.status === "expiring-soon"
-                                  ? `${status.days}d left`
-                                  : "Valid"}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div>
-                              <p className="text-muted-foreground">
-                                Administered
-                              </p>
-                              <p className="font-medium">
-                                {formatDate(vacc.administeredDate)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Expires</p>
-                              <p className="font-medium">
-                                {formatDate(vacc.expiryDate)}
-                              </p>
-                            </div>
-                          </div>
-                          {vacc.notes && (
-                            <p className="text-muted-foreground border-t pt-2 text-xs">
-                              {vacc.notes}
-                            </p>
-                          )}
-                          {vacc.documentUrl && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-2 w-full"
-                            >
-                              <Download className="mr-1 size-3" />
-                              Download Certificate
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <Syringe className="text-muted-foreground mx-auto mb-2 size-12" />
-                  <p className="text-muted-foreground text-sm">
-                    No vaccination records
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Stay History Tab */}
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">
-                Stay History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {petBookings.length > 0 ? (
-                <div className="space-y-3">
-                  {petBookings
-                    .sort(
-                      (a, b) =>
-                        new Date(b.startDate).getTime() -
-                        new Date(a.startDate).getTime(),
-                    )
-                    .map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="bg-card hover:bg-muted rounded-lg border p-4 transition-colors"
-                      >
-                        <div className="mb-2 flex items-start justify-between">
-                          <div>
-                            <h4 className="flex items-center gap-2 text-sm font-semibold capitalize">
-                              {booking.service}
-                              {booking.status === "completed" && (
-                                <CheckCircle className="size-3 text-green-500" />
-                              )}
-                              {booking.status === "pending" && (
-                                <Clock className="size-3 text-yellow-500" />
-                              )}
-                            </h4>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {formatDate(booking.startDate)}
-                              {booking.startDate !== booking.endDate &&
-                                ` - ${formatDate(booking.endDate)}`}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">
-                              ${booking.totalCost}
-                            </p>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {booking.paymentStatus}
-                            </Badge>
-                          </div>
-                        </div>
-                        {booking.specialRequests && (
-                          <p className="text-muted-foreground border-t pt-2 text-xs italic">
-                            {booking.specialRequests}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <History className="text-muted-foreground mx-auto mb-2 size-12" />
-                  <p className="text-muted-foreground text-sm">
-                    No stay history
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Report Cards Tab */}
-        <TabsContent value="reports" className="space-y-4">
-          {reports.length > 0 ? (
-            reports
-              .slice()
-              .sort(
-                (a, b) =>
-                  new Date(b.visitDate).getTime() -
-                  new Date(a.visitDate).getTime(),
-              )
-              .map((report) => {
-                // What the facility actually wrote. This tab used to render
-                // `activities`, `meals` and `pottyBreaks` — arrays the report
-                // card form has never collected, so all three were empty and
-                // the card showed a header and nothing else. That day's real
-                // feeding and potty record is in the care log, not here.
-                const sections = sectionsOf(report);
-                const mood =
-                  typeof report.input.mood === "string"
-                    ? report.input.mood
-                    : "";
-                const photos = usablePhotos(report.photos);
-
-                return (
-                  <Card key={report.id}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base capitalize">
-                            {report.serviceType} Report
-                          </CardTitle>
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            {formatDate(report.visitDate)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {report.deliveryStatus !== "sent" && (
-                            <Badge variant="secondary">Draft</Badge>
-                          )}
-                          {mood && (
-                            <Badge className={getMoodColor(mood)}>{mood}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {sections.map((section) => (
-                        <div key={section.id}>
-                          <h4 className="mb-1 text-sm font-semibold">
-                            {section.label}
-                          </h4>
-                          <p className="text-muted-foreground text-sm whitespace-pre-line">
-                            {section.body}
-                          </p>
-                        </div>
-                      ))}
-
-                      {photos.length > 0 && (
-                        <div>
-                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                            <Camera className="size-4" />
-                            Photos ({photos.length})
-                          </h4>
-                          <div className="grid grid-cols-4 gap-2">
-                            {photos.map((photo) => (
-                              <div
-                                key={photo.id}
-                                className="bg-muted relative aspect-square overflow-hidden rounded-lg"
-                              >
-                                {/* The photo itself. This drew a placeholder
-                                    icon for every picture, so a facility could
-                                    never see what it had sent. A signed
-                                    private URL, so not next/image. */}
-                                {/* eslint-disable-next-line @next/next/no-img-element -- signed private URL */}
-                                <img
-                                  src={photo.url}
-                                  alt={photo.caption ?? "Report card photo"}
-                                  className="absolute inset-0 size-full object-cover"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {report.replyMessage && (
-                        <div className="border-t pt-3">
-                          <h4 className="mb-1 text-sm font-semibold">
-                            The owner replied
-                          </h4>
-                          <p className="text-muted-foreground text-sm">
-                            {report.replyMessage}
-                          </p>
-                        </div>
-                      )}
-
-                      {report.deliveryStatus === "sent" && report.sentAt && (
-                        <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
-                          <CheckCircle className="size-3" />
-                          Published to the owner&apos;s portal on{" "}
-                          {formatDateTime(report.sentAt)}
-                          {report.viewedAt
-                            ? ` · opened ${formatDateTime(report.viewedAt)}`
-                            : " · not opened yet"}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <Award className="text-muted-foreground mx-auto mb-2 size-12" />
-                <p className="text-muted-foreground text-sm">
-                  No report cards yet
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

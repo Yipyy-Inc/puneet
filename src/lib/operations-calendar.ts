@@ -3,7 +3,7 @@ import {
   getModuleWorkflowQuestionnaire,
 } from "@/data/custom-services";
 import type { Tag, TagAssignment } from "@/types/tags";
-import { vaccinationRecords } from "@/data/pet-data";
+import type { VaccinationRecord } from "@/types/pet";
 import { users } from "@/data/users";
 import { defaultServiceAddOns } from "@/data/service-addons";
 import { daycareRates } from "@/data/daycare";
@@ -403,6 +403,14 @@ interface BuildUnifiedEventsInput {
    */
   tags?: Tag[];
   tagAssignments?: TagAssignment[];
+  /**
+   * The facility's vaccination records, for the expiry chip.
+   *
+   * These were `vaccinationRecords` from `@/data/pet-data`, matched to real
+   * pets by numeric ref — a real pet wore an invented rabies warning. Rows in
+   * `public.pet_vaccinations` now, passed in for the same reason as the tags.
+   */
+  vaccinations?: VaccinationRecord[];
 }
 
 function resourceTypeLabel(type: string): string {
@@ -1036,37 +1044,36 @@ interface DecorationContext {
 
 // Per pet, the soonest-expiring *current* record (renewals supersede earlier
 // records for the same vaccine); warn when it is expired or within 30 days.
-function buildVaccinationWarnings(now: Date): Map<number, VaccinationWarning> {
-  const latestPerVaccine = new Map<
-    string,
-    (typeof vaccinationRecords)[number]
-  >();
-  for (const record of vaccinationRecords) {
+// Expiry dates compare as ISO calendar days; `new Date("2026-09-11")` is
+// midnight UTC, the evening before in Montréal.
+function buildVaccinationWarnings(
+  now: Date,
+  records: VaccinationRecord[],
+): Map<number, VaccinationWarning> {
+  const latestPerVaccine = new Map<string, VaccinationRecord>();
+  for (const record of records) {
+    // A rejected certificate is no record, and one with no expiry never lapses.
+    if (record.status === "rejected" || !record.expiryDate) continue;
     const key = `${record.petId}::${record.vaccineName}`;
     const existing = latestPerVaccine.get(key);
-    if (
-      !existing ||
-      new Date(record.expiryDate) > new Date(existing.expiryDate)
-    ) {
+    if (!existing || record.expiryDate > existing.expiryDate) {
       latestPerVaccine.set(key, record);
     }
   }
 
   const today = startOfDay(now);
-  const soonestPerPet = new Map<number, (typeof vaccinationRecords)[number]>();
+  const soonestPerPet = new Map<number, VaccinationRecord>();
   for (const record of latestPerVaccine.values()) {
     const existing = soonestPerPet.get(record.petId);
-    if (
-      !existing ||
-      new Date(record.expiryDate) < new Date(existing.expiryDate)
-    ) {
+    if (!existing || record.expiryDate < existing.expiryDate) {
       soonestPerPet.set(record.petId, record);
     }
   }
 
   const warnings = new Map<number, VaccinationWarning>();
   for (const [petId, record] of soonestPerPet) {
-    const expiry = new Date(record.expiryDate);
+    const [y, m, d] = record.expiryDate.slice(0, 10).split("-").map(Number);
+    const expiry = new Date(y, m - 1, d);
     const daysLeft = Math.ceil(
       (startOfDay(expiry).getTime() - today.getTime()) / DECORATION_DAY_MS,
     );
@@ -1116,9 +1123,10 @@ function buildDecorationContext(
   now: Date,
   clients: Client[],
   bookings: Booking[],
+  vaccinations: VaccinationRecord[],
 ): DecorationContext {
   return {
-    vaccinationWarnings: buildVaccinationWarnings(now),
+    vaccinationWarnings: buildVaccinationWarnings(now, vaccinations),
     birthdays: buildPetBirthdays(clients),
     firstBookings: buildFirstBookingDates(bookings),
   };
@@ -2089,6 +2097,7 @@ export function buildUnifiedEvents(
     new Date(),
     input.clients,
     input.bookings,
+    input.vaccinations ?? [],
   );
 
   // Built once per call rather than per event: the previous version scanned a

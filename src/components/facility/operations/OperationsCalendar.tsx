@@ -16,6 +16,7 @@ import { bookingMutations, bookingQueries } from "@/lib/api/booking";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { useFacilityVaccinations } from "@/lib/api/vaccinations";
 import { useTagCatalogue } from "@/lib/api/tags";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
@@ -864,6 +865,8 @@ export function OperationsCalendar() {
   // itself -- the same reason the grooming menu is passed in above.
   const { tags: tagCatalogue, assignments: tagAssignmentList } =
     useTagCatalogue();
+  // The vaccination expiry chip, from pet_vaccinations — same reason again.
+  const { vaccinations } = useFacilityVaccinations();
 
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
@@ -883,6 +886,7 @@ export function OperationsCalendar() {
       groomingMenu,
       tags: tagCatalogue,
       tagAssignments: tagAssignmentList,
+      vaccinations,
     });
 
     // Flip converted leads: hide the source external event, add its booking.
@@ -907,6 +911,7 @@ export function OperationsCalendar() {
     convertedLeadBookings,
     convertedLeadEventIds,
     groomingMenu,
+    vaccinations,
   ]);
 
   // Lead capture (Tasks 9–10): ingest external-calendar events → dedupe →

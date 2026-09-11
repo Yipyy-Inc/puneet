@@ -2,7 +2,8 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { vaccinationRecords } from "@/data/pet-data";
+import { useClientVaccinations } from "@/lib/api/vaccinations";
+import { expiryState, localToday } from "@/lib/vaccinations";
 import { clientCommunications } from "@/data/communications";
 import {
   memberships as allMemberships,
@@ -86,6 +87,10 @@ export default function ClientOverviewPage({
   );
   // Only so each card can show the package's refund/transfer policy.
   const { data: catalogue = [] } = useServicePackages();
+  // This client's vaccination records, from Postgres. The fixture matched
+  // them to a real pet by its numeric ref.
+  const { vaccinations } = useClientVaccinations(clientId);
+  const [today] = useState(localToday);
 
   if (!client) return null;
 
@@ -147,14 +152,14 @@ export default function ClientOverviewPage({
 
   // Pet vaccination status
   const petVacStatus = client.pets.map((pet) => {
-    const records = vaccinationRecords.filter((v) => v.petId === pet.id);
+    const records = vaccinations.filter(
+      (v) => v.petId === pet.id && v.status !== "rejected",
+    );
     const expired = records.filter(
-      (v) => new Date(v.expiryDate).getTime() < now,
+      (v) => expiryState(v.expiryDate, today) === "expired",
     );
     const expiringSoon = records.filter(
-      (v) =>
-        new Date(v.expiryDate).getTime() >= now &&
-        new Date(v.expiryDate).getTime() - now < 30 * 86400000,
+      (v) => expiryState(v.expiryDate, today) === "expiring",
     );
     return { pet, records, expired, expiringSoon };
   });

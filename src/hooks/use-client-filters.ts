@@ -1,9 +1,24 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { bookings } from "@/data/bookings";
-import { vaccinationRecords } from "@/data/pet-data";
+import { useQuery } from "@tanstack/react-query";
+
+import { bookingQueries } from "@/lib/api/booking";
+import { useFacilityVaccinations } from "@/lib/api/vaccinations";
+import { NO_ITEMS } from "@/lib/no-items";
+import { addDaysIso, expiryState, localToday } from "@/lib/vaccinations";
+import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
+
+// ── WHAT THE FOUR RECORD FILTERS READ ───────────────────────────────────────
+//
+// Services, active booking, last visit and the two vaccine filters read
+// `bookings` from `@/data/bookings` and `vaccinationRecords` from
+// `@/data/pet-data`, matched to real clients by numeric ref. So "has an active
+// booking" answered about somebody else's invented booking, and every real
+// client failed the vaccine filters for want of a record. They read the
+// facility's own bookings and `pet_vaccinations` now — and only fetch them
+// once one of those filters is switched on.
 
 // ========================================
 // Filter State Types
@@ -92,6 +107,20 @@ const DEFAULT_FILTERS: ClientFilters = {
 
 export function useClientFilters() {
   const [filters, setFilters] = useState<ClientFilters>({ ...DEFAULT_FILTERS });
+
+  const needsBookings =
+    filters.services.length > 0 ||
+    filters.hasActiveBooking !== "any" ||
+    filters.lastVisitDays !== null;
+  const needsVaccinations =
+    filters.vaccineExpired !== "any" || filters.vaccineExpiryDays !== null;
+
+  const { data: bookingData } = useQuery({
+    ...bookingQueries.all(),
+    enabled: needsBookings,
+  });
+  const bookings = (bookingData ?? NO_ITEMS) as Booking[];
+  const { vaccinations } = useFacilityVaccinations(needsVaccinations);
 
   const setFilter = useCallback(
     <K extends keyof ClientFilters>(key: K, value: ClientFilters[K]) => {
@@ -337,13 +366,14 @@ export function useClientFilters() {
         // Vaccine expired/missing
         if (filters.vaccineExpired !== "any") {
           const petIds = client.pets.map((p) => p.id);
-          const records = vaccinationRecords.filter((v) =>
-            petIds.includes(v.petId),
+          // A rejected certificate is no record at all.
+          const records = vaccinations.filter(
+            (v) => petIds.includes(v.petId) && v.status !== "rejected",
           );
-          const now = Date.now();
+          const today = localToday();
 
           const hasExpiredVaccine = records.some(
-            (record) => new Date(record.expiryDate).getTime() < now,
+            (record) => expiryState(record.expiryDate, today) === "expired",
           );
           const hasMissingVaccineRecord =
             petIds.length > 0 &&
@@ -378,20 +408,25 @@ export function useClientFilters() {
         // Vaccine expiry (day range)
         if (filters.vaccineExpiryDays !== null) {
           const petIds = client.pets.map((p) => p.id);
-          const records = vaccinationRecords.filter((v) =>
-            petIds.includes(v.petId),
+          const records = vaccinations.filter(
+            (v) =>
+              petIds.includes(v.petId) &&
+              v.status !== "rejected" &&
+              Boolean(v.expiryDate),
           );
           if (records.length === 0) return false;
-          const now = Date.now();
+          const today = localToday();
           const range = filters.vaccineExpiryDays;
           const minDays = range.min;
           const maxDays = range.max ?? range.preset;
+          // Calendar days, compared as ISO strings — see src/lib/vaccinations.ts.
           const match = records.some((v) => {
-            const daysUntil =
-              (new Date(v.expiryDate).getTime() - now) / (1000 * 60 * 60 * 24);
-            if (daysUntil < 0) return false; // already expired
-            if (maxDays != null && daysUntil > maxDays) return false;
-            if (minDays != null && daysUntil < minDays) return false;
+            const day = v.expiryDate.slice(0, 10);
+            if (day < today) return false; // already expired
+            if (maxDays != null && day > addDaysIso(today, maxDays))
+              return false;
+            if (minDays != null && day < addDaysIso(today, minDays))
+              return false;
             return true;
           });
           if (!match) return false;
@@ -400,7 +435,7 @@ export function useClientFilters() {
         return true;
       });
     },
-    [filters],
+    [filters, bookings, vaccinations],
   );
 
   return {
