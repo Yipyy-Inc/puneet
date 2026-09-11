@@ -12682,3 +12682,21 @@ staff row and writes `assigned_staff_id` / `assigned_staff_name`.
   collects are not stored — the booking carries the first groomer only; the
   price and duration overrides reach the booking's totals but not a pricing
   audit; the dialog's labels are still English (a ratchet entry).
+
+## 2026-09-11 — the grooming appointment panel writes the status it shows
+
+The calendar's appointment panel opened the same check-in, mark-ready and
+payment dialogs as the check-in board, then changed the appointment object in
+memory: a groom checked in from the calendar was still "scheduled" on the
+board, and **Cancel appointment** / **Mark no show** were toasts. It read the
+owner from the `@/data/clients` fixture by numeric id, so the payment dialog's
+tax and the check-in helpers found nobody for a real client. **Message owner**
+and **Edit** were toasts.
+
+Every transition goes through `useSetGroomingAppointmentStatus` (PATCH
+`/api/grooming/appointments`), the status toast waits for the write, and the
+owner comes from `useClientRecord`. Message owner is a `mailto:`; Edit had
+nothing behind it and is gone.
+
+- **Still open:** "Send ETA SMS" still toasts "SMS sent" and sends nothing;
+  the panel's labels are still English (ratchet entry).
