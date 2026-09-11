@@ -2759,43 +2759,45 @@ export default function POSPage() {
                             -${item.discount.toFixed(2)} discount
                           </span>
                         )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-6"
-                          onClick={() =>
-                            updateQuantity(item.id, item.quantity - 1)
-                          }
-                        >
-                          <Minus className="size-3" />
-                        </Button>
-                        <input
-                          type="number"
-                          min={1}
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!Number.isNaN(val) && val > 0) {
-                              updateQuantity(item.id, val);
+                        {/* The stepper sits under the name: beside it, the
+                            cart column left the name one letter wide. */}
+                        <div className="mt-2 flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="size-6"
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity - 1)
                             }
-                          }}
-                          onFocus={(e) => e.target.select()}
-                          className="focus:border-primary h-6 w-8 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="size-6"
-                          onClick={() =>
-                            updateQuantity(item.id, item.quantity + 1)
-                          }
-                        >
-                          <Plus className="size-3" />
-                        </Button>
+                          >
+                            <Minus className="size-3" />
+                          </Button>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!Number.isNaN(val) && val > 0) {
+                                updateQuantity(item.id, val);
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="focus:border-primary h-6 w-8 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="size-6"
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity + 1)
+                            }
+                          >
+                            <Plus className="size-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p className="text-sm font-medium">
                           ${item.total.toFixed(2)}
                         </p>
