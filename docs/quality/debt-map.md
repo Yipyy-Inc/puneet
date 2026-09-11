@@ -12925,3 +12925,18 @@ facility's own tax. The sale is `purchase_package` then `record_payment` —
   after the passes were granted is reported as such, not undone. A card taken
   through Clover is not offered here (the terminal tender records one taken
   on the facility's own device).
+
+## 2026-09-11 — the daycare rates are the facility's
+
+The daycare Rates screen copied `daycareRates` from `@/data/daycare` into
+`useState`: add, edit, toggle and delete were gone on reload, and the booking
+modal's daycare step went on reading the fixture to decide which sections a
+half day may use and which add-ons come free with it. The rates are the
+`daycare_rates` settings domain now (src/lib/settings/daycare-rates.ts —
+empty fallback, because rates are money), read and written through
+`useDaycareRates`; the booking modal reads the same list.
+
+- **Still open:** the booking price for a daycare day is still
+  `daycare_config.basePrice` (and the branch price), not the matching rate's
+  size price; the operations calendar and the report data sources still read
+  the fixture rates.

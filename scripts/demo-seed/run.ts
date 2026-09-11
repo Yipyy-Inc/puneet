@@ -41,6 +41,7 @@ import {
   CATEGORIES,
   CLIENTS,
   DAYCARE_PRICE,
+  DAYCARE_RATES,
   ESTIMATES,
   STORE_CREDIT,
   VACCINATIONS,
@@ -253,6 +254,17 @@ try {
         insert into public.daycare_location_prices (facility_id, location_id, base_price)
         values (${DEMO_FACILITY_ID}, ${l.id}, ${DAYCARE_PRICE})`;
       count("daycare prices");
+    }
+
+    // ── Daycare rates (the Rates screen) ──────────────────────────────────
+    const [haveRates] = await tx`
+      select 1 from public.facility_settings
+       where facility_id = ${DEMO_FACILITY_ID} and domain = 'daycare_rates'`;
+    if (!haveRates) {
+      await tx`
+        insert into public.facility_settings (facility_id, domain, value)
+        values (${DEMO_FACILITY_ID}, 'daycare_rates', ${{ rates: DAYCARE_RATES }}::jsonb)`;
+      count("daycare rates");
     }
 
     // ── Grooming menu ─────────────────────────────────────────────────────

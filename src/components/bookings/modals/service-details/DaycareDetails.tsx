@@ -20,7 +20,7 @@ import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
-import { daycareRates } from "@/data/daycare";
+import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { addOnPriceLabel } from "./addon-price-label";
 import {
@@ -349,6 +349,8 @@ function DaycareSectionAssignmentStep({
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
+  // The facility's rates (daycare_rates), not @/data/daycare's.
+  const { rates: daycareRates } = useDaycareRates();
   // Derive which sections the selected rate allows (empty = all sections allowed)
   const allowedSectionIds = React.useMemo<string[]>(() => {
     const firstDt = daycareDateTimes[0];
@@ -361,7 +363,7 @@ function DaycareSectionAssignmentStep({
       (r) => r.type === rateType && r.isActive,
     );
     return matchingRate?.allowedSectionIds ?? [];
-  }, [daycareDateTimes]);
+  }, [daycareDateTimes, daycareRates]);
 
   const hasRoomRestriction = allowedSectionIds.length > 0;
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
@@ -912,6 +914,8 @@ function DaycareAddOnsSubStep({
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
+  // The facility's rates (daycare_rates), not @/data/daycare's.
+  const { rates: daycareRates } = useDaycareRates();
   // Derive rate type from session duration to find included free add-ons
   const injectedRef = useRef(false);
   useEffect(() => {

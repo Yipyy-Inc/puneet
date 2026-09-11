@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
+import {
+  daycareRatesSchema,
+  NO_DAYCARE_RATES,
+} from "@/lib/settings/daycare-rates";
 
 import {
   NO_LOYALTY_PROGRAM,
@@ -407,6 +411,13 @@ export const SETTING_DOMAINS = {
     schema: dailyCareConfigSchema,
     fallback: SHIPPED_DAILY_CARE_ROUTINE,
   },
+  // ── DAYCARE RATES ──────────────────────────────────────────────────────
+  //
+  // Hourly, half day, full day… with size pricing, included add-ons and the
+  // sections each may use. The fixture's rates in the Rates screen's useState
+  // until 2026-09-11. Money, so the fallback is empty; see the banner in
+  // lib/settings/daycare-rates.ts.
+  daycare_rates: { schema: daycareRatesSchema, fallback: NO_DAYCARE_RATES },
   // ── TAGS AND NOTES ─────────────────────────────────────────────────────
   //
   // Which tag types the facility uses, what a new tag or note defaults to, and

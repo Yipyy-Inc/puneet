@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FacilityDailyCareConfig } from "@/types/boarding";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
+import type { DaycareRatesConfig } from "@/lib/settings/daycare-rates";
 import type { IvrSettings } from "@/lib/settings/ivr";
 import type {
   CallingDispatch,
@@ -127,6 +128,8 @@ export interface FacilitySettings {
    * routine, because an empty one is an empty board.
    */
   daily_care_config: SettingState<FacilityDailyCareConfig>;
+  /** The daycare rates — hourly, half day, full day… Empty until set. */
+  daycare_rates: SettingState<DaycareRatesConfig>;
   /**
    * Which tag types this facility uses, what a new tag or note defaults to,
    * and who may read, write, edit and delete a note of each category.

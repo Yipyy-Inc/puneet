@@ -2095,6 +2095,9 @@
         "paymentNote": "Package sale — {name}",
         "open": "Sell a package",
         "noneYet": "No packages yet."
+      },
+      "daycareRates": {
+        "notSaved": "The rates were not saved"
       }
     }
   },

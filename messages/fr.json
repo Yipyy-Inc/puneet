@@ -2095,6 +2095,9 @@
         "paymentNote": "Vente de forfait — {name}",
         "open": "Vendre un forfait",
         "noneYet": "Aucun forfait pour l’instant."
+      },
+      "daycareRates": {
+        "notSaved": "Les tarifs n’ont pas été enregistrés"
       }
     }
   },
