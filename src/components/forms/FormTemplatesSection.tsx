@@ -24,10 +24,8 @@ import {
 import {
   getStarterTemplates,
   getTemplatesByFacility,
-  createFormFromTemplate,
   type FormTemplate,
 } from "@/data/forms";
-import { toast } from "sonner";
 
 const TEMPLATE_META: Record<
   string,
@@ -113,16 +111,14 @@ export function FormTemplatesSection({
   const starters = getStarterTemplates();
   const facilityTemplates = getTemplatesByFacility(facilityId);
 
+  // Opens the builder SEEDED from the template; the form is created in
+  // Postgres when it is saved there. This created a form in the fixture and
+  // sent its id as `?formId=`, a parameter the builder never read — so the
+  // builder opened blank and the "created" form existed nowhere real.
   const handleUseTemplate = (template: FormTemplate) => {
-    const form = createFormFromTemplate(template.id, facilityId);
-    if (form) {
-      toast.success(
-        `Created "${form.name}" from template. You can edit and publish.`,
-      );
-      router.push(`/facility/dashboard/forms/builder?formId=${form.id}`);
-    } else {
-      toast.error("Could not create form from template.");
-    }
+    router.push(
+      `/facility/dashboard/forms/builder?new=1&templateId=${encodeURIComponent(template.id)}`,
+    );
   };
 
   const body = (

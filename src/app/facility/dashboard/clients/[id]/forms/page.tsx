@@ -2,16 +2,15 @@
 
 import { use, useMemo } from "react";
 import Link from "next/link";
-import { getFormsByFacility } from "@/data/forms";
+import { useQuery } from "@tanstack/react-query";
 import { useClientRecord } from "@/lib/api/client";
-import { getSubmissionsByFacility } from "@/data/form-submissions";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import type { Form, FormType } from "@/types/forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText, CheckCircle, Clock, ExternalLink } from "lucide-react";
-
-const FACILITY_ID = 11;
 
 const CATEGORY_LABELS: Record<FormType, string> = {
   intake: "Intake Forms",
@@ -42,32 +41,39 @@ export default function ClientFormsPage({
   // told they did not exist on their own file.
   const { client } = useClientRecord(clientId);
 
+  // The facility's published customer forms and this client's answers, from
+  // Postgres. These read the forms fixture for "facility 11" and matched
+  // fixture submissions to a real client by numeric id.
+  const { data: liveForms } = useQuery(liveFormQueries.all());
   const forms = useMemo(
     () =>
-      getFormsByFacility(FACILITY_ID).filter(
-        (f) => !f.internal && f.status !== "archived",
-      ),
-    [],
+      (liveForms ?? [])
+        .map((row) => toFlatForm(row))
+        .filter((f) => !f.internal && f.status === "published"),
+    [liveForms],
   );
 
+  const { data: submissionPayload } = useQuery(liveFormQueries.submissions());
   const submissions = useMemo(
     () =>
-      getSubmissionsByFacility(FACILITY_ID).filter(
-        (s) => s.customerId === clientId,
+      (submissionPayload?.submissions ?? []).filter(
+        (s) => s.clientRef === clientId,
       ),
-    [clientId],
+    [submissionPayload, clientId],
   );
 
   if (!client) return null;
 
-  const petIds = new Set(client.pets.map((p) => p.id));
   const completedByForm = new Map<
     string,
-    { submittedAt: string; petId?: number }
+    { submittedAt: string; petName: string | null }
   >();
   submissions.forEach((s) => {
-    const petId = s.petIds?.find((pid) => petIds.has(pid));
-    completedByForm.set(s.formId, { submittedAt: s.createdAt, petId });
+    if (!s.formId) return;
+    completedByForm.set(s.formId, {
+      submittedAt: s.submittedAt,
+      petName: s.petName,
+    });
   });
 
   const grouped = new Map<FormType, Form[]>();
@@ -134,9 +140,7 @@ export default function ClientFormsPage({
             <CardContent className="space-y-2">
               {list.map((form) => {
                 const sub = completedByForm.get(form.id);
-                const pet = sub?.petId
-                  ? client.pets.find((p) => p.id === sub.petId)
-                  : null;
+                const petName = sub?.petName ?? null;
                 return (
                   <div
                     key={form.id}
@@ -149,7 +153,7 @@ export default function ClientFormsPage({
                         <div className="text-muted-foreground text-xs">
                           {form.questions.length} question
                           {form.questions.length !== 1 ? "s" : ""}
-                          {pet && <> · For {pet.name}</>}
+                          {petName && <> · For {petName}</>}
                           {sub &&
                             ` · Submitted ${new Date(
                               sub.submittedAt,

@@ -2036,6 +2036,12 @@
         "linkCopiedShare": "Copié dans le presse-papiers :",
         "linkToShare": "Le lien à partager :",
         "clientCreated": "Un dossier client a été créé pour {name}, afin que cette estimation puisse devenir une réservation."
+      },
+      "formBuilder": {
+        "savedToast": "« {name} » est enregistré",
+        "publishedToast": "« {name} » est publié",
+        "saveFailed": "Le formulaire n’a pas été enregistré",
+        "couldNotOpen": "Ce formulaire n’a pas pu être ouvert."
       }
     }
   },

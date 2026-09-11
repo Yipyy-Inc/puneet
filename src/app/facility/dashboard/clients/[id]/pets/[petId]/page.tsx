@@ -17,8 +17,8 @@ import { VaccinationRecordRow } from "@/components/clients/vaccinations/Vaccinat
 import { reportCardQueries } from "@/lib/api/report-cards";
 import { sectionsOf } from "@/lib/report-cards/sections";
 import { usablePhotos } from "@/lib/report-cards/photos";
-import { getFormsByFacility } from "@/data/forms";
-import { getSubmissionsForPet } from "@/data/form-submissions";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
@@ -234,6 +234,10 @@ export default function PetDetailPage({
   );
   const { rules: vaccinationRules } = useVaccinationRules();
   const [today] = useState(localToday);
+  // The facility's forms and answers, from Postgres — they read the forms
+  // fixture for "facility 11" and matched fixture answers to this pet by id.
+  const { data: liveForms } = useQuery(liveFormQueries.all());
+  const { data: submissionPayload } = useQuery(liveFormQueries.submissions());
   // This client's real bookings; the stay history and the Stays tile read
   // `bookings` from `@/data/bookings` by numeric pet id.
   const { data: ownerBookings } = useQuery({
@@ -276,14 +280,19 @@ export default function PetDetailPage({
   const reports = petReportCards;
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
 
-  const FACILITY_ID = 11;
-  const petApplicableForms = getFormsByFacility(FACILITY_ID).filter(
-    (f) =>
-      !f.internal &&
-      f.status === "published" &&
-      (f.type === "pet" || f.type === "service"),
-  );
-  const petSubmissions = getSubmissionsForPet(FACILITY_ID, pet.id);
+  const petApplicableForms = (liveForms ?? [])
+    .map((row) => toFlatForm(row))
+    .filter(
+      (f) =>
+        !f.internal &&
+        f.status === "published" &&
+        (f.type === "pet" || f.type === "service"),
+    );
+  // A submission names its pet by uuid, which this screen does not hold; the
+  // owner and the pet's name together pick this pet out of the household.
+  const petSubmissions = (submissionPayload?.submissions ?? [])
+    .filter((s) => s.clientRef === client.id && s.petName === pet.name)
+    .map((s) => ({ ...s, createdAt: s.submittedAt }));
   const petCompletedFormIds = new Set(petSubmissions.map((s) => s.formId));
   const friends = relationships.filter(
     (r) =>

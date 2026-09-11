@@ -39,11 +39,7 @@ import {
   ServiceType,
   QuestionType,
   FormCondition,
-  createForm,
-  updateForm,
-  getFormById,
   getTemplateById,
-  getFormVersionHistory,
   type FieldMappingItem,
   type FormSectionDTO,
   type FormAudience,
@@ -72,6 +68,15 @@ import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
 import { VariableRichInput } from "@/components/forms/VariableRichInput";
 import { useSettings } from "@/hooks/use-settings";
+import { toast } from "sonner";
+import {
+  useCreateForm,
+  useSaveFormQuestions,
+  useUpdateForm,
+  type FormRow,
+} from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   resolveTemplate,
   getMockPreviewData,
@@ -391,8 +396,16 @@ function generateSectionId(): string {
 }
 
 export interface FormBuilderEditorProps {
-  facilityId: number;
-  initialFormId?: string | null;
+  /**
+   * The Postgres form being edited, already loaded — null for a new one. The
+   * page mounts this editor only once the row has arrived, so every
+   * `useState` below seeds from the real form.
+   *
+   * It took an id and looked it up in `@/data/forms`, which knows none of
+   * the facility's real forms: "Edit" on any of them opened a blank "new"
+   * form, and saving that wrote to the fixture.
+   */
+  liveForm: FormRow | null;
   templateId?: string | null;
   /** Pre-selects the service type for a brand-new form (e.g. grooming
    *  check-in forms created from Grooming → Settings). Ignored when editing. */
@@ -401,15 +414,22 @@ export interface FormBuilderEditorProps {
 }
 
 export function FormBuilderEditor({
-  facilityId,
-  initialFormId,
+  liveForm,
   templateId,
   defaultServiceType,
   onSave,
 }: FormBuilderEditorProps) {
   const { languageSettings } = useSettings();
-  const existing = initialFormId ? getFormById(initialFormId) : null;
+  const initialFormId = liveForm?.id ?? null;
+  // The version an author edits: the open draft, else the published one.
+  const existing: Form | null = liveForm ? toFlatForm(liveForm, true) : null;
+  // Templates are Yipyy's starter content, not a facility's data.
   const template = templateId ? getTemplateById(templateId) : null;
+  const createLiveForm = useCreateForm();
+  const updateLiveForm = useUpdateForm();
+  const saveQuestions = useSaveFormQuestions();
+  const [saving, setSaving] = useState(false);
+  const { t: builderT, fill: builderFill } = useStaffText("formBuilder");
 
   const [name, setName] = useState(existing?.name ?? template?.name ?? "");
   const [slug, setSlug] = useState(existing?.slug ?? "");
@@ -489,7 +509,21 @@ export function FormBuilderEditor({
   const i18nEnabledForForm = languageSettings.secondaryEnabled
     ? i18nEnabled
     : false;
-  const versionHistory = existing ? getFormVersionHistory(existing.id) : [];
+  // The two versions the database hands an author: what is published, and
+  // the open draft over it. Each carries its own question count.
+  const versionHistory = [liveForm?.draftVersion, liveForm?.publishedVersion]
+    .filter((v): v is NonNullable<typeof v> => Boolean(v))
+    .sort((a, b) => b.versionNumber - a.versionNumber)
+    .map((v) => ({
+      versionId: v.id,
+      versionNumber: v.versionNumber,
+      questionCount: Array.isArray(v.schema.questions)
+        ? v.schema.questions.length
+        : 0,
+      createdBy: undefined as string | undefined,
+      publishedAt: v.publishedAt,
+      createdAt: v.createdAt,
+    }));
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
 
@@ -677,106 +711,87 @@ export function FormBuilderEditor({
     setFieldMapping((prev) => prev.filter((m) => m.questionId !== questionId));
   };
 
-  const handleSave = () => {
-    if (!name.trim()) return;
-    const settings =
-      welcomeMessage || submitMessage || themeColor
-        ? {
-            welcomeMessage: welcomeMessage || undefined,
-            submitMessage: submitMessage || undefined,
-            themeColor: themeColor || undefined,
-          }
-        : undefined;
+  // ── Saving ──────────────────────────────────────────────────────────────
+  //
+  // Identity (name, slug, type, who it is for, settings) and the questions
+  // travel separately: renaming must not open a version, and changing a
+  // question must. `publish` freezes the draft this save writes — after that
+  // the only way to change the questions is another version, which the
+  // database enforces by trigger.
+  const persist = async (publish: boolean) => {
+    if (!name.trim() || saving) return;
+    const settings: Record<string, unknown> = {
+      ...(existing?.settings ?? {}),
+      welcomeMessage: welcomeMessage || undefined,
+      submitMessage: submitMessage || undefined,
+      themeColor: themeColor || undefined,
+      serviceType: serviceType || undefined,
+      scoring: scoringConfig,
+    };
     const questionsWithSection = questions.map((q) => ({
       ...q,
       sectionId: q.sectionId ?? sortedSections[0]?.id,
     }));
-    const appliesData =
-      appliesTo.petTypes?.length ||
-      appliesTo.serviceTypes?.length ||
-      appliesTo.locationIds?.length
-        ? appliesTo
-        : undefined;
-    if (existing) {
-      const updated = updateForm(existing.id, {
-        name: name.trim(),
-        slug: slug.trim() || undefined,
-        type,
-        serviceType: serviceType || undefined,
-        internal,
-        repeatPerPet,
-        requireAuth,
-        audience,
-        appliesTo: appliesData,
-        sections,
-        questions: questionsWithSection,
-        fieldMapping,
-        logicRules: formLogicRules.length ? formLogicRules : undefined,
-        settings,
+    const schema = {
+      questions: questionsWithSection,
+      sections,
+      logicRules: formLogicRules,
+      fieldMapping,
+    };
+    const who = internal ? "staff" : audience;
+    setSaving(true);
+    try {
+      let row: FormRow;
+      if (existing) {
+        await updateLiveForm.mutateAsync({
+          id: existing.id,
+          name: name.trim(),
+          ...(slug.trim() ? { slug: slug.trim() } : {}),
+          type,
+          audience: who,
+          requireAuth,
+          repeatPerPet,
+          settings,
+          appliesTo: appliesTo as Record<string, unknown>,
+        });
+        row = await saveQuestions.mutateAsync({
+          id: existing.id,
+          schema,
+          publish,
+        });
+      } else {
+        const created = await createLiveForm.mutateAsync({
+          name: name.trim(),
+          ...(slug.trim() ? { slug: slug.trim() } : {}),
+          type,
+          audience: who,
+          requireAuth,
+          repeatPerPet,
+          settings,
+          appliesTo: appliesTo as Record<string, unknown>,
+          schema,
+        });
+        row = publish
+          ? await saveQuestions.mutateAsync({ id: created.id, publish: true })
+          : created;
+      }
+      toast.success(
+        builderFill(publish ? "publishedToast" : "savedToast", {
+          name: row.name,
+        }),
+      );
+      onSave(toFlatForm(row, true));
+    } catch (error) {
+      toast.error(builderT("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
       });
-      if (updated) onSave(updated);
-    } else {
-      const created = createForm({
-        facilityId,
-        name: name.trim(),
-        slug: slug.trim(),
-        type,
-        serviceType: serviceType || undefined,
-        templateId: template?.id,
-        internal,
-        audience,
-        appliesTo: appliesData,
-        sections,
-        questions: questionsWithSection,
-        fieldMapping,
-        logicRules: formLogicRules.length ? formLogicRules : undefined,
-        repeatPerPet,
-        requireAuth,
-        settings,
-      });
-      onSave(created);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handlePublish = () => {
-    if (!name.trim() || !existing) return;
-    const settings =
-      welcomeMessage || submitMessage || themeColor
-        ? {
-            welcomeMessage: welcomeMessage || undefined,
-            submitMessage: submitMessage || undefined,
-            themeColor: themeColor || undefined,
-          }
-        : undefined;
-    const questionsWithSection = questions.map((q) => ({
-      ...q,
-      sectionId: q.sectionId ?? sortedSections[0]?.id,
-    }));
-    const appliesData =
-      appliesTo.petTypes?.length ||
-      appliesTo.serviceTypes?.length ||
-      appliesTo.locationIds?.length
-        ? appliesTo
-        : undefined;
-    const updated = updateForm(existing.id, {
-      name: name.trim(),
-      slug: slug.trim() || undefined,
-      type,
-      serviceType: serviceType || undefined,
-      internal,
-      repeatPerPet,
-      requireAuth,
-      audience,
-      appliesTo: appliesData,
-      sections,
-      questions: questionsWithSection,
-      fieldMapping,
-      logicRules: formLogicRules.length ? formLogicRules : undefined,
-      settings,
-      status: "published",
-    });
-    if (updated) onSave(updated);
-  };
+  const handleSave = () => void persist(false);
+  const handlePublish = () => void persist(true);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -785,18 +800,13 @@ export function FormBuilderEditor({
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Form settings</CardTitle>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={handleSave}>
+              <Button variant="outline" onClick={handleSave} disabled={saving}>
                 <Save className="mr-2 size-4" />
                 Save
               </Button>
-              {existing && (
-                <Button
-                  onClick={handlePublish}
-                  disabled={existing?.status === "published"}
-                >
-                  Publish
-                </Button>
-              )}
+              <Button onClick={handlePublish} disabled={saving}>
+                Publish
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
