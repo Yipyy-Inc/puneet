@@ -1014,3 +1014,253 @@ export const INCIDENTS: SeedIncident[] = [
     ownerTold: true,
   },
 ];
+
+// ── Vaccination records ───────────────────────────────────────────────────
+//
+// Every animal has the facility's required vaccines on file, most of them
+// current — the realistic picture — with the handful of cases a front desk
+// actually meets: one expiring this month, one already lapsed, one waiting
+// for somebody to look at it, one rejected and one accepted by exception.
+// Vaccine names match the shipped requirement list, so "missing required"
+// reads true.
+
+export type SeedVaccination = {
+  pet: string;
+  vaccine: string;
+  givenDaysAgo: number;
+  /** Null for a record with no expiry. */
+  expiresInDays: number | null;
+  status: "approved" | "pending_review" | "rejected" | "exception";
+  reason?: string;
+  vet: string;
+  clinic: string;
+};
+
+const VETS = [
+  ["Dr Amélie Roy", "Clinique vétérinaire du Plateau"],
+  ["Dr Marc Tessier", "Hôpital vétérinaire Rosemont"],
+  ["Dr Julia Chen", "Westmount Animal Clinic"],
+] as const;
+
+const DOG_VACCINES = ["Rabies", "DHPP", "Bordetella"];
+const CAT_VACCINES = ["Rabies", "FVRCP"];
+
+/** The exceptions, by pet index and vaccine; everything else is current. */
+const VACCINE_CASES: Record<
+  string,
+  Partial<Pick<SeedVaccination, "expiresInDays" | "status" | "reason">>
+> = {
+  "2:Bordetella": { expiresInDays: 12 },
+  "5:Rabies": { expiresInDays: -9 },
+  "7:DHPP": { status: "pending_review" },
+  "9:Bordetella": {
+    status: "rejected",
+    reason:
+      "The certificate is a photo of a screen — ask for the clinic’s PDF.",
+  },
+  "11:Bordetella": {
+    status: "exception",
+    reason:
+      "Booster given three weeks ago; the clinic is sending the paperwork.",
+  },
+  "14:FVRCP": { expiresInDays: 21 },
+};
+
+export const VACCINATIONS: SeedVaccination[] = PETS.flatMap((p, i) => {
+  const names = p.pet.type === "Cat" ? CAT_VACCINES : DOG_VACCINES;
+  const [vet, clinic] = VETS[i % VETS.length];
+  return names.map((vaccine, j) => {
+    const special = VACCINE_CASES[`${i}:${vaccine}`] ?? {};
+    const expiresInDays =
+      special.expiresInDays ?? 90 + ((i * 53 + j * 71) % 600);
+    return {
+      pet: p.pet.name!,
+      vaccine,
+      givenDaysAgo: 365 - Math.min(expiresInDays, 300) + 30,
+      expiresInDays,
+      status: special.status ?? "approved",
+      reason: special.reason,
+      vet,
+      clinic,
+    };
+  });
+});
+
+// ── Estimates ─────────────────────────────────────────────────────────────
+//
+// One in every state a list shows. Amounts are the facility's own seeded
+// prices; the totals are recomputed by the seed exactly as the route does.
+
+export type SeedEstimateLine = {
+  label: string;
+  amount: number;
+  quantity: number;
+};
+
+export type SeedEstimate = {
+  key: string;
+  /** A client by index into CLIENTS, or a guest. */
+  client?: number;
+  guest?: {
+    name: string;
+    email: string;
+    phone?: string;
+    pet: { name: string; breed: string };
+  };
+  pets?: string[];
+  service: "boarding" | "daycare" | "grooming";
+  serviceType?: string;
+  startInDays: number;
+  nights?: number;
+  lines: SeedEstimateLine[];
+  discount?: number;
+  discountReason?: string;
+  deposit?: number;
+  publicNote?: string;
+  internalNote?: string;
+  state:
+    | "draft"
+    | "sent"
+    | "viewed"
+    | "accepted"
+    | "declined"
+    | "expired"
+    | "converted";
+  sentDaysAgo?: number;
+  declineReason?: string;
+};
+
+export const ESTIMATES: SeedEstimate[] = [
+  {
+    key: `${SEED_PREFIX}-estimate-01`,
+    client: 3,
+    service: "boarding",
+    serviceType: "Standard suite",
+    startInDays: 34,
+    nights: 5,
+    lines: [
+      { label: "Standard suite", amount: 55, quantity: 5 },
+      { label: "Nightly tuck-in treat", amount: 4, quantity: 5 },
+    ],
+    internalNote:
+      "Asked about the deluxe suite too — price it if they call back.",
+    state: "draft",
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-02`,
+    client: 4,
+    service: "grooming",
+    serviceType: "Full groom",
+    startInDays: 9,
+    lines: [
+      { label: "Full groom", amount: 85, quantity: 1 },
+      { label: "Nail grinding", amount: 15, quantity: 1 },
+    ],
+    state: "sent",
+    sentDaysAgo: 2,
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-03`,
+    client: 5,
+    service: "daycare",
+    serviceType: "Full day",
+    startInDays: 6,
+    lines: [{ label: "Daycare — full day", amount: 38, quantity: 10 }],
+    discount: 38,
+    discountReason: "Ten-day bundle",
+    publicNote: "Ten full days to use over the next two months.",
+    state: "viewed",
+    sentDaysAgo: 4,
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-04`,
+    client: 6,
+    service: "boarding",
+    serviceType: "Deluxe suite",
+    startInDays: 20,
+    nights: 3,
+    lines: [{ label: "Deluxe suite", amount: 72, quantity: 3 }],
+    deposit: 50,
+    state: "accepted",
+    sentDaysAgo: 6,
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-05`,
+    client: 7,
+    service: "boarding",
+    serviceType: "Standard suite",
+    startInDays: 15,
+    nights: 7,
+    lines: [{ label: "Standard suite", amount: 55, quantity: 7 }],
+    state: "declined",
+    sentDaysAgo: 12,
+    declineReason: "Found a sitter closer to home.",
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-06`,
+    client: 8,
+    service: "grooming",
+    serviceType: "Bath and brush",
+    startInDays: -20,
+    lines: [{ label: "Bath and brush", amount: 55, quantity: 1 }],
+    state: "expired",
+    sentDaysAgo: 44,
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-07`,
+    guest: {
+      name: "Sophie Tremblay",
+      email: "sophie.tremblay@example.invalid",
+      phone: "+1 514 555-0199",
+      pet: { name: "Ruby", breed: "Beagle" },
+    },
+    service: "daycare",
+    serviceType: "Trial day",
+    startInDays: 3,
+    lines: [
+      { label: "Temperament evaluation", amount: 30, quantity: 1 },
+      { label: "Daycare — full day", amount: 38, quantity: 1 },
+    ],
+    publicNote:
+      "Ruby spends her first half day with our trainer before joining a group.",
+    state: "sent",
+    sentDaysAgo: 1,
+  },
+  {
+    key: `${SEED_PREFIX}-estimate-08`,
+    client: 0,
+    service: "boarding",
+    serviceType: "Standard suite",
+    startInDays: 12,
+    nights: 4,
+    lines: [{ label: "Standard suite", amount: 55, quantity: 4 }],
+    state: "converted",
+    sentDaysAgo: 8,
+  },
+];
+
+// ── Store credit ──────────────────────────────────────────────────────────
+
+export const STORE_CREDIT = [
+  {
+    client: 2,
+    amount: 25,
+    reason: "added" as const,
+    note: "Goodwill — the groom ran forty minutes late.",
+    daysAgo: 16,
+  },
+  {
+    client: 9,
+    amount: 60,
+    reason: "refund" as const,
+    note: "Cancelled boarding night refunded as credit.",
+    daysAgo: 30,
+  },
+  {
+    client: 9,
+    amount: -20,
+    reason: "redeemed" as const,
+    note: "Used at the till on a daycare day.",
+    daysAgo: 11,
+  },
+];
