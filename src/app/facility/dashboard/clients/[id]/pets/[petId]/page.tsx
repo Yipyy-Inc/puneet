@@ -6,11 +6,13 @@ import Link from "next/link";
 import { bookings } from "@/data/bookings";
 import { useQuery } from "@tanstack/react-query";
 import { clientQueries, useClientRecord } from "@/lib/api/client";
-import {
-  petPhotos,
-  vaccinationRecords,
-  petRelationships,
-} from "@/data/pet-data";
+import { petPhotos, petRelationships } from "@/data/pet-data";
+import { usePetVaccinations } from "@/lib/api/vaccinations";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
+import { expiryState, localToday, recordMatchesRule } from "@/lib/vaccinations";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { AddVaccinationDialog } from "@/components/clients/vaccinations/AddVaccinationDialog";
+import { VaccinationRecordRow } from "@/components/clients/vaccinations/VaccinationRecordRow";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import { sectionsOf } from "@/lib/report-cards/sections";
 import { usablePhotos } from "@/lib/report-cards/photos";
@@ -65,8 +67,6 @@ import {
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
-import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
-import { toast } from "sonner";
 import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
@@ -221,6 +221,15 @@ export default function PetDetailPage({
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
 
+  // This pet's vaccination records, from Postgres by its ref. Above the
+  // early return for the same reason as the report cards below.
+  const { t: vaxT, fill: vaxFill } = useStaffText("vaccinations");
+  const { vaccinations, pending: vaccinationsPending } = usePetVaccinations(
+    parseInt(petId),
+  );
+  const { rules: vaccinationRules } = useVaccinationRules();
+  const [today] = useState(localToday);
+
   const petEvaluations = (pet as { evaluations?: Evaluation[] } | undefined)
     ?.evaluations;
 
@@ -250,7 +259,6 @@ export default function PetDetailPage({
   }
 
   const photos = petPhotos.filter((p) => p.petId === pet.id);
-  const vaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
   const petBookings = bookings.filter((b) => b.petId === pet.id);
   const reports = petReportCards;
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
@@ -272,15 +280,17 @@ export default function PetDetailPage({
     (r) => r.relationshipType === "keep_apart",
   );
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
-  const expiredVaccinations = vaccinations.filter(
-    (v) => new Date(v.expiryDate) < new Date(),
+  // A rejected certificate is not one that lapsed; only the live records
+  // raise the banner.
+  const liveVaccinations = vaccinations.filter((v) => v.status !== "rejected");
+  const expiredVaccinations = liveVaccinations.filter(
+    (v) => expiryState(v.expiryDate, today) === "expired",
   );
-  const now = new Date();
-  const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-  const upcomingVaccinations = vaccinations.filter(
-    (v) =>
-      new Date(v.expiryDate) <= sixtyDaysFromNow &&
-      new Date(v.expiryDate) > now,
+  const upcomingVaccinations = liveVaccinations.filter(
+    (v) => expiryState(v.expiryDate, today) === "expiring",
+  );
+  const petVaccinationRules = vaccinationRules.filter(
+    (r) => r.species.toLowerCase() === pet.type.toLowerCase(),
   );
 
   const formatDate = (dateString: string) => {
@@ -299,32 +309,6 @@ export default function PetDetailPage({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getVaccinationStatus = (
-    vaccination: (typeof vaccinationRecords)[0],
-  ) => {
-    const expiryDate = new Date(vaccination.expiryDate);
-    const now = new Date();
-    const daysUntilExpiry = Math.floor(
-      (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (daysUntilExpiry < 0) {
-      return {
-        status: "expired",
-        color: "destructive",
-        days: Math.abs(daysUntilExpiry),
-      };
-    } else if (daysUntilExpiry <= 30) {
-      return {
-        status: "expiring-soon",
-        color: "warning",
-        days: daysUntilExpiry,
-      };
-    } else {
-      return { status: "valid", color: "success", days: daysUntilExpiry };
-    }
   };
 
   const getMoodColor = (mood: string) => {
@@ -533,9 +517,12 @@ export default function PetDetailPage({
               <div className="border-destructive/20 bg-destructive/10 flex items-center gap-2 rounded-lg border p-3">
                 <AlertCircle className="text-destructive size-4" />
                 <span className="text-destructive text-sm font-medium">
-                  {expiredVaccinations.length} vaccination
-                  {expiredVaccinations.length > 1 ? "s" : ""} expired - Update
-                  required
+                  {vaxFill(
+                    expiredVaccinations.length === 1
+                      ? "expiredAlertOne"
+                      : "expiredAlertMany",
+                    { n: expiredVaccinations.length },
+                  )}
                 </span>
               </div>
             )}
@@ -544,9 +531,12 @@ export default function PetDetailPage({
                 <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                   <Clock className="size-4 text-yellow-600" />
                   <span className="text-sm font-medium text-yellow-800">
-                    {upcomingVaccinations.length} vaccination
-                    {upcomingVaccinations.length > 1 ? "s" : ""} expiring within
-                    60 days
+                    {vaxFill(
+                      upcomingVaccinations.length === 1
+                        ? "expiringAlertOne"
+                        : "expiringAlertMany",
+                      { n: upcomingVaccinations.length },
+                    )}
                   </span>
                 </div>
               )}
@@ -1122,97 +1112,50 @@ export default function PetDetailPage({
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-semibold">
-                  Vaccination Records
+                  {vaxT("title")}
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setVaccinationModalOpen(true)}
-                >
-                  <Syringe className="mr-1 size-4" />
-                  Add Vaccination
-                </Button>
+                {canEditPetMedical && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVaccinationModalOpen(true)}
+                  >
+                    <Syringe className="mr-1 size-4" />
+                    {vaxFill("addFor", { pet: pet.name })}
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
-                {vaccinations.length > 0 ? (
+                {vaccinationsPending ? (
+                  <div className="bg-muted h-24 animate-pulse rounded-2xl" />
+                ) : vaccinations.length > 0 ? (
                   <div className="space-y-3">
-                    {vaccinations
-                      .sort(
-                        (a, b) =>
-                          new Date(b.administeredDate).getTime() -
-                          new Date(a.administeredDate).getTime(),
-                      )
-                      .map((vax) => {
-                        const status = getVaccinationStatus(vax);
-                        return (
-                          <div
-                            key={vax.id}
-                            className="bg-card flex items-start justify-between rounded-lg border p-4"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`rounded-lg p-2 ${
-                                  status.status === "expired"
-                                    ? "bg-destructive/10"
-                                    : status.status === "expiring-soon"
-                                      ? "bg-yellow-100"
-                                      : "bg-green-100"
-                                } `}
-                              >
-                                <Syringe
-                                  className={`size-4 ${
-                                    status.status === "expired"
-                                      ? "text-destructive"
-                                      : status.status === "expiring-soon"
-                                        ? "text-yellow-600"
-                                        : "text-green-600"
-                                  } `}
-                                />
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-semibold">
-                                  {vax.vaccineName}
-                                </h4>
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  Administered:{" "}
-                                  {formatDate(vax.administeredDate)}
-                                </p>
-                                {vax.veterinarianName && (
-                                  <p className="text-muted-foreground text-xs">
-                                    By: {vax.veterinarianName}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge
-                                variant={
-                                  status.status === "expired"
-                                    ? "destructive"
-                                    : status.status === "expiring-soon"
-                                      ? "secondary"
-                                      : "outline"
-                                }
-                              >
-                                {status.status === "expired"
-                                  ? `Expired ${status.days} days ago`
-                                  : status.status === "expiring-soon"
-                                    ? `Expires in ${status.days} days`
-                                    : `Valid for ${status.days} days`}
-                              </Badge>
-                              <p className="text-muted-foreground mt-1 text-xs">
-                                Expires: {formatDate(vax.expiryDate)}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    {vaccinations.map((vax) => {
+                      const rule = petVaccinationRules.find((r) =>
+                        recordMatchesRule(vax, r.vaccineName),
+                      );
+                      return (
+                        <VaccinationRecordRow
+                          key={vax.id}
+                          record={vax}
+                          today={today}
+                          canEdit={canEditPetMedical}
+                          requirement={
+                            rule
+                              ? rule.required
+                                ? "required"
+                                : "optional"
+                              : undefined
+                          }
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="py-8 text-center">
-                    <Syringe className="text-muted-foreground mx-auto mb-2 size-12" />
-                    <p className="text-muted-foreground text-sm">
-                      No vaccination records
+                    <Syringe className="text-ink-tertiary mx-auto mb-2 size-12" />
+                    <p className="text-ink-tertiary text-sm">
+                      {vaxFill("noneForPet", { pet: pet.name })}
                     </p>
                   </div>
                 )}
@@ -1486,23 +1429,15 @@ export default function PetDetailPage({
           preSelectedPetId={parseInt(petId)}
         />
 
-        <AddVaccinationModal
-          open={vaccinationModalOpen}
-          onOpenChange={setVaccinationModalOpen}
-          petId={pet.id}
-          petName={pet.name}
-          petSpecies={pet.type}
-          initialStatus="approved"
-          submitLabel="Save Records"
-          onSave={async (records) => {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            if (records.length === 0) return;
-            toast.success(
-              `${records.length} vaccination record${records.length === 1 ? "" : "s"} saved`,
-            );
-            router.refresh();
-          }}
-        />
+        {vaccinationModalOpen && (
+          <AddVaccinationDialog
+            open
+            onOpenChange={setVaccinationModalOpen}
+            petRef={pet.id}
+            petName={pet.name}
+            petSpecies={pet.type}
+          />
+        )}
       </div>
     </div>
   );

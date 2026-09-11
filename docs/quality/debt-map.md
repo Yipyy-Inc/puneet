@@ -12476,3 +12476,30 @@ refused with nothing moved. `gift-card-payment.spec.ts` joins the gate.
 - **Still open:** a tip cannot go on a gift card (the checkout says so and
   refuses); split payments still send one tender; package passes are not yet
   a tender at checkout.
+
+## 2026-09-11 — a vaccination record is a row (Phase 2 of making the facility side real)
+
+`public.pet_vaccinations` has existed since 20260828134018 with its policies
+in place and no route, so every facility screen read `vaccinationRecords` from
+`@/data/pet-data` by numeric pet id: a real pet whose ref matched a fixture pet
+wore that pet's rabies certificate, every other one had none, "Approve" edited
+the module array as "Sarah (Staff)", and the pet profile's "Add vaccination"
+was a 500 ms `setTimeout` and a toast. `/api/vaccinations` (list by client,
+pet or facility; add) and `/api/vaccinations/[id]` (review, correct, remove)
+now back the client file's Vaccinations page, the tabbed profile's pet cards,
+the sidebar overview, the pet profile's tab, the client list's two vaccine
+filters and the calendar's expiry chip. A review is stamped with the signed-in
+person. `supabase/tests/pet-vaccinations.sql` pins who reads and writes.
+
+Expiry is now a calendar-day comparison (`src/lib/vaccinations.ts`, unit
+tested): `new Date("2026-09-11")` is midnight UTC, the evening before in
+Montréal, so a certificate used to read as expired through its whole last day.
+
+The tabbed profile's pet-details dialog was dead — `setSelectedPet` had no
+caller — and was the only reader of three fixture helpers; it is gone.
+
+- **Still open:** customers cannot read or add their own pets' records (the
+  read policy is members only, and `AddVaccinationModal` still "uploads" to a
+  blob URL); a certificate cannot be attached yet (no storage bucket for client
+  files — Phase 2 documents); grooming, training and the printable
+  appointment cards still read the fixture (Phase 3).
