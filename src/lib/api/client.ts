@@ -240,6 +240,44 @@ export function useCreateClient() {
   });
 }
 
+/**
+ * Add a pet to an existing client.
+ *
+ * `clientId` is the owner's ref; POST /api/pets resolves it through RLS, and
+ * the database stamps the facility from the owner (`pets_set_facility`).
+ * Invalidates the client roster, because a client's pets travel nested in it.
+ */
+export function useCreatePet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: Partial<Pet> & { clientId: number }) =>
+      writeJson<Pet>("/api/pets", "POST", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+      void queryClient.invalidateQueries({ queryKey: ["pets"] });
+    },
+  });
+}
+
+/**
+ * Change a pet. PATCH /api/pets/[ref] merges `details`, so sending what
+ * changed never erases the rest; what a caller may change (status, re-homing,
+ * evaluations) is the database's decision (20260803090000).
+ */
+export function useUpdatePet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ref, patch }: { ref: number; patch: Partial<Pet> }) =>
+      writeJson<Pet>(`/api/pets/${ref}`, "PATCH", patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+      void queryClient.invalidateQueries({ queryKey: ["pets"] });
+    },
+  });
+}
+
 /** Update a client. The response is the STORED row, not the request. */
 export function useUpdateClient() {
   const queryClient = useQueryClient();

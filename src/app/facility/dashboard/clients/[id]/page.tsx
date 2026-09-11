@@ -25,6 +25,7 @@ import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
+import { AddPetDialog } from "@/components/clients/AddPetDialog";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
 import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
@@ -179,6 +180,8 @@ export default function ClientDetailPage({
   const { t: profileT } = useStaffText("clientProfile");
   const updateClient = useUpdateClient();
   const [isEditing, setIsEditing] = useState(false);
+  // "Add pet" and "Add first pet" had no handler.
+  const [addingPet, setAddingPet] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   // Grooming-appointment dialog state. Opened from the "Book Grooming" entry
   // point in the Bookings card with the client (and optionally a specific
@@ -1466,9 +1469,13 @@ export default function ClientDetailPage({
                     <CardTitle className="text-sm font-semibold">
                       Active Pets ({activePets.length})
                     </CardTitle>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAddingPet(true)}
+                    >
                       <Plus className="mr-1 size-4" />
-                      Add Pet
+                      {profileT("addPetButton")}
                     </Button>
                   </CardHeader>
                   <CardContent>
@@ -1664,9 +1671,14 @@ export default function ClientDetailPage({
                         <p className="text-muted-foreground text-sm">
                           No active pets registered
                         </p>
-                        <Button variant="outline" size="sm" className="mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => setAddingPet(true)}
+                        >
                           <Plus className="mr-1 size-4" />
-                          Add First Pet
+                          {profileT("addFirstPet")}
                         </Button>
                       </div>
                     )}
@@ -2905,6 +2917,15 @@ export default function ClientDetailPage({
       })()}
 
       {/* Incident Details Modal — opened from the Overview → Incidents table */}
+      {addingPet && (
+        <AddPetDialog
+          open
+          onOpenChange={setAddingPet}
+          clientRef={client.id}
+          clientName={client.name}
+        />
+      )}
+
       <Dialog
         open={!!selectedIncident}
         onOpenChange={(open) => {

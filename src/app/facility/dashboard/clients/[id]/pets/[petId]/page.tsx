@@ -2,10 +2,11 @@
 
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import { bookings } from "@/data/bookings";
 import { useQuery } from "@tanstack/react-query";
-import { clientQueries, useClientRecord } from "@/lib/api/client";
+import { clientQueries, useClientRecord, useUpdatePet } from "@/lib/api/client";
 import { petPhotos, petRelationships } from "@/data/pet-data";
 import { usePetVaccinations } from "@/lib/api/vaccinations";
 import { useVaccinationRules } from "@/lib/api/facility-settings";
@@ -219,7 +220,11 @@ export default function PetDetailPage({
   const { data: allClients = [] } = useQuery(clientQueries.all());
   const pet = client?.pets.find((p) => p.id === parseInt(petId));
 
-  const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
+  // Seeded when editing STARTS (see startEditing): seeding it here ran before
+  // the client loaded, so a cold load opened the editor on nothing.
+  const [editedPet, setEditedPet] = useState<Pet | null>(null);
+  const updatePet = useUpdatePet();
+  const { t: petT, fill: petFill } = useStaffText("clientProfile");
 
   // This pet's vaccination records, from Postgres by its ref. Above the
   // early return for the same reason as the report cards below.
@@ -328,10 +333,51 @@ export default function PetDetailPage({
     }
   };
 
-  const handleSave = () => {
-    // In a real app, this would save to the backend
-    setIsEditing(false);
-    // For now we just toggle edit mode off
+  const startEditing = () => {
+    setEditedPet(pet);
+    setIsEditing(true);
+  };
+
+  // It closed the editor ("In a real app, this would save to the backend").
+  // PATCH /api/pets/[ref] stores what changed — and only the medical fields
+  // when this person may edit them, which the database checks again.
+  const handleSave = async () => {
+    if (!editedPet) return;
+    if (!editedPet.name.trim()) {
+      toast.error(petT("petNameRequired"));
+      return;
+    }
+    const general: (keyof Pet)[] = [
+      "name",
+      "type",
+      "breed",
+      "age",
+      "weight",
+      "color",
+      "microchip",
+      "petStatus",
+    ];
+    const medical: (keyof Pet)[] = ["allergies", "specialNeeds"];
+    const fields = canEditPetMedical ? [...general, ...medical] : general;
+    const patch: Partial<Pet> = {};
+    for (const key of fields) {
+      if (editedPet[key] !== pet[key]) {
+        (patch as Record<string, unknown>)[key] = editedPet[key];
+      }
+    }
+    if (Object.keys(patch).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    try {
+      await updatePet.mutateAsync({ ref: pet.id, patch });
+      toast.success(petFill("petSavedToast", { pet: editedPet.name }));
+      setIsEditing(false);
+    } catch (error) {
+      toast.error(petT("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -398,23 +444,28 @@ export default function PetDetailPage({
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" size="sm" onClick={handleCancel}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={updatePet.isPending}
+                >
                   <X className="mr-1 size-4" />
-                  Cancel
+                  {petT("cancel")}
                 </Button>
-                <Button size="sm" onClick={handleSave}>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={updatePet.isPending}
+                >
                   <Save className="mr-1 size-4" />
-                  Save
+                  {petFill("savePet", { pet: pet.name })}
                 </Button>
               </>
             ) : (
               <>
                 {canEditPet && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={startEditing}>
                     <Edit className="mr-1 size-4" />
                     Edit
                   </Button>
@@ -427,9 +478,13 @@ export default function PetDetailPage({
                   <Calendar className="mr-1 size-4" />
                   Book
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab("reports")}
+                >
                   <FileText className="mr-1 size-4" />
-                  Report
+                  {petT("reportCards")}
                 </Button>
               </>
             )}

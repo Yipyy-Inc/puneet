@@ -1939,7 +1939,19 @@
         "blockNotAllowed": "Votre rôle ne permet pas de bloquer ou débloquer un client ; le reste a été enregistré.",
         "blockedToast": "{name} est bloqué",
         "unblockedToast": "{name} est débloqué",
-        "settingsSavedToast": "Paramètres du client enregistrés"
+        "settingsSavedToast": "Paramètres du client enregistrés",
+        "addPetButton": "Ajouter un animal",
+        "addFirstPet": "Ajouter le premier animal",
+        "addPetTitle": "Ajouter un animal pour {client}",
+        "addPetDescription": "Un nom et une espèce suffisent pour commencer ; le reste peut être rempli plus tard.",
+        "addPetNamed": "Ajouter {pet}",
+        "petAddedToast": "{pet} ajouté au dossier de {client}",
+        "petAddFailed": "L’animal n’a pas été ajouté",
+        "specialNeedsLabel": "Besoins particuliers",
+        "petNameRequired": "Un animal doit avoir un nom.",
+        "petSavedToast": "Fiche de {pet} enregistrée",
+        "savePet": "Enregistrer {pet}",
+        "reportCards": "Bulletins"
       }
     }
   },

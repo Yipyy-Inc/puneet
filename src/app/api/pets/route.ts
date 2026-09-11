@@ -103,7 +103,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const row = petToRow(input, { clientId: owner.id });
+  // The owner travels as its own column; left in `input` it would also be
+  // copied into `details`, a second copy of a fact the row already holds.
+  const { clientId: _ownerRef, ...petInput } = input;
+  const row = petToRow(petInput, { clientId: owner.id });
 
   const { data: created, error } = await supabase
     .from("pets")

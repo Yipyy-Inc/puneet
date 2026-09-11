@@ -1939,7 +1939,19 @@
         "blockNotAllowed": "Your role cannot block or unblock a client; everything else was saved.",
         "blockedToast": "{name} is blocked",
         "unblockedToast": "{name} is unblocked",
-        "settingsSavedToast": "Customer settings saved"
+        "settingsSavedToast": "Customer settings saved",
+        "addPetButton": "Add pet",
+        "addFirstPet": "Add the first pet",
+        "addPetTitle": "Add a pet for {client}",
+        "addPetDescription": "A name and a species are enough to start; the rest can be filled in later.",
+        "addPetNamed": "Add {pet}",
+        "petAddedToast": "{pet} added to {client}’s file",
+        "petAddFailed": "The pet was not added",
+        "specialNeedsLabel": "Special needs",
+        "petNameRequired": "A pet needs a name.",
+        "petSavedToast": "{pet}’s details saved",
+        "savePet": "Save {pet}",
+        "reportCards": "Report cards"
       }
     }
   },
