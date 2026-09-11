@@ -15,8 +15,8 @@ import {
 // the fixture named and the facility does not sell made the whole booking
 // fail with "This facility has 0 of the 1 grooming add-ons requested."
 //
-// The id is the legacy id, because that is what `create_booking` matches on;
-// an add-on without one cannot be booked, so it is not offered.
+// The id is the legacy id when there is one, else the uuid — the rule every
+// catalogue route uses, and what `create_booking` accepts for either.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -38,10 +38,11 @@ export async function GET() {
   const scope = await activeFacilityIdForStaff();
   const { data, error } = await supabase
     .from("grooming_add_ons")
-    .select("legacy_id, name, price, duration_min, is_active, display_order")
+    .select(
+      "id, legacy_id, name, price, duration_min, is_active, display_order",
+    )
     .match(inFacility(scope))
     .eq("is_active", true)
-    .not("legacy_id", "is", null)
     .order("display_order", { ascending: true });
 
   if (error) {
@@ -49,7 +50,7 @@ export async function GET() {
   }
 
   const options: GroomingAddOnOption[] = (data ?? []).map((row) => ({
-    id: row.legacy_id as string,
+    id: row.legacy_id ?? row.id,
     name: row.name,
     price: Number(row.price),
     duration: row.duration_min ?? 0,

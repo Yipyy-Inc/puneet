@@ -394,6 +394,98 @@ exception when others then
   reset role; perform pg_temp.t('B9  unknown add-on', false, sqlerrm);
 end $$;
 
+-- ── B10: what the facility made in the app can be booked ───────────────────
+--
+-- A service, add-on or station created through the app has no legacy id, and
+-- the routes address it by uuid. Until 20260911135248 create_booking matched on
+-- legacy_id alone, so the facility could put a service on its menu and never
+-- book it.
+insert into public.grooming_services
+  (id, facility_id, name, base_price, duration_min)
+values
+  ('00000000-0000-0000-0000-000000190061', '00000000-0000-0000-0000-000000190020',
+   'App Bath', 40, 45);
+insert into public.grooming_add_ons
+  (id, facility_id, name, price, duration_min)
+values
+  ('00000000-0000-0000-0000-000000190071', '00000000-0000-0000-0000-000000190020',
+   'App Teeth', 9, 5);
+insert into public.grooming_stations (id, facility_id, name, type)
+values
+  ('00000000-0000-0000-0000-000000190080', '00000000-0000-0000-0000-000000190020',
+   'App Table', 'table');
+
+do $$
+declare v_id uuid; v_service text; v_station uuid; v_addons integer;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select booking_id into v_id from public.create_booking(
+    pg_temp.booking('00000000-0000-0000-0000-000000190040'),
+    array['00000000-0000-0000-0000-000000190050']::uuid[],
+    jsonb_build_object(
+      'serviceId', '00000000-0000-0000-0000-000000190061',
+      'stationId', '00000000-0000-0000-0000-000000190080',
+      'addOnIds', jsonb_build_array('00000000-0000-0000-0000-000000190071'))
+  );
+  reset role;
+
+  select service_name, station_id into v_service, v_station
+    from public.grooming_appointments where booking_id = v_id;
+  select count(*) into v_addons
+    from public.grooming_appointment_add_ons where booking_id = v_id;
+
+  perform pg_temp.t('B10 a service, station and add-on with no legacy id are booked by uuid',
+    v_service = 'App Bath'
+      and v_station = '00000000-0000-0000-0000-000000190080'
+      and v_addons = 1,
+    format('service=%s station=%s add_ons=%s', v_service, v_station, v_addons));
+exception when others then
+  reset role; perform pg_temp.t('B10 book by uuid', false, sqlerrm);
+end $$;
+
+-- ── B11: another facility's uuid is still nobody's here ────────────────────
+--
+-- The negative control for B10. The uuid is real; it is simply not this
+-- facility's, and the lookup is scoped to the booking's facility.
+insert into public.facilities (id, org_id, name, slug, legacy_id) values
+  ('00000000-0000-0000-0000-000000190021', '00000000-0000-0000-0000-000000190010',
+   'Other salon', 'cb-b', 'cb-b')
+on conflict do nothing;
+insert into public.grooming_services
+  (id, facility_id, name, base_price, duration_min)
+values
+  ('00000000-0000-0000-0000-000000190062', '00000000-0000-0000-0000-000000190021',
+   'Their Bath', 1, 45);
+
+do $$
+declare v_before integer; v_after integer; v_raised boolean;
+begin
+  select count(*) into v_before from public.bookings
+   where client_id = '00000000-0000-0000-0000-000000190040';
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000190001', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    perform public.create_booking(
+      pg_temp.booking('00000000-0000-0000-0000-000000190040'),
+      array['00000000-0000-0000-0000-000000190050']::uuid[],
+      jsonb_build_object('serviceId', '00000000-0000-0000-0000-000000190062')
+    );
+    v_raised := false;
+  exception when others then v_raised := true; end;
+  reset role;
+
+  select count(*) into v_after from public.bookings
+   where client_id = '00000000-0000-0000-0000-000000190040';
+
+  perform pg_temp.t('B11 another facility''s service uuid is refused',
+    v_raised and v_after = v_before,
+    format('raised=%s before=%s after=%s', v_raised, v_before, v_after));
+exception when others then
+  reset role; perform pg_temp.t('B11 foreign uuid', false, sqlerrm);
+end $$;
+
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;
