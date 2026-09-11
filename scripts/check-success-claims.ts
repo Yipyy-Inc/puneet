@@ -191,7 +191,6 @@ const BASELINE = new Set<string>([
   "src/components/bookings/MedicationSection.tsx",
   "src/components/bookings/SendEstimateModal.tsx",
   "src/components/bookings/UnfinishedBookingDetailSheet.tsx",
-  "src/components/bookings/modals/service-details/TrainingScheduleStep.tsx",
   "src/components/camera-integration/CameraIntegrationSettings.tsx",
   "src/components/custom-services/wizard/steps/YipyyGoConfigStep.tsx",
   "src/components/customer/MessageAttachmentUpload.tsx",

@@ -18,7 +18,14 @@ import type { TrainingTrainer } from "@/lib/api/training-trainers";
 // times. The keys are unchanged, so the screens that patch the cache locally
 // still find their arrays.
 
-const EMPTY_BOOK: TrainingBook = { classes: [], sessions: [], enrollments: [] };
+const EMPTY_BOOK: TrainingBook = {
+  classes: [],
+  sessions: [],
+  enrollments: [],
+  series: [],
+  seriesEnrollments: [],
+  extraCourseTypes: [],
+};
 let bookLoad: { at: number; promise: Promise<TrainingBook> } | null = null;
 
 export function fetchTrainingBook(): Promise<TrainingBook> {

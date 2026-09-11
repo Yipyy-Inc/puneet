@@ -12810,3 +12810,25 @@ request (src/lib/api/training-book.ts).
   their rows reference fixture ids, so on a real facility they are simply
   empty. The session view's roster details, the students list and the
   booking modal's training step are converted in the commits that follow.
+
+## 2026-09-11 — booking a dog into training enrols it
+
+The booking modal's training step listed the fixture's series and course
+types (`@/data/training-series`), counted spots from fixture enrolments, and
+on submit wrote each dog into the query cache and then created ONE plain
+`service: 'training'` booking on the first session's date — no enrolment
+row, no link to any session, and `enroll_in_training_series` was never
+called. "Join the course waitlist" wrote cache rows only and promised a text
+and an email.
+
+`trainingQueries.series / seriesDetail / seriesEnrollments /
+allSeriesEnrollments` read the facility's series from the training book, and
+`courseTypes` adds any course a real series names that the catalogue lacks.
+Each enrolment in the cart goes through `POST
+/api/training/series/[id]/enrollments` (the RPC books the dog into every
+remaining session), so an enrolment-only cart makes no booking of its own;
+the waitlist join goes through the same route with `joinWaitlist`.
+
+- **Still open:** a drop-in is still one plain booking with no session link;
+  the course catalogue itself (`defaultTrainingCourseTypes`) is still code,
+  not a table — a series files under it by name.

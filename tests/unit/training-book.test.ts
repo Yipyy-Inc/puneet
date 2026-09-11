@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildTrainingBook,
+  courseOf,
   type BookEnrollmentRow,
   type BookSeriesRow,
   type BookSessionRow,
@@ -122,5 +123,59 @@ describe("the training book", () => {
     });
     expect(book.enrollments[0].sessionsAttended).toBe(2);
     expect(book.enrollments[0].totalSessions).toBe(2);
+  });
+
+  test("a series files under the catalogue course it names, or under its own name", () => {
+    expect(
+      courseOf({ course_type_name: "puppy preschool", name: "Tue puppies" }),
+    ).toEqual({
+      id: "puppy-preschool",
+      name: "Puppy Preschool",
+      catalogue: true,
+    });
+    const own = courseOf({ course_type_name: "", name: "Scent work" });
+    expect(own.catalogue).toBe(false);
+    expect(own.name).toBe("Scent work");
+    const book = build({
+      series: [series({ course_type_name: "Scent work" })],
+    });
+    expect(book.extraCourseTypes.map((c) => c.name)).toEqual(["Scent work"]);
+    expect(book.series[0].courseTypeId).toBe(own.id);
+  });
+
+  test("an active series that has not started yet is upcoming", () => {
+    const later = buildTrainingBook({
+      series: [series({})],
+      sessions: [session({})],
+      enrollments: [],
+      attended: new Map(),
+      timeZone: "America/Toronto",
+      today: "2026-09-10",
+    });
+    expect(later.series[0].status).toBe("upcoming");
+    const running = buildTrainingBook({
+      series: [series({})],
+      sessions: [session({})],
+      enrollments: [],
+      attended: new Map(),
+      timeZone: "America/Toronto",
+      today: "2026-09-20",
+    });
+    expect(running.series[0].status).toBe("active");
+  });
+
+  test("a series enrollment carries its progress and how it stands on payment", () => {
+    const book = buildTrainingBook({
+      series: [series({ number_of_sessions: 4 })],
+      sessions: [session({})],
+      enrollments: [enrollment({})],
+      attended: new Map([["s1", new Map([[7, 1]])]]),
+      paid: new Map([["s1", new Map([[7, "deposit" as const]])]]),
+      timeZone: "America/Toronto",
+    });
+    const e = book.seriesEnrollments[0];
+    expect(e.progress).toBe(25);
+    expect(e.currentSessionNumber).toBe(2);
+    expect(e.paymentStatus).toBe("deposit");
   });
 });

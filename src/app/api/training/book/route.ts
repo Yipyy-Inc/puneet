@@ -5,7 +5,8 @@ import {
   activeFacilityIdForStaff,
   inFacility,
 } from "@/lib/api/facility-context";
-import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
+import type { SeriesPaymentStatus } from "@/lib/training-enrollment";
 import {
   buildTrainingBook,
   type BookEnrollmentRow,
@@ -55,7 +56,14 @@ export async function GET() {
   }
   const series = (seriesData ?? []) as unknown as BookSeriesRow[];
   if (series.length === 0) {
-    return NextResponse.json({ classes: [], sessions: [], enrollments: [] });
+    return NextResponse.json({
+      classes: [],
+      sessions: [],
+      enrollments: [],
+      series: [],
+      seriesEnrollments: [],
+      extraCourseTypes: [],
+    });
   }
   const seriesIds = series.map((s) => s.id);
 
@@ -80,7 +88,7 @@ export async function GET() {
       supabase
         .from("bookings")
         .select(
-          `training_series_session_id,
+          `training_series_session_id, payment_status,
            booking_pets(pets(ref)),
            training_attendance(checked_in_at)`,
         )
@@ -102,8 +110,14 @@ export async function GET() {
 
   const seriesOfSession = new Map(sessions.map((s) => [s.id, s.series_id]));
   const attended = new Map<string, Map<number, number>>();
+  // How a dog's session bookings stand on payment: all paid, some, or none.
+  const paidCount = new Map<
+    string,
+    Map<number, { paid: number; all: number }>
+  >();
   for (const row of (bookingsResult.data ?? []) as unknown as {
     training_series_session_id: string | null;
+    payment_status: string | null;
     booking_pets: { pets: { ref: number } | null }[] | null;
     training_attendance:
       | { checked_in_at: string | null }
@@ -114,6 +128,15 @@ export async function GET() {
       ? seriesOfSession.get(row.training_series_session_id)
       : undefined;
     if (!seriesId) continue;
+    const tally = paidCount.get(seriesId) ?? new Map();
+    for (const bp of row.booking_pets ?? []) {
+      if (!bp.pets) continue;
+      const t = tally.get(bp.pets.ref) ?? { paid: 0, all: 0 };
+      t.all += 1;
+      if (row.payment_status === "paid") t.paid += 1;
+      tally.set(bp.pets.ref, t);
+    }
+    paidCount.set(seriesId, tally);
     const attendance = Array.isArray(row.training_attendance)
       ? row.training_attendance[0]
       : row.training_attendance;
@@ -130,7 +153,28 @@ export async function GET() {
     (facilityResult.data as { timezone: string | null } | null)?.timezone ??
     DEFAULT_TIMEZONE;
 
+  const paid = new Map<string, Map<number, SeriesPaymentStatus>>();
+  for (const [seriesId, tally] of paidCount) {
+    const byPet = new Map<number, SeriesPaymentStatus>();
+    for (const [petRef, t] of tally) {
+      byPet.set(
+        petRef,
+        t.paid === 0 ? "unpaid" : t.paid >= t.all ? "paid" : "deposit",
+      );
+    }
+    paid.set(seriesId, byPet);
+  }
+  const today = wallClockParts(new Date().toISOString(), timeZone).date;
+
   return NextResponse.json(
-    buildTrainingBook({ series, sessions, enrollments, attended, timeZone }),
+    buildTrainingBook({
+      series,
+      sessions,
+      enrollments,
+      attended,
+      paid,
+      timeZone,
+      today,
+    }),
   );
 }
