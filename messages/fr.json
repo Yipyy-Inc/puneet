@@ -2071,6 +2071,30 @@
         "pick": "Choisissez un service…",
         "empty": "Ajoutez au moins un service à ce forfait.",
         "fullDay": "Journée complète"
+      },
+      "sellPackage": {
+        "title": "Vendre un forfait à {client}",
+        "intro": "Les passages sont ajoutés au dossier du client et le paiement au registre.",
+        "package": "Forfait",
+        "pickPackage": "Choisissez un forfait",
+        "noPackages": "Aucun forfait actif. Créez-en un dans l’onglet Forfaits d’un service.",
+        "tender": "Payé par",
+        "cash": "Comptant",
+        "terminal": "Carte au terminal",
+        "eTransfer": "Virement Interac",
+        "price": "Prix",
+        "tax": "Taxes",
+        "taxIncluded": "Taxes incluses",
+        "total": "Total",
+        "cancel": "Annuler",
+        "sell": "Vendre le forfait",
+        "sellNamed": "Vendre pour {total}",
+        "sold": "{name} vendu à {client} — {total}",
+        "notSold": "Le forfait n’a pas été vendu",
+        "soldUnpaid": "Les passages ont été attribués, mais le paiement n’a pas été enregistré",
+        "paymentNote": "Vente de forfait — {name}",
+        "open": "Vendre un forfait",
+        "noneYet": "Aucun forfait pour l’instant."
       }
     }
   },
