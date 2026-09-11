@@ -234,6 +234,39 @@ try {
     if (productsGone.count)
       removed["public.retail_products"] = productsGone.count;
 
+    // ── Packages the seed sold, and the bundles it created ─────────────────
+    // A seeded sale by its legacy id, with its pool and pass entries (neither
+    // is money-guarded; the sale's PAYMENT stays, below). A seeded bundle goes
+    // only when no customer package points at it — one the client sold
+    // himself keeps it — and its lines first, which reference it.
+    const soldIds = (
+      await tx`
+        select id::text from public.customer_packages
+         where facility_id = ${DEMO_FACILITY_ID}
+           and legacy_id like ${`${SEED_PREFIX}-cpkg-%`}`
+    ).map((r: { id: string }) => r.id);
+    await deleteChildren(tx, "public.customer_packages", soldIds);
+    const soldGone = await tx.unsafe(
+      `delete from public.customer_packages where id = any($1::uuid[])`,
+      [pgArray(soldIds)],
+    );
+    if (soldGone.count) removed["public.customer_packages"] = soldGone.count;
+    const bundleIds = (
+      await tx`
+        select p.id::text from public.prepaid_packages p
+         where p.facility_id = ${DEMO_FACILITY_ID}
+           and p.legacy_id like ${`${SEED_PREFIX}-pkg-%`}
+           and not exists (
+             select 1 from public.customer_packages cp where cp.package_id = p.id)`
+    ).map((r: { id: string }) => r.id);
+    await deleteChildren(tx, "public.prepaid_packages", bundleIds);
+    const bundlesGone = await tx.unsafe(
+      `delete from public.prepaid_packages where id = any($1::uuid[])`,
+      [pgArray(bundleIds)],
+    );
+    if (bundlesGone.count)
+      removed["public.prepaid_packages"] = bundlesGone.count;
+
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even
     // for the owner), and that is a guard to respect, not to route around. So
