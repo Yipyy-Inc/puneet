@@ -6,7 +6,6 @@ import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { buildResumePreselection } from "@/lib/resume-booking";
-import { clientDocuments } from "@/data/documents";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
 import {
   playdateAlertLogs,
@@ -26,6 +25,8 @@ import { TagsButton } from "@/components/shared/TagsButton";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
 import { AddPetDialog } from "@/components/clients/AddPetDialog";
+import { ClientDocumentsPanel } from "@/components/clients/documents/ClientDocumentsPanel";
+import { useClientDocuments } from "@/lib/api/client-documents";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import { ClientServicePreferences } from "@/components/clients/ClientServicePreferences";
 import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
@@ -81,24 +82,19 @@ import {
   PhoneCall,
   Loader2,
   MessageCircle,
-  Download,
   ExternalLink,
-  CheckCircle,
   AlertCircle,
   Play,
   User,
   Dog,
   Cat,
   Camera,
-  Upload,
   Award,
   History,
   DollarSign,
   CreditCard,
   Wallet,
   Gift,
-  PenLine,
-  Globe,
   MapPin,
   AlertTriangle,
   Edit,
@@ -247,6 +243,9 @@ export default function ClientDetailPage({
     client?.id ?? 0,
   );
   const [today] = useState(localToday);
+  // The files on this client's record, for the Documents tile. The tab itself
+  // reads them through ClientDocumentsPanel; same query, fetched once.
+  const { documents: clientDocs } = useClientDocuments(client?.id ?? 0);
   // The client's store credit and the gift cards they bought, from the two
   // ledgers the till spends. These read `customerCredits` and `giftCards`
   // from `@/data/payments` by numeric id, so a real client wore invented
@@ -395,7 +394,6 @@ export default function ClientDetailPage({
     (a, b) =>
       new Date(b.incidentDate).getTime() - new Date(a.incidentDate).getTime(),
   );
-  const clientDocs = clientDocuments.filter((d) => d.clientId === client.id);
   const clientComms = clientCommunications.filter(
     (c) => c.clientId === client.id,
   );
@@ -464,12 +462,6 @@ export default function ClientDetailPage({
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   const getCommunicationIcon = (type: string) => {
@@ -1120,7 +1112,6 @@ export default function ClientDetailPage({
               {client.pets.length > 0 ? (
                 <div className="grid grid-cols-3 gap-3">
                   {client.pets.slice(0, 3).map((pet) => {
-                    const petData = getPetData(pet);
                     return (
                       <div
                         key={pet.id}
@@ -2421,174 +2412,11 @@ export default function ClientDetailPage({
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
-                Documents & Agreements
-              </CardTitle>
-              <Button variant="outline" size="sm">
-                <Upload className="mr-1 size-4" />
-                Upload
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {clientDocs.length > 0 ? (
-                <div className="space-y-3">
-                  {clientDocs.map((doc) => {
-                    const isAgreement =
-                      doc.type === "agreement" || doc.type === "waiver";
-                    const isDigital = doc.signatureType === "digital";
-
-                    return (
-                      <div
-                        key={doc.id}
-                        className="bg-card hover:bg-muted rounded-lg border p-4 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex flex-1 items-start gap-3">
-                            <div
-                              className={`rounded-lg p-2 ${
-                                isAgreement
-                                  ? isDigital
-                                    ? "bg-blue-100"
-                                    : "bg-green-100"
-                                  : "bg-muted"
-                              } `}
-                            >
-                              {isAgreement ? (
-                                isDigital ? (
-                                  <Globe className="size-4 text-blue-600" />
-                                ) : (
-                                  <PenLine className="size-4 text-green-600" />
-                                )
-                              ) : (
-                                <FileText className="text-muted-foreground size-4" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-medium">
-                                  {doc.name}
-                                </h4>
-                                {isAgreement && (
-                                  <Badge
-                                    variant={
-                                      isDigital ? "default" : "secondary"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {isDigital ? "Digital" : "Physical"}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="mt-1 flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs capitalize"
-                                >
-                                  {doc.type}
-                                </Badge>
-                                {doc.fileSize && (
-                                  <span className="text-muted-foreground text-xs">
-                                    {formatFileSize(doc.fileSize)}
-                                  </span>
-                                )}
-                                <span className="text-muted-foreground text-xs">
-                                  {formatDate(doc.uploadedAt)}
-                                </span>
-                                {doc.expiryDate && (
-                                  <Badge
-                                    variant={
-                                      new Date(doc.expiryDate) < new Date()
-                                        ? "destructive"
-                                        : "outline"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    Expires: {formatDate(doc.expiryDate)}
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {/* Signature Info for Agreements */}
-                              {isAgreement && doc.signedAt && (
-                                <div className="bg-muted/50 mt-2 rounded-sm p-2 text-xs">
-                                  <div className="flex items-center gap-4">
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Signed by:{" "}
-                                      </span>
-                                      <span className="font-medium">
-                                        {doc.signedByName}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Date:{" "}
-                                      </span>
-                                      <span className="font-medium">
-                                        {formatDate(doc.signedAt)}
-                                      </span>
-                                    </div>
-                                    {isDigital && doc.ipAddress && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          IP:{" "}
-                                        </span>
-                                        <span className="font-mono">
-                                          {doc.ipAddress}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {isDigital &&
-                                    doc.agreedToTerms &&
-                                    doc.agreedToTerms.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {doc.agreedToTerms.map((term, idx) => (
-                                          <Badge
-                                            key={idx}
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            <CheckCircle className="mr-1 size-3" />
-                                            {term}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
-
-                              {doc.notes && (
-                                <p className="text-muted-foreground mt-2 text-xs">
-                                  {doc.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {doc.fileUrl && (
-                              <Button variant="ghost" size="sm">
-                                <Download className="size-4" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="sm">
-                              <ExternalLink className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-muted-foreground py-4 text-center text-sm">
-                  No documents uploaded
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <ClientDocumentsPanel
+            clientRef={client.id}
+            clientName={client.name}
+            pets={client.pets}
+          />
         </TabsContent>
 
         {/* Communications Tab */}

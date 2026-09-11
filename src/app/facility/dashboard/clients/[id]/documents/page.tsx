@@ -1,59 +1,29 @@
 "use client";
 
 import { use } from "react";
-import { clientDocuments } from "@/data/documents";
-import { useClientRecord } from "@/lib/api/client";
-import { Badge } from "@/components/ui/badge";
-import { FileText } from "lucide-react";
 
+import { ClientDocumentsPanel } from "@/components/clients/documents/ClientDocumentsPanel";
+import { useClientRecord } from "@/lib/api/client";
+
+// The client's files and signed agreements, from Postgres and the private
+// `client-documents` bucket. This listed `clientDocuments` from
+// `@/data/documents` by numeric id — somebody else's invented paperwork.
 export default function ClientDocumentsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const clientId = parseInt(id, 10);
-  // The client, from Postgres. This was `clients.find(...)` over
-  // `src/data/clients.ts`, so every client created since the migration was
-  // told they did not exist on their own file.
-  const { client } = useClientRecord(clientId);
+  const { client } = useClientRecord(parseInt(id, 10));
   if (!client) return null;
-
-  const docs = clientDocuments.filter((d) => d.clientId === clientId);
 
   return (
     <div className="space-y-4 p-4 pt-5 md:p-6">
-      <h2 className="text-lg font-semibold">Documents ({docs.length})</h2>
-      {docs.length === 0 ? (
-        <p className="text-muted-foreground py-8 text-center text-sm">
-          No documents uploaded
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {docs.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center gap-3 rounded-md border px-4 py-3"
-            >
-              <FileText className="text-muted-foreground size-5 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{doc.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {doc.type} ·{" "}
-                  {new Date(doc.uploadedAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-              <Badge variant="outline" className="text-[10px] capitalize">
-                {doc.type}
-              </Badge>
-            </div>
-          ))}
-        </div>
-      )}
+      <ClientDocumentsPanel
+        clientRef={client.id}
+        clientName={client.name}
+        pets={client.pets}
+      />
     </div>
   );
 }

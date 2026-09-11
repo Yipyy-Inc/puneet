@@ -12566,3 +12566,26 @@ owner's real bookings and links to each.
 
 - **Still open:** Purchases (retail) and Membership still read fixtures /
   `clients.details` (Phase 4).
+
+## 2026-09-11 — a client's file holds real files
+
+The client file's Documents tab (and the sidebar Documents page, and the
+profile's Documents tile) read `clientDocuments` from `@/data/documents` by
+numeric id: a real client whose ref matched a fixture client showed a
+"Service Agreement - 2024" linked to a PDF that does not exist, and Upload,
+Download and Open had no handlers. There was no table and no bucket for a
+client's files.
+
+`client_documents` + the private `client-documents` bucket
+(20260911111658) and `/api/client-documents` (list with 60-second signed
+links, file, remove) now back `ClientDocumentsPanel`, which also shows the
+client's signed waivers from `waiver_signatures` — the record that already
+held every signature and was not shown here. Read is
+`view_client_documents`, file and remove are `edit_clients`; the bytes are
+sniffed, never trusted by their declared type; the facility is the client's,
+set by trigger. `supabase/tests/client-documents.sql` (11) pins table and
+object policies, including the positive upload case.
+
+- **Still open:** customers cannot see or add their own files yet; a vaccination
+  record cannot link to a filed certificate (`pet_vaccinations.document_url`
+  is unused).
