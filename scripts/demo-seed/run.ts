@@ -54,6 +54,8 @@ import {
   PETS,
   STAFF,
   TASK_TEMPLATES,
+  TRAINER_LEGACY_ID,
+  TRAINING_SERIES,
 } from "./data";
 import { planBookings } from "./bookings";
 import { assertSafeContact } from "./safety";
@@ -438,6 +440,104 @@ try {
       returning b.id`;
     if (assigned.length)
       summary["grooms given their groomer"] = assigned.length;
+
+    // ── Training: the classes, who is in them, and what was held ─────────
+    //
+    // Through the app's own RPCs: create_training_series writes a series and
+    // every session; enroll_in_training_series books each dog into the
+    // sessions still ahead. Sessions already past are booked here the same
+    // way (create_booking, linked to the session), marked held, and the dogs
+    // checked in and out — the history the Students tab and the calendar show.
+    const [trainer] = await tx`
+      select id from public.staff
+       where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${TRAINER_LEGACY_ID}`;
+    for (const spec of TRAINING_SERIES) {
+      // The first session: this week's (or startWeeks away) `day`.
+      const todayDow = new Date(`${today}T12:00:00Z`).getUTCDay();
+      const startDate = shiftDay(
+        today,
+        spec.day - todayDow + spec.startWeeks * 7,
+      );
+      let [series] = await tx`
+        select id from public.training_series
+         where facility_id = ${DEMO_FACILITY_ID} and name = ${spec.name}`;
+      if (!series) {
+        [series] = await tx`
+          select (s).id as id from public.create_training_series(
+            ${DEMO_FACILITY_ID}, ${spec.name}, ${spec.day}::smallint,
+            ${spec.time}::time, ${spec.duration}, ${startDate}::date,
+            ${spec.sessions}, ${spec.capacity}, ${spec.price},
+            ${location.id}, ${trainer?.id ?? null}, ${spec.course}) s`;
+        count("training series");
+      }
+      const perSession = money(spec.price / spec.sessions);
+      const everyone = [
+        ...spec.pets.map((name) => ({ name, waitlist: false })),
+        ...(spec.waitlist ?? []).map((name) => ({ name, waitlist: true })),
+      ];
+      for (const { name, waitlist } of everyone) {
+        const pet = PETS.find((p) => p.pet.name === name);
+        if (!pet) throw new Error(`No seeded pet named ${name}`);
+        const petId = petIds.get(pet.key)!;
+        const clientId = clientIds.get(pet.ownerKey)!;
+        const [already] = await tx`
+          select 1 from public.training_series_enrollments
+           where series_id = ${series.id} and pet_id = ${petId}
+             and status <> 'cancelled'`;
+        if (!already) {
+          await tx`
+            select public.enroll_in_training_series(
+              ${series.id}, ${petId}, ${clientId}, ${waitlist})`;
+          count(waitlist ? "training waitlist" : "training enrolments");
+        }
+        if (waitlist) continue;
+
+        // The sessions already past: booked, attended, held.
+        const past = await tx`
+          select id, start_at, end_at from public.training_series_sessions
+           where series_id = ${series.id} and start_at < now()
+           order by session_number`;
+        for (const session of past) {
+          const [booked] = await tx`
+            select b.id from public.bookings b
+              join public.booking_pets bp on bp.booking_id = b.id
+             where b.training_series_session_id = ${session.id}
+               and bp.pet_id = ${petId}`;
+          if (booked) continue;
+          const [created] = await tx`
+            select booking_id from public.create_booking(
+              ${{
+                facility_id: DEMO_FACILITY_ID,
+                location_id: location.id,
+                client_id: clientId,
+                service: "training",
+                service_type: spec.course,
+                status: "completed",
+                start_at: session.start_at,
+                end_at: session.end_at,
+                assigned_staff_id: trainer?.id ?? null,
+                base_price: perSession,
+                total_cost: perSession,
+                training_series_session_id: session.id,
+                details: { demoSeedKey: `${spec.name}:${session.id}:${name}` },
+              }}::jsonb,
+              ${`{${petId}}`}::uuid[])`;
+          await tx`
+            insert into public.training_attendance
+              (booking_id, facility_id, checked_in_at, checked_out_at,
+               session_notes, author_name)
+            values
+              (${created.booking_id}, ${DEMO_FACILITY_ID}, ${session.start_at},
+               ${session.end_at}, ${"Good focus; practised sit-stay and loose-leash walking."},
+               ${SEED_AUTHOR})`;
+          count("training sessions attended");
+        }
+        await tx`
+          update public.training_series_sessions set status = 'completed'
+           where series_id = ${series.id} and start_at < now()
+             and status = 'scheduled'`;
+      }
+    }
 
     // ── What staff logged during the stays ──────────────────────────────
     // The guest journal is built from `care_log_entries`, the same rows the

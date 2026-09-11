@@ -23,7 +23,7 @@ import {
   SEED_AUTHOR,
   SEED_PREFIX,
 } from "./config";
-import { CATEGORIES, INCIDENTS, NOTES } from "./data";
+import { CATEGORIES, INCIDENTS, NOTES, TRAINING_SERIES } from "./data";
 
 const ROLLBACK = process.argv.includes("--rollback");
 class Rollback extends Error {}
@@ -145,6 +145,47 @@ try {
     if (vaccinationsGone.count)
       removed["public.pet_vaccinations"] = vaccinationsGone.count;
 
+    // ── Training the seed created ───────────────────────────────────────────
+    // A series is found by its seeded name. The bookings its enrolments made
+    // carry no seed key — enroll_in_training_series wrote them — and
+    // `training_series_session_id` is ON DELETE SET NULL, so deleting the
+    // series would orphan them rather than remove them. They go first,
+    // unless a payment is on one (payments are append-only).
+    const seriesIds = (
+      await tx`
+        select id::text from public.training_series
+         where facility_id = ${DEMO_FACILITY_ID}
+           and name = any(${pgTextArray(TRAINING_SERIES.map((s) => s.name))}::text[])`
+    ).map((r: { id: string }) => r.id);
+    if (seriesIds.length) {
+      const trainingBookings = (
+        await tx.unsafe(
+          `select b.id::text from public.bookings b
+             join public.training_series_sessions s on s.id = b.training_series_session_id
+            where s.series_id = any($1::uuid[])
+              and not exists (select 1 from public.payments p where p.booking_id = b.id)`,
+          [pgArray(seriesIds)],
+        )
+      ).map((r: { id: string }) => r.id);
+      await deleteChildren(tx, "public.bookings", trainingBookings);
+      const tb = await tx.unsafe(
+        `delete from public.bookings where id = any($1::uuid[])`,
+        [pgArray(trainingBookings)],
+      );
+      if (tb.count)
+        removed["public.bookings"] =
+          (removed["public.bookings"] ?? 0) + tb.count;
+      const ts = await tx.unsafe(
+        `delete from public.training_series where id = any($1::uuid[])
+            and not exists (
+              select 1 from public.bookings b
+                join public.training_series_sessions s on s.id = b.training_series_session_id
+               where s.series_id = training_series.id)`,
+        [pgArray(seriesIds)],
+      );
+      if (ts.count) removed["public.training_series"] = ts.count;
+    }
+
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even
     // for the owner), and that is a guard to respect, not to route around. So
@@ -166,7 +207,9 @@ try {
       `delete from public.bookings where id = any($1::uuid[])`,
       [pgArray(deletable)],
     );
-    if (gone.count) removed["public.bookings"] = gone.count;
+    if (gone.count)
+      removed["public.bookings"] =
+        (removed["public.bookings"] ?? 0) + gone.count;
 
     const pets = idsOf(
       await tx.unsafe(

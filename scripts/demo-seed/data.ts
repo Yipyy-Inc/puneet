@@ -661,6 +661,8 @@ export const STAFF: SeedStaff[] = [
     role: "reception",
     jobTitle: "Front desk",
   },
+  // Appended: a staff member's legacy id is their position in this list.
+  { first: "Julien", last: "Côté", role: "trainer", jobTitle: "Dog trainer" },
 ].map((s, i) => ({
   ...s,
   legacyId: `${SEED_PREFIX}-staff-${String(i + 1).padStart(2, "0")}`,
@@ -835,6 +837,85 @@ export const GROOMING_STYLISTS: SeedStylist[] = [
     days: [1, 2, 3, 4, 5],
     start: "09:00",
     end: "17:00",
+  },
+];
+
+// ── Training ──────────────────────────────────────────────────────────────
+//
+// Four classes in four states: one halfway through (its past sessions were
+// held and attended), one about to start, a private 1-on-1, and one full
+// with a waitlist. A series is found again by its name, so a second run
+// creates nothing. `course` is the catalogue's course-type name, so each
+// files under its course in the booking modal.
+
+export type SeedTrainingSeries = {
+  name: string;
+  course: string;
+  /** 0 = Sunday. */
+  day: number;
+  time: string;
+  duration: number;
+  sessions: number;
+  capacity: number;
+  price: number;
+  /** Weeks from this week to the first session; negative has begun. */
+  startWeeks: number;
+  pets: string[];
+  /** Enrolled past capacity, these join the waitlist. */
+  waitlist?: string[];
+};
+
+export const TRAINER_LEGACY_ID = `${SEED_PREFIX}-staff-07`;
+
+export const TRAINING_SERIES: SeedTrainingSeries[] = [
+  {
+    name: "Puppy Preschool — Tuesday evenings",
+    course: "Puppy Preschool",
+    day: 2,
+    time: "18:30",
+    duration: 60,
+    sessions: 6,
+    capacity: 6,
+    price: 210,
+    startWeeks: -3,
+    pets: ["Kiwi", "Teddy", "Caramel", "Luna"],
+  },
+  {
+    name: "Basic Obedience — Saturday mornings",
+    course: "Basic Obedience / Beginner Manners",
+    day: 6,
+    time: "10:00",
+    duration: 60,
+    sessions: 6,
+    capacity: 8,
+    price: 240,
+    startWeeks: 1,
+    pets: ["Moka", "Biscuit", "Murphy", "Daisy", "Oscar"],
+  },
+  {
+    name: "Private coaching — Charlie",
+    course: "Reactive Rover Recovery",
+    day: 4,
+    time: "16:00",
+    duration: 45,
+    sessions: 4,
+    capacity: 1,
+    price: 300,
+    startWeeks: 0,
+    pets: ["Charlie"],
+  },
+  {
+    name: "Canine Good Citizen Prep — Wednesday",
+    course: "Canine Good Citizen Prep",
+    day: 3,
+    time: "19:00",
+    duration: 60,
+    sessions: 5,
+    capacity: 3,
+    price: 200,
+    startWeeks: 1,
+    pets: ["Rocky", "Bruno", "Max"],
+    waitlist: ["Hazel"],
   },
 ];
 
