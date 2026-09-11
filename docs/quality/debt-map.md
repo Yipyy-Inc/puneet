@@ -12996,3 +12996,33 @@ and Insights is counted from rows by `src/lib/memberships/figures.ts`
   booking page consumes the loyalty reward and drops a pending late fee
   without writing either onto the bill — the line items are added only on
   the other tenders — so a Clover charge is for `amount_due` without them.
+
+## 2026-09-11 — promo codes are rows, and the booking checkout takes one
+
+Three screens kept three fixture lists of promo codes in three shapes, and
+none could reach a bill: Marketing → Promo Codes read `promoCodes` from
+`@/data/marketing` (Save was a `console.log`, Edit opened an empty Create
+form, Copy logged), the retail till applied `@/data/retail` codes to a cart
+in memory, and `/facility/services/promo-codes` is linked from nowhere.
+
+`promo_codes` and `promo_code_redemptions` are tables now (20260911173538);
+a code's used count is counted from its redemptions. `redeem_promo_code`
+checks a code against a booking — active, in its dates (the facility's
+clock), for the booking's service and day of the week, under its total and
+per-client limits, first visit only, not already on the bill, over its
+minimum — and writes the negative line and the redemption together with the
+code locked. SECURITY DEFINER because the lock needs the UPDATE policy, so
+it checks retail_process_sale itself; `supabase/tests/promo-codes.sql`
+(P1–P10). Deleting the line gives the use back (the redemption cascades).
+
+- Marketing → Promo Codes (`PromoCodesTab`) lists, creates, edits, switches
+  off and deletes codes; the editor lost "Auto-apply" (nothing applies a code
+  on its own) and the free-text "Service name" for a free service, which no
+  bill could match — a free service is one of the four services now.
+- The booking page's checkout has a **Promo code** field: the code goes on
+  the bill before the money moves, so every tender charges the discounted
+  `amount_due`.
+- **Still open:** the dashboard booking card's checkout
+  (`booking-card.tsx`) does not offer the field; the retail till still reads
+  the fixture codes (with retail); `/facility/services/promo-codes` and
+  `/facility/services/packages` are orphaned fixture pages.

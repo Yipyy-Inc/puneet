@@ -34,9 +34,7 @@ import {
   FileEdit,
   CheckCircle2,
   Gift,
-  Percent,
   Filter,
-  Ticket,
 } from "lucide-react";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { cn } from "@/lib/utils";
@@ -50,7 +48,6 @@ import {
   customerLoyaltyData,
   referralCodes,
   badges,
-  promoCodes,
   type CustomerSegment,
 } from "@/data/marketing";
 import {
@@ -63,7 +60,7 @@ import {
 import { EmailTemplateModal } from "@/components/marketing/EmailTemplateModal";
 import { SegmentBuilderModal } from "@/components/marketing/SegmentBuilderModal";
 import { CampaignBuilderModal } from "@/components/marketing/CampaignBuilderModal";
-import { PromoCodeModal } from "@/components/marketing/PromoCodeModal";
+import { PromoCodesTab } from "@/components/marketing/PromoCodesTab";
 import { FacilityBrandingSection } from "@/components/marketing/FacilityBrandingSection";
 import { PlaydateAlertsTab } from "@/components/marketing/PlaydateAlertsTab";
 import Link from "next/link";
@@ -84,7 +81,6 @@ export default function MarketingPage() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
-  const [showPromoModal, setShowPromoModal] = useState(false);
   const [showReferralConfigModal, setShowReferralConfigModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<
     (typeof emailTemplates)[0] | null
@@ -445,99 +441,6 @@ export default function MarketingPage() {
         <Badge variant={row.original.isActive ? "default" : "secondary"}>
           {row.original.isActive ? "Active" : "Inactive"}
         </Badge>
-      ),
-    },
-  ];
-
-  // Promo Code Columns
-  const promoColumns: ColumnDef<(typeof promoCodes)[0]>[] = [
-    {
-      accessorKey: "code",
-      header: "Promo Code",
-      cell: ({ row }) => (
-        <div>
-          <div className="font-mono font-semibold">{row.original.code}</div>
-          <div className="text-muted-foreground text-sm">
-            {row.original.description}
-          </div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => {
-        let displayValue = "";
-        if (row.original.type === "percentage") {
-          displayValue = `${row.original.value}% off`;
-        } else if (row.original.type === "fixed") {
-          displayValue = `$${row.original.value} off`;
-        } else {
-          displayValue = String(row.original.value);
-        }
-        return (
-          <div>
-            <Badge variant="outline" className="capitalize">
-              {row.original.type}
-            </Badge>
-            <div className="mt-1 text-sm">{displayValue}</div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "usedCount",
-      header: "Usage",
-      cell: ({ row }) => (
-        <div>
-          <div>{row.original.usedCount} times</div>
-          {row.original.usageLimit && (
-            <div className="text-muted-foreground text-sm">
-              Limit: {row.original.usageLimit}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "validUntil",
-      header: "Valid Until",
-      cell: ({ row }) => new Date(row.original.validUntil).toLocaleDateString(),
-    },
-    {
-      accessorKey: "isActive",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge variant={row.original.isActive ? "default" : "secondary"}>
-          {row.original.isActive ? "Active" : "Inactive"}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setShowPromoModal(true);
-            }}
-          >
-            <Edit className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(row.original.code);
-              console.log(`Promo code "${row.original.code}" copied`);
-            }}
-          >
-            <Copy className="size-4" />
-          </Button>
-        </div>
       ),
     },
   ];
@@ -1235,65 +1138,7 @@ export default function MarketingPage() {
 
         {/* Promo Codes Tab */}
         <TabsContent value="promos" className="space-y-4">
-          {/* Promo overview tiles */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiTile
-              label="Total Promo Codes"
-              value={promoCodes.length}
-              hint={`${promoCodes.filter((p) => p.isActive).length} active`}
-              icon={Ticket}
-              tone="indigo"
-            />
-            <KpiTile
-              label="Total Redemptions"
-              value={promoCodes.reduce((sum, p) => sum + p.usedCount, 0)}
-              hint="Across all codes"
-              icon={CheckCircle2}
-              tone="emerald"
-            />
-            <KpiTile
-              label="Active Codes"
-              value={promoCodes.filter((p) => p.isActive).length}
-              hint="Currently redeemable"
-              icon={Zap}
-              tone="amber"
-            />
-            <KpiTile
-              label="% Discount Codes"
-              value={promoCodes.filter((p) => p.type === "percentage").length}
-              hint="vs. fixed-amount codes"
-              icon={Percent}
-              tone="violet"
-            />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tag className="size-5 text-violet-500" />
-                    Promo Codes
-                  </CardTitle>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    Discount codes and special offers
-                  </p>
-                </div>
-                <Button onClick={() => setShowPromoModal(true)}>
-                  <Plus className="mr-2 size-4" />
-                  Create Promo Code
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={promoColumns}
-                data={promoCodes}
-                searchColumn="code"
-                searchPlaceholder="Search promo codes..."
-              />
-            </CardContent>
-          </Card>
+          <PromoCodesTab />
         </TabsContent>
       </Tabs>
 
@@ -1332,12 +1177,6 @@ export default function MarketingPage() {
               setSelectedCampaign(null);
             }}
           />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPromoModal} onOpenChange={setShowPromoModal}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl">
-          <PromoCodeModal onClose={() => setShowPromoModal(false)} />
         </DialogContent>
       </Dialog>
 

@@ -1614,3 +1614,45 @@ export const MEMBERS: SeedMember[] = [
     changedDaysAgo: 40,
   },
 ];
+
+// ── Promo codes (20260911173538) ───────────────────────────────────────────
+// What staff type at the booking checkout. Found again by their code: the
+// table has one code per facility.
+export const PROMO_CODES = [
+  {
+    code: "WELCOME15",
+    description: "15% off a first visit, up to $30.",
+    type: "percentage" as const,
+    value: 15,
+    maxDiscount: 30,
+    appliesTo: [] as string[],
+    firstTimeOnly: true,
+    perCustomerLimit: 1,
+    usageLimit: null as number | null,
+    validDays: 120,
+  },
+  {
+    code: "GROOM10",
+    description: "$10 off a groom.",
+    type: "fixed" as const,
+    value: 10,
+    maxDiscount: null as number | null,
+    appliesTo: ["grooming"],
+    firstTimeOnly: false,
+    perCustomerLimit: 2,
+    usageLimit: 50,
+    validDays: 60,
+  },
+  {
+    code: "FALLDAYCARE",
+    description: "A free daycare day for the autumn open house.",
+    type: "free_service" as const,
+    value: 0,
+    maxDiscount: null as number | null,
+    appliesTo: ["daycare"],
+    firstTimeOnly: false,
+    perCustomerLimit: 1,
+    usageLimit: 20,
+    validDays: 45,
+  },
+];

@@ -5,7 +5,6 @@ import {
   facilityBranding,
   playdateAlertConfig,
   playdateAlertLogs,
-  promoCodes,
   referralNotificationTemplates,
 } from "@/data/marketing";
 import type {
@@ -15,7 +14,6 @@ import type {
   FacilityBranding,
   PlaydateAlertConfig,
   PlaydateAlertLog,
-  MarketingPromoCode,
   ReferralNotificationTemplate,
 } from "@/types/marketing";
 
@@ -44,10 +42,7 @@ export const marketingQueries = {
     queryKey: ["marketing", "playdate-logs"] as const,
     queryFn: async (): Promise<PlaydateAlertLog[]> => playdateAlertLogs,
   }),
-  promoCodes: () => ({
-    queryKey: ["marketing", "promo-codes"] as const,
-    queryFn: async (): Promise<MarketingPromoCode[]> => promoCodes,
-  }),
+  // promoCodes lives in src/lib/api/promo-codes.ts, on promo_codes.
   referralTemplates: () => ({
     queryKey: ["marketing", "referral-templates"] as const,
     queryFn: async (): Promise<ReferralNotificationTemplate[]> =>

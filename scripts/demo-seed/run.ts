@@ -35,6 +35,7 @@ import {
   REFUSED_SLUGS,
   SEED_ACTOR_SUB,
   SEED_AUTHOR,
+  SEED_PREFIX,
   TAX_RATE,
 } from "./config";
 import {
@@ -55,6 +56,7 @@ import {
   MEMBERSHIP_PLANS,
   NOTES,
   PETS,
+  PROMO_CODES,
   STAFF,
   TASK_TEMPLATES,
   TRAINER_LEGACY_ID,
@@ -1057,6 +1059,26 @@ try {
            ${p.discountPercentage}, ${m.status === "cancelled" ? null : next},
            ${detail}::jsonb, ${daysAgoIso(m.startedDaysAgo)})`;
       count("memberships");
+    }
+
+    // ── Promo codes ───────────────────────────────────────────────────────
+    for (const p of PROMO_CODES) {
+      const [exists] = await tx`
+        select 1 from public.promo_codes
+         where facility_id = ${DEMO_FACILITY_ID} and code = ${p.code}`;
+      if (exists) continue;
+      await tx`
+        insert into public.promo_codes
+          (facility_id, code, description, discount_type, discount_value,
+           max_discount, applies_to, first_time_only, per_customer_limit,
+           usage_limit, valid_from, valid_until, detail)
+        values
+          (${DEMO_FACILITY_ID}, ${p.code}, ${p.description}, ${p.type},
+           ${p.value}, ${p.maxDiscount}, ${pgTextArray(p.appliesTo)}::text[],
+           ${p.firstTimeOnly}, ${p.perCustomerLimit}, ${p.usageLimit},
+           ${shiftDay(today, -10)}, ${shiftDay(today, p.validDays)},
+           ${{ demoSeedKey: `${SEED_PREFIX}-promo-${p.code}` }}::jsonb)`;
+      count("promo codes");
     }
 
     if (ROLLBACK) {

@@ -22,27 +22,56 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tag } from "lucide-react";
+import { toast } from "sonner";
+
+import { useSavePromoCode } from "@/lib/api/promo-codes";
+import { formatWeekday } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { MarketingPromoCode } from "@/types/marketing";
 
 interface PromoCodeModalProps {
+  /** The code being edited; absent for a new one. */
+  code?: MarketingPromoCode | null;
   onClose: () => void;
 }
 
-export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
-  const [formData, setFormData] = useState({
-    code: "",
-    description: "",
-    type: "percentage" as "percentage" | "fixed" | "free_service",
-    value: "",
-    minPurchase: "",
-    maxDiscount: "",
-    validFrom: "",
-    validUntil: "",
-    usageLimit: "",
-    perCustomerLimit: "",
-    autoApply: false,
-    firstTimeCustomer: false,
-    specificDays: [] as string[],
-  });
+// ── A CODE IS SAVED, AND WHAT IT PROMISES IS WHAT THE BILL CHECKS ─────────
+//
+// Save was `console.log("Saving promo code:", formData)`. It writes
+// `promo_codes` now (20260911173538), and each field is one the checkout's
+// `redeem_promo_code` enforces: the dates, the limits, first visit only, the
+// days of the week, the service. Two fields that promised more than that are
+// gone — "Auto-apply" (nothing applies a code on its own) and a free-text
+// "Service name" for a free service, which a bill could never match; a free
+// service is now one of the services the facility runs.
+const SERVICES = ["boarding", "daycare", "grooming", "training"] as const;
+
+export function PromoCodeModal({ code, onClose }: PromoCodeModalProps) {
+  const { t, fill, locale } = useStaffText("promoCodes");
+  const save = useSavePromoCode();
+  const [formData, setFormData] = useState(() => ({
+    code: code?.code ?? "",
+    description: code?.description ?? "",
+    type: (code?.type ?? "percentage") as
+      | "percentage"
+      | "fixed"
+      | "free_service",
+    value: code ? String(code.value) : "",
+    minPurchase: code?.minPurchase ? String(code.minPurchase) : "",
+    maxDiscount: code?.maxDiscount ? String(code.maxDiscount) : "",
+    validFrom: code?.validFrom ?? "",
+    validUntil: code?.validUntil ?? "",
+    usageLimit: code?.usageLimit ? String(code.usageLimit) : "",
+    perCustomerLimit: code?.perCustomerLimit
+      ? String(code.perCustomerLimit)
+      : "",
+    appliesTo:
+      code && code.type !== "free_service"
+        ? (code.applicableServices?.[0] ?? "all")
+        : "all",
+    firstTimeCustomer: code?.conditions?.firstTimeCustomer ?? false,
+    specificDays: code?.conditions?.specificDays ?? ([] as string[]),
+  }));
 
   const generateCode = () => {
     const code =
@@ -50,9 +79,50 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
     setFormData({ ...formData, code });
   };
 
+  const optionalNumber = (v: string) => (v.trim() ? Number(v) : undefined);
   const handleSave = () => {
-    console.log("Saving promo code:", formData);
-    onClose();
+    const payload: Partial<MarketingPromoCode> = {
+      code: formData.code,
+      description: formData.description,
+      type: formData.type,
+      value:
+        formData.type === "free_service"
+          ? formData.value
+          : Number(formData.value),
+      minPurchase: optionalNumber(formData.minPurchase),
+      maxDiscount:
+        formData.type === "percentage"
+          ? optionalNumber(formData.maxDiscount)
+          : undefined,
+      validFrom: formData.validFrom,
+      validUntil: formData.validUntil,
+      usageLimit: optionalNumber(formData.usageLimit),
+      perCustomerLimit: optionalNumber(formData.perCustomerLimit),
+      applicableServices:
+        formData.type === "free_service" || formData.appliesTo === "all"
+          ? []
+          : [formData.appliesTo],
+      autoApply: false,
+      conditions: {
+        firstTimeCustomer: formData.firstTimeCustomer,
+        specificDays: formData.specificDays,
+      },
+    };
+    save.mutate(
+      { id: code?.id, code: payload },
+      {
+        onSuccess: (saved) => {
+          toast.success(
+            fill(code ? "updated" : "created", { code: saved.code }),
+          );
+          onClose();
+        },
+        onError: (error) =>
+          toast.error(t("notSaved"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const daysOfWeek = [
@@ -68,7 +138,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Create Promo Code</DialogTitle>
+        <DialogTitle>{code ? t("editTitle") : "Create Promo Code"}</DialogTitle>
         <DialogDescription>
           Set up discount codes and special offers
         </DialogDescription>
@@ -133,21 +203,61 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             <Label htmlFor="value">
               {formData.type === "percentage" && "Percentage (%)"}
               {formData.type === "fixed" && "Amount ($)"}
-              {formData.type === "free_service" && "Service Name"}
+              {formData.type === "free_service" && t("freeService")}
             </Label>
-            <Input
-              id="value"
-              value={formData.value}
-              onChange={(e) =>
-                setFormData({ ...formData, value: e.target.value })
-              }
-              placeholder={
-                formData.type === "free_service" ? "e.g., Nail Trim" : ""
-              }
-              type={formData.type !== "free_service" ? "number" : "text"}
-            />
+            {formData.type === "free_service" ? (
+              <Select
+                value={formData.value}
+                onValueChange={(value) => setFormData({ ...formData, value })}
+              >
+                <SelectTrigger id="value">
+                  <SelectValue placeholder={t("pickService")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {t(`service_${s}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="value"
+                value={formData.value}
+                onChange={(e) =>
+                  setFormData({ ...formData, value: e.target.value })
+                }
+                type="number"
+                min={0}
+              />
+            )}
           </div>
         </div>
+
+        {formData.type !== "free_service" && (
+          <div className="space-y-2">
+            <Label htmlFor="appliesTo">{t("appliesTo")}</Label>
+            <Select
+              value={formData.appliesTo}
+              onValueChange={(appliesTo) =>
+                setFormData({ ...formData, appliesTo })
+              }
+            >
+              <SelectTrigger id="appliesTo">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("allServices")}</SelectItem>
+                {SERVICES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {t(`service_${s}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Optional Limits */}
         <Card>
@@ -247,23 +357,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
         {/* Conditions */}
         <Card>
           <CardContent className="space-y-4 pt-6">
-            <Label className="text-base">Conditions (Auto-Apply Rules)</Label>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="autoApply"
-                checked={formData.autoApply}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, autoApply: checked as boolean })
-                }
-              />
-              <label
-                htmlFor="autoApply"
-                className="cursor-pointer text-sm/none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Auto-apply this promo code when conditions are met
-              </label>
-            </div>
+            <Label className="text-base">{t("conditions")}</Label>
 
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -295,7 +389,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                         ? "default"
                         : "outline"
                     }
-                    className="cursor-pointer capitalize"
+                    className="cursor-pointer"
                     onClick={() => {
                       if (formData.specificDays.includes(day)) {
                         setFormData({
@@ -312,7 +406,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
                       }
                     }}
                   >
-                    {day}
+                    {formatWeekday((daysOfWeek.indexOf(day) + 1) % 7, locale)}
                   </Badge>
                 ))}
               </div>
@@ -328,6 +422,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
         <Button
           onClick={handleSave}
           disabled={
+            save.isPending ||
             !formData.code ||
             !formData.value ||
             !formData.validFrom ||
@@ -335,7 +430,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
           }
         >
           <Tag className="mr-2 size-4" />
-          Create Promo Code
+          {code ? t("saveChanges") : "Create Promo Code"}
         </Button>
       </DialogFooter>
     </>

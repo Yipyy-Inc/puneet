@@ -2178,6 +2178,7 @@ export default function ClientBookingDetailPage({
             }))}
           loyaltyDiscount={loyaltyDiscount ?? undefined}
           membershipDiscount={membershipDiscount ?? undefined}
+          promoBookingRef={booking.id}
           onConfirm={async (payment) => {
             const lateFee = pendingLateFee;
             const reward = loyaltyDiscount;
