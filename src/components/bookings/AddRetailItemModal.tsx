@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { products } from "@/data/retail";
+import { useRetailProducts } from "@/lib/api/retail-store";
+import { NO_ITEMS } from "@/lib/no-items";
 import dynamic from "next/dynamic";
 
 const CameraScanner = dynamic(
@@ -59,6 +60,10 @@ export function AddRetailItemModal({
   const [cart, setCart] = useState<
     Map<string, { name: string; price: number; quantity: number }>
   >(new Map());
+  // The facility shelf (retail_products), not `@/data/retail` — a sample
+  // shop whose items and prices went onto real bills.
+  const { data: shelf } = useRetailProducts();
+  const products = shelf ?? NO_ITEMS;
 
   const categories = useMemo(() => {
     const activeProducts = products.filter((p) => p.status === "active");
@@ -67,7 +72,7 @@ export function AddRetailItemModal({
       counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
     }
     return { total: activeProducts.length, counts };
-  }, []);
+  }, [products]);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -83,7 +88,7 @@ export function AddRetailItemModal({
         p.brand?.toLowerCase().includes(q)
       );
     });
-  }, [searchQuery, activeCategory]);
+  }, [products, searchQuery, activeCategory]);
 
   const handleScan = (code: string) => {
     setCameraOpen(false);
@@ -151,14 +156,12 @@ export function AddRetailItemModal({
       price: item.price * item.quantity,
       quantity: item.quantity,
     }));
+    // The page says "added" once the lines are written; this said it first.
     onAddItems(items);
     onOpenChange(false);
     setCart(new Map());
     setSearchQuery("");
     setActiveCategory("all");
-    toast.success(
-      `${cartCount} item${cartCount !== 1 ? "s" : ""} added to invoice`,
-    );
   };
 
   const handleClose = () => {

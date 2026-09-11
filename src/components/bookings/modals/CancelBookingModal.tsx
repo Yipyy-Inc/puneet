@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,26 +14,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { AlertTriangle, CreditCard, Wallet } from "lucide-react";
+import { AlertTriangle, Banknote, CreditCard, Wallet } from "lucide-react";
 import type { Booking } from "@/types/booking";
-import { clients } from "@/data/clients";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDepositRules } from "@/lib/api/facility-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatDateShort, formatMoney, formatTime } from "@/lib/i18n/format";
+
+/**
+ * How money goes back. `original` is the card it was paid with, through the
+ * processor — the same path as Issue Refund. It used to write a negative
+ * ledger row and toast "$X refunded" without asking the card network for a
+ * cent. Store credit and cash are ledger entries for something done in the
+ * room.
+ */
+export type CancelRefundMethod = "original" | "store_credit" | "cash";
 
 interface CancelBookingModalProps {
   booking: Booking;
+  /** From the booking page's own reads — this read the fixture client list. */
+  clientName?: string;
+  petName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * AWAITED. A throw keeps the dialog open with the reason on screen; it
+   * closes only once the cancellation (and any refund) is recorded.
+   */
   onConfirm: (
     bookingId: number,
     cancellationReason: string,
-    refundMethod: "card" | "store_credit",
+    refundMethod: CancelRefundMethod,
     refundAmount: number,
-  ) => void;
+  ) => Promise<void>;
 }
 
 export function CancelBookingModal({
   booking,
+  clientName,
+  petName,
   open,
   onOpenChange,
   onConfirm,
@@ -45,56 +64,76 @@ export function CancelBookingModal({
   // localStorage, so a deposit issued as store credit on one machine came back
   // to the card on another.
   const { refundPolicy } = useDepositRules();
+  const { t, fill, locale } = useStaffText("cancelBooking");
+  const money = (n: number) => formatMoney(n, locale);
   const [cancellationReason, setCancellationReason] = useState("");
   // Held as null until somebody chooses, and DERIVED below rather than seeded:
   // the policy arrives over the network, so a useState default would capture
   // whatever was assumed before it landed and never correct itself. That is the
   // shape check:settings-seeding exists for.
-  const [chosenRefundMethod, setChosenRefundMethod] = useState<
-    "card" | "store_credit" | null
-  >(null);
-  const refundMethod: "card" | "store_credit" =
+  const [chosenRefundMethod, setChosenRefundMethod] =
+    useState<CancelRefundMethod | null>(null);
+  const refundMethod: CancelRefundMethod =
     chosenRefundMethod ??
-    (refundPolicy.type === "credit" ? "store_credit" : "card");
+    (refundPolicy.type === "credit" ? "store_credit" : "original");
   const setRefundMethod = setChosenRefundMethod;
-  const [refundAmount, setRefundAmount] = useState(booking.totalCost);
+  // What was PAID, from the ledger — not the price. Defaulting to the price
+  // offered to refund money that was never taken.
+  const paid = booking.amountPaid ?? 0;
+  const [refundAmount, setRefundAmount] = useState(paid);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
-  const client = clients.find((c) => c.id === booking.clientId);
-  const pet = client?.pets.find((p) => p.id === booking.petId);
-
-  const bookingStartLabel = useMemo(() => {
-    const d = new Date(booking.startDate);
-    if (booking.checkInTime) {
-      const [h, m] = booking.checkInTime.split(":").map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }, [booking.startDate, booking.checkInTime]);
+  // In the viewer's locale — it was "en-US" whatever they had chosen.
+  const start = new Date(
+    `${booking.startDate}T${booking.checkInTime || "00:00"}`,
+  );
+  const bookingStartLabel = booking.checkInTime
+    ? `${formatDateShort(start, locale)} ${formatTime(start, locale)}`
+    : formatDateShort(start, locale);
 
   const depositPolicyText =
     refundPolicy.type === "non_refundable"
-      ? "The collected deposit is non-refundable — exclude it from the refund amount below."
+      ? t("policyNonRefundable")
       : refundPolicy.type === "credit"
-        ? "The collected deposit is issued as store credit toward a future booking (refund method preset to Store Credit)."
-        : `Full deposit refund if cancelled at least ${refundPolicy.refundBeforeHours}h before the booking (starts ${bookingStartLabel}). Otherwise the deposit is forfeited.`;
+        ? t("policyCredit")
+        : fill("policyWindow", {
+            hours: String(refundPolicy.refundBeforeHours),
+            start: bookingStartLabel,
+          });
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!cancellationReason.trim()) {
-      alert("Please provide a cancellation reason");
+      setProblem(t("needReason"));
       return;
     }
-    onConfirm(booking.id, cancellationReason, refundMethod, refundAmount);
+    if (refundAmount > paid + 0.005) {
+      setProblem(fill("overPaid", { amount: money(paid) }));
+      return;
+    }
+    setBusy(true);
+    setProblem(null);
+    try {
+      await onConfirm(
+        booking.id,
+        cancellationReason,
+        refundMethod,
+        canRefund ? refundAmount : 0,
+      );
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : t("notCancelled"));
+      return;
+    } finally {
+      setBusy(false);
+    }
     onOpenChange(false);
     setCancellationReason("");
-    setRefundAmount(booking.totalCost);
+    setRefundAmount(paid);
   };
 
-  const canRefund = booking.paymentStatus === "paid";
+  // Anything paid can be given back — a part-paid booking too, which used to
+  // be offered no refund at all.
+  const canRefund = paid > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,37 +141,35 @@ export function CancelBookingModal({
         <DialogHeader>
           <DialogTitle className="text-destructive flex items-center gap-2">
             <AlertTriangle className="size-5" />
-            Cancel Booking #{booking.id}
+            {fill("title", { ref: String(booking.id) })}
           </DialogTitle>
           <DialogDescription>
-            Client: {client?.name} | Pet: {pet?.name}
+            {[clientName, petName].filter(Boolean).join(" · ")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <Alert variant="destructive">
             <AlertTriangle className="size-4" />
-            <AlertTitle>Warning</AlertTitle>
-            <AlertDescription>
-              This action will cancel the booking. This cannot be undone.
-            </AlertDescription>
+            <AlertTitle>{t("warningTitle")}</AlertTitle>
+            <AlertDescription>{t("warningBody")}</AlertDescription>
           </Alert>
 
           {/* Deposit refund policy from Deposit Rules settings */}
           <Alert>
             <Wallet className="size-4" />
-            <AlertTitle>Deposit refund policy</AlertTitle>
+            <AlertTitle>{t("policyTitle")}</AlertTitle>
             <AlertDescription>{depositPolicyText}</AlertDescription>
           </Alert>
 
           {/* Cancellation Reason */}
           <div className="grid gap-2">
-            <Label htmlFor="reason">Cancellation Reason *</Label>
+            <Label htmlFor="reason">{t("reasonLabel")} *</Label>
             <Textarea
               id="reason"
               value={cancellationReason}
               onChange={(e) => setCancellationReason(e.target.value)}
-              placeholder="Please provide a reason for cancellation..."
+              placeholder={t("reasonPlaceholder")}
               rows={3}
               required
             />
@@ -142,16 +179,16 @@ export function CancelBookingModal({
           {canRefund && (
             <>
               <div className="border-t pt-4">
-                <h4 className="mb-3 font-semibold">Refund Details</h4>
+                <h4 className="mb-3 font-semibold">{t("refundTitle")}</h4>
 
                 {/* Refund Amount */}
                 <div className="mb-4 grid gap-2">
-                  <Label htmlFor="refundAmount">Refund Amount ($)</Label>
+                  <Label htmlFor="refundAmount">{t("refundAmount")}</Label>
                   <Input
                     id="refundAmount"
                     type="number"
                     min="0"
-                    max={booking.totalCost}
+                    max={paid}
                     step="0.01"
                     value={refundAmount}
                     onChange={(e) =>
@@ -159,33 +196,46 @@ export function CancelBookingModal({
                     }
                   />
                   <p className="text-muted-foreground text-xs">
-                    Original amount: ${booking.totalCost.toFixed(2)}
+                    {fill("paidSoFarLine", { amount: money(paid) })}
                   </p>
                 </div>
 
                 {/* Refund Method */}
                 <div className="grid gap-3">
-                  <Label>Refund Method</Label>
+                  <Label>{t("refundTo")}</Label>
                   <RadioGroup
                     value={refundMethod}
                     onValueChange={(value: string) =>
-                      setRefundMethod(value as "card" | "store_credit")
+                      setRefundMethod(value as CancelRefundMethod)
                     }
                   >
                     <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
-                      <RadioGroupItem value="card" id="card" />
+                      <RadioGroupItem value="original" id="refund-original" />
                       <Label
-                        htmlFor="card"
+                        htmlFor="refund-original"
                         className="flex flex-1 cursor-pointer items-center gap-2"
                       >
                         <CreditCard className="size-4" />
                         <div>
-                          <div className="font-medium">
-                            Original Payment Method
-                          </div>
+                          <div className="font-medium">{t("toCard")}</div>
                           <div className="text-muted-foreground text-xs">
-                            Refund to{" "}
-                            {booking.paymentMethod === "card" ? "card" : "cash"}
+                            {t("toCardHelp")}
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+
+                    <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
+                      <RadioGroupItem value="cash" id="refund-cash" />
+                      <Label
+                        htmlFor="refund-cash"
+                        className="flex flex-1 cursor-pointer items-center gap-2"
+                      >
+                        <Banknote className="size-4" />
+                        <div>
+                          <div className="font-medium">{t("cash")}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {t("cashHelp")}
                           </div>
                         </div>
                       </Label>
@@ -199,9 +249,9 @@ export function CancelBookingModal({
                       >
                         <Wallet className="size-4" />
                         <div>
-                          <div className="font-medium">Store Credit</div>
+                          <div className="font-medium">{t("credit")}</div>
                           <div className="text-muted-foreground text-xs">
-                            Issue store credit for future bookings
+                            {t("creditHelp")}
                           </div>
                         </div>
                       </Label>
@@ -213,12 +263,12 @@ export function CancelBookingModal({
               {/* Refund Summary */}
               <div className="bg-muted rounded-lg p-3">
                 <div className="mb-1 flex justify-between text-sm">
-                  <span>Booking Total:</span>
-                  <span>${booking.totalCost.toFixed(2)}</span>
+                  <span>{t("paidSoFar")}</span>
+                  <span className="tabular-nums">{money(paid)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold">
-                  <span>Refund Amount:</span>
-                  <span>${refundAmount.toFixed(2)}</span>
+                  <span>{t("refundTitle")}</span>
+                  <span className="tabular-nums">{money(refundAmount)}</span>
                 </div>
               </div>
             </>
@@ -226,19 +276,28 @@ export function CancelBookingModal({
 
           {!canRefund && (
             <Alert>
-              <AlertDescription>
-                No refund will be processed as payment is still pending.
-              </AlertDescription>
+              <AlertDescription>{t("nothingPaid")}</AlertDescription>
             </Alert>
           )}
         </div>
 
+        {problem && (
+          <p role="alert" className="text-destructive text-sm">
+            {problem}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Go Back
+            {t("keep")}
           </Button>
-          <Button variant="destructive" onClick={handleConfirm}>
-            Confirm Cancellation
+          <Button
+            variant="destructive"
+            onClick={() => void handleConfirm()}
+            loading={busy}
+          >
+            {canRefund && refundAmount > 0
+              ? fill("cancelAndRefund", { amount: money(refundAmount) })
+              : t("cancelOnly")}
           </Button>
         </DialogFooter>
       </DialogContent>

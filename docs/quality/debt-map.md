@@ -13117,3 +13117,47 @@ sharing the same statement-timeout budget.
 **Still open.** The viewer is re-resolved on every request with no per-request
 cache across route handlers; a burst of API calls multiplies it. Worth a look
 before real traffic grows.
+
+## 2026-09-12 — the booking page's money tells the truth
+
+An audit of every booking button (2026-09-11) found the checkout claiming
+money it had not taken. Fixed, with `booking-checkout-truth` added to the gate:
+
+- **The checkout waits.** The booking page ran its handler as
+  `void (async () => …)()`, so "Payment Complete — $X charged successfully"
+  appeared before the payment was written and whether or not it was. It is
+  `hooks/use-booking-checkout` now, shared with the dashboard card: awaited,
+  every failure thrown so the dialog stays open with the reason (which is now
+  shown for every tender, not only the terminal's), and the dialog reports
+  what the handler says was taken.
+- **Tax is recorded apart.** The dialog sent one amount with the tax inside;
+  the charge compared it with the pre-tax balance, so any facility that set a
+  tax could not take a non-terminal payment. Supply, tax and tip go to the
+  ledger separately. The card route (saved card and the customer's pay-by-card
+  link) charged no tax at all; it adds the facility's tax now, from
+  `lib/payments/booking-tax`, and the pay page shows it. A gift card pays tax
+  too (20260911221947, P7).
+- **The bill moves before the money for every tender** — the terminal path
+  spent the loyalty reward and cleared the late fee without writing either.
+- **Card on File charges a card.** It wrote a `card-on-file` row without
+  touching one; it charges a saved, consented card through Clover now, and is
+  offered only when the client has one. "Custom" (no ledger meaning) and
+  "other unpaid invoices" (charged to this booking alone and refused) are
+  gone — several bills are settled from the client file's bulk payment.
+- **Split payment records each part** (`lib/checkout/plan-split`, unit
+  tested): typed parts first, a card part last taking what remains.
+- **Change kept as store credit is issued**; store credit that does not cover
+  the bill says what is still owed; a paid checkout checks the booking out.
+- **Cancel** refunds first — "back to the card" is the processor refund Issue
+  Refund uses (it wrote a ledger row and toasted "refunded") — defaults to
+  what was PAID, offers a refund on part-paid bookings, and no longer promises
+  a message or a policy. **Deposit and prepayment** record money in hand only
+  (their card options charged nothing), carry tax, wait for the write, and a
+  deposit really confirms a pending booking. **Add Item** sells the facility's
+  own shelf, not `@/data/retail`.
+- **Still open (step 3 of the audit):** the booking's status rules come from
+  fixture facility 11 (`mappers/booking.ts` sets `facilityId: 11`);
+  InvoicePanel / AutoAppliedBenefits on migrated bookings, Email invoice, SMS
+  link, Send estimate, QuickBooks resync, medication and belongings edits,
+  Undo check-in and Mark as ready still claim what they do not do; the New
+  Booking form does not wait for its save and drops special requests.
