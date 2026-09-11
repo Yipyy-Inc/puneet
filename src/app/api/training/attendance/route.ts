@@ -8,6 +8,11 @@ import {
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import {
+  DEFAULT_TIMEZONE,
+  instantFromWallClock,
+  wallClockParts,
+} from "@/lib/time/facility-time";
+import {
   TRAINING_BOOKING_SELECT,
   rowToTrainingAttendee,
   type TrainingBookingRow,
@@ -41,8 +46,31 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   const scope = await activeFacilityIdForStaff();
   const url = new URL(request.url);
+  // The day is the FACILITY's day. The window was midnight to midnight UTC,
+  // so in Montréal an evening class — 20:00 is 00:00Z — fell into tomorrow and
+  // was missing from tonight's check-in board; a 23:00 check-in the night
+  // before showed up this morning.
+  const { data: facilityRow } = scope
+    ? await supabase
+        .from("facilities")
+        .select("timezone")
+        .eq("id", scope)
+        .maybeSingle()
+    : { data: null };
+  const timeZone =
+    (facilityRow as { timezone: string | null } | null)?.timezone ??
+    DEFAULT_TIMEZONE;
   const date =
-    url.searchParams.get("date") ?? new Date().toISOString().slice(0, 10);
+    url.searchParams.get("date") ??
+    wallClockParts(new Date().toISOString(), timeZone).date;
+  const nextDay = new Date(`${date}T12:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const dayStart = instantFromWallClock(date, "00:00", timeZone);
+  const dayEnd = instantFromWallClock(
+    nextDay.toISOString().slice(0, 10),
+    "00:00",
+    timeZone,
+  );
 
   const { data, error } = await supabase
     .from("bookings")
@@ -50,8 +78,8 @@ export async function GET(request: NextRequest) {
     .match(inFacility(scope))
     .eq("service", "training")
     .not("status", "in", "(cancelled,declined,no_show)")
-    .gte("start_at", `${date}T00:00:00.000Z`)
-    .lte("start_at", `${date}T23:59:59.999Z`)
+    .gte("start_at", dayStart)
+    .lt("start_at", dayEnd)
     .order("start_at", { ascending: true });
 
   if (error) {
