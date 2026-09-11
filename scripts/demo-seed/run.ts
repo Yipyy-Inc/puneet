@@ -48,6 +48,7 @@ import {
   VACCINATIONS,
   FACILITY_PROFILE,
   GROOMING_ADD_ONS,
+  GROOMING_SERVICE_CHARGES,
   GROOMING_SERVICES,
   GROOMING_STATIONS,
   GROOMING_STYLISTS,
@@ -273,6 +274,17 @@ try {
         insert into public.facility_settings (facility_id, domain, value)
         values (${DEMO_FACILITY_ID}, 'daycare_rates', ${{ rates: DAYCARE_RATES }}::jsonb)`;
       count("daycare rates");
+    }
+
+    // ── Grooming service charges (the grooming Rates tab) ─────────────────
+    const [haveCharges] = await tx`
+      select 1 from public.facility_settings
+       where facility_id = ${DEMO_FACILITY_ID} and domain = 'grooming_service_charges'`;
+    if (!haveCharges) {
+      await tx`
+        insert into public.facility_settings (facility_id, domain, value)
+        values (${DEMO_FACILITY_ID}, 'grooming_service_charges', ${{ charges: GROOMING_SERVICE_CHARGES }}::jsonb)`;
+      count("grooming service charges");
     }
 
     // ── Training programs (the training Rates tab) ────────────────────────

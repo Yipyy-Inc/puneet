@@ -1063,7 +1063,7 @@
     "src/components/facility/grooming/grooming-calendar.tsx": 116,
     "src/components/facility/grooming/grooming-check-in-forms.tsx": 12,
     "src/components/facility/grooming/grooming-prepaid-packages.tsx": 80,
-    "src/components/facility/grooming/grooming-rates.tsx": 51,
+    "src/components/facility/grooming/grooming-rates.tsx": 46,
     "src/components/facility/grooming/grooming-session-panel.tsx": 53,
     "src/components/facility/grooming/live-tracking-page.tsx": 41,
     "src/components/facility/grooming/mark-ready-dialog.tsx": 27,
