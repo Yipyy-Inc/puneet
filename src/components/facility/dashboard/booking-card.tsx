@@ -19,7 +19,6 @@ import {
   Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSettings } from "@/hooks/use-settings";
 import { TagList } from "@/components/shared/TagList";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
@@ -41,13 +40,13 @@ import {
   type LateFeeResult,
 } from "@/lib/late-pickup-fee";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
-import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
-import {
-  balanceOf,
-  checkoutTender,
-  useTakeBookingPayment,
-} from "@/lib/api/booking-money";
-import { useAddLineItems } from "@/lib/api/booking-line-items";
+import { useBookingCheckout } from "@/hooks/use-booking-checkout";
+import { balanceOf } from "@/lib/api/booking-money";
+import type {
+  CheckoutPayment,
+  CheckoutResult,
+} from "@/components/bookings/PaymentCheckoutFlow";
+import type { Booking } from "@/types/booking";
 
 // ── WHOSE RECORD THIS CARD LINKS TO ──────────────────────────────────────
 //
@@ -136,14 +135,7 @@ export function BookingCard({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
-  // The facility's report-card settings — auto-send mode and send time. Read
-  // from the fixture until now, so a facility that had turned auto-send off
-  // still had it announced as scheduled.
-  const { reportCards: reportCardConfig } = useSettings();
   const { updateStatus } = useUnifiedBookings();
-  const takePayment = useTakeBookingPayment();
-  const addLineItems = useAddLineItems();
-  const earnPoints = useEarnLoyaltyPoints();
   const {
     discount: loyaltyDiscount,
     consume: consumeLoyaltyDiscount,
@@ -163,8 +155,42 @@ export function BookingCard({
   const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
     null,
   );
-  const [reportCardSent, setReportCardSent] = useState(false);
   const ownerRef = useOwnerRef(booking);
+
+  // Training and custom services have no booking row to charge against.
+  const bookingRef = Number(booking.rawId);
+  const hasRow =
+    booking.source !== "training" &&
+    booking.source !== "custom" &&
+    Number.isFinite(bookingRef);
+  // The same checkout the booking page uses (hooks/use-booking-checkout):
+  // awaited, every failure thrown so the dialog stays open, the late fee and
+  // reward on the bill before any tender, the terminal really charged.
+  const checkout = useBookingCheckout({
+    booking: hasRow
+      ? ({
+          id: bookingRef,
+          totalCost: booking.price ?? 0,
+          amountDue: booking.amountDue ?? booking.price ?? 0,
+          amountPaid: booking.amountPaid ?? 0,
+          status: "confirmed",
+        } as unknown as Booking)
+      : undefined,
+    clientRef: ownerRef ?? 0,
+    lateFee: pendingLateFee,
+    clearLateFee: () => setPendingLateFee(null),
+    loyaltyDiscount,
+    consumeLoyaltyDiscount,
+    releaseLoyaltyDiscount,
+    membershipDiscount: null,
+    // This card checks the booking out through the board's own status flow.
+    completeOnSettle: false,
+    text: {
+      discountRefused: "The member discount could not be applied.",
+      giftCardNoTip: "A gift card cannot pay a tip.",
+      giftCardRemaining: (amount) => `$${amount.toFixed(2)} left on the card`,
+    },
+  });
   const petImage = getPetImage(booking.petId);
   const petHref = ownerRef
     ? `/facility/dashboard/clients/${ownerRef}/pets/${booking.petId}`
@@ -229,7 +255,7 @@ export function BookingCard({
     });
     if (lateFee) {
       toast.warning(
-        `Late pickup: ${lateFee.minutesLate} min over — $${lateFee.amount.toFixed(2)} fee added`,
+        `Late pickup: ${lateFee.minutesLate} min over — a $${lateFee.amount.toFixed(2)} fee goes on the bill at payment`,
       );
     }
     setPendingCheckout({ timestamp, earlyCheckout });
@@ -239,287 +265,58 @@ export function BookingCard({
   };
 
   /**
-   * The report-card side of checkout. Unchanged, and still local.
-   */
-  const sendReportCard = () => {
-    if (reportCardSent) return;
-    const mode = reportCardConfig.autoSend.mode;
-    if (mode === "immediate" || mode === "checkout") {
-      toast.success(`Report card sent to ${booking.ownerName}`);
-      setReportCardSent(true);
-    } else if (mode === "scheduled") {
-      toast.success(
-        `Report card scheduled for ${reportCardConfig.autoSend.sendTime ?? "18:00"}`,
-      );
-      setReportCardSent(true);
-    }
-  };
-
-  /**
-   * Everything that follows a payment landing.
+   * Check the booking out, once the money is settled.
    *
-   * INSIDE the mutation's success path, all of it. It used to run beside a
-   * toast that announced a charge nobody had made: loyalty points were awarded,
-   * a discount voucher was consumed and a report card was "sent" for a payment
-   * that reached no ledger. The same defect the daycare board had, one screen
-   * over.
+   * "Report card sent to {owner}" used to follow here, and nothing was sent or
+   * scheduled: report cards are written and sent from the Report cards
+   * module. The points are awarded by the checkout itself.
    */
-  const afterPayment = (charged: number) => {
+  const afterPayment = () => {
     updateStatus(booking.id, "checked-out", {
       timestamp: pendingCheckout?.timestamp ?? new Date().toISOString(),
       earlyCheckout: pendingCheckout?.earlyCheckout,
     });
     setPendingCheckout(null);
     setPendingLateFee(null);
-
-    // The reward is NOT spent here any more. It is spent before the charge, so
-    // one that has already gone stops the payment instead of quietly
-    // discounting it — see handlePaymentConfirm.
-
-    // ── THE POINTS THIS BOOKING EARNED ──────────────────────────────────
-    //
-    // This used to call the fixture engine, which wrote to an in-memory array
-    // and toasted a summary — so a customer was told they had earned points
-    // that no balance anywhere reflected.
-    //
-    // The award is computed on the SERVER now, from the booking and the
-    // facility's own rules, and posted to the ledger. Fire-and-forget on
-    // purpose: the money is already taken and the checkout must not fail
-    // because an award did not land. A failure is said out loud rather than
-    // swallowed, and the booking can be re-awarded — the route is idempotent.
-    // `afterPayment` is also reached from the already-settled path, so the
-    // reference is resolved here rather than passed in.
-    const bookingRef = Number(booking.rawId);
-    if (Number.isFinite(bookingRef)) {
-      void earnPoints
-        .mutateAsync({ bookingRef })
-        .then((result) => {
-          if (result.awarded && result.points > 0) {
-            toast.success(`+${result.points.toLocaleString()} points`, {
-              description: result.reasons.join(" · ") || undefined,
-            });
-          }
-          // Said separately, and after, because it is news about the CUSTOMER
-          // rather than about this bill — the person at the counter is the one
-          // who gets to tell them.
-          if (result.tierUp) {
-            toast.success(
-              `${result.tierUp.icon} Reached ${result.tierUp.name}`,
-              {
-                description: result.tierUp.rewarded
-                  ? "A tier reward has been added to their account."
-                  : undefined,
-              },
-            );
-          }
-          // One toast per badge rather than a count: a badge is a thing with a
-          // name, and "2 badges earned" is not something the counter can pass
-          // on. Rarely more than one.
-          for (const badge of result.badges) {
-            toast.success(`${badge.icon} ${badge.name}`, {
-              description: badge.rewardText
-                ? `Badge earned — reward: ${badge.rewardText}`
-                : "Badge earned",
-            });
-          }
-        })
-        .catch((error: unknown) => {
-          toast.error("The points for this booking were not awarded", {
-            description:
-              error instanceof Error ? error.message : "Try the booking again.",
-          });
-        });
-    }
-
-    toast.success(
-      charged > 0
-        ? `Charged $${charged.toFixed(2)}`
-        : "Checked out — nothing left to pay",
-    );
-    sendReportCard();
   };
 
   /**
-   * Take the money.
+   * Take the money, then check out.
    *
-   * ── WHAT THIS DID BEFORE ────────────────────────────────────────────────
-   *
-   * Nothing. It toasted `Charged $X via card`, awarded loyalty points and
-   * marked the booking checked out — and called no payment endpoint at all. The
-   * money was never recorded, so the booking stayed unpaid, the client's
-   * balance never moved, and the only trace of the transaction was a toast that
-   * had already faded.
-   *
-   * ── THE AMOUNT IS THE BALANCE, NOT WHAT THE MODAL ADDED UP ──────────────
-   *
-   * `useTakeBookingPayment` takes the booking and works the balance out itself,
-   * against `amount_due` — the price plus anything added at the counter, minus
-   * what the ledger already holds. The modal's figure was `price + lateFee`,
-   * and `price` was undefined for boarding and daycare, so it offered to charge
-   * the late fee alone.
-   *
-   * ── THE LATE FEE GOES ON THE BILL FIRST ─────────────────────────────────
-   *
-   * As a LINE ITEM, which raises `amount_due`, so the payment that follows
-   * covers it. Charging it as a loose extra on the payment row would leave the
-   * booking owing a fee the bill has no record of.
+   * It used to swallow every failure — `toast.error` and `return` — so the
+   * dialog it answered then said "Payment of $X taken" for a payment that was
+   * refused. Failures THROW now and the dialog stays open. Its "Terminal"
+   * tender recorded a terminal payment without touching a terminal; the shared
+   * checkout asks the terminal for real.
    */
-  const handlePaymentConfirm = async (payment: {
-    method: string;
-    amount: number;
-    tip: number;
-    includedInvoices?: string[];
-  }) => {
-    if (!pendingCheckout) return;
+  const handlePaymentConfirm = async (
+    payment: CheckoutPayment,
+  ): Promise<CheckoutResult> => {
+    if (!pendingCheckout) throw new Error("Check the booking out first.");
 
-    // Training and custom services have no booking row to pay against — no
-    // table, no ref. They keep the old behaviour and the toast says so rather
-    // than claiming a charge.
-    const ref = Number(booking.rawId);
-    if (
-      booking.source === "training" ||
-      booking.source === "custom" ||
-      !Number.isFinite(ref)
-    ) {
-      updateStatus(booking.id, "checked-out", {
-        timestamp: pendingCheckout.timestamp,
-        earlyCheckout: pendingCheckout.earlyCheckout,
-      });
-      setPendingCheckout(null);
-      setPendingLateFee(null);
-      toast.success(`Checked out — payment not recorded`, {
-        description: `${booking.serviceLabel} has no booking to charge against yet`,
-      });
-      sendReportCard();
-      return;
+    if (!hasRow) {
+      afterPayment();
+      return {
+        taken: 0,
+        message: `Checked out — no payment recorded: ${booking.serviceLabel} has no booking to charge against yet.`,
+      };
     }
 
-    let tender;
-    try {
-      tender = checkoutTender(payment.method);
-    } catch (error) {
-      // "custom" reaches here. A tender the books do not recognise is not
-      // something to guess at — the money arrived somehow, and which way it
-      // came is the thing being recorded.
-      toast.error((error as Error).message);
-      return;
-    }
-
-    const lateFee = pendingLateFee;
-    const reward = loyaltyDiscount;
-
-    // ── THE REWARD IS SPENT BEFORE THE MONEY MOVES ─────────────────────────
-    //
-    // It used to be spent in `afterPayment`, once the charge had gone through.
-    // Which meant a voucher another till had already taken still came off this
-    // bill: the check happened after the discount had been applied, when there
-    // was nothing left to do about it.
-    //
-    // Spending first turns that into a refusal — the reward is gone, the
-    // payment does not happen, and nobody is charged a discounted total for a
-    // discount they did not get. The cost is a window where the reward is spent
-    // and the charge then fails, and `release` below is what closes it.
-    if (reward) {
-      try {
-        await consumeLoyaltyDiscount(ref);
-      } catch (error) {
-        toast.error("That reward is no longer available", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "It may have been used on another bill.",
-        });
-        return;
-      }
-    }
-
-    // ── AND IT GOES ON THE BILL, NOT JUST IN THE DIALOG ────────────────────
-    //
-    // The discount used to be a number the checkout dialog subtracted for
-    // display while this handler rebuilt the charge from `booking.amountDue` —
-    // so it was shown and never taken off. A negative line item is the same
-    // mechanism the late fee already uses: `extras_total` moves, `amount_due`
-    // is generated from it, and the receipt says what happened.
-    //
-    // It also has to be a ROW rather than a number because the terminal tender
-    // charges server-side from `amount_due`. A figure living in this browser
-    // was never going to reach that.
-    const items: {
-      kind: "item" | "fee";
-      name: string;
-      unitPrice: number;
-    }[] = [];
-    if (lateFee && lateFee.amount > 0) {
-      items.push({
-        kind: "fee",
-        name: `Late pickup (${lateFee.minutesLate} min)`,
-        unitPrice: lateFee.amount,
-      });
-    }
-    if (reward && reward.amount > 0) {
-      items.push({
-        kind: "item",
-        name: reward.label,
-        unitPrice: -reward.amount,
-      });
-    }
-
-    if (items.length > 0) {
-      try {
-        await addLineItems.mutateAsync({ bookingRef: ref, items });
-      } catch (error) {
-        // Nothing has been charged. Give the reward back before stopping.
-        await releaseLoyaltyDiscount();
-        toast.error("The bill was not updated", {
-          description: error instanceof Error ? error.message : undefined,
-        });
-        return;
-      }
-    }
-
-    // ONE FIGURE, used for both the check and the charge. The first draft of
-    // this added the late fee when deciding whether anything was owed and left
-    // it out of the amount charged — taking the money for everything except the
-    // fee that triggered the charge.
-    //
-    // The fee and the discount are both on the server's `amount_due` by the
-    // time this runs: the line items are written first, on purpose.
-    const money = {
-      id: ref,
+    const owed = balanceOf({
       totalCost: booking.price ?? 0,
-      amountDue: Math.max(
-        0,
+      amountDue:
         (booking.amountDue ?? booking.price ?? 0) +
-          (lateFee?.amount ?? 0) -
-          (reward?.amount ?? 0),
-      ),
+        (pendingLateFee?.amount ?? 0),
       amountPaid: booking.amountPaid ?? 0,
-    };
-
-    if (balanceOf(money) <= 0) {
-      // Already settled — a deposit that covered it, a payment taken at the
-      // counter a minute ago, or a reward that covered the rest. Checking out
-      // is still right, and the voucher stays spent because it is what settled
-      // the bill.
-      afterPayment(0);
-      return;
+    });
+    if (owed <= 0) {
+      afterPayment();
+      return { taken: 0, message: "Checked out — nothing was left to pay." };
     }
 
-    try {
-      const charged = await takePayment.mutateAsync({
-        booking: money,
-        method: tender,
-        tipAmount: payment.tip > 0 ? payment.tip : undefined,
-      });
-      afterPayment(charged);
-    } catch (error) {
-      // The charge failed and the reward is already spent. Return it, or the
-      // customer retries and pays full price holding a voucher nothing has.
-      await releaseLoyaltyDiscount();
-      toast.error("The payment was not recorded", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
+    const result = await checkout(payment);
+    afterPayment();
+    return result;
   };
 
   return (

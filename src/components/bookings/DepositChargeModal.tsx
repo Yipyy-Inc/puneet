@@ -10,16 +10,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CreditCard, Banknote, Smartphone } from "lucide-react";
+import { ArrowLeftRight, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+
+/**
+ * Money already in hand. "Card on File" and "Terminal" were offered here and
+ * wrote a ledger row saying a card had been charged — without asking any card
+ * network or device for a cent. A card is charged at checkout, where it
+ * really is.
+ */
+export type DepositTender = "cash" | "e_transfer";
 
 interface DepositChargeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ruleAmount: number;
   ruleLabel: string;
-  onCharge: (amount: number, method: string) => void;
+  /** The facility's tax on an amount — shown, and recorded with it. */
+  taxFor?: (amount: number) => number;
+  /** AWAITED: the dialog closes only once the deposit is recorded. */
+  onCharge: (amount: number, method: DepositTender) => Promise<void>;
 }
 
 export function DepositChargeModal({
@@ -27,25 +37,45 @@ export function DepositChargeModal({
   onOpenChange,
   ruleAmount,
   ruleLabel,
+  taxFor,
   onCharge,
 }: DepositChargeModalProps) {
   const [useRule, setUseRule] = useState(true);
   const [customAmount, setCustomAmount] = useState("");
-  const [method, setMethod] = useState("card");
+  const [method, setMethod] = useState<DepositTender>("cash");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const amount = useRule ? ruleAmount : parseFloat(customAmount) || 0;
+  const tax = taxFor && amount > 0 ? taxFor(amount) : 0;
 
-  const methods = [
-    { value: "card", label: "Card on File", icon: CreditCard },
+  const methods: {
+    value: DepositTender;
+    label: string;
+    icon: typeof Banknote;
+  }[] = [
     { value: "cash", label: "Cash", icon: Banknote },
-    { value: "terminal", label: "Terminal", icon: Smartphone },
+    { value: "e_transfer", label: "E-Transfer", icon: ArrowLeftRight },
   ];
 
-  const handleCharge = () => {
+  // The toast used to say "charged" before the page had written anything —
+  // and again when the write was refused.
+  const handleCharge = async () => {
     if (amount <= 0) return;
-    onCharge(amount, method);
-    onOpenChange(false);
-    toast.success(`Deposit of $${amount.toFixed(2)} charged`);
+    setBusy(true);
+    setProblem(null);
+    try {
+      await onCharge(amount, method);
+      onOpenChange(false);
+    } catch (error) {
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "The deposit was not recorded.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -104,7 +134,7 @@ export function DepositChargeModal({
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
               Payment Method
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {methods.map((m) => {
                 const Icon = m.icon;
                 return (
@@ -124,15 +154,33 @@ export function DepositChargeModal({
                 );
               })}
             </div>
+            <p className="text-ink-tertiary mt-2 text-xs">
+              This records money already in hand. A card is charged at checkout,
+              on the terminal or a saved card.
+            </p>
           </div>
+          {tax > 0 && (
+            <p className="text-ink-secondary text-sm tabular-nums">
+              Plus ${tax.toFixed(2)} tax — ${(amount + tax).toFixed(2)} in all
+            </p>
+          )}
+          {problem && (
+            <p role="alert" className="text-destructive text-sm">
+              {problem}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCharge} disabled={amount <= 0}>
-            Charge Deposit ${amount.toFixed(2)}
+          <Button
+            onClick={() => void handleCharge()}
+            disabled={amount <= 0}
+            loading={busy}
+          >
+            Record deposit ${(amount + tax).toFixed(2)}
           </Button>
         </DialogFooter>
       </DialogContent>

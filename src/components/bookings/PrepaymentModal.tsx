@@ -12,13 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Banknote, CreditCard, Smartphone, Wallet } from "lucide-react";
+import { ArrowLeftRight, Banknote, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
+/**
+ * Money already in hand — see DepositChargeModal: "Card on file" and
+ * "Terminal" wrote card rows without charging a card.
+ */
 export interface PrepaymentResult {
   amount: number;
-  method: "card" | "cash" | "terminal" | "ach";
+  method: "cash" | "e_transfer" | "ach";
   note?: string;
 }
 
@@ -28,14 +31,16 @@ interface PrepaymentModalProps {
   remainingDue: number;
   invoiceTotal: number;
   alreadyCollected: number;
-  onConfirm: (result: PrepaymentResult) => void;
+  /** The facility's tax on an amount — shown, and recorded with it. */
+  taxFor?: (amount: number) => number;
+  /** AWAITED: the dialog closes only once the payment is recorded. */
+  onConfirm: (result: PrepaymentResult) => Promise<void>;
 }
 
 const METHODS = [
-  { value: "card" as const, label: "Card on file", Icon: CreditCard },
   { value: "cash" as const, label: "Cash", Icon: Banknote },
-  { value: "terminal" as const, label: "Terminal", Icon: Smartphone },
-  { value: "ach" as const, label: "Bank/ACH", Icon: Wallet },
+  { value: "e_transfer" as const, label: "E-Transfer", Icon: ArrowLeftRight },
+  { value: "ach" as const, label: "Bank transfer", Icon: Wallet },
 ];
 
 export function PrepaymentModal({
@@ -44,17 +49,21 @@ export function PrepaymentModal({
   remainingDue,
   invoiceTotal,
   alreadyCollected,
+  taxFor,
   onConfirm,
 }: PrepaymentModalProps) {
   const [amount, setAmount] = useState<string>(remainingDue.toFixed(2));
-  const [method, setMethod] = useState<PrepaymentResult["method"]>("card");
+  const [method, setMethod] = useState<PrepaymentResult["method"]>("cash");
   const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setAmount(remainingDue.toFixed(2));
-      setMethod("card");
+      setMethod("cash");
       setNote("");
+      setProblem(null);
     }
   }, [open, remainingDue]);
 
@@ -69,15 +78,30 @@ export function PrepaymentModal({
     { label: "Full", value: remainingDue },
   ].filter((p) => p.value > 0);
 
-  const handleSubmit = () => {
+  const tax = taxFor && numericAmount > 0 ? taxFor(numericAmount) : 0;
+
+  // "Prepayment collected" used to be said before anything was written, and
+  // again when the write was refused.
+  const handleSubmit = async () => {
     if (!valid) return;
-    onConfirm({ amount: numericAmount, method, note: note || undefined });
-    toast.success(
-      isFull
-        ? `Prepayment of $${numericAmount.toFixed(2)} collected — invoice fully prepaid, stays open for add-ons`
-        : `Prepayment of $${numericAmount.toFixed(2)} collected — $${newRemaining.toFixed(2)} remaining`,
-    );
-    onOpenChange(false);
+    setBusy(true);
+    setProblem(null);
+    try {
+      await onConfirm({
+        amount: numericAmount,
+        method,
+        note: note || undefined,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "The payment was not recorded.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -169,7 +193,7 @@ export function PrepaymentModal({
             <p className="text-muted-foreground mb-1.5 text-[10px] font-semibold tracking-wider uppercase">
               Payment method
             </p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {METHODS.map(({ value, label, Icon }) => (
                 <button
                   key={value}
@@ -187,6 +211,10 @@ export function PrepaymentModal({
                 </button>
               ))}
             </div>
+            <p className="text-ink-tertiary mt-2 text-xs">
+              This records money already in hand. A card is charged at checkout,
+              on the terminal or a saved card.
+            </p>
           </div>
 
           {/* Optional note */}
@@ -203,12 +231,27 @@ export function PrepaymentModal({
           </div>
         </div>
 
+        {tax > 0 && (
+          <p className="text-ink-secondary text-sm tabular-nums">
+            Plus ${tax.toFixed(2)} tax — ${(numericAmount + tax).toFixed(2)} in
+            all
+          </p>
+        )}
+        {problem && (
+          <p role="alert" className="text-destructive text-sm">
+            {problem}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!valid}>
-            Charge ${numericAmount.toFixed(2)}
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={!valid}
+            loading={busy}
+          >
+            Record ${(numericAmount + tax).toFixed(2)}
           </Button>
         </DialogFooter>
       </DialogContent>

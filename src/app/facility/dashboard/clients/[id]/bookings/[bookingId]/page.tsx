@@ -64,7 +64,6 @@ import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
 import { useStoreCredit } from "@/lib/api/store-credit";
-import { usePayWithGiftCard } from "@/lib/api/booking-money";
 import { bookingMutations } from "@/lib/api/booking";
 import { useBoardingStayUpdate } from "@/lib/api/boarding-attendance";
 import { useBookingModal } from "@/hooks/use-booking-modal";
@@ -90,7 +89,6 @@ import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
 import { memberDiscount } from "@/lib/memberships/figures";
-import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
@@ -117,7 +115,6 @@ import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
 import {
   balanceOf,
-  checkoutTender,
   refundTender,
   useCancelBooking,
   useChargeBooking,
@@ -126,7 +123,7 @@ import {
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
-import { useChargeOnTerminal } from "@/lib/api/terminals";
+import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { useBookingTips, useSetTipSplit } from "@/lib/api/booking-tips";
 import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
@@ -271,7 +268,6 @@ export default function ClientBookingDetailPage({
   const refundToCard = useRefundBookingToCard();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
-  const chargeOnTerminal = useChargeOnTerminal();
   const initialBooking = useMemo(
     () => clientBookings.find((b) => b.id === bookingId),
     [clientBookings, bookingId],
@@ -291,7 +287,6 @@ export default function ClientBookingDetailPage({
         : undefined,
     [booking, clientEstimates],
   );
-  const earnPoints = useEarnLoyaltyPoints();
   const {
     discount: loyaltyDiscount,
     consume: consumeLoyaltyDiscount,
@@ -617,7 +612,6 @@ export default function ClientBookingDetailPage({
   // and record_payment spends the ledger correctly, but the page never passed
   // a balance, so the checkout filtered store credit out for everybody.
   const { data: storeCredit } = useStoreCredit();
-  const payWithGiftCard = usePayWithGiftCard();
   const {
     t: gcT,
     fill: gcFill,
@@ -632,6 +626,13 @@ export default function ClientBookingDetailPage({
   const invoiceTemplate = useInvoiceTemplate();
   const facilityTaxConfig = useFacilitySettings().settings.tax_config
     .value as TaxConfig;
+  // The facility's tax on part of the supply — a deposit, a prepayment —
+  // recorded with it, as the checkout does. Nothing where prices include it.
+  const taxOnSupply = (amount: number) =>
+    facilityTaxConfig.pricesIncludeTax
+      ? 0
+      : computeTax(Math.round(amount * 100), facilityTaxConfig).totalCents /
+        100;
   // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
   //
   // The same rows the Payment Summary panel shows, so the paper a customer
@@ -685,6 +686,25 @@ export default function ClientBookingDetailPage({
           ),
         }
       : null;
+
+  // The checkout's handler: awaited end to end, and it throws on every
+  // failure so the dialog stays open with the reason. See the hook's banner.
+  const checkout = useBookingCheckout({
+    booking,
+    clientRef: clientId,
+    lateFee: pendingLateFee,
+    clearLateFee: () => setPendingLateFee(null),
+    loyaltyDiscount,
+    consumeLoyaltyDiscount,
+    releaseLoyaltyDiscount,
+    membershipDiscount,
+    text: {
+      discountRefused: fillJoin("discountRefused", {}),
+      giftCardNoTip: gcT("noTip"),
+      giftCardRemaining: (amount) =>
+        gcFill("remaining", { amount: formatMoneyIn(amount, gcLocale) }),
+    },
+  });
 
   // The facility's task routine, which the generator needs to build this
   // booking's task list. Every module's, because the booking's service decides
@@ -1101,7 +1121,7 @@ export default function ClientBookingDetailPage({
                   <span className="font-medium tabular-nums">
                     ${remainingDue.toFixed(2)}
                   </span>{" "}
-                  · Booking auto-confirmed
+                  {booking.status === "confirmed" ? " · Booking confirmed" : ""}
                 </p>
               </div>
             </div>
@@ -1994,28 +2014,48 @@ export default function ClientBookingDetailPage({
         />
         <CancelBookingModal
           booking={booking}
+          clientName={client.name}
+          petName={pet?.name}
           open={cancelOpen}
           onOpenChange={setCancelOpen}
-          onConfirm={(bId, reason, refundMethod, refundAmount) => {
-            setCancelOpen(false);
-            cancelBooking.mutate(
-              {
-                bookingId: bId,
-                reason,
-                ...(refundAmount > 0
-                  ? { refund: { amount: refundAmount, method: refundMethod } }
-                  : {}),
-              },
-              {
-                onSuccess: (refunded) =>
-                  toast.success(
-                    `${bookingRef} cancelled` +
-                      (refunded > 0
-                        ? ` — $${refunded.toFixed(2)} refunded`
-                        : ""),
-                  ),
-                onError: (error) => toast.error(error.message),
-              },
+          // AWAITED, and refund FIRST: a refund that lands before a failed
+          // cancel leaves the money right and the status stale — visible, and
+          // fixed by cancelling again. The other order leaves a cancelled
+          // booking whose money never went back. "Back to the card" is the
+          // processor refund Issue Refund uses; it used to be a ledger row
+          // that toasted "$X refunded" without touching the card.
+          onConfirm={async (bId, reason, refundMethod, refundAmount) => {
+            let refunded = 0;
+            if (refundAmount > 0) {
+              if (refundMethod === "original") {
+                const result = await refundToCard.mutateAsync({
+                  bookingRef: bId,
+                  amountCents: Math.round(refundAmount * 100),
+                  reason,
+                });
+                refunded = result.refundedCents / 100;
+                if (result.shortfallCents > 0) {
+                  throw new Error(
+                    `$${refunded.toFixed(2)} went back to the card, but $${(result.shortfallCents / 100).toFixed(2)} did not — the booking is not cancelled yet. Refund the rest another way, then cancel.`,
+                  );
+                }
+              } else {
+                await refundBooking.mutateAsync({
+                  bookingId: bId,
+                  amount: refundAmount,
+                  method: refundTender(refundMethod),
+                  reason,
+                });
+                refunded = refundAmount;
+              }
+            }
+            await cancelBooking.mutateAsync({ bookingId: bId, reason });
+            toast.success(
+              `${bookingRef} cancelled` +
+                (refunded > 0
+                  ? ` — $${refunded.toFixed(2)} refunded${refundMethod === "store_credit" ? " as store credit" : refundMethod === "cash" ? " in cash" : " to the card"}`
+                  : ""),
+              { description: "The customer has not been messaged." },
             );
           }}
         />
@@ -2123,9 +2163,6 @@ export default function ClientBookingDetailPage({
                   : item.name,
               amount: item.price,
             })),
-            ...(incidentCareTotal > 0
-              ? [{ label: "Incident care", amount: incidentCareTotal }]
-              : []),
             ...(pendingLateFee
               ? [{ label: "Late pickup fee", amount: pendingLateFee.amount }]
               : []),
@@ -2150,330 +2187,24 @@ export default function ClientBookingDetailPage({
           // derived by the database from the payments ledger for every booking,
           // fixture ones included — the blob was never the better source.
           //
-          // Incident care and a pending late fee ARE added on top: neither is a
-          // row yet, so neither is inside `amount_due`.
-          amountDue={
-            balanceOf(booking) +
-            incidentCareTotal +
-            (pendingLateFee?.amount ?? 0)
-          }
+          // A pending late fee IS added on top: it is not a row until the
+          // checkout writes it. (Fixture "incident care" used to be added here
+          // too and was never billed — it is sample data, and it is gone.)
+          amountDue={balanceOf(booking) + (pendingLateFee?.amount ?? 0)}
           // What they actually handed over, so "Amount Due" and the deduction
           // above it reconcile to the balance rather than to two sources.
           depositPaid={booking.amountPaid ?? 0}
           invoiceTotal={
             (booking.amountDue ?? booking.totalCost + addedSubtotal) +
-            incidentCareTotal +
             (pendingLateFee?.amount ?? 0)
           }
-          otherUnpaidInvoices={clientBookings
-            .filter(
-              (b) =>
-                b.id !== bookingId &&
-                b.paymentStatus === "pending" &&
-                b.status !== "cancelled",
-            )
-            .map((b) => ({
-              invoiceId: b.invoice?.id ?? String(10000 + b.id),
-              service: b.service,
-              amount: b.invoice?.remainingDue ?? b.totalCost,
-            }))}
+          clientRowId={
+            (booking as { clientRowId?: string }).clientRowId ?? null
+          }
           loyaltyDiscount={loyaltyDiscount ?? undefined}
           membershipDiscount={membershipDiscount ?? undefined}
           promoBookingRef={booking.id}
-          onConfirm={async (payment) => {
-            const lateFee = pendingLateFee;
-            const reward = loyaltyDiscount;
-            const memberOff = membershipDiscount;
-
-            // The membership discount goes on the bill FIRST, before either
-            // tender: a terminal charge is computed server-side from
-            // `amount_due`, so a discount that is not a line yet is not part
-            // of it. It is a standing entitlement, not a voucher — if the
-            // charge then fails, the line is still right.
-            if (memberOff && memberOff.amount > 0) {
-              try {
-                await addLineItems.mutateAsync({
-                  bookingRef: booking.id,
-                  items: [
-                    {
-                      kind: "item",
-                      name: memberOff.label,
-                      unitPrice: -memberOff.amount,
-                      quantity: 1,
-                    },
-                  ],
-                });
-              } catch (error) {
-                toast.error(fillJoin("discountRefused", {}), {
-                  description:
-                    error instanceof Error ? error.message : undefined,
-                });
-                return;
-              }
-            }
-
-            // ── THE REWARD IS SPENT BEFORE THE MONEY MOVES ────────────────
-            //
-            // It used to be spent here unconditionally, before anything was
-            // known about whether the charge would work — and, because
-            // `consume` could not fail, a voucher another till had already
-            // taken came off this bill anyway.
-            //
-            // Now a spent reward stops the checkout instead of silently
-            // discounting it. If the charge later fails, `release` puts it
-            // back: the customer must not retry at full price still holding a
-            // reward the system has eaten.
-            if (reward) {
-              try {
-                await consumeLoyaltyDiscount(booking.id);
-              } catch (error) {
-                toast.error("That reward is no longer available", {
-                  description:
-                    error instanceof Error
-                      ? error.message
-                      : "It may have been used on another bill.",
-                });
-                return;
-              }
-            }
-
-            // ── THE TERMINAL TENDER ACTUALLY CHARGES A CARD NOW ───────────
-            //
-            // It used to record a `terminal` row and stop — a statement that
-            // somebody had taken a card on a device, made without touching one.
-            // Awaited, and thrown from on failure, so the dialog stays open and
-            // prints no receipt: on a terminal the customer has not tapped yet
-            // when this begins.
-            if (payment.method === "terminal" && payment.deviceSerial) {
-              // THE CUSTOMER IS ASKED ON THE TERMINAL, not here. A tip picked
-              // on this screen is staff choosing on the payer's behalf; the
-              // device asks the person actually paying. `tipCents` is therefore
-              // not sent at all — the route ignores it under `tipOnDevice`, and
-              // sending both would only invite the two to disagree.
-              const result = await chargeOnTerminal.mutateAsync({
-                bookingRef: booking.id,
-                deviceSerial: payment.deviceSerial,
-                tipOnDevice: true,
-              });
-              const card = result.cardLast4
-                ? `${result.cardBrand ?? "Card"} ···${result.cardLast4}`
-                : null;
-              toast.success(
-                `$${(result.amountCents / 100).toFixed(2)} taken on the terminal`,
-                {
-                  description: [
-                    card,
-                    result.tipPrompted
-                      ? `Tip $${(result.tipCents / 100).toFixed(2)}`
-                      : "No tip added.",
-                    // Said out loud either way. A charge that went through with
-                    // no paper is something the person at the counter has to
-                    // know BEFORE the customer walks off, and silence would let
-                    // them assume a receipt printed. Now that the CUSTOMER
-                    // picks, the message has to name what they picked too —
-                    // "no receipt printed" reads as a fault when in fact they
-                    // asked for it by email.
-                    result.receiptMethod === "NO_RECEIPT"
-                      ? "Customer declined a receipt."
-                      : result.receiptMethod === "EMAIL"
-                        ? result.receiptDelivered
-                          ? result.receiptItemised
-                            ? "Itemised receipt emailed."
-                            : "Emailed, but WITHOUT the breakdown."
-                          : "Email receipt FAILED — offer a printed one."
-                        : result.receiptMethod === "SMS"
-                          ? result.receiptDelivered
-                            ? result.receiptItemised
-                              ? "Itemised receipt texted."
-                              : "Texted, but WITHOUT the breakdown."
-                            : "Text receipt FAILED — offer a printed one."
-                          : result.receiptPrinted
-                            ? "Itemised receipt printed."
-                            : "No receipt printed — hand over the copy from Print.",
-                  ]
-                    .filter(Boolean)
-                    .join(" · "),
-                },
-              );
-              setPendingLateFee(null);
-              return;
-            }
-
-            // ── Checkout ────────────────────────────────────────────────────
-            //
-            // This used to build a whole invoice in `setBooking` — items, fees,
-            // subtotal, total, tipTotal, a payments[] array — and send none of
-            // it. Everything it assembled either lives in a table now or is
-            // derived from one.
-            //
-            // A late fee is a LINE on the bill, so it goes on before the money
-            // is taken: charging first and adding it after would settle the
-            // booking and immediately reopen it.
-            void (async () => {
-              try {
-                // ── THE DISCOUNT IS A LINE ON THE BILL ────────────────────
-                //
-                // The dialog already subtracted it from what it CHARGES
-                // (`payment.amount`), but nothing lowered what is OWED — so
-                // the booking would have been charged less than `amount_due`
-                // and sat partially unpaid for ever, with no line saying why.
-                //
-                // A negative line item is the mechanism the late fee already
-                // uses: `extras_total` moves, `amount_due` is generated from
-                // it, the two agree, and the receipt says what happened.
-                const items: {
-                  kind: "item" | "fee";
-                  name: string;
-                  unitPrice: number;
-                  quantity: number;
-                }[] = [];
-                if (lateFee) {
-                  items.push({
-                    kind: "fee",
-                    name: lateFee.label,
-                    unitPrice: lateFee.amount,
-                    quantity: 1,
-                  });
-                }
-                if (reward && reward.amount > 0) {
-                  items.push({
-                    kind: "item",
-                    name: reward.label,
-                    unitPrice: -reward.amount,
-                    quantity: 1,
-                  });
-                }
-                if (items.length > 0) {
-                  await addLineItems.mutateAsync({
-                    bookingRef: booking.id,
-                    items,
-                  });
-                }
-                // Store credit pays what the balance covers and no more — the
-                // checkout promises "the rest by another method", and asking
-                // the ledger for more than it holds is a refusal.
-                const charged =
-                  payment.method === "store_credit"
-                    ? Math.min(payment.amount, storeCreditBalance)
-                    : payment.amount;
-                if (payment.method === "gift_card") {
-                  // The card is redeemed and the payment recorded in ONE
-                  // database transaction (pay_booking_with_gift_card), so it
-                  // is never spent without the booking being paid.
-                  if (payment.tip > 0) throw new Error(gcT("noTip"));
-                  const { cardBalance } = await payWithGiftCard.mutateAsync({
-                    bookingRef: booking.id,
-                    code: payment.giftCardCode ?? "",
-                    amount: charged,
-                  });
-                  toast.success(
-                    gcFill("paid", {
-                      amount: formatMoneyIn(charged, gcLocale),
-                    }),
-                    {
-                      description: gcFill("remaining", {
-                        amount: formatMoneyIn(cardBalance, gcLocale),
-                      }),
-                    },
-                  );
-                } else
-                  await chargeBooking.mutateAsync({
-                    booking: {
-                      ...booking,
-                      // The lines just added are not in `booking` yet — the
-                      // refetch has not landed — and `useChargeBooking` refuses
-                      // more than the balance. Tell it what the bill now is.
-                      amountDue: Math.max(
-                        0,
-                        (booking.amountDue ?? booking.totalCost) +
-                          (lateFee?.amount ?? 0) -
-                          (reward?.amount ?? 0) -
-                          (memberOff?.amount ?? 0),
-                      ),
-                    },
-                    amount: charged,
-                    // Throws on "Custom", which has no ledger meaning.
-                    method: checkoutTender(payment.method),
-                    ...(payment.tip > 0 ? { tipAmount: payment.tip } : {}),
-                  });
-                setPendingLateFee(null);
-
-                // ── THE POINTS THIS BOOKING EARNED ────────────────────────
-                //
-                // Computed on the SERVER from the booking and the facility's
-                // own rules, then posted to the ledger. Fire-and-forget: the
-                // money is already taken and a checkout must not fail because
-                // an award did not land. The route is idempotent, so a booking
-                // whose award failed can simply be awarded again.
-                void earnPoints
-                  .mutateAsync({ bookingRef: booking.id })
-                  .then((result) => {
-                    if (result.awarded && result.points > 0) {
-                      toast.success(
-                        `+${result.points.toLocaleString()} points`,
-                        {
-                          description: result.reasons.join(" · ") || undefined,
-                        },
-                      );
-                    }
-                    // News about the CUSTOMER, not about this bill — said
-                    // separately so the person at the counter can pass it on.
-                    if (result.tierUp) {
-                      toast.success(
-                        `${result.tierUp.icon} Reached ${result.tierUp.name}`,
-                        {
-                          description: result.tierUp.rewarded
-                            ? "A tier reward has been added to their account."
-                            : undefined,
-                        },
-                      );
-                    }
-                    // Named one at a time. A badge is a thing with a name, and
-                    // "2 badges earned" is not something the counter can pass
-                    // on to the customer standing in front of them.
-                    for (const badge of result.badges) {
-                      toast.success(`${badge.icon} ${badge.name}`, {
-                        description: badge.rewardText
-                          ? `Badge earned — reward: ${badge.rewardText}`
-                          : "Badge earned",
-                      });
-                    }
-                  })
-                  .catch((error: unknown) => {
-                    toast.error(
-                      "The points for this booking were not awarded",
-                      {
-                        description:
-                          error instanceof Error ? error.message : undefined,
-                      },
-                    );
-                  });
-
-                const extra = payment.includedInvoices?.length
-                  ? ` + ${payment.includedInvoices.length} other invoices`
-                  : "";
-                // The gift card said its own sentence above.
-                if (payment.method !== "gift_card")
-                  toast.success(
-                    `Charged $${charged.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
-                  );
-              } catch (error) {
-                // The reward is already spent and no money moved. Give it back
-                // before saying so.
-                await releaseLoyaltyDiscount();
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "Could not complete that checkout.",
-                );
-              }
-            })();
-
-            // "Report card sent to …" / "Report card scheduled for 18:00"
-            // used to follow every checkout, and nothing was sent or
-            // scheduled. Report cards are written and sent from the Report
-            // cards module; the till no longer claims to have done it.
-          }}
+          onConfirm={checkout}
         />
         <TipSplitModal
           open={tipSplitOpen}
@@ -2525,24 +2256,40 @@ export default function ClientBookingDetailPage({
           onOpenChange={setDepositOpen}
           ruleAmount={ruleDepositAmount}
           ruleLabel={ruleDepositLabel}
-          // "Card on File" on this dialog, so `card_on_file` rather than
-          // `card` — which the bulk dialog uses for a NEW card. Same word,
-          // different tender (20260806860000).
-          onCharge={(amount, method) => {
-            chargeBooking.mutate(
-              {
-                booking,
-                amount,
-                method: method === "card" ? "card_on_file" : (method as Tender),
-                note: `Deposit — ${ruleDepositLabel}`,
-              },
-              {
-                onSuccess: (charged) =>
-                  toast.success(
-                    `Deposit of $${charged.toFixed(2)} taken by ${method}`,
-                  ),
-                onError: (error) => toast.error(error.message),
-              },
+          taxFor={taxOnSupply}
+          // AWAITED. The banner above says paying the deposit confirms the
+          // booking; it said so while nothing confirmed it. It does now.
+          onCharge={async (amount, method) => {
+            const charged = await chargeBooking.mutateAsync({
+              booking,
+              amount,
+              tax: taxOnSupply(amount),
+              method: method as Tender,
+              note: `Deposit — ${ruleDepositLabel}`,
+            });
+            let confirmed = false;
+            if (
+              booking.status === "pending" ||
+              booking.status === "request_submitted"
+            ) {
+              try {
+                await updateStatus.mutateAsync({
+                  id: booking.id,
+                  status: "confirmed",
+                });
+                confirmed = true;
+              } catch (error) {
+                toast.error(
+                  "Deposit recorded, but the booking is not confirmed",
+                  {
+                    description:
+                      error instanceof Error ? error.message : undefined,
+                  },
+                );
+              }
+            }
+            toast.success(
+              `Deposit of $${charged.toFixed(2)} recorded${confirmed ? " — booking confirmed" : ""}`,
             );
           }}
         />
@@ -2554,26 +2301,17 @@ export default function ClientBookingDetailPage({
           remainingDue={balanceOf(booking)}
           invoiceTotal={booking.amountDue ?? booking.totalCost}
           alreadyCollected={booking.amountPaid ?? 0}
-          onConfirm={(result) => {
-            setPrepaymentOpen(false);
-            chargeBooking.mutate(
-              {
-                booking,
-                amount: result.amount,
-                // "Card on file" here too.
-                method:
-                  result.method === "card"
-                    ? "card_on_file"
-                    : (result.method as Tender),
-                ...(result.note ? { note: result.note } : {}),
-              },
-              {
-                onSuccess: (charged) =>
-                  toast.success(
-                    `$${charged.toFixed(2)} taken in advance — the bill stays open`,
-                  ),
-                onError: (error) => toast.error(error.message),
-              },
+          taxFor={taxOnSupply}
+          onConfirm={async (result) => {
+            const charged = await chargeBooking.mutateAsync({
+              booking,
+              amount: result.amount,
+              tax: taxOnSupply(result.amount),
+              method: result.method as Tender,
+              ...(result.note ? { note: result.note } : {}),
+            });
+            toast.success(
+              `$${charged.toFixed(2)} recorded in advance — the bill stays open`,
             );
           }}
         />

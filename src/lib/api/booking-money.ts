@@ -91,11 +91,21 @@ function paymentRow(input: {
   bookingId: number;
   method: Tender;
   subtotal: number;
+  /**
+   * The tax on `subtotal`, recorded in its own column. A booking's balance is
+   * the pre-tax SUPPLY (20260819210000), so tax folded into the subtotal made
+   * every taxed payment look like an overpayment — and the charge was refused
+   * as "more than is owed" before it got that far.
+   */
+  tax?: number;
   tip?: number;
+  /** What the customer actually handed over, when it was cash. */
+  cashReceived?: number;
   note?: string;
 }): PaymentRow {
   const tip = input.tip ?? 0;
-  const grandTotal = input.subtotal + tip;
+  const tax = Math.round((input.tax ?? 0) * 100) / 100;
+  const grandTotal = Math.round((input.subtotal + tax + tip) * 100) / 100;
 
   // Paying WITH store credit has to say so, or `record_payment` records the
   // payment and never writes the ledger entry that spends the credit — the
@@ -108,7 +118,7 @@ function paymentRow(input: {
     bookingRef: String(input.bookingId),
     method: TENDER[input.method],
     subtotal: input.subtotal,
-    tax: 0,
+    tax,
     tip,
     storeCreditApplied,
     packagePassApplied: 0,
@@ -117,7 +127,9 @@ function paymentRow(input: {
     amountCharged: grandTotal - storeCreditApplied,
     grandTotal,
     // Only cash carries a tender, and the CHECK refuses it on anything else.
-    ...(input.method === "cash" ? { cashReceived: grandTotal } : {}),
+    ...(input.method === "cash"
+      ? { cashReceived: Math.max(input.cashReceived ?? 0, grandTotal) }
+      : {}),
     receiptChannels: [],
     // Both, and they are not the same sentence. `creditNote` annotates the
     // store-credit entry and exists only when credit moved; `note` is on the
@@ -261,7 +273,10 @@ export function useTakeBookingPayment() {
         amountPaid?: number;
       };
       method: Tender;
+      /** Tax on the balance, recorded apart (see paymentRow). */
+      tax?: number;
       tipAmount?: number;
+      cashReceived?: number;
     }) => {
       const balance = balanceOf(input.booking);
       if (balance <= 0) {
@@ -272,10 +287,16 @@ export function useTakeBookingPayment() {
           bookingId: input.booking.id,
           method: input.method,
           subtotal: balance,
+          tax: input.tax,
           tip: input.tipAmount,
+          cashReceived: input.cashReceived,
         }),
       );
-      return balance;
+      return (
+        Math.round(
+          (balance + (input.tax ?? 0) + (input.tipAmount ?? 0)) * 100,
+        ) / 100
+      );
     },
     onSuccess: invalidate,
   });
@@ -396,16 +417,21 @@ export function useChargeBooking() {
         amountDue?: number;
         amountPaid?: number;
       };
+      /** The SUPPLY being paid for — pre-tax, pre-tip. */
       amount: number;
       method: Tender;
+      /** Tax on `amount`, recorded apart. */
+      tax?: number;
       tipAmount?: number;
+      cashReceived?: number;
       note?: string;
     }) => {
       if (!(input.amount > 0)) {
         throw new Error("That is not an amount to charge.");
       }
       const balance = balanceOf(input.booking);
-      if (input.amount > balance) {
+      // A cent of rounding is not "more than is owed".
+      if (input.amount > balance + 0.005) {
         throw new Error(
           balance === 0
             ? "This booking has already been paid in full."
@@ -416,12 +442,22 @@ export function useChargeBooking() {
         paymentRow({
           bookingId: input.booking.id,
           method: input.method,
-          subtotal: input.amount,
+          subtotal: Math.min(input.amount, balance),
+          tax: input.tax,
           tip: input.tipAmount,
+          cashReceived: input.cashReceived,
           note: input.note,
         }),
       );
-      return input.amount;
+      // Everything the tender took: supply, tax and tip.
+      return (
+        Math.round(
+          (Math.min(input.amount, balance) +
+            (input.tax ?? 0) +
+            (input.tipAmount ?? 0)) *
+            100,
+        ) / 100
+      );
     },
     onSuccess: invalidate,
   });
@@ -439,7 +475,9 @@ export function usePayWithGiftCard() {
     mutationFn: async (input: {
       bookingRef: number;
       code: string;
+      /** The supply; the card is also debited for `tax` (20260911221947). */
       amount: number;
+      tax?: number;
     }) => {
       const response = await fetch("/api/payments/gift-card", {
         method: "POST",
@@ -454,6 +492,53 @@ export function usePayWithGiftCard() {
         throw new Error(parsed?.error ?? "That gift card did not pay.");
       }
       return { cardBalance: Number(parsed?.card_balance ?? 0) };
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Charge a card the customer saved, for what the booking still owes.
+ *
+ * "Card on File" at the counter used to write a `card-on-file` ROW — a
+ * statement that a stored card had been charged, made without touching one.
+ * This goes through the card route: Clover is asked, the server works out the
+ * balance and the facility's tax itself (the amount is never in the request),
+ * and the ledger row is written only once the charge has gone through.
+ */
+export function useChargeSavedCard() {
+  const invalidate = useSettleInvalidation();
+  return useMutation({
+    mutationFn: async (input: {
+      /** The booking's uuid, not its ref — the card route reads by id. */
+      bookingRowId: string;
+      savedCardId: string;
+      tipCents?: number;
+    }) => {
+      const response = await fetch("/api/payments/clover/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: input.bookingRowId,
+          savedCardId: input.savedCardId,
+          tipCents: Math.max(0, Math.round(input.tipCents ?? 0)),
+        }),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        error?: string;
+        amountCents?: number;
+        cardBrand?: string | null;
+        cardLast4?: string | null;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "The card was not charged.");
+      }
+      return {
+        amount: Number(parsed?.amountCents ?? 0) / 100,
+        card: parsed?.cardLast4
+          ? `${parsed.cardBrand ?? "Card"} ···${parsed.cardLast4}`
+          : null,
+      };
     },
     onSuccess: invalidate,
   });

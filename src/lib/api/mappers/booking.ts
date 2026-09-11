@@ -32,6 +32,11 @@ type BookingRow = Tables<"bookings"> & {
 export type BookingWithRowId = Booking & {
   /** The uuid primary key. Needed to write; ignored by everything that reads. */
   rowId: string;
+  /**
+   * The client uuid. The card routes and saved cards are keyed by it, and
+   * the app-facing `clientId` is the numeric ref.
+   */
+  clientRowId: string;
 };
 
 export function rowToBooking(row: BookingRow): BookingWithRowId {
@@ -50,6 +55,7 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     ...(details as Partial<Booking>),
 
     rowId: row.id,
+    clientRowId: row.client_id,
     id: row.ref,
     locationId: row.location_id ?? undefined,
     clientId: row.clients?.ref ?? 0,
@@ -115,6 +121,7 @@ export const BOOKING_SELECT = `
 const COLUMN_FIELDS = [
   "id",
   "rowId",
+  "clientRowId",
   "clientId",
   "petId",
   "facilityId",

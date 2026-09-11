@@ -505,8 +505,13 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               onClick={() =>
                 requestConfirm({
                   title: "Cancel this booking?",
+                  // It said "The client will be notified. Refund and deposit
+                  // handling will be applied based on your cancellation
+                  // policy." Neither happens: nothing messages the customer
+                  // on a cancellation, and the refund is chosen by hand on
+                  // the next step, with the policy shown beside it.
                   description:
-                    "The client will be notified. Refund and deposit handling will be applied based on your cancellation policy.",
+                    "The customer is not messaged from here. You choose any refund on the next step.",
                   confirmLabel: "Cancel Booking",
                   onConfirm: props.onCancelBooking,
                 })
