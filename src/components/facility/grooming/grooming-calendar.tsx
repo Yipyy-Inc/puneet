@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -44,7 +44,18 @@ import {
   applyCalendarFilters,
   type CalendarFilterState,
 } from "./calendar-filters";
-import { TimeBlockDialog, type TimeBlock } from "./time-block-dialog";
+import {
+  TimeBlockDialog,
+  TIME_BLOCK_REASONS,
+  type TimeBlock,
+} from "./time-block-dialog";
+import { bookingMutations } from "@/lib/api/booking";
+import {
+  useCalendarEvents,
+  useCalendarEventMutations,
+} from "@/lib/api/calendar-events";
+import { useRecordAppointmentHistory } from "@/lib/api/grooming-appointments";
+import type { ManualFacilityEvent } from "@/lib/operations-calendar";
 import { WaitlistPanel } from "./waitlist-panel";
 import { PrintableDaySheet } from "./printable-day-sheet";
 import { PrintableAppointmentCards } from "./printable-appointment-cards";
@@ -107,6 +118,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NO_ITEMS } from "@/lib/no-items";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -2201,6 +2213,62 @@ function MonthView({
   );
 }
 
+// ─── Time blocks are calendar events ─────────────────────────────────────────
+//
+// A groomer's lunch or training block lived in this component's `useState`:
+// gone on reload, and invisible to the front desk, the facility calendar and
+// the booking screens. It is a `calendar_events` row of kind `block-time` now
+// — the same row the facility calendar's "Block time" writes — aimed at the
+// groomer (`affects: "staff"`, `affectedStaff` = the stylist id).
+
+function blocksFromEvents(events: ManualFacilityEvent[]): TimeBlock[] {
+  const out: TimeBlock[] = [];
+  for (const e of events) {
+    if (e.kind !== "block-time" || e.affects !== "staff" || !e.affectedStaff) {
+      continue;
+    }
+    if (e.deletedAt) continue;
+    const [date, startTime = "00:00"] = e.start.split("T");
+    const [, endTime = "23:59"] = e.end.split("T");
+    const reason =
+      TIME_BLOCK_REASONS.find((r) => r.label === e.title || r.value === e.title)
+        ?.value ?? "personal";
+    out.push({
+      id: e.id,
+      stylistId: e.affectedStaff,
+      stylistName: e.staff,
+      date,
+      startTime: startTime.slice(0, 5),
+      endTime: endTime.slice(0, 5),
+      reason,
+      notes: e.notes,
+    });
+  }
+  return out;
+}
+
+function eventFromBlock(block: TimeBlock): ManualFacilityEvent {
+  return {
+    id: "",
+    title:
+      TIME_BLOCK_REASONS.find((r) => r.value === block.reason)?.label ??
+      block.reason,
+    subtype: "blocked-time",
+    kind: "block-time",
+    start: `${block.date}T${block.startTime}`,
+    end: `${block.date}T${block.endTime}`,
+    allDay: false,
+    location: "",
+    staff: block.stylistName,
+    // french-ok: a stored status value, the one the facility calendar writes
+    status: "Scheduled",
+    notes: block.notes,
+    affects: "staff",
+    affectedStaff: block.stylistId,
+    visibility: "all-staff",
+  };
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function GroomingCalendar() {
@@ -2232,7 +2300,16 @@ export function GroomingCalendar() {
   } | null>(null);
   const [filters, setFilters] = useState<CalendarFilterState>(EMPTY_FILTERS);
   const [searchQuery, setSearchQuery] = useState("");
-  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const { data: calendarEvents } = useCalendarEvents();
+  const { create: createCalendarEvent, update: updateCalendarEvent } =
+    useCalendarEventMutations();
+  const timeBlocks = useMemo(
+    () => blocksFromEvents(calendarEvents ?? NO_ITEMS),
+    [calendarEvents],
+  );
+  const queryClient = useQueryClient();
+  const { mutate: recordTrail } = useRecordAppointmentHistory();
+  const { t: tAppt } = useStaffText("groomingAppointment");
   const [pendingBlockSlot, setPendingBlockSlot] = useState<{
     stylistId: string;
     time: string;
@@ -2252,8 +2329,9 @@ export function GroomingCalendar() {
   );
   const { entries: waitlist } = useGroomingWaitlist();
 
-  // Drag-and-drop reassign/reschedule edits, merged over the (static mock)
-  // query so a drop renders immediately. Mock-only, in-memory.
+  // Drag-and-drop reassign/reschedule edits, merged over the query so a drop
+  // renders at once; each is cleared when the write lands and the calendar
+  // has re-read, or undone when the write is refused.
   const [apptOverrides, setApptOverrides] = useState<
     Record<string, GroomingAppointment>
   >({});
@@ -2359,66 +2437,123 @@ export function GroomingCalendar() {
     });
   }
 
-  // Apply the confirmed drop: update the store override, append a history
-  // entry, and fire the mock owner notification.
-  function applyDrop() {
+  // Apply the confirmed drop. It moved an in-memory override and nothing else,
+  // so a groom dragged to 14:00 was back at 10:00 on reload. It writes the
+  // booking now — a reschedule its times, a reassign its groomer (the booking
+  // route resolves the stylist to the staff row) — and the audit line goes to
+  // the appointment's real history.
+  async function applyDrop() {
     if (!pendingDrop) return;
-    const { apt } = pendingDrop;
+    const drop = pendingDrop;
+    const { apt } = drop;
+    setPendingDrop(null);
     const at = new Date().toISOString();
     const histId = `h-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    if (pendingDrop.kind === "reassign") {
+    // The audit line, as the appointment history stores it.
+    const trail =
+      drop.kind === "reassign"
+        ? `Reassigned from ${apt.stylistName} to ${drop.targetStylistName}`
+        : `Rescheduled from ${apt.startTime} to ${drop.newTime}`;
+    if (drop.kind === "reassign") {
       const updated: GroomingAppointment = {
         ...apt,
-        stylistId: pendingDrop.targetStylistId,
-        stylistName: pendingDrop.targetStylistName,
+        stylistId: drop.targetStylistId,
+        stylistName: drop.targetStylistName,
         history: [
           ...(apt.history ?? []),
           {
             id: histId,
             at,
             staff: "You",
-            description: `Reassigned from ${apt.stylistName} to ${pendingDrop.targetStylistName}`,
+            description: trail,
           },
         ],
       };
       setApptOverrides((prev) => ({ ...prev, [apt.id]: updated }));
-      toast.success(
-        `${apt.petName} reassigned to ${pendingDrop.targetStylistName}`,
-        {
-          description: buildBookingChangeMessage({
-            kind: "reassign",
-            petName: apt.petName,
-            clientName: apt.ownerName,
-            newGroomerName: pendingDrop.targetStylistName,
-          }),
-        },
-      );
+      if (
+        !(await writeDrop(apt.id, { stylistPreference: drop.targetStylistId }))
+      ) {
+        return;
+      }
+      recordTrail({
+        appointmentId: apt.id,
+        description: trail,
+      });
+      toast.success(`${apt.petName} reassigned to ${drop.targetStylistName}`, {
+        description: buildBookingChangeMessage({
+          kind: "reassign",
+          petName: apt.petName,
+          clientName: apt.ownerName,
+          newGroomerName: drop.targetStylistName,
+        }),
+      });
     } else {
       const updated: GroomingAppointment = {
         ...apt,
-        startTime: pendingDrop.newTime,
-        endTime: pendingDrop.newEndTime,
+        startTime: drop.newTime,
+        endTime: drop.newEndTime,
         history: [
           ...(apt.history ?? []),
           {
             id: histId,
             at,
             staff: "You",
-            description: `Rescheduled from ${apt.startTime} to ${pendingDrop.newTime}`,
+            description: trail,
           },
         ],
       };
       setApptOverrides((prev) => ({ ...prev, [apt.id]: updated }));
-      toast.success(`${apt.petName} rescheduled to ${pendingDrop.newTime}`, {
+      if (
+        !(await writeDrop(apt.id, {
+          checkInTime: drop.newTime,
+          checkOutTime: drop.newEndTime,
+        }))
+      ) {
+        return;
+      }
+      recordTrail({
+        appointmentId: apt.id,
+        description: trail,
+      });
+      toast.success(`${apt.petName} rescheduled to ${drop.newTime}`, {
         description: buildBookingChangeMessage({
           kind: "reschedule",
           petName: apt.petName,
           clientName: apt.ownerName,
-          newTime: pendingDrop.newTime,
+          newTime: drop.newTime,
         }),
       });
     }
-    setPendingDrop(null);
+  }
+
+  function clearOverride(id: string) {
+    setApptOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  async function writeDrop(
+    id: string,
+    patch: {
+      stylistPreference?: string;
+      checkInTime?: string;
+      checkOutTime?: string;
+    },
+  ): Promise<boolean> {
+    try {
+      await bookingMutations.update(Number(id), patch);
+    } catch (error) {
+      clearOverride(id);
+      toast.error(
+        error instanceof Error ? error.message : tAppt("moveNotSaved"),
+      );
+      return false;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["grooming"] });
+    clearOverride(id);
+    return true;
   }
   const { enabled: mobileEnabled, vans } = useMobileGrooming();
 
@@ -2615,13 +2750,18 @@ export function GroomingCalendar() {
   function handleConfirmUnblock() {
     const id = pendingBlockSlot?.existingBlockId;
     if (!id) return;
-    setTimeBlocks((prev) => prev.filter((b) => b.id !== id));
-    toast.success("Time block removed");
+    updateCalendarEvent.mutate(
+      { id, deleted: true },
+      {
+        onSuccess: () => toast.success("Time block removed"),
+        onError: (error) => toast.error(error.message),
+      },
+    );
     setPendingBlockSlot(null);
   }
 
-  function handleSaveBlock(block: TimeBlock) {
-    setTimeBlocks((prev) => [...prev, block]);
+  async function handleSaveBlock(block: TimeBlock) {
+    await createCalendarEvent.mutateAsync(eventFromBlock(block));
   }
 
   function handleBlockDialogOpenChange(next: boolean) {
@@ -2876,7 +3016,7 @@ export function GroomingCalendar() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={applyDrop}>
+              <AlertDialogAction onClick={() => void applyDrop()}>
                 Confirm &amp; Notify
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -13,6 +13,7 @@ import {
   getFacilityContext,
   inFacility,
 } from "@/lib/api/facility-context";
+import { staffForStylist } from "@/lib/api/stylist-staff";
 import type { NewBooking } from "@/types/booking";
 
 // ============================================================================
@@ -227,32 +228,16 @@ export async function POST(request: NextRequest) {
   // `stylistPreference` and nothing resolved it, so every groom booked in the
   // app landed in nobody's column. The stylist id is the profile's (its
   // legacy id, or its uuid); the staff row behind it is what the column
-  // holds. Resolved inside this facility, through RLS — an id from somewhere
-  // else simply resolves to nobody.
+  // holds (`staffForStylist`).
   if (input.service === "grooming" && input.stylistPreference) {
-    const stylistKey = input.stylistPreference;
-    const isUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        stylistKey,
-      );
-    const { data: stylist } = await supabase
-      .from("grooming_stylist_profiles")
-      .select("staff_id, staff:staff_id(first_name, last_name)")
-      .eq("facility_id", facility.facilityId)
-      .eq(isUuid ? "id" : "legacy_id", stylistKey)
-      .maybeSingle();
+    const stylist = await staffForStylist(
+      supabase,
+      facility.facilityId,
+      input.stylistPreference,
+    );
     if (stylist) {
-      const staff = stylist as unknown as {
-        staff_id: string;
-        staff: { first_name: string | null; last_name: string | null } | null;
-      };
-      row.assigned_staff_id = staff.staff_id;
-      if (!row.assigned_staff_name) {
-        row.assigned_staff_name =
-          [staff.staff?.first_name, staff.staff?.last_name]
-            .filter(Boolean)
-            .join(" ") || null;
-      }
+      row.assigned_staff_id = stylist.staffId;
+      row.assigned_staff_name ??= stylist.name;
     }
   }
 
