@@ -119,6 +119,9 @@ export function CreateFormModal({
           logicRules: [],
           fieldMapping: [],
         },
+        // Built above and, until now, never sent.
+        settings: settings as Record<string, unknown>,
+        appliesTo: appliesTo as Record<string, unknown>,
       });
     } catch (error) {
       setSubmitError((error as Error).message);

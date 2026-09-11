@@ -2036,6 +2036,12 @@
         "linkCopiedShare": "Copied to your clipboard:",
         "linkToShare": "The link to share:",
         "clientCreated": "A client record was created for {name}, so this estimate can become a booking."
+      },
+      "formBuilder": {
+        "savedToast": "“{name}” is saved",
+        "publishedToast": "“{name}” is published",
+        "saveFailed": "The form was not saved",
+        "couldNotOpen": "This form could not be opened."
       }
     }
   },

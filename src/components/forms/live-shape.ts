@@ -85,6 +85,11 @@ export function toFlatForm(row: FormRow, forAuthor = false): Form {
     audience: row.audience as FormAudience,
     appliesTo: row.appliesTo as FormAppliesTo,
     settings: row.settings as FormSettings,
+    // A form's service lives in its settings; the row has no column for it.
+    serviceType:
+      typeof row.settings?.serviceType === "string"
+        ? (row.settings.serviceType as Form["serviceType"])
+        : undefined,
   };
 }
 

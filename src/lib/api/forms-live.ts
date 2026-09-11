@@ -146,6 +146,10 @@ export function useCreateForm() {
       schema?: Record<string, unknown>;
       requireAuth?: boolean;
       repeatPerPet?: boolean;
+      // The route has always taken these two; the hook's type dropped them,
+      // so the create modal built them and they never left the browser.
+      settings?: Record<string, unknown>;
+      appliesTo?: Record<string, unknown>;
     }) => (await send<{ form: FormRow }>("/api/forms", input)).form,
     onSuccess: () => invalidateForms(queryClient),
   });
@@ -163,9 +167,12 @@ export function useUpdateForm() {
       name?: string;
       slug?: string;
       status?: "draft" | "published" | "archived";
+      type?: string;
       audience?: "customer" | "staff" | "both";
       requireAuth?: boolean;
       repeatPerPet?: boolean;
+      settings?: Record<string, unknown>;
+      appliesTo?: Record<string, unknown>;
     }) =>
       (
         await send<{ form: FormRow }>(

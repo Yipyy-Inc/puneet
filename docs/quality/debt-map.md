@@ -12640,3 +12640,25 @@ money — a deposit is taken when the business books.
   staff, who copy the link); `/customer/estimates/[token]/setup` still
   "activates" an account that nothing creates; `/api/v1/search` still lists
   fixture estimates.
+
+## 2026-09-11 — the form builder edits the real form
+
+The forms list, the create modal and the submissions pages were already on
+Postgres, but the builder was not: it looked the form up in `@/data/forms`,
+which knows none of a facility's real forms, so **Edit** on any of them opened
+a blank "new" form and **Save / Publish** wrote to the fixture. A created or
+duplicated form could never get questions into the database. Using a template
+created a fixture form and passed its id as `?formId=`, which the builder never
+read; the create modal built `settings` and `appliesTo` and never sent them.
+
+The builder page loads the form through `liveFormQueries.detail` and mounts
+the editor once it has arrived; Save writes identity through `useUpdateForm`
+and questions through `useSaveFormQuestions` (into the open draft, or a new
+version), and Publish freezes that draft. A template opens the builder seeded
+and is created on Save. The client file's Forms tab and the pet profile's
+forms read the live forms and submissions.
+
+- **Still open:** templates are still Yipyy's in-memory starters (no table);
+  the grooming settings' check-in forms and the public `/forms/[slug]` page
+  still read the fixture (Phase 3 / public side); the builder's own labels are
+  still English.
