@@ -53,7 +53,7 @@ import {
   Users,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
 import {
   computeMakeupCandidates,
   listHostSessionsForCandidate,
@@ -68,6 +68,9 @@ import type {
 import { PageHeader } from "@/components/ui/page-header";
 
 export default function FacilityMakeupSessionsPage() {
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients } = useFacilityClientList();
   const queryClient = useQueryClient();
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -98,7 +101,7 @@ export default function FacilityMakeupSessionsPage() {
       map.set(c.id, { name: c.name, phone: c.phone, email: c.email });
     }
     return (ownerId: number) => map.get(ownerId) ?? null;
-  }, []);
+  }, [clients]);
 
   const candidates = useMemo(
     () =>

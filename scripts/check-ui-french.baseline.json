@@ -853,7 +853,7 @@
     "src/app/facility/dashboard/services/training/students/_components/training-profile-quick-actions.tsx": 39,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-report-cards.tsx": 59,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-vaccinations.tsx": 28,
-    "src/app/facility/dashboard/services/training/students/_components/training-profile.tsx": 23,
+    "src/app/facility/dashboard/services/training/students/_components/training-profile.tsx": 22,
     "src/app/facility/dashboard/services/vet/layout.tsx": 2,
     "src/app/facility/dashboard/services/vet/page.tsx": 6,
     "src/app/facility/dashboard/services/vet/settings/page.tsx": 101,

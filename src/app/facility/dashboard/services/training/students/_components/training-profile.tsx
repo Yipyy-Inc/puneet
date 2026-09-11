@@ -25,7 +25,8 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clients } from "@/data/clients";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { trainingQueries } from "@/lib/api/training";
 import {
   computeVaccineWarning,
@@ -88,6 +89,10 @@ const VALID_PROFILE_TABS = new Set([
 ]);
 
 export function TrainingProfile({ petId }: Props) {
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients, loaded: clientsLoaded } = useFacilityClientList();
+  const { t: tProfile } = useStaffText("trainingProfile");
   const searchParams = useSearchParams();
   const defaultTab = (() => {
     const raw = searchParams.get("tab");
@@ -169,11 +174,12 @@ export function TrainingProfile({ petId }: Props) {
     [petId, allVaccinations, todayISO],
   );
 
-  // If the petId snuck past the server-side check (e.g., raw URL), fail safe.
+  // Loading until the clients arrive; after that, a pet this facility does
+  // not have is said to be missing rather than loading forever.
   if (!pet) {
     return (
       <div className="text-muted-foreground py-12 text-center text-sm">
-        Loading student…
+        {clientsLoaded ? tProfile("notFound") : tProfile("loading")}
       </div>
     );
   }

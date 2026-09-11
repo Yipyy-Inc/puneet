@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
 import {
   DUE_SOON_WINDOW_DAYS,
   aggregateHomeworkBoard,
@@ -107,6 +107,9 @@ function relativeLabel(iso: string, todayISO: string): string {
 }
 
 export function HomeworkBoard() {
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients } = useFacilityClientList();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -121,7 +124,7 @@ export function HomeworkBoard() {
   const { data: series = [] } = useQuery(trainingQueries.series());
   const { data: trainers = [] } = useQuery(trainingQueries.trainers());
 
-  const pets = useMemo(() => clients.flatMap((c) => c.pets), []);
+  const pets = useMemo(() => clients.flatMap((c) => c.pets), [clients]);
 
   // Dialogs.
   const [dialogOpen, setDialogOpen] = useState(false);
