@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/generic-sidebar";
 import { petCams } from "@/data/additional-features";
 import { useCustomerMobileApp } from "@/lib/api/customer-mobile-app";
-import { estimates } from "@/data/estimates";
+import { useMyEstimates } from "@/lib/api/estimates";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import {
   cameraIntegrationConfig,
@@ -83,18 +83,14 @@ export function CustomerSidebar() {
     enabled: customerId != null,
   });
 
-  // Estimates awaiting the customer's response (sent, not yet accepted/declined).
-  // Still a fixture — estimates have no backend yet — but keyed off the real
-  // person, so it now counts nothing rather than counting somebody else's.
-  const awaitingEstimateCount = useMemo(
-    () =>
-      customerId == null
-        ? 0
-        : estimates.filter(
-            (e) => e.clientId === customerId && e.status === "sent",
-          ).length,
-    [customerId],
-  );
+  // Estimates awaiting the customer's response, from Postgres — RLS returns
+  // only their own, once sent. An expired one reads "expired" and is not
+  // counted.
+  const { estimates: myEstimates } = useMyEstimates();
+  const awaitingEstimateCount =
+    customerId == null
+      ? 0
+      : myEstimates.filter((e) => e.status === "sent").length;
 
   // Unread report cards, from Postgres.
   //

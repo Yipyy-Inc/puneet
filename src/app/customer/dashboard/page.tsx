@@ -39,7 +39,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
-import { estimates } from "@/data/estimates";
+import { useMyEstimates } from "@/lib/api/estimates";
 import { businessProfile } from "@/data/settings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
@@ -253,11 +253,11 @@ export default function CustomerDashboardPage() {
     };
   }, [customerId]);
 
-  // Pending (Awaiting Response) estimates for this customer.
+  // Estimates awaiting this customer's answer, from Postgres (their own only).
+  const { estimates: myEstimates } = useMyEstimates();
   const pendingEstimates = useMemo(
-    () =>
-      estimates.filter((e) => e.clientId === customerId && e.status === "sent"),
-    [customerId],
+    () => myEstimates.filter((e) => e.status === "sent"),
+    [myEstimates],
   );
 
   // Passes expiring within 14 days (with passes remaining), soonest first.

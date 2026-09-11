@@ -12617,3 +12617,26 @@ customer and copies the link, and every surface says so.
   accept/decline dialogs, account setup) still read the fixture — next commit;
   the wizard's room prices and training programmes are still fixtures
   (Phase 3/4); no email is sent for an estimate anywhere.
+
+## 2026-09-11 — a customer's estimates are their own
+
+The customer's estimate list filtered `@/data/estimates` by a hardcoded
+`CUSTOMER_ID = 15` and headed it "Example Pet Care Facility" from
+`@/data/settings`; the link page looked the token up in the same fixture;
+**Accept** "took" the deposit from saved cards read out of `@/data/clients`
+and charged nothing, then "auto-converted" into a booking that was only a
+number; **Decline** edited the fixture and toasted the FACILITY's
+notification at the customer, with a "Create revised estimate" button that
+did nothing. The sidebar badge and the dashboard counted the fixture too.
+
+They read `/api/estimates?mine=1` and `/api/estimates/[token]` (RLS: the
+customer's own, once sent) and the business from `/api/customer/facility`;
+opening the link records it as viewed, and Accept / Decline go through
+`respond_to_estimate` under the customer's own name. Accepting moves no
+money — a deposit is taken when the business books.
+
+- **Still open:** the link page sits behind the customer login, so a guest
+  who is not a client yet cannot open it (guest estimates are shared by
+  staff, who copy the link); `/customer/estimates/[token]/setup` still
+  "activates" an account that nothing creates; `/api/v1/search` still lists
+  fixture estimates.

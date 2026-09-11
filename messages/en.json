@@ -9569,7 +9569,10 @@
         "setupAtLeast8": "At least 8 characters",
         "setupConfirmPassword": "Confirm password",
         "setupReenterPassword": "Re-enter your password",
-        "setupSetPasswordAndView": "Set password and view estimate"
+        "setupSetPasswordAndView": "Set password and view estimate",
+        "acceptFailed": "Your acceptance was not saved",
+        "declineFailed": "Your answer was not saved",
+        "depositDueAtBooking": "A deposit of {amount} is due when your booking is made."
       },
       "refer": {
         "whenOnSignup": "As soon as your friend creates an account.",
