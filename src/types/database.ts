@@ -7409,6 +7409,155 @@ export type Database = {
         };
         Relationships: [];
       };
+      promo_code_redemptions: {
+        Row: {
+          amount: number;
+          booking_id: string | null;
+          client_id: string | null;
+          code: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          line_item_id: string | null;
+          promo_code_id: string | null;
+        };
+        Insert: {
+          amount: number;
+          booking_id?: string | null;
+          client_id?: string | null;
+          code: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          line_item_id?: string | null;
+          promo_code_id?: string | null;
+        };
+        Update: {
+          amount?: number;
+          booking_id?: string | null;
+          client_id?: string | null;
+          code?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          line_item_id?: string | null;
+          promo_code_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "promo_code_redemptions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_line_item_id_fkey";
+            columns: ["line_item_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_line_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_promo_code_id_fkey";
+            columns: ["promo_code_id"];
+            isOneToOne: false;
+            referencedRelation: "promo_codes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      promo_codes: {
+        Row: {
+          applies_to: string[];
+          code: string;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          detail: Json;
+          discount_type: string;
+          discount_value: number;
+          facility_id: string;
+          first_time_only: boolean;
+          id: string;
+          is_active: boolean;
+          max_discount: number | null;
+          min_purchase: number | null;
+          per_customer_limit: number | null;
+          updated_at: string;
+          usage_limit: number | null;
+          valid_from: string | null;
+          valid_until: string | null;
+        };
+        Insert: {
+          applies_to?: string[];
+          code: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          detail?: Json;
+          discount_type: string;
+          discount_value?: number;
+          facility_id: string;
+          first_time_only?: boolean;
+          id?: string;
+          is_active?: boolean;
+          max_discount?: number | null;
+          min_purchase?: number | null;
+          per_customer_limit?: number | null;
+          updated_at?: string;
+          usage_limit?: number | null;
+          valid_from?: string | null;
+          valid_until?: string | null;
+        };
+        Update: {
+          applies_to?: string[];
+          code?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          detail?: Json;
+          discount_type?: string;
+          discount_value?: number;
+          facility_id?: string;
+          first_time_only?: boolean;
+          id?: string;
+          is_active?: boolean;
+          max_discount?: number | null;
+          min_purchase?: number | null;
+          per_customer_limit?: number | null;
+          updated_at?: string;
+          usage_limit?: number | null;
+          valid_from?: string | null;
+          valid_until?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       provisioning_requests: {
         Row: {
           created_at: string;
@@ -11866,6 +12015,10 @@ export type Database = {
           p_note?: string;
         };
         Returns: number;
+      };
+      redeem_promo_code: {
+        Args: { p_booking_id: string; p_code: string };
+        Returns: Json;
       };
       redeem_loyalty_points: {
         Args: {

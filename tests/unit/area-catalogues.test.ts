@@ -47,6 +47,8 @@ const SAME_IN_BOTH = new Set([
   "staff.clientDocuments.version", // version {v} / version {v}
   "staff.sellPackage.total", // Total / Total
   "staff.joinMembership.total", // Total / Total
+  "staff.promoCodes.colCode", // Code / Code
+  "staff.promoCodes.colActions", // Actions / Actions
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",
   "staff.profile.tabDocuments",

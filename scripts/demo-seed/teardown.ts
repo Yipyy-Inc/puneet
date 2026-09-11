@@ -201,6 +201,12 @@ try {
        where facility_id = ${DEMO_FACILITY_ID}
          and plan->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
     if (plansGone.count) removed["public.membership_plans"] = plansGone.count;
+    // A seeded promo code; its uses keep their code (promo_code_id SET NULL).
+    const promosGone = await tx`
+      delete from public.promo_codes
+       where facility_id = ${DEMO_FACILITY_ID}
+         and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (promosGone.count) removed["public.promo_codes"] = promosGone.count;
 
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even

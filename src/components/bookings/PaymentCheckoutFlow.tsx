@@ -36,6 +36,7 @@ import { formatMoney } from "@/lib/i18n/format";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { TerminalPicker } from "./TerminalPicker";
 import { TipSelector } from "./TipSelector";
+import { PromoCodeField } from "./PromoCodeField";
 
 /** One priced line on the printed receipt — the service, an item, a fee. */
 export interface ReceiptDetailLine {
@@ -82,6 +83,8 @@ interface PaymentCheckoutFlowProps {
   /** The client's membership discount — a line, netted off like the reward.
    *  The caller puts it on the bill in its onConfirm handler. */
   membershipDiscount?: { label: string; amount: number };
+  /** The booking's ref — when given, a promo code can be put on its bill. */
+  promoBookingRef?: number;
   /**
    * May return a promise. When it does, the dialog waits — a terminal payment
    * is held open while the customer finds their card, and a receipt printed
@@ -125,6 +128,7 @@ export function PaymentCheckoutFlow({
   otherUnpaidInvoices = [],
   loyaltyDiscount,
   membershipDiscount,
+  promoBookingRef,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
@@ -295,6 +299,10 @@ export function PaymentCheckoutFlow({
               </p>
             )}
           </div>
+
+          {promoBookingRef !== undefined && (
+            <PromoCodeField bookingRef={promoBookingRef} />
+          )}
 
           {/* Other unpaid invoices notice */}
           {otherUnpaidInvoices.length > 0 && (
