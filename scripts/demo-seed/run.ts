@@ -30,6 +30,7 @@ import { bookingToRow } from "../../src/lib/api/mappers/booking";
 import { clientToRow, petToRow } from "../../src/lib/api/mappers/client";
 import { courseOf } from "../../src/lib/api/mappers/training-book";
 import { shiftInstants } from "../../src/lib/api/mappers/scheduling";
+import { instantFromWallClock } from "../../src/lib/time/facility-time";
 import {
   DEMO_FACILITY_ID,
   DEMO_FACILITY_SLUG,
@@ -44,6 +45,7 @@ import {
   CATEGORIES,
   CLIENTS,
   DEPARTMENTS,
+  FACILITY_TASKS,
   GIFT_CARDS,
   OPEN_SHIFTS,
   POSITIONS,
@@ -1481,6 +1483,29 @@ try {
       count("gift cards");
     }
     await tx.unsafe("set local role authenticated");
+
+    // ── The to-do list ────────────────────────────────────────────────────
+    for (const task of FACILITY_TASKS) {
+      const [exists] = await tx`
+        select 1 from public.facility_tasks
+         where facility_id = ${DEMO_FACILITY_ID} and source_ref = ${task.ref}`;
+      if (exists) continue;
+      const due = instantFromWallClock(
+        shiftDay(today, task.dueInDays),
+        task.dueTime,
+        DEMO_TIMEZONE,
+      );
+      await tx`
+        insert into public.facility_tasks
+          (facility_id, title, description, category, priority, status,
+           due_at, completed_at, source, source_ref, metadata, created_by)
+        values
+          (${DEMO_FACILITY_ID}, ${task.title}, ${task.description},
+           ${task.category}, ${task.priority}, ${task.status}, ${due},
+           ${task.status === "completed" ? due : null}, 'manual', ${task.ref},
+           ${{}}::jsonb, ${SEED_ACTOR_SUB})`;
+      count("tasks");
+    }
 
     // ── Report cards ──────────────────────────────────────────────────────
     for (const rc of REPORT_CARDS) {

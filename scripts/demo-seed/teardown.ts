@@ -277,6 +277,13 @@ try {
     // held by seeded staff or nobody (the client's own shifts stay), then the
     // department memberships, pay, positions and departments nothing else
     // uses. Deleting a shift writes an audit_log row; that log is permanent.
+    const todosGone = await tx`
+      delete from public.facility_tasks
+       where facility_id = ${DEMO_FACILITY_ID}
+         and source = 'manual' and source_ref like ${`${SEED_PREFIX}-todo-%`}`;
+    if (todosGone.count)
+      removed["public.facility_tasks"] =
+        (removed["public.facility_tasks"] ?? 0) + todosGone.count;
     const cardsGone = await tx`
       delete from public.report_cards
        where facility_id = ${DEMO_FACILITY_ID}
