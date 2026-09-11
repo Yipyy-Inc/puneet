@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,15 +52,18 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { InterpolatedText } from "@/components/ui/interpolated-text";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
-import {
-  retailConfig,
-  type RetailSupplier,
-  type RetailBrand,
-  type RetailTaxMode,
-  type RetailReceiptFormat,
+import type {
+  RetailConfig,
+  RetailSupplier,
+  RetailBrand,
+  RetailTaxMode,
+  RetailReceiptFormat,
 } from "@/data/retail-config";
-import { retailMutations } from "@/lib/api/retail";
-import { products, type PricingMethod } from "@/data/retail";
+import type { PricingMethod, Product } from "@/types/retail";
+import { useRetailConfig } from "@/hooks/use-retail-config";
+import { retailKeys, useRetailProducts } from "@/lib/api/retail-store";
+import { Skeleton } from "@/components/ui/skeleton";
+import { NO_ITEMS } from "@/lib/no-items";
 import type { RoundingRule } from "@/lib/retail-pricing";
 
 // The `label` is the CODE — HST, GST, PST, QST are the same four letters in
@@ -74,70 +77,48 @@ const TAX_MODES: { value: RetailTaxMode; label: string; hintKey: string }[] = [
 ];
 
 /**
- * THE FIXTURE WRITES, MOVED OUT OF THE COMPONENT.
+ * ── THE SECTION SAVES THE FACILITY'S RETAIL CONFIGURATION ────────────────
  *
- * `retailConfig`, `products` and `retailConfig.brandMarginRules` are imported
- * module objects, and these handlers assign into them in place. That is the
- * real defect — this screen's brands, categories and suppliers live in a
- * module singleton, exactly the pattern the tag catalogue was moved off on
- * 2026-09-06 — and it is recorded rather than fixed here.
+ * It assigned into `retailConfig` — a module object from
+ * `@/data/retail-config` — and renamed brands on the fixture's thirteen
+ * products in place: every save lasted until the page reloaded, and the till
+ * never saw it. It writes the `retail_config` settings domain now
+ * (lib/settings/retail-config.ts) through `useRetailConfig`, and a brand
+ * rename or merge renames the brand on the facility's real products.
  *
- * It became visible when the section learned French: the React Compiler only
- * analyses a scope it might memoise, and a handler that closes over no
- * reactive value is not one. Adding `t` made these handlers reactive, and the
- * compiler produced twelve "This value cannot be modified" errors that had
- * been true all along.
- *
- * Hoisting the writes to module scope is not a workaround for the rule. It is
- * where a module-singleton write belongs: the component decides WHAT to save,
- * these functions know WHERE the fixture keeps it, and the seam is the one
- * that has to exist anyway when this moves to Postgres.
+ * A supplier's portal password is not kept: a login in plain text inside a
+ * settings blob is a credential nobody meant to store.
  */
 // Same normalization resolveBrandRule uses, so counts and moves match rule
-// lookups. Module level because the writers above need it too.
+// lookups.
 function normalizeBrand(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
 }
 
-function persistBrands(next: RetailBrand[]): void {
-  retailConfig.brands = next;
-}
-
-function persistBrandRules(next: typeof retailConfig.brandMarginRules): void {
-  retailConfig.brandMarginRules = next;
-}
-
-/** Reassign every product on `fromKey` to `toName`. Returns how many moved. */
-function reassignProducts(fromKey: string, toName: string): number {
-  let moved = 0;
-  for (const p of products) {
-    if (normalizeBrand(p.brand) === fromKey) {
-      p.brand = toName;
-      moved += 1;
+/** Rename the brand on every product that carries `fromKey`. Returns how many. */
+async function reassignProducts(
+  products: readonly Product[],
+  fromKey: string,
+  toName: string,
+): Promise<number> {
+  const moving = products.filter((p) => normalizeBrand(p.brand) === fromKey);
+  for (const p of moving) {
+    const response = await fetch(
+      `/api/retail/products/${encodeURIComponent(p.id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand: toName }),
+      },
+    );
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      throw new Error(body?.error ?? String(response.status));
     }
   }
-  return moved;
-}
-
-/** Rename the brand on any margin rule that referenced it. */
-function renameBrandRules(fromKey: string, toName: string): void {
-  for (const rule of retailConfig.brandMarginRules) {
-    if (normalizeBrand(rule.brandName) === fromKey) rule.brandName = toName;
-  }
-}
-
-function persistLists(next: {
-  categories: typeof retailConfig.categories;
-  suppliers: typeof retailConfig.suppliers;
-  brands: typeof retailConfig.brands;
-  productTags: typeof retailConfig.productTags;
-  unitsOfMeasure: typeof retailConfig.unitsOfMeasure;
-}): void {
-  retailConfig.categories = next.categories;
-  retailConfig.suppliers = next.suppliers;
-  retailConfig.brands = next.brands;
-  retailConfig.productTags = next.productTags;
-  retailConfig.unitsOfMeasure = next.unitsOfMeasure;
+  return moving.length;
 }
 
 /**
@@ -173,9 +154,33 @@ function nextId(prefix: string) {
 }
 
 export function RetailSettings() {
+  // Not until the saved configuration is in: a form seeded from the fallback
+  // and saved would overwrite what the facility set.
+  const { config, pending, save } = useRetailConfig();
+  const products = useRetailProducts().data ?? NO_ITEMS;
+  if (pending) {
+    return <Skeleton className="h-96 rounded-3xl" />;
+  }
+  return (
+    <RetailSettingsForm initial={config} save={save} products={products} />
+  );
+}
+
+function RetailSettingsForm({
+  initial,
+  save,
+  products,
+}: {
+  initial: RetailConfig;
+  save: (next: RetailConfig) => Promise<unknown>;
+  products: readonly Product[];
+}) {
+  const retailConfig = initial;
   const t = useSettingsText().section("retail");
   const { role } = useFacilityRole();
   const queryClient = useQueryClient();
+  const [brandRules, setBrandRules] = useState(initial.brandMarginRules);
+  const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState(retailConfig.categories);
   const [suppliers, setSuppliers] = useState(retailConfig.suppliers);
   const [brands, setBrands] = useState(retailConfig.brands);
@@ -250,10 +255,6 @@ export function RetailSettings() {
   const [mergeBrand, setMergeBrand] = useState<RetailBrand | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState("");
 
-  // Same normalization resolveBrandRule uses, so counts/moves match rule lookups.
-  const normalizeBrand = (s: string) =>
-    s.trim().toLowerCase().replace(/\s+/g, "");
-
   const brandProductCount = (name: string) => {
     const key = normalizeBrand(name);
     return products.filter((p) => normalizeBrand(p.brand) === key).length;
@@ -270,7 +271,7 @@ export function RetailSettings() {
     setNewBrand("");
   };
 
-  const handleRenameBrand = () => {
+  const handleRenameBrand = async () => {
     if (!renameBrand) return;
     const newName = renameValue.trim();
     if (!newName) return;
@@ -281,7 +282,9 @@ export function RetailSettings() {
         b.id === renameBrand.id ? { ...b, name: newName } : b,
       );
       setBrands(relabeled);
-      persistBrands(relabeled);
+      void save(currentConfig({ brands: relabeled })).catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : String(error)),
+      );
       setRenameBrand(null);
       return;
     }
@@ -302,14 +305,31 @@ export function RetailSettings() {
       b.id === renameBrand.id ? { ...b, name: newName } : b,
     );
     setBrands(updatedBrands);
-    persistBrands(updatedBrands);
 
     // Reassign products and any margin rule that referenced the old name so the
     // rename is the canonical, permanent fix (resolveBrandRule stays tolerant
     // as a safety net, but this removes the ambiguity at the source).
     const key = normalizeBrand(oldName);
-    const moved = reassignProducts(key, newName);
-    renameBrandRules(key, newName);
+    const renamedRules = brandRules.map((rule) =>
+      normalizeBrand(rule.brandName) === key
+        ? { ...rule, brandName: newName }
+        : rule,
+    );
+    setBrandRules(renamedRules);
+    let moved = 0;
+    try {
+      await save(
+        currentConfig({
+          brands: updatedBrands,
+          brandMarginRules: renamedRules,
+        }),
+      );
+      moved = await reassignProducts(products, key, newName);
+      void queryClient.invalidateQueries({ queryKey: retailKeys.all });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     // Was a template with English pluralisation ("product" + "s") spliced
     // into the middle of the sentence. French agrees the participle as well,
     // so each count owns a whole sentence.
@@ -323,7 +343,7 @@ export function RetailSettings() {
     setRenameBrand(null);
   };
 
-  const handleMergeBrand = () => {
+  const handleMergeBrand = async () => {
     if (!mergeBrand || !mergeTargetId) return;
     const target = brands.find((b) => b.id === mergeTargetId);
     if (!target || target.id === mergeBrand.id) return;
@@ -332,12 +352,9 @@ export function RetailSettings() {
     const targetKey = normalizeBrand(target.name);
     const targetName = target.name;
 
-    // Reassign every product from the source brand to the target brand.
-    const moved = reassignProducts(sourceKey, targetName);
-
     // Collapse rules: drop the source's rule; if the target had none, carry the
     // source's margin over so the merged brand keeps a rule.
-    const rules = retailConfig.brandMarginRules;
+    const rules = brandRules;
     const sourceRule = rules.find(
       (r) => normalizeBrand(r.brandName) === sourceKey,
     );
@@ -350,11 +367,23 @@ export function RetailSettings() {
     if (sourceRule && !targetHasRule) {
       nextRules = [...nextRules, { ...sourceRule, brandName: targetName }];
     }
-    persistBrandRules(nextRules);
-
     const updatedBrands = brands.filter((b) => b.id !== mergeBrand.id);
     setBrands(updatedBrands);
-    persistBrands(updatedBrands);
+    setBrandRules(nextRules);
+
+    // The list and the rules, written; then every product from the source
+    // brand moved onto the target.
+    let moved = 0;
+    try {
+      await save(
+        currentConfig({ brands: updatedBrands, brandMarginRules: nextRules }),
+      );
+      moved = await reassignProducts(products, sourceKey, targetName);
+      void queryClient.invalidateQueries({ queryKey: retailKeys.all });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
 
     toast.success(
       moved === 1
@@ -377,8 +406,18 @@ export function RetailSettings() {
     );
   };
 
-  const saveTaxConfig = useMutation({
-    ...retailMutations.updateTaxConfig({
+  // Everything this section edits, as the configuration it saves.
+  const currentConfig = (patch: Partial<RetailConfig> = {}): RetailConfig => ({
+    ...initial,
+    categories,
+    // The portal password is not stored; see the header.
+    suppliers: suppliers.map(
+      ({ orderingPortalPassword: _password, ...rest }) => rest,
+    ),
+    brands,
+    productTags: tags,
+    unitsOfMeasure: units,
+    taxConfig: {
       defaultRate: Number.parseFloat(defaultTaxRate) || 0,
       taxMode,
       registrationNumber: taxRegistrationNumber.trim(),
@@ -387,54 +426,31 @@ export function RetailSettings() {
       exemptCategoryIds: exemptCategoryIds.filter((id) =>
         categories.some((c) => c.id === id),
       ),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["retail", "tax-config"] });
     },
-  });
-
-  const saveReceiptConfig = useMutation({
-    ...retailMutations.updateReceiptConfig({
+    receiptConfig: {
       header: receiptHeader.trim(),
       footer: receiptFooter.trim(),
       format: receiptFormat,
       showLogo: receiptShowLogo,
       returnPolicy: receiptReturnPolicy.trim(),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["retail", "receipt-config"] });
     },
-  });
-
-  const saveLowStockConfig = useMutation({
-    ...retailMutations.updateLowStockConfig({
+    lowStockConfig: {
       defaultThreshold: Math.max(
         0,
         Number.parseInt(lowStockThreshold, 10) || 0,
       ),
       notifyStaff: lowStockNotify,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["retail", "low-stock-config"],
-      });
     },
-  });
-
-  const savePricingConfig = useMutation({
-    ...retailMutations.updatePricingConfig({
+    pricingConfig: {
       defaultPricingMethod,
       defaultMarginPercent:
         defaultMarginPercent.trim() === ""
           ? undefined
           : Number.parseFloat(defaultMarginPercent) || 0,
       rounding,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["retail", "pricing-config"],
-      });
     },
+    brandMarginRules: brandRules,
+    ...patch,
   });
 
   const handleSendTestReceipt = () => {
@@ -447,19 +463,18 @@ export function RetailSettings() {
     toast.success(t(via));
   };
 
-  const handleSave = () => {
-    persistLists({
-      categories,
-      suppliers,
-      brands,
-      productTags: tags,
-      unitsOfMeasure: units,
-    });
-    saveTaxConfig.mutate();
-    saveReceiptConfig.mutate();
-    saveLowStockConfig.mutate();
-    savePricingConfig.mutate();
-    toast.success(t("saved"));
+  // The toast waits for the write; a refusal keeps everything typed.
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await save(currentConfig());
+      toast.success(t("saved"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -910,7 +925,7 @@ export function RetailSettings() {
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleRenameBrand();
+                if (e.key === "Enter") void handleRenameBrand();
               }}
               placeholder={t("brandName")}
             />
@@ -922,7 +937,10 @@ export function RetailSettings() {
             <Button variant="outline" onClick={() => setRenameBrand(null)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleRenameBrand} disabled={!renameValue.trim()}>
+            <Button
+              onClick={() => void handleRenameBrand()}
+              disabled={!renameValue.trim()}
+            >
               {t("saveShort")}
             </Button>
           </DialogFooter>
@@ -988,7 +1006,10 @@ export function RetailSettings() {
             >
               {t("cancel")}
             </Button>
-            <Button onClick={handleMergeBrand} disabled={!mergeTargetId}>
+            <Button
+              onClick={() => void handleMergeBrand()}
+              disabled={!mergeTargetId}
+            >
               {t("merge")}
             </Button>
           </DialogFooter>
@@ -1290,7 +1311,11 @@ export function RetailSettings() {
 
       {/* Save */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} className="gap-1.5">
+        <Button
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="gap-1.5"
+        >
           {t("save")}
         </Button>
       </div>

@@ -1,33 +1,33 @@
 /**
  * Barcode generation for products without manufacturer barcodes.
  *
- * Format: YPY-FFNNNNN
+ * Format: YPY-NNNNN
  * - YPY: Yipyy prefix (never conflicts with UPC/EAN manufacturer codes)
- * - FF: 2-digit facility ID (zero-padded)
- * - NNNNN: 5-digit sequential number (supports 99,999 products per facility)
+ * - NNNNN: 5-digit sequential number, one past the facility's highest
+ *
+ * The next number comes from the barcodes the caller passes in — the
+ * facility's own products. It read the fixture's thirteen products, which
+ * decided nothing about any real shelf; the database's unique index on
+ * (facility, barcode) is what finally refuses a clash.
  *
  * Uses CODE128 format — alphanumeric, widely compatible with scanners.
  */
-
-import { products } from "@/data/retail";
 
 export interface GeneratedBarcode {
   code: string;
   format: "CODE128";
   source: "generated";
   generatedAt: string;
-  facilityId: number;
 }
 
 /**
  * Generate a unique barcode for a facility.
  */
-export function generateUniqueBarcode(facilityId: number): GeneratedBarcode {
-  const prefix = `YPY-${String(facilityId).padStart(2, "0")}`;
+export function generateUniqueBarcode(barcodes: string[]): GeneratedBarcode {
+  const prefix = "YPY-";
 
-  // Find highest existing YPY code for this facility
-  const existing = products
-    .map((p) => p.barcode)
+  // The highest YPY code the facility already has.
+  const existing = barcodes
     .filter((b): b is string => !!b && b.startsWith(prefix))
     .map((b) => parseInt(b.replace(prefix, ""), 10))
     .filter((n) => !Number.isNaN(n));
@@ -40,31 +40,7 @@ export function generateUniqueBarcode(facilityId: number): GeneratedBarcode {
     format: "CODE128",
     source: "generated",
     generatedAt: new Date().toISOString(),
-    facilityId,
   };
-}
-
-/**
- * Validate a barcode doesn't conflict with existing products.
- */
-export function validateBarcodeUnique(code: string): {
-  unique: boolean;
-  conflictProduct?: string;
-} {
-  for (const product of products) {
-    if (product.barcode === code) {
-      return { unique: false, conflictProduct: product.name };
-    }
-    for (const variant of product.variants ?? []) {
-      if (variant.barcode === code) {
-        return {
-          unique: false,
-          conflictProduct: `${product.name} — ${variant.name}`,
-        };
-      }
-    }
-  }
-  return { unique: true };
 }
 
 /**

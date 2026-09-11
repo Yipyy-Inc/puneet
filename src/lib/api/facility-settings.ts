@@ -5,6 +5,7 @@ import type { FacilityDailyCareConfig } from "@/types/boarding";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type { DaycareRatesConfig } from "@/lib/settings/daycare-rates";
+import type { RetailConfig } from "@/data/retail-config";
 import type { TrainingProgramsConfig } from "@/lib/settings/training-programs";
 import type { IvrSettings } from "@/lib/settings/ivr";
 import type {
@@ -133,6 +134,8 @@ export interface FacilitySettings {
   daycare_rates: SettingState<DaycareRatesConfig>;
   /** The training Rates tab's programs. Empty until set. */
   training_programs: SettingState<TrainingProgramsConfig>;
+  /** Retail categories, brands, receipt, pricing defaults and brand rules. */
+  retail_config: SettingState<RetailConfig>;
   /**
    * Which tag types this facility uses, what a new tag or note defaults to,
    * and who may read, write, edit and delete a note of each category.

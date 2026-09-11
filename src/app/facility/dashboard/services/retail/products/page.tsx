@@ -54,7 +54,6 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
-  products,
   categories,
   type Product,
   type ProductVariant,
@@ -68,7 +67,8 @@ import { generateUniqueBarcode } from "@/lib/barcode-generator";
 import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
 import { BulkPriceLabelPrint } from "@/components/retail/BulkPriceLabelPrint";
-import { retailConfig } from "@/data/retail-config";
+import { useRetailConfig } from "@/hooks/use-retail-config";
+import type { BrandMarginRule } from "@/data/retail-config";
 import {
   sellingFromMargin,
   profitOf,
@@ -77,6 +77,12 @@ import {
 } from "@/lib/retail-pricing";
 import { resolveBrandRule } from "@/lib/api/retail";
 import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
+import {
+  useRetailProducts,
+  useSaveRetailProduct,
+} from "@/lib/api/retail-store";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 
 type ProductWithRecord = Product & Record<string, unknown>;
 
@@ -93,12 +99,13 @@ function priceForMethod(
   brand: string,
   manualFallback: number,
   rounding: RoundingRule,
+  rules: BrandMarginRule[],
 ): number {
   if (method === "margin") {
     return sellingFromMargin(cost, marginPercent, rounding);
   }
   if (method === "brand_rule") {
-    const rule = resolveBrandRule(brand.trim());
+    const rule = resolveBrandRule(brand.trim(), rules);
     return rule
       ? sellingFromMargin(cost, rule.marginPercent, rounding)
       : manualFallback;
@@ -118,7 +125,21 @@ const PACKAGE_UNIT_OPTIONS: { value: PackageUnitType; label: string }[] = [
 ];
 
 export default function ProductsPage() {
-  const [productList, setProductList] = useState<Product[]>(products);
+  // Pricing defaults, brands, categories and brand margin rules, as Settings →
+  // Retail saved them.
+  const retailConfig = useRetailConfig().config;
+  // ── THE PRODUCTS ARE THE FACILITY'S ─────────────────────────────────────
+  //
+  // This list was `products` from @/data/retail copied into useState: a
+  // product created or edited here lived in this tab and never reached the
+  // till, the inventory screen or a reload. It is `retail_products` now
+  // (20260911180840) — the till and the inventory screen read the same rows —
+  // and Save waits for the write. A count typed into the editor goes onto
+  // the stock ledger as a count; the product row cannot move its own stock.
+  const { t: tRetail } = useStaffText("retailStore");
+  const { data: productRows } = useRetailProducts();
+  const productList = productRows ?? NO_ITEMS;
+  const saveProduct = useSaveRetailProduct();
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
@@ -271,6 +292,7 @@ export default function ProductsPage() {
     formData.brand,
     formData.basePrice,
     pricingRounding,
+    retailConfig.brandMarginRules,
   );
 
   // Resolved selling price for the variant currently being edited. When it
@@ -285,6 +307,7 @@ export default function ProductsPage() {
         formData.brand,
         variantForm.price,
         pricingRounding,
+        retailConfig.brandMarginRules,
       )
     : priceForMethod(
         variantForm.costPrice,
@@ -293,6 +316,7 @@ export default function ProductsPage() {
         formData.brand,
         variantForm.price,
         pricingRounding,
+        retailConfig.brandMarginRules,
       );
 
   const handleAddNew = () => {
@@ -484,47 +508,47 @@ export default function ProductsPage() {
               formData.brand,
               v.price,
               pricingRounding,
+              retailConfig.brandMarginRules,
             ),
           },
     );
 
-    if (editingProduct) {
-      setProductList((prev) =>
-        prev.map((product) =>
-          product.id === editingProduct.id
-            ? {
-                ...product,
-                ...productFields,
-                packagedAs,
-                basePrice: resolvedBasePrice,
-                priceUpdatedAt:
-                  resolvedBasePrice !== product.basePrice
-                    ? now
-                    : product.priceUpdatedAt,
-                variants: formData.hasVariants ? syncedVariants : [],
-                updatedAt: now,
-              }
-            : product,
-        ),
-      );
-      toast.success("Product updated");
-    } else {
-      const newProduct: Product = {
-        id: `prod-${new Date().getTime()}`,
-        ...productFields,
-        packagedAs,
-        basePrice: resolvedBasePrice,
-        priceUpdatedAt: now,
-        variants: formData.hasVariants ? syncedVariants : [],
-        createdAt: now,
-        updatedAt: now,
-      };
-      setProductList((prev) => [newProduct, ...prev]);
-      toast.success("Product created");
-    }
-
-    setSelectedProductIds(new Set());
-    setIsAddEditModalOpen(false);
+    const { stock: typedStock, ...fieldsWithoutStock } = productFields;
+    const payload: Partial<Product> = {
+      ...fieldsWithoutStock,
+      packagedAs,
+      basePrice: resolvedBasePrice,
+      priceUpdatedAt:
+        !editingProduct || resolvedBasePrice !== editingProduct.basePrice
+          ? now
+          : editingProduct.priceUpdatedAt,
+      variants: formData.hasVariants ? syncedVariants : [],
+      ...(editingProduct ? {} : { stock: typedStock }),
+    };
+    saveProduct.mutate(
+      {
+        id: editingProduct?.id,
+        product: payload,
+        // A changed count is a count on the ledger, not an edit to the row.
+        stockCount:
+          editingProduct &&
+          !formData.hasVariants &&
+          typedStock !== editingProduct.stock
+            ? typedStock
+            : undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success(editingProduct ? "Product updated" : "Product created");
+          setSelectedProductIds(new Set());
+          setIsAddEditModalOpen(false);
+        },
+        onError: (error) =>
+          toast.error(tRetail("productNotSaved"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const handleAddTag = () => {
@@ -1200,7 +1224,9 @@ export default function ProductsPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const gen = generateUniqueBarcode(11);
+                        const gen = generateUniqueBarcode(
+                          productList.map((p) => p.barcode),
+                        );
                         setFormData({ ...formData, barcode: gen.code });
                         toast.success(`Barcode generated: ${gen.code}`);
                       }}
@@ -1364,7 +1390,10 @@ export default function ProductsPage() {
                       </div>
                     );
                   }
-                  const rule = resolveBrandRule(brand);
+                  const rule = resolveBrandRule(
+                    brand,
+                    retailConfig.brandMarginRules,
+                  );
                   if (!rule) {
                     return (
                       <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
@@ -1953,7 +1982,10 @@ export default function ProductsPage() {
                           </div>
                         );
                       }
-                      const rule = resolveBrandRule(brand);
+                      const rule = resolveBrandRule(
+                        brand,
+                        retailConfig.brandMarginRules,
+                      );
                       if (!rule) {
                         return (
                           <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">

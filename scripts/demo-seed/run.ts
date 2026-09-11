@@ -57,6 +57,9 @@ import {
   NOTES,
   PETS,
   PROMO_CODES,
+  RETAIL_PRODUCTS,
+  RETAIL_PURCHASE_ORDER,
+  RETAIL_SUPPLIERS,
   STAFF,
   TASK_TEMPLATES,
   TRAINER_LEGACY_ID,
@@ -1079,6 +1082,78 @@ try {
            ${shiftDay(today, -10)}, ${shiftDay(today, p.validDays)},
            ${{ demoSeedKey: `${SEED_PREFIX}-promo-${p.code}` }}::jsonb)`;
       count("promo codes");
+    }
+
+    // ── Retail: the shelf, the suppliers, one open order ─────────────────
+    // Found again by SKU (unique per facility) and by name; each carries its
+    // seed key in `detail` for the teardown.
+    const productIds = new Map<string, string>();
+    for (const p of RETAIL_PRODUCTS) {
+      const [exists] = await tx`
+        select id from public.retail_products
+         where facility_id = ${DEMO_FACILITY_ID} and lower(sku) = lower(${p.sku})`;
+      if (exists) {
+        productIds.set(p.sku, exists.id);
+        continue;
+      }
+      const [created] = await tx`
+        insert into public.retail_products
+          (facility_id, name, sku, category, brand, base_price, cost_price,
+           stock, min_stock, detail)
+        values
+          (${DEMO_FACILITY_ID}, ${p.name}, ${p.sku}, ${p.category}, ${p.brand},
+           ${p.price}, ${p.cost}, ${p.stock}, ${p.minStock},
+           ${{ demoSeedKey: `${SEED_PREFIX}-product-${p.sku}`, tags: [], pricingMethod: "manual", onlineVisible: false }}::jsonb)
+        returning id`;
+      productIds.set(p.sku, created.id);
+      count("retail products");
+    }
+    const supplierIds: string[] = [];
+    for (const s of RETAIL_SUPPLIERS) {
+      assertSafeContact(`supplier ${s.name}`, s.email, s.phone);
+      const [exists] = await tx`
+        select id from public.retail_suppliers
+         where facility_id = ${DEMO_FACILITY_ID} and name = ${s.name}`;
+      if (exists) {
+        supplierIds.push(exists.id);
+        continue;
+      }
+      const [created] = await tx`
+        insert into public.retail_suppliers
+          (facility_id, name, contact_name, email, phone, detail)
+        values
+          (${DEMO_FACILITY_ID}, ${s.name}, ${s.contactName}, ${s.email}, ${s.phone},
+           ${{ demoSeedKey: `${SEED_PREFIX}-supplier`, paymentTerms: s.paymentTerms, leadTimeDays: s.leadTimeDays, address: "", city: "Montréal", country: "Canada", notes: "", totalOrders: 0 }}::jsonb)
+        returning id`;
+      supplierIds.push(created.id);
+      count("retail suppliers");
+    }
+    {
+      const po = RETAIL_PURCHASE_ORDER;
+      const [exists] = await tx`
+        select 1 from public.retail_purchase_orders
+         where facility_id = ${DEMO_FACILITY_ID} and notes = ${po.notes}`;
+      if (!exists) {
+        const items = po.lines.map((line) => {
+          const product = RETAIL_PRODUCTS.find((p) => p.sku === line.sku)!;
+          return {
+            productId: productIds.get(line.sku),
+            productName: product.name,
+            sku: product.sku,
+            quantity: line.quantity,
+            unitCost: product.cost,
+            received: 0,
+          };
+        });
+        await tx`
+          insert into public.retail_purchase_orders
+            (facility_id, supplier_id, supplier_name, status, items, expected_on, notes)
+          values
+            (${DEMO_FACILITY_ID}, ${supplierIds[po.supplier]},
+             ${RETAIL_SUPPLIERS[po.supplier].name}, 'ordered', ${items}::jsonb,
+             ${shiftDay(today, po.expectedInDays)}, ${po.notes})`;
+        count("purchase orders");
+      }
     }
 
     if (ROLLBACK) {

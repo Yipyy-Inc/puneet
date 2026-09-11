@@ -9,6 +9,10 @@ import {
   NO_TRAINING_PROGRAMS,
   trainingProgramsSchema,
 } from "@/lib/settings/training-programs";
+import {
+  retailConfigSchema,
+  SHIPPED_RETAIL_SETTINGS,
+} from "@/lib/settings/retail-config";
 
 import {
   NO_LOYALTY_PROGRAM,
@@ -430,6 +434,17 @@ export const SETTING_DOMAINS = {
   training_programs: {
     schema: trainingProgramsSchema,
     fallback: NO_TRAINING_PROGRAMS,
+  },
+  // ── RETAIL ─────────────────────────────────────────────────────────────
+  //
+  // Product categories, brands, tags, units, the receipt, the low-stock
+  // threshold, the pricing defaults and the brand margin rules. A module
+  // object the Retail section assigned into until 2026-09-11. The fallback is
+  // the shipped lists, minus suppliers, brands and rules, which name
+  // businesses; see the banner in lib/settings/retail-config.ts.
+  retail_config: {
+    schema: retailConfigSchema,
+    fallback: SHIPPED_RETAIL_SETTINGS,
   },
   // ── TAGS AND NOTES ─────────────────────────────────────────────────────
   //

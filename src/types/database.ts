@@ -7421,6 +7421,7 @@ export type Database = {
           id: string;
           line_item_id: string | null;
           promo_code_id: string | null;
+          retail_sale_id: string | null;
         };
         Insert: {
           amount: number;
@@ -7433,6 +7434,7 @@ export type Database = {
           id?: string;
           line_item_id?: string | null;
           promo_code_id?: string | null;
+          retail_sale_id?: string | null;
         };
         Update: {
           amount?: number;
@@ -7445,6 +7447,7 @@ export type Database = {
           id?: string;
           line_item_id?: string | null;
           promo_code_id?: string | null;
+          retail_sale_id?: string | null;
         };
         Relationships: [
           {
@@ -7809,6 +7812,345 @@ export type Database = {
             columns: ["pet_id"];
             isOneToOne: false;
             referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      retail_products: {
+        Row: {
+          barcode: string;
+          base_price: number;
+          brand: string;
+          category: string;
+          cost_price: number;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          detail: Json;
+          facility_id: string;
+          id: string;
+          max_stock: number | null;
+          min_stock: number;
+          name: string;
+          sku: string;
+          status: string;
+          stock: number;
+          taxable: boolean;
+          updated_at: string;
+          variants: Json;
+        };
+        Insert: {
+          barcode?: string;
+          base_price?: number;
+          brand?: string;
+          category?: string;
+          cost_price?: number;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          detail?: Json;
+          facility_id: string;
+          id?: string;
+          max_stock?: number | null;
+          min_stock?: number;
+          name: string;
+          sku?: string;
+          status?: string;
+          stock?: number;
+          taxable?: boolean;
+          updated_at?: string;
+          variants?: Json;
+        };
+        Update: {
+          barcode?: string;
+          base_price?: number;
+          brand?: string;
+          category?: string;
+          cost_price?: number;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          detail?: Json;
+          facility_id?: string;
+          id?: string;
+          max_stock?: number | null;
+          min_stock?: number;
+          name?: string;
+          sku?: string;
+          status?: string;
+          stock?: number;
+          taxable?: boolean;
+          updated_at?: string;
+          variants?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retail_products_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      retail_purchase_orders: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          expected_on: string | null;
+          facility_id: string;
+          id: string;
+          items: Json;
+          notes: string;
+          number: number;
+          received_at: string | null;
+          status: string;
+          supplier_id: string | null;
+          supplier_name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          expected_on?: string | null;
+          facility_id: string;
+          id?: string;
+          items?: Json;
+          notes?: string;
+          number?: number;
+          received_at?: string | null;
+          status?: string;
+          supplier_id?: string | null;
+          supplier_name?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          expected_on?: string | null;
+          facility_id?: string;
+          id?: string;
+          items?: Json;
+          notes?: string;
+          number?: number;
+          received_at?: string | null;
+          status?: string;
+          supplier_id?: string | null;
+          supplier_name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retail_purchase_orders_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retail_purchase_orders_supplier_id_fkey";
+            columns: ["supplier_id"];
+            isOneToOne: false;
+            referencedRelation: "retail_suppliers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      retail_sales: {
+        Row: {
+          cashier_name: string;
+          client_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          discount_total: number;
+          facility_id: string;
+          id: string;
+          items: Json;
+          note: string;
+          number: number;
+          payment_ids: string[];
+          promo_code: string | null;
+          status: string;
+          subtotal: number;
+          tax_total: number;
+          tender: string;
+          tip: number;
+          total: number;
+        };
+        Insert: {
+          cashier_name?: string;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          discount_total?: number;
+          facility_id: string;
+          id?: string;
+          items: Json;
+          note?: string;
+          number?: number;
+          payment_ids?: string[];
+          promo_code?: string | null;
+          status?: string;
+          subtotal: number;
+          tax_total?: number;
+          tender: string;
+          tip?: number;
+          total: number;
+        };
+        Update: {
+          cashier_name?: string;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          discount_total?: number;
+          facility_id?: string;
+          id?: string;
+          items?: Json;
+          note?: string;
+          number?: number;
+          payment_ids?: string[];
+          promo_code?: string | null;
+          status?: string;
+          subtotal?: number;
+          tax_total?: number;
+          tender?: string;
+          tip?: number;
+          total?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retail_sales_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retail_sales_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      retail_stock_movements: {
+        Row: {
+          author_name: string;
+          created_at: string;
+          created_by: string | null;
+          delta: number;
+          facility_id: string;
+          id: string;
+          note: string;
+          product_id: string;
+          purchase_order_id: string | null;
+          reason: string;
+          sale_id: string | null;
+          variant_id: string | null;
+        };
+        Insert: {
+          author_name?: string;
+          created_at?: string;
+          created_by?: string | null;
+          delta: number;
+          facility_id: string;
+          id?: string;
+          note?: string;
+          product_id: string;
+          purchase_order_id?: string | null;
+          reason: string;
+          sale_id?: string | null;
+          variant_id?: string | null;
+        };
+        Update: {
+          author_name?: string;
+          created_at?: string;
+          created_by?: string | null;
+          delta?: number;
+          facility_id?: string;
+          id?: string;
+          note?: string;
+          product_id?: string;
+          purchase_order_id?: string | null;
+          reason?: string;
+          sale_id?: string | null;
+          variant_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retail_stock_movements_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retail_stock_movements_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "retail_products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retail_stock_movements_purchase_order_id_fkey";
+            columns: ["purchase_order_id"];
+            isOneToOne: false;
+            referencedRelation: "retail_purchase_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retail_stock_movements_sale_id_fkey";
+            columns: ["sale_id"];
+            isOneToOne: false;
+            referencedRelation: "retail_sales";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      retail_suppliers: {
+        Row: {
+          contact_name: string;
+          created_at: string;
+          detail: Json;
+          email: string;
+          facility_id: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          phone: string;
+          updated_at: string;
+        };
+        Insert: {
+          contact_name?: string;
+          created_at?: string;
+          detail?: Json;
+          email?: string;
+          facility_id: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          phone?: string;
+          updated_at?: string;
+        };
+        Update: {
+          contact_name?: string;
+          created_at?: string;
+          detail?: Json;
+          email?: string;
+          facility_id?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          phone?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retail_suppliers_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
             referencedColumns: ["id"];
           },
         ];
@@ -11778,6 +12120,17 @@ export type Database = {
       };
       purge_e2e_bookings: { Args: never; Returns: number };
       purge_e2e_report_cards: { Args: never; Returns: number };
+      quote_promo_code: {
+        Args: {
+          p_amount: number;
+          p_client_id: string | null;
+          p_code: string;
+          p_facility_id: string;
+          p_lock?: boolean;
+          p_service: string;
+        };
+        Returns: Json;
+      };
       rate_report_card: {
         Args: { p_card_id: string; p_comment?: string; p_stars: number };
         Returns: {
@@ -11865,6 +12218,10 @@ export type Database = {
           service: string;
         }[];
       };
+      receive_purchase_order: {
+        Args: { p_author_name?: string; p_lines: Json; p_po_id: string };
+        Returns: Json;
+      };
       record_boarding_arrival: {
         Args: { p_action: string; p_booking_ref: number };
         Returns: string;
@@ -11949,6 +12306,25 @@ export type Database = {
           event_id: string;
           is_new: boolean;
         }[];
+      };
+      record_retail_sale: {
+        Args: {
+          p_cashier_name?: string;
+          p_client_id?: string | null;
+          p_discount: number;
+          p_facility_id: string;
+          p_items: Json;
+          p_note?: string;
+          p_payment_ids?: string[];
+          p_payments?: Json;
+          p_promo_code?: string | null;
+          p_subtotal: number;
+          p_tax: number;
+          p_tender: string;
+          p_tip: number;
+          p_total: number;
+        };
+        Returns: Json;
       };
       record_review_click: {
         Args: { p_channel_id: string; p_token: string };

@@ -101,7 +101,6 @@ const BASELINE = new Set<string>([
   //
   // Each of these is a real claim over a file with nothing that performs it.
   // They are recorded, not excused.
-  "src/app/facility/dashboard/services/retail/inventory/page.tsx",
   "src/app/facility/dashboard/services/training/courses/page.tsx",
   "src/components/grooming/GroomingIntakeForm.tsx",
   // YipyyGoSettings.tsx left on 2026-09-06, by being fixed. Its "Express
@@ -165,8 +164,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/dashboard/services/custom/[slug]/settings/_components/FacilitySettingsEditor.tsx",
   "src/app/facility/dashboard/services/custom/page.tsx",
   "src/app/facility/dashboard/services/grooming/settings/page.tsx",
-  "src/app/facility/dashboard/services/retail/products/page.tsx",
-  "src/app/facility/dashboard/services/retail/settings/page.tsx",
   "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-homework-prompt.tsx",
   "src/app/facility/dashboard/services/training/students/_components/homework-board.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Warehouse,
   AlertTriangle,
@@ -17,7 +17,6 @@ import {
   Eye,
   ShoppingCart,
   FileText,
-  FileUp,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,19 +48,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type {
+  InventoryMovement,
+  LowStockAlert,
+  Product,
+  ProductVariant,
+} from "@/types/retail";
+import { toast } from "sonner";
 import {
-  products,
-  inventoryMovements,
-  lowStockAlerts,
-  getLowStockProducts,
-  getInventoryValue,
-  getActiveSuppliers,
-  type InventoryMovement,
-  type LowStockAlert,
-  type Product,
-  type ProductVariant,
-} from "@/data/retail";
-import { InvoiceImportDialog } from "@/components/retail/InvoiceImportDialog";
+  useAdjustStock,
+  useRetailProducts,
+  useSavePurchaseOrder,
+  useStockMovements,
+  useSuppliers,
+} from "@/lib/api/retail-store";
+import { formatDateLong, formatTime as formatClock } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { NO_ITEMS } from "@/lib/no-items";
 
 type InventoryMovementWithRecord = InventoryMovement & Record<string, unknown>;
 type LowStockAlertWithRecord = LowStockAlert & Record<string, unknown>;
@@ -71,7 +74,6 @@ export default function InventoryPage() {
     "overview" | "movements" | "alerts"
   >("overview");
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
-  const [isInvoiceImportOpen, setIsInvoiceImportOpen] = useState(false);
   const [isAlertDetailModalOpen, setIsAlertDetailModalOpen] = useState(false);
   const [isReorderListModalOpen, setIsReorderListModalOpen] = useState(false);
   const [isCreatePOModalOpen, setIsCreatePOModalOpen] = useState(false);
@@ -110,41 +112,125 @@ export default function InventoryPage() {
     reason: "",
   });
 
-  const inventoryValue = getInventoryValue();
-  const lowStockItems = getLowStockProducts();
-  const pendingAlerts = lowStockAlerts.filter((a) => a.status === "pending");
+  // ── THE SHELF IS THE LEDGER ─────────────────────────────────────────────
+  //
+  // Products, movements and low-stock alerts were `products`,
+  // `inventoryMovements` and `lowStockAlerts` from @/data/retail. "Adjust
+  // stock" closed the dialog and changed nothing, "Acknowledge" logged to the
+  // console, and "Create purchase order" said it had with an alert(). The
+  // products and their movements are the facility's rows now
+  // (20260911180840); an adjustment is a movement on the ledger; a low-stock
+  // alert is simply a product at or under its minimum — it clears when the
+  // stock does, so there is nothing to acknowledge; and the reorder list
+  // writes a real purchase order.
+  const { t: tR, fill: fillR, locale } = useStaffText("retailStore");
+  const products = useRetailProducts().data ?? NO_ITEMS;
+  const inventoryMovements = useStockMovements().data ?? NO_ITEMS;
+  const suppliers = useSuppliers().data ?? NO_ITEMS;
+  const adjustStock = useAdjustStock();
+  const savePurchaseOrder = useSavePurchaseOrder();
 
-  // Format date consistently to avoid hydration errors
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${month}/${day}/${year}`;
-  };
+  const lowStockAlerts = useMemo<LowStockAlert[]>(
+    () =>
+      products.flatMap((p) =>
+        p.hasVariants
+          ? p.variants
+              .filter((v) => v.stock <= v.minStock)
+              .map((v) => ({
+                id: `${p.id}:${v.id}`,
+                productId: p.id,
+                productName: p.name,
+                variantId: v.id,
+                variantName: v.name,
+                sku: v.sku,
+                currentStock: v.stock,
+                minStock: v.minStock,
+                status: "pending" as const,
+                createdAt: p.updatedAt,
+              }))
+          : p.stock <= p.minStock
+            ? [
+                {
+                  id: p.id,
+                  productId: p.id,
+                  productName: p.name,
+                  sku: p.sku,
+                  currentStock: p.stock,
+                  minStock: p.minStock,
+                  status: "pending" as const,
+                  createdAt: p.updatedAt,
+                },
+              ]
+            : [],
+      ),
+    [products],
+  );
+  const inventoryValue = products.reduce(
+    (sum, p) => {
+      if (p.hasVariants) {
+        for (const v of p.variants) {
+          sum.cost += v.stock * v.costPrice;
+          sum.retail += v.stock * v.price;
+        }
+      } else {
+        sum.cost += p.stock * p.baseCostPrice;
+        sum.retail += p.stock * p.basePrice;
+      }
+      return sum;
+    },
+    { cost: 0, retail: 0 },
+  );
+  const lowStockItems = products.flatMap<Product | ProductVariant>((p) =>
+    p.hasVariants
+      ? p.variants.filter((v) => v.stock <= v.minStock)
+      : p.stock <= p.minStock
+        ? [p]
+        : [],
+  );
+  const getActiveSuppliers = () =>
+    suppliers.filter((supplier) => supplier.status === "active");
+  const pendingAlerts = lowStockAlerts;
 
-  // Format time consistently
-  const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
-  };
+  // A numeric date read 09/11/2026 — §6 rule 8 bans it outright.
+  const formatDate = (dateString: string): string =>
+    formatDateLong(dateString, locale);
+  const formatTime = (dateString: string): string =>
+    formatClock(dateString, locale);
 
   const handleAdjustStock = () => {
-    // In a real app, this would save to the backend
-    setIsAdjustmentModalOpen(false);
-    setAdjustmentForm({
-      productId: "",
-      variantId: "",
-      quantity: 0,
-      reason: "",
-    });
-  };
-
-  const handleAcknowledgeAlert = (alert: LowStockAlert) => {
-    // In a real app, this would update the alert status
-    console.log("Acknowledging alert:", alert.id);
+    if (!adjustmentForm.productId || !adjustmentForm.quantity) return;
+    adjustStock.mutate(
+      {
+        productId: adjustmentForm.productId,
+        variantId: adjustmentForm.variantId || undefined,
+        delta: adjustmentForm.quantity,
+        reason: "adjustment",
+        note: adjustmentForm.reason,
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            fillR("stockAdjusted", {
+              change:
+                adjustmentForm.quantity > 0
+                  ? `+${adjustmentForm.quantity}`
+                  : String(adjustmentForm.quantity),
+            }),
+          );
+          setIsAdjustmentModalOpen(false);
+          setAdjustmentForm({
+            productId: "",
+            variantId: "",
+            quantity: 0,
+            reason: "",
+          });
+        },
+        onError: (error) =>
+          toast.error(tR("stockNotAdjusted"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const handleGenerateReorderList = () => {
@@ -640,13 +726,6 @@ export default function InventoryPage() {
           </TabsList>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsInvoiceImportOpen(true)}
-            >
-              <FileUp className="mr-2 size-4" />
-              Receive Stock via Invoice
-            </Button>
             <Button onClick={() => setIsAdjustmentModalOpen(true)}>
               <RefreshCw className="mr-2 size-4" />
               Adjust Stock
@@ -841,16 +920,6 @@ export default function InventoryPage() {
                     <Eye className="mr-2 size-4" />
                     View Details
                   </DropdownMenuItem>
-                  {item.status === "pending" && (
-                    <DropdownMenuItem
-                      onClick={() =>
-                        handleAcknowledgeAlert(item as LowStockAlert)
-                      }
-                    >
-                      <CheckCircle2 className="mr-2 size-4" />
-                      Acknowledge
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem
                     onClick={() =>
                       handleAddSingleAlertToReorder(item as LowStockAlert)
@@ -949,7 +1018,16 @@ export default function InventoryPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleAdjustStock}>Apply Adjustment</Button>
+            <Button
+              onClick={handleAdjustStock}
+              disabled={
+                adjustStock.isPending ||
+                !adjustmentForm.productId ||
+                !adjustmentForm.quantity
+              }
+            >
+              Apply Adjustment
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1037,11 +1115,6 @@ export default function InventoryPage() {
             >
               Close
             </Button>
-            {selectedAlert?.status === "pending" && (
-              <Button onClick={() => handleAcknowledgeAlert(selectedAlert)}>
-                Acknowledge Alert
-              </Button>
-            )}
             <Button
               onClick={() => {
                 if (selectedAlert) {
@@ -1427,30 +1500,69 @@ export default function InventoryPage() {
             </Button>
             <Button
               onClick={() => {
-                // In a real app, this would create the purchase order
                 const selectedItems = reorderItems.filter(
                   (item) => item.selected,
                 );
-                alert(
-                  `Purchase order created successfully with ${selectedItems.length} items!`,
+                const supplier = suppliers.find(
+                  (x) => x.id === poForm.supplierId,
                 );
-                setIsCreatePOModalOpen(false);
-                setReorderItems([]);
-                setSelectedAlertsForReorder(new Set());
-                setPoForm({ supplierId: "", expectedDelivery: "", notes: "" });
+                savePurchaseOrder.mutate(
+                  {
+                    order: {
+                      supplierId: poForm.supplierId,
+                      supplierName: supplier?.name ?? "",
+                      status: "ordered",
+                      expectedDelivery: poForm.expectedDelivery,
+                      notes: poForm.notes,
+                      items: selectedItems.map((item) => ({
+                        productId: item.productId,
+                        productName: item.productName,
+                        variantId: item.variantId,
+                        variantName: item.variantName,
+                        sku: item.sku,
+                        quantity: item.suggestedQuantity,
+                        unitCost: item.unitCost,
+                        totalCost: item.suggestedQuantity * item.unitCost,
+                        receivedQuantity: 0,
+                      })),
+                    },
+                  },
+                  {
+                    onSuccess: (order) => {
+                      toast.success(
+                        fillR("orderCreated", {
+                          number: order.orderNumber,
+                          count: selectedItems.length,
+                        }),
+                      );
+                      setIsCreatePOModalOpen(false);
+                      setReorderItems([]);
+                      setSelectedAlertsForReorder(new Set());
+                      setPoForm({
+                        supplierId: "",
+                        expectedDelivery: "",
+                        notes: "",
+                      });
+                    },
+                    onError: (error) =>
+                      toast.error(tR("orderNotCreated"), {
+                        description:
+                          error instanceof Error ? error.message : undefined,
+                      }),
+                  },
+                );
               }}
-              disabled={!poForm.supplierId || !poForm.expectedDelivery}
+              disabled={
+                savePurchaseOrder.isPending ||
+                !poForm.supplierId ||
+                !poForm.expectedDelivery
+              }
             >
               Create Purchase Order
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <InvoiceImportDialog
-        open={isInvoiceImportOpen}
-        onOpenChange={setIsInvoiceImportOpen}
-      />
     </div>
   );
 }
