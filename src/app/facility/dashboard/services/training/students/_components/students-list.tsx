@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
 import {
   aggregateTrainingStudents,
   VACCINE_EXPIRY_WINDOW_DAYS,
@@ -121,6 +121,9 @@ function vaccineLabel(row: TrainingStudentRow): string {
 }
 
 export function StudentsList() {
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients } = useFacilityClientList();
   const router = useRouter();
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -139,7 +142,7 @@ export function StudentsList() {
         clients,
         todayISO,
       }),
-    [enrollments, series, vaccinations, todayISO],
+    [enrollments, series, vaccinations, clients, todayISO],
   );
 
   const summary = useMemo(() => {

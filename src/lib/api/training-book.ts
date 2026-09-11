@@ -1,4 +1,5 @@
 import type { Trainer } from "@/types/training";
+import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
 
@@ -73,3 +74,21 @@ export async function fetchTrainers(): Promise<Trainer[]> {
 // notes, homework, report cards and the rest, and `check:success-claims`
 // follows one import. A fetch in training.ts would make every screen that
 // toasts over a cache-only write look as if it had a writer.
+
+/**
+ * The facility's vaccination records, for the training rosters' expiry
+ * warnings. These read `@/data/pet-data` — another facility's certificates,
+ * matched to real dogs by ref. A record with no expiry never lapses, and a
+ * rejected one is not a certificate, so neither is offered to the warnings.
+ */
+export async function fetchFacilityVaccinations(): Promise<
+  VaccinationRecord[]
+> {
+  const response = await fetch("/api/vaccinations");
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Failed to load vaccinations (${response.status})`);
+  }
+  const rows = (await response.json()) as VaccinationRecord[];
+  return rows.filter((v) => v.expiryDate && v.status !== "rejected");
+}

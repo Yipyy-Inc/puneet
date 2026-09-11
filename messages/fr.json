@@ -2050,6 +2050,10 @@
         "notSaved": "Cette modification n’a pas été enregistrée.",
         "moveNotSaved": "Ce déplacement n’a pas été enregistré",
         "blockNotSaved": "Le blocage n’a pas été enregistré"
+      },
+      "trainingProfile": {
+        "notFound": "Aucun élève avec cet identifiant dans cet établissement.",
+        "loading": "Chargement de l’élève…"
       }
     }
   },

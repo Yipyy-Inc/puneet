@@ -19,8 +19,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
-import { vaccinationRecords } from "@/data/pet-data";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
+import { NO_ITEMS } from "@/lib/no-items";
 import { aggregateStudentBriefing } from "@/lib/training-pre-session";
 import { STATUS_META } from "@/components/facility/training/training-calendar-utils";
 import { SessionAttendanceSection } from "./session-view-attendance";
@@ -40,6 +40,9 @@ type Section = "attendance" | "exercises";
 export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients } = useFacilityClientList();
   const [section, setSection] = useState<Section>("attendance");
   const [attendance, setAttendance] = useState<Record<string, AttendanceMark>>(
     {},
@@ -122,6 +125,8 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const { data: dropInBookings = [] } = useQuery(
     trainingQueries.dropInBookings(),
   );
+  const { data: vaccinationData } = useQuery(trainingQueries.vaccinations());
+  const vaccinationRecords = vaccinationData ?? NO_ITEMS;
 
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId),
@@ -145,14 +150,14 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     return idx >= 0 ? idx + 1 : 1;
   }, [sessions, session]);
 
-  const pets = useMemo(() => clients.flatMap((c) => c.pets), []);
+  const pets = useMemo(() => clients.flatMap((c) => c.pets), [clients]);
   const ownerByPetId = useMemo(() => {
     const m = new Map<number, string>();
     for (const c of clients) {
       for (const p of c.pets) m.set(p.id, c.name);
     }
     return m;
-  }, []);
+  }, [clients]);
 
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
 
@@ -228,6 +233,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     ownerByPetId,
     todayISO,
     dropInsForSession,
+    vaccinationRecords,
   ]);
 
   // Enrollment ids prefixed with `drop-` are guest dogs from outside the

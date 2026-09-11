@@ -45,10 +45,8 @@ import {
 import { ExercisePicker } from "@/components/facility/training/exercise-picker";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
-import { trainers } from "@/data/training";
-import { vaccinationRecords } from "@/data/pet-data";
-import { notes as petNotesData } from "@/data/tags-notes";
+import { useFacilityClientList } from "@/lib/api/facility-clients";
+import { NO_ITEMS } from "@/lib/no-items";
 import { useTagCatalogue } from "@/lib/api/tags";
 import {
   aggregateHomeworkSummary,
@@ -144,6 +142,9 @@ export function PreSessionBriefingPanel({
 }) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  // The facility's own clients and their pets. This read `@/data/clients`
+  // — another facility's — and matched it to real enrolments by numeric ref.
+  const { clients } = useFacilityClientList();
   const [nowMs] = useState(() => Date.now());
   const todayISO = useMemo(
     () => new Date(nowMs).toISOString().split("T")[0]!,
@@ -160,6 +161,15 @@ export function PreSessionBriefingPanel({
   const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
   const { data: sessions = [] } = useQuery(trainingQueries.sessions());
+  // The trainers and the vaccination records are the facility's own. The
+  // pet notes the briefing flagged came from `@/data/tags-notes` — invented
+  // notes matched to real dogs by ref — and are left out until the briefing
+  // reads the notes table for its roster.
+  const { data: trainerData } = useQuery(trainingQueries.trainers());
+  const trainers = trainerData ?? NO_ITEMS;
+  const { data: vaccinationData } = useQuery(trainingQueries.vaccinations());
+  const vaccinationRecords = vaccinationData ?? NO_ITEMS;
+  const petNotesData = NO_ITEMS;
   const { tags: tagCatalogue, assignments: tagAssignmentList } =
     useTagCatalogue();
 
@@ -168,14 +178,14 @@ export function PreSessionBriefingPanel({
     [task, sessions],
   );
 
-  const pets = useMemo(() => clients.flatMap((c) => c.pets), []);
+  const pets = useMemo(() => clients.flatMap((c) => c.pets), [clients]);
   const ownerByPetId = useMemo(() => {
     const m = new Map<number, string>();
     for (const c of clients) {
       for (const pet of c.pets) m.set(pet.id, c.name);
     }
     return m;
-  }, []);
+  }, [clients]);
 
   const rows = useMemo<StudentBriefingRow[]>(() => {
     if (!task || !sessionRecord) return [];
@@ -205,6 +215,8 @@ export function PreSessionBriefingPanel({
     tagAssignmentList,
     ownerByPetId,
     todayISO,
+    vaccinationRecords,
+    petNotesData,
   ]);
 
   const homeworkSummary = useMemo<HomeworkSummary | null>(() => {

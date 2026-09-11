@@ -12832,3 +12832,24 @@ the waitlist join goes through the same route with `joinWaitlist`.
 - **Still open:** a drop-in is still one plain booking with no session link;
   the course catalogue itself (`defaultTrainingCourseTypes`) is still code,
   not a table — a series files under it by name.
+
+## 2026-09-11 — the training rosters are the facility's own dogs
+
+The Students tab, a student's profile, the homework board, make-ups, the
+session view and the pre-session briefing looked owners and pets up in
+`@/data/clients`, took vaccination warnings from `@/data/pet-data` and (the
+briefing) pet notes from `@/data/tags-notes` and trainers from
+`@/data/training` — all matched to real enrolments by numeric ref. A real
+dog's profile route was a 404, because it checked the pet against the
+fixture.
+
+They read the facility's clients through `useFacilityClientList`
+(src/lib/api/facility-clients.ts — a read-only hook, kept out of
+src/lib/api/client.ts so `check:success-claims` does not mistake a lookup for
+a writer), `trainingQueries.vaccinations` reads `/api/vaccinations` (no-expiry
+and rejected records excluded), the briefing's trainers are the real
+trainers, and the profile route no longer consults a fixture.
+
+- **Still open:** the briefing's pet-note flags are empty until it reads the
+  notes table for its roster; homework, trainer notes, attendance history and
+  report cards on these screens are still fixtures keyed to fixture ids.

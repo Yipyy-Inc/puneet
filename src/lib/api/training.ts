@@ -5,7 +5,11 @@ import {
 } from "@/data/training";
 // trainers, classes, sessions and enrollments are the facility's own — see
 // src/lib/api/training-book.ts, where they are fetched.
-import { fetchTrainers, fetchTrainingBook } from "@/lib/api/training-book";
+import {
+  fetchFacilityVaccinations,
+  fetchTrainers,
+  fetchTrainingBook,
+} from "@/lib/api/training-book";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
   defaultTrainingCourseTypes,
@@ -14,7 +18,6 @@ import {
 import { defaultTrainingPathways } from "@/data/training-pathways";
 import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
-import { vaccinationRecords } from "@/data/pet-data";
 import {
   getAttendanceForPet,
   getHomeworkForEnrollments,
@@ -204,7 +207,7 @@ export const trainingQueries = {
    *  vaccines so staff can chase owners before a series cuts them out. */
   vaccinations: () => ({
     queryKey: ["training", "vaccinations"] as const,
-    queryFn: async () => vaccinationRecords,
+    queryFn: fetchFacilityVaccinations,
   }),
   /** Every attendance record for a single pet — drives the Training
    *  History tab. */
