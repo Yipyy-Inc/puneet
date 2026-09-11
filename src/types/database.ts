@@ -1025,6 +1025,79 @@ export type Database = {
           },
         ];
       };
+      client_documents: {
+        Row: {
+          client_id: string;
+          content_type: string;
+          created_at: string;
+          doc_type: string;
+          expires_on: string | null;
+          facility_id: string;
+          file_name: string;
+          id: string;
+          notes: string | null;
+          pet_id: string | null;
+          size_bytes: number;
+          storage_path: string;
+          uploaded_by: string | null;
+          uploaded_by_name: string | null;
+        };
+        Insert: {
+          client_id: string;
+          content_type: string;
+          created_at?: string;
+          doc_type?: string;
+          expires_on?: string | null;
+          facility_id: string;
+          file_name: string;
+          id?: string;
+          notes?: string | null;
+          pet_id?: string | null;
+          size_bytes: number;
+          storage_path: string;
+          uploaded_by?: string | null;
+          uploaded_by_name?: string | null;
+        };
+        Update: {
+          client_id?: string;
+          content_type?: string;
+          created_at?: string;
+          doc_type?: string;
+          expires_on?: string | null;
+          facility_id?: string;
+          file_name?: string;
+          id?: string;
+          notes?: string | null;
+          pet_id?: string | null;
+          size_bytes?: number;
+          storage_path?: string;
+          uploaded_by?: string | null;
+          uploaded_by_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_documents_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_documents_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_documents_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       client_rebook_preferences: {
         Row: {
           client_id: string;
