@@ -3,8 +3,9 @@
  * finished stays and visits in the past (paid), dogs on site today, and a
  * calendar that fills up over the next three weeks.
  *
- * Every boarding stay gets its OWN room, so no two ever overlap and the
- * database's exclusion constraint (23P01) never has an opinion.
+ * No two boarding stays share a room on the same night, so the database's
+ * exclusion constraint (23P01) never has an opinion: the first list gives
+ * each stay its own room, and the later one reuses a room only between stays.
  */
 import type { NewBooking } from "../../src/types/booking";
 import { SEED_PREFIX as SEED_PREFIX_KEY } from "./config";
@@ -184,6 +185,67 @@ const GROOMING: GroomSpec[] = [
   ["Caramel", -12, "09:00", "full", "completed", "Hugo Martel", "1"],
 ];
 
+// ── Phase 5 (2026-09-11): the clients added since, sixty days back and a
+// month ahead. Rooms are reused only where their stays cannot overlap:
+// standard 07 and 08 were free; the others fit between existing stays.
+const MORE_BOARDING: BoardingSpec[] = [
+  ["Olive", -55, -50, "cat-standard-suite-07", "completed", "Kevin Tran"],
+  ["Willow", -45, -41, "cat-deluxe-suite-02", "completed", "Kevin Tran"],
+  [
+    "Loki",
+    -36,
+    -30,
+    "cat-standard-suite-08",
+    "completed",
+    "Émile Roy",
+    "Escape artist — double-check the latch.",
+  ],
+  ["Sasha", -22, -19, "cat-standard-suite-07", "completed", "Kevin Tran"],
+  ["Rex", -14, -10, "cat-standard-suite-08", "completed", "Émile Roy"],
+  ["Jasper", -2, 3, "cat-standard-suite-07", "checked_in", "Kevin Tran"],
+  ["Ruby", 1, 6, "cat-standard-suite-08", "confirmed", "Kevin Tran"],
+  ["Frida", 12, 16, "cat-standard-suite-02", "confirmed", "Émile Roy"],
+  ["Coco", 22, 27, "cat-deluxe-suite-01", "confirmed", "Kevin Tran"],
+  ["Buster", 25, 28, "cat-standard-suite-03", "pending", "Émile Roy"],
+];
+
+const MORE_DAYCARE: DaycareSpec[] = [
+  ["Milo", -30, "completed"],
+  ["Nova", -25, "completed"],
+  ["Archie", -19, "completed"],
+  ["Ziggy", -16, "completed"],
+  ["Indy", -13, "completed"],
+  ["Rosie", -9, "completed"],
+  ["Tango", -5, "completed"],
+  ["Nova", -3, "completed"],
+  ["Milo", 0, "checked_in"],
+  ["Nova", 0, "checked_in"],
+  ["Archie", 0, "checked_in"],
+  ["Indy", 1, "confirmed"],
+  ["Rosie", 2, "confirmed"],
+  ["Ziggy", 4, "confirmed"],
+  ["Tango", 8, "confirmed"],
+  ["Bella", 10, "request_submitted"],
+  ["Lola", 14, "confirmed"],
+  ["Milo", 21, "confirmed"],
+];
+
+const MORE_GROOMING: GroomSpec[] = [
+  ["Bijou", -45, "10:00", "full", "completed", "Hugo Martel", "1"],
+  ["Lola", -38, "13:00", "bath", "completed", "Aïcha Diallo", "tub"],
+  ["Coco", -33, "09:30", "full", "completed", "Hugo Martel", "1"],
+  ["Sasha", -26, "11:00", "bath", "completed", "Aïcha Diallo", "tub"],
+  ["Toby", -17, "14:00", "nails", "completed", "Hugo Martel", "2"],
+  ["Pépito", -11, "10:30", "bath", "completed", "Aïcha Diallo", "tub"],
+  ["Archie", -4, "09:00", "full", "completed", "Hugo Martel", "1"],
+  ["Bijou", 6, "10:00", "full", "confirmed", "Hugo Martel", "1"],
+  ["Willow", 9, "11:30", "nails", "confirmed", "Aïcha Diallo", "2"],
+  ["Coco", 11, "09:30", "full", "confirmed", "Hugo Martel", "1"],
+  ["Rosie", 15, "13:00", "puppy", "confirmed", "Aïcha Diallo", "tub"],
+  ["Sasha", 19, "10:00", "bath", "confirmed", "Hugo Martel", "tub"],
+  ["Pépito", 26, "14:00", "bath", "confirmed", "Aïcha Diallo", "tub"],
+];
+
 const ROOM_PRICE: Record<string, number> = {
   "cat-standard-suite": 55,
   "cat-deluxe-suite": 75,
@@ -201,131 +263,147 @@ export function planBookings(today: string): PlannedBooking[] {
   const key = () =>
     `${SEED_PREFIX_KEY}-booking-${String(++n).padStart(3, "0")}`;
 
-  for (const [petName, from, to, room, status, staff, requests] of BOARDING) {
-    const pet = petByName(petName);
-    const nights = to - from;
-    const rate = ROOM_PRICE[room.replace(/-\d+$/, "")];
-    out.push({
-      key: key(),
-      clientKey: pet.ownerKey,
-      petKeys: [pet.key],
-      booking: {
-        service: "boarding",
-        serviceType: room.startsWith("cat-deluxe")
-          ? "Deluxe suite"
-          : "Standard suite",
-        startDate: addDays(today, from),
-        endDate: addDays(today, to),
-        checkInTime: "14:00",
-        checkOutTime: "11:00",
-        status: status as NewBooking["status"],
-        basePrice: rate,
-        totalCost: rate * nights,
-        assignedStaff: staff,
-        specialRequests: requests,
-        unitAssignment: room,
-        feedingSchedule: TWICE_DAILY_KIBBLE(
-          petName,
-          pet.pet.weight! > 50 ? "2" : "1",
-        ) as NewBooking["feedingSchedule"],
-        ...(petName === "Maple"
-          ? {
-              medications: [
-                {
-                  id: "med-maple-vetmedin",
-                  name: "Vetmedin",
-                  purpose: "Heart",
-                  amount: "1",
-                  strength: "1.25 mg",
-                  form: "pill",
-                  frequency: "twice_daily",
-                  times: ["08:00", "20:00"],
-                  adminInstructions: ["with_food"],
-                  givenWith: "pill_pocket",
-                  ifMissed: "call_parent",
-                  isHighRisk: true,
-                  notes: "",
-                },
-              ] as NewBooking["medications"],
-            }
-          : {}),
-      },
-      boarding: { roomId: room },
-      payment:
-        status === "completed" ? (n % 2 ? "e-transfer" : "cash") : undefined,
-      arrived: status === "completed" || status === "checked_in",
-      departed: status === "completed",
-    });
-  }
+  const addBoarding = (specs: BoardingSpec[]) => {
+    for (const [petName, from, to, room, status, staff, requests] of specs) {
+      const pet = petByName(petName);
+      const nights = to - from;
+      const rate = ROOM_PRICE[room.replace(/-\d+$/, "")];
+      out.push({
+        key: key(),
+        clientKey: pet.ownerKey,
+        petKeys: [pet.key],
+        booking: {
+          service: "boarding",
+          serviceType: room.startsWith("cat-deluxe")
+            ? "Deluxe suite"
+            : "Standard suite",
+          startDate: addDays(today, from),
+          endDate: addDays(today, to),
+          checkInTime: "14:00",
+          checkOutTime: "11:00",
+          status: status as NewBooking["status"],
+          basePrice: rate,
+          totalCost: rate * nights,
+          assignedStaff: staff,
+          specialRequests: requests,
+          unitAssignment: room,
+          feedingSchedule: TWICE_DAILY_KIBBLE(
+            petName,
+            pet.pet.weight! > 50 ? "2" : "1",
+          ) as NewBooking["feedingSchedule"],
+          ...(petName === "Maple"
+            ? {
+                medications: [
+                  {
+                    id: "med-maple-vetmedin",
+                    name: "Vetmedin",
+                    purpose: "Heart",
+                    amount: "1",
+                    strength: "1.25 mg",
+                    form: "pill",
+                    frequency: "twice_daily",
+                    times: ["08:00", "20:00"],
+                    adminInstructions: ["with_food"],
+                    givenWith: "pill_pocket",
+                    ifMissed: "call_parent",
+                    isHighRisk: true,
+                    notes: "",
+                  },
+                ] as NewBooking["medications"],
+              }
+            : {}),
+        },
+        boarding: { roomId: room },
+        payment:
+          status === "completed" ? (n % 2 ? "e-transfer" : "cash") : undefined,
+        arrived: status === "completed" || status === "checked_in",
+        departed: status === "completed",
+      });
+    }
+  };
 
-  for (const [petName, day, status] of DAYCARE) {
-    const pet = petByName(petName);
-    const date = addDays(today, day);
-    out.push({
-      key: key(),
-      clientKey: pet.ownerKey,
-      petKeys: [pet.key],
-      booking: {
-        service: "daycare",
-        serviceType: "Full day",
-        startDate: date,
-        endDate: date,
-        checkInTime: "07:30",
-        checkOutTime: "18:00",
-        status: status as NewBooking["status"],
-        basePrice: 38,
-        totalCost: 38,
-        assignedStaff: "Maude Gauthier",
-        daycareSelectedDates: [date],
-      },
-      payment:
-        status === "completed" ? (n % 3 ? "cash" : "e-transfer") : undefined,
-      arrived: status === "completed" || status === "checked_in",
-      departed: status === "completed",
-    });
-  }
+  const addDaycare = (specs: DaycareSpec[]) => {
+    for (const [petName, day, status] of specs) {
+      const pet = petByName(petName);
+      const date = addDays(today, day);
+      out.push({
+        key: key(),
+        clientKey: pet.ownerKey,
+        petKeys: [pet.key],
+        booking: {
+          service: "daycare",
+          serviceType: "Full day",
+          startDate: date,
+          endDate: date,
+          checkInTime: "07:30",
+          checkOutTime: "18:00",
+          status: status as NewBooking["status"],
+          basePrice: 38,
+          totalCost: 38,
+          assignedStaff: "Maude Gauthier",
+          daycareSelectedDates: [date],
+        },
+        payment:
+          status === "completed" ? (n % 3 ? "cash" : "e-transfer") : undefined,
+        arrived: status === "completed" || status === "checked_in",
+        departed: status === "completed",
+      });
+    }
+  };
 
-  for (const [
-    petName,
-    day,
-    time,
-    service,
-    status,
-    groomer,
-    station,
-  ] of GROOMING) {
-    const pet = petByName(petName);
-    const svc = GROOMING_SERVICES.find((s) =>
-      s.legacyId.endsWith(`-groom-${service}`),
-    )!;
-    const date = addDays(today, day);
-    out.push({
-      key: key(),
-      clientKey: pet.ownerKey,
-      petKeys: [pet.key],
-      booking: {
-        service: "grooming",
-        serviceType: svc.legacyId,
-        startDate: date,
-        endDate: date,
-        checkInTime: time,
-        checkOutTime: addMinutes(time, svc.duration),
-        status: status as NewBooking["status"],
-        basePrice: svc.price,
-        totalCost: svc.price,
-        assignedStaff: groomer,
-        stationAssignment: `${SEED_PREFIX_KEY}-station-${station}`,
-      },
-      grooming: {
-        serviceId: svc.legacyId,
-        stationId: `${SEED_PREFIX_KEY}-station-${station}`,
-      },
-      payment:
-        status === "completed" ? (n % 2 ? "cash" : "e-transfer") : undefined,
-      arrived: status === "completed" || status === "in_progress",
-      departed: status === "completed",
-    });
-  }
+  const addGrooming = (specs: GroomSpec[]) => {
+    for (const [
+      petName,
+      day,
+      time,
+      service,
+      status,
+      groomer,
+      station,
+    ] of specs) {
+      const pet = petByName(petName);
+      const svc = GROOMING_SERVICES.find((s) =>
+        s.legacyId.endsWith(`-groom-${service}`),
+      )!;
+      const date = addDays(today, day);
+      out.push({
+        key: key(),
+        clientKey: pet.ownerKey,
+        petKeys: [pet.key],
+        booking: {
+          service: "grooming",
+          serviceType: svc.legacyId,
+          startDate: date,
+          endDate: date,
+          checkInTime: time,
+          checkOutTime: addMinutes(time, svc.duration),
+          status: status as NewBooking["status"],
+          basePrice: svc.price,
+          totalCost: svc.price,
+          assignedStaff: groomer,
+          stationAssignment: `${SEED_PREFIX_KEY}-station-${station}`,
+        },
+        grooming: {
+          serviceId: svc.legacyId,
+          stationId: `${SEED_PREFIX_KEY}-station-${station}`,
+        },
+        payment:
+          status === "completed" ? (n % 2 ? "cash" : "e-transfer") : undefined,
+        arrived: status === "completed" || status === "in_progress",
+        departed: status === "completed",
+      });
+    }
+  };
+
+  // A booking's key is its position in this sequence, so the original three
+  // lists run first, in their order, and anything added runs AFTER them —
+  // appending to BOARDING would shift every daycare and grooming key by one.
+  addBoarding(BOARDING);
+  addDaycare(DAYCARE);
+  addGrooming(GROOMING);
+  addBoarding(MORE_BOARDING);
+  addDaycare(MORE_DAYCARE);
+  addGrooming(MORE_GROOMING);
 
   // Every planned booking names a seeded client and pet.
   for (const b of out) {
