@@ -12910,3 +12910,18 @@ price (`usePackageServiceOptions`). ModulePackagesPage is deleted.
 - **Still open:** the route still lives under `/api/grooming/`; a daycare
   half day has no price anywhere to offer; selling a package to a client from
   the facility side comes in the next commit.
+
+## 2026-09-11 — a package can be sold from the client file
+
+Staff had no way to sell a package: `usePurchasePackage` had one caller, the
+customer's own portal checkout, and the client file's Membership & Packages
+card did not even render for a client with nothing yet. The card is always
+shown now, with **Sell a package**: the catalogue's active packages (every
+module), the tender (cash, card on the terminal, e-transfer) and the
+facility's own tax. The sale is `purchase_package` then `record_payment` —
+`POST /api/payments` takes a `clientRef` for money with no booking behind it.
+
+- **Still open:** the two writes are not one transaction; a refused payment
+  after the passes were granted is reported as such, not undone. A card taken
+  through Clover is not offered here (the terminal tender records one taken
+  on the facility's own device).

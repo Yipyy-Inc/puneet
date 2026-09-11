@@ -27,6 +27,8 @@ import { ActiveMembershipCard } from "@/components/customer/billing/packages/Act
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BulkPaymentModal } from "@/components/bookings/BulkPaymentModal";
+import { SellPackageDialog } from "@/components/clients/packages/SellPackageDialog";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { Button } from "@/components/ui/button";
 import {
   Mail,
@@ -74,6 +76,8 @@ export default function ClientOverviewPage({
   const { maskContact, maskAmount, canSee } = useFieldMask();
   const [now] = useState(() => Date.now());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  const [sellOpen, setSellOpen] = useState(false);
+  const { t: tSell } = useStaffText("sellPackage");
   const settleBookings = useSettleBookings();
   // Above the early return: hooks run in the same order on every render, and
   // a client id that matches nothing is a render this component still does.
@@ -652,83 +656,94 @@ export default function ClientOverviewPage({
             </CardContent>
           </Card>
 
-          {/* Membership & Packages */}
-          {(client.membership ||
-            client.packages?.length ||
-            activePrepaidPackages.length > 0) && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">
-                  Membership & Packages
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {client.membership && (
-                  <div className="bg-muted/20 flex items-center justify-between rounded-lg border px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {client.membership.plan} Plan
-                      </p>
-                      <p className="text-muted-foreground text-xs capitalize">
-                        {client.membership.status}
-                        {client.membership.benefits.discountPercent &&
-                          ` · ${client.membership.benefits.discountPercent}% off`}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        client.membership.status === "active"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="capitalize"
-                    >
-                      {client.membership.status}
-                    </Badge>
-                  </div>
+          {/* Membership & Packages — always shown, so a package can be sold
+              to a client who has none yet. */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+              <CardTitle className="text-sm font-semibold">
+                Membership & Packages
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSellOpen(true)}
+              >
+                {tSell("open")}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {!client.membership &&
+                !client.packages?.length &&
+                activePrepaidPackages.length === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {tSell("noneYet")}
+                  </p>
                 )}
-
-                {/* Legacy simple packages */}
-                {client.packages?.map((pkg) => (
-                  <div key={pkg.id} className="rounded-lg border px-3 py-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{pkg.name}</p>
-                      <span className="text-xs font-medium">
-                        {pkg.remainingCredits}/{pkg.totalCredits}
-                      </span>
-                    </div>
-                    <div className="bg-muted mt-1.5 h-1.5 overflow-hidden rounded-full">
-                      <div
-                        className="bg-primary h-full rounded-full"
-                        style={{
-                          width: `${(pkg.usedCredits / pkg.totalCredits) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                {/* Prepaid Packages Summary */}
-                {activePrepaidPackages.length > 0 && (
-                  <div className="mt-2 rounded-lg border border-emerald-100/50 bg-emerald-50/50 px-3 py-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-emerald-800">
-                        Prepaid Passes Available
-                      </p>
-                      <span className="text-sm font-bold text-emerald-700">
-                        {totalPrepaidPassesRemaining} pass
-                        {totalPrepaidPassesRemaining === 1 ? "" : "es"} left
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-emerald-700/70">
-                      Across {activePrepaidPackages.length} active package
-                      {activePrepaidPackages.length === 1 ? "" : "s"}
+              {client.membership && (
+                <div className="bg-muted/20 flex items-center justify-between rounded-lg border px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {client.membership.plan} Plan
+                    </p>
+                    <p className="text-muted-foreground text-xs capitalize">
+                      {client.membership.status}
+                      {client.membership.benefits.discountPercent &&
+                        ` · ${client.membership.benefits.discountPercent}% off`}
                     </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  <Badge
+                    variant={
+                      client.membership.status === "active"
+                        ? "default"
+                        : "secondary"
+                    }
+                    className="capitalize"
+                  >
+                    {client.membership.status}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Legacy simple packages */}
+              {client.packages?.map((pkg) => (
+                <div key={pkg.id} className="rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{pkg.name}</p>
+                    <span className="text-xs font-medium">
+                      {pkg.remainingCredits}/{pkg.totalCredits}
+                    </span>
+                  </div>
+                  <div className="bg-muted mt-1.5 h-1.5 overflow-hidden rounded-full">
+                    <div
+                      className="bg-primary h-full rounded-full"
+                      style={{
+                        width: `${(pkg.usedCredits / pkg.totalCredits) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Prepaid Packages Summary */}
+              {activePrepaidPackages.length > 0 && (
+                <div className="mt-2 rounded-lg border border-emerald-100/50 bg-emerald-50/50 px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-emerald-800">
+                      Prepaid Passes Available
+                    </p>
+                    <span className="text-sm font-bold text-emerald-700">
+                      {totalPrepaidPassesRemaining} pass
+                      {totalPrepaidPassesRemaining === 1 ? "" : "es"} left
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-emerald-700/70">
+                    Across {activePrepaidPackages.length} active package
+                    {activePrepaidPackages.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -890,6 +905,12 @@ export default function ClientOverviewPage({
         </div>
       )}
 
+      <SellPackageDialog
+        open={sellOpen}
+        onOpenChange={setSellOpen}
+        clientRef={clientId}
+        clientName={client.name}
+      />
       <BulkPaymentModal
         open={bulkPayOpen}
         onOpenChange={setBulkPayOpen}

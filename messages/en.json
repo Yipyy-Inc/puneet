@@ -2071,6 +2071,30 @@
         "pick": "Select a service…",
         "empty": "Add at least one service to this package.",
         "fullDay": "Full day"
+      },
+      "sellPackage": {
+        "title": "Sell a package to {client}",
+        "intro": "The passes go on the client’s file and the payment on the ledger.",
+        "package": "Package",
+        "pickPackage": "Choose a package",
+        "noPackages": "No active packages. Create one on a service’s Packages tab.",
+        "tender": "Paid by",
+        "cash": "Cash",
+        "terminal": "Card on the terminal",
+        "eTransfer": "E-transfer",
+        "price": "Price",
+        "tax": "Tax",
+        "taxIncluded": "Tax included",
+        "total": "Total",
+        "cancel": "Cancel",
+        "sell": "Sell the package",
+        "sellNamed": "Sell for {total}",
+        "sold": "{name} sold to {client} — {total}",
+        "notSold": "The package was not sold",
+        "soldUnpaid": "The passes were given, but the payment was not recorded",
+        "paymentNote": "Package sale — {name}",
+        "open": "Sell a package",
+        "noneYet": "No packages yet."
       }
     }
   },

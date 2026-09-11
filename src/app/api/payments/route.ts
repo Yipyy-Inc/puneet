@@ -175,6 +175,11 @@ interface PaymentInput {
    * Optional: a retail sale belongs to no booking.
    */
   bookingRef?: string;
+  /**
+   * Who paid, when there is no booking to say so — a package sold at the
+   * desk. Ignored when a booking is given: the booking names its client.
+   */
+  clientRef?: number;
   method?: string;
   subtotal?: number;
   tax?: number;
@@ -277,6 +282,21 @@ export async function POST(request: NextRequest) {
   // needs the uuid. Resolved through a read the caller must be able to make,
   // so a package they cannot see is "no such package" rather than an RLS error
   // three statements deeper.
+  if (!bookingId && body.clientRef != null) {
+    const { data: payer } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("ref", body.clientRef)
+      .maybeSingle();
+    if (!payer) {
+      return NextResponse.json(
+        { error: "That client does not exist, or is not yours." },
+        { status: 404 },
+      );
+    }
+    clientId = payer.id as string;
+  }
+
   let customerPackageId: string | null = null;
   if (body.customerPackageId) {
     const { data: pkg } = await supabase

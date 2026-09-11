@@ -45,6 +45,7 @@ const SAME_IN_BOTH = new Set([
   "staff.vaccinations.notesLabel", // Notes / Notes
   "staff.vaccinations.statusException", // Exception / Exception
   "staff.clientDocuments.version", // version {v} / version {v}
+  "staff.sellPackage.total", // Total / Total
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",
   "staff.profile.tabDocuments",
