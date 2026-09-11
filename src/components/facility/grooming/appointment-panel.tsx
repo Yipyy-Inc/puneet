@@ -31,7 +31,6 @@ import {
   Sparkles,
   LogOut,
   MessageCircle,
-  Pencil,
   ExternalLink,
   Hourglass,
   CheckCircle2,
@@ -45,11 +44,12 @@ import {
   applyMarkReadyResult,
   applyPaymentResult,
   recordStationAssignmentHistory,
-  markAppointmentNoShow,
 } from "@/lib/grooming/check-in-actions";
+import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
+import { useClientRecord } from "@/lib/api/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { clients as initialClients } from "@/data/clients";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { findZipTaxRate } from "@/lib/service-areas";
 import {
@@ -179,10 +179,36 @@ export function AppointmentPanel({
     [customerPackages, appointment],
   );
 
+  const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
+  const { t: tAppt } = useStaffText("groomingAppointment");
+  // The owner, from Postgres — the payment dialog and the check-in helpers
+  // read the `@/data/clients` fixture by numeric id.
+  const { client: ownerClient } = useClientRecord(appointment?.ownerId);
+
   if (!appointment) return null;
 
   const s = STATUS_META[appointment.status];
   const destructiveActions = DESTRUCTIVE_ACTIONS[appointment.status] ?? [];
+
+  // ── STATUS IS WRITTEN, THE SAME WAY THE CHECK-IN BOARD WRITES IT ────────
+  //
+  // This panel opened the same check-in, mark-ready and payment dialogs as
+  // the board, and then changed the appointment object in memory: a groom
+  // checked in from the calendar was still "scheduled" on the board, and a
+  // cancel or no-show from the menu was a toast. It sends the transition to
+  // /api/grooming/appointments now and lets the calendar re-read.
+  const writeStatus = (status: GroomingStatus, onSaved?: () => void) =>
+    setAppointmentStatus(
+      { id: appointment.id, status },
+      {
+        onSuccess: onSaved,
+        onError: (error) =>
+          toast.error(
+            error instanceof Error ? error.message : tAppt("notSaved"),
+          ),
+      },
+    );
+  const ownerClients = ownerClient ? [ownerClient] : [];
   const effectiveAlerts = getEffectiveAlertNotes(appointment, allAppointments);
   const hasAlert =
     appointment.allergies.length > 0 || !!appointment.specialInstructions;
@@ -263,7 +289,9 @@ export function AppointmentPanel({
       setPaymentOpen(true);
       return;
     }
-    toast.success(`Status updated to "${STATUS_LABELS[next]}"`);
+    writeStatus(next, () =>
+      toast.success(`Status updated to "${STATUS_LABELS[next]}"`),
+    );
   }
 
   const displayDate = new Date(
@@ -287,7 +315,7 @@ export function AppointmentPanel({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-2rem)] w-[460px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-2rem)] w-[460px] max-w-[calc(100vw-2rem)] -translate-1/2 flex-col",
             "bg-background rounded-2xl border shadow-2xl outline-none",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
@@ -778,26 +806,19 @@ export function AppointmentPanel({
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 gap-1.5"
-                onClick={() =>
-                  toast.success(`Messaging ${appointment.ownerName}`)
-                }
-              >
-                <MessageCircle className="size-3.5" />
-                Message Owner
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 gap-1.5"
-                onClick={() => toast.info("Edit appointment")}
-              >
-                <Pencil className="size-3.5" />
-                Edit
-              </Button>
+              {appointment.ownerEmail && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 gap-1.5"
+                  asChild
+                >
+                  <a href={`mailto:${appointment.ownerEmail}`}>
+                    <MessageCircle className="size-3.5" />
+                    Message Owner
+                  </a>
+                </Button>
+              )}
             </div>
           </div>
         </DialogPrimitive.Content>
@@ -808,13 +829,13 @@ export function AppointmentPanel({
         apt={appointment}
         onConfirm={(result: CheckInConfirmation) => {
           if (result.markNoShow) {
-            markAppointmentNoShow(appointment);
+            writeStatus("no-show");
             toast.warning(`${appointment.petName} — No-Show`);
             setCheckInOpen(false);
             return;
           }
           const summary = applyCheckInResult(appointment, result, {
-            clients: initialClients,
+            clients: ownerClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
           });
@@ -832,10 +853,11 @@ export function AppointmentPanel({
             result.stationName,
             "You",
           );
+          writeStatus("checked-in");
           const readyLine = result.estimatedReadyTime
             ? ` · ready ~${result.estimatedReadyTime}`
             : "";
-          toast.success(`${appointment.petName} — In Progress`, {
+          toast.success(`${appointment.petName} — Checked In`, {
             description:
               (result.mattedSurcharge > 0
                 ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
@@ -852,11 +874,12 @@ export function AppointmentPanel({
         facilityName="Yipyy"
         onConfirm={(result: MarkReadyConfirmation) => {
           const summary = applyMarkReadyResult(appointment, result, {
-            clients: initialClients,
+            clients: ownerClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
             facilityName: "Yipyy",
           });
+          writeStatus("ready-for-pickup");
           toast.success(`${appointment.petName} — Ready for Pickup`, {
             description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
           });
@@ -864,9 +887,7 @@ export function AppointmentPanel({
         }}
       />
       {(() => {
-        const paymentClient = initialClients.find(
-          (c) => c.id === appointment.ownerId,
-        );
+        const paymentClient = ownerClient;
         // Step 7 — same ZIP-prefix tax lookup BookingModal uses on
         // ConfirmStep so the two displays agree to the cent.
         const matchedTax = findZipTaxRate(
@@ -884,7 +905,7 @@ export function AppointmentPanel({
             taxRate={resolvedTaxRate}
             onConfirm={(result: PaymentResult) => {
               const summary = applyPaymentResult(appointment, result, {
-                clients: initialClients,
+                clients: ownerClients,
                 setStationStatus,
                 notify: (title, detail) => toast.message(title, detail),
                 facilityName: "Yipyy",
@@ -894,6 +915,7 @@ export function AppointmentPanel({
               recordPayment(summary.paymentRecord, {
                 onError: (error) => toast.error(error.message),
               });
+              writeStatus("completed");
               toast.success(`${appointment.petName} — Completed`, {
                 description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
               });
