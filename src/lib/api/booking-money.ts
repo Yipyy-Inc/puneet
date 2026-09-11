@@ -427,6 +427,38 @@ export function useChargeBooking() {
   });
 }
 
+/**
+ * Pay a booking with a gift card: the card is redeemed and the payment
+ * recorded in one database transaction (`pay_booking_with_gift_card`), so the
+ * card is never spent without the booking being paid. Refuses more than the
+ * booking owes or the card holds, with the database's own sentence.
+ */
+export function usePayWithGiftCard() {
+  const invalidate = useSettleInvalidation();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+      code: string;
+      amount: number;
+    }) => {
+      const response = await fetch("/api/payments/gift-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        error?: string;
+        card_balance?: number;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "That gift card did not pay.");
+      }
+      return { cardBalance: Number(parsed?.card_balance ?? 0) };
+    },
+    onSuccess: invalidate,
+  });
+}
+
 /** What `settle_bookings` actually took, per booking. */
 export interface SettledBooking {
   bookingRef: number;

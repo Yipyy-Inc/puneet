@@ -150,6 +150,7 @@ export type PaymentMethod =
   | "terminal"
   | "e_transfer"
   | "store_credit"
+  | "gift_card"
   | "custom";
 
 export const PAYMENT_METHODS: {
@@ -162,6 +163,10 @@ export const PAYMENT_METHODS: {
   { value: "terminal", label: "Terminal", icon: "Smartphone" },
   { value: "e_transfer", label: "E-Transfer", icon: "ArrowLeftRight" },
   { value: "store_credit", label: "Store Credit", icon: "Wallet" },
+  // Offered only where the caller says it can take one (see PaymentCheckoutFlow's
+  // `giftCardTender`) — it pays through its own database function, not the
+  // ledger row the other tenders write.
+  { value: "gift_card", label: "Gift Card", icon: "Gift" },
   { value: "custom", label: "Custom", icon: "MoreHorizontal" },
 ];
 
