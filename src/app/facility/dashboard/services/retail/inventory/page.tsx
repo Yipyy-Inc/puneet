@@ -644,13 +644,15 @@ export default function InventoryPage() {
             <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(
-                ((inventoryValue.retail - inventoryValue.cost) /
-                  inventoryValue.retail) *
-                100
-              ).toFixed(1)}
-              %
+            <div className="text-2xl font-bold tabular-nums">
+              {/* An empty shelf has no margin: 0 / 0 printed "NaN%". */}
+              {inventoryValue.retail > 0
+                ? `${(
+                    ((inventoryValue.retail - inventoryValue.cost) /
+                      inventoryValue.retail) *
+                    100
+                  ).toFixed(1)}%`
+                : "—"}
             </div>
             <p className="text-muted-foreground text-xs">
               Potential profit: $
