@@ -9569,7 +9569,10 @@
         "setupAtLeast8": "Au moins 8 caractères",
         "setupConfirmPassword": "Confirmer le mot de passe",
         "setupReenterPassword": "Entrez de nouveau votre mot de passe",
-        "setupSetPasswordAndView": "Enregistrer le mot de passe et voir l’estimation"
+        "setupSetPasswordAndView": "Enregistrer le mot de passe et voir l’estimation",
+        "acceptFailed": "Votre acceptation n’a pas été enregistrée",
+        "declineFailed": "Votre réponse n’a pas été enregistrée",
+        "depositDueAtBooking": "Un dépôt de {amount} sera exigé au moment de la réservation."
       },
       "refer": {
         "whenOnSignup": "Dès que votre ami crée un compte.",

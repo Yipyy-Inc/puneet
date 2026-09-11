@@ -14,11 +14,9 @@ import {
 import { cn } from "@/lib/utils";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import { declineEstimate } from "@/lib/estimates/decline-estimate";
+import { useEstimateMutations } from "@/lib/api/estimates";
 import type { Estimate } from "@/types/booking";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
-import { serviceTypeLabel } from "@/lib/i18n/labels";
-import { formatList } from "@/lib/i18n/format";
 
 // A reason by CATALOGUE KEY. The one sent to the facility is written in the
 // reader's words, like anything else they type; "other" alone sends only
@@ -46,7 +44,8 @@ export function DeclineEstimateDialog({
   onOpenChange,
   onDeclined,
 }: Props) {
-  const { t, fill, locale } = useCustomerText("estimates");
+  const { t, fill } = useCustomerText("estimates");
+  const { respond } = useEstimateMutations();
   const [step, setStep] = useState<"reason" | "success">("reason");
   const [selected, setSelected] = useState<string>("");
   const [detail, setDetail] = useState("");
@@ -62,7 +61,11 @@ export function DeclineEstimateDialog({
     onOpenChange(o);
   };
 
-  const handleSubmit = () => {
+  // Recorded through `respond_to_estimate`, under the customer's name. The
+  // dialog used to edit the fixture in place and then toast the FACILITY's
+  // notification — with a "Create revised estimate" button that did nothing —
+  // at the customer.
+  const handleSubmit = async () => {
     if (!selected) return;
     const text = detail.trim();
     const label = t(selected);
@@ -73,35 +76,19 @@ export function DeclineEstimateDialog({
           ? `${label} — ${text}`
           : label;
 
-    declineEstimate(estimate, { reason, now: new Date() });
-
-    // Facility notification (mock) with a quick action to revise the estimate.
-    const petLabel =
-      estimate.petNames.length > 0
-        ? formatList(estimate.petNames, locale)
-        : (estimate.guestPetInfo?.name ?? t("theirPet"));
-    toast(
-      fill("declinedToast", {
-        client: estimate.clientName,
-        id: estimate.estimateId,
+    try {
+      await respond.mutateAsync({
+        id: estimate.id,
+        action: "decline",
         reason,
-      }),
-      {
-        description: fill("serviceForPet", {
-          service: serviceTypeLabel(locale, estimate.service),
-          pet: petLabel,
-        }),
-        action: {
-          label: t("createRevisedEstimate"),
-          onClick: () => {
-            /* facility opens the revised-estimate composer */
-          },
-        },
-      },
-    );
-
-    onDeclined?.(estimate.id);
-    setStep("success");
+      });
+      onDeclined?.(estimate.id);
+      setStep("success");
+    } catch (error) {
+      toast.error(t("declineFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -166,7 +153,7 @@ export function DeclineEstimateDialog({
                 variant="destructive"
                 className="flex-1"
                 onClick={handleSubmit}
-                disabled={!selected}
+                disabled={!selected || respond.isPending}
               >
                 {t("declineEstimate")}
               </Button>

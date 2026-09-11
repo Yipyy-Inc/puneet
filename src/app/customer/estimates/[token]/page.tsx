@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,8 @@ import {
   LogIn,
   Check,
 } from "lucide-react";
-import { estimates } from "@/data/estimates";
-import { businessProfile } from "@/data/settings";
+import { useEstimate, useEstimateMutations } from "@/lib/api/estimates";
+import { useCustomerFacility } from "@/lib/api/customer-facility";
 import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload";
 import { AcceptEstimateDialog } from "@/components/customer/estimates/AcceptEstimateDialog";
 import { DeclineEstimateDialog } from "@/components/customer/estimates/DeclineEstimateDialog";
@@ -35,19 +35,33 @@ export default function CustomerEstimateViewPage() {
   const token = params.token as string;
   const { t, fill, locale } = useCustomerText("estimates");
 
-  const estimate = useMemo(
-    () =>
-      estimates.find(
-        (e) =>
-          e.estimateToken === token || e.id === token || e.estimateId === token,
-      ),
-    [token],
-  );
+  // The estimate behind this link, from Postgres — the customer's own, or
+  // none (RLS). It was a lookup in `@/data/estimates`, which matched a real
+  // link to nothing and seven invented ones to somebody else's quote.
+  const { estimate, pending } = useEstimate(token);
+  // And the business it came from, through the customer's own client row —
+  // it named "Example Pet Care Facility" from `@/data/settings`.
+  const facility = useCustomerFacility();
+  const facilityName = facility?.name ?? "";
+  const { respond } = useEstimateMutations();
+
+  // Opening the link is what the business sees as "viewed". Once per visit;
+  // the function ignores a second view and anything not open.
+  const viewed = useRef(false);
+  useEffect(() => {
+    if (!estimate || viewed.current || estimate.status !== "sent") return;
+    viewed.current = true;
+    respond.mutate({ id: estimate.id, action: "view" });
+  }, [estimate, respond]);
 
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [justAccepted, setJustAccepted] = useState(false);
   const [declineOpen, setDeclineOpen] = useState(false);
   const [justDeclined, setJustDeclined] = useState(false);
+
+  if (pending) {
+    return <div className="min-h-screen" aria-busy="true" />;
+  }
 
   if (!estimate) {
     return (
@@ -89,7 +103,7 @@ export default function CustomerEstimateViewPage() {
           {/* Header */}
           <div className="border-b bg-slate-50 px-6 py-5 text-center">
             <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
-              {businessProfile.businessName}
+              {facilityName}
             </p>
             <h1 className="mt-2 text-xl font-bold text-slate-800">
               {fill("estimateFor", {
@@ -334,8 +348,8 @@ export default function CustomerEstimateViewPage() {
             )}
             <p className="mt-1">
               {fill("questionsCallOrEmail", {
-                phone: businessProfile.phone,
-                email: businessProfile.email,
+                phone: facility?.phone ?? "",
+                email: facility?.email ?? "",
               })}
             </p>
           </div>
@@ -344,7 +358,7 @@ export default function CustomerEstimateViewPage() {
 
       <AcceptEstimateDialog
         estimate={estimate}
-        facilityName={businessProfile.businessName}
+        facilityName={facilityName}
         open={acceptOpen}
         onOpenChange={setAcceptOpen}
         onAccepted={() => setJustAccepted(true)}
@@ -352,7 +366,7 @@ export default function CustomerEstimateViewPage() {
 
       <DeclineEstimateDialog
         estimate={estimate}
-        facilityName={businessProfile.businessName}
+        facilityName={facilityName}
         open={declineOpen}
         onOpenChange={setDeclineOpen}
         onDeclined={() => setJustDeclined(true)}
