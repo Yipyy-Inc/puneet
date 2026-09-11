@@ -12526,3 +12526,21 @@ block for a caller without `edit_clients`).
 - **Still open:** pet bans have no column, so the pet cards no longer show
   the fixture's; the Settings page's membership instabook list still reads
   `@/data/services-pricing` (Phase 4).
+
+## 2026-09-11 — a client can be given a pet, and a pet can be edited
+
+The profile's **Add pet** and **Add the first pet** buttons had no handler,
+so a client on file could only get a pet by being created again. The pet
+profile's **Edit → Save** closed the editor and saved nothing, seeded before
+the client loaded. PATCH `/api/pets/[ref]` existed and nothing called it. And
+the create-client form made a pet's sex and spayed/neutered status REQUIRED,
+then dropped both on submit.
+
+`AddPetDialog` (POST `/api/pets`, labels shared with the create-client form)
+and `useCreatePet` / `useUpdatePet` in `src/lib/api/client.ts` now carry both;
+Save sends only what changed, and the medical fields only for someone who may
+edit them. The pet profile's inert **Report** button opens the report cards
+tab. `/api/pets` POST no longer copies the owner ref into `details`.
+
+- **Still open:** the pet profile's Photos and Relationships tabs still read
+  `@/data/pet-data` (no table for either yet).

@@ -504,7 +504,7 @@ function PetVaccineCard({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="text-destructive hover:text-destructive h-5 w-5 shrink-0 p-0"
+                    className="text-destructive hover:text-destructive size-5 shrink-0 p-0"
                     onClick={() => removeProof(i)}
                   >
                     <X className="size-3" />
@@ -597,6 +597,9 @@ interface CreateClientModalProps {
       microchip: string;
       allergies: string;
       specialNeeds: string;
+      dateOfBirth?: string;
+      sex?: "male" | "female";
+      spayedNeutered?: boolean;
     }>;
   }) => void;
   facilityName: string;
@@ -888,6 +891,12 @@ export function CreateClientModal({
         // french-ok: written to the pet RECORD, read back by other screens
         allergies: p.allergies === "yes" ? p.allergyDetails || "Yes" : "None",
         specialNeeds: p.specialNeeds,
+        // Both are REQUIRED on the pet step and were dropped here, so every
+        // pet created with its owner was stored with neither.
+        sex: p.sex === "male" || p.sex === "female" ? p.sex : undefined,
+        spayedNeutered: p.spayedNeutered
+          ? p.spayedNeutered === "yes"
+          : undefined,
       })),
     });
     onOpenChange(false);

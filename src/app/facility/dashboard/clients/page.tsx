@@ -302,6 +302,9 @@ export default function FacilityClientsPage() {
       microchip: string;
       allergies: string;
       specialNeeds: string;
+      dateOfBirth?: string;
+      sex?: "male" | "female";
+      spayedNeutered?: boolean;
     }>;
   }) => {
     // Ids come from the database now. They used to be `Math.max(...) + 1` over
