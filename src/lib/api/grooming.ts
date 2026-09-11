@@ -12,8 +12,8 @@ import { groomingProducts, inventoryOrders } from "@/data/grooming";
 // comes from /api/packages/owned. The type stays — it is the shape
 // six screens already read, and the mapper fills it from Postgres.
 import type { CustomerPackageRecord } from "@/data/customer-packages";
-import { petNotes } from "@/data/pet-notes";
 import type { PetNote } from "@/types/pet";
+import type { Note } from "@/types/tags";
 import { petServicePricing } from "@/data/grooming-pet-pricing";
 import { groomingPetPreferences } from "@/data/grooming-pet-preferences";
 import type { GroomingPetPreference } from "@/data/grooming-pet-preferences";
@@ -309,6 +309,35 @@ async function fetchCustomerPackages(
   return (await response.json()) as CustomerPackageRecord[];
 }
 
+// ── A pet's and a client's own notes ────────────────────────────────────────
+//
+// These read `@/data/pet-notes` — invented notes matched to a real pet or
+// client by numeric ref, which is how a groom's page showed notes nobody at
+// the facility wrote. They are the `notes` rows the client file shows now
+// (`/api/notes`), in the shape the grooming screens already draw.
+async function fetchProfileNotes(
+  scope: "pet" | "client",
+  ref: number,
+): Promise<PetNote[]> {
+  if (!(ref > 0)) return [];
+  const category = scope === "pet" ? "pet" : "customer";
+  const response = await fetch(`/api/notes?category=${category}&ref=${ref}`);
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Failed to load notes (${response.status})`);
+  }
+  const notes = (await response.json()) as Note[];
+  return notes.map((n) => ({
+    id: n.id,
+    scope,
+    ...(scope === "pet" ? { petId: ref } : { clientId: ref }),
+    text: n.content,
+    pinned: n.isPinned,
+    createdBy: n.createdBy,
+    createdAt: n.createdAt,
+  }));
+}
+
 export const groomingQueries = {
   appointments: () => ({
     queryKey: ["grooming", "appointments"] as const,
@@ -403,17 +432,11 @@ export const groomingQueries = {
   // households back on the board.
   petNotes: (petId: number) => ({
     queryKey: ["pet-notes", "pet", petId] as const,
-    queryFn: async () =>
-      petNotes.filter(
-        (n) => n.scope === "pet" && n.petId === petId,
-      ) as PetNote[],
+    queryFn: () => fetchProfileNotes("pet", petId),
   }),
   clientNotes: (clientId: number) => ({
     queryKey: ["pet-notes", "client", clientId] as const,
-    queryFn: async () =>
-      petNotes.filter(
-        (n) => n.scope === "client" && n.clientId === clientId,
-      ) as PetNote[],
+    queryFn: () => fetchProfileNotes("client", clientId),
   }),
   petServicePricing: (petId: number) => ({
     queryKey: ["pet-service-pricing", petId] as const,
