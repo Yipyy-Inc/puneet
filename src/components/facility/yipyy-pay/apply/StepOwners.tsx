@@ -141,7 +141,7 @@ export function StepOwners({
             </Button>
             <p className="text-muted-foreground text-sm">
               Ownership listed:{" "}
-              <span className="text-foreground font-[tabular-nums] font-semibold">
+              <span className="text-foreground font-semibold tabular-nums">
                 {total}%
               </span>
             </p>

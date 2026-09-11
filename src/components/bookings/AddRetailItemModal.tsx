@@ -285,7 +285,7 @@ export function AddRetailItemModal({
                         {product.brand ?? product.category}
                       </p>
                       <div className="mt-1.5 flex items-center gap-2">
-                        <span className="font-[tabular-nums] text-sm font-bold">
+                        <span className="text-sm font-bold tabular-nums">
                           ${product.basePrice.toFixed(2)}
                         </span>
                         {product.stock != null && (
@@ -369,7 +369,7 @@ export function AddRetailItemModal({
                     <span className="text-muted-foreground text-xs">
                       ×{item.quantity}
                     </span>
-                    <span className="w-14 text-right font-[tabular-nums] text-xs font-semibold">
+                    <span className="w-14 text-right text-xs font-semibold tabular-nums">
                       ${(item.price * item.quantity).toFixed(2)}
                     </span>
                     <button
@@ -396,9 +396,7 @@ export function AddRetailItemModal({
               <Check className="size-4" />
               Add to Invoice
               {cartTotal > 0 && (
-                <span className="font-[tabular-nums]">
-                  — ${cartTotal.toFixed(2)}
-                </span>
+                <span className="tabular-nums">— ${cartTotal.toFixed(2)}</span>
               )}
             </Button>
           </div>

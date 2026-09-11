@@ -71,7 +71,7 @@ export function DepositChargeModal({
               />
               <span className="text-sm">
                 Use rule amount:{" "}
-                <strong className="font-[tabular-nums]">
+                <strong className="tabular-nums">
                   ${ruleAmount.toFixed(2)}
                 </strong>
               </span>
@@ -91,7 +91,7 @@ export function DepositChargeModal({
                   setCustomAmount(e.target.value);
                   setUseRule(false);
                 }}
-                className="ml-auto h-8 w-24 text-right font-[tabular-nums]"
+                className="ml-auto h-8 w-24 text-right tabular-nums"
                 min={0}
                 step={0.01}
                 placeholder="0.00"

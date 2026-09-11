@@ -220,7 +220,7 @@ export function DecisionPanel({
                 value={reference}
                 onChange={(event) => setReference(event.target.value)}
                 placeholder="What underwriting calls this application"
-                className="font-[tabular-nums]"
+                className="tabular-nums"
               />
             </div>
 

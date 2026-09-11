@@ -109,7 +109,7 @@ export function PayNowModal({
             <span className="text-muted-foreground text-sm">
               {t("amountDue")}
             </span>
-            <span className="font-[tabular-nums] text-lg font-semibold">
+            <span className="text-lg font-semibold tabular-nums">
               {amountText}
             </span>
           </div>

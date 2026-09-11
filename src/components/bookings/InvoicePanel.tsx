@@ -295,7 +295,7 @@ export function InvoicePanel({
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="font-[tabular-nums] text-sm">
+                      <span className="text-sm tabular-nums">
                         ${fmt(item.price)}
                       </span>
                       {canEditItemAt(i, item.type) ? (
@@ -349,7 +349,7 @@ export function InvoicePanel({
                       ${fmt(item.unitPrice)} x {item.quantity}
                     </p>
                   </div>
-                  <span className="font-[tabular-nums] text-sm">
+                  <span className="text-sm tabular-nums">
                     ${fmt(item.price)}
                   </span>
                 </div>
@@ -415,7 +415,7 @@ export function InvoicePanel({
               {invoice.fees.map((fee, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{fee.name}</span>
-                  <span className="font-[tabular-nums]">${fmt(fee.price)}</span>
+                  <span className="tabular-nums">${fmt(fee.price)}</span>
                 </div>
               ))}
             </div>
@@ -428,7 +428,7 @@ export function InvoicePanel({
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-[tabular-nums]">
+            <span className="tabular-nums">
               ${fmt(invoice.subtotal + extraTotal)}
             </span>
           </div>
@@ -437,7 +437,7 @@ export function InvoicePanel({
             ? invoice.discounts.map((d, i) => (
                 <div key={i} className="flex justify-between">
                   <span className="text-muted-foreground">{d.name}</span>
-                  <span className="font-[tabular-nums] text-emerald-600">
+                  <span className="text-emerald-600 tabular-nums">
                     -${fmt(d.price)}
                   </span>
                 </div>
@@ -448,7 +448,7 @@ export function InvoicePanel({
                     Discount
                     {invoice.discountLabel ? ` (${invoice.discountLabel})` : ""}
                   </span>
-                  <span className="font-[tabular-nums] text-emerald-600">
+                  <span className="text-emerald-600 tabular-nums">
                     -${fmt(invoice.discount)}
                   </span>
                 </div>
@@ -474,9 +474,7 @@ export function InvoicePanel({
                   <span className="text-muted-foreground">
                     {tax.name} ({parseFloat((tax.rate * 100).toFixed(4))}%)
                   </span>
-                  <span className="font-[tabular-nums]">
-                    ${fmt(tax.amount)}
-                  </span>
+                  <span className="tabular-nums">${fmt(tax.amount)}</span>
                 </div>
               ))
             : invoice.taxAmount > 0 && (
@@ -484,7 +482,7 @@ export function InvoicePanel({
                   <span className="text-muted-foreground">
                     Tax ({parseFloat((invoice.taxRate * 100).toFixed(4))}%)
                   </span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     ${fmt(invoice.taxAmount)}
                   </span>
                 </div>
@@ -493,9 +491,7 @@ export function InvoicePanel({
           {invoice.tipTotal && invoice.tipTotal > 0 && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tip</span>
-              <span className="font-[tabular-nums]">
-                ${fmt(invoice.tipTotal)}
-              </span>
+              <span className="tabular-nums">${fmt(invoice.tipTotal)}</span>
             </div>
           )}
           {/* Package credits */}
@@ -504,15 +500,13 @@ export function InvoicePanel({
               <span className="text-muted-foreground">
                 Package credits used
               </span>
-              <span className="font-[tabular-nums]">
-                {invoice.packageCreditsUsed}
-              </span>
+              <span className="tabular-nums">{invoice.packageCreditsUsed}</span>
             </div>
           )}
           <Separator />
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span className="font-[tabular-nums]">
+            <span className="tabular-nums">
               ${fmt(invoice.total + extraTotal)}
             </span>
           </div>
@@ -536,7 +530,7 @@ export function InvoicePanel({
                       </span>
                     )}
                   </span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     ${fmt(invoice.depositRequired ?? 0)}
                   </span>
                 </div>
@@ -545,7 +539,7 @@ export function InvoicePanel({
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Collected</span>
-                    <span className="font-[tabular-nums] text-emerald-700">
+                    <span className="text-emerald-700 tabular-nums">
                       ${fmt(invoice.depositCollected)}
                     </span>
                   </div>
@@ -573,7 +567,7 @@ export function InvoicePanel({
                 (invoice.depositRequired ?? 0) > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Collected</span>
-                    <span className="font-[tabular-nums] text-amber-700">
+                    <span className="text-amber-700 tabular-nums">
                       Not yet collected
                     </span>
                   </div>
@@ -589,7 +583,7 @@ export function InvoicePanel({
                 )}
               >
                 <span>Remaining</span>
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   ${fmt(invoice.remainingDue + extraOwed)}
                 </span>
               </div>
@@ -603,7 +597,7 @@ export function InvoicePanel({
           invoice.remainingDue + extraOwed > 0 && (
             <div className="text-destructive flex items-center justify-between text-sm font-medium">
               <span>Remaining due</span>
-              <span className="font-[tabular-nums]">
+              <span className="tabular-nums">
                 ${fmt(invoice.remainingDue + extraOwed)}
               </span>
             </div>
@@ -818,7 +812,7 @@ export function InvoicePanel({
                           {p.transactionId && ` · ${p.transactionId}`}
                         </p>
                       </div>
-                      <span className="font-[tabular-nums] text-sm font-semibold">
+                      <span className="text-sm font-semibold tabular-nums">
                         ${fmt(p.amount)}
                       </span>
                     </div>

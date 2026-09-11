@@ -223,7 +223,7 @@ export function OpenInvoicesSection({
                   </p>
                 </Link>
                 <div className="text-right">
-                  <p className="font-[tabular-nums] text-sm font-semibold">
+                  <p className="text-sm font-semibold tabular-nums">
                     ${inv.remainingDue.toFixed(2)}
                   </p>
                   <p className="text-muted-foreground text-[10px]">due</p>
@@ -241,7 +241,7 @@ export function OpenInvoicesSection({
               </p>
               <p className="text-[11px] text-amber-800/70">
                 Total to collect:{" "}
-                <span className="font-[tabular-nums] font-semibold">
+                <span className="font-semibold tabular-nums">
                   ${selectedTotal.toFixed(2)}
                 </span>
               </p>
@@ -286,7 +286,7 @@ export function OpenInvoicesSection({
                         · {b.service} {formatDate(b.startDate)}
                       </span>
                     </span>
-                    <span className="font-[tabular-nums]">
+                    <span className="tabular-nums">
                       ${b.invoice!.remainingDue.toFixed(2)}
                     </span>
                   </div>
@@ -294,7 +294,7 @@ export function OpenInvoicesSection({
               </div>
               <div className="mt-2 flex items-center justify-between border-t pt-2 text-sm font-semibold">
                 <span>Total</span>
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   ${selectedTotal.toFixed(2)}
                 </span>
               </div>

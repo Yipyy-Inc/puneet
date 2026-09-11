@@ -336,7 +336,7 @@ function MultiDimSelector({
                     : `${selectedVariant.stock} in stock`}
               </p>
             </div>
-            <p className="font-[tabular-nums] text-lg font-bold">
+            <p className="text-lg font-bold tabular-nums">
               ${selectedVariant.price.toFixed(2)}
             </p>
           </div>
@@ -390,7 +390,7 @@ function MultiDimSelector({
         <ShoppingCart className="size-4" />
         Add to Cart
         {selectedVariant && selectedVariant.stock > 0 && (
-          <span className="font-[tabular-nums]">
+          <span className="tabular-nums">
             — ${(selectedVariant.price * quantity).toFixed(2)}
           </span>
         )}
@@ -534,7 +534,7 @@ function SingleDimSelector({
                     <span className="w-full truncate text-center text-[10px]/tight font-medium">
                       {label}
                     </span>
-                    <span className="text-muted-foreground font-[tabular-nums] text-[10px]">
+                    <span className="text-muted-foreground text-[10px] tabular-nums">
                       ${v.price.toFixed(2)}
                     </span>
                     {outOfStock && (
@@ -570,7 +570,7 @@ function SingleDimSelector({
                       {v.name || v.variantValue}
                     </p>
                     <div className="mt-0.5 flex items-center gap-2">
-                      <span className="font-[tabular-nums] text-xs font-semibold">
+                      <span className="text-xs font-semibold tabular-nums">
                         ${v.price.toFixed(2)}
                       </span>
                       <span
@@ -612,7 +612,7 @@ function SingleDimSelector({
                   ` · Barcode: ${selectedVariant.barcode}`}
               </p>
             </div>
-            <p className="font-[tabular-nums] text-lg font-bold">
+            <p className="text-lg font-bold tabular-nums">
               ${selectedVariant.price.toFixed(2)}
             </p>
           </div>
@@ -660,7 +660,7 @@ function SingleDimSelector({
         <ShoppingCart className="size-4" />
         Add to Cart
         {selectedVariant && selectedVariant.stock > 0 && (
-          <span className="font-[tabular-nums]">
+          <span className="tabular-nums">
             — ${(selectedVariant.price * quantity).toFixed(2)}
           </span>
         )}

@@ -138,11 +138,11 @@ export function AutoAppliedBenefits({
                 {evaluation.applied.length > 1 ? "s" : ""} applied automatically
               </p>
               <p className="text-[11px] text-emerald-800/80">
-                <span className="font-[tabular-nums] font-semibold">
+                <span className="font-semibold tabular-nums">
                   ${evaluation.totalSavings.toFixed(2)} saved
                 </span>{" "}
                 · adjusted total{" "}
-                <span className="font-[tabular-nums] font-semibold">
+                <span className="font-semibold tabular-nums">
                   ${evaluation.adjustedTotal.toFixed(2)}
                 </span>
               </p>
@@ -202,7 +202,7 @@ export function AutoAppliedBenefits({
                 <div className="text-right">
                   <p
                     className={cn(
-                      "font-[tabular-nums] text-xs font-semibold",
+                      "text-xs font-semibold tabular-nums",
                       tone.fg,
                     )}
                   >

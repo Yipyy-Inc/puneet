@@ -499,7 +499,7 @@ export function TaxSettings() {
               ))}
               <div className="bg-muted/40 flex items-center justify-between rounded-lg px-4 py-2.5">
                 <span className="text-sm font-medium">{t("combinedRate")}</span>
-                <span className="font-[tabular-nums] text-sm font-bold">
+                <span className="text-sm font-bold tabular-nums">
                   {(combinedRate * 100).toFixed(
                     combinedRate * 100 === Math.floor(combinedRate * 100)
                       ? 0

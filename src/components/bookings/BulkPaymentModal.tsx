@@ -246,7 +246,7 @@ ${lines.map((inv) => `<div class="row"><span>#${inv.bookingId} · ${inv.service}
             {/* Total */}
             <div className="bg-muted/30 rounded-xl border p-4 text-center">
               <p className="text-muted-foreground text-xs">Total Outstanding</p>
-              <p className="font-[tabular-nums] text-3xl font-bold">
+              <p className="text-3xl font-bold tabular-nums">
                 ${invoices.reduce((s, i) => s + i.remaining, 0).toFixed(2)}
               </p>
               <p className="text-muted-foreground mt-1 text-xs">
@@ -297,7 +297,7 @@ ${lines.map((inv) => `<div class="row"><span>#${inv.bookingId} · ${inv.service}
                       </div>
                     </div>
                     <div className="ml-auto text-right">
-                      <p className="font-[tabular-nums] text-sm font-semibold">
+                      <p className="text-sm font-semibold tabular-nums">
                         ${inv.remaining.toFixed(2)}
                       </p>
                       {inv.paid > 0 && (
@@ -345,9 +345,7 @@ ${lines.map((inv) => `<div class="row"><span>#${inv.bookingId} · ${inv.service}
                   {selectedInvoices.length} invoice
                   {selectedInvoices.length !== 1 ? "s" : ""} selected
                 </span>
-                <span className="font-[tabular-nums]">
-                  ${totalAmount.toFixed(2)}
-                </span>
+                <span className="tabular-nums">${totalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -366,7 +364,7 @@ ${lines.map((inv) => `<div class="row"><span>#${inv.bookingId} · ${inv.service}
                 <Separator />
                 <div className="flex items-baseline justify-between">
                   <span className="font-medium">Total to Charge</span>
-                  <span className="font-[tabular-nums] text-2xl font-bold">
+                  <span className="text-2xl font-bold tabular-nums">
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>

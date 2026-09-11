@@ -307,7 +307,7 @@ export function RouteView() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-xs">Revenue</p>
-            <p className="mt-1 font-[tabular-nums] text-2xl font-bold">
+            <p className="mt-1 text-2xl font-bold tabular-nums">
               ${totalRevenue.toFixed(2)}
             </p>
           </CardContent>
@@ -417,7 +417,7 @@ export function RouteView() {
                       </div>
 
                       {/* Price */}
-                      <span className="font-[tabular-nums] text-sm font-medium">
+                      <span className="text-sm font-medium tabular-nums">
                         ${stop.price.toFixed(2)}
                       </span>
                     </div>
@@ -428,7 +428,7 @@ export function RouteView() {
               {/* Route total */}
               <div className="mt-3 flex justify-between border-t pt-2 text-sm">
                 <span className="text-muted-foreground">Route Total</span>
-                <span className="font-[tabular-nums] font-semibold">
+                <span className="font-semibold tabular-nums">
                   ${route.totalRevenue.toFixed(2)}
                 </span>
               </div>

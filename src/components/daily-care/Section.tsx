@@ -221,7 +221,7 @@ export function Section({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 font-semibold text-green-700 dark:text-green-400">
-            <span className="font-[tabular-nums] text-sm">
+            <span className="text-sm tabular-nums">
               {requiresHeadCount && headCountDone
                 ? "Counted"
                 : `${done}/${total}`}
@@ -349,7 +349,7 @@ export function Section({
                 </Tooltip>
               ))}
             <div className="text-right">
-              <div className="font-[tabular-nums] text-sm font-semibold">
+              <div className="text-sm font-semibold tabular-nums">
                 {done} / {total}
               </div>
               <div className="text-muted-foreground text-[10px] tracking-wider uppercase">

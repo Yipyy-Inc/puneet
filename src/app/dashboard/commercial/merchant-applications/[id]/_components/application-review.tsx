@@ -427,7 +427,7 @@ function Row({
   return (
     <div className="grid gap-1 py-1 sm:grid-cols-[11rem_1fr]">
       <span className="text-muted-foreground text-sm">{label}</span>
-      <span className={cn("text-sm", mono && "font-[tabular-nums]")}>
+      <span className={cn("text-sm", mono && "tabular-nums")}>
         {value || "—"}
       </span>
     </div>

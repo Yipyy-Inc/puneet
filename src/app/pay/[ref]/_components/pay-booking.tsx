@@ -148,7 +148,7 @@ export function PayBooking({
             <p className="text-muted-foreground text-xs">
               Balance on booking #{bookingRef}
             </p>
-            <p className="font-[tabular-nums] text-3xl font-bold">
+            <p className="text-3xl font-bold tabular-nums">
               {money(amountCents, currency)}
             </p>
           </div>

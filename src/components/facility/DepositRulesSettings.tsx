@@ -371,7 +371,7 @@ function DepositRulesEditor({
                       refundBeforeHours: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="h-8 w-20 text-right font-[tabular-nums]"
+                  className="h-8 w-20 text-right tabular-nums"
                 />
                 <span className="text-sm">{t("wordHours")}</span>
               </div>
@@ -491,7 +491,7 @@ function ServiceRuleRow({
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();
           }}
-          className="h-8 w-20 text-right font-[tabular-nums]"
+          className="h-8 w-20 text-right tabular-nums"
         />
       </div>
     </div>
@@ -562,7 +562,7 @@ function ThresholdRuleRow({
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
-              className="h-8 font-[tabular-nums]"
+              className="h-8 tabular-nums"
             />
           </div>
         </div>
@@ -604,7 +604,7 @@ function ThresholdRuleRow({
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
-              className="h-8 font-[tabular-nums]"
+              className="h-8 tabular-nums"
             />
           </div>
         </div>

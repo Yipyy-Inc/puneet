@@ -215,9 +215,7 @@ export function CustomerInvoiceCard({
                       {money(item.unitPrice)} × {item.quantity}
                     </p>
                   </div>
-                  <span className="font-[tabular-nums]">
-                    {money(item.price)}
-                  </span>
+                  <span className="tabular-nums">{money(item.price)}</span>
                 </div>
               ))}
               {invoice.fees.map((fee, i) => (
@@ -226,9 +224,7 @@ export function CustomerInvoiceCard({
                   className="text-muted-foreground flex justify-between text-sm"
                 >
                   <span>{fee.name}</span>
-                  <span className="font-[tabular-nums]">
-                    {money(fee.price)}
-                  </span>
+                  <span className="tabular-nums">{money(fee.price)}</span>
                 </div>
               ))}
             </div>
@@ -238,9 +234,7 @@ export function CustomerInvoiceCard({
           <div className="space-y-1 border-t pt-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("subtotal")}</span>
-              <span className="font-[tabular-nums]">
-                {money(invoice.subtotal)}
-              </span>
+              <span className="tabular-nums">{money(invoice.subtotal)}</span>
             </div>
             {invoice.discount > 0 && (
               <div className="flex justify-between text-emerald-700">
@@ -248,9 +242,7 @@ export function CustomerInvoiceCard({
                   {t("discount")}
                   {invoice.discountLabel ? ` (${invoice.discountLabel})` : ""}
                 </span>
-                <span className="font-[tabular-nums]">
-                  −{money(invoice.discount)}
-                </span>
+                <span className="tabular-nums">−{money(invoice.discount)}</span>
               </div>
             )}
             {(invoice.taxes && invoice.taxes.length > 0
@@ -267,28 +259,26 @@ export function CustomerInvoiceCard({
                   )}
                   )
                 </span>
-                <span className="font-[tabular-nums]">{money(tax.amount)}</span>
+                <span className="tabular-nums">{money(tax.amount)}</span>
               </div>
             ))}
             {(!invoice.taxes || invoice.taxes.length === 0) &&
               invoice.taxAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t("tax")}</span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     {money(invoice.taxAmount)}
                   </span>
                 </div>
               )}
             <div className="flex justify-between border-t pt-1.5 font-semibold">
               <span>{t("total")}</span>
-              <span className="font-[tabular-nums]">
-                {money(invoice.total)}
-              </span>
+              <span className="tabular-nums">{money(invoice.total)}</span>
             </div>
             {invoice.depositCollected > 0 && (
               <div className="flex justify-between text-emerald-700">
                 <span>{t("depositCollected")}</span>
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   −{money(invoice.depositCollected)}
                 </span>
               </div>
@@ -296,7 +286,7 @@ export function CustomerInvoiceCard({
             {hasBalance && (
               <div className="text-destructive flex justify-between font-medium">
                 <span>{t("amountDue")}</span>
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   {money(invoice.remainingDue)}
                 </span>
               </div>

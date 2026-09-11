@@ -108,7 +108,7 @@ body{font-family:-apple-system,sans-serif;padding:20px;margin:0}
             <p className="mt-2 max-w-[180px] truncate text-center text-xs font-medium">
               {productName}
             </p>
-            <p className="font-[tabular-nums] text-sm font-bold">
+            <p className="text-sm font-bold tabular-nums">
               ${price.toFixed(2)}
             </p>
           </div>

@@ -1012,7 +1012,7 @@ export function EvaluationSettings() {
               {price > 0 && (
                 <div className="mt-1 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t("price")}</span>
-                  <span className="font-[tabular-nums] font-semibold">
+                  <span className="font-semibold tabular-nums">
                     {formatMoney(price, locale)}
                   </span>
                 </div>

@@ -251,7 +251,7 @@ ${
                     <p className="text-sm font-semibold">Full Refund</p>
                     <p className="text-muted-foreground text-xs">
                       Refund entire payment of{" "}
-                      <span className="font-[tabular-nums] font-medium">
+                      <span className="font-medium tabular-nums">
                         ${amountPaid.toFixed(2)}
                       </span>
                     </p>
@@ -328,7 +328,7 @@ ${
                   min={0}
                   max={amountPaid}
                   step={0.01}
-                  className="h-12 text-center font-[tabular-nums] text-xl font-bold"
+                  className="h-12 text-center text-xl font-bold tabular-nums"
                   autoFocus
                 />
               </div>
@@ -364,7 +364,7 @@ ${
                       </div>
                       <span className="text-sm">{item.name}</span>
                     </div>
-                    <span className="font-[tabular-nums] text-sm font-medium">
+                    <span className="text-sm font-medium tabular-nums">
                       ${item.price.toFixed(2)}
                     </span>
                   </button>
@@ -460,7 +460,7 @@ ${
                 <Separator />
                 <div className="flex items-baseline justify-between">
                   <span className="font-medium">Refund Amount</span>
-                  <span className="font-[tabular-nums] text-2xl font-bold text-red-600">
+                  <span className="text-2xl font-bold text-red-600 tabular-nums">
                     ${refundAmount.toFixed(2)}
                   </span>
                 </div>

@@ -59,9 +59,7 @@ export function Step1Account({ overview }: { overview: YipyyPayOverview }) {
                 template={t("linkedToMerchantId")}
                 placeholder="{id}"
               >
-                <span className="font-[tabular-nums]">
-                  {connection.merchantId}
-                </span>
+                <span className="tabular-nums">{connection.merchantId}</span>
               </InterpolatedText>
             ) : (
               t("linkedToMerchant")

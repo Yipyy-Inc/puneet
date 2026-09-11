@@ -531,7 +531,7 @@ export default function BookingDetailPage({
                     >
                       <span className="font-bold">{t("balance")}</span>
                       {isPaid ? (
-                        <span className="flex items-center gap-1.5 font-[tabular-nums] font-bold text-emerald-600">
+                        <span className="flex items-center gap-1.5 font-bold text-emerald-600 tabular-nums">
                           <CheckCircle2 className="size-4" />
                           {t("paidInFull")}
                         </span>

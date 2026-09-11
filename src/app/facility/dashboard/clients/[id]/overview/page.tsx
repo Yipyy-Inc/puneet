@@ -271,7 +271,7 @@ export default function ClientOverviewPage({
             <div>
               <p className="text-sm font-medium text-red-800">
                 Outstanding Balance:{" "}
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   {maskAmount(`$${totalOverdue.toFixed(2)}`)}
                 </span>
               </p>
@@ -334,7 +334,7 @@ export default function ClientOverviewPage({
                 <DollarSign className="size-5 text-emerald-600" />
               </div>
               <div>
-                <p className="font-[tabular-nums] text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {maskAmount(`$${totalSpent.toFixed(0)}`, "client_financial")}
                 </p>
                 <p className="text-muted-foreground text-xs">Total Spent</p>
@@ -361,7 +361,7 @@ export default function ClientOverviewPage({
               <Clock className="size-5 text-amber-600" />
             </div>
             <div>
-              <p className="font-[tabular-nums] text-2xl font-bold">
+              <p className="text-2xl font-bold tabular-nums">
                 {maskAmount(`$${avgSpent.toFixed(0)}`, "client_financial")}
               </p>
               <p className="text-muted-foreground text-xs">Avg per Booking</p>
@@ -444,7 +444,7 @@ export default function ClientOverviewPage({
                           >
                             {b.status}
                           </Badge>
-                          <p className="mt-0.5 font-[tabular-nums] text-sm font-medium">
+                          <p className="mt-0.5 text-sm font-medium tabular-nums">
                             ${b.totalCost}
                           </p>
                         </div>
