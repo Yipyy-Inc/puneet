@@ -82,8 +82,14 @@ import {
 } from "lucide-react";
 import type { AdditionalPet, AppointmentStage } from "@/types/grooming";
 import type { PetSize } from "@/types/base";
-import { GROOMING_ADD_ONS as ADD_ONS } from "@/data/grooming-add-ons";
+import { useGroomingAddOns } from "@/lib/api/grooming-catalogue";
+import { bookingMutations } from "@/lib/api/booking";
+import { useCreateClient, useCreatePet } from "@/lib/api/client";
+import { useLocationContext } from "@/hooks/use-location-context";
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
+import type { NewBooking } from "@/types/booking";
 import { NO_ITEMS } from "@/lib/no-items";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 
@@ -227,7 +233,17 @@ export function NewAppointmentDialog({
   // submit so future bookings for the same pet/package pre-fill with it.
   const [savePriceToPet, setSavePriceToPet] = useState(false);
   const queryClient = useQueryClient();
+  const { t: tBook, fill: fillBook } = useStaffText("groomingAppointment");
   const { mutate: redeemPass } = useRedeemPackagePass();
+  // The facility's grooming add-ons. This offered GROOMING_ADD_ONS from
+  // `@/data/grooming-add-ons`, eight invented extras — and the booking RPC
+  // refuses an add-on the facility does not sell.
+  const { data: addOnData } = useGroomingAddOns();
+  const ADD_ONS = (addOnData ?? NO_ITEMS) as GroomingAddOnOption[];
+  const createClientMutation = useCreateClient();
+  const createPetMutation = useCreatePet();
+  const { currentLocationId } = useLocationContext();
+  const [saving, setSaving] = useState(false);
   // Ids the system auto-attached from the package's default-add-on rules.
   // Tracked separately so we know which add-ons to clear when the package
   // changes (manual selections survive package switches).
@@ -645,7 +661,7 @@ export function NewAppointmentDialog({
         const ao = ADD_ONS.find((a) => a.id === id);
         return sum + (ao?.price ?? 0);
       }, 0),
-    [selectedAddOns],
+    [selectedAddOns, ADD_ONS],
   );
 
   // Minutes the selected add-ons add on top of the service(s) — mirrors
@@ -656,7 +672,7 @@ export function NewAppointmentDialog({
         const ao = ADD_ONS.find((a) => a.id === id);
         return sum + (ao?.duration ?? 0);
       }, 0),
-    [selectedAddOns],
+    [selectedAddOns, ADD_ONS],
   );
 
   // Filter stylists by package restrictions. Three-layer check:
@@ -1022,125 +1038,6 @@ export function NewAppointmentDialog({
     onOpenChange(false);
   }
 
-  function handleSubmit() {
-    if (
-      !form.ownerName ||
-      !form.petName ||
-      !form.petSize ||
-      !form.packageId ||
-      !form.stylistId ||
-      !form.date
-    ) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    if (form.isMobile) {
-      if (!form.clientAddress.trim() || !form.clientPostalCode.trim()) {
-        toast.error("Address and postal code are required for mobile visits");
-        return;
-      }
-      if (coverageResult?.status === "not-covered" && !form.coverageOverride) {
-        toast.error(
-          "Address is outside the service area for this date. Check the override box to book anyway.",
-        );
-        return;
-      }
-    }
-    // Validate any added pets have a name + service
-    const incompletePet = additionalPets.find(
-      (p) => !p.petName.trim() || !p.packageId,
-    );
-    if (incompletePet) {
-      toast.error("Each additional pet needs a name and a service selected");
-      return;
-    }
-    // A manual price override must come with a reason — it's the audit trail
-    // for any discount or upcharge applied at booking time.
-    if (manualPriceOverride !== undefined && !priceOverrideReason.trim()) {
-      toast.error("Add a note explaining the price override before booking.");
-      return;
-    }
-    // Persist the manual price/duration as a saved override on this pet so
-    // future bookings of the same pet+package start from this number. Only
-    // fires when staff explicitly opted in and there's a known pet to attach
-    // it to (drafted-only pets get a negative id from the picker — skip
-    // those since they can't be looked up next time).
-    if (
-      savePriceToPet &&
-      form.petId !== undefined &&
-      form.petId > 0 &&
-      form.packageId
-    ) {
-      const finalPrice = manualPriceOverride;
-      const finalDuration = manualDurationOverride;
-      if (finalPrice !== undefined || finalDuration !== undefined) {
-        saveCustomPetPricingOverride({
-          petId: form.petId,
-          packageId: form.packageId,
-          customPrice: finalPrice,
-          customDurationMin: finalDuration,
-          note:
-            priceOverrideReason.trim() ||
-            `Saved from booking on ${form.date || "today"}.`,
-          createdBy: "facility-staff",
-        });
-        // Invalidate so the next read (next dialog open) sees the new row.
-        void queryClient.invalidateQueries({
-          queryKey: ["pet-service-pricing"],
-        });
-      }
-    }
-
-    if (form.customerPackageId && selectedCustomerPackage && selectedPassPool) {
-      // The pass is spent server-side: the balance check and the write are one
-      // locked statement, so two tills cannot both spend the last pass. The
-      // reported balance is what the database returned, not a local decrement.
-      const packageName = selectedCustomerPackage.packageName;
-      redeemPass(
-        {
-          customerPackageId: form.customerPackageId,
-          serviceId: selectedPassPool.packageId,
-          serviceLabel: selectedPackage?.name ?? selectedPassPool.serviceName,
-          petId: form.petId,
-          petName: form.petName,
-        },
-        {
-          onSuccess: ({ passesLeft }) => {
-            // A $0 receipt, so the books show the service was delivered
-            // against a package rather than given away.
-            syncRedeemedPassToQuickBooks(
-              { facilityId: "11" },
-              selectedCustomerPackage,
-              { passesLeft, pool: selectedPassPool },
-              { petName: form.petName },
-            );
-            toast.success(`Redeemed 1 pass from ${packageName}`, {
-              description: `${passesLeft} pass${
-                passesLeft === 1 ? "" : "es"
-              } remaining.`,
-            });
-          },
-          onError: (error: Error) => {
-            // The appointment is already booked. Saying nothing would leave a
-            // visit that quietly costs full price.
-            toast.error("The pass was not redeemed", {
-              description: error.message,
-            });
-          },
-        },
-      );
-    }
-
-    const petCount = 1 + additionalPets.length;
-    const staffCount = 1 + additionalStylistIds.length;
-    const labelParts: string[] = [];
-    if (petCount > 1) labelParts.push(`${petCount} pets`);
-    if (staffCount > 1) labelParts.push(`${staffCount} groomers`);
-    const suffix = labelParts.length > 0 ? ` · ${labelParts.join(" · ")}` : "";
-    toast.success(`Appointment booked for ${form.petName}${suffix}`);
-    handleClose();
-  }
-
   const showAddOns = !!selectedPackage;
 
   // Per-pet line items for the invoice. The primary pet anchors the booking;
@@ -1231,6 +1128,231 @@ export function NewAppointmentDialog({
   // Running "Total appointment duration" = service(s) + selected add-ons.
   const grandDurationMin = totalDurationMin + addOnDurationMin;
   const showPriceSummary = petLines.length > 0;
+
+  async function handleSubmit() {
+    if (
+      !form.ownerName ||
+      !form.petName ||
+      !form.petSize ||
+      !form.packageId ||
+      !form.stylistId ||
+      !form.date
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (form.isMobile) {
+      if (!form.clientAddress.trim() || !form.clientPostalCode.trim()) {
+        toast.error("Address and postal code are required for mobile visits");
+        return;
+      }
+      if (coverageResult?.status === "not-covered" && !form.coverageOverride) {
+        toast.error(
+          "Address is outside the service area for this date. Check the override box to book anyway.",
+        );
+        return;
+      }
+    }
+    // Validate any added pets have a name + service
+    const incompletePet = additionalPets.find(
+      (p) => !p.petName.trim() || !p.packageId,
+    );
+    if (incompletePet) {
+      toast.error("Each additional pet needs a name and a service selected");
+      return;
+    }
+    // A manual price override must come with a reason — it's the audit trail
+    // for any discount or upcharge applied at booking time.
+    if (manualPriceOverride !== undefined && !priceOverrideReason.trim()) {
+      toast.error("Add a note explaining the price override before booking.");
+      return;
+    }
+    // Persist the manual price/duration as a saved override on this pet so
+    // future bookings of the same pet+package start from this number. Only
+    // fires when staff explicitly opted in and there's a known pet to attach
+    // it to (drafted-only pets get a negative id from the picker — skip
+    // those since they can't be looked up next time).
+    if (
+      savePriceToPet &&
+      form.petId !== undefined &&
+      form.petId > 0 &&
+      form.packageId
+    ) {
+      const finalPrice = manualPriceOverride;
+      const finalDuration = manualDurationOverride;
+      if (finalPrice !== undefined || finalDuration !== undefined) {
+        saveCustomPetPricingOverride({
+          petId: form.petId,
+          packageId: form.packageId,
+          customPrice: finalPrice,
+          customDurationMin: finalDuration,
+          note:
+            priceOverrideReason.trim() ||
+            `Saved from booking on ${form.date || "today"}.`,
+          createdBy: "facility-staff",
+        });
+        // Invalidate so the next read (next dialog open) sees the new row.
+        void queryClient.invalidateQueries({
+          queryKey: ["pet-service-pricing"],
+        });
+      }
+    }
+
+    // ── THE APPOINTMENT ITSELF ──────────────────────────────────────────
+    //
+    // This toasted "Appointment booked" and closed; no row was written, so a
+    // groom booked from the calendar was on nobody's board. It goes through
+    // POST /api/bookings now — `create_booking` writes the booking, its pet
+    // and the grooming appointment in one transaction, reading prices from
+    // the catalogue — once per pet, because each pet has its own service.
+    // A client or pet typed in fresh is put on file first.
+    if (saving) return;
+    setSaving(true);
+    let firstRef: number | null = null;
+    try {
+      let clientRef = form.clientId;
+      if (!clientRef) {
+        const { client } = await createClientMutation.mutateAsync({
+          name: form.ownerName.trim(),
+          email: form.ownerEmail.trim(),
+          phone: form.ownerPhone.trim() || undefined,
+          status: "active",
+        });
+        clientRef = client.id;
+      }
+      const petRefFor = async (name: string, type?: string, breed?: string) =>
+        (
+          await createPetMutation.mutateAsync({
+            clientId: clientRef!,
+            name: name.trim(),
+            type: type || "Dog",
+            breed: breed || "",
+          })
+        ).id;
+      const primaryPet =
+        form.petId !== undefined && form.petId > 0
+          ? form.petId
+          : await petRefFor(form.petName, form.petType, form.petBreed);
+
+      const end = addMinutesToTime(
+        form.startTime,
+        Math.max(grandDurationMin, 15),
+      );
+      const notes =
+        [form.specialInstructions, form.notes]
+          .map((n) => n.trim())
+          .filter(Boolean)
+          .join("\n") || undefined;
+      const base = (
+        petRef: number,
+        serviceId: string,
+        price: number,
+      ): NewBooking => ({
+        clientId: clientRef!,
+        petId: petRef,
+        // Required by the schema and ignored by the route — the session
+        // decides the facility.
+        facilityId: 0,
+        service: "grooming",
+        serviceType: serviceId,
+        startDate: form.date,
+        endDate: form.date,
+        checkInTime: form.startTime,
+        checkOutTime: end,
+        status: "confirmed",
+        basePrice: price,
+        discount: 0,
+        totalCost: price,
+        stylistPreference: form.stylistId,
+        specialRequests: notes,
+        isMobile: form.isMobile || undefined,
+      });
+
+      const primaryLine = petLines[0];
+      const primaryPrice = (primaryLine?.price ?? 0) + addOnTotal;
+      const created = await bookingMutations.create(
+        {
+          ...base(primaryPet, form.packageId, primaryPrice),
+          groomingAddOns:
+            selectedAddOns.length > 0 ? selectedAddOns : undefined,
+          groomingDurationOverrideMin: manualDurationOverride,
+        },
+        currentLocationId,
+      );
+      firstRef = created.id;
+      for (const [i, ap] of additionalPets.entries()) {
+        const petRef = await petRefFor(ap.petName, form.petType, ap.petBreed);
+        await bookingMutations.create(
+          base(petRef, ap.packageId, petLines[i + 1]?.price ?? 0),
+          currentLocationId,
+        );
+      }
+      void queryClient.invalidateQueries({ queryKey: ["grooming"] });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      void queryClient.invalidateQueries({ queryKey: ["clients"] });
+    } catch (error) {
+      toast.error(
+        firstRef
+          ? fillBook("partlyBooked", { ref: firstRef })
+          : tBook("notBooked"),
+        { description: error instanceof Error ? error.message : undefined },
+      );
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+
+    if (form.customerPackageId && selectedCustomerPackage && selectedPassPool) {
+      // The pass is spent server-side: the balance check and the write are one
+      // locked statement, so two tills cannot both spend the last pass. The
+      // reported balance is what the database returned, not a local decrement.
+      const packageName = selectedCustomerPackage.packageName;
+      redeemPass(
+        {
+          customerPackageId: form.customerPackageId,
+          serviceId: selectedPassPool.packageId,
+          serviceLabel: selectedPackage?.name ?? selectedPassPool.serviceName,
+          petId: form.petId,
+          petName: form.petName,
+        },
+        {
+          onSuccess: ({ passesLeft }) => {
+            // A $0 receipt, so the books show the service was delivered
+            // against a package rather than given away.
+            syncRedeemedPassToQuickBooks(
+              { facilityId: "11" },
+              selectedCustomerPackage,
+              { passesLeft, pool: selectedPassPool },
+              { petName: form.petName },
+            );
+            toast.success(`Redeemed 1 pass from ${packageName}`, {
+              description: `${passesLeft} pass${
+                passesLeft === 1 ? "" : "es"
+              } remaining.`,
+            });
+          },
+          onError: (error: Error) => {
+            // The appointment is already booked. Saying nothing would leave a
+            // visit that quietly costs full price.
+            toast.error("The pass was not redeemed", {
+              description: error.message,
+            });
+          },
+        },
+      );
+    }
+
+    const petCount = 1 + additionalPets.length;
+    const staffCount = 1 + additionalStylistIds.length;
+    const labelParts: string[] = [];
+    if (petCount > 1) labelParts.push(`${petCount} pets`);
+    if (staffCount > 1) labelParts.push(`${staffCount} groomers`);
+    const suffix = labelParts.length > 0 ? ` · ${labelParts.join(" · ")}` : "";
+    toast.success(
+      `${fillBook("booked", { ref: firstRef ?? "", pet: form.petName })}${suffix}`,
+    );
+    handleClose();
+  }
 
   // Facility base postal — used to compute the travel zone for mobile.
   // Real impl would read this from the facility config; the demo uses a
@@ -1854,7 +1976,7 @@ export function NewAppointmentDialog({
                           ...selectedAddOns
                             .map((id) => ADD_ONS.find((a) => a.id === id))
                             .filter(
-                              (ao): ao is (typeof ADD_ONS)[number] =>
+                              (ao): ao is GroomingAddOnOption =>
                                 !!ao && ao.duration > 0,
                             )
                             .map((ao) => `${ao.name}: ${ao.duration} min`),
@@ -2826,7 +2948,7 @@ export function NewAppointmentDialog({
             <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
+            <Button onClick={() => void handleSubmit()} disabled={saving}>
               <Plus className="mr-1.5 size-4" />
               Book Appointment
             </Button>

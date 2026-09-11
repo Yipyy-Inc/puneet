@@ -2042,6 +2042,12 @@
         "publishedToast": "« {name} » est publié",
         "saveFailed": "Le formulaire n’a pas été enregistré",
         "couldNotOpen": "Ce formulaire n’a pas pu être ouvert."
+      },
+      "groomingAppointment": {
+        "booked": "Réservation n° {ref} — {pet}",
+        "partlyBooked": "La réservation n° {ref} a été faite, mais pas pour tous les animaux",
+        "notBooked": "Le rendez-vous n’a pas été réservé",
+        "notSaved": "Cette modification n’a pas été enregistrée."
       }
     }
   },
