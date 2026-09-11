@@ -13,6 +13,7 @@
 --   P4  another business cannot spend this business's card on its booking
 --   P5  a groomer, who takes no payments, cannot pay by card
 --   P6  anon cannot call it
+--   P7  a card pays the tax on what it pays for, recorded apart (20260911221947)
 -- ============================================================================
 
 begin;
@@ -220,8 +221,40 @@ do $$
 begin
   perform pg_temp.t('P6  anon cannot call it',
     not has_function_privilege('anon',
-      'public.pay_booking_with_gift_card(text, bigint, numeric, text)', 'execute'),
+      'public.pay_booking_with_gift_card(text, bigint, numeric, text, numeric)', 'execute'),
     'anon can execute');
+end $$;
+
+-- ── P7 (20260911221947) ────────────────────────────────────────────────────
+-- A card pays the tax on what it pays for: $20 of supply and $3.00 of tax
+-- comes off the card as $23, the payment records them apart, and the booking's
+-- paid total counts the supply only — so a taxed bill can be settled.
+do $$
+declare v_state text; v_paid numeric; v_balance numeric; v_row record;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001a0001');
+  set local role authenticated;
+  begin
+    perform public.pay_booking_with_gift_card(
+      'GCPTEST0001',
+      (select ref from refs where id = '00000000-0000-0000-0000-0000001a0051'),
+      20, null, 3.00);
+    v_state := 'paid';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+  reset role;
+  select amount_paid into v_paid from public.bookings
+   where id = '00000000-0000-0000-0000-0000001a0051';
+  select balance into v_balance from public.gift_cards where code = 'GCPTEST0001';
+  select subtotal, tax, grand_total into v_row from public.payments
+   where booking_id = '00000000-0000-0000-0000-0000001a0051' and method = 'gift-card';
+  perform pg_temp.t('P7  $20 + $3 tax: card -$23, payment 20/3/23, booking paid 20',
+    v_state = 'paid' and v_balance = 27 and v_paid = 20
+      and v_row.subtotal = 20 and v_row.tax = 3 and v_row.grand_total = 23,
+    v_state || ' / balance ' || v_balance || ' / paid ' || v_paid
+      || ' / row ' || coalesce(v_row.subtotal::text, '-') || '/'
+      || coalesce(v_row.tax::text, '-') || '/' || coalesce(v_row.grand_total::text, '-'));
 end $$;
 
 select n, name, ok, detail from tap order by n;

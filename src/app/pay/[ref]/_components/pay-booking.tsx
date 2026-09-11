@@ -38,7 +38,10 @@ export interface PayBookingProps {
   service: string | null;
   serviceType: string | null;
   startAt: string | null;
+  /** What the card will be charged before any tip: the balance plus its tax. */
   amountCents: number;
+  /** The tax inside `amountCents`; zero where prices include it or none is set. */
+  taxCents: number;
   currency: string;
   merchantId: string;
   publicApiKey: string;
@@ -82,6 +85,7 @@ export function PayBooking({
   serviceType,
   startAt,
   amountCents,
+  taxCents,
   currency,
   merchantId,
   publicApiKey,
@@ -151,6 +155,11 @@ export function PayBooking({
             <p className="text-3xl font-bold tabular-nums">
               {money(amountCents, currency)}
             </p>
+            {taxCents > 0 && (
+              <p className="text-ink-tertiary mt-1 text-xs tabular-nums">
+                Includes {money(taxCents, currency)} tax
+              </p>
+            )}
           </div>
 
           {/* The facility's OWN tips — this page hardcoded 10/15/20 until
@@ -165,7 +174,9 @@ export function PayBooking({
               </p>
               <TipSelector
                 tipConfig={tipConfig}
-                subtotal={amountCents / 100}
+                // Pre-tax: a gratuity on top of sales tax is not what "20%"
+                // means to the person pressing it (the terminal's convention).
+                subtotal={(amountCents - taxCents) / 100}
                 tipAmount={tipCents / 100}
                 onTipChange={(dollars) =>
                   setTipCents(Math.round(dollars * 100))

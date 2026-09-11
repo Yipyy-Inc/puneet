@@ -3,7 +3,9 @@ import { z } from "zod";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { chargeCard } from "@/lib/clover/charge";
+import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
 
 // ============================================================================
 // Charging a card against a booking.
@@ -29,12 +31,14 @@ import { chargeCard } from "@/lib/clover/charge";
 // The tip IS taken from the request, because a tip is genuinely the payer's
 // decision. It is bounded in chargeCard.
 //
-// ── TAX IS NOT SPLIT OUT, BECAUSE NOTHING RECORDS IT ──────────────────────
+// ── TAX IS CHARGED, AND RECORDED APART ─────────────────────────────────────
 //
-// `bookings` has base_price, discount, extras_total and amount_due. There is no
-// tax column, so the whole balance is passed as subtotal and the ledger's tax
-// reads 0. That is truthful — inventing a split would put a number in a tax
-// column that nobody calculated.
+// This said "tax is not split out, because nothing records it". Something
+// does: `payments.tax` has held the terminal's tax since 2026-08-27, and the
+// balance (`amount_due - amount_paid`) is the pre-tax SUPPLY. So this route
+// charged a taxed facility's customers no tax at all. The facility's tax is
+// added now, from the same helper the pay page uses to show it
+// (lib/payments/booking-tax), and `chargeCard` records it in its own column.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -182,11 +186,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The facility's tax, read with the admin client: a customer paying by link
+  // cannot read `facility_settings` under RLS, and the booking itself was
+  // already established above through the caller's own client.
+  const taxCents = taxToAddCents(
+    await facilityTaxConfig(createAdminClient(), booking.facility_id),
+    owedCents,
+  );
+
   const outcome = await chargeCard({
     facilityId: booking.facility_id,
     bookingId: booking.id,
     clientId: booking.client_id,
     subtotalCents: owedCents,
+    taxCents,
     tipCents: parsed.data.tipCents,
     source,
     storedCard,
