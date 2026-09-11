@@ -2054,6 +2054,11 @@
       "trainingProfile": {
         "notFound": "No student with that id at this facility.",
         "loading": "Loading student…"
+      },
+      "trainingSession": {
+        "completed": "Session marked held — attendance saved for {count} dog(s)",
+        "notAllSaved": "The session was not fully saved",
+        "noBooking": "{pet} has no booking for this session."
       }
     }
   },

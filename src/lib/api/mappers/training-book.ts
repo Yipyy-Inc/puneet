@@ -161,6 +161,8 @@ export function buildTrainingBook(input: {
   attended: Map<string, Map<number, number>>;
   /** series id → pet ref → how its session bookings stand on payment. */
   paid?: Map<string, Map<number, SeriesPaymentStatus>>;
+  /** session id → pet ref → the booking that is that dog's place in it. */
+  bookingRefs?: Map<string, Map<number, number>>;
   timeZone: string;
   /** Today on the facility's clock — decides "upcoming" versus "active". */
   today?: string;
@@ -239,6 +241,10 @@ export function buildTrainingBook(input: {
       attendees: rosterBySeries.get(s.series_id) ?? [],
       notes: "",
       sessionNumber: s.session_number,
+      // Attendance is written against these when the session is completed.
+      bookingRefByPet: Object.fromEntries(
+        input.bookingRefs?.get(s.id) ?? new Map<number, number>(),
+      ),
     });
   }
 

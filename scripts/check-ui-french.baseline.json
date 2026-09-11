@@ -832,7 +832,7 @@
     "src/app/facility/dashboard/services/training/series/_components/series-list.tsx": 40,
     "src/app/facility/dashboard/services/training/session/[sessionId]/_components/request-records-button.tsx": 10,
     "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-attendance.tsx": 7,
-    "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-client.tsx": 17,
+    "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-client.tsx": 15,
     "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-complete-dialog.tsx": 8,
     "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-exercises.tsx": 45,
     "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-homework-prompt.tsx": 55,
