@@ -31,7 +31,10 @@ import {
   Check,
   Home,
 } from "lucide-react";
-import { daycareRates, DaycareRate } from "@/data/daycare";
+import type { DaycareRate } from "@/types/daycare";
+import { useDaycareRates } from "@/hooks/use-daycare-rates";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { toast } from "sonner";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { addOnsForService } from "@/lib/settings/addons";
@@ -55,7 +58,20 @@ const EMPTY_RATE = {
 
 export default function DaycareRatesPage() {
   const settingsPath = useSettingsHref();
-  const [rates, setRates] = useState<DaycareRate[]>(daycareRates);
+  // ── THE RATES ARE THE FACILITY'S ───────────────────────────────────────
+  //
+  // This copied `daycareRates` from `@/data/daycare` into state: every add,
+  // edit, toggle and delete was gone on reload, and the booking modal kept
+  // reading the fixture. They are the `daycare_rates` settings domain now;
+  // each change writes the whole list and the screen shows what was saved.
+  const { rates, pending: ratesPending, save: saveRates } = useDaycareRates();
+  const { t: tRates } = useStaffText("daycareRates");
+  const setRates = (next: DaycareRate[]) => {
+    if (ratesPending) return;
+    saveRates(next).catch((error: unknown) =>
+      toast.error(error instanceof Error ? error.message : tRates("notSaved")),
+    );
+  };
   const { areas, sections } = useDaycareAreas();
   const activeSections = sections.filter((s) => s.isActive);
 

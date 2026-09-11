@@ -727,6 +727,32 @@ export const CATEGORIES: SeedCategory[] = [
 
 export const DAYCARE_PRICE = 38;
 
+/** The Rates screen's list (the daycare_rates settings domain). */
+export const DAYCARE_RATES = [
+  {
+    id: "rate-full-day",
+    name: "Full day",
+    type: "full-day",
+    basePrice: 38,
+    description: "Up to 10 hours of supervised play, a nap and a snack.",
+    durationHours: 10,
+    isActive: true,
+    color: "#1668E3",
+    sizePricing: { small: 36, medium: 38, large: 40, giant: 44 },
+  },
+  {
+    id: "rate-half-day",
+    name: "Half day",
+    type: "half-day",
+    basePrice: 24,
+    description: "Up to 5 hours, morning or afternoon.",
+    durationHours: 5,
+    isActive: true,
+    color: "#4F9E85",
+    sizePricing: { small: 22, medium: 24, large: 26, giant: 28 },
+  },
+];
+
 // ── Grooming ──────────────────────────────────────────────────────────────
 
 export const GROOMING_SERVICES = [
