@@ -2042,6 +2042,12 @@
         "publishedToast": "“{name}” is published",
         "saveFailed": "The form was not saved",
         "couldNotOpen": "This form could not be opened."
+      },
+      "groomingAppointment": {
+        "booked": "Booking #{ref} — {pet}",
+        "partlyBooked": "Booking #{ref} was made, but not every pet was booked",
+        "notBooked": "The appointment was not booked",
+        "notSaved": "That change was not saved."
       }
     }
   },

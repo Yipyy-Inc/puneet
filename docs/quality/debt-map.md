@@ -12662,3 +12662,23 @@ forms read the live forms and submissions.
   the grooming settings' check-in forms and the public `/forms/[slug]` page
   still read the fixture (Phase 3 / public side); the builder's own labels are
   still English.
+
+## 2026-09-11 — the grooming calendar's New appointment books (Phase 3)
+
+The grooming module's own **New appointment** dialog validated, redeemed a
+pass, toasted "Appointment booked" and closed — no row was written, so a groom
+booked from the grooming calendar was on nobody's board. It offered
+`GROOMING_ADD_ONS` from `@/data/grooming-add-ons`, which the booking RPC
+refuses, and a chosen stylist reached the API as `stylistPreference`, which
+nothing resolved, so even a real booking landed in nobody's column.
+
+The dialog books through `POST /api/bookings` (one booking per pet, each
+through `create_booking`), putting a client or pet typed in fresh on file
+first. The add-ons come from `/api/grooming/add-ons`. The bookings route
+resolves `stylistPreference` on a grooming booking to the stylist profile's
+staff row and writes `assigned_staff_id` / `assigned_staff_name`.
+
+- **Still open:** multi-stage grooms and the additional groomers the dialog
+  collects are not stored — the booking carries the first groomer only; the
+  price and duration overrides reach the booking's totals but not a pricing
+  audit; the dialog's labels are still English (a ratchet entry).

@@ -219,6 +219,43 @@ export async function POST(request: NextRequest) {
     timeZone: facility.timeZone,
   });
 
+  // ── THE GROOMER ─────────────────────────────────────────────────────────
+  //
+  // A groom is booked WITH somebody, and the board, the calendar's stylist
+  // columns and a groomer's own queue all read that from
+  // `bookings.assigned_staff_id`. The modal sent the chosen stylist as
+  // `stylistPreference` and nothing resolved it, so every groom booked in the
+  // app landed in nobody's column. The stylist id is the profile's (its
+  // legacy id, or its uuid); the staff row behind it is what the column
+  // holds. Resolved inside this facility, through RLS — an id from somewhere
+  // else simply resolves to nobody.
+  if (input.service === "grooming" && input.stylistPreference) {
+    const stylistKey = input.stylistPreference;
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        stylistKey,
+      );
+    const { data: stylist } = await supabase
+      .from("grooming_stylist_profiles")
+      .select("staff_id, staff:staff_id(first_name, last_name)")
+      .eq("facility_id", facility.facilityId)
+      .eq(isUuid ? "id" : "legacy_id", stylistKey)
+      .maybeSingle();
+    if (stylist) {
+      const staff = stylist as unknown as {
+        staff_id: string;
+        staff: { first_name: string | null; last_name: string | null } | null;
+      };
+      row.assigned_staff_id = staff.staff_id;
+      if (!row.assigned_staff_name) {
+        row.assigned_staff_name =
+          [staff.staff?.first_name, staff.staff?.last_name]
+            .filter(Boolean)
+            .join(" ") || null;
+      }
+    }
+  }
+
   // THE BOOKING, ITS PETS AND — PER MODULE — ITS APPOINTMENT OR ITS KENNEL,
   // IN ONE TRANSACTION.
   //

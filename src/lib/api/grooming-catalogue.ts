@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 
 import type { GroomingPackage } from "@/types/grooming";
 
@@ -67,6 +68,18 @@ export const groomingCatalogueQueries = {
       ),
   }),
 };
+
+/**
+ * The facility's grooming add-ons — what a groom can be booked WITH. The
+ * booking RPC resolves these by id, so a screen offering any other list
+ * offers extras the booking will refuse.
+ */
+export function useGroomingAddOns() {
+  return useQuery({
+    queryKey: [...groomingCatalogueKeys.all, "add-ons"] as const,
+    queryFn: () => json<GroomingAddOnOption[]>("/api/grooming/add-ons"),
+  });
+}
 
 export function useGroomingServices(locationId?: string | null) {
   return useQuery(groomingCatalogueQueries.services(locationId));
