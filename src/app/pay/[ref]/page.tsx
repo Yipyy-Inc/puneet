@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { cloverConfig } from "@/lib/clover/config";
 import { chargeableConnection } from "@/lib/clover/connection";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
 import { tipConfigSchema, type TipConfig } from "@/types/facility";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 
@@ -130,6 +131,13 @@ export default async function PayBookingPage({
   // caller has proved they may see it — and because tip suggestions are shown
   // to this person anyway. Nothing else from the row is used.
   const tipConfig = await tipsFor(booking.facility_id);
+  // The tax the card route will ADD, shown before the card is asked for — the
+  // same helper, so what is shown here is what is charged
+  // (lib/payments/booking-tax). Admin client for the reason tips use one.
+  const taxCents = taxToAddCents(
+    await facilityTaxConfig(createAdminClient(), booking.facility_id),
+    owedCents,
+  );
 
   const connection = await chargeableConnection(booking.facility_id);
   if (!connection) {
@@ -178,7 +186,8 @@ export default async function PayBookingPage({
       service={booking.service}
       serviceType={booking.service_type}
       startAt={booking.start_at}
-      amountCents={owedCents}
+      amountCents={owedCents + taxCents}
+      taxCents={taxCents}
       currency={connection.currency}
       merchantId={connection.merchantId}
       publicApiKey={connection.publicApiKey}

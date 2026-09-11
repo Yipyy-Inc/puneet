@@ -29,11 +29,20 @@ export async function POST(request: NextRequest) {
     code?: string;
     bookingRef?: number | string;
     amount?: number;
+    /** The tax on `amount`, from the facility's own settings (20260911221947). */
+    tax?: number;
     note?: string;
   } | null;
   const code = body?.code?.trim() ?? "";
   const bookingRef = Number(body?.bookingRef);
   const amount = Number(body?.amount);
+  const tax = Number(body?.tax ?? 0);
+  if (!Number.isFinite(tax) || tax < 0) {
+    return NextResponse.json(
+      { error: "The tax on a gift card payment has to be a positive amount." },
+      { status: 422 },
+    );
+  }
   if (!code || !Number.isInteger(bookingRef) || !(amount > 0)) {
     return NextResponse.json(
       { error: "A gift card payment needs a code, a booking and an amount." },
@@ -49,6 +58,7 @@ export async function POST(request: NextRequest) {
       p_booking_ref: bookingRef,
       p_amount: Math.round(amount * 100) / 100,
       p_note: body?.note ?? null,
+      p_tax: Math.round(tax * 100) / 100,
     } as never,
   );
 
