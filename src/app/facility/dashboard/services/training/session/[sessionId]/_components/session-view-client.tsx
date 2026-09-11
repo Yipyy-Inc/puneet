@@ -28,6 +28,12 @@ import { SessionExercisesSection } from "./session-view-exercises";
 import { SessionCompleteConfirmDialog } from "./session-view-complete-dialog";
 import { SessionHomeworkPromptDialog } from "./session-view-homework-prompt";
 import { saveSession, type PresentStudentSummary } from "./session-view-save";
+import {
+  useMarkTrainingSession,
+  useTrainingCheckIn,
+  useTrainingVisitUpdate,
+} from "@/lib/api/training-attendance";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   AttendanceMark,
   SessionExerciseEntry,
@@ -40,6 +46,10 @@ type Section = "attendance" | "exercises";
 export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { mutateAsync: checkIn } = useTrainingCheckIn();
+  const { mutateAsync: updateVisit } = useTrainingVisitUpdate();
+  const { mutateAsync: markSession } = useMarkTrainingSession();
+  const { t: tSession, fill: fillSession } = useStaffText("trainingSession");
   // The facility's own clients and their pets. This read `@/data/clients`
   // — another facility's — and matched it to real enrolments by numeric ref.
   const { clients } = useFacilityClientList();
@@ -306,14 +316,61 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
       petImageById: new Map(pets.map((p) => [p.id, p.imageUrl])),
     });
     setSavedStudents(summaries);
-
     setCompleteConfirmOpen(false);
-    toast.success(
-      `Session marked complete. ${summaries.length} draft report card${
-        summaries.length === 1 ? "" : "s"
-      } created.`,
-    );
+    void persistSession();
     setHomeworkPromptOpen(true);
+  }
+
+  // ── WHAT HAPPENED IN THE SESSION IS WRITTEN ─────────────────────────────
+  //
+  // Completing a session patched the query cache — attendance, the session's
+  // status, draft report cards — and toasted "Session marked complete. N
+  // draft report cards created." None of it survived a reload. Each dog
+  // marked present or late is now checked in and out against its booking for
+  // this session (training_attendance, with the session notes), and the
+  // session itself is marked held. Drop-ins have no series booking and are
+  // left as they were; report cards, exercise ratings and homework are still
+  // local (see the debt map).
+  async function persistSession() {
+    if (!session) return;
+    const refs = (session.bookingRefByPet ?? {}) as Record<string, number>;
+    const present = rows.filter(
+      (r) =>
+        !r.enrollmentId.startsWith("drop-") &&
+        ["present", "late"].includes(attendance[r.enrollmentId]?.status ?? ""),
+    );
+    const results = await Promise.allSettled(
+      present.map(async (r) => {
+        const bookingRef = refs[String(r.petId)];
+        if (!bookingRef)
+          throw new Error(fillSession("noBooking", { pet: r.petName }));
+        const notes =
+          [sessionNotes.trim(), (studentNotes[r.enrollmentId] ?? "").trim()]
+            .filter(Boolean)
+            .join("\n\n") || undefined;
+        await checkIn({ bookingRef });
+        await updateVisit({ bookingRef, checkOut: true, notes });
+      }),
+    );
+    let held = true;
+    try {
+      await markSession({ sessionId: session.id, status: "completed" });
+    } catch {
+      held = false;
+    }
+    const refused = results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    if (!held || refused.length > 0) {
+      toast.error(tSession("notAllSaved"), {
+        description:
+          refused[0]?.reason instanceof Error
+            ? refused[0].reason.message
+            : undefined,
+      });
+      return;
+    }
+    toast.success(fillSession("completed", { count: present.length }));
   }
 
   function handleHomeworkDone() {

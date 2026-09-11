@@ -12853,3 +12853,26 @@ trainers, and the profile route no longer consults a fixture.
 - **Still open:** the briefing's pet-note flags are empty until it reads the
   notes table for its roster; homework, trainer notes, attendance history and
   report cards on these screens are still fixtures keyed to fixture ids.
+
+## 2026-09-11 — completing a training session writes what happened
+
+The session view's **Complete session** patched the query cache —
+attendance, the session's status, draft report cards — and toasted "Session
+marked complete. N draft report cards created." Nothing survived a reload, and
+`training_series_sessions` could not have recorded it anyway: it was
+insert-and-select only, so every session stayed "scheduled" forever. (The
+table had also kept Supabase's default table-wide UPDATE grant for
+authenticated and anon, harmless only for want of a policy.)
+
+Migration 20260911143447 lets the status — and only the status — move, for
+`check_in_out` or `training_manage_programs`, and takes the table-wide UPDATE
+grant away (supabase/tests/training-session-status.sql). The training book
+now carries, per session, which booking is each dog's place in it; completing
+checks each present or late dog in and out against that booking
+(training_attendance, with the session notes) and marks the session held
+through `PATCH /api/training/sessions/[id]`.
+
+- **Still open:** exercise ratings, homework, photos and the training report
+  cards the completion drafts are still local — the report cards could go to
+  the shared `report_cards` table, which already accepts `training`; drop-ins
+  have no series booking to attend against.

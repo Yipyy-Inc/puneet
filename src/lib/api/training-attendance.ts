@@ -120,3 +120,32 @@ export function useTrainingRevert() {
     onSuccess: invalidate,
   });
 }
+
+/**
+ * The session was held (or is put back). Only the status moves — the
+ * schedule is fixed when the series is created (20260911143447).
+ */
+export function useMarkTrainingSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      sessionId: string;
+      status: "scheduled" | "completed" | "cancelled";
+    }) => {
+      const response = await fetch(
+        `/api/training/sessions/${encodeURIComponent(input.sessionId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: input.status }),
+        },
+      );
+      if (!response.ok) {
+        throw await readError(response, "Could not mark that session.");
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["training"] });
+    },
+  });
+}

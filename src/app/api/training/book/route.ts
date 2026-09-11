@@ -88,7 +88,7 @@ export async function GET() {
       supabase
         .from("bookings")
         .select(
-          `training_series_session_id, payment_status,
+          `ref, training_series_session_id, payment_status,
            booking_pets(pets(ref)),
            training_attendance(checked_in_at)`,
         )
@@ -115,7 +115,11 @@ export async function GET() {
     string,
     Map<number, { paid: number; all: number }>
   >();
+  // Which booking is which dog's place in which session — what attendance is
+  // written against when the session is completed.
+  const bookingRefs = new Map<string, Map<number, number>>();
   for (const row of (bookingsResult.data ?? []) as unknown as {
+    ref: number;
     training_series_session_id: string | null;
     payment_status: string | null;
     booking_pets: { pets: { ref: number } | null }[] | null;
@@ -128,6 +132,13 @@ export async function GET() {
       ? seriesOfSession.get(row.training_series_session_id)
       : undefined;
     if (!seriesId) continue;
+    const refs =
+      bookingRefs.get(row.training_series_session_id!) ??
+      new Map<number, number>();
+    for (const bp of row.booking_pets ?? []) {
+      if (bp.pets) refs.set(bp.pets.ref, row.ref);
+    }
+    bookingRefs.set(row.training_series_session_id!, refs);
     const tally = paidCount.get(seriesId) ?? new Map();
     for (const bp of row.booking_pets ?? []) {
       if (!bp.pets) continue;
@@ -173,6 +184,7 @@ export async function GET() {
       enrollments,
       attended,
       paid,
+      bookingRefs,
       timeZone,
       today,
     }),

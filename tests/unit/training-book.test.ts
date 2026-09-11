@@ -178,4 +178,16 @@ describe("the training book", () => {
     expect(e.currentSessionNumber).toBe(2);
     expect(e.paymentStatus).toBe("deposit");
   });
+
+  test("a session knows which booking is each dog's place in it", () => {
+    const book = buildTrainingBook({
+      series: [series({})],
+      sessions: [session({})],
+      enrollments: [enrollment({})],
+      attended: new Map(),
+      bookingRefs: new Map([["x1", new Map([[7, 5012]])]]),
+      timeZone: "America/Toronto",
+    });
+    expect(book.sessions[0].bookingRefByPet).toEqual({ 7: 5012 });
+  });
 });
