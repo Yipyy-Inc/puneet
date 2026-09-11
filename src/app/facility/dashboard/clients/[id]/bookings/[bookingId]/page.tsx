@@ -661,6 +661,7 @@ export default function ClientBookingDetailPage({
         membershipPlanRows ?? [],
         String(booking.service ?? ""),
         booking.totalCost ?? 0,
+        booking.startDate,
       )
     : null;
   const membershipLabel = membershipOffer
