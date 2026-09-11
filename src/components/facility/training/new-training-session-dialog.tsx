@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,12 +22,16 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { User2, Users } from "lucide-react";
 import type { ClassType } from "@/types/training";
 import { trainingQueries } from "@/lib/api/training";
-import { clients } from "@/data/clients";
+import { clientQueries } from "@/lib/api/client";
+import { useTrainingTrainers } from "@/lib/api/training-trainers";
+import {
+  useCreateTrainingSeries,
+  useEnrollInTrainingSeries,
+} from "@/lib/api/training-series";
 
 interface Props {
   open: boolean;
@@ -55,7 +59,12 @@ export function NewTrainingSessionDialog({
   );
   const [time, setTime] = useState<string>(defaultTime ?? "10:00");
   const [petKey, setPetKey] = useState<string>(""); // "<clientId>:<petId>"
-  const [notes, setNotes] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: trainerData } = useTrainingTrainers();
+  const { data: clientData } = useQuery(clientQueries.all());
+  const createSeries = useCreateTrainingSeries();
+  const enroll = useEnrollInTrainingSeries();
 
   // Re-sync date/time/mode on each open so slot clicks always reflect the
   // latest pre-filled values. The right-click "New private session" path
@@ -84,7 +93,9 @@ export function NewTrainingSessionDialog({
     [availableClasses, classId],
   );
 
-  // Flatten clients → pets so the private session can pick a single dog.
+  // Flatten the facility's clients → their dogs, so a private session can
+  // pick one. This listed `@/data/clients` — dogs of a facility that is not
+  // this one.
   const petOptions = useMemo(() => {
     const out: {
       key: string;
@@ -92,9 +103,9 @@ export function NewTrainingSessionDialog({
       ownerName: string;
       breed?: string;
     }[] = [];
-    for (const c of clients) {
-      for (const p of c.pets) {
-        if (p.type !== "Dog") continue;
+    for (const c of clientData ?? []) {
+      for (const p of c.pets ?? []) {
+        if (p.type?.toLowerCase() !== "dog") continue;
         out.push({
           key: `${c.id}:${p.id}`,
           petName: p.name,
@@ -104,9 +115,18 @@ export function NewTrainingSessionDialog({
       }
     }
     return out.sort((a, b) => a.petName.localeCompare(b.petName));
-  }, []);
+  }, [clientData]);
 
-  function handleSubmit() {
+  // ── A SESSION IS A ONE-DATE SERIES ──────────────────────────────────────
+  //
+  // This toasted "scheduled" and wrote nothing ("Mock create — no backend
+  // yet"). A class's dates are fixed when its series is created, so an extra
+  // session of it is a series of its own: one date, the class's trainer,
+  // length and per-session price, through the same create_training_series
+  // RPC the Series tab uses. A private session then enrols its dog, which
+  // books the dog in through create_booking.
+  async function handleSubmit() {
+    if (saving) return;
     if (!classId) {
       toast.error(
         mode === "group"
@@ -121,12 +141,52 @@ export function NewTrainingSessionDialog({
     }
     if (!selectedClass) return;
 
-    // Mock create — no backend yet, so just toast and close.
+    const trainer = (trainerData ?? []).find(
+      (t) => t.id === selectedClass.trainerId,
+    );
+    const perSession =
+      selectedClass.totalSessions > 0
+        ? Math.round(
+            (selectedClass.price / selectedClass.totalSessions) * 100,
+          ) / 100
+        : selectedClass.price;
+    const pet = petOptions.find((p) => p.key === petKey);
+    setSaving(true);
+    try {
+      const created = await createSeries.mutateAsync({
+        name: selectedClass.name,
+        courseTypeName: selectedClass.description,
+        dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+        startTime: time,
+        durationMinutes: selectedClass.duration,
+        startDate: date,
+        numberOfSessions: 1,
+        capacity: mode === "private" ? 1 : selectedClass.capacity,
+        totalPrice: perSession,
+        staffId: trainer?.staffId ?? null,
+      });
+      if (mode === "private" && pet) {
+        const [clientRef, petRef] = pet.key.split(":").map(Number);
+        await enroll.mutateAsync({
+          seriesId: created.id,
+          clientId: clientRef,
+          petId: petRef,
+        });
+      }
+    } catch (error) {
+      toast.error("The session was not scheduled", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    void queryClient.invalidateQueries({ queryKey: ["training"] });
     toast.success(
       mode === "group"
         ? `Group session for "${selectedClass.name}" scheduled on ${date} at ${time}.`
         : `Private session with ${
-            petOptions.find((p) => p.key === petKey)?.petName ?? "the dog"
+            pet?.petName ?? "the dog"
           } scheduled on ${date} at ${time}.`,
     );
     reset();
@@ -136,7 +196,6 @@ export function NewTrainingSessionDialog({
   function reset() {
     setClassId("");
     setPetKey("");
-    setNotes("");
   }
 
   return (
@@ -263,30 +322,13 @@ export function NewTrainingSessionDialog({
               {mode === "group" && <> · capacity {selectedClass.capacity}</>}
             </div>
           )}
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Notes (optional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={
-                mode === "private"
-                  ? "Goals or focus areas for this session…"
-                  : "Anything the trainer should know…"
-              }
-              rows={3}
-            />
-          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-          >
+          <Button onClick={() => void handleSubmit()} disabled={saving}>
             Schedule session
           </Button>
         </DialogFooter>
