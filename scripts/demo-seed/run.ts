@@ -28,6 +28,7 @@
 import { SQL } from "bun";
 import { bookingToRow } from "../../src/lib/api/mappers/booking";
 import { clientToRow, petToRow } from "../../src/lib/api/mappers/client";
+import { courseOf } from "../../src/lib/api/mappers/training-book";
 import {
   DEMO_FACILITY_ID,
   DEMO_FACILITY_SLUG,
@@ -56,6 +57,8 @@ import {
   MEMBERS,
   MEMBERSHIP_PLANS,
   NOTES,
+  PACKAGE_SALES,
+  PACKAGES,
   PETS,
   PROMO_CODES,
   RETAIL_PRODUCTS,
@@ -1166,6 +1169,139 @@ try {
              ${shiftDay(today, po.expectedInDays)}, ${po.notes})`;
         count("purchase orders");
       }
+    }
+
+    // ── Prepaid packages, who bought them, and the passes used ───────────
+    //
+    // The catalogue goes in as the Packages editor writes it (a bundle, then
+    // its lines filed under the module). A sale is what purchase_package and
+    // redeem_package_pass write — the customer package, its lines copied from
+    // the bundle, -1 entries — and the payment what record_payment writes, all
+    // inserted with their own dates for the same reason the visits' payments
+    // are: the functions stamp now(), which would sell every package today.
+    const packageIds = new Map<string, string>();
+    for (const p of PACKAGES) {
+      const [exists] = await tx`
+        select id from public.prepaid_packages
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${p.key}`;
+      if (exists) {
+        packageIds.set(p.key, exists.id);
+        continue;
+      }
+      const lines = [];
+      for (const line of p.lines) {
+        let serviceId: string | null = null;
+        if (p.module === "grooming") {
+          // A grooming line names the service by its LEGACY id — the id the
+          // grooming catalogue hands the editor, and the one the database's
+          // grooming_line_names_a_grooming_service trigger checks.
+          const [s] = await tx`
+            select legacy_id from public.grooming_services
+             where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${line.ref}`;
+          serviceId = s?.legacy_id ?? null;
+        } else if (p.module === "boarding") {
+          // Likewise the category's app id (mappers/boarding: legacy ?? uuid).
+          const [c] = await tx`
+            select coalesce(legacy_id, id::text) as app_id
+              from public.room_categories
+             where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${line.ref}`;
+          serviceId = c?.app_id ?? null;
+        } else if (p.module === "daycare") {
+          serviceId = line.ref;
+        } else {
+          serviceId = courseOf({
+            course_type_name: line.ref,
+            name: line.ref,
+          }).id;
+        }
+        if (!serviceId) {
+          throw new Error(
+            `Package ${p.name}: no ${p.module} service ${line.ref}.`,
+          );
+        }
+        lines.push({ ...line, serviceId });
+      }
+      const [created] = await tx`
+        insert into public.prepaid_packages
+          (facility_id, legacy_id, name, description, package_price,
+           validity_days, status, is_popular)
+        values
+          (${DEMO_FACILITY_ID}, ${p.key}, ${p.name}, ${p.description},
+           ${p.price}, ${p.validityDays}, 'active', ${p.isPopular})
+        returning id`;
+      for (const line of lines) {
+        await tx`
+          insert into public.prepaid_package_lines
+            (package_id, service_id, service_name, quantity, price_per_session, module)
+          values
+            (${created.id}, ${line.serviceId}, ${line.name}, ${line.quantity},
+             ${line.unitPrice}, ${p.module})`;
+      }
+      packageIds.set(p.key, created.id);
+      count("packages");
+    }
+    for (const sale of PACKAGE_SALES) {
+      const p = PACKAGES.find((x) => x.key === sale.pkg)!;
+      const clientKey = CLIENTS[sale.client].key;
+      const clientRowId = clientIds.get(clientKey)!;
+      const legacyId = `${SEED_PREFIX}-cpkg-${clientKey.slice(-2)}-${p.key.slice(`${SEED_PREFIX}-pkg-`.length)}`;
+      const [exists] = await tx`
+        select 1 from public.customer_packages
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${legacyId}`;
+      if (exists) continue;
+      const boughtAt = daysAgoIso(sale.daysAgo, 14);
+      const expiresAt = new Date(
+        Date.parse(boughtAt) + p.validityDays * 86_400_000,
+      ).toISOString();
+      const [cp] = await tx`
+        insert into public.customer_packages
+          (facility_id, legacy_id, client_id, package_id, package_name,
+           price_paid, purchased_at, expires_at)
+        values
+          (${DEMO_FACILITY_ID}, ${legacyId}, ${clientRowId},
+           ${packageIds.get(p.key)!}, ${p.name}, ${p.price}, ${boughtAt},
+           ${expiresAt})
+        returning id`;
+      const pool = await tx`
+        insert into public.customer_package_lines
+          (customer_package_id, service_id, service_name, passes_total, module)
+        select ${cp.id}, l.service_id, l.service_name, l.quantity, l.module
+          from public.prepaid_package_lines l
+         where l.package_id = ${packageIds.get(p.key)!}
+        returning service_id, service_name`;
+      const tax = money(p.price * TAX_RATE);
+      const total = money(p.price + tax);
+      await tx`
+        insert into public.payments
+          (facility_id, booking_id, client_id, method, subtotal, tax, tip,
+           store_credit_applied, package_pass_applied, loyalty_discount_applied,
+           amount_charged, grand_total, cash_received, receipt_channels,
+           author_name, note, created_at)
+        values
+          (${DEMO_FACILITY_ID}, null, ${clientRowId}, ${sale.tender},
+           ${p.price}, ${tax}, 0, 0, 0, 0, ${total}, ${total},
+           ${sale.tender === "cash" ? Math.ceil(total) : null}, '{}',
+           ${SEED_AUTHOR}, ${`Package sale — ${p.name}`}, ${boughtAt})`;
+      // The passes used, spread between the sale and the day it ran out (or
+      // yesterday), on the client's first pet.
+      const pet = PETS.find((x) => x.ownerKey === clientKey)!;
+      const lastDay = Math.max(1, sale.daysAgo - p.validityDays);
+      const gap = Math.max(
+        1,
+        Math.floor((sale.daysAgo - lastDay) / (sale.used + 1)),
+      );
+      for (let i = 0; i < sale.used; i++) {
+        await tx`
+          insert into public.package_pass_entries
+            (facility_id, customer_package_id, service_id, passes, reason,
+             pet_id, pet_name, service_label, author_name, created_at)
+          values
+            (${DEMO_FACILITY_ID}, ${cp.id}, ${pool[0].service_id}, -1,
+             'redeemed', ${petIds.get(pet.key)!}, ${pet.pet.name!},
+             ${pool[0].service_name}, ${SEED_AUTHOR},
+             ${daysAgoIso(sale.daysAgo - gap * (i + 1), 10)})`;
+      }
+      count("packages sold");
     }
 
     if (ROLLBACK) {

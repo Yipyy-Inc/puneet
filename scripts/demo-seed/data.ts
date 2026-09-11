@@ -1791,3 +1791,189 @@ export const GROOMING_SERVICE_CHARGES = [
     isActive: true,
   },
 ];
+
+// ── Prepaid packages (each module's Packages tab) ─────────────────────────
+//
+// A line's `ref` is what the Packages editor offers for its module, and it is
+// resolved to the `service_id` that editor would store: a grooming service's
+// legacy id or a room category's (both stored as they are — each is that
+// row's app id), the daycare full day, or a training course's name (run
+// through the training mapper's own `courseOf`).
+export type SeedPackage = {
+  key: string;
+  module: "grooming" | "boarding" | "daycare" | "training";
+  name: string;
+  description: string;
+  price: number;
+  validityDays: number;
+  isPopular: boolean;
+  lines: { ref: string; name: string; quantity: number; unitPrice: number }[];
+};
+
+export const PACKAGES: SeedPackage[] = [
+  {
+    key: `${SEED_PREFIX}-pkg-bath5`,
+    module: "grooming",
+    name: "Bath & brush 5-pack",
+    description: "Five baths with a full brush-out — the fifth is on us.",
+    price: 220,
+    validityDays: 180,
+    isPopular: true,
+    lines: [
+      {
+        ref: `${SEED_PREFIX}-groom-bath`,
+        name: "Bath and brush",
+        quantity: 5,
+        unitPrice: 55,
+      },
+    ],
+  },
+  {
+    key: `${SEED_PREFIX}-pkg-groom3`,
+    module: "grooming",
+    name: "Full groom trio",
+    description: "Three full grooms, a season's worth, at 10% off.",
+    price: 229,
+    validityDays: 150,
+    isPopular: false,
+    lines: [
+      {
+        ref: `${SEED_PREFIX}-groom-full`,
+        name: "Full groom",
+        quantity: 3,
+        unitPrice: 85,
+      },
+    ],
+  },
+  {
+    key: `${SEED_PREFIX}-pkg-daycare10`,
+    module: "daycare",
+    name: "Daycare 10-day pack",
+    description: "Ten full days, any weekday, within six months.",
+    price: 342,
+    validityDays: 180,
+    isPopular: true,
+    lines: [
+      {
+        ref: "daycare-full-day",
+        name: "Full day",
+        quantity: 10,
+        unitPrice: DAYCARE_PRICE,
+      },
+    ],
+  },
+  {
+    key: `${SEED_PREFIX}-pkg-daycare20`,
+    module: "daycare",
+    name: "Daycare 20-day pack",
+    description: "Twenty full days at 15% off, for the regulars.",
+    price: 646,
+    validityDays: 365,
+    isPopular: false,
+    lines: [
+      {
+        ref: "daycare-full-day",
+        name: "Full day",
+        quantity: 20,
+        unitPrice: DAYCARE_PRICE,
+      },
+    ],
+  },
+  {
+    key: `${SEED_PREFIX}-pkg-weekend`,
+    module: "boarding",
+    name: "Weekend getaway",
+    description: "Two nights in a Standard suite, Friday to Sunday.",
+    price: 99,
+    validityDays: 120,
+    isPopular: false,
+    lines: [
+      {
+        ref: "cat-standard-suite",
+        name: "Standard suite",
+        quantity: 2,
+        unitPrice: 55,
+      },
+    ],
+  },
+  {
+    key: `${SEED_PREFIX}-pkg-coaching4`,
+    module: "training",
+    name: "Private coaching 4-pack",
+    description: "Four one-on-one sessions for a reactive or anxious dog.",
+    price: 270,
+    validityDays: 120,
+    isPopular: false,
+    lines: [
+      {
+        ref: "Reactive Rover Recovery",
+        name: "Reactive Rover Recovery",
+        quantity: 4,
+        unitPrice: 75,
+      },
+    ],
+  },
+];
+
+/**
+ * Who bought one, when, and how many passes they have used since — on the
+ * client's first pet. The last one ran out before anyone used it all, so an
+ * expired package shows too.
+ */
+export const PACKAGE_SALES: {
+  client: number;
+  pkg: string;
+  daysAgo: number;
+  used: number;
+  tender: "cash" | "e-transfer";
+}[] = [
+  {
+    client: 0,
+    pkg: `${SEED_PREFIX}-pkg-daycare10`,
+    daysAgo: 40,
+    used: 6,
+    tender: "e-transfer",
+  },
+  {
+    client: 4,
+    pkg: `${SEED_PREFIX}-pkg-daycare20`,
+    daysAgo: 75,
+    used: 11,
+    tender: "e-transfer",
+  },
+  {
+    client: 2,
+    pkg: `${SEED_PREFIX}-pkg-bath5`,
+    daysAgo: 58,
+    used: 2,
+    tender: "cash",
+  },
+  {
+    client: 12,
+    pkg: `${SEED_PREFIX}-pkg-groom3`,
+    daysAgo: 30,
+    used: 1,
+    tender: "e-transfer",
+  },
+  {
+    client: 7,
+    pkg: `${SEED_PREFIX}-pkg-coaching4`,
+    daysAgo: 20,
+    used: 1,
+    tender: "e-transfer",
+  },
+  {
+    client: 16,
+    pkg: `${SEED_PREFIX}-pkg-weekend`,
+    daysAgo: 12,
+    used: 0,
+    tender: "cash",
+  },
+  {
+    client: 20,
+    pkg: `${SEED_PREFIX}-pkg-bath5`,
+    daysAgo: 200,
+    used: 3,
+    tender: "cash",
+  },
+];
