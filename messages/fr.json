@@ -2059,6 +2059,18 @@
         "completed": "Séance marquée comme donnée — présence enregistrée pour {count} chien(s)",
         "notAllSaved": "La séance n’a pas été entièrement enregistrée",
         "noBooking": "{pet} n’a pas de réservation pour cette séance."
+      },
+      "modulePackages": {
+        "title_boarding": "Forfaits d’hébergement prépayés",
+        "title_daycare": "Forfaits de garderie prépayés",
+        "title_training": "Forfaits de dressage prépayés",
+        "intro_boarding": "Regroupez des nuits à prix réduit, valables pendant une période fixe.",
+        "intro_daycare": "Vendez des journées de garderie en lot — une carte que le client utilise une journée à la fois.",
+        "intro_training": "Regroupez des séances de dressage à prix réduit, valables pendant une période fixe.",
+        "dialogIntro": "Regroupez un ou plusieurs services à prix réduit. Les clients paient d’avance et les utilisent pendant la période de validité.",
+        "pick": "Choisissez un service…",
+        "empty": "Ajoutez au moins un service à ce forfait.",
+        "fullDay": "Journée complète"
       }
     }
   },

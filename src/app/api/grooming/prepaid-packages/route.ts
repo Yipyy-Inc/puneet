@@ -39,13 +39,19 @@ import {
 // money that silently disappears. Stated so the next person can decide it needs
 // one rather than discover the gap.
 //
-// ── THIS IS THE GROOMING VIEW OF A SHARED TABLE ────────────────────────────
+// ── ONE MODULE'S VIEW OF A SHARED TABLE ────────────────────────────────────
 //
-// `prepaid_packages` now holds the portal's daycare, boarding and training
-// packages too (20260806440000). This route is the GROOMING screen's, so it
-// returns only packages whose pools are all grooming — otherwise the grooming
-// manager opens Packages and finds a Daycare 20-Pack they cannot price, in a
-// screen whose editor only offers grooming services.
+// `prepaid_packages` holds daycare, boarding and training packages as well
+// as grooming (20260806440000). Each module's Packages screen asks for its
+// own with `?module=` (grooming when absent — this was the grooming screen's
+// route first) and gets only packages whose pools are ALL that module:
+// otherwise the grooming manager opens Packages and finds a Daycare 20-Pack
+// they cannot price, in an editor that offers only grooming services. A
+// write names its module the same way, and every line is filed under it.
+//
+// The boarding, daycare and training Packages screens read
+// `@/data/services-pricing` and `@/data/daycare`; their Save closed the
+// dialog and their Delete did nothing.
 //
 // Filtered AFTER the read rather than in the query, because "every line is
 // grooming" is a condition on the whole set of lines and PostgREST's embedded
@@ -56,6 +62,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** The modules a package line can be spent against (`service_module`). */
+const MODULES = new Set(["grooming", "boarding", "daycare", "training"]);
+
+function moduleOf(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return "grooming";
+  return typeof value === "string" && MODULES.has(value) ? value : null;
+}
+
 interface LineInput {
   serviceId?: string;
   serviceName?: string;
@@ -64,6 +78,7 @@ interface LineInput {
 }
 
 interface PackageInput {
+  module?: string;
   name?: string;
   description?: string;
   packagePrice?: number;
@@ -148,10 +163,16 @@ function toRow(input: PackageInput, facilityId: string) {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+  const serviceModule = moduleOf(
+    new URL(request.url).searchParams.get("module"),
+  );
+  if (!serviceModule) {
+    return NextResponse.json({ error: "No such module." }, { status: 422 });
   }
 
   const supabase = await createServerClient();
@@ -170,13 +191,13 @@ export async function GET() {
   const rows = (data ?? []) as unknown as (PrepaidPackageRow & {
     id: string;
   })[];
-  const groomingOnly = rows.filter((row) => {
+  const ofModule = rows.filter((row) => {
     const lines = row.prepaid_package_lines ?? [];
-    return lines.length > 0 && lines.every((l) => l.module === "grooming");
+    return lines.length > 0 && lines.every((l) => l.module === serviceModule);
   });
 
   return NextResponse.json(
-    groomingOnly.map((row) => rowToPrepaidPackage(row, pricing.get(row.id))),
+    ofModule.map((row) => rowToPrepaidPackage(row, pricing.get(row.id))),
   );
 }
 
@@ -189,6 +210,10 @@ export async function POST(request: NextRequest) {
   const input = (await request.json().catch(() => null)) as PackageInput | null;
   const problem = input ? validate(input) : "Nothing to save.";
   if (problem) return NextResponse.json({ error: problem }, { status: 422 });
+  const serviceModule = moduleOf(input!.module);
+  if (!serviceModule) {
+    return NextResponse.json({ error: "No such module." }, { status: 422 });
+  }
 
   const context = await getFacilityContext();
   if (!context) {
@@ -222,10 +247,9 @@ export async function POST(request: NextRequest) {
         service_name: l.serviceName,
         quantity: l.quantity,
         price_per_session: l.pricePerSession ?? 0,
-        // This screen prices grooming and nothing else; its editor offers only
-        // grooming services. The column has no default (20260806420000)
-        // precisely so a caller that does not know must say so here.
-        module: "grooming",
+        // The column has no default (20260806420000) precisely so a caller
+        // that does not know must say so — the screen names its module.
+        module: serviceModule,
       })) as never,
     );
 

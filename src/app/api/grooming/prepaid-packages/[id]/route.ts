@@ -59,6 +59,7 @@ export async function PATCH(
     validityDays?: number;
     status?: string;
     isPopular?: boolean;
+    module?: string;
     services?: {
       serviceId?: string;
       serviceName?: string;
@@ -117,6 +118,25 @@ export async function PATCH(
     if (denied) return denied;
   }
 
+  // The module the new lines are filed under: the one the screen names, or —
+  // for a caller that does not — the one the bundle is already filed under.
+  let lineModule = input.module;
+  if (input.services && !lineModule) {
+    const { data: existing } = await supabase
+      .from("prepaid_package_lines")
+      .select("module")
+      .eq("package_id", packageId)
+      .limit(1);
+    lineModule =
+      (existing?.[0] as { module?: string } | undefined)?.module ?? "grooming";
+  }
+  if (
+    lineModule &&
+    !["grooming", "boarding", "daycare", "training"].includes(lineModule)
+  ) {
+    return NextResponse.json({ error: "No such module." }, { status: 422 });
+  }
+
   // The bundle is replaced whole — see the collection route's header for why
   // that is delete-then-insert and what it costs.
   if (input.services) {
@@ -141,10 +161,9 @@ export async function PATCH(
           service_name: l.serviceName,
           quantity: l.quantity,
           price_per_session: l.pricePerSession ?? 0,
-          // This screen prices grooming and nothing else; its editor offers
-          // only grooming services. The column has no default (20260806420000)
-          // precisely so a caller that does not know must say so here.
-          module: "grooming",
+          // The screen names its module (see the collection route); the
+          // column has no default (20260806420000) so nothing guesses.
+          module: lineModule,
         })) as never,
       );
     if (lineError) {

@@ -2059,6 +2059,18 @@
         "completed": "Session marked held — attendance saved for {count} dog(s)",
         "notAllSaved": "The session was not fully saved",
         "noBooking": "{pet} has no booking for this session."
+      },
+      "modulePackages": {
+        "title_boarding": "Prepaid boarding packages",
+        "title_daycare": "Prepaid daycare packages",
+        "title_training": "Prepaid training packages",
+        "intro_boarding": "Bundle nights at a discount, valid for a fixed window.",
+        "intro_daycare": "Sell daycare days in bulk — a pass the client spends one day at a time.",
+        "intro_training": "Bundle training sessions at a discount, valid for a fixed window.",
+        "dialogIntro": "Bundle one or more services at a discount. Clients prepay and use them over the validity window.",
+        "pick": "Select a service…",
+        "empty": "Add at least one service to this package.",
+        "fullDay": "Full day"
       }
     }
   },
