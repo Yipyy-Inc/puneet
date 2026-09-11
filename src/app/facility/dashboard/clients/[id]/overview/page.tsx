@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useClientVaccinations } from "@/lib/api/vaccinations";
+import { NotesList } from "@/components/shared/NotesList";
 import { expiryState, localToday } from "@/lib/vaccinations";
 import { clientCommunications } from "@/data/communications";
 import {
@@ -27,7 +28,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BulkPaymentModal } from "@/components/bookings/BulkPaymentModal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Mail,
   Phone,
@@ -43,7 +43,6 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
-  Plus,
   MessageSquare,
   StickyNote,
   Package,
@@ -73,7 +72,6 @@ export default function ClientOverviewPage({
   );
   // Table 21 masking. TODO: also strip server-side when a backend exists.
   const { maskContact, maskAmount, canSee } = useFieldMask();
-  const [noteText, setNoteText] = useState("");
   const [now] = useState(() => Date.now());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
   const settleBookings = useSettleBookings();
@@ -421,53 +419,10 @@ export default function ClientOverviewPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Add a client note..."
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && noteText.trim()) {
-                      toast.success("Note added");
-                      setNoteText("");
-                    }
-                  }}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    if (noteText.trim()) {
-                      toast.success("Note added");
-                      setNoteText("");
-                    }
-                  }}
-                  disabled={!noteText.trim()}
-                >
-                  <Plus className="mr-1 size-3.5" />
-                  Add
-                </Button>
-              </div>
-              <div className="mt-3 space-y-2">
-                <div className="bg-muted/20 rounded-lg border px-3 py-2.5">
-                  <p className="text-sm">
-                    Prefers morning drop-offs. Buddy gets anxious with loud
-                    noises — keep away from barking areas.
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Jessica M. · 2 days ago
-                  </p>
-                </div>
-                <div className="bg-muted/20 rounded-lg border px-3 py-2.5">
-                  <p className="text-sm">
-                    Client mentioned interest in swim sessions for Buddy. Follow
-                    up after next boarding stay.
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Amy C. · 1 week ago
-                  </p>
-                </div>
-              </div>
+              {/* The client's own notes, from Postgres. This was an input
+                  whose Add only toasted "Note added", above two hardcoded
+                  notes about a dog called Buddy on every client. */}
+              <NotesList category="customer" entityId={clientId} compact />
             </CardContent>
           </Card>
 

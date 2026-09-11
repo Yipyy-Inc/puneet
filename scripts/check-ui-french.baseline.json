@@ -699,7 +699,7 @@
     "src/app/facility/dashboard/clients/[id]/layout.tsx": 1,
     "src/app/facility/dashboard/clients/[id]/loyalty/page.tsx": 16,
     "src/app/facility/dashboard/clients/[id]/messages/page.tsx": 14,
-    "src/app/facility/dashboard/clients/[id]/overview/page.tsx": 61,
+    "src/app/facility/dashboard/clients/[id]/overview/page.tsx": 53,
     "src/app/facility/dashboard/clients/[id]/page.tsx": 133,
     "src/app/facility/dashboard/clients/[id]/pets/[petId]/page.tsx": 90,
     "src/app/facility/dashboard/clients/[id]/pets/page.tsx": 2,
