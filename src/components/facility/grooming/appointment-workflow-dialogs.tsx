@@ -573,8 +573,14 @@ export function RescheduleDialog({
   );
 }
 
-/** Toast-only helper kept here for reuse by other callsites that want the
- *  same confirmation pattern without rolling their own. */
+/**
+ * The owner should hear about a cancellation, a reschedule or a no-show.
+ *
+ * This said "<kind> notification sent to <owner>" and sent nothing — no
+ * sender stands behind these dialogs' "notify client" switch. It says what
+ * is true (the owner has not been told) and offers the one send that is
+ * real from here: an email the staff member writes, opened pre-addressed.
+ */
 export function toastClientNotification(
   appointment: GroomingAppointment,
   kind: "cancellation" | "reschedule" | "no-show",
@@ -584,10 +590,20 @@ export function toastClientNotification(
     reschedule: "Reschedule",
     "no-show": "No-show",
   };
-  toast.success(
-    `${labels[kind]} notification sent to ${appointment.ownerName}`,
-    {
-      description: `${appointment.ownerEmail} · ${appointment.ownerPhone}`,
-    },
-  );
+  const email = appointment.ownerEmail;
+  toast.message(`${labels[kind]} — let ${appointment.ownerName} know`, {
+    description: [email, appointment.ownerPhone].filter(Boolean).join(" · "),
+    ...(email
+      ? {
+          action: {
+            label: "Email",
+            onClick: () => {
+              window.location.href = `mailto:${email}?subject=${encodeURIComponent(
+                `${appointment.petName} — ${labels[kind]}`,
+              )}`;
+            },
+          },
+        }
+      : {}),
+  });
 }

@@ -356,7 +356,8 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       { startTime: apt.startTime, endTime: apt.endTime },
       DEFAULT_OFFER_WINDOW_MINUTES,
     );
-    // Build the Table 96 SMS+email copy (mock — surfaced, not really sent).
+    // The Table 96 offer copy. It is shown to staff, not sent: no text or
+    // email sender stands behind the waitlist offer yet.
     const { message } = buildWaitlistOfferForEntry(match, {
       date: apt.date,
       startTime: apt.startTime,
@@ -369,7 +370,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       },
     );
     recordHistory(
-      `Waitlist auto-match — SMS+email sent to ${match.ownerName}: "${message}"`,
+      `Waitlist auto-match — slot offered to ${match.ownerName}: "${message}"`,
     );
   }
 
@@ -788,7 +789,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     recordHistory(`Cancellation reason: ${reasonLabel}`);
     if (r.notifyClient) {
       toastClientNotification(apt, "cancellation");
-      recordHistory("Cancellation notification sent");
     } else {
       toast.success("Appointment cancelled");
     }
