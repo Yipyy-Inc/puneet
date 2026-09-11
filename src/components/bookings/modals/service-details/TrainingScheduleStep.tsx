@@ -39,7 +39,7 @@ import {
   checkPrerequisitesWithProgress,
   type PrereqDetail,
 } from "@/lib/training-program-prereqs";
-import type { TrainingEnrollment } from "@/lib/training-enrollment";
+import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 
@@ -168,6 +168,7 @@ export function TrainingScheduleStep({
 }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const enrollInSeries = useEnrollInTrainingSeries();
   const { data: seriesList = [] } = useQuery(trainingQueries.series());
   const { data: allSeriesEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
@@ -442,13 +443,13 @@ export function TrainingScheduleStep({
     });
   }
 
-  /** Course-level waitlist join (every series for the course is full). Writes
-   *  one `waitlisted` TrainingEnrollment per selected dog, hung off the
-   *  earliest upcoming series that has waitlisting enabled (falling back to
-   *  the earliest series), and fans it out through the series-enrollment
-   *  caches so the trainer's Waitlist tab + Students roster see it instantly —
-   *  the same pathway the customer-portal waitlist dialog uses. */
-  function handleJoinCourseWaitlist() {
+  /** Course-level waitlist join (every series for the course is full): one
+   *  waitlisted enrolment per selected dog on the earliest upcoming series.
+   *  It wrote those rows into the query cache and nowhere else, so the
+   *  waitlist was gone on reload; they go through enroll_in_training_series
+   *  now, which files a full series' request as waitlisted and books
+   *  nothing until a spot is given. */
+  async function handleJoinCourseWaitlist() {
     if (!selectedCourseType || courseBookableSeries.length === 0) return;
     const upcoming = courseBookableSeries.filter(
       (s) => s.status === "upcoming",
@@ -462,65 +463,35 @@ export function TrainingScheduleStep({
     if (!host) return;
 
     // Training enrollments are dog-only; fall back to all selected pets if
-    // none are tagged as dogs so the demo never silently no-ops.
-    const dogs = selectedPets.filter((p) => p.type === "Dog");
+    // none are tagged as dogs.
+    const dogs = selectedPets.filter((p) => p.type?.toLowerCase() === "dog");
     const petsToList = dogs.length > 0 ? dogs : selectedPets;
 
-    if (petsToList.length === 0 || !selectedClient) {
-      // No pet/owner context to attach a record to — still flip the UI so the
-      // staffer sees the intent registered.
-      setWaitlistJoined(true);
-      toast.success(`Added to the waitlist for ${selectedCourseType.name}.`);
+    // Nobody to put on the list: say so rather than pretend.
+    if (petsToList.length === 0 || !selectedClient) return;
+
+    const ownerRef = selectedClient.id;
+    const results = await Promise.allSettled(
+      petsToList.map((pet) =>
+        enrollInSeries.mutateAsync({
+          seriesId: host.id,
+          clientId: ownerRef,
+          petId: pet.id,
+          joinWaitlist: true,
+        }),
+      ),
+    );
+    void queryClient.invalidateQueries({ queryKey: ["training"] });
+    const refused = results.find(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    if (refused) {
+      toast.error("The waitlist was not joined", {
+        description:
+          refused.reason instanceof Error ? refused.reason.message : undefined,
+      });
       return;
     }
-
-    const nowISO = new Date().toISOString();
-    const todayISO = nowISO.slice(0, 10);
-    const newEntries: TrainingEnrollment[] = petsToList.map((pet, i) => ({
-      id: `waitlist-${host.id}-${pet.id}-${Date.now()}-${i}`,
-      seriesId: host.id,
-      seriesName: host.seriesName,
-      courseTypeId: host.courseTypeId,
-      courseTypeName: host.courseTypeName,
-      petId: pet.id,
-      petName: pet.name,
-      petBreed: pet.breed ?? "",
-      ownerId: selectedClient.id,
-      ownerName: selectedClient.name,
-      ownerPhone: selectedClient.phone ?? "",
-      ownerEmail: selectedClient.email ?? "",
-      enrollmentDate: todayISO,
-      status: "waitlisted",
-      sessionsAttended: 0,
-      totalSessions: host.numberOfWeeks,
-      currentSessionNumber: 1,
-      progress: 0,
-      paymentStatus: "unpaid",
-      notes: "",
-      preferredTimeOfDay: "no-preference",
-      createdAt: nowISO,
-      updatedAt: nowISO,
-    }));
-
-    const cache = queryClient.getQueryCache();
-    // All cross-series rollups (the "all" list the Students roster reads).
-    cache
-      .findAll({ queryKey: ["training", "series-enrollments"] })
-      .forEach((q) => {
-        queryClient.setQueryData<TrainingEnrollment[]>(
-          q.queryKey,
-          (prev = []) => [...prev, ...newEntries],
-        );
-      });
-    // The host series' own enrollment list — drives its Waitlist tab.
-    cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
-      if (q.queryKey[3] !== "enrollments") return;
-      if (q.queryKey[2] !== host.id) return;
-      queryClient.setQueryData<TrainingEnrollment[]>(
-        q.queryKey,
-        (prev = []) => [...prev, ...newEntries],
-      );
-    });
 
     setWaitlistJoined(true);
     const who =
@@ -529,10 +500,6 @@ export function TrainingScheduleStep({
         : `${petsToList.length} dogs`;
     toast.success(
       `${who} added to the waitlist for ${selectedCourseType.name}.`,
-      {
-        description: "We'll text + email the moment a spot opens.",
-        duration: 6_000,
-      },
     );
   }
 

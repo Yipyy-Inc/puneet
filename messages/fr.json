@@ -7003,7 +7003,9 @@
       "dropInBadge": "À l’unité",
       "estimateLineAddOns": "Options",
       "estimateLineFees": "Frais et ajustements",
-      "estimateSaveFailed": "L’estimation n’a pas été enregistrée"
+      "estimateSaveFailed": "L’estimation n’a pas été enregistrée",
+      "trainingEnrolled": "{count} inscription(s) — chaque chien est réservé pour toutes les séances restantes",
+      "trainingEnrolFailed": "Tous les chiens n’ont pas été inscrits"
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",

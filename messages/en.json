@@ -7003,7 +7003,9 @@
       "dropInBadge": "Drop-in",
       "estimateLineAddOns": "Add-ons",
       "estimateLineFees": "Fees and adjustments",
-      "estimateSaveFailed": "The estimate was not saved"
+      "estimateSaveFailed": "The estimate was not saved",
+      "trainingEnrolled": "Enrolled {count} — each dog is booked into every remaining session",
+      "trainingEnrolFailed": "Not every dog was enrolled"
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",

@@ -6,6 +6,19 @@ import type {
   TrainingSession,
 } from "@/types/training";
 import { wallClockParts } from "@/lib/time/facility-time";
+import {
+  defaultTrainingCourseTypes,
+  type TrainingCourseType,
+} from "@/lib/training-config";
+import type {
+  SeriesStatus,
+  TrainingSeries,
+  TrainingSeriesSession,
+} from "@/lib/training-series";
+import type {
+  SeriesPaymentStatus,
+  TrainingEnrollment,
+} from "@/lib/training-enrollment";
 
 // ============================================================================
 // The training book, in the shapes the training screens already draw.
@@ -22,6 +35,16 @@ import { wallClockParts } from "@/lib/time/facility-time";
 //   training_series             → TrainingClass   (id = series uuid)
 //   training_series_sessions    → TrainingSession (id = session uuid)
 //   training_series_enrollments → Enrollment      (id = enrollment uuid)
+//
+// and, for the booking modal's training step and the Students tab, which
+// were written against `@/data/training-series`:
+//
+//   training_series             → TrainingSeries     (with its sessions)
+//   training_series_enrollments → TrainingEnrollment
+//
+// A series names its course by `course_type_name`. When that is one of the
+// catalogue's course types the series files under it; otherwise the course
+// is the name itself, so a series is never unbookable for want of a match.
 //
 // A series with room for one dog is a private class; anything larger is a
 // group. A session's roster is every dog enrolled in its series.
@@ -75,6 +98,32 @@ export interface TrainingBook {
   classes: TrainingClass[];
   sessions: TrainingSession[];
   enrollments: Enrollment[];
+  series: TrainingSeries[];
+  seriesEnrollments: TrainingEnrollment[];
+  /** Courses named by a series that the catalogue does not carry. */
+  extraCourseTypes: TrainingCourseType[];
+}
+
+const normalize = (name: string) => name.trim().toLowerCase();
+
+/** The course a series files under — the catalogue's, or its own name. */
+export function courseOf(
+  row: Pick<BookSeriesRow, "course_type_name" | "name">,
+): {
+  id: string;
+  name: string;
+  catalogue: boolean;
+} {
+  const name = row.course_type_name.trim() || row.name.trim();
+  const match = defaultTrainingCourseTypes.find(
+    (c) => normalize(c.name) === normalize(name),
+  );
+  if (match) return { id: match.id, name: match.name, catalogue: true };
+  return {
+    id: `course:${normalize(name).replace(/[^a-z0-9]+/g, "-")}`,
+    name,
+    catalogue: false,
+  };
 }
 
 const hhmm = (time: string) => time.slice(0, 5);
@@ -110,9 +159,15 @@ export function buildTrainingBook(input: {
   enrollments: BookEnrollmentRow[];
   /** series id → pet ref → sessions checked in. */
   attended: Map<string, Map<number, number>>;
+  /** series id → pet ref → how its session bookings stand on payment. */
+  paid?: Map<string, Map<number, SeriesPaymentStatus>>;
   timeZone: string;
+  /** Today on the facility's clock — decides "upcoming" versus "active". */
+  today?: string;
 }): TrainingBook {
   const { series, sessions, enrollments, attended, timeZone } = input;
+  const paid = input.paid ?? new Map();
+  const today = input.today ?? "";
   const seriesById = new Map(series.map((s) => [s.id, s]));
 
   const lastDateBySeries = new Map<string, string>();
@@ -210,5 +265,119 @@ export function buildTrainingBook(input: {
     });
   }
 
-  return { classes, sessions: trainingSessions, enrollments: out };
+  // ── The series shape: the booking step and the Students tab ────────────
+  const sessionsBySeries = new Map<string, TrainingSeriesSession[]>();
+  for (const s of trainingSessions) {
+    const list = sessionsBySeries.get(s.classId) ?? [];
+    list.push({
+      id: s.id,
+      seriesId: s.classId,
+      sessionNumber: Number(s.sessionNumber ?? list.length + 1),
+      date: s.date,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      status: s.status,
+      enrolledCount: enrolledCount.get(s.classId) ?? 0,
+    });
+    sessionsBySeries.set(s.classId, list);
+  }
+
+  const extraCourseTypes = new Map<string, TrainingCourseType>();
+  const seriesOut: TrainingSeries[] = series.map((row) => {
+    const course = courseOf(row);
+    if (!course.catalogue && !extraCourseTypes.has(course.id)) {
+      extraCourseTypes.set(course.id, {
+        id: course.id,
+        name: course.name,
+        description: "",
+        classFormat: row.capacity === 1 ? "private" : "group",
+        defaultWeeks: row.number_of_sessions,
+        ageRange: { minWeeks: 0 },
+        requiredVaccines: [],
+        prerequisites: [],
+        isActive: true,
+        createdAt: "",
+        updatedAt: "",
+      });
+    }
+    const own = sessionsBySeries.get(row.id) ?? [];
+    const firstDate = own[0]?.date ?? row.start_date;
+    const status: SeriesStatus =
+      row.status === "active"
+        ? today && firstDate > today
+          ? "upcoming"
+          : "active"
+        : row.status;
+    const startTime = hhmm(row.start_time);
+    return {
+      id: row.id,
+      courseTypeId: course.id,
+      courseTypeName: course.name,
+      seriesName: row.name,
+      startDate: row.start_date,
+      dayOfWeek: row.day_of_week,
+      startTime,
+      endTime: addMinutes(startTime, row.duration_minutes),
+      duration: row.duration_minutes,
+      numberOfWeeks: row.number_of_sessions,
+      location: row.locations?.name ?? "",
+      instructorId: trainerIdOf(row),
+      instructorName: trainerNameOf(row),
+      maxCapacity: row.capacity,
+      enrollmentRules: {
+        bookingOpensDate: "",
+        bookingClosesDate: "",
+        depositRequired: 0,
+        fullPaymentAmount: Number(row.total_price),
+        waitlistEnabled: true,
+        allowDropIns: false,
+      },
+      status,
+      sessions: own,
+      createdAt: "",
+      updatedAt: "",
+    };
+  });
+
+  const seriesEnrollments: TrainingEnrollment[] = [];
+  for (const e of enrollments) {
+    const parent = seriesById.get(e.series_id);
+    if (!parent || !e.pets || !e.clients) continue;
+    const course = courseOf(parent);
+    const done = attended.get(e.series_id)?.get(e.pets.ref) ?? 0;
+    const total = parent.number_of_sessions;
+    seriesEnrollments.push({
+      id: e.id,
+      seriesId: e.series_id,
+      seriesName: parent.name,
+      courseTypeId: course.id,
+      courseTypeName: course.name,
+      petId: e.pets.ref,
+      petName: e.pets.name,
+      petBreed: e.pets.breed ?? "",
+      ownerId: e.clients.ref,
+      ownerName: e.clients.name ?? "",
+      ownerPhone: e.clients.phone ?? "",
+      ownerEmail: e.clients.email ?? "",
+      enrollmentDate: e.enrolled_at.slice(0, 10),
+      status: ENROLLMENT_STATUS[e.status],
+      sessionsAttended: done,
+      totalSessions: total,
+      currentSessionNumber: Math.min(done + 1, total),
+      progress: total > 0 ? Math.round((done / total) * 100) : 0,
+      paymentStatus: paid.get(e.series_id)?.get(e.pets.ref) ?? "unpaid",
+      notes: "",
+      createdAt: e.enrolled_at,
+      updatedAt: e.enrolled_at,
+    });
+  }
+
+  return {
+    classes,
+    sessions: trainingSessions,
+    enrollments: out,
+    series: seriesOut,
+    seriesEnrollments,
+    extraCourseTypes: [...extraCourseTypes.values()],
+  };
 }

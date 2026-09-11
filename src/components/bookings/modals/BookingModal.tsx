@@ -113,7 +113,7 @@ import {
   type TrainingCartItem,
 } from "./TrainingEnrollmentCartPanel";
 import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
-import type { TrainingEnrollment } from "@/lib/training-enrollment";
+import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
 
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -317,6 +317,7 @@ export function BookingModal({
   const { currentLocationId } = useLocationContext();
   const { data: daycareLocationPrices = [] } = useDaycareLocationPrices();
   const queryClient = useQueryClient();
+  const enrollInSeries = useEnrollInTrainingSeries();
   const { mutate: redeemPass } = useRedeemPackagePass();
   const { data: customerPackagesData = [] } = useQuery(
     groomingQueries.customerPackages(),
@@ -2588,71 +2589,48 @@ export function BookingModal({
       });
     }
 
-    // Multi-dog training: create one series enrollment per enrolled dog and fan
-    // it out to the series caches so the trainer's roster + the client portal
-    // reflect every dog from this single transaction. Drop-ins are per-session
-    // (not series enrollments), so they're excluded here.
+    // ── A TRAINING ENROLMENT IS AN ENROLMENT ──────────────────────────────
+    //
+    // This wrote each dog into the series caches — arrays gone on reload —
+    // and then created ONE plain training booking on the first session's
+    // date, with no enrolment row and no link to any session. Each dog is
+    // enrolled through enroll_in_training_series now, which books it into
+    // every remaining session itself; a cart of enrolments therefore creates
+    // no booking of its own. Drop-ins still go through the booking below.
+    let enrolmentsOnly = false;
     if (selectedService === "training" && !isCustomerMode && selectedClient) {
       const enrollItems = trainingItems.filter((li) => li.kind === "enroll");
       if (enrollItems.length > 0) {
-        const nowISO = new Date().toISOString();
-        const todayISO = nowISO.slice(0, 10);
-        const paymentStatus: TrainingEnrollment["paymentStatus"] =
-          booking.initialDeposit
-            ? "deposit"
-            : approvalRequired
-              ? "unpaid"
-              : "paid";
-        const petById = new Map(selectedClient.pets.map((p) => [p.id, p]));
-        const newEnrollments: TrainingEnrollment[] = enrollItems.map(
-          (li, i) => ({
-            id: `enroll-${li.seriesId}-${li.petId}-${Date.now()}-${i}`,
-            seriesId: li.seriesId,
-            seriesName: li.seriesName,
-            courseTypeId: li.courseTypeId,
-            courseTypeName: li.courseTypeName,
-            petId: li.petId,
-            petName: li.petName,
-            petBreed: petById.get(li.petId)?.breed ?? "",
-            ownerId: selectedClient.id,
-            ownerName: selectedClient.name,
-            ownerPhone: selectedClient.phone ?? "",
-            ownerEmail: selectedClient.email ?? "",
-            enrollmentDate: todayISO,
-            status: "enrolled",
-            sessionsAttended: 0,
-            totalSessions: li.numberOfWeeks,
-            currentSessionNumber: 1,
-            progress: 0,
-            paymentStatus,
-            notes: "",
-            createdAt: nowISO,
-            updatedAt: nowISO,
-          }),
-        );
-        const cache = queryClient.getQueryCache();
-        cache
-          .findAll({ queryKey: ["training", "series-enrollments"] })
-          .forEach((q) => {
-            queryClient.setQueryData<TrainingEnrollment[]>(
-              q.queryKey,
-              (prev = []) => [...prev, ...newEnrollments],
-            );
-          });
-        const bySeries = new Map<string, TrainingEnrollment[]>();
-        for (const e of newEnrollments) {
-          const arr = bySeries.get(e.seriesId) ?? [];
-          arr.push(e);
-          bySeries.set(e.seriesId, arr);
-        }
-        cache.findAll({ queryKey: ["training", "series"] }).forEach((q) => {
-          if (q.queryKey[3] !== "enrollments") return;
-          const add = bySeries.get(q.queryKey[2] as string);
-          if (!add) return;
-          queryClient.setQueryData<TrainingEnrollment[]>(
-            q.queryKey,
-            (prev = []) => [...prev, ...add],
+        enrolmentsOnly = enrollItems.length === trainingItems.length;
+        const ownerRef = selectedClient.id;
+        void Promise.allSettled(
+          enrollItems.map((li) =>
+            enrollInSeries.mutateAsync({
+              seriesId: li.seriesId,
+              clientId: ownerRef,
+              petId: li.petId,
+            }),
+          ),
+        ).then((results) => {
+          void queryClient.invalidateQueries({ queryKey: ["training"] });
+          void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+          const refused = results.filter(
+            (r): r is PromiseRejectedResult => r.status === "rejected",
           );
+          const made = results.length - refused.length;
+          if (made > 0) {
+            toast.success(
+              t("trainingEnrolled").replace("{count}", String(made)),
+            );
+          }
+          if (refused.length > 0) {
+            toast.error(t("trainingEnrolFailed"), {
+              description:
+                refused[0].reason instanceof Error
+                  ? refused[0].reason.message
+                  : undefined,
+            });
+          }
         });
       }
     }
@@ -2688,7 +2666,7 @@ export function BookingModal({
       return;
     }
 
-    onCreateBooking(booking);
+    if (!enrolmentsOnly) onCreateBooking(booking);
 
     // An EDIT sends no confirmation, schedules no reminder and collects no
     // deposit — the toasts below describe a new booking. The caller reports

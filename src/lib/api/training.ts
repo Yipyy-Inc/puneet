@@ -6,7 +6,6 @@ import {
 // trainers, classes, sessions and enrollments are the facility's own — see
 // src/lib/api/training-book.ts, where they are fetched.
 import { fetchTrainers, fetchTrainingBook } from "@/lib/api/training-book";
-import { seriesEnrollments, trainingSeriesList } from "@/data/training-series";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
   defaultTrainingCourseTypes,
@@ -111,9 +110,14 @@ export const trainingQueries = {
   /** Active course types from the Course Catalog — the single source of truth
    *  for what a client can book/enroll in. The booking flow scopes its series
    *  list to a chosen course type from this list. */
+  // The catalogue's course types, plus any course a real series names that
+  // the catalogue does not carry — otherwise that series could not be booked.
   courseTypes: () => ({
     queryKey: ["training", "course-types"] as const,
-    queryFn: async () => defaultTrainingCourseTypes.filter((c) => c.isActive),
+    queryFn: async () => [
+      ...defaultTrainingCourseTypes.filter((c) => c.isActive),
+      ...(await fetchTrainingBook()).extraCourseTypes,
+    ],
   }),
   /** Unfiltered course-type catalog — used by editors that need to surface
    *  inactive course types too. */
@@ -121,24 +125,29 @@ export const trainingQueries = {
     queryKey: ["training", "course-types", "all"] as const,
     queryFn: async () => defaultTrainingCourseTypes,
   }),
+  // The facility's series and who is in them — the booking step, the
+  // Students tab and make-ups read these. They were `@/data/training-series`.
   series: () => ({
     queryKey: ["training", "series"] as const,
-    queryFn: async () => trainingSeriesList,
+    queryFn: async () => (await fetchTrainingBook()).series,
   }),
   seriesDetail: (id: string) => ({
     queryKey: ["training", "series", id] as const,
-    queryFn: async () => trainingSeriesList.find((s) => s.id === id),
+    queryFn: async () =>
+      (await fetchTrainingBook()).series.find((s) => s.id === id),
   }),
   seriesEnrollments: (seriesId: string) => ({
     queryKey: ["training", "series", seriesId, "enrollments"] as const,
     queryFn: async () =>
-      seriesEnrollments.filter((e) => e.seriesId === seriesId),
+      (await fetchTrainingBook()).seriesEnrollments.filter(
+        (e) => e.seriesId === seriesId,
+      ),
   }),
   /** All series enrollments across every series — used by the Students tab
    *  to roll up per-pet activity. */
   allSeriesEnrollments: () => ({
     queryKey: ["training", "series-enrollments", "all"] as const,
-    queryFn: async () => seriesEnrollments,
+    queryFn: async () => (await fetchTrainingBook()).seriesEnrollments,
   }),
   disciplines: () => ({
     queryKey: ["training", "disciplines"] as const,
