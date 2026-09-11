@@ -110,7 +110,9 @@ export function rowToStylist(
   const staff = row.staff;
   return {
     id: stylistAppId(row),
-    ...(staff?.legacy_id ? { staffId: staff.legacy_id } : {}),
+    // The staff app id — legacy id when there is one, else the uuid, the same
+    // rule the staff route uses — so a groomer with no legacy id still has one.
+    ...(staff ? { staffId: staff.legacy_id ?? staff.id } : {}),
     name: staff ? `${staff.first_name} ${staff.last_name}`.trim() : "",
     email: staff?.email ?? "",
     phone: staff?.phone ?? "",

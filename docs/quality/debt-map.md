@@ -12743,3 +12743,25 @@ soft delete.
 - **Still open:** the drop's confirmation text still describes a message to
   the owner that nothing sends; mobile-grooming van columns still name their
   drivers from `@/data/facility-staff`.
+
+## 2026-09-11 — the Groomers page lists the facility's groomers, and Add groomer adds one
+
+`/facility/dashboard/services/grooming/stylists` built its table from
+`@/data/facility-staff` — the fixture's groomers — and joined the real
+grooming profiles onto them by legacy id, so a real facility's groomers were
+not in the table at all. Performance, 30-day stats and tomorrow's summary were
+measured against `@/data/grooming`'s appointments. **Add groomer** appended a
+made-up row to local state and toasted "Invite sent … (mock)"; the "send test
+reminder" items wrote into a fixture notification store; the summary's
+**Send now** toasted "(mock)".
+
+The roster is `staffQueries.profiles()` (groomers by role, plus anyone with a
+grooming profile) and the book is `groomingQueries.appointments()`. Add groomer
+writes a staff row (`POST /api/staff`), the grooming profile (PUT) and the
+working week (PATCH); the sign-in invite stays on the Staff page. The test
+reminders and Send now are gone. A staff member with no legacy id is now
+addressed by uuid everywhere a stylist is (`legacy_id ?? id`): the stylist and
+appointment mappers and `/api/grooming/stylists/[staffId]`.
+
+- **Still open:** the analytics card still reads `groomingAnalytics` from the
+  report fixtures; the page's labels are still English (ratchet entry).

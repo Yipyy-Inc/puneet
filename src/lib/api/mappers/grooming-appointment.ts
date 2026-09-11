@@ -323,7 +323,7 @@ export function rowToGroomingAppointment(
 
     // The STAFF legacy id. The query factory remaps it to a stylist id — see
     // the header.
-    stylistId: row.staff?.legacy_id ?? "",
+    stylistId: row.staff?.legacy_id ?? row.assigned_staff_id ?? "",
     stylistName: row.assigned_staff_name ?? "",
     ...(ext?.station?.legacy_id
       ? { stationId: ext.station.legacy_id }
