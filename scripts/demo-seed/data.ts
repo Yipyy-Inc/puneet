@@ -783,6 +783,61 @@ export const GROOMING_STATIONS = [
   { legacyId: `${SEED_PREFIX}-station-tub`, name: "Tub", type: "tub" },
 ];
 
+// ── The grooming team ─────────────────────────────────────────────────────
+//
+// A groomer is a staff row PLUS a grooming profile; without the profile the
+// calendar has no column for them and the Groomers page lists them as "no
+// profile yet". Hours are their working week.
+
+export type SeedStylist = {
+  staffLegacyId: string;
+  legacyId: string;
+  specializations: string[];
+  certifications: string[];
+  years: number;
+  bio: string;
+  color: string;
+  skill: "basic" | "standard" | "premium" | "platinum";
+  matted: boolean;
+  anxious: boolean;
+  days: number[];
+  start: string;
+  end: string;
+};
+
+export const GROOMING_STYLISTS: SeedStylist[] = [
+  {
+    staffLegacyId: `${SEED_PREFIX}-staff-02`,
+    legacyId: `${SEED_PREFIX}-stylist-01`,
+    specializations: ["Hand scissoring", "Doodle cuts"],
+    certifications: ["Certified master groomer"],
+    years: 9,
+    bio: "Nine years on the table. Takes the doodles and the nervous ones.",
+    color: "#4F9E85",
+    skill: "premium",
+    matted: true,
+    anxious: true,
+    days: [2, 3, 4, 5, 6],
+    start: "08:30",
+    end: "16:30",
+  },
+  {
+    staffLegacyId: `${SEED_PREFIX}-staff-03`,
+    legacyId: `${SEED_PREFIX}-stylist-02`,
+    specializations: ["Cats", "Bath and tidy"],
+    certifications: ["Feline grooming"],
+    years: 4,
+    bio: "Cats, small breeds and the bath-and-tidy regulars.",
+    color: "#8D85D6",
+    skill: "standard",
+    matted: false,
+    anxious: true,
+    days: [1, 2, 3, 4, 5],
+    start: "09:00",
+    end: "17:00",
+  },
+];
+
 // ── The business itself ───────────────────────────────────────────────────
 
 export const FACILITY_PROFILE = {

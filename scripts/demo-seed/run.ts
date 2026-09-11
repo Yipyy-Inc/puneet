@@ -48,6 +48,7 @@ import {
   GROOMING_ADD_ONS,
   GROOMING_SERVICES,
   GROOMING_STATIONS,
+  GROOMING_STYLISTS,
   INCIDENTS,
   NOTES,
   PETS,
@@ -73,6 +74,9 @@ function facilityToday(): string {
 }
 
 const money = (n: number) => Math.round(n * 100) / 100;
+/** A text[] literal: the driver sends a JS array as a bare comma list. */
+const pgTextArray = (items: string[]) =>
+  `{${items.map((v) => `"${v.replace(/[\\"]/g, (c) => `\\${c}`)}"`).join(",")}}`;
 
 const shiftDay = (iso: string, n: number) => {
   const d = new Date(`${iso}T12:00:00Z`);
@@ -165,6 +169,39 @@ try {
           (${DEMO_FACILITY_ID}, ${s.legacyId}, ${s.first}, ${s.last}, ${s.email},
            ${s.jobTitle}, ${s.role}::public.facility_staff_role, 'active', true)`;
       count("staff");
+    }
+
+    // ── The grooming team: a profile and a working week per groomer ──────
+    for (const g of GROOMING_STYLISTS) {
+      const [staff] = await tx`
+        select id from public.staff
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${g.staffLegacyId}`;
+      if (!staff) continue;
+      const [profile] = await tx`
+        select 1 from public.grooming_stylist_profiles where staff_id = ${staff.id}`;
+      if (!profile) {
+        await tx`
+          insert into public.grooming_stylist_profiles
+            (facility_id, legacy_id, staff_id, specializations, certifications,
+             years_experience, bio, visible_online, calendar_color, skill_level,
+             can_handle_matted, can_handle_anxious)
+          values
+            (${DEMO_FACILITY_ID}, ${g.legacyId}, ${staff.id},
+             ${pgTextArray(g.specializations)}::text[],
+             ${pgTextArray(g.certifications)}::text[],
+             ${g.years}, ${g.bio}, true, ${g.color}, ${g.skill},
+             ${g.matted}, ${g.anxious})`;
+        count("grooming profiles");
+      }
+      for (const day of g.days) {
+        const added = await tx`
+          insert into public.grooming_stylist_availability
+            (facility_id, staff_id, day_of_week, start_time, end_time, is_available)
+          values (${DEMO_FACILITY_ID}, ${staff.id}, ${day}, ${g.start}, ${g.end}, true)
+          on conflict (staff_id, day_of_week, start_time) do nothing
+          returning id`;
+        if (added.length) count("groomer hours");
+      }
     }
 
     // ── Rooms and daycare areas ───────────────────────────────────────────
@@ -384,6 +421,23 @@ try {
         count("payments");
       }
     }
+
+    // ── Each groom is WITH its groomer ──────────────────────────────────
+    // The calendar columns and a groomer's queue read `assigned_staff_id`;
+    // the plan names the groomer, so the id is filled from the name.
+    const assigned = await tx`
+      update public.bookings b
+         set assigned_staff_id = s.id
+        from public.staff s
+       where b.facility_id = ${DEMO_FACILITY_ID}
+         and b.service = 'grooming'
+         and b.assigned_staff_id is null
+         and b.details ? 'demoSeedKey'
+         and s.facility_id = ${DEMO_FACILITY_ID}
+         and b.assigned_staff_name = s.first_name || ' ' || s.last_name
+      returning b.id`;
+    if (assigned.length)
+      summary["grooms given their groomer"] = assigned.length;
 
     // ── What staff logged during the stays ──────────────────────────────
     // The guest journal is built from `care_log_entries`, the same rows the

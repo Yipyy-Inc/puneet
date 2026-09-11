@@ -175,6 +175,13 @@ const GROOMING: GroomSpec[] = [
   ["Nala", 5, "16:00", "nails", "confirmed", "Hugo Martel", "1"],
   ["Filou", 7, "10:00", "full", "confirmed", "Hugo Martel", "1"],
   ["Poppy", 12, "14:00", "bath", "confirmed", "Aïcha Diallo", "2"],
+  ["Winston", 0, "14:00", "full", "confirmed", "Hugo Martel", "1"],
+  ["Kiwi", 1, "09:30", "full", "confirmed", "Hugo Martel", "1"],
+  ["Praline", 1, "13:00", "bath", "confirmed", "Aïcha Diallo", "tub"],
+  ["Oscar", 2, "10:00", "nails", "confirmed", "Aïcha Diallo", "2"],
+  ["Gustave", 3, "15:00", "full", "confirmed", "Hugo Martel", "1"],
+  ["Nala", -7, "11:00", "bath", "completed", "Aïcha Diallo", "tub"],
+  ["Caramel", -12, "09:00", "full", "completed", "Hugo Martel", "1"],
 ];
 
 const ROOM_PRICE: Record<string, number> = {
