@@ -116,6 +116,7 @@ import {
   useSaveSupplier,
   useSuppliers,
 } from "@/lib/api/retail-store";
+import { formatDateLong } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { NO_ITEMS } from "@/lib/no-items";
 import { toast } from "sonner";
@@ -331,7 +332,7 @@ export default function OrdersPage() {
   // (20260911180840): an order is created, a supplier saved, and receiving is
   // receive_purchase_order — stock onto the ledger, the status the
   // database's own.
-  const { t: tR, fill: fillR } = useStaffText("retailStore");
+  const { t: tR, fill: fillR, locale } = useStaffText("retailStore");
   const retailConfig = useRetailConfig().config;
   const products = useRetailProducts().data ?? NO_ITEMS;
   const purchaseOrders = usePurchaseOrders().data ?? NO_ITEMS;
@@ -1166,14 +1167,14 @@ ${outcome.message}`);
       label: "Order Date",
       icon: Calendar,
       defaultVisible: true,
-      render: (item) => new Date(item.orderedAt as string).toLocaleDateString(),
+      render: (item) => formatDateLong(item.orderedAt as string, locale),
     },
     {
       key: "expectedDelivery",
       label: "Expected",
       defaultVisible: true,
-      render: (item) =>
-        new Date(item.expectedDelivery as string).toLocaleDateString(),
+      // An order placed without a date has none: "—", not "Invalid Date".
+      render: (item) => formatDateLong(item.expectedDelivery as string, locale),
     },
     {
       key: "status",
@@ -1464,7 +1465,7 @@ ${outcome.message}`);
       label: "Date",
       icon: Calendar,
       defaultVisible: false,
-      render: (item) => new Date(item.createdAt as string).toLocaleDateString(),
+      render: (item) => formatDateLong(item.createdAt as string, locale),
     },
     {
       key: "status",
@@ -2542,7 +2543,7 @@ ${outcome.message}`);
                 <div>
                   <p className="text-muted-foreground text-sm">Order Date</p>
                   <p className="font-medium">
-                    {new Date(selectedOrder.orderedAt).toLocaleDateString()}
+                    {formatDateLong(selectedOrder.orderedAt, locale)}
                   </p>
                 </div>
                 <div>
@@ -2550,16 +2551,14 @@ ${outcome.message}`);
                     Expected Delivery
                   </p>
                   <p className="font-medium">
-                    {new Date(
-                      selectedOrder.expectedDelivery,
-                    ).toLocaleDateString()}
+                    {formatDateLong(selectedOrder.expectedDelivery, locale)}
                   </p>
                 </div>
                 {selectedOrder.receivedAt && (
                   <div>
                     <p className="text-muted-foreground text-sm">Received</p>
                     <p className="font-medium">
-                      {new Date(selectedOrder.receivedAt).toLocaleDateString()}
+                      {formatDateLong(selectedOrder.receivedAt, locale)}
                     </p>
                   </div>
                 )}
@@ -2674,9 +2673,7 @@ ${outcome.message}`);
                   <div>
                     <p className="text-muted-foreground text-sm">Date</p>
                     <p className="font-medium">
-                      {new Date(
-                        selectedTransaction.createdAt,
-                      ).toLocaleDateString()}
+                      {formatDateLong(selectedTransaction.createdAt, locale)}
                     </p>
                   </div>
                   {selectedTransaction.customerName && (
