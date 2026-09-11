@@ -17,7 +17,12 @@
  * facility row is re-checked by id and slug first.
  */
 import { SQL, type TransactionSQL } from "bun";
-import { DEMO_FACILITY_ID, DEMO_FACILITY_SLUG, SEED_PREFIX } from "./config";
+import {
+  DEMO_FACILITY_ID,
+  DEMO_FACILITY_SLUG,
+  SEED_AUTHOR,
+  SEED_PREFIX,
+} from "./config";
 import { CATEGORIES, INCIDENTS, NOTES } from "./data";
 
 const ROLLBACK = process.argv.includes("--rollback");
@@ -124,6 +129,22 @@ try {
         )
       ).map((r: { id: string }) => r.id);
 
+    // ── Estimates and vaccination records the seed wrote ────────────────────
+    // An estimate carries its seed key in the first entry of its history (the
+    // table has no details column); a guest estimate hangs off no seeded row,
+    // so it is found here or not at all. A vaccination record the seed wrote
+    // names the seed as its author.
+    const estimatesGone = await tx`
+      delete from public.estimates
+       where facility_id = ${DEMO_FACILITY_ID}
+         and activity_log->0->>'seedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (estimatesGone.count) removed["public.estimates"] = estimatesGone.count;
+    const vaccinationsGone = await tx`
+      delete from public.pet_vaccinations
+       where facility_id = ${DEMO_FACILITY_ID} and created_by = ${SEED_AUTHOR}`;
+    if (vaccinationsGone.count)
+      removed["public.pet_vaccinations"] = vaccinationsGone.count;
+
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even
     // for the owner), and that is a guard to respect, not to route around. So
@@ -168,6 +189,8 @@ try {
           where c.id = any($1::uuid[])
             and not exists (select 1 from public.bookings b where b.client_id = c.id)
             and not exists (select 1 from public.payments p where p.client_id = c.id)
+            -- Store credit is append-only too (prevent_money_mutation).
+            and not exists (select 1 from public.store_credit_entries s where s.client_id = c.id)
             and not exists (select 1 from public.pets p where p.client_id = c.id)`,
         [pgArray(await seeded("clients"))],
       ),

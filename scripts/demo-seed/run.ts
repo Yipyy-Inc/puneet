@@ -41,6 +41,9 @@ import {
   CATEGORIES,
   CLIENTS,
   DAYCARE_PRICE,
+  ESTIMATES,
+  STORE_CREDIT,
+  VACCINATIONS,
   FACILITY_PROFILE,
   GROOMING_ADD_ONS,
   GROOMING_SERVICES,
@@ -81,6 +84,8 @@ const shiftDay = (iso: string, n: number) => {
 for (const c of CLIENTS)
   assertSafeContact(c.key, c.client.email!, c.client.phone);
 for (const s of STAFF) assertSafeContact(s.legacyId, s.email);
+for (const e of ESTIMATES)
+  if (e.guest) assertSafeContact(e.key, e.guest.email, e.guest.phone);
 assertSafeContact("facility", FACILITY_PROFILE.email, FACILITY_PROFILE.phone);
 if (REFUSED_SLUGS.includes(DEMO_FACILITY_SLUG)) {
   throw new Error(`Refusing to seed ${DEMO_FACILITY_SLUG}.`);
@@ -580,6 +585,174 @@ try {
              }}::jsonb, ${SEED_ACTOR_SUB})`;
         count("incident follow-ups");
       }
+    }
+
+    // ── Vaccination records ──────────────────────────────────────────────
+    // Reviewed by the manager, on the day after they were given.
+    for (const v of VACCINATIONS) {
+      const petRowId = petIds.get(petByName(v.pet).key)!;
+      const [exists] = await tx`
+        select 1 from public.pet_vaccinations
+         where pet_id = ${petRowId} and vaccine_name = ${v.vaccine}`;
+      if (exists) continue;
+      const given = shiftDay(today, -v.givenDaysAgo);
+      const reviewed = v.status !== "pending_review";
+      await tx`
+        insert into public.pet_vaccinations
+          (pet_id, facility_id, vaccine_name, administered_on, expires_on,
+           veterinarian_name, veterinary_clinic, status, reviewed_by,
+           reviewed_at, review_reason, created_by)
+        values
+          (${petRowId}, ${DEMO_FACILITY_ID}, ${v.vaccine}, ${given},
+           ${v.expiresInDays === null ? null : shiftDay(today, v.expiresInDays)},
+           ${v.vet}, ${v.clinic}, ${v.status},
+           ${reviewed ? "Valérie Lacroix" : null},
+           ${reviewed ? `${shiftDay(given, 1)}T14:00:00Z` : null},
+           ${v.reason ?? null}, ${SEED_AUTHOR})`;
+      count("vaccinations");
+    }
+
+    // ── Estimates, one in every state ────────────────────────────────────
+    // Numbered by the table's own trigger (E10001…), so they read exactly as
+    // the app's would. The seed key rides in the first history entry — the
+    // table has no details column — which is how teardown finds them.
+    const daysAgoIso = (days: number, hour = 15) => {
+      const d = new Date(Date.now() - days * 86_400_000);
+      d.setUTCHours(hour, 0, 0, 0);
+      return d.toISOString();
+    };
+    const plusDays = (iso: string, days: number) =>
+      new Date(new Date(iso).getTime() + days * 86_400_000).toISOString();
+    for (const e of ESTIMATES) {
+      const [exists] = await tx`
+        select 1 from public.estimates
+         where facility_id = ${DEMO_FACILITY_ID}
+           and activity_log->0->>'seedKey' = ${e.key}`;
+      if (exists) continue;
+
+      const seedClient = e.client === undefined ? null : CLIENTS[e.client];
+      const clientRowId = seedClient ? clientIds.get(seedClient.key)! : null;
+      const ownPets = seedClient
+        ? PETS.filter((p) => p.ownerKey === seedClient.key).slice(0, 1)
+        : [];
+      const petRowIds = ownPets.map((p) => petIds.get(p.key)!);
+
+      const lines = e.lines.map((l) => ({
+        ...l,
+        total: money(l.amount * l.quantity),
+      }));
+      const subtotal = money(lines.reduce((sum, l) => sum + l.total, 0));
+      const discount = money(e.discount ?? 0);
+      const taxAmount = money((subtotal - discount) * TAX_RATE);
+      const total = money(subtotal - discount + taxAmount);
+
+      const start = shiftDay(today, e.startInDays);
+      const end = e.nights ? shiftDay(start, e.nights) : start;
+      const author = "Valérie Lacroix";
+      const created = daysAgoIso((e.sentDaysAgo ?? 1) + 1, 13);
+      const sent =
+        e.sentDaysAgo !== undefined ? daysAgoIso(e.sentDaysAgo) : null;
+      const expires = sent ? plusDays(sent, 30) : null;
+      const who = seedClient?.client.name ?? e.guest?.name ?? "Customer";
+
+      const log: Record<string, unknown>[] = [
+        { at: created, type: "created", actor: author, seedKey: e.key },
+      ];
+      if (sent) log.push({ at: sent, type: "sent", actor: author });
+      const viewed =
+        sent &&
+        e.state !== "draft" &&
+        e.state !== "sent" &&
+        e.state !== "expired"
+          ? plusDays(sent, 1)
+          : null;
+      if (viewed) log.push({ at: viewed, type: "viewed", actor: who });
+
+      let converted: { id: string; ref: number } | null = null;
+      if (e.state === "converted" && clientRowId) {
+        const [b] = await tx`
+          select id, ref from public.bookings
+           where client_id = ${clientRowId} and start_at > now()
+           order by start_at limit 1`;
+        converted = b ? { id: b.id, ref: Number(b.ref) } : null;
+      }
+
+      const status =
+        e.state === "viewed" || e.state === "expired"
+          ? "sent"
+          : e.state === "converted" && !converted
+            ? "accepted"
+            : e.state;
+      const acceptedAt =
+        e.state === "accepted" || e.state === "converted"
+          ? plusDays(sent!, 2)
+          : null;
+      if (acceptedAt)
+        log.push({
+          at: acceptedAt,
+          type: "accepted",
+          actor: author,
+          detail: `on behalf of ${who}, by phone`,
+        });
+      const declinedAt = e.state === "declined" ? plusDays(sent!, 3) : null;
+      if (declinedAt)
+        log.push({
+          at: declinedAt,
+          type: "declined",
+          actor: who,
+          detail: e.declineReason,
+        });
+      const convertedAt = converted ? plusDays(acceptedAt!, 1) : null;
+      if (converted)
+        log.push({
+          at: convertedAt,
+          type: "converted",
+          actor: author,
+          detail: `#${converted.ref}`,
+        });
+
+      await tx`
+        insert into public.estimates
+          (facility_id, client_id, guest, pet_ids, service, service_type,
+           start_date, end_date, check_in_time, check_out_time, room_type,
+           line_items, subtotal, discount, discount_reason, tax_rate,
+           tax_amount, total, deposit_required, status, public_note,
+           internal_note, sent_at, sent_via, viewed_at, expires_at,
+           accepted_at, accepted_by, accepted_on_behalf, declined_at,
+           decline_reason, converted_booking_id, converted_at, activity_log,
+           created_by, created_by_name)
+        values
+          (${DEMO_FACILITY_ID}, ${clientRowId},
+           ${e.guest ?? null}::jsonb, ${`{${petRowIds.join(",")}}`}::uuid[],
+           ${e.service}, ${e.serviceType ?? null}, ${start}, ${end},
+           ${e.service === "boarding" ? "15:00" : "08:00"},
+           ${e.service === "boarding" ? "11:00" : "17:00"},
+           ${e.service === "boarding" ? (e.serviceType ?? null) : null},
+           ${lines}::jsonb, ${subtotal}, ${discount}, ${e.discountReason ?? null},
+           ${TAX_RATE}, ${taxAmount}, ${total}, ${e.deposit ?? null}, ${status},
+           ${e.publicNote ?? null}, ${e.internalNote ?? null}, ${sent},
+           ${sent ? "link" : null}, ${viewed},
+           ${e.state === "expired" ? plusDays(sent!, 30) : expires},
+           ${acceptedAt}, ${acceptedAt ? author : null}, ${Boolean(acceptedAt)},
+           ${declinedAt}, ${e.declineReason ?? null}, ${converted?.id ?? null},
+           ${convertedAt}, ${log}::jsonb, ${SEED_ACTOR_SUB}, ${author})`;
+      count("estimates");
+    }
+
+    // ── Store credit on two accounts ─────────────────────────────────────
+    for (const sc of STORE_CREDIT) {
+      const clientRowId = clientIds.get(CLIENTS[sc.client].key)!;
+      const [exists] = await tx`
+        select 1 from public.store_credit_entries
+         where client_id = ${clientRowId} and note = ${sc.note}`;
+      if (exists) continue;
+      await tx`
+        insert into public.store_credit_entries
+          (facility_id, client_id, amount, reason, note, author_name, created_at)
+        values
+          (${DEMO_FACILITY_ID}, ${clientRowId}, ${sc.amount}, ${sc.reason},
+           ${sc.note}, 'Valérie Lacroix', ${daysAgoIso(sc.daysAgo)})`;
+      count("store credit entries");
     }
 
     if (ROLLBACK) {
