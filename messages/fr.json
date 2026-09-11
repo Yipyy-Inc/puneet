@@ -2098,6 +2098,9 @@
       },
       "daycareRates": {
         "notSaved": "Les tarifs n’ont pas été enregistrés"
+      },
+      "trainingRates": {
+        "notSaved": "Les programmes n’ont pas été enregistrés"
       }
     }
   },

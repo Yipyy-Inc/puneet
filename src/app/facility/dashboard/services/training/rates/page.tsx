@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +23,14 @@ import {
   MoveVertical,
   Info,
 } from "lucide-react";
-import { trainingQueries } from "@/lib/api/training";
 import type { TrainingPackage } from "@/types/training";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+  useServiceAddOns,
+} from "@/lib/api/facility-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { addOnsForService } from "@/lib/settings/addons";
 import { toast } from "sonner";
 import {
@@ -39,7 +43,37 @@ import { useSettingsHref } from "@/lib/settings/use-settings-href";
 export default function TrainingRatesPage() {
   const settingsPath = useSettingsHref();
   const queryClient = useQueryClient();
-  const { data: programs = [] } = useQuery(trainingQueries.packages());
+  // ── THE PROGRAMS ARE THE FACILITY'S ────────────────────────────────────
+  //
+  // Every save, delete and toggle below wrote `setQueryData` into the
+  // training cache and toasted: gone on reload, and never seen by the booking
+  // modal or the prerequisite checks. They write the `training_programs`
+  // settings domain now — the whole list, as the screen edits it — and the
+  // toast waits for the write.
+  const { settings, isPending: settingsPending } = useFacilitySettings();
+  const { mutateAsync: saveSetting } = useSaveFacilitySetting();
+  const programs = settings.training_programs.value.programs;
+  const { t: tRates } = useStaffText("trainingRates");
+  async function writePrograms(
+    next: TrainingPackage[],
+    done?: string,
+  ): Promise<boolean> {
+    if (settingsPending) return false;
+    try {
+      await saveSetting({
+        domain: "training_programs",
+        value: { programs: next },
+      });
+    } catch (error) {
+      toast.error(tRates("notSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return false;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["training", "packages"] });
+    if (done) toast.success(done);
+    return true;
+  }
 
   // The facility's own extras. This page carried its own copy of a
   // localStorage loader — one of thirteen — plus a `storage` listener to keep
@@ -103,36 +137,32 @@ export default function TrainingRatesPage() {
       imageUrl: form.imageUrl.trim() || undefined,
     };
 
-    queryClient.setQueryData<TrainingPackage[]>(
-      ["training", "packages"],
-      (prev = []) =>
-        editing
-          ? prev.map((p) => (p.id === next.id ? next : p))
-          : [...prev, next],
-    );
-
-    toast.success(
+    void writePrograms(
+      editing
+        ? programs.map((p) => (p.id === next.id ? next : p))
+        : [...programs, next],
       editing ? `"${next.name}" updated` : `"${next.name}" created`,
-    );
-    setProgramDialogOpen(false);
-    setEditingProgram(null);
+    ).then((saved) => {
+      if (!saved) return;
+      setProgramDialogOpen(false);
+      setEditingProgram(null);
+    });
   }
 
   function handleProgramDelete() {
     if (!deletingProgram) return;
-    queryClient.setQueryData<TrainingPackage[]>(
-      ["training", "packages"],
-      (prev = []) => prev.filter((p) => p.id !== deletingProgram.id),
-    );
-    toast.success(`"${deletingProgram.name}" deleted`);
-    setDeletingProgram(null);
+    const gone = deletingProgram;
+    void writePrograms(
+      programs.filter((p) => p.id !== gone.id),
+      `"${gone.name}" deleted`,
+    ).then((saved) => {
+      if (saved) setDeletingProgram(null);
+    });
   }
 
   function toggleProgram(id: string) {
-    queryClient.setQueryData<TrainingPackage[]>(
-      ["training", "packages"],
-      (prev = []) =>
-        prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p)),
+    void writePrograms(
+      programs.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p)),
     );
   }
 
@@ -305,6 +335,12 @@ export default function TrainingRatesPage() {
               <ProgramCardGrid
                 programs={programs}
                 onToggleActive={toggleProgram}
+                onReorder={(next) =>
+                  void writePrograms(
+                    next,
+                    "Reordered — this is the new booking-page order.",
+                  )
+                }
                 onEdit={(program) => {
                   setEditingProgram(program);
                   setProgramDialogOpen(true);

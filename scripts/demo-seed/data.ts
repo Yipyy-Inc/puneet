@@ -891,6 +891,51 @@ export type SeedTrainingSeries = {
   waitlist?: string[];
 };
 
+/** The training Rates tab's programs (the training_programs settings domain). */
+export const TRAINING_PROGRAMS = [
+  {
+    id: "prog-puppy",
+    name: "Puppy Preschool — 6 weeks",
+    description:
+      "Socialisation, handling and first cues for puppies under six months.",
+    classType: "group",
+    skillLevel: "beginner",
+    sessions: 6,
+    price: 210,
+    validityDays: 90,
+    isActive: true,
+    popular: true,
+    includes: ["Six group sessions", "Take-home practice plan"],
+    sortOrder: 1,
+  },
+  {
+    id: "prog-obedience",
+    name: "Basic Obedience — 6 weeks",
+    description: "Sit, down, stay, recall and loose-leash walking.",
+    classType: "group",
+    skillLevel: "beginner",
+    sessions: 6,
+    price: 240,
+    validityDays: 90,
+    isActive: true,
+    includes: ["Six group sessions", "Progress report at graduation"],
+    sortOrder: 2,
+  },
+  {
+    id: "prog-private",
+    name: "Private coaching — 4 sessions",
+    description: "One-on-one work on the behaviour you want to change.",
+    classType: "private",
+    skillLevel: "all-levels",
+    sessions: 4,
+    price: 300,
+    validityDays: 120,
+    isActive: true,
+    includes: ["Four 45-minute private sessions", "A written plan"],
+    sortOrder: 3,
+  },
+];
+
 export const TRAINER_LEGACY_ID = `${SEED_PREFIX}-staff-07`;
 
 export const TRAINING_SERIES: SeedTrainingSeries[] = [

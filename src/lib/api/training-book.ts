@@ -1,4 +1,4 @@
-import type { Trainer } from "@/types/training";
+import type { Trainer, TrainingPackage } from "@/types/training";
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
@@ -91,4 +91,21 @@ export async function fetchFacilityVaccinations(): Promise<
   }
   const rows = (await response.json()) as VaccinationRecord[];
   return rows.filter((v) => v.expiryDate && v.status !== "rejected");
+}
+
+/**
+ * The facility's training programs (the `training_programs` settings domain)
+ * — the Rates tab's priced offers. These were `trainingPackages` from
+ * `@/data/training`; the Rates tab now writes the domain.
+ */
+export async function fetchTrainingPrograms(): Promise<TrainingPackage[]> {
+  const response = await fetch("/api/facility/settings");
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Failed to load training programs (${response.status})`);
+  }
+  const settings = (await response.json()) as {
+    training_programs?: { value?: { programs?: TrainingPackage[] } };
+  };
+  return settings.training_programs?.value?.programs ?? [];
 }

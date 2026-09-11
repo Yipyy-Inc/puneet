@@ -12940,3 +12940,17 @@ empty fallback, because rates are money), read and written through
   `daycare_config.basePrice` (and the branch price), not the matching rate's
   size price; the operations calendar and the report data sources still read
   the fixture rates.
+
+## 2026-09-11 — the training programs on the Rates tab are saved
+
+The training Rates tab's programs were `trainingPackages` from
+`@/data/training`; create, edit, delete, toggle and drag-to-reorder all wrote
+`setQueryData` into the training cache and toasted — gone on reload. They are
+the `training_programs` settings domain now (empty fallback: a program is a
+price), the tab writes the whole list and the toast waits for the write, and
+`trainingQueries.packages()` reads the same domain for every other screen.
+
+- **Still open:** `TrainingScheduleStep`'s legacy `?program=` deep link,
+  `ClientPetStep`, `lib/training-program-prereqs.ts`,
+  `lib/training-report-cards.ts` and `lib/operations-calendar.ts` still import
+  the fixture `trainingPackages` directly.

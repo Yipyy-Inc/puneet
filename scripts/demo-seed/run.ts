@@ -56,6 +56,7 @@ import {
   STAFF,
   TASK_TEMPLATES,
   TRAINER_LEGACY_ID,
+  TRAINING_PROGRAMS,
   TRAINING_SERIES,
 } from "./data";
 import { planBookings } from "./bookings";
@@ -265,6 +266,17 @@ try {
         insert into public.facility_settings (facility_id, domain, value)
         values (${DEMO_FACILITY_ID}, 'daycare_rates', ${{ rates: DAYCARE_RATES }}::jsonb)`;
       count("daycare rates");
+    }
+
+    // ── Training programs (the training Rates tab) ────────────────────────
+    const [havePrograms] = await tx`
+      select 1 from public.facility_settings
+       where facility_id = ${DEMO_FACILITY_ID} and domain = 'training_programs'`;
+    if (!havePrograms) {
+      await tx`
+        insert into public.facility_settings (facility_id, domain, value)
+        values (${DEMO_FACILITY_ID}, 'training_programs', ${{ programs: TRAINING_PROGRAMS }}::jsonb)`;
+      count("training programs");
     }
 
     // ── Grooming menu ─────────────────────────────────────────────────────
