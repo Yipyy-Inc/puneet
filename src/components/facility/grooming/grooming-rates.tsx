@@ -53,7 +53,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { GroomingPackage } from "@/types/grooming";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+  useServiceAddOns,
+} from "@/lib/api/facility-settings";
+import type { ServiceCharge } from "@/lib/settings/grooming-service-charges";
 import { addOnsForService } from "@/lib/settings/addons";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { ServiceDialog } from "./service-dialog";
@@ -67,16 +72,7 @@ const FACILITY_WIDE = "__facility_wide__";
 // Service charges
 // ─────────────────────────────────────────────────────────────────────────
 
-type ServiceChargeType = "flat" | "per-15min" | "per-km" | "percent";
-
-interface ServiceCharge {
-  id: string;
-  name: string;
-  description: string;
-  amount: number;
-  type: ServiceChargeType;
-  isActive: boolean;
-}
+type ServiceChargeType = ServiceCharge["type"];
 
 const SERVICE_CHARGE_TYPE_LABELS: Record<ServiceChargeType, string> = {
   flat: "Flat fee",
@@ -84,49 +80,6 @@ const SERVICE_CHARGE_TYPE_LABELS: Record<ServiceChargeType, string> = {
   "per-km": "Per km",
   percent: "% of service",
 };
-
-const INITIAL_SERVICE_CHARGES: ServiceCharge[] = [
-  {
-    id: "sc-01",
-    name: "Matting Fee",
-    description: "Severe coat matting requiring extra dematting time",
-    amount: 25,
-    type: "per-15min",
-    isActive: true,
-  },
-  {
-    id: "sc-02",
-    name: "Aggressive Handling Fee",
-    description: "For pets requiring extra safety measures",
-    amount: 20,
-    type: "flat",
-    isActive: true,
-  },
-  {
-    id: "sc-03",
-    name: "Late Cancellation Fee",
-    description: "Cancellations within 24 hours",
-    amount: 30,
-    type: "flat",
-    isActive: true,
-  },
-  {
-    id: "sc-04",
-    name: "No Show Fee",
-    description: "Client did not show up for appointment",
-    amount: 30,
-    type: "flat",
-    isActive: true,
-  },
-  {
-    id: "sc-05",
-    name: "Travel Fee",
-    description: "Mobile grooming distance surcharge",
-    amount: 15,
-    type: "per-km",
-    isActive: true,
-  },
-];
 
 // ─────────────────────────────────────────────────────────────────────────
 // Service card (services tab)
@@ -414,10 +367,32 @@ export function GroomingRates() {
     [allAddOns],
   );
 
-  // Service charges
-  const [charges, setCharges] = useState<ServiceCharge[]>(
-    INITIAL_SERVICE_CHARGES,
-  );
+  // ── THE SERVICE CHARGES ARE THE FACILITY'S ────────────────────────────
+  //
+  // Five charges typed into this file, copied into useState: add, edit,
+  // toggle and delete were gone on reload. They are the
+  // `grooming_service_charges` settings domain now; each change writes the
+  // whole list and the toast waits for it.
+  const { settings, isPending: chargesPending } = useFacilitySettings();
+  const { mutateAsync: saveSetting } = useSaveFacilitySetting();
+  const charges = settings.grooming_service_charges.value.charges;
+  async function writeCharges(
+    next: ServiceCharge[],
+    done?: string,
+  ): Promise<boolean> {
+    if (chargesPending) return false;
+    try {
+      await saveSetting({
+        domain: "grooming_service_charges",
+        value: { charges: next },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
+    if (done) toast.success(done);
+    return true;
+  }
   const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [editingCharge, setEditingCharge] = useState<ServiceCharge | null>(
     null,
@@ -463,27 +438,31 @@ export function GroomingRates() {
     form: Omit<ServiceCharge, "id">,
     editing: ServiceCharge | null,
   ) {
-    if (editing) {
-      setCharges((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, ...form } : c)),
-      );
-      toast.success(`"${form.name}" updated`);
-    } else {
-      setCharges((prev) => [...prev, { id: `sc-${Date.now()}`, ...form }]);
-      toast.success(`"${form.name}" added`);
-    }
-    setChargeDialogOpen(false);
-    setEditingCharge(null);
+    const next = editing
+      ? charges.map((c) => (c.id === editing.id ? { ...c, ...form } : c))
+      : [...charges, { id: `sc-${crypto.randomUUID()}`, ...form }];
+    void writeCharges(
+      next,
+      editing ? `"${form.name}" updated` : `"${form.name}" added`,
+    ).then((saved) => {
+      if (!saved) return;
+      setChargeDialogOpen(false);
+      setEditingCharge(null);
+    });
   }
   function handleChargeDelete() {
     if (!deletingCharge) return;
-    setCharges((prev) => prev.filter((c) => c.id !== deletingCharge.id));
-    toast.success(`"${deletingCharge.name}" deleted`);
-    setDeletingCharge(null);
+    const gone = deletingCharge;
+    void writeCharges(
+      charges.filter((c) => c.id !== gone.id),
+      `"${gone.name}" deleted`,
+    ).then((saved) => {
+      if (saved) setDeletingCharge(null);
+    });
   }
   function toggleCharge(id: string) {
-    setCharges((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c)),
+    void writeCharges(
+      charges.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c)),
     );
   }
 

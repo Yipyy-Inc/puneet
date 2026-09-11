@@ -13071,3 +13071,14 @@ role editor's `retail_manage_products`, `retail_manage_inventory` and
   list beside `retail_suppliers`; reports, analytics, the operations calendar,
   smart insights, `AddRetailItemModal` on the booking page and the QuickBooks
   catalogue still read the fixture products and sales.
+
+## 2026-09-11 — the grooming Rates tab's service charges are saved
+
+Matting, no-show, travel and the rest were `INITIAL_SERVICE_CHARGES`, five
+charges typed into `grooming-rates.tsx` and copied into useState: add, edit,
+toggle and delete were gone on reload. They are the
+`grooming_service_charges` settings domain now (empty fallback: a charge is
+money); each change writes the whole list and the toast waits for it.
+
+- **Still open:** nothing applies a charge to a bill yet — the list is the
+  facility's price sheet, and a groomer adds a fee as a line item.

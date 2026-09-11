@@ -1763,3 +1763,31 @@ export const RETAIL_PURCHASE_ORDER = {
   expectedInDays: 4,
   notes: "Restock before the weekend open house.",
 };
+
+// ── Grooming service charges (the Rates tab) ───────────────────────────────
+export const GROOMING_SERVICE_CHARGES = [
+  {
+    id: "demo-sc-matting",
+    name: "Matting fee",
+    description: "Severe matting that needs extra dematting time",
+    amount: 20,
+    type: "per-15min" as const,
+    isActive: true,
+  },
+  {
+    id: "demo-sc-noshow",
+    name: "No-show fee",
+    description: "Missed appointment without notice",
+    amount: 30,
+    type: "flat" as const,
+    isActive: true,
+  },
+  {
+    id: "demo-sc-handling",
+    name: "Extra handling",
+    description: "A second groomer for a nervous or reactive dog",
+    amount: 15,
+    type: "flat" as const,
+    isActive: true,
+  },
+];

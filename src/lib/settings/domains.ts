@@ -13,6 +13,10 @@ import {
   retailConfigSchema,
   SHIPPED_RETAIL_SETTINGS,
 } from "@/lib/settings/retail-config";
+import {
+  groomingServiceChargesSchema,
+  NO_SERVICE_CHARGES,
+} from "@/lib/settings/grooming-service-charges";
 
 import {
   NO_LOYALTY_PROGRAM,
@@ -445,6 +449,15 @@ export const SETTING_DOMAINS = {
   retail_config: {
     schema: retailConfigSchema,
     fallback: SHIPPED_RETAIL_SETTINGS,
+  },
+  // ── GROOMING SERVICE CHARGES ───────────────────────────────────────────
+  //
+  // Matting, no-show, travel… on the grooming Rates tab. Five charges typed
+  // into the component until 2026-09-11. Money, so the fallback is empty;
+  // see lib/settings/grooming-service-charges.ts.
+  grooming_service_charges: {
+    schema: groomingServiceChargesSchema,
+    fallback: NO_SERVICE_CHARGES,
   },
   // ── TAGS AND NOTES ─────────────────────────────────────────────────────
   //
