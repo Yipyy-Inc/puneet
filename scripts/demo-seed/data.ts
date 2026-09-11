@@ -1182,6 +1182,26 @@ export const STAFF: SeedStaff[] = [
   },
   // Appended: a staff member's legacy id is their position in this list.
   { first: "Julien", last: "Côté", role: "trainer", jobTitle: "Dog trainer" },
+  // Phase 5 (2026-09-11): evening kennels, a second daycare hand, weekends
+  // at the desk — ten on the roster with the owner.
+  {
+    first: "Émile",
+    last: "Roy",
+    role: "boarding_attendant",
+    jobTitle: "Evening kennel attendant",
+  },
+  {
+    first: "Léa",
+    last: "Moreau",
+    role: "daycare_attendant",
+    jobTitle: "Daycare attendant",
+  },
+  {
+    first: "Noah",
+    last: "Bélisle",
+    role: "reception",
+    jobTitle: "Front desk (weekends)",
+  },
 ].map((s, i) => ({
   ...s,
   legacyId: `${SEED_PREFIX}-staff-${String(i + 1).padStart(2, "0")}`,
@@ -2494,5 +2514,455 @@ export const PACKAGE_SALES: {
     daysAgo: 200,
     used: 3,
     tender: "cash",
+  },
+];
+
+// ── The schedule: departments, positions, pay, and four weeks of shifts ────
+//
+// As Scheduling → Structure writes them (POST /api/scheduling/structure) and
+// the shifts as POST /api/scheduling/shifts does, through `shiftInstants` so
+// the times are the facility's wall clock. Two weeks back and this week are
+// published; next week is still a draft, so the "waiting to be published"
+// bar has something to say. Each shift writes one internal audit_log row —
+// that trigger is the audit trail, and nothing leaves the building.
+export const DEPARTMENTS = [
+  { name: "Management", color: "#0E3A5C" },
+  { name: "Front desk", color: "#1668E3" },
+  { name: "Boarding", color: "#4F9E85" },
+  { name: "Daycare", color: "#D9A46A" },
+  { name: "Grooming", color: "#8D85D6" },
+  { name: "Training", color: "#C06A6A" },
+];
+
+export const POSITIONS = [
+  { name: "Facility manager", department: "Management", hourly: 32 },
+  { name: "Receptionist", department: "Front desk", hourly: 18.5 },
+  { name: "Kennel attendant", department: "Boarding", hourly: 18 },
+  { name: "Daycare lead", department: "Daycare", hourly: 21 },
+  { name: "Daycare attendant", department: "Daycare", hourly: 17.75 },
+  { name: "Groomer", department: "Grooming", hourly: 24 },
+  { name: "Dog trainer", department: "Training", hourly: 27 },
+];
+
+/**
+ * Who works when. `staff` is the index into STAFF; `days` are 0 = Sunday …
+ * 6 = Saturday. Nobody's shifts overlap (the table's exclusion constraint).
+ */
+export const SHIFT_PATTERNS: {
+  staff: number;
+  position: string;
+  days: number[];
+  start: string;
+  end: string;
+  breakMinutes: number;
+}[] = [
+  {
+    staff: 0,
+    position: "Facility manager",
+    days: [1, 2, 3, 4, 5],
+    start: "08:00",
+    end: "16:30",
+    breakMinutes: 30,
+  },
+  {
+    staff: 1,
+    position: "Groomer",
+    days: [2, 3, 4, 5, 6],
+    start: "09:00",
+    end: "17:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 2,
+    position: "Groomer",
+    days: [1, 3, 4, 5],
+    start: "10:00",
+    end: "18:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 3,
+    position: "Kennel attendant",
+    days: [1, 2, 3, 4, 5],
+    start: "06:30",
+    end: "14:30",
+    breakMinutes: 30,
+  },
+  {
+    staff: 4,
+    position: "Daycare lead",
+    days: [1, 2, 3, 4, 5],
+    start: "07:00",
+    end: "15:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 5,
+    position: "Receptionist",
+    days: [1, 2, 3, 4, 5],
+    start: "07:00",
+    end: "15:30",
+    breakMinutes: 30,
+  },
+  {
+    staff: 6,
+    position: "Dog trainer",
+    days: [2, 3, 4],
+    start: "12:00",
+    end: "20:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 6,
+    position: "Dog trainer",
+    days: [6],
+    start: "09:00",
+    end: "13:00",
+    breakMinutes: 0,
+  },
+  {
+    staff: 7,
+    position: "Kennel attendant",
+    days: [0, 1, 5, 6],
+    start: "14:00",
+    end: "22:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 8,
+    position: "Daycare attendant",
+    days: [1, 2, 3, 4, 5],
+    start: "10:00",
+    end: "18:30",
+    breakMinutes: 30,
+  },
+  {
+    staff: 9,
+    position: "Receptionist",
+    days: [0, 6],
+    start: "08:00",
+    end: "16:00",
+    breakMinutes: 30,
+  },
+  {
+    staff: 9,
+    position: "Receptionist",
+    days: [3, 4],
+    start: "15:30",
+    end: "19:30",
+    breakMinutes: 0,
+  },
+];
+
+/** Weeks relative to this one; the last is left as a draft. */
+export const SHIFT_WEEKS = [-2, -1, 0, 1];
+
+/** Next week's gaps nobody has picked up yet — open shifts. */
+export const OPEN_SHIFTS = [
+  {
+    position: "Kennel attendant",
+    day: 6,
+    start: "07:00",
+    end: "14:00",
+    urgent: true,
+  },
+  {
+    position: "Daycare attendant",
+    day: 5,
+    start: "12:00",
+    end: "18:30",
+    urgent: false,
+  },
+];
+
+// ── Gift cards ────────────────────────────────────────────────────────────
+//
+// The ledger is the money: a card goes in at a zero balance and its `issued`
+// entry (then any spend) brings it to where it is, through the table's own
+// trigger. Dated in the past, in order. Recipients are .invalid; nothing is
+// ever sent for a gift card.
+export const GIFT_CARDS: {
+  code: string;
+  kind: "online" | "physical";
+  amount: number;
+  daysAgo: number;
+  buyer?: number;
+  recipientName?: string;
+  recipientEmail?: string;
+  message?: string;
+  /** Days from issue until it expires; absent means never. */
+  validDays?: number;
+  spends: { amount: number; daysAgo: number; note: string }[];
+}[] = [
+  {
+    code: "7C41E9A2B05D3F68",
+    kind: "online",
+    amount: 100,
+    daysAgo: 45,
+    buyer: 5,
+    recipientName: "Jean Bouchard",
+    recipientEmail: "jean.bouchard@example.invalid",
+    message: "Bonne fête! Un bain pour Filou de notre part.",
+    spends: [{ amount: 35, daysAgo: 20, note: "Bath and brush" }],
+  },
+  {
+    code: "B2D8F0136A9C4E57",
+    kind: "online",
+    amount: 50,
+    daysAgo: 10,
+    buyer: 0,
+    recipientName: "Léo Tremblay",
+    recipientEmail: "leo.tremblay@example.invalid",
+    message: "For Moka's cousin — first daycare day is on us.",
+    spends: [],
+  },
+  {
+    code: "PC-0042-1187",
+    kind: "physical",
+    amount: 75,
+    daysAgo: 90,
+    spends: [
+      { amount: 40, daysAgo: 70, note: "Daycare day" },
+      { amount: 35, daysAgo: 41, note: "Nail trim and teeth" },
+    ],
+  },
+  {
+    code: "PC-0017-5530",
+    kind: "physical",
+    amount: 25,
+    daysAgo: 400,
+    message: "Holiday market 2025",
+    validDays: 365,
+    spends: [],
+  },
+  {
+    code: "E61A4C9D27F83B05",
+    kind: "online",
+    amount: 150,
+    daysAgo: 3,
+    buyer: 13,
+    recipientName: "Nadia Haddad",
+    recipientEmail: "nadia.haddad@example.invalid",
+    message: "A spa day for Zeus. Love, Karim",
+    spends: [],
+  },
+];
+
+// ── Report cards ──────────────────────────────────────────────────────────
+//
+// As the Report Cards form writes them: its `input` answers and the
+// `generated` sections the customer portal reads. Each is tied to that pet's
+// latest completed visit for the service when there is one. Some were read,
+// one was rated and answered, one is waiting to be sent.
+export const REPORT_CARDS: {
+  key: string;
+  pet: string;
+  service: "daycare" | "boarding" | "grooming" | "training";
+  /** Used only when the pet has no completed visit for the service. */
+  daysAgo: number;
+  delivery: "sent" | "pending";
+  viewed?: boolean;
+  favourite?: boolean;
+  rating?: { stars: number; comment: string };
+  reply?: string;
+  input: Record<string, unknown>;
+  generated: {
+    todaysVibe: string;
+    friendsAndFun: string;
+    careMetrics: string;
+    closingNote: string;
+  };
+}[] = [
+  {
+    key: `${SEED_PREFIX}-rc-moka`,
+    pet: "Moka",
+    service: "daycare",
+    daysAgo: 2,
+    delivery: "sent",
+    viewed: true,
+    favourite: true,
+    rating: { stars: 5, comment: "She came home exhausted and happy. Merci!" },
+    input: {
+      mood: "happy",
+      energy: "high",
+      socialization: "social",
+      favoriteActivities: ["fetch", "group-play", "water-play"],
+      playNotes:
+        "Led the morning fetch group and refused to leave the splash pool.",
+      bestFriends: "Biscuit and Rocky",
+      appetite: "ate-all",
+      potty: "normal",
+      meds: "not-needed",
+      holiday: "no",
+      closingComment: "A perfect daycare dog. See you Thursday!",
+    },
+    generated: {
+      todaysVibe:
+        "Moka was happy and bubbly all day, with energy to spare — she was first to the gate every time we went out to the yard.",
+      friendsAndFun:
+        "A total social butterfly: she ran the morning fetch group, then spent the afternoon in the splash pool with Biscuit and Rocky.",
+      careMetrics:
+        "Eating habits: Ate everything\nPotty habits: All normal\nMedication: Not needed",
+      closingNote: "A perfect daycare dog. See you Thursday!",
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-rc-biscuit`,
+    pet: "Biscuit",
+    service: "grooming",
+    daysAgo: 6,
+    delivery: "sent",
+    viewed: true,
+    reply: "He smells amazing — thank you Hugo!",
+    input: {
+      mood: "content",
+      energy: "medium",
+      socialization: "social",
+      favoriteActivities: ["cuddles"],
+      playNotes: "Stood beautifully for the blow-dry.",
+      bestFriends: "",
+      appetite: "ate-all",
+      potty: "normal",
+      meds: "not-needed",
+      holiday: "no",
+      closingComment:
+        "Coat is in great shape; a light de-shed in six weeks will keep it that way.",
+      petConditions: { coat: "Light undercoat shedding, no mats" },
+    },
+    generated: {
+      todaysVibe:
+        "Biscuit was calm and content on the table, and stood beautifully for his blow-dry.",
+      friendsAndFun:
+        "Plenty of cuddles between steps — he leaned into every towel-dry.",
+      careMetrics:
+        "Eating habits: Ate everything\nPotty habits: All normal\nMedication: Not needed",
+      closingNote:
+        "Coat is in great shape; a light de-shed in six weeks will keep it that way.",
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-rc-luna`,
+    pet: "Luna",
+    service: "boarding",
+    daysAgo: 9,
+    delivery: "sent",
+    viewed: false,
+    input: {
+      mood: "shy",
+      energy: "medium",
+      socialization: "selective",
+      favoriteActivities: ["sniffing", "rest"],
+      playNotes: "Took a day to settle, then loved her evening sniff walks.",
+      bestFriends: "Maple",
+      appetite: "ate-most",
+      potty: "normal",
+      meds: "given",
+      holiday: "no",
+      closingComment: "She was a sweetheart once she settled in.",
+    },
+    generated: {
+      todaysVibe:
+        "Luna was a little shy on her first night, then relaxed into the routine — by day two she was waiting at her suite door for walks.",
+      friendsAndFun:
+        "She prefers one friend at a time, and that friend was Maple. Long sniff walks were the highlight.",
+      careMetrics:
+        "Eating habits: Ate most of her meals\nPotty habits: All normal\nMedication: Given as scheduled",
+      closingNote: "She was a sweetheart once she settled in.",
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-rc-charlie`,
+    pet: "Charlie",
+    service: "training",
+    daysAgo: 4,
+    delivery: "sent",
+    viewed: true,
+    rating: {
+      stars: 4,
+      comment: "Real progress on the leash. Homework is hard!",
+    },
+    input: {
+      mood: "content",
+      energy: "high",
+      socialization: "selective",
+      favoriteActivities: ["training"],
+      playNotes: "Held a sit at twelve metres from another dog — a first.",
+      bestFriends: "",
+      appetite: "ate-all",
+      potty: "normal",
+      meds: "not-needed",
+      holiday: "no",
+      closingComment: "Homework: five minutes of 'look at me' on every walk.",
+    },
+    generated: {
+      todaysVibe:
+        "Charlie came in focused and keen to work, and stayed with us for the whole session.",
+      friendsAndFun:
+        "The big win: he held a sit twelve metres from another dog without reacting — the first time we have seen that.",
+      careMetrics:
+        "Eating habits: Took every treat\nPotty habits: All normal\nMedication: Not needed",
+      closingNote: "Homework: five minutes of 'look at me' on every walk.",
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-rc-maple`,
+    pet: "Maple",
+    service: "daycare",
+    daysAgo: 1,
+    delivery: "sent",
+    viewed: false,
+    input: {
+      mood: "tired",
+      energy: "low",
+      socialization: "independent",
+      favoriteActivities: ["cuddles", "rest"],
+      playNotes: "A quiet day in the small-dog room.",
+      bestFriends: "",
+      appetite: "ate-some",
+      potty: "normal",
+      meds: "not-needed",
+      holiday: "no",
+      closingComment:
+        "She was quieter than usual; worth keeping an eye on her appetite tonight.",
+      overallFeedback: "Lower energy and appetite than her usual days.",
+    },
+    generated: {
+      todaysVibe:
+        "Maple had a quiet, sleepy day and spent most of it curled up in the small-dog room.",
+      friendsAndFun:
+        "She was happy on her own today, and came over for cuddles whenever someone sat down.",
+      careMetrics:
+        "Eating habits: Ate some of her lunch\nPotty habits: All normal\nMedication: Not needed",
+      closingNote:
+        "She was quieter than usual; worth keeping an eye on her appetite tonight.",
+    },
+  },
+  {
+    key: `${SEED_PREFIX}-rc-rocky`,
+    pet: "Rocky",
+    service: "daycare",
+    daysAgo: 0,
+    delivery: "pending",
+    input: {
+      mood: "happy",
+      energy: "high",
+      socialization: "social",
+      favoriteActivities: ["group-play", "fetch"],
+      playNotes: "Big-dog yard all morning.",
+      bestFriends: "Moka",
+      appetite: "ate-all",
+      potty: "normal",
+      meds: "not-needed",
+      holiday: "no",
+      closingComment: "",
+    },
+    generated: {
+      todaysVibe:
+        "Rocky was full of beans and spent the morning in the big-dog yard.",
+      friendsAndFun: "He and Moka ran laps until lunch.",
+      careMetrics:
+        "Eating habits: Ate everything\nPotty habits: All normal\nMedication: Not needed",
+      closingNote: "",
+    },
   },
 ];

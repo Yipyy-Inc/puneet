@@ -25,8 +25,11 @@ import {
 } from "./config";
 import {
   CATEGORIES,
+  DEPARTMENTS,
+  GIFT_CARDS,
   INCIDENTS,
   NOTES,
+  POSITIONS,
   RETAIL_PURCHASE_ORDER,
   TRAINING_SERIES,
 } from "./data";
@@ -266,6 +269,86 @@ try {
     );
     if (bundlesGone.count)
       removed["public.prepaid_packages"] = bundlesGone.count;
+
+    // ── Report cards, gift cards and the schedule ─────────────────────────
+    // A seeded report card by the key in its `input` (sent ones too: this
+    // runs as the owner). A seeded gift card by its code, ledger first — the
+    // ledger refuses UPDATE, not DELETE. Shifts in the seeded departments
+    // held by seeded staff or nobody (the client's own shifts stay), then the
+    // department memberships, pay, positions and departments nothing else
+    // uses. Deleting a shift writes an audit_log row; that log is permanent.
+    const cardsGone = await tx`
+      delete from public.report_cards
+       where facility_id = ${DEMO_FACILITY_ID}
+         and input->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
+    if (cardsGone.count) removed["public.report_cards"] = cardsGone.count;
+    const giftIds = (
+      await tx`
+        select id::text from public.gift_cards
+         where facility_id = ${DEMO_FACILITY_ID}
+           and code = any(${pgTextArray(GIFT_CARDS.map((g) => g.code))}::text[])`
+    ).map((r: { id: string }) => r.id);
+    await deleteChildren(tx, "public.gift_cards", giftIds);
+    const giftsGone = await tx.unsafe(
+      `delete from public.gift_cards where id = any($1::uuid[])`,
+      [pgArray(giftIds)],
+    );
+    if (giftsGone.count) removed["public.gift_cards"] = giftsGone.count;
+    const deptIds = (
+      await tx`
+        select id::text from public.facility_departments
+         where facility_id = ${DEMO_FACILITY_ID}
+           and name = any(${pgTextArray(DEPARTMENTS.map((d) => d.name))}::text[])`
+    ).map((r: { id: string }) => r.id);
+    if (deptIds.length) {
+      const shiftsGone = await tx.unsafe(
+        `delete from public.staff_shifts
+          where department_id = any($1::uuid[])
+            and (staff_id is null or staff_id in (
+              select id from public.staff
+               where facility_id = $2 and legacy_id like $3))`,
+        [pgArray(deptIds), DEMO_FACILITY_ID, `${SEED_PREFIX}-staff-%`],
+      );
+      if (shiftsGone.count) removed["public.staff_shifts"] = shiftsGone.count;
+      const membersGone = await tx.unsafe(
+        `delete from public.staff_departments
+          where department_id = any($1::uuid[])
+            and staff_id in (select id from public.staff
+                              where facility_id = $2 and legacy_id like $3)`,
+        [pgArray(deptIds), DEMO_FACILITY_ID, `${SEED_PREFIX}-staff-%`],
+      );
+      if (membersGone.count)
+        removed["public.staff_departments"] = membersGone.count;
+      const freePositions = (
+        await tx.unsafe(
+          `select p.id::text from public.facility_positions p
+            where p.department_id = any($1::uuid[])
+              and p.name = any($2::text[])
+              and not exists (select 1 from public.staff_shifts s where s.position_id = p.id)`,
+          [pgArray(deptIds), pgTextArray(POSITIONS.map((p) => p.name))],
+        )
+      ).map((r: { id: string }) => r.id);
+      await tx.unsafe(
+        `delete from public.facility_position_pay where position_id = any($1::uuid[])`,
+        [pgArray(freePositions)],
+      );
+      const positionsGone = await tx.unsafe(
+        `delete from public.facility_positions where id = any($1::uuid[])`,
+        [pgArray(freePositions)],
+      );
+      if (positionsGone.count)
+        removed["public.facility_positions"] = positionsGone.count;
+      const deptsGone = await tx.unsafe(
+        `delete from public.facility_departments d
+          where d.id = any($1::uuid[])
+            and not exists (select 1 from public.facility_positions p where p.department_id = d.id)
+            and not exists (select 1 from public.staff_shifts s where s.department_id = d.id)
+            and not exists (select 1 from public.staff_departments sd where sd.department_id = d.id)`,
+        [pgArray(deptIds)],
+      );
+      if (deptsGone.count)
+        removed["public.facility_departments"] = deptsGone.count;
+    }
 
     // ── MONEY STAYS ─────────────────────────────────────────────────────────
     // `payments` is append-only (`prevent_money_mutation` refuses DELETE even
