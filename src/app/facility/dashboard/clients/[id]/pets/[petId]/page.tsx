@@ -4,8 +4,8 @@ import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { bookings } from "@/data/bookings";
 import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
 import { clientQueries, useClientRecord, useUpdatePet } from "@/lib/api/client";
 import { petPhotos, petRelationships } from "@/data/pet-data";
 import { usePetVaccinations } from "@/lib/api/vaccinations";
@@ -234,6 +234,12 @@ export default function PetDetailPage({
   );
   const { rules: vaccinationRules } = useVaccinationRules();
   const [today] = useState(localToday);
+  // This client's real bookings; the stay history and the Stays tile read
+  // `bookings` from `@/data/bookings` by numeric pet id.
+  const { data: ownerBookings } = useQuery({
+    ...bookingQueries.byClient(parseInt(id, 10)),
+    enabled: Number.isInteger(parseInt(id, 10)),
+  });
 
   const petEvaluations = (pet as { evaluations?: Evaluation[] } | undefined)
     ?.evaluations;
@@ -264,7 +270,9 @@ export default function PetDetailPage({
   }
 
   const photos = petPhotos.filter((p) => p.petId === pet.id);
-  const petBookings = bookings.filter((b) => b.petId === pet.id);
+  const petBookings = (ownerBookings ?? []).filter((b) =>
+    (Array.isArray(b.petId) ? b.petId : [b.petId]).includes(pet.id),
+  );
   const reports = petReportCards;
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
 
@@ -1236,9 +1244,10 @@ export default function PetDetailPage({
                           new Date(a.startDate).getTime(),
                       )
                       .map((booking) => (
-                        <div
+                        <Link
                           key={booking.id}
-                          className="bg-card hover:bg-muted flex cursor-pointer items-start justify-between rounded-lg border p-4 transition-colors"
+                          href={`/facility/dashboard/clients/${id}/bookings/${booking.id}`}
+                          className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
                         >
                           <div className="flex items-start gap-3">
                             <div className="bg-muted rounded-lg p-2">
@@ -1270,7 +1279,7 @@ export default function PetDetailPage({
                               ${booking.totalCost}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                   </div>
                 ) : (

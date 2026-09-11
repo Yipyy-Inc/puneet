@@ -12544,3 +12544,25 @@ tab. `/api/pets` POST no longer copies the owner ref into `details`.
 
 - **Still open:** the pet profile's Photos and Relationships tabs still read
   `@/data/pet-data` (no table for either yet).
+
+## 2026-09-11 — the client file's money tabs read the ledgers the till writes
+
+On the profile a client row opens, **Credits** and **Gift cards** read
+`customerCredits` and `giftCards` from `@/data/payments` by numeric id, and
+**Invoices** listed fixture invoices beside the booking ones, with a Send
+button that did nothing — a real client wore invented balances, and credit the
+till had just issued them was nowhere. The Outstanding figure summed those
+fixture invoices; the Credit Balance summed fixture credits. On the sidebar
+Billing page, **Pay selected** on open invoices toasted "Bulk payment of $X
+processed" and recorded nothing. The pet profile's stay history and Stays
+tile read `@/data/bookings`.
+
+Credits now read the client's own `store_credit_entries` (`?clientRef=`,
+server-side — the sidebar page stops downloading every client's ledger),
+gift cards the ones this client bought, Outstanding is
+`clients.outstanding_balance`, and Pay selected settles through
+`settle_bookings` and states what it actually took. Stay history reads the
+owner's real bookings and links to each.
+
+- **Still open:** Purchases (retail) and Membership still read fixtures /
+  `clients.details` (Phase 4).

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useClientRecord } from "@/lib/api/client";
 import { bookingQueries } from "@/lib/api/booking";
 import { paymentQueries } from "@/lib/api/payments";
-import { useStoreCredit } from "@/lib/api/store-credit";
+import { useClientStoreCredit } from "@/lib/api/store-credit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Receipt, Gift, Award } from "lucide-react";
@@ -34,7 +34,7 @@ export default function ClientBillingPage({
   const { data: clientBookings = [] } = useQuery(
     bookingQueries.byClient(clientId),
   );
-  const { data: storeCredit } = useStoreCredit();
+  const { data: storeCredit } = useClientStoreCredit(clientId);
 
   if (!client) return null;
 

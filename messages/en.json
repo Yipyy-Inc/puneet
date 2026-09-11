@@ -1951,7 +1951,18 @@
         "petNameRequired": "A pet needs a name.",
         "petSavedToast": "{pet}’s details saved",
         "savePet": "Save {pet}",
-        "reportCards": "Report cards"
+        "reportCards": "Report cards",
+        "outstandingAlert": "{amount} is owed on finished bookings",
+        "creditIssued": "Credit added",
+        "creditSpent": "Credit used",
+        "noCredit": "No store credit on this account yet.",
+        "giftCardFor": "For {name}",
+        "giftCardExpires": "Expires {date}",
+        "giftCardOf": "of {amount}",
+        "noGiftCards": "This client has not bought a gift card.",
+        "settledOne": "{amount} recorded on {n} booking",
+        "settledMany": "{amount} recorded across {n} bookings",
+        "settleFailed": "Nothing was recorded"
       }
     }
   },
