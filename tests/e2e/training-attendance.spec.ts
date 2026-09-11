@@ -46,8 +46,13 @@ interface Attendee {
   trainerName: string | null;
 }
 
+// The day the bookings are made on, and the day the board is asked for —
+// the same string, passed explicitly. The board's default is the FACILITY's
+// today, which is not the UTC date between 20:00 and midnight in Montréal —
+// exactly when the nightly suite runs.
+const today = new Date().toISOString().slice(0, 10);
+
 function bookingBody(service = "training") {
-  const today = new Date().toISOString().slice(0, 10);
   return {
     clientId: CLIENT_REF,
     petId: PET_REF,
@@ -66,7 +71,7 @@ function bookingBody(service = "training") {
 }
 
 async function day(page: import("@playwright/test").Page): Promise<Attendee[]> {
-  const res = await page.request.get("/api/training/attendance");
+  const res = await page.request.get(`/api/training/attendance?date=${today}`);
   expect(res.ok(), await res.text()).toBe(true);
   return ((await res.json()) as { attendees: Attendee[] }).attendees;
 }
