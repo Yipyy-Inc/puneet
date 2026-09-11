@@ -12589,3 +12589,31 @@ object policies, including the positive upload case.
 - **Still open:** customers cannot see or add their own files yet; a vaccination
   record cannot link to a filed certificate (`pet_vaccinations.document_url`
   is unused).
+
+## 2026-09-11 — an estimate is a row (the facility side)
+
+Nothing in the database held an estimate. The facility list, the client
+file's tab, the card and drawer, the convert dialog, the wizard and the
+booking modal's estimate mode all read seven rows from `@/data/estimates`;
+the wizard's **Send** built an estimate and stored it nowhere, the card's
+actions were empty "mock seams" followed by success toasts, **Send reminder**
+and **Send via SMS** claimed messages nobody sent, and converting pushed a
+booking onto the bookings fixture with a card deposit "paid on acceptance"
+that nobody took.
+
+`public.estimates` (20260911113556, fixed by 20260911113726 — `lpad`
+truncates a number longer than its width, caught by the SQL test before any
+facility wrote one) numbers per facility from its own `estimate_settings`,
+freezes number, token and facility, lets a customer read their own once sent,
+and answers them through `respond_to_estimate`. `/api/estimates` and
+`/api/estimates/[key]` (named actions: send, accept on behalf, decline,
+convert, edit — a price change after sending is a new version) back every
+facility estimate screen; totals are recomputed server-side from the lines.
+Converting creates the booking through `/api/bookings` and only then marks
+the estimate. **Send sends no message**: it opens the estimate to the
+customer and copies the link, and every surface says so.
+
+- **Still open:** the customer's estimate pages (list, token page,
+  accept/decline dialogs, account setup) still read the fixture — next commit;
+  the wizard's room prices and training programmes are still fixtures
+  (Phase 3/4); no email is sent for an estimate anywhere.

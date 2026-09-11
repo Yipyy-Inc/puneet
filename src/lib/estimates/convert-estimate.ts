@@ -1,48 +1,53 @@
-import { bookings } from "@/data/bookings";
-import { sendBookingConfirmationEmail } from "@/lib/estimates/email-sends";
-import type { Booking, Estimate, NewBooking } from "@/types/booking";
+import type { Estimate, NewBooking } from "@/types/booking";
 
-// The demo facility estimates belong to (matches the estimate wizard).
-const DEMO_FACILITY_ID = 11;
+// ============================================================================
+// An estimate, as the booking it becomes.
+//
+// This file used to FINISH the conversion too: push a booking onto the
+// `@/data/bookings` fixture, flip the estimate in memory, and "send" a
+// confirmation email to an in-memory outbox. The booking is created through
+// /api/bookings now and the estimate is pointed at it by
+// `useConvertEstimate` (src/lib/api/estimates.ts). What is left here is the
+// mapping, which is the one part that was always real.
+//
+// No deposit rides along. The fixture version attached `initialDeposit` —
+// "card, collected on acceptance" — when the facility's settings said a
+// deposit was due on accepting, whether or not anybody had taken one.
+// Accepting an estimate moves no money; a deposit is taken at the till.
+// ============================================================================
 
-function nextBookingId(): number {
-  return bookings.reduce((m, b) => Math.max(m, b.id), 1000) + 1;
-}
+/** `facilityId` on NewBooking is a label the server ignores (it uses the session). */
+const FACILITY_LABEL = 11;
 
 /**
- * Booking notes carried over from the estimate (spec 7.x): staff-only notes
- * plus the customer-facing note, tagged with its source estimate id.
+ * Booking notes carried over from the estimate: staff-only notes plus the
+ * customer-facing note, tagged with its source estimate number.
  */
 export function estimateBookingNotes(estimate: Estimate): string {
   const parts: string[] = [];
   const internal =
     estimate.internalNotes || estimate.internalNote || estimate.notes;
   if (internal) parts.push(internal.trim());
-  if (estimate.publicNote) {
-    parts.push(`[From Estimate ${estimate.estimateId}] ${estimate.publicNote}`);
+  if (estimate.publicNote && estimate.publicNote !== internal) {
+    parts.push(`[${estimate.estimateId}] ${estimate.publicNote}`);
   }
   return parts.join("\n");
 }
 
 /** Map an estimate onto the booking-create shape (NewBooking) — no re-entry. */
-export function buildBookingDataFromEstimate(
-  estimate: Estimate,
-  opts?: { depositPaid?: boolean },
-): NewBooking {
+export function buildBookingDataFromEstimate(estimate: Estimate): NewBooking {
   const petId =
     estimate.petIds.length === 1 ? estimate.petIds[0] : estimate.petIds;
-  const deposit = estimate.depositRequired ?? 0;
-  const depositPaid = !!opts?.depositPaid && deposit > 0;
   const notes = estimateBookingNotes(estimate);
 
   return {
     clientId: estimate.clientId,
     petId,
-    facilityId: DEMO_FACILITY_ID,
+    facilityId: FACILITY_LABEL,
     service: estimate.service,
     serviceType: estimate.serviceType || estimate.roomType,
     startDate: estimate.startDate,
-    endDate: estimate.endDate,
+    endDate: estimate.endDate || estimate.startDate,
     checkInTime: estimate.checkInTime,
     checkOutTime: estimate.checkOutTime,
     status: "confirmed",
@@ -52,60 +57,5 @@ export function buildBookingDataFromEstimate(
     totalCost: estimate.total,
     kennel: estimate.roomType,
     specialRequests: notes || undefined,
-    initialDeposit: depositPaid
-      ? {
-          amount: deposit,
-          method: "card",
-          ruleLabel: "Estimate deposit",
-          collectedAt: estimate.acceptedAt,
-        }
-      : undefined,
   };
-}
-
-/**
- * Finalize a conversion: append the booking to the shared bookings list (so it
- * shows in both the facility and customer portals), flip the estimate to
- * converted, and send the booking-confirmation email (Area 6.2). Returns the id.
- */
-export function finalizeEstimateConversion(
-  estimate: Estimate,
-  data: NewBooking,
-  now: Date = new Date(),
-): number {
-  const bookingId = nextBookingId();
-  // A paid deposit is a PARTIAL payment and the balance is still due, so a
-  // converted estimate is 'pending' however much was taken up front. The
-  // database reaches the same answer for the same reason — it has no 'partial'
-  // yet (Decision 3 in 20260806680000) — but this list is local, so it is said
-  // here too.
-  const booking: Booking = { ...data, id: bookingId, paymentStatus: "pending" };
-  bookings.push(booking);
-
-  estimate.status = "converted";
-  estimate.convertedBookingId = bookingId;
-  estimate.activityLog = [
-    ...(estimate.activityLog ?? []),
-    {
-      at: now.toISOString(),
-      type: "Converted",
-      actor: "Staff",
-      detail: `Booking #${bookingId}`,
-    },
-  ];
-
-  sendBookingConfirmationEmail(estimate, bookingId);
-  return bookingId;
-}
-
-/** Convert an estimate to a booking as-is (the "Confirm Booking" path). */
-export function convertEstimateToBooking(
-  estimate: Estimate,
-  opts?: { now?: Date; depositPaid?: boolean },
-): number {
-  return finalizeEstimateConversion(
-    estimate,
-    buildBookingDataFromEstimate(estimate, { depositPaid: opts?.depositPaid }),
-    opts?.now,
-  );
 }

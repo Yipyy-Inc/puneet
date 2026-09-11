@@ -39,7 +39,7 @@ import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal"
 import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
 import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { estimates } from "@/data/estimates";
+import { useClientEstimates } from "@/lib/api/estimates";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/use-settings";
@@ -279,12 +279,15 @@ export default function ClientBookingDetailPage({
     setBooking(initialBooking);
   }, [initialBooking]);
   // Traceability: the estimate this booking was converted from, if any.
+  // The estimate this booking was converted from, among the client's own —
+  // the fixture matched a real booking to an invented estimate by number.
+  const { estimates: clientEstimates } = useClientEstimates(clientId);
   const sourceEstimate = useMemo(
     () =>
       booking
-        ? estimates.find((e) => e.convertedBookingId === booking.id)
+        ? clientEstimates.find((e) => e.convertedBookingId === booking.id)
         : undefined,
-    [booking],
+    [booking, clientEstimates],
   );
   const earnPoints = useEarnLoyaltyPoints();
   const {

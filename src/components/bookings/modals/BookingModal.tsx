@@ -11,7 +11,6 @@ import React, {
 } from "react";
 import {
   useDepositRules,
-  useEstimateSettings,
   usePricingRules,
   useServiceAddOns,
   useYipyyGoConfig,
@@ -91,7 +90,8 @@ import {
 } from "@/lib/capacity-engine";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { toast } from "sonner";
-import { getNextEstimateId } from "@/data/estimates";
+import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
+import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
@@ -306,10 +306,6 @@ export function BookingModal({
   // amounts on the same booking.
   const { rules: depositRules, isPending: depositRulesPending } =
     useDepositRules();
-  // The estimate number's prefix and width belong to the business. In
-  // localStorage they belonged to the machine, so two staff generated two
-  // numbering schemes for the same facility.
-  const { settings: estimateSettings } = useEstimateSettings();
   const { addOns: serviceAddOns } = useServiceAddOns();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
@@ -357,6 +353,15 @@ export function BookingModal({
   );
   const [estimatePricingSnapshot, setEstimatePricingSnapshot] =
     useState<EstimatePricingSnapshot | null>(null);
+  // The estimate this mode wrote. It set a success state and numbered it from
+  // the fixture, and "Send" flipped a flag — nothing was stored, so an
+  // estimate made here existed until the modal closed.
+  const [savedEstimate, setSavedEstimate] = useState<{
+    id: string;
+    token?: string;
+  } | null>(null);
+  const [estimateBusy, setEstimateBusy] = useState(false);
+  const { create: createEstimate, act: actOnEstimate } = useEstimateMutations();
 
   // Customer booking request confirmation state
   const [bookingRequested, setBookingRequested] = useState(false);
@@ -455,12 +460,14 @@ export function BookingModal({
       setEstimateCreated(false);
       setEstimateSent(false);
       setGeneratedEstimateId(null);
+      setSavedEstimate(null);
       setEstimatePricingSnapshot(null);
     } else {
       setIsEstimateMode(false);
       setEstimateCreated(false);
       setEstimateSent(false);
       setGeneratedEstimateId(null);
+      setSavedEstimate(null);
       setEstimatePricingSnapshot(null);
       // Reset quick-create drafts so a re-opened wizard starts clean.
       setDraftClients([]);
@@ -2249,11 +2256,95 @@ export function BookingModal({
     }
   };
 
+  // What the estimate says, from the same figures the confirm step shows.
+  // `subtotal` there is already net of discounts, so the lines carry the
+  // gross and the discount travels separately; the route recomputes the total
+  // from exactly these and lands on the figure on screen.
+  const estimateDates = () => ({
+    startDate:
+      selectedService === "daycare" && daycareSelectedDates.length > 0
+        ? daycareSelectedDates[0].toISOString().split("T")[0]
+        : selectedService === "boarding" && boardingRangeStart
+          ? boardingRangeStart.toISOString().split("T")[0]
+          : startDate,
+    endDate:
+      selectedService === "boarding" && boardingRangeEnd
+        ? boardingRangeEnd.toISOString().split("T")[0]
+        : endDate || startDate,
+    checkInTime:
+      selectedService === "boarding" && boardingDateTimes.length > 0
+        ? boardingDateTimes[0].checkInTime
+        : checkInTime,
+    checkOutTime:
+      selectedService === "boarding" && boardingDateTimes.length > 0
+        ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
+        : checkOutTime,
+  });
+
+  const persistEstimate = async (
+    recipient: Pick<EstimateCreate, "clientRef" | "guest" | "petRefs">,
+  ) => {
+    if (estimateBusy) return;
+    const price = calculatePrice;
+    const cents = (n: number) => Math.round(n * 100) / 100;
+    const gross = cents(price.subtotal + price.discount);
+    const serviceLabel = serviceType
+      ? `${selectedService} · ${serviceType}`
+      : selectedService;
+    const lines: EstimateCreate["lineItems"] = [
+      { label: serviceLabel, amount: cents(price.basePrice), quantity: 1 },
+    ];
+    if (price.addOnsTotal > 0) {
+      lines.push({
+        label: t("estimateLineAddOns"),
+        amount: cents(price.addOnsTotal),
+        quantity: 1,
+      });
+    }
+    const rest = cents(gross - price.basePrice - price.addOnsTotal);
+    if (Math.abs(rest) >= 0.01) {
+      lines.push({ label: t("estimateLineFees"), amount: rest, quantity: 1 });
+    }
+    const dates = estimateDates();
+    setEstimateBusy(true);
+    try {
+      const saved = await createEstimate.mutateAsync({
+        ...recipient,
+        service: selectedService,
+        serviceType: serviceType || undefined,
+        startDate: dates.startDate || undefined,
+        endDate: dates.endDate || undefined,
+        checkInTime: dates.checkInTime || undefined,
+        checkOutTime: dates.checkOutTime || undefined,
+        lineItems: lines,
+        discount: cents(price.discount),
+        taxRate: price.taxRate,
+        send: false,
+      });
+      setEstimatePricingSnapshot(buildEstimatePricingSnapshot(price));
+      setSavedEstimate({ id: saved.id, token: saved.estimateToken });
+      setGeneratedEstimateId(saved.estimateId);
+      setEstimateCreated(true);
+    } catch (error) {
+      toast.error(t("estimateSaveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setEstimateBusy(false);
+    }
+  };
+
   const handleComplete = () => {
     if (isEstimateMode && isGuestEstimate) {
-      setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
-      setGeneratedEstimateId(getNextEstimateId(estimateSettings));
-      setEstimateCreated(true);
+      void persistEstimate({
+        guest: {
+          name: guestName.trim() || guestEmail.trim() || t("newInquiry"),
+          email: guestEmail.trim() || undefined,
+          phone: guestPhone.trim() || undefined,
+          pet: guestPetSummary[0] ? { name: guestPetSummary[0] } : undefined,
+        },
+        petRefs: [],
+      });
       return;
     }
 
@@ -2280,7 +2371,8 @@ export function BookingModal({
     // Check if service requires evaluation
     const requiresEvaluation = requiresEvaluationForService(selectedService);
 
-    if (requiresEvaluation) {
+    // Not for a quote: an estimate books nothing, evaluations included.
+    if (requiresEvaluation && !isEstimateMode) {
       const petsNeedingEvaluation = selectedPets.filter((pet) => {
         const hasValidEval =
           pet.evaluations?.some(
@@ -2465,10 +2557,11 @@ export function BookingModal({
     };
 
     if (isEstimateMode) {
-      // In estimate mode, show success state instead of creating a booking
-      setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
-      setGeneratedEstimateId(getNextEstimateId(estimateSettings));
-      setEstimateCreated(true);
+      // In estimate mode the booking is not made: the quote is stored instead.
+      void persistEstimate({
+        clientRef: clientId,
+        petRefs: petIdList.filter((id) => id > 0),
+      });
       return;
     }
 
@@ -2838,7 +2931,29 @@ export function BookingModal({
     }
 
     setEstimatePricingSnapshot(latestSnapshot);
-    setEstimateSent(true);
+    if (!savedEstimate || estimateBusy) return;
+    // Opens it to the customer and copies the link. No message is sent from
+    // here, and the success screen says so.
+    setEstimateBusy(true);
+    actOnEstimate
+      .mutateAsync({
+        id: savedEstimate.id,
+        patch: { action: "send", via: "link" },
+      })
+      .then(async (sent) => {
+        if (sent.estimateToken) {
+          await navigator.clipboard
+            .writeText(customerEstimateLink(sent))
+            .catch(() => undefined);
+        }
+        setEstimateSent(true);
+      })
+      .catch((error: unknown) => {
+        toast.error(t("estimateSaveFailed"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      })
+      .finally(() => setEstimateBusy(false));
   };
 
   const isViewMode = !!booking;

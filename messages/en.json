@@ -2008,6 +2008,34 @@
         "cancel": "Cancel",
         "filedToast": "{name} filed for {client}",
         "fileFailed": "The document was not filed"
+      },
+      "estimateActions": {
+        "sentToast": "{number} is open to the customer",
+        "sentCopied": "Its link is copied — paste it into an email or a text. No message was sent from here.",
+        "sentNotCopied": "Copy its link from the estimate to share it. No message was sent from here.",
+        "sendFailed": "The estimate was not opened to the customer",
+        "linkCopied": "Estimate link copied",
+        "linkNotCopied": "The link could not be copied",
+        "acceptedToast": "{number} accepted on behalf of {client}",
+        "theCustomer": "the customer",
+        "acceptFailed": "The acceptance was not recorded",
+        "declinedToast": "{number} marked declined",
+        "declineFailed": "The estimate was not declined",
+        "duplicatedToast": "{number} copied to a new draft, {copy}",
+        "duplicateFailed": "The estimate was not copied",
+        "deletedToast": "Draft {number} deleted",
+        "deleteFailed": "The draft was not deleted",
+        "convertedToast": "Booking #{booking} created from {number}",
+        "convertFailed": "The booking was not created",
+        "confirmBooking": "Create the booking",
+        "guestNeedsClient": "{name} is not a client yet. Add them as a client, then use Edit to book.",
+        "draftSavedToast": "{number} saved as a draft",
+        "saveFailed": "The estimate was not saved",
+        "readyTitle": "Estimate open to the customer",
+        "readyBody": "{number} is open to {client}. Nothing was emailed from here — share the link below.",
+        "linkCopiedShare": "Copied to your clipboard:",
+        "linkToShare": "The link to share:",
+        "clientCreated": "A client record was created for {name}, so this estimate can become a booking."
       }
     }
   },
@@ -6477,8 +6505,8 @@
       "confirmedWithPass": "Your {service} booking is confirmed and 1 pass has been applied — no payment needed.",
       "confirmedPending": "Thank you. We have received your booking request and will verify the details. You will get a confirmation email shortly once everything is reviewed and approved.",
       "done": "Done",
-      "estimateSent": "Estimate sent",
-      "estimateSentTo": "The estimate has been sent to {who}",
+      "estimateSent": "Estimate open to the customer",
+      "estimateSentTo": "{who} can open it from its link, which is copied to your clipboard. Nothing was emailed from here.",
       "inquiryContact": "the inquiry contact",
       "estimatedTotal": "Estimated total",
       "estimateCreated": "Estimate created",
@@ -6958,7 +6986,10 @@
       "openCount": "{n} open",
       "datesAndTimes": "Dates and times",
       "cartSeriesLine": "Every {day} · {time} · {weeks} weeks · starts {date}",
-      "dropInBadge": "Drop-in"
+      "dropInBadge": "Drop-in",
+      "estimateLineAddOns": "Add-ons",
+      "estimateLineFees": "Fees and adjustments",
+      "estimateSaveFailed": "The estimate was not saved"
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",

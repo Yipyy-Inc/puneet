@@ -10,18 +10,21 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { clients } from "@/data/clients";
-import { useEstimateSettings } from "@/lib/api/facility-settings";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { clientQueries } from "@/lib/api/client";
+import { useConvertEstimate } from "@/lib/api/estimates";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
-  convertEstimateToBooking,
+  buildBookingDataFromEstimate,
   estimateBookingNotes,
-  finalizeEstimateConversion,
 } from "@/lib/estimates/convert-estimate";
-import type { Estimate } from "@/types/booking";
+import type { Estimate, NewBooking } from "@/types/booking";
 
-const FACILITY_NAME = "Example Pet Care Facility";
-const FACILITY_ID = 11;
+/** A mock-era label the booking route ignores; it takes the facility from the session. */
+const FACILITY_LABEL = 11;
 
 function fmtDate(d: string) {
   return new Date(d.slice(0, 10) + "T12:00:00").toLocaleDateString("en-US", {
@@ -72,16 +75,21 @@ export function ConvertEstimateReviewDialog({
   onOpenChange,
   onConverted,
 }: Props) {
-  // The facility's estimate policy, not the browser's: whether accepting an
-  // estimate requires the deposit up front.
-  const { settings: estimateSettings } = useEstimateSettings();
+  const { t, fill } = useStaffText("estimateActions");
   const { openBookingModal } = useBookingModal();
+  // The roster, for the booking wizard's "Edit" path. This handed it
+  // `clients` from `@/data/clients` filtered by an invented facility name.
+  const { data: allClients } = useQuery(clientQueries.all());
+  const { profile } = useFacilityProfile();
+  const convert = useConvertEstimate();
+  // A guest is not a client yet, and a booking needs one.
+  const isGuest = estimate.clientId <= 0;
 
   const deposit = estimate.depositRequired ?? 0;
-  const depositPaid =
-    !!estimate.acceptedAt &&
-    deposit > 0 &&
-    estimateSettings.acceptanceRequiresDeposit;
+  // Accepting an estimate takes no money, so a deposit is always still due
+  // here. This read "Paid on acceptance" whenever the settings said one was
+  // required on acceptance — whether or not anybody had taken it.
+  const depositPaid = false;
   const dateRange = `${fmtDate(estimate.startDate)}${
     estimate.endDate && estimate.endDate !== estimate.startDate
       ? ` – ${fmtDate(estimate.endDate)}`
@@ -89,14 +97,33 @@ export function ConvertEstimateReviewDialog({
   }`;
   const notes = estimateBookingNotes(estimate);
 
-  // "Edit" reuses the existing booking-create path (use-booking-modal),
-  // pre-filled from the estimate — no data re-entry. Completing it finalizes
-  // the conversion.
+  // Both paths end here: the booking through /api/bookings, then the
+  // estimate pointed at it. The toast names the booking only once it exists.
+  const run = async (booking: NewBooking) => {
+    try {
+      const bookingRef = await convert.mutateAsync({ estimate, booking });
+      toast.success(
+        fill("convertedToast", {
+          number: estimate.estimateId,
+          booking: bookingRef,
+        }),
+      );
+      onConverted?.(bookingRef);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(t("convertFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  // "Edit" reuses the booking wizard, pre-filled from the estimate — no
+  // re-entry. Completing it converts.
   const handleEdit = () => {
     openBookingModal({
-      clients: clients.filter((c) => c.facility === FACILITY_NAME),
-      facilityId: FACILITY_ID,
-      facilityName: FACILITY_NAME,
+      clients: allClients ?? [],
+      facilityId: FACILITY_LABEL,
+      facilityName: profile.businessName,
       preSelectedClientId: estimate.clientId,
       preSelectedPetId: estimate.petIds[0],
       preSelectedService: estimate.service,
@@ -106,24 +133,13 @@ export function ConvertEstimateReviewDialog({
       preSelectedCheckOutTime: estimate.checkOutTime,
       preSelectedSpecialRequests: notes,
       onCreateBooking: (booking) => {
-        const id = finalizeEstimateConversion(estimate, booking);
-        toast.success(
-          `Booking #${id} created from Estimate ${estimate.estimateId}`,
-        );
-        onConverted?.(id);
+        void run(booking);
       },
     });
     onOpenChange(false);
   };
 
-  const handleConfirm = () => {
-    const id = convertEstimateToBooking(estimate, { depositPaid });
-    toast.success(
-      `Booking #${id} created from Estimate ${estimate.estimateId}`,
-    );
-    onConverted?.(id);
-    onOpenChange(false);
-  };
+  const handleConfirm = () => void run(buildBookingDataFromEstimate(estimate));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -262,10 +278,22 @@ export function ConvertEstimateReviewDialog({
           >
             Back to Estimate
           </Button>
-          <Button className="flex-1" onClick={handleConfirm}>
-            Confirm Booking
+          <Button
+            className="flex-1"
+            onClick={handleConfirm}
+            disabled={isGuest || convert.isPending}
+          >
+            {convert.isPending && <Loader2 className="size-4 animate-spin" />}
+            {t("confirmBooking")}
           </Button>
         </div>
+        {isGuest && (
+          <p className="text-ink-secondary text-sm" role="note">
+            {fill("guestNeedsClient", {
+              name: estimate.guestName || estimate.clientName,
+            })}
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );
