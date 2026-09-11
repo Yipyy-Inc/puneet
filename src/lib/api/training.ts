@@ -1,12 +1,11 @@
 import {
-  trainers,
-  trainingClasses,
-  trainingSessions,
-  enrollments,
   trainerNotes,
   progressRecords,
   trainingPackages,
 } from "@/data/training";
+// trainers, classes, sessions and enrollments are the facility's own — see
+// src/lib/api/training-book.ts, where they are fetched.
+import { fetchTrainers, fetchTrainingBook } from "@/lib/api/training-book";
 import { seriesEnrollments, trainingSeriesList } from "@/data/training-series";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
@@ -52,35 +51,40 @@ const seededPrivateSessionPlans: Record<number, CourseCurriculumWeek[]> = {
 export const trainingQueries = {
   trainers: () => ({
     queryKey: ["training", "trainers"] as const,
-    queryFn: async () => trainers,
+    queryFn: fetchTrainers,
   }),
   trainerDetail: (id: string) => ({
     queryKey: ["training", "trainers", id] as const,
-    queryFn: async () => trainers.find((t) => t.id === id),
+    queryFn: async () => (await fetchTrainers()).find((t) => t.id === id),
   }),
   classes: () => ({
     queryKey: ["training", "classes"] as const,
-    queryFn: async () => trainingClasses,
+    queryFn: async () => (await fetchTrainingBook()).classes,
   }),
   classDetail: (id: string) => ({
     queryKey: ["training", "classes", id] as const,
-    queryFn: async () => trainingClasses.find((c) => c.id === id),
+    queryFn: async () =>
+      (await fetchTrainingBook()).classes.find((c) => c.id === id),
   }),
   sessions: () => ({
     queryKey: ["training", "sessions"] as const,
-    queryFn: async () => trainingSessions,
+    queryFn: async () => (await fetchTrainingBook()).sessions,
   }),
   sessionsByClass: (classId: string) => ({
     queryKey: ["training", "sessions", classId] as const,
-    queryFn: async () => trainingSessions.filter((s) => s.classId === classId),
+    queryFn: async () =>
+      (await fetchTrainingBook()).sessions.filter((s) => s.classId === classId),
   }),
   enrollments: () => ({
     queryKey: ["training", "enrollments"] as const,
-    queryFn: async () => enrollments,
+    queryFn: async () => (await fetchTrainingBook()).enrollments,
   }),
   enrollmentsByClass: (classId: string) => ({
     queryKey: ["training", "enrollments", classId] as const,
-    queryFn: async () => enrollments.filter((e) => e.classId === classId),
+    queryFn: async () =>
+      (await fetchTrainingBook()).enrollments.filter(
+        (e) => e.classId === classId,
+      ),
   }),
   trainerNotes: () => ({
     queryKey: ["training", "notes"] as const,
