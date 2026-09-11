@@ -13094,3 +13094,26 @@ money); each change writes the whole list and the toast waits for it.
 
 - **Still open:** nothing applies a charge to a bill yet — the list is the
   facility's price sheet, and a groomer adds a fee as a line item.
+
+## 2026-09-11 — two e2e runs at once time the shared database out
+
+**What happened.** From 21:02 to 21:06 UTC, PostgREST answered 500 on ordinary
+reads — `bookings`, even a four-row `gift_cards` — and Postgres logged 22
+`canceling statement due to statement timeout` (57014) inside
+`is_platform_admin` / `resolve_permission`. The Supabase edge log for that
+window holds ~4,300 requests each to `profiles` and `facility_memberships`,
+~2,600 to `facilities` and ~2,400 to `locations`, from exactly two `node`
+clients: the CI runner's e2e server and a local e2e server started while CI
+was still running. Every API request resolves its viewer (profile,
+memberships, facilities, locations), so two suites at once is four queries a
+request, twice over, on one small compute — and that compute is PRODUCTION's.
+CI's `booking-write-integrity` failed in its `afterAll` (`bookings.filter is
+not a function`: the list came back as an error object); it passes alone.
+
+**Rule.** Do not run a local `test:e2e:*` while a CI e2e job is running on
+the same database — check `gh run list` first. A real customer's page is
+sharing the same statement-timeout budget.
+
+**Still open.** The viewer is re-resolved on every request with no per-request
+cache across route handlers; a burst of API calls multiplies it. Worth a look
+before real traffic grows.
