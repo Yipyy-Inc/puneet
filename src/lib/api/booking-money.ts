@@ -482,6 +482,8 @@ export function useSettleBookings() {
     mutationFn: async (input: {
       bookingRefs: number[];
       method: string;
+      /** Where the receipt goes; `settle_bookings` records the choice. */
+      receiptChannels?: string[];
     }): Promise<SettledBooking[]> => {
       const response = await fetch("/api/payments/bulk", {
         method: "POST",

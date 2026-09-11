@@ -1951,7 +1951,18 @@
         "petNameRequired": "Un animal doit avoir un nom.",
         "petSavedToast": "Fiche de {pet} enregistrée",
         "savePet": "Enregistrer {pet}",
-        "reportCards": "Bulletins"
+        "reportCards": "Bulletins",
+        "outstandingAlert": "{amount} est dû sur des réservations terminées",
+        "creditIssued": "Crédit ajouté",
+        "creditSpent": "Crédit utilisé",
+        "noCredit": "Aucun crédit en magasin sur ce compte pour l’instant.",
+        "giftCardFor": "Pour {name}",
+        "giftCardExpires": "Expire le {date}",
+        "giftCardOf": "sur {amount}",
+        "noGiftCards": "Ce client n’a acheté aucune carte-cadeau.",
+        "settledOne": "{amount} enregistré sur {n} réservation",
+        "settledMany": "{amount} enregistré sur {n} réservations",
+        "settleFailed": "Rien n’a été enregistré"
       }
     }
   },

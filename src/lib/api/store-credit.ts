@@ -58,6 +58,30 @@ export function useStoreCredit() {
 }
 
 /**
+ * One client's account and entries, narrowed server-side (`?clientRef=`).
+ *
+ * The client file used the facility-wide `useStoreCredit` and filtered in the
+ * browser — every client's ledger shipped to read one. Same key root, so a
+ * write through `useWriteStoreCredit` refreshes this too.
+ */
+export function useClientStoreCredit(clientRef: number) {
+  return useQuery({
+    queryKey: [...storeCreditKeys.all, "client", clientRef] as const,
+    enabled: clientRef > 0,
+    queryFn: async (): Promise<StoreCreditPayload> => {
+      const response = await fetch(`/api/store-credit?clientRef=${clientRef}`);
+      if (!response.ok) {
+        const parsed = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+      }
+      return (await response.json()) as StoreCreditPayload;
+    },
+  });
+}
+
+/**
  * One entry on the ledger.
  *
  * `added` issues credit and needs `process_refund`; a negative `adjustment`

@@ -31,7 +31,9 @@ import { ClientServicePreferences } from "@/components/clients/ClientServicePref
 import { NewAppointmentDialog } from "@/components/facility/grooming/new-appointment-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { invoices, giftCards, customerCredits } from "@/data/payments";
+import { useClientStoreCredit } from "@/lib/api/store-credit";
+import { giftCardQueries } from "@/lib/api/gift-cards";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
 import { getClientRetailPurchases } from "@/data/retail";
 import { incidentQueries } from "@/lib/api/incidents";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
@@ -95,7 +97,6 @@ import {
   CreditCard,
   Wallet,
   Gift,
-  Send,
   PenLine,
   Globe,
   MapPin,
@@ -177,7 +178,11 @@ export default function ClientDetailPage({
   const { refs: assignedRefs, pending: assignedPending } =
     useAssignedClientRefs(assignedClientScope);
   const resumedBookingRef = useRef<string | null>(null);
-  const { t: profileT } = useStaffText("clientProfile");
+  const {
+    t: profileT,
+    fill: profileFill,
+    locale: profileLocale,
+  } = useStaffText("clientProfile");
   const updateClient = useUpdateClient();
   const [isEditing, setIsEditing] = useState(false);
   // "Add pet" and "Add first pet" had no handler.
@@ -242,6 +247,15 @@ export default function ClientDetailPage({
     client?.id ?? 0,
   );
   const [today] = useState(localToday);
+  // The client's store credit and the gift cards they bought, from the two
+  // ledgers the till spends. These read `customerCredits` and `giftCards`
+  // from `@/data/payments` by numeric id, so a real client wore invented
+  // balances and the credit the till had just issued them was nowhere.
+  const { data: storeCredit } = useClientStoreCredit(client?.id ?? 0);
+  const { data: facilityGiftCards } = useQuery({
+    ...giftCardQueries.all(),
+    enabled: Boolean(client),
+  });
 
   const { data: clientReportCards = [] } = useQuery({
     ...reportCardQueries.byClient(client?.id ?? 0),
@@ -390,12 +404,17 @@ export default function ClientDetailPage({
     (a) => a.recipientCustomerId === client.id,
   );
 
-  // Client billing data
-  const clientInvoices = invoices.filter((inv) => inv.clientId === client.id);
-  const clientGiftCards = giftCards.filter(
-    (gc) => gc.purchasedByClientId === client.id,
+  // Client billing data. There is no standalone invoice table: an invoice
+  // here is a booking's, and what is owed is the database's own figure.
+  const creditEntries = (storeCredit?.entries ?? []).filter(
+    (e) => e.clientRef === client.id,
   );
-  const clientCredits = customerCredits.filter((c) => c.clientId === client.id);
+  const clientGiftCards = (facilityGiftCards ?? []).filter(
+    (gc) => gc.purchasedByClientRef === client.id,
+  );
+  const openBookingInvoices = clientBookings.filter(
+    (b) => b.invoice && b.invoice.remainingDue > 0,
+  );
 
   // Retail purchase history (linked to client file)
   const clientRetailPurchases = getClientRetailPurchases(client.id);
@@ -411,16 +430,11 @@ export default function ClientDetailPage({
   // "total revenue from this client" has to mean. Filtering on a status that
   // does not exist would have silently summed to zero.
   const totalRevenue = clientPayments.reduce((sum, p) => sum + p.amount, 0);
-  const outstandingInvoices = clientInvoices.filter(
-    (inv) => inv.status === "sent" || inv.status === "overdue",
-  );
-  const totalOutstanding = outstandingInvoices.reduce(
-    (sum, inv) => sum + inv.amountDue,
-    0,
-  );
-  const totalCredits = clientCredits
-    .filter((c) => c.status === "active")
-    .reduce((sum, c) => sum + c.remainingAmount, 0);
+  // `clients.outstanding_balance` is derived from the bookings ledger
+  // (20260806780000): what delivered bookings have not settled.
+  const totalOutstanding = client.outstandingBalance ?? 0;
+  // A store-credit balance is a SUM of its entries, never a column.
+  const totalCredits = creditEntries.reduce((sum, e) => sum + e.amount, 0);
 
   // Calculate stats
   const totalBookings = clientBookings.length;
@@ -1787,12 +1801,13 @@ export default function ClientDetailPage({
               </div>
 
               {/* Outstanding Alert */}
-              {outstandingInvoices.length > 0 && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertCircle className="size-4 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-800">
-                    {outstandingInvoices.length} outstanding invoice(s) totaling
-                    ${totalOutstanding.toFixed(2)}
+              {totalOutstanding > 0 && (
+                <div className="flex items-center gap-2 rounded-2xl border p-3">
+                  <AlertCircle className="text-warning size-4" aria-hidden />
+                  <span className="text-warning text-sm font-semibold">
+                    {profileFill("outstandingAlert", {
+                      amount: formatMoney(totalOutstanding, profileLocale),
+                    })}
                   </span>
                 </div>
               )}
@@ -1803,9 +1818,9 @@ export default function ClientDetailPage({
                   <TabsTrigger value="payments">Payments</TabsTrigger>
                   <TabsTrigger value="invoices">
                     Invoices
-                    {outstandingInvoices.length > 0 && (
-                      <Badge variant="destructive" className="ml-1 text-xs">
-                        {outstandingInvoices.length}
+                    {openBookingInvoices.length > 0 && (
+                      <Badge variant="pending" className="ml-1 tabular-nums">
+                        {openBookingInvoices.length}
                       </Badge>
                     )}
                   </TabsTrigger>
@@ -1989,73 +2004,7 @@ export default function ClientDetailPage({
                     </div>
                   )}
 
-                  {/* Standalone invoices from payments system */}
-                  {clientInvoices.length > 0 ? (
-                    <div className="space-y-3">
-                      {clientInvoices
-                        .sort(
-                          (a, b) =>
-                            new Date(b.issuedDate).getTime() -
-                            new Date(a.issuedDate).getTime(),
-                        )
-                        .map((invoice) => {
-                          const daysOverdue =
-                            invoice.status === "overdue"
-                              ? Math.floor(
-                                  (new Date().getTime() -
-                                    new Date(invoice.dueDate).getTime()) /
-                                    (1000 * 60 * 60 * 24),
-                                )
-                              : 0;
-                          return (
-                            <div
-                              key={invoice.id}
-                              className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
-                            >
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-sm font-semibold">
-                                    {invoice.invoiceNumber}
-                                  </h4>
-                                  <Badge
-                                    variant={
-                                      invoice.status === "paid"
-                                        ? "outline"
-                                        : invoice.status === "overdue"
-                                          ? "destructive"
-                                          : "secondary"
-                                    }
-                                  >
-                                    {invoice.status}
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                  Issued: {formatDate(invoice.issuedDate)} •
-                                  Due: {formatDate(invoice.dueDate)}
-                                  {daysOverdue > 0 &&
-                                    ` • ${daysOverdue} days overdue`}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-semibold">
-                                  ${invoice.total.toFixed(2)}
-                                </div>
-                                {invoice.amountDue > 0 && (
-                                  <div className="mt-1 flex items-center gap-2">
-                                    <span className="text-xs text-amber-600">
-                                      ${invoice.amountDue.toFixed(2)} due
-                                    </span>
-                                    <Button variant="outline" size="sm">
-                                      <Send className="size-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  ) : (
+                  {clientBookings.filter((b) => b.invoice).length === 0 && (
                     <p className="text-muted-foreground py-8 text-center text-sm">
                       No invoices
                     </p>
@@ -2064,49 +2013,45 @@ export default function ClientDetailPage({
 
                 {/* Credits Tab */}
                 <TabsContent value="credits" className="mt-4">
-                  {clientCredits.length > 0 ? (
-                    <div className="space-y-3">
-                      {clientCredits.map((credit) => (
-                        <div
-                          key={credit.id}
-                          className="bg-card flex items-start justify-between rounded-lg border p-4"
+                  {creditEntries.length > 0 ? (
+                    <ul className="space-y-2">
+                      {creditEntries.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="flex min-h-12 items-start justify-between gap-3 rounded-2xl border p-3"
                         >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="capitalize">
-                                {credit.reason}
-                              </Badge>
-                              <Badge
-                                variant={
-                                  credit.status === "active"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                              >
-                                {credit.status}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-sm">{credit.description}</p>
-                            {credit.expiryDate && (
-                              <p className="text-muted-foreground mt-1 text-xs">
-                                Expires: {formatDate(credit.expiryDate)}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">
+                              {profileT(
+                                entry.amount >= 0
+                                  ? "creditIssued"
+                                  : "creditSpent",
+                              )}
+                            </p>
+                            {entry.note && (
+                              <p className="text-ink-secondary text-sm">
+                                {entry.note}
                               </p>
                             )}
-                          </div>
-                          <div className="text-right">
-                            <div className="font-bold text-green-600">
-                              ${credit.remainingAmount.toFixed(2)}
-                            </div>
-                            <p className="text-muted-foreground text-xs">
-                              of ${credit.amount.toFixed(2)}
+                            <p className="text-ink-tertiary text-xs tabular-nums">
+                              {formatDateLong(entry.createdAt, profileLocale)}
+                              {entry.authorName ? ` · ${entry.authorName}` : ""}
                             </p>
                           </div>
-                        </div>
+                          <p
+                            className="shrink-0 text-sm font-semibold tabular-nums"
+                            data-sign={entry.amount >= 0 ? "in" : "out"}
+                          >
+                            {maskAmount(
+                              formatMoney(entry.amount, profileLocale),
+                            )}
+                          </p>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : (
-                    <p className="text-muted-foreground py-8 text-center text-sm">
-                      No credits
+                    <p className="text-ink-tertiary py-8 text-center text-sm">
+                      {profileT("noCredit")}
                     </p>
                   )}
                 </TabsContent>
@@ -2114,47 +2059,67 @@ export default function ClientDetailPage({
                 {/* Gift Cards Tab */}
                 <TabsContent value="giftcards" className="mt-4">
                   {clientGiftCards.length > 0 ? (
-                    <div className="space-y-3">
+                    <ul className="space-y-2">
                       {clientGiftCards.map((gc) => (
-                        <div
+                        <li
                           key={gc.id}
-                          className="bg-card flex items-start justify-between rounded-lg border p-4"
+                          className="flex min-h-12 items-start justify-between gap-3 rounded-2xl border p-3"
                         >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Gift className="text-muted-foreground size-4" />
-                              <span className="font-mono text-sm font-medium">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Gift
+                                className="text-ink-tertiary size-4"
+                                aria-hidden
+                              />
+                              <span className="font-mono text-sm font-semibold">
                                 {gc.code}
                               </span>
+                              <StatusBadge
+                                type="status"
+                                value={
+                                  gc.effectiveStatus === "redeemed"
+                                    ? "completed"
+                                    : gc.effectiveStatus
+                                }
+                              />
                             </div>
-                            <Badge
-                              variant={
-                                gc.status === "active" ? "default" : "secondary"
-                              }
-                              className="mt-2"
-                            >
-                              {gc.status}
-                            </Badge>
-                            {gc.expiryDate && (
-                              <p className="text-muted-foreground mt-1 text-xs">
-                                Expires: {formatDate(gc.expiryDate)}
+                            {gc.recipientName && (
+                              <p className="text-ink-secondary mt-1 text-sm">
+                                {profileFill("giftCardFor", {
+                                  name: gc.recipientName,
+                                })}
+                              </p>
+                            )}
+                            {gc.expiresAt && (
+                              <p className="text-ink-tertiary text-xs tabular-nums">
+                                {profileFill("giftCardExpires", {
+                                  date: formatDateLong(
+                                    gc.expiresAt,
+                                    profileLocale,
+                                  ),
+                                })}
                               </p>
                             )}
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold">
-                              ${gc.currentBalance.toFixed(2)}
-                            </div>
-                            <p className="text-muted-foreground text-xs">
-                              of ${gc.initialAmount.toFixed(2)}
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm font-semibold tabular-nums">
+                              {formatMoney(gc.balance, profileLocale)}
+                            </p>
+                            <p className="text-ink-tertiary text-xs tabular-nums">
+                              {profileFill("giftCardOf", {
+                                amount: formatMoney(
+                                  gc.initialAmount,
+                                  profileLocale,
+                                ),
+                              })}
                             </p>
                           </div>
-                        </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : (
-                    <p className="text-muted-foreground py-8 text-center text-sm">
-                      No gift cards
+                    <p className="text-ink-tertiary py-8 text-center text-sm">
+                      {profileT("noGiftCards")}
                     </p>
                   )}
                 </TabsContent>

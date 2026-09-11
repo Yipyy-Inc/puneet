@@ -27,6 +27,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Booking } from "@/types/booking";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useSettleBookings } from "@/lib/api/booking-money";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface OpenInvoicesSectionProps {
   clientId: number;
@@ -35,13 +38,17 @@ interface OpenInvoicesSectionProps {
   basePath: string;
 }
 
-type Method = "card" | "cash" | "terminal" | "ach";
+// The bulk route's own vocabulary (`/api/payments/bulk`). "ach" was offered
+// here and is a tender the route refuses; a bank payment is an e-transfer.
+type Method = "card" | "cash" | "terminal" | "e_transfer";
 
 const METHODS: { value: Method; label: string; Icon: typeof CreditCard }[] = [
-  { value: "card", label: "Card on file", Icon: CreditCard },
+  // Records a card payment taken at the counter. It charges nothing, so it
+  // does not say "on file".
+  { value: "card", label: "Card", Icon: CreditCard },
   { value: "cash", label: "Cash", Icon: Banknote },
   { value: "terminal", label: "Terminal", Icon: Smartphone },
-  { value: "ach", label: "Bank/ACH", Icon: Wallet },
+  { value: "e_transfer", label: "E-Transfer", Icon: Wallet },
 ];
 
 function formatDate(d: string): string {
@@ -77,6 +84,8 @@ export function OpenInvoicesSection({
   const [payOpen, setPayOpen] = useState(false);
   const [method, setMethod] = useState<Method>("card");
   const [sendReceipt, setSendReceipt] = useState(true);
+  const settleBookings = useSettleBookings();
+  const { t, fill, locale } = useStaffText("clientProfile");
 
   // Table 21: hide outstanding balances entirely from staff without
   // financial_view_amounts. TODO: also strip server-side when a backend exists.
@@ -108,17 +117,31 @@ export function OpenInvoicesSection({
     0,
   );
 
-  const handlePay = () => {
-    const count = selectedBookings.length;
-    const ids = selectedBookings.map((b) => b.invoice!.id).join(", ");
-    toast.success(
-      `Bulk payment of $${selectedTotal.toFixed(2)} processed via ${method}`,
-      {
-        description: `${count} invoice${count > 1 ? "s" : ""} closed: ${ids}${sendReceipt ? " · Combined receipt sent" : ""}`,
-      },
-    );
-    setSelected(new Set());
-    setPayOpen(false);
+  // It toasted "Bulk payment of $X processed" and recorded nothing — money
+  // announced, no money moved. `settle_bookings` records every payment in one
+  // transaction and reports what it ACTUALLY took from each balance, which is
+  // the figure the toast now states.
+  const handlePay = async () => {
+    try {
+      const settled = await settleBookings.mutateAsync({
+        bookingRefs: selectedBookings.map((b) => b.id),
+        method,
+        receiptChannels: sendReceipt ? ["email"] : [],
+      });
+      const taken = settled.reduce((sum, s) => sum + s.amount, 0);
+      toast.success(
+        fill(settled.length === 1 ? "settledOne" : "settledMany", {
+          amount: formatMoney(taken, locale),
+          n: settled.length,
+        }),
+      );
+      setSelected(new Set());
+      setPayOpen(false);
+    } catch (error) {
+      toast.error(t("settleFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -319,7 +342,10 @@ export function OpenInvoicesSection({
             <Button variant="outline" onClick={() => setPayOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handlePay} disabled={selectedTotal <= 0}>
+            <Button
+              onClick={handlePay}
+              disabled={selectedTotal <= 0 || settleBookings.isPending}
+            >
               Charge ${selectedTotal.toFixed(2)}
             </Button>
           </DialogFooter>
