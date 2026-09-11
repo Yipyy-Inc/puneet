@@ -12,11 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Plus, Pencil } from "lucide-react";
-import { formQueries } from "@/lib/api/forms";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import type { Form } from "@/types/forms";
-
-// Demo facility — mirrors the forms builder route (FACILITY_ID = 11).
-const FACILITY_ID = 11;
 
 const BUILDER_BASE = "/facility/dashboard/forms/builder";
 
@@ -54,9 +52,11 @@ function StatusBadge({ status }: { status: Form["status"] }) {
 
 export function GroomingCheckInForms() {
   const router = useRouter();
-  const { data: forms = [], isLoading } = useQuery(
-    formQueries.byFacility(FACILITY_ID),
-  );
+  // The facility's own forms. This listed `formQueries.byFacility(11)` —
+  // the fixture's forms for a facility that is not this one — so a check-in
+  // form built in the form builder never appeared here.
+  const { data: rows, isLoading } = useQuery(liveFormQueries.all());
+  const forms = (rows ?? []).map((row) => toFlatForm(row, true));
 
   // Forms bound to grooming — either by service type or an explicit apply-to.
   const groomingForms = forms.filter(
