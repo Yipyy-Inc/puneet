@@ -12876,3 +12876,17 @@ through `PATCH /api/training/sessions/[id]`.
   cards the completion drafts are still local — the report cards could go to
   the shared `report_cards` table, which already accepts `training`; drop-ins
   have no series booking to attend against.
+
+## 2026-09-11 — training report cards are the facility's report cards
+
+The training Report Cards tab rendered its own 1,350-line screen over
+`trainingQueries.allReportCards()` — the fixture's invented cards — and its
+Save and Send changed the query cache only. Daycare, boarding and grooming
+already use the shared `ReportCardsModule`, which lists `report_cards` rows and
+writes new ones against a real visit (the table has accepted `training` since
+20260822300000). The tab uses it too; the fixture screen is deleted.
+
+- **Still open:** the student profile's Report Cards tab and the session
+  view's completion still build training cards into the fixture cache
+  (`buildTrainingReportCard`); the shared module has no training-specific
+  sections (exercise ratings, homework).

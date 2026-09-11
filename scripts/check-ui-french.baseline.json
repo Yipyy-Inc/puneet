@@ -826,7 +826,6 @@
     "src/app/facility/dashboard/services/training/rates/_components/program-card.tsx": 14,
     "src/app/facility/dashboard/services/training/rates/_components/program-dialog.tsx": 40,
     "src/app/facility/dashboard/services/training/rates/page.tsx": 28,
-    "src/app/facility/dashboard/services/training/report-cards/_components/facility-training-report-cards.tsx": 78,
     "src/app/facility/dashboard/services/training/series/_components/real-series-detail.tsx": 42,
     "src/app/facility/dashboard/services/training/series/_components/real-series-edit-dialog.tsx": 27,
     "src/app/facility/dashboard/services/training/series/_components/series-list.tsx": 40,
