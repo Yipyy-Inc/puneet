@@ -116,19 +116,28 @@ describe("monthlyTrend", () => {
 
 describe("memberDiscount", () => {
   const gold = { id: "p", applicableServices: ["grooming" as const] };
+  // A day inside sub()'s term, which starts 2026-01-15 and has no end.
+  const ON = "2026-09-11";
   test("an active member gets the plan's percentage off a covered service", () => {
     const d = memberDiscount(
       [sub({ discountPercentage: 10 })],
       [gold],
       "Grooming",
       84.5,
+      ON,
     );
     expect(d?.amount).toBe(8.45);
     expect(d?.percent).toBe(10);
   });
   test("a service the plan does not cover gets nothing", () => {
     expect(
-      memberDiscount([sub({ discountPercentage: 10 })], [gold], "boarding", 80),
+      memberDiscount(
+        [sub({ discountPercentage: 10 })],
+        [gold],
+        "boarding",
+        80,
+        ON,
+      ),
     ).toBeNull();
   });
   test("a plan with no services listed covers every service", () => {
@@ -138,6 +147,7 @@ describe("memberDiscount", () => {
         [{ id: "p", applicableServices: [] }],
         "daycare",
         40,
+        ON,
       )?.amount,
     ).toBe(6);
   });
@@ -151,14 +161,59 @@ describe("memberDiscount", () => {
         [gold],
         "grooming",
         80,
+        ON,
       ),
     ).toBeNull();
   });
   test("a deleted plan's members keep the discount they were sold", () => {
     expect(
-      memberDiscount([sub({ discountPercentage: 5 })], [], "boarding", 200)
+      memberDiscount([sub({ discountPercentage: 5 })], [], "boarding", 200, ON)
         ?.amount,
     ).toBe(10);
+  });
+  // The row that found this: "active", 15%, and a term that ended on
+  // 2026-01-01 — still discounting every booking eight months later.
+  test("a term that has ended gets nothing, whatever its status says", () => {
+    expect(
+      memberDiscount(
+        [
+          sub({
+            discountPercentage: 15,
+            startDate: "2025-01-01",
+            endDate: "2026-01-01",
+          }),
+        ],
+        [],
+        "daycare",
+        64,
+        ON,
+      ),
+    ).toBeNull();
+  });
+  test("a booking before the term starts gets nothing", () => {
+    expect(
+      memberDiscount(
+        [sub({ discountPercentage: 15, startDate: "2026-10-01" })],
+        [],
+        "daycare",
+        64,
+        ON,
+      ),
+    ).toBeNull();
+  });
+  test("the first and last days of the term are covered", () => {
+    const term = sub({
+      discountPercentage: 10,
+      startDate: "2026-09-01",
+      endDate: "2026-09-30",
+    });
+    expect(
+      memberDiscount([term], [], "daycare", 50, "2026-09-01")?.amount,
+    ).toBe(5);
+    expect(
+      memberDiscount([term], [], "daycare", 50, "2026-09-30")?.amount,
+    ).toBe(5);
+    expect(memberDiscount([term], [], "daycare", 50, "2026-10-01")).toBeNull();
   });
 });
 

@@ -114,16 +114,28 @@ export interface MemberDiscount {
  * `applicableServices` decides which services it covers: empty means all of
  * them, and so does a plan that has since been deleted, whose subscribers
  * were still sold the discount.
+ *
+ * ── AND ONLY ON A DAY THE MEMBERSHIP COVERS ───────────────────────────────
+ *
+ * `on` is the service date (`YYYY-MM-DD`). A status of "active" is not proof
+ * of cover: nothing moves a row whose term has ended, and the first one found
+ * in the wild (2026-09-11) had ended on 2026-01-01 and was still taking 15%
+ * off every booking. So the day has to fall inside `startDate`…`endDate`,
+ * both inclusive; no end date means an open, renewing term.
  */
 export function memberDiscount(
   rows: readonly Membership[],
   plans: readonly Pick<MembershipPlan, "id" | "applicableServices">[],
   service: string,
   subtotal: number,
+  on: string,
 ): MemberDiscount | null {
   const wanted = service.trim().toLowerCase();
+  const day = on.slice(0, 10);
   for (const m of rows) {
     if (m.status !== "active" || m.discountPercentage <= 0) continue;
+    if (m.startDate && day < m.startDate.slice(0, 10)) continue;
+    if (m.endDate && day > m.endDate.slice(0, 10)) continue;
     const plan = plans.find((p) => p.id === m.planId);
     const covers =
       !plan ||

@@ -12982,6 +12982,11 @@ and Insights is counted from rows by `src/lib/memberships/figures.ts`
   whose plan covers the booking's service is written onto the bill as a
   negative line before either tender, so a terminal charge (computed from
   `amount_due`) includes it; a line already on the bill is not offered twice.
+  **Only on a day the term covers**: the booking's start date must fall
+  inside `starts_on`…`ends_on`. Status alone was trusted at first, and the
+  full e2e run caught it the same day — the e2e facility's Gold row says
+  `active` but ended on 2026-01-01, and was taking 15% off every booking
+  `booking-payment-screens` paid for.
 - Cancelling is end of cycle: `cancelled` at once, `ends_on` = the next
   billing date.
 - **Still open:** nothing bills a membership automatically — no renewal
@@ -12992,6 +12997,13 @@ and Insights is counted from rows by `src/lib/memberships/figures.ts`
   access rules and the QuickBooks catalogue still read the fixture plans. The
   plan's `discountRules` and included items are stored but only
   `discountPercentage` comes off a bill.
+- **Still open — nothing ends a term.** No job moves a row whose `ends_on`
+  has passed out of `active`, and `customer_memberships_one_active` is a
+  unique index on `(client_id) WHERE status = 'active'`, so a lapsed row
+  that still says `active` blocks putting that client on a new plan (409,
+  "already on an active plan"). One such row exists, on the e2e facility; the
+  discount no longer trusts it. The renewal job this entry already lacks is
+  where expiry belongs.
 - **Found, not fixed (bookings checkout):** on the terminal tender the
   booking page consumes the loyalty reward and drops a pending late fee
   without writing either onto the bill — the line items are added only on
