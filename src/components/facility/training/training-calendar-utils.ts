@@ -53,7 +53,13 @@ export function timeToMinutes(time: string): number {
 }
 
 export function formatISODate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  // The LOCAL calendar day. `toISOString()` is the UTC day, so in Montréal
+  // after 20:00 "today" was already tomorrow, and east of UTC every local
+  // midnight read as the day before — a session's dot sat on the wrong date.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function formatHour(h: number): string {
