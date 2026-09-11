@@ -52,11 +52,18 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** null = create. */
   editing: RealTrainingSeries | null;
+  /** A new series' course, when the caller already knows it. */
+  defaultCourseTypeName?: string;
 }
 
 const NONE = "__none__";
 
-export function RealSeriesEditDialog({ open, onOpenChange, editing }: Props) {
+export function RealSeriesEditDialog({
+  open,
+  onOpenChange,
+  editing,
+  defaultCourseTypeName,
+}: Props) {
   const { data: locations } = useFacilityLocations();
   const { data: trainers } = useTrainingTrainers();
   const create = useCreateTrainingSeries();
@@ -64,7 +71,7 @@ export function RealSeriesEditDialog({ open, onOpenChange, editing }: Props) {
 
   const [name, setName] = useState(editing?.name ?? "");
   const [courseTypeName, setCourseTypeName] = useState(
-    editing?.courseTypeName ?? "",
+    editing?.courseTypeName ?? defaultCourseTypeName ?? "",
   );
   const [locationId, setLocationId] = useState(editing?.locationId ?? "");
   const [staffId, setStaffId] = useState(editing?.staffId ?? "");

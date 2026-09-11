@@ -175,6 +175,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Facility not found." }, { status: 500 });
   }
 
+  // The first session falls on the series' weekday. create_training_series
+  // lays sessions a week apart from `start_date` and never consults
+  // `day_of_week`, so "Mondays, starting the 16th" (a Wednesday) made a
+  // Monday class that met on Wednesdays. The start moves forward to the
+  // first matching day on or after the date given.
+  const given = new Date(`${input.startDate}T12:00:00Z`);
+  given.setUTCDate(
+    given.getUTCDate() + ((input.dayOfWeek - given.getUTCDay() + 7) % 7),
+  );
+  const firstSession = given.toISOString().slice(0, 10);
+
   const supabase = await createServerClient();
   const { data, error } = await supabase.rpc("create_training_series", {
     p_facility_id: facility.facilityId,
@@ -182,7 +193,7 @@ export async function POST(request: NextRequest) {
     p_day_of_week: input.dayOfWeek,
     p_start_time: input.startTime,
     p_duration_minutes: input.durationMinutes,
-    p_start_date: input.startDate,
+    p_start_date: firstSession,
     p_number_of_sessions: input.numberOfSessions,
     p_capacity: input.capacity,
     p_total_price: input.totalPrice,

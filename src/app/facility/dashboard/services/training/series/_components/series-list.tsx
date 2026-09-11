@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import {
   DataTable,
@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/training-trainers";
 import type { RealTrainingSeries } from "@/types/training-series";
 import { RealSeriesEditDialog } from "./real-series-edit-dialog";
+import { defaultTrainingCourseTypes } from "@/lib/training-config";
 
 // ============================================================================
 // Real training series -- schedule, instructor, branch, capacity, price, and
@@ -117,7 +118,16 @@ export function SeriesList() {
   const [editingSeries, setEditingSeries] = useState<RealTrainingSeries | null>(
     null,
   );
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  // The booking modal's "Create a series" sends `?create=1&course=<id>`; it
+  // landed here and was ignored, so the staff member had to start again.
+  const searchParams = useSearchParams();
+  const [isEditOpen, setIsEditOpen] = useState(
+    () => searchParams.get("create") === "1",
+  );
+  const courseParam = searchParams.get("course") ?? "";
+  const deepLinkedCourse =
+    defaultTrainingCourseTypes.find((c) => c.id === courseParam)?.name ??
+    courseParam.replace(/^course:/, "").replace(/-/g, " ");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const summary = useMemo(() => {
@@ -410,6 +420,7 @@ export function SeriesList() {
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         editing={editingSeries}
+        defaultCourseTypeName={editingSeries ? undefined : deepLinkedCourse}
       />
 
       <AlertDialog
