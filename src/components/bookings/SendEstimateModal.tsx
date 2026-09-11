@@ -180,15 +180,13 @@ export function SendEstimateModal({
               {showPrices && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-[tabular-nums]">
-                    ${subtotal.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">${subtotal.toFixed(2)}</span>
                 </div>
               )}
               {currentDiscount > 0 && showPrices && (
                 <div className="flex justify-between text-emerald-600">
                   <span>Discount</span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     -${currentDiscount.toFixed(2)}
                   </span>
                 </div>
@@ -196,22 +194,20 @@ export function SendEstimateModal({
               {showTax && taxAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tax</span>
-                  <span className="font-[tabular-nums]">
-                    ${taxAmount.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">${taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   ${effectiveTotal.toFixed(2)}
                 </span>
               </div>
               {showDeposit && depositRequired && (
                 <div className="flex justify-between text-xs text-amber-600">
                   <span>Deposit required</span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     ${depositRequired.toFixed(2)}
                   </span>
                 </div>

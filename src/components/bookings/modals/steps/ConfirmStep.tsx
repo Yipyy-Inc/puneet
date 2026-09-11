@@ -907,7 +907,7 @@ export function ConfirmStep({
                           )}{" "}
                           × {es.quantity}
                         </span>
-                        <span className="font-[tabular-nums] font-semibold">
+                        <span className="font-semibold tabular-nums">
                           {formatMoney(lineTotal, locale)}
                         </span>
                       </div>
@@ -1267,7 +1267,7 @@ export function ConfirmStep({
                 ? ` × ${t("nightsCountMany").replace("{count}", String(boardingNights))}`
                 : ""}
             </span>
-            <span className="font-[tabular-nums] font-medium">
+            <span className="font-medium tabular-nums">
               {formatMoney(calculatePrice.basePrice, locale)}
             </span>
           </div>
@@ -1307,7 +1307,7 @@ export function ConfirmStep({
                         <span>
                           {addon?.name ?? es.serviceId} × {es.quantity}
                         </span>
-                        <span className="font-[tabular-nums]">
+                        <span className="tabular-nums">
                           {formatMoney(lineTotal, locale)}
                         </span>
                       </div>
@@ -1317,7 +1317,7 @@ export function ConfirmStep({
                     <span className="text-muted-foreground font-medium">
                       {t("addOnsSubtotal")}
                     </span>
-                    <span className="font-[tabular-nums] font-medium">
+                    <span className="font-medium tabular-nums">
                       {formatMoney(addonsTotal, locale)}
                     </span>
                   </div>
@@ -1336,7 +1336,7 @@ export function ConfirmStep({
                 </span>
                 <span
                   className={cn(
-                    "font-[tabular-nums] font-medium",
+                    "font-medium tabular-nums",
                     adjustment.amount < 0 && "text-emerald-600",
                   )}
                 >
@@ -1352,7 +1352,7 @@ export function ConfirmStep({
                 className="flex items-center justify-between text-sm"
               >
                 <span className="text-muted-foreground">{fee.label}</span>
-                <span className="font-[tabular-nums] font-medium">
+                <span className="font-medium tabular-nums">
                   +{formatMoney(fee.amount, locale)}
                 </span>
               </div>
@@ -1373,7 +1373,7 @@ export function ConfirmStep({
                     <span className="text-muted-foreground">
                       {tax.name} ({formatPercent(pct, locale, 2)})
                     </span>
-                    <span className="font-[tabular-nums] font-medium">
+                    <span className="font-medium tabular-nums">
                       +{formatMoney(taxAmt, locale)}
                     </span>
                   </div>
@@ -1391,7 +1391,7 @@ export function ConfirmStep({
                     ),
                   )}
                 </span>
-                <span className="font-[tabular-nums] font-medium">
+                <span className="font-medium tabular-nums">
                   +{formatMoney(calculatePrice.taxAmount ?? 0, locale)}
                 </span>
               </div>
@@ -1401,7 +1401,7 @@ export function ConfirmStep({
               <span className="text-muted-foreground flex items-center gap-1">
                 <Star className="size-3" /> {t("tip")}
               </span>
-              <span className="font-[tabular-nums] font-medium">
+              <span className="font-medium tabular-nums">
                 +{formatMoney(tipAmount, locale)}
               </span>
             </div>
@@ -1414,7 +1414,7 @@ export function ConfirmStep({
             <CheckCircle2 className="text-primary size-5" />
             <span className="text-sm font-bold">{t("total")}</span>
           </div>
-          <span className="text-primary font-[tabular-nums] text-xl font-bold">
+          <span className="text-primary text-xl font-bold tabular-nums">
             {redeemedPackageId && calculatePrice.total + tipAmount === 0 ? (
               <span className="text-sm text-emerald-600">
                 {t("packagePassApplied")}

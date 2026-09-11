@@ -88,6 +88,23 @@ const eslintConfig = defineConfig([
       "better-tailwindcss/enforce-consistent-line-wrapping": "off", // conflicts with Prettier
       "better-tailwindcss/no-unnecessary-whitespace": "off", // conflicts with Prettier
       "better-tailwindcss/enforce-canonical-classes": "warn",
+      // `font-[tabular-nums]` compiles to `font-family: tabular-nums`, which
+      // names no font, so the browser falls back to its SERIF default. 164
+      // money figures in 46 files — the whole booking checkout among them —
+      // rendered in Times until 2026-09-11. `tabular-nums` is the utility.
+      "better-tailwindcss/no-restricted-classes": [
+        "error",
+        {
+          restrict: [
+            {
+              pattern:
+                "^(.*:)?font-\\[(tabular-nums|lining-nums|oldstyle-nums|proportional-nums|slashed-zero)\\]$",
+              message:
+                "font-[…] sets font-family, so this renders in a serif fallback. Use the bare numeric utility (tabular-nums).",
+            },
+          ],
+        },
+      ],
       "better-tailwindcss/no-unknown-classes": [
         "warn",
         {

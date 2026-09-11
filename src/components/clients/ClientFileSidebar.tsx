@@ -435,7 +435,7 @@ export function ClientFileSidebar({
                         {bPet && ` · ${bPet.name}`}
                       </p>
                     </div>
-                    <span className="font-[tabular-nums] text-sm font-medium">
+                    <span className="text-sm font-medium tabular-nums">
                       {maskAmount(`$${b.totalCost}`, "booking_financials")}
                     </span>
                   </Link>

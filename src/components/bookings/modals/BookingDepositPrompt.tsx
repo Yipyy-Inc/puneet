@@ -63,7 +63,7 @@ export function BookingDepositPrompt({
           </div>
           <p className="mt-0.5 text-[11px] text-emerald-800/80">
             {t("depositRuleBefore")}{" "}
-            <span className="font-[tabular-nums] font-semibold">
+            <span className="font-semibold tabular-nums">
               {formatMoney(required, locale)}
             </span>{" "}
             {t("depositRuleAfter")}
@@ -142,7 +142,7 @@ export function BookingDepositPrompt({
                       amount: parseFloat(e.target.value) || 0,
                     })
                   }
-                  className="ml-auto h-7 w-24 text-right font-[tabular-nums]"
+                  className="ml-auto h-7 w-24 text-right tabular-nums"
                   placeholder="0.00"
                 />
               )}

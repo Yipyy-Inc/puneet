@@ -275,7 +275,7 @@ export function MoneyField({
           inputMode="decimal"
           placeholder="0.00"
           aria-invalid={error ? true : undefined}
-          className="pl-7 font-[tabular-nums]"
+          className="pl-7 tabular-nums"
           onChange={(event) => onChange(event.target.value)}
         />
       </div>
@@ -312,7 +312,7 @@ export function SecretField({
         autoComplete="off"
         placeholder={placeholder}
         aria-invalid={error ? true : undefined}
-        className="font-[tabular-nums]"
+        className="tabular-nums"
       />
     </Field>
   );
@@ -321,7 +321,7 @@ export function SecretField({
 /** "•••• 4321", for a number that has already been stored. */
 export function StoredLast4({ last4 }: { last4: string }) {
   return (
-    <span className="font-[tabular-nums] text-sm">
+    <span className="text-sm tabular-nums">
       <span aria-hidden="true">•••• </span>
       <span className="sr-only">ending </span>
       {last4}

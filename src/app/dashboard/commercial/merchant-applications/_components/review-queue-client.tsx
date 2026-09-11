@@ -144,7 +144,7 @@ export function ReviewQueueClient() {
         return (
           <span
             className={cn(
-              "font-[tabular-nums] text-sm",
+              "text-sm tabular-nums",
               ours && days >= 5 && "font-semibold text-rose-600",
               ours && days >= 2 && days < 5 && "text-amber-600",
             )}
@@ -161,7 +161,7 @@ export function ReviewQueueClient() {
       sortable: true,
       sortValue: (row) => row.estimatedMonthlyVolumeCents ?? -1,
       render: (row) => (
-        <span className="font-[tabular-nums] text-sm">
+        <span className="text-sm tabular-nums">
           {money(row.estimatedMonthlyVolumeCents)}
         </span>
       ),

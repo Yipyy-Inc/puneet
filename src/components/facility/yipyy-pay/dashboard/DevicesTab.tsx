@@ -234,7 +234,7 @@ export function DevicesTab({ overview }: { overview: YipyyPayOverview }) {
 
                       <p className="text-muted-foreground text-xs">
                         {terminal.model ?? t("unknownModel")} · Serial{" "}
-                        <span className="font-[tabular-nums]">
+                        <span className="tabular-nums">
                           ····{terminal.serial.slice(-4)}
                         </span>
                       </p>

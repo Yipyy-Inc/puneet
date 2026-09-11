@@ -271,7 +271,7 @@ export function PaymentCheckoutFlow({
           {/* Amount */}
           <div className="bg-muted/30 rounded-lg border p-4 text-center">
             <p className="text-muted-foreground text-xs">Amount Due</p>
-            <p className="font-[tabular-nums] text-3xl font-bold">
+            <p className="text-3xl font-bold tabular-nums">
               ${netAmountDue.toFixed(2)}
             </p>
             {loyaltyDiscount && loyaltyDiscountAmount > 0 && (
@@ -310,7 +310,7 @@ export function PaymentCheckoutFlow({
               <p className="text-sm font-medium text-amber-800">
                 This client has {otherUnpaidInvoices.length} other unpaid
                 invoice{otherUnpaidInvoices.length !== 1 ? "s" : ""} (
-                <span className="font-[tabular-nums]">
+                <span className="tabular-nums">
                   $
                   {otherUnpaidInvoices
                     .reduce((s, i) => s + i.amount, 0)
@@ -349,7 +349,7 @@ export function PaymentCheckoutFlow({
                     <span className="flex-1 text-xs">
                       {inv.invoiceId} · {inv.service}
                     </span>
-                    <span className="font-[tabular-nums] text-xs font-medium">
+                    <span className="text-xs font-medium tabular-nums">
                       ${inv.amount.toFixed(2)}
                     </span>
                   </label>
@@ -464,7 +464,7 @@ export function PaymentCheckoutFlow({
                       );
                     }}
                     placeholder="Amount"
-                    className="h-8 flex-1 font-[tabular-nums] text-xs"
+                    className="h-8 flex-1 text-xs tabular-nums"
                     min={0}
                     step={0.01}
                   />
@@ -496,7 +496,7 @@ export function PaymentCheckoutFlow({
                 </button>
                 <span
                   className={cn(
-                    "font-[tabular-nums] text-xs font-medium",
+                    "text-xs font-medium tabular-nums",
                     splitLeftToPay > 0.01
                       ? "text-amber-600"
                       : splitLeftToPay < -0.01
@@ -572,14 +572,14 @@ export function PaymentCheckoutFlow({
                   placeholder="0.00"
                   min={0}
                   step={0.01}
-                  className="font-[tabular-nums]"
+                  className="tabular-nums"
                 />
               </div>
               {cashNum > 0 && change > 0 && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Change Due</span>
-                    <span className="font-[tabular-nums] font-semibold">
+                    <span className="font-semibold tabular-nums">
                       ${change.toFixed(2)}
                     </span>
                   </div>
@@ -683,14 +683,12 @@ export function PaymentCheckoutFlow({
                 <span className="text-muted-foreground">
                   Services & Products
                 </span>
-                <span className="font-[tabular-nums]">
-                  ${invoiceTotal.toFixed(2)}
-                </span>
+                <span className="tabular-nums">${invoiceTotal.toFixed(2)}</span>
               </div>
               {depositPaid > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>Already paid</span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     -${depositPaid.toFixed(2)}
                   </span>
                 </div>
@@ -701,32 +699,24 @@ export function PaymentCheckoutFlow({
                     + {includedInvoices.size} other invoice
                     {includedInvoices.size !== 1 ? "s" : ""}
                   </span>
-                  <span className="font-[tabular-nums]">
-                    ${otherTotal.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">${otherTotal.toFixed(2)}</span>
                 </div>
               )}
               {tipAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tip</span>
-                  <span className="font-[tabular-nums]">
-                    ${tipAmount.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">${tipAmount.toFixed(2)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between font-semibold">
                 <span>Amount to charge</span>
-                <span className="font-[tabular-nums]">
-                  ${remaining.toFixed(2)}
-                </span>
+                <span className="tabular-nums">${remaining.toFixed(2)}</span>
               </div>
               {isCash && change > 0 && changeAsCredit && (
                 <div className="flex justify-between text-xs text-emerald-600">
                   <span>→ Store credit added</span>
-                  <span className="font-[tabular-nums]">
-                    +${change.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">+${change.toFixed(2)}</span>
                 </div>
               )}
             </div>

@@ -182,7 +182,7 @@ function FacilityChooser({
                 ) : (
                   <div className="rounded-md border px-3 py-2 text-sm">
                     {choice.name}
-                    <span className="text-muted-foreground ml-2 font-[tabular-nums] text-xs">
+                    <span className="text-muted-foreground ml-2 text-xs tabular-nums">
                       {choice.slug}
                     </span>
                   </div>

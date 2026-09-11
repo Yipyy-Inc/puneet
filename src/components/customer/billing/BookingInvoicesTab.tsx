@@ -104,7 +104,7 @@ export function BookingInvoicesTab() {
             <p className="text-[10px] font-semibold tracking-wider text-amber-900/70 uppercase">
               {t("outstanding")}
             </p>
-            <p className="font-[tabular-nums] text-lg font-bold text-amber-900">
+            <p className="text-lg font-bold text-amber-900 tabular-nums">
               {formatMoney(totalDue, locale)}
             </p>
           </div>

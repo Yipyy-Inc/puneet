@@ -1097,7 +1097,7 @@ export default function ClientBookingDetailPage({
                 </p>
                 <p className="text-xs text-emerald-600">
                   Remaining balance:{" "}
-                  <span className="font-[tabular-nums] font-medium">
+                  <span className="font-medium tabular-nums">
                     ${remainingDue.toFixed(2)}
                   </span>{" "}
                   · Booking auto-confirmed
@@ -1202,7 +1202,7 @@ export default function ClientBookingDetailPage({
                 without view_booking_amounts. */}
             {canSeeBookingAmounts && (
               <div className="text-right">
-                <p className="font-[tabular-nums] text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {maskAmount(
                     `$${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}`,
                     "booking_financials",
@@ -1757,7 +1757,7 @@ export default function ClientBookingDetailPage({
                         <span className="text-muted-foreground text-sm">
                           Total Tip
                         </span>
-                        <span className="font-[tabular-nums] text-lg font-bold">
+                        <span className="text-lg font-bold tabular-nums">
                           ${(tips?.tipCollected ?? 0).toFixed(2)}
                         </span>
                       </div>
@@ -1772,13 +1772,13 @@ export default function ClientBookingDetailPage({
                           <div className="text-muted-foreground space-y-0.5 text-xs">
                             <div className="flex justify-between">
                               <span>Terminal</span>
-                              <span className="font-[tabular-nums]">
+                              <span className="tabular-nums">
                                 ${(tips?.bySource.terminal ?? 0).toFixed(2)}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span>Online</span>
-                              <span className="font-[tabular-nums]">
+                              <span className="tabular-nums">
                                 ${(tips?.bySource.online ?? 0).toFixed(2)}
                               </span>
                             </div>
@@ -1803,7 +1803,7 @@ export default function ClientBookingDetailPage({
                                   allocation.authorName ??
                                   "—"}
                               </p>
-                              <span className="font-[tabular-nums] text-sm font-semibold">
+                              <span className="text-sm font-semibold tabular-nums">
                                 ${allocation.amount.toFixed(2)}
                               </span>
                             </div>
@@ -1843,7 +1843,7 @@ export default function ClientBookingDetailPage({
                                     {(pct * 100).toFixed(0)}%)
                                   </p>
                                 </div>
-                                <span className="font-[tabular-nums] text-sm font-semibold">
+                                <span className="text-sm font-semibold tabular-nums">
                                   ${tipShare.toFixed(2)}
                                 </span>
                               </div>

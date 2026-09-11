@@ -79,7 +79,7 @@ export function ProgressHeader({
         <div className="mt-3 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Today&apos;s progress</span>
-            <span className="font-[tabular-nums] font-medium">{pct}%</span>
+            <span className="font-medium tabular-nums">{pct}%</span>
           </div>
           <Progress value={pct} className="h-2" />
         </div>

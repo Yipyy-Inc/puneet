@@ -185,7 +185,7 @@ export function ApplicationStatus({
             {application.externalReference && (
               <div className="flex gap-2">
                 <dt>{t("reference")}</dt>
-                <dd className="text-foreground font-[tabular-nums] font-medium">
+                <dd className="text-foreground font-medium tabular-nums">
                   {application.externalReference}
                 </dd>
               </div>

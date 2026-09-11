@@ -96,23 +96,19 @@ export function PrepaymentModal({
           <div className="bg-muted/30 rounded-lg border px-4 py-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Invoice total</span>
-              <span className="font-[tabular-nums]">
-                ${invoiceTotal.toFixed(2)}
-              </span>
+              <span className="tabular-nums">${invoiceTotal.toFixed(2)}</span>
             </div>
             {alreadyCollected > 0 && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Already collected</span>
-                <span className="font-[tabular-nums] text-emerald-700">
+                <span className="text-emerald-700 tabular-nums">
                   -${alreadyCollected.toFixed(2)}
                 </span>
               </div>
             )}
             <div className="mt-1 flex items-center justify-between border-t pt-1.5 text-sm font-medium">
               <span>Remaining due</span>
-              <span className="font-[tabular-nums]">
-                ${remainingDue.toFixed(2)}
-              </span>
+              <span className="tabular-nums">${remainingDue.toFixed(2)}</span>
             </div>
           </div>
 
@@ -130,7 +126,7 @@ export function PrepaymentModal({
                 max={remainingDue}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-10 text-right font-[tabular-nums] text-base"
+                className="h-10 text-right text-base tabular-nums"
                 autoFocus
               />
             </div>
@@ -154,7 +150,7 @@ export function PrepaymentModal({
             {!isFull && numericAmount > 0 && (
               <p className="text-muted-foreground text-[11px]">
                 After this prepayment:{" "}
-                <span className="text-foreground font-[tabular-nums] font-medium">
+                <span className="text-foreground font-medium tabular-nums">
                   ${newRemaining.toFixed(2)}
                 </span>{" "}
                 will remain due at checkout.

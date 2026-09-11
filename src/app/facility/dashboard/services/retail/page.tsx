@@ -2239,7 +2239,7 @@ export default function POSPage() {
                             )}
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="font-[tabular-nums] text-sm font-semibold">
+                          <p className="text-sm font-semibold tabular-nums">
                             ${product.basePrice.toFixed(2)}
                           </p>
                           <p
@@ -2302,7 +2302,7 @@ export default function POSPage() {
                       <p className="max-w-[120px] truncate text-xs font-medium">
                         {product.name}
                       </p>
-                      <p className="text-muted-foreground font-[tabular-nums] text-[10px]">
+                      <p className="text-muted-foreground text-[10px] tabular-nums">
                         ${product.basePrice.toFixed(2)}
                       </p>
                     </div>
@@ -2351,7 +2351,7 @@ export default function POSPage() {
                         <span className="w-full truncate text-center text-sm font-medium">
                           {product.name}
                         </span>
-                        <span className="text-muted-foreground font-[tabular-nums] text-xs">
+                        <span className="text-muted-foreground text-xs tabular-nums">
                           ${product.basePrice.toFixed(2)}
                         </span>
                       </button>
@@ -2436,7 +2436,7 @@ export default function POSPage() {
                         {txn.items !== 1 ? "s" : ""} · {txn.method}
                       </p>
                     </div>
-                    <span className="font-[tabular-nums] text-sm font-semibold">
+                    <span className="text-sm font-semibold tabular-nums">
                       ${txn.total.toFixed(2)}
                     </span>
                   </div>
@@ -2860,14 +2860,14 @@ export default function POSPage() {
             <div className="mt-4 shrink-0 space-y-1.5 border-t pt-3">
               <div className="flex justify-between py-0.5 text-sm">
                 <span className="font-semibold">Subtotal</span>
-                <span className="font-[tabular-nums] font-semibold">
+                <span className="font-semibold tabular-nums">
                   ${subtotal.toFixed(2)}
                 </span>
               </div>
               {discountTotal > 0 && (
                 <div className="flex justify-between py-0.5 text-sm text-emerald-600">
                   <span>Discount</span>
-                  <span className="font-[tabular-nums]">
+                  <span className="tabular-nums">
                     -${discountTotal.toFixed(2)}
                   </span>
                 </div>
@@ -2880,9 +2880,7 @@ export default function POSPage() {
                       ? `${taxConfig.taxMode} (${taxConfig.defaultRate}%)`
                       : "Tax"}
                   </span>
-                  <span className="font-[tabular-nums]">
-                    ${taxTotal.toFixed(2)}
-                  </span>
+                  <span className="tabular-nums">${taxTotal.toFixed(2)}</span>
                 </div>
               )}
 
@@ -2957,7 +2955,7 @@ export default function POSPage() {
               <Separator className="my-2" />
               <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
                 <span className="text-base font-bold">Total</span>
-                <span className="font-[tabular-nums] text-base font-bold">
+                <span className="text-base font-bold tabular-nums">
                   ${grandTotal.toFixed(2)}
                 </span>
               </div>

@@ -1030,7 +1030,7 @@ function BoardingAddOnsSubStep({
                                 >
                                   -
                                 </Button>
-                                <span className="min-w-[2ch] text-center font-[tabular-nums] text-xs font-semibold">
+                                <span className="min-w-[2ch] text-center text-xs font-semibold tabular-nums">
                                   {quantity}
                                 </span>
                                 <Button

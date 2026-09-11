@@ -133,7 +133,7 @@ export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
 
       {/* Price + payment */}
       <div className="text-right">
-        <p className="font-[tabular-nums] text-sm font-semibold">
+        <p className="text-sm font-semibold tabular-nums">
           {maskAmount(`$${total.toFixed(2)}`, "booking_financials")}
         </p>
         {booking.paymentStatus === "paid" ? (

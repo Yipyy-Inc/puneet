@@ -166,7 +166,7 @@ export function UnattachedPayments() {
                 >
                   <CreditCard className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-[tabular-nums] text-sm font-semibold">
+                    <p className="text-sm font-semibold tabular-nums">
                       {money(payment.amountCents, payment.currency)}
                       {payment.tipCents > 0 && (
                         <span className="text-muted-foreground ml-2 text-xs font-normal">
@@ -308,7 +308,7 @@ function AttachDialog({
                   value={bookingRef}
                   inputMode="numeric"
                   placeholder="896"
-                  className="pl-9 font-[tabular-nums]"
+                  className="pl-9 tabular-nums"
                   onChange={(event) => setBookingRef(event.target.value)}
                 />
               </div>

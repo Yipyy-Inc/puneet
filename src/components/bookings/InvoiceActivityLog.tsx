@@ -258,7 +258,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                       <p className="text-foreground text-micro/snug">
                         {event.description}
                         {event.amount !== undefined && (
-                          <span className="ml-1 font-[tabular-nums] font-semibold">
+                          <span className="ml-1 font-semibold tabular-nums">
                             ${fmt(event.amount)}
                           </span>
                         )}
@@ -268,7 +268,7 @@ export function InvoiceActivityLog({ invoice }: InvoiceActivityLogProps) {
                     <p className="text-muted-foreground mt-0.5 text-[10.5px]">
                       <span className="font-medium">{event.staffName}</span>
                       <span className="mx-1">·</span>
-                      <span className="font-[tabular-nums]">
+                      <span className="tabular-nums">
                         {date}, {time}
                       </span>
                       {event.note && (
@@ -377,7 +377,7 @@ function SnapshotView({
                     {item.staffName && ` · ${item.staffName}`}
                   </p>
                 </div>
-                <span className="font-[tabular-nums]">${fmt(item.price)}</span>
+                <span className="tabular-nums">${fmt(item.price)}</span>
               </div>
             ))}
           </div>
@@ -393,7 +393,7 @@ function SnapshotView({
             {snapshot.fees.map((fee, i) => (
               <div key={i} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{fee.name}</span>
-                <span className="font-[tabular-nums]">${fmt(fee.price)}</span>
+                <span className="tabular-nums">${fmt(fee.price)}</span>
               </div>
             ))}
           </div>
@@ -403,7 +403,7 @@ function SnapshotView({
       <div className="mt-3 space-y-1 border-t pt-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-[tabular-nums]">${fmt(snapshot.subtotal)}</span>
+          <span className="tabular-nums">${fmt(snapshot.subtotal)}</span>
         </div>
         {snapshot.discount > 0 && (
           <div className="flex justify-between text-emerald-700">
@@ -411,9 +411,7 @@ function SnapshotView({
               Discount
               {snapshot.discountLabel ? ` (${snapshot.discountLabel})` : ""}
             </span>
-            <span className="font-[tabular-nums]">
-              -${fmt(snapshot.discount)}
-            </span>
+            <span className="tabular-nums">-${fmt(snapshot.discount)}</span>
           </div>
         )}
         {snapshot.taxes && snapshot.taxes.length > 0
@@ -422,33 +420,29 @@ function SnapshotView({
                 <span className="text-muted-foreground">
                   {t.name} ({(t.rate * 100).toFixed(t.rate < 0.1 ? 1 : 3)}%)
                 </span>
-                <span className="font-[tabular-nums]">${fmt(t.amount)}</span>
+                <span className="tabular-nums">${fmt(t.amount)}</span>
               </div>
             ))
           : snapshot.taxAmount > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tax</span>
-                <span className="font-[tabular-nums]">
-                  ${fmt(snapshot.taxAmount)}
-                </span>
+                <span className="tabular-nums">${fmt(snapshot.taxAmount)}</span>
               </div>
             )}
         {snapshot.tipTotal !== undefined && snapshot.tipTotal > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tip</span>
-            <span className="font-[tabular-nums]">
-              ${fmt(snapshot.tipTotal)}
-            </span>
+            <span className="tabular-nums">${fmt(snapshot.tipTotal)}</span>
           </div>
         )}
         <div className="flex justify-between border-t pt-1 font-semibold">
           <span>Total</span>
-          <span className="font-[tabular-nums]">${fmt(snapshot.total)}</span>
+          <span className="tabular-nums">${fmt(snapshot.total)}</span>
         </div>
         {snapshot.depositCollected > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">Deposit collected</span>
-            <span className="font-[tabular-nums] text-emerald-700">
+            <span className="text-emerald-700 tabular-nums">
               -${fmt(snapshot.depositCollected)}
             </span>
           </div>
@@ -456,9 +450,7 @@ function SnapshotView({
         {snapshot.remainingDue > 0 && (
           <div className="text-destructive flex justify-between font-medium">
             <span>Remaining due</span>
-            <span className="font-[tabular-nums]">
-              ${fmt(snapshot.remainingDue)}
-            </span>
+            <span className="tabular-nums">${fmt(snapshot.remainingDue)}</span>
           </div>
         )}
       </div>
@@ -484,7 +476,7 @@ function SnapshotView({
                     </span>
                   )}
                 </span>
-                <span className="font-[tabular-nums]">${fmt(p.amount)}</span>
+                <span className="tabular-nums">${fmt(p.amount)}</span>
               </div>
             ))}
           </div>

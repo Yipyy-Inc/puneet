@@ -114,7 +114,7 @@ export function SavedCardPicker({
                 <CreditCard className="text-muted-foreground size-4 shrink-0" />
                 <span className="text-sm font-medium">{describe(card)}</span>
                 {exp && (
-                  <span className="text-muted-foreground font-[tabular-nums] text-xs">
+                  <span className="text-muted-foreground text-xs tabular-nums">
                     {exp}
                   </span>
                 )}

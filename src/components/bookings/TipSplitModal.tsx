@@ -197,7 +197,7 @@ export function TipSplitModal({
           {/* Total tip */}
           <div className="bg-muted/30 rounded-lg border p-3 text-center">
             <p className="text-muted-foreground text-xs">Total Tip</p>
-            <p className="font-[tabular-nums] text-2xl font-bold">
+            <p className="text-2xl font-bold tabular-nums">
               ${totalTip.toFixed(2)}
             </p>
             <p className="text-muted-foreground mt-0.5 text-[11px]">
@@ -237,7 +237,7 @@ export function TipSplitModal({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{s.serviceName}</p>
-                    <p className="text-muted-foreground font-[tabular-nums] text-xs">
+                    <p className="text-muted-foreground text-xs tabular-nums">
                       ${s.serviceValue.toFixed(2)}
                     </p>
                   </div>
@@ -329,7 +329,7 @@ export function TipSplitModal({
                 >
                   {nameFor(entry.staffName)}
                 </span>
-                <span className="text-muted-foreground text-right font-[tabular-nums] text-sm">
+                <span className="text-muted-foreground text-right text-sm tabular-nums">
                   ${entry.serviceValue.toFixed(2)}
                 </span>
                 {method === "custom_amount" || method === "custom_percent" ? (
@@ -342,17 +342,17 @@ export function TipSplitModal({
                         [entry.staffName]: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="h-7 text-right font-[tabular-nums] text-xs"
+                    className="h-7 text-right text-xs tabular-nums"
                     min={0}
                     step={0.01}
                     placeholder={method === "custom_percent" ? "%" : "$"}
                   />
                 ) : (
-                  <span className="text-right font-[tabular-nums] text-sm font-semibold">
+                  <span className="text-right text-sm font-semibold tabular-nums">
                     ${entry.tipAmount.toFixed(2)}
                   </span>
                 )}
-                <span className="text-muted-foreground text-right font-[tabular-nums] text-xs">
+                <span className="text-muted-foreground text-right text-xs tabular-nums">
                   {entry.percentage}%
                 </span>
               </div>
@@ -363,13 +363,13 @@ export function TipSplitModal({
               <span />
               <span
                 className={cn(
-                  "text-right font-[tabular-nums]",
+                  "text-right tabular-nums",
                   !isBalanced && "text-destructive",
                 )}
               >
                 ${totalAllocated.toFixed(2)}
               </span>
-              <span className="text-right font-[tabular-nums]">100%</span>
+              <span className="text-right tabular-nums">100%</span>
             </div>
             {!isBalanced && (
               <div className="text-destructive flex items-center gap-1.5 text-xs">

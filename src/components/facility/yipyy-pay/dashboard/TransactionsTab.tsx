@@ -396,7 +396,7 @@ function Breakdown({
                 <li key={name} className="space-y-1">
                   <div className="flex items-baseline justify-between gap-3 text-sm">
                     <span className="font-medium">{name}</span>
-                    <span className="text-muted-foreground shrink-0 font-[tabular-nums]">
+                    <span className="text-muted-foreground shrink-0 tabular-nums">
                       {formatCurrency(row.net)}
                       <span className="ml-2 text-xs opacity-70">
                         {row.sales}
