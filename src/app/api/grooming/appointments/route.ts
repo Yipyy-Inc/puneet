@@ -211,7 +211,15 @@ export async function PATCH(request: NextRequest) {
       const { data: station } = await supabase
         .from("grooming_stations")
         .select("id")
-        .eq("legacy_id", body.stationId)
+        // The station app id: legacy id when present, else the uuid.
+        .eq(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            body.stationId,
+          )
+            ? "id"
+            : "legacy_id",
+          body.stationId,
+        )
         .maybeSingle();
       stationUuid = (station?.id as string | undefined) ?? null;
     }
