@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Ban, Calendar as CalendarIcon, Clock, User } from "lucide-react";
 import { toast } from "sonner";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,8 @@ interface TimeBlockDialogProps {
   stylistName: string;
   date: string;
   startTime: string;
-  onSave: (block: TimeBlock) => void;
+  /** Resolves once the block is on record; a rejection keeps the dialog open. */
+  onSave: (block: TimeBlock) => Promise<void>;
 }
 
 export function TimeBlockDialog({
@@ -94,6 +96,8 @@ export function TimeBlockDialog({
   const [reason, setReason] = useState<TimeBlockReason | "">("");
   const [durationMin, setDurationMin] = useState<string>("60");
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { t: tAppt } = useStaffText("groomingAppointment");
 
   useEffect(() => {
     if (open) {
@@ -103,7 +107,8 @@ export function TimeBlockDialog({
     }
   }, [open]);
 
-  function handleSave() {
+  async function handleSave() {
+    if (saving) return;
     if (!reason) {
       toast.error("Pick a reason for the time block");
       return;
@@ -119,7 +124,17 @@ export function TimeBlockDialog({
       reason,
       notes: notes.trim() || undefined,
     };
-    onSave(block);
+    setSaving(true);
+    try {
+      await onSave(block);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : tAppt("blockNotSaved"),
+      );
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     toast.success(
       `Blocked ${stylistName}'s ${reason} (${startTime}–${endTime})`,
     );

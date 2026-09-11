@@ -2047,7 +2047,9 @@
         "booked": "Réservation n° {ref} — {pet}",
         "partlyBooked": "La réservation n° {ref} a été faite, mais pas pour tous les animaux",
         "notBooked": "Le rendez-vous n’a pas été réservé",
-        "notSaved": "Cette modification n’a pas été enregistrée."
+        "notSaved": "Cette modification n’a pas été enregistrée.",
+        "moveNotSaved": "Ce déplacement n’a pas été enregistré",
+        "blockNotSaved": "Le blocage n’a pas été enregistré"
       }
     }
   },

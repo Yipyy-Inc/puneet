@@ -12723,3 +12723,23 @@ are gone; Message owner opens an email with the draft.
   after a freed slot says "SMS+email sent" and sends nothing; the invoice card
   uses a hard-coded 15% tax; a real Edit (service and add-ons) needs a write
   for `grooming_appointments` the PATCH route does not have.
+
+## 2026-09-11 — the grooming calendar's drags and time blocks are kept
+
+Dragging a groom to another time or another groomer's column moved an
+in-memory override and toasted; the calendar was back as it was on reload.
+**Block time** kept its blocks in the component's `useState`, so a groomer's
+lunch was gone on reload and invisible everywhere else.
+
+A drop writes the booking — its times through `PATCH /api/bookings/[ref]`, or
+its groomer through the same route, which now resolves `stylistPreference` to
+the staff row the way the create route does (`staffForStylist`,
+src/lib/api/stylist-staff.ts) — and adds the line to the appointment's real
+history. A refused write puts the groom back. Time blocks are
+`calendar_events` rows of kind `block-time` aimed at the groomer
+(`affects: "staff"`), so the facility calendar sees them too; unblock is the
+soft delete.
+
+- **Still open:** the drop's confirmation text still describes a message to
+  the owner that nothing sends; mobile-grooming van columns still name their
+  drivers from `@/data/facility-staff`.

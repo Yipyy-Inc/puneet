@@ -7,6 +7,7 @@ import {
   rowToBooking,
 } from "@/lib/api/mappers/booking";
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { staffForStylist } from "@/lib/api/stylist-staff";
 import type { NewBooking } from "@/types/booking";
 
 // ============================================================================
@@ -82,6 +83,25 @@ export async function PATCH(
     facilityId: facility.facilityId,
     timeZone: facility.timeZone,
   });
+
+  // A groom moved to another groomer's column. The create route resolves the
+  // stylist the same way; without it here a drag across columns changed the
+  // time and left the groom with the groomer it came from.
+  if (existing.service === "grooming" && input.stylistPreference) {
+    const stylist = await staffForStylist(
+      supabase,
+      facility.facilityId,
+      input.stylistPreference,
+    );
+    if (!stylist) {
+      return NextResponse.json(
+        { error: "That groomer is not on this facility's team." },
+        { status: 422 },
+      );
+    }
+    row.assigned_staff_id = stylist.staffId;
+    row.assigned_staff_name = stylist.name;
+  }
 
   const { data: written, error } = await supabase
     .from("bookings")
