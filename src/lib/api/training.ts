@@ -25,7 +25,6 @@ import { trainingExercises } from "@/data/training-exercises";
 import {
   getAttendanceForPet,
   getHomeworkForEnrollments,
-  getReportCardsForPet,
   sessionAttendances,
   trainingHomeworkRecords,
   trainingReportCardRecords,
@@ -274,12 +273,6 @@ export const trainingQueries = {
   allHomework: () => ({
     queryKey: ["training", "homework", "all"] as const,
     queryFn: async () => trainingHomeworkRecords,
-  }),
-  /** Training report cards for a single pet — feeds the per-pet Report
-   *  Cards tab on the Training Profile and the customer-portal view. */
-  reportCardsForPet: (petId: number) => ({
-    queryKey: ["training", "report-cards", "pet", petId] as const,
-    queryFn: async () => getReportCardsForPet(petId),
   }),
   /** Unscoped catalog of every training report card — for any global view
    *  (none today; reserved for a future facility-wide Report Cards board). */
