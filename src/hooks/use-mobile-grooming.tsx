@@ -2,128 +2,55 @@
 
 import {
   createContext,
-  useContext,
-  useState,
   useCallback,
-  useEffect,
+  useContext,
   useMemo,
   type ReactNode,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   MobileGroomingVan,
   ServiceArea,
   StaffServiceAreaSchedule,
   TravelZone,
-  ZipTaxRate,
 } from "@/types/grooming";
-import { staffAreaSchedules as DEFAULT_STAFF_SCHEDULES } from "@/data/staff-area-schedules";
+import type { CustomServicesAudience } from "@/hooks/use-custom-services";
+import { facilitySettingsQueries } from "@/lib/api/facility-settings";
+import { facilityProfileQueries } from "@/lib/api/facility-profile";
+import {
+  MOBILE_GROOMING_OFF,
+  type MobileGroomingSettings,
+} from "@/lib/settings/mobile-grooming";
+import { NO_ITEMS } from "@/lib/no-items";
 
-const ENABLED_KEY = "yipyy_mobile_grooming_enabled";
-const VANS_KEY = "yipyy_mobile_grooming_vans";
-const AREAS_KEY = "yipyy_mobile_grooming_service_areas";
-const ARRIVAL_WINDOW_KEY = "yipyy_mobile_arrival_window_minutes";
-const STAFF_SCHEDULES_KEY = "yipyy_mobile_grooming_staff_schedules";
-const CERTAIN_AREA_KEY = "yipyy_mobile_certain_area_enabled";
-const TRAVEL_ZONES_KEY = "yipyy_mobile_travel_zones";
-const ZIP_TAX_KEY = "yipyy_mobile_zip_tax_rates";
-
-const DEFAULT_ARRIVAL_WINDOW_MINUTES = 60;
-
-const DEFAULT_SERVICE_AREAS: ServiceArea[] = [
-  {
-    id: "area-north",
-    facilityId: 11,
-    name: "North Montréal",
-    type: "postal",
-    postalCodes: ["H2P", "H2N", "H2M", "H2L"],
-    daysOfWeek: [1, 3], // Mon, Wed
-    active: true,
-    color: "#0ea5e9",
-  },
-  {
-    id: "area-south",
-    facilityId: 11,
-    name: "South Shore",
-    type: "radius",
-    centerAddress: "Longueuil, QC",
-    radiusKm: 12,
-    daysOfWeek: [2, 4], // Tue, Thu
-    active: true,
-    color: "#a855f7",
-  },
-];
-
-const DEFAULT_TRAVEL_ZONES: TravelZone[] = [
-  {
-    id: "zone-1",
-    label: "Zone 1 · 0–5 mi",
-    maxMiles: 5,
-    surchargeMode: "flat",
-    surchargeAmount: 0,
-    active: true,
-  },
-  {
-    id: "zone-2",
-    label: "Zone 2 · 5–15 mi",
-    maxMiles: 15,
-    surchargeMode: "flat",
-    surchargeAmount: 10,
-    active: true,
-  },
-  {
-    id: "zone-3",
-    label: "Zone 3 · 15–25 mi",
-    maxMiles: 25,
-    surchargeMode: "flat",
-    surchargeAmount: 20,
-    active: true,
-  },
-];
-
-const DEFAULT_ZIP_TAX_RATES: ZipTaxRate[] = [
-  {
-    id: "zip-tax-qc",
-    prefix: "H",
-    ratePercent: 14.975,
-    label: "Québec (GST + QST)",
-    isDefault: true,
-  },
-  {
-    id: "zip-tax-on",
-    prefix: "M",
-    ratePercent: 13,
-    label: "Ontario (HST)",
-  },
-  {
-    id: "zip-tax-h3a",
-    prefix: "H3A",
-    ratePercent: 14.975,
-    label: "Downtown Montréal",
-  },
-];
-
-const DEFAULT_VANS: MobileGroomingVan[] = [
-  {
-    id: "van-1",
-    facilityId: 11,
-    name: "Van 1",
-    licensePlate: "MG-4422",
-    homeBaseAddress: "1450 Saint-Catherine St W, Montréal, QC",
-    assignedStaffIds: [],
-    active: true,
-    calendarColor: "#0ea5e9",
-  },
-  {
-    id: "van-2",
-    facilityId: 11,
-    name: "Van 2",
-    licensePlate: "MG-7891",
-    homeBaseAddress: "1450 Saint-Catherine St W, Montréal, QC",
-    assignedStaffIds: [],
-    active: true,
-    calendarColor: "#a855f7",
-  },
-];
+// ============================================================================
+// Mobile grooming — the facility's own setting.
+//
+// ── WHAT IT REPLACES ──────────────────────────────────────────────────────
+//
+// Everything here lived in the browser's localStorage, seeded with two
+// invented vans, two Montréal service areas, three travel zones and a week of
+// area schedules for fixture staff — and ZIP tax rates defaulting to Québec's.
+// It is the `mobile_grooming` settings domain now
+// (lib/settings/mobile-grooming.ts), off until a facility sets it up. The ZIP
+// tax rates are gone: tax comes from the facility's tax settings.
+//
+// ── TWO AUDIENCES ─────────────────────────────────────────────────────────
+//
+//   staff      reads and writes the setting; the base postal code is the
+//              facility profile's.
+//   customer   reads `public.offered_mobile_grooming()` through
+//              /api/customer/mobile-grooming — the switches, active areas and
+//              zones, whether a van is running, and the base postal code. No
+//              vans, no staff schedules, and no writes.
+//
+// ── WRITES ARE PROMISES ───────────────────────────────────────────────────
+//
+// Each write reads the CURRENT setting from the server, changes only its own
+// part, saves, and resolves once saved — or rejects with the server's reason.
+// They were synchronous localStorage writes, toasted before anything could
+// have failed.
+// ============================================================================
 
 interface MobileGroomingContextValue {
   enabled: boolean;
@@ -139,8 +66,6 @@ interface MobileGroomingContextValue {
   serviceAreas: ServiceArea[];
   /** Travel zones used to compute mobile-grooming distance surcharges. */
   travelZones: TravelZone[];
-  /** Per-ZIP / postal-prefix tax rates. */
-  zipTaxRates: ZipTaxRate[];
   /** Client-facing arrival window size (in minutes). Internal times stay precise. */
   arrivalWindowMinutes: number;
   /**
@@ -151,364 +76,287 @@ interface MobileGroomingContextValue {
   certainAreaEnabled: boolean;
   /** Per-staff weekly area templates + per-date overrides. */
   staffSchedules: StaffServiceAreaSchedule[];
+  /** The postal code a travel zone's distance is measured from — the
+   *  facility's own. It was a constant ("H2X 1Z4") for every facility. */
+  basePostalCode: string | undefined;
+  /** True until the facility's setting has arrived. */
+  isPending: boolean;
 
-  setEnabled: (next: boolean) => void;
-  setArrivalWindowMinutes: (next: number) => void;
-  setCertainAreaEnabled: (next: boolean) => void;
-  addVan: (van: MobileGroomingVan) => void;
-  updateVan: (van: MobileGroomingVan) => void;
-  deleteVan: (id: string) => void;
-  toggleVanActive: (id: string) => void;
+  setEnabled: (next: boolean) => Promise<void>;
+  setArrivalWindowMinutes: (next: number) => Promise<void>;
+  setCertainAreaEnabled: (next: boolean) => Promise<void>;
+  addVan: (van: MobileGroomingVan) => Promise<void>;
+  updateVan: (van: MobileGroomingVan) => Promise<void>;
+  deleteVan: (id: string) => Promise<void>;
+  toggleVanActive: (id: string) => Promise<void>;
 
-  addServiceArea: (area: ServiceArea) => void;
-  updateServiceArea: (area: ServiceArea) => void;
-  deleteServiceArea: (id: string) => void;
-  toggleServiceAreaActive: (id: string) => void;
+  addServiceArea: (area: ServiceArea) => Promise<void>;
+  updateServiceArea: (area: ServiceArea) => Promise<void>;
+  deleteServiceArea: (id: string) => Promise<void>;
+  toggleServiceAreaActive: (id: string) => Promise<void>;
 
   /** Replace one day in a staff's weekly template (dow = 0=Sun … 6=Sat). */
   setStaffWeeklyDay: (
     staffId: string,
     dayOfWeek: number,
     areaId: string | null,
-  ) => void;
+  ) => Promise<void>;
   /** Set / clear a per-date override for a staff. Pass `undefined` to remove. */
   setStaffDateOverride: (
     staffId: string,
     dateStr: string,
     areaId: string | null | undefined,
-  ) => void;
+  ) => Promise<void>;
 
   /** Add or replace a travel zone (matched by id). */
-  upsertTravelZone: (zone: TravelZone) => void;
-  deleteTravelZone: (id: string) => void;
-
-  /** Add or replace a ZIP tax rate (matched by id). */
-  upsertZipTaxRate: (rate: ZipTaxRate) => void;
-  deleteZipTaxRate: (id: string) => void;
-  /**
-   * Mark exactly one ZIP tax rate as the default fallback. Clears the flag
-   * on every other entry to keep the invariant of "exactly one default."
-   */
-  setDefaultZipTaxRate: (id: string) => void;
+  upsertTravelZone: (zone: TravelZone) => Promise<void>;
+  deleteTravelZone: (id: string) => Promise<void>;
 }
 
-const MobileGroomingContext = createContext<MobileGroomingContextValue | null>(
-  null,
-);
+/** What a customer is shown (`public.offered_mobile_grooming()`). */
+interface OfferedMobileGrooming {
+  enabled: boolean;
+  hasActiveVans: boolean;
+  arrivalWindowMinutes: number;
+  certainAreaEnabled: boolean;
+  serviceAreas: ServiceArea[];
+  travelZones: TravelZone[];
+  basePostalCode: string | null;
+}
 
-function loadStored<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw !== null) return JSON.parse(raw) as T;
-  } catch {
-    // ignore
+const NOTHING_OFFERED: OfferedMobileGrooming = {
+  enabled: false,
+  hasActiveVans: false,
+  arrivalWindowMinutes: MOBILE_GROOMING_OFF.arrivalWindowMinutes,
+  certainAreaEnabled: false,
+  serviceAreas: [],
+  travelZones: [],
+  basePostalCode: null,
+};
+
+const OFFERED_KEY = ["customer", "mobile-grooming"] as const;
+
+async function readError(response: Response, fallback: string) {
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+  } | null;
+  return new Error(body?.error ?? fallback);
+}
+
+async function fetchOffered(): Promise<OfferedMobileGrooming> {
+  const response = await fetch("/api/customer/mobile-grooming");
+  if (response.status === 401 || response.status === 404) {
+    return NOTHING_OFFERED;
   }
-  return fallback;
+  if (!response.ok) {
+    throw await readError(response, "Could not load mobile grooming.");
+  }
+  return {
+    ...NOTHING_OFFERED,
+    ...((await response.json()) as Partial<OfferedMobileGrooming>),
+  };
 }
 
-export function MobileGroomingProvider({ children }: { children: ReactNode }) {
-  // Start with defaults on both server and first client render so SSR markup
-  // matches; hydrate from localStorage in an effect.
-  const [enabled, setEnabledState] = useState<boolean>(false);
-  const [vans, setVans] = useState<MobileGroomingVan[]>(DEFAULT_VANS);
-  const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>(
-    DEFAULT_SERVICE_AREAS,
-  );
-  const [arrivalWindowMinutes, setArrivalWindowMinutesState] = useState<number>(
-    DEFAULT_ARRIVAL_WINDOW_MINUTES,
-  );
-  const [certainAreaEnabled, setCertainAreaEnabledState] =
-    useState<boolean>(true);
-  const [staffSchedules, setStaffSchedules] = useState<
-    StaffServiceAreaSchedule[]
-  >(DEFAULT_STAFF_SCHEDULES);
-  const [travelZones, setTravelZones] =
-    useState<TravelZone[]>(DEFAULT_TRAVEL_ZONES);
-  const [zipTaxRates, setZipTaxRates] = useState<ZipTaxRate[]>(
-    DEFAULT_ZIP_TAX_RATES,
-  );
-  const [hasHydrated, setHasHydrated] = useState(false);
+const NOT_YOURS = "Mobile grooming is set up by the facility.";
 
-  useEffect(() => {
-    setEnabledState(loadStored<boolean>(ENABLED_KEY, false));
-    setVans(loadStored<MobileGroomingVan[]>(VANS_KEY, DEFAULT_VANS));
-    setServiceAreas(
-      loadStored<ServiceArea[]>(AREAS_KEY, DEFAULT_SERVICE_AREAS),
-    );
-    setArrivalWindowMinutesState(
-      loadStored<number>(ARRIVAL_WINDOW_KEY, DEFAULT_ARRIVAL_WINDOW_MINUTES),
-    );
-    setCertainAreaEnabledState(loadStored<boolean>(CERTAIN_AREA_KEY, true));
-    setStaffSchedules(
-      loadStored<StaffServiceAreaSchedule[]>(
-        STAFF_SCHEDULES_KEY,
-        DEFAULT_STAFF_SCHEDULES,
-      ),
-    );
-    setTravelZones(
-      loadStored<TravelZone[]>(TRAVEL_ZONES_KEY, DEFAULT_TRAVEL_ZONES),
-    );
-    setZipTaxRates(
-      loadStored<ZipTaxRate[]>(ZIP_TAX_KEY, DEFAULT_ZIP_TAX_RATES),
-    );
-    setHasHydrated(true);
-  }, []);
+function makeEmptyWeekly(): Record<string, string | null> {
+  const out: Record<string, string | null> = {};
+  for (let d = 0; d < 7; d++) out[String(d)] = null;
+  return out;
+}
 
-  const setArrivalWindowMinutes = useCallback(
-    (next: number) => {
-      const clamped = Math.max(0, Math.min(240, Math.round(next)));
-      setArrivalWindowMinutesState(clamped);
-      if (hasHydrated) {
-        queueMicrotask(() =>
-          localStorage.setItem(ARRIVAL_WINDOW_KEY, JSON.stringify(clamped)),
-        );
+export function MobileGroomingProvider({
+  children,
+  audience = "staff",
+}: {
+  children: ReactNode;
+  audience?: CustomServicesAudience;
+}) {
+  const queryClient = useQueryClient();
+  const staff = audience === "staff";
+
+  const settingsQuery = useQuery({
+    ...facilitySettingsQueries.all(),
+    enabled: staff,
+  });
+  const profileQuery = useQuery({
+    ...facilityProfileQueries.detail(),
+    enabled: staff,
+  });
+  const offeredQuery = useQuery({
+    queryKey: OFFERED_KEY,
+    queryFn: fetchOffered,
+    enabled: !staff,
+  });
+
+  const saved = settingsQuery.data?.mobile_grooming?.value;
+
+  // ── The current setting, from the server, changed in one part ──────────
+  const save = useCallback(
+    async (
+      change: (prev: MobileGroomingSettings) => MobileGroomingSettings,
+    ): Promise<void> => {
+      if (!staff) throw new Error(NOT_YOURS);
+      const settings = await queryClient.fetchQuery({
+        ...facilitySettingsQueries.all(),
+        staleTime: 0,
+      });
+      const prev: MobileGroomingSettings = {
+        ...MOBILE_GROOMING_OFF,
+        ...(settings.mobile_grooming?.value ?? {}),
+      };
+      const response = await fetch("/api/facility/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          domain: "mobile_grooming",
+          value: change(prev),
+        }),
+      });
+      if (!response.ok) {
+        throw await readError(response, `Request failed (${response.status})`);
       }
-    },
-    [hasHydrated],
-  );
-
-  const persistEnabled = useCallback(
-    (next: boolean) => {
-      setEnabledState(next);
-      if (hasHydrated) {
-        queueMicrotask(() =>
-          localStorage.setItem(ENABLED_KEY, JSON.stringify(next)),
-        );
-      }
-    },
-    [hasHydrated],
-  );
-
-  const persistVans = useCallback(
-    (updater: (prev: MobileGroomingVan[]) => MobileGroomingVan[]) => {
-      setVans((prev) => {
-        const next = updater(prev);
-        if (hasHydrated) {
-          queueMicrotask(() =>
-            localStorage.setItem(VANS_KEY, JSON.stringify(next)),
-          );
-        }
-        return next;
+      await queryClient.invalidateQueries({
+        queryKey: ["facility", "settings"],
       });
     },
-    [hasHydrated],
+    [staff, queryClient],
+  );
+
+  const setEnabled = useCallback(
+    (next: boolean) => save((prev) => ({ ...prev, enabled: next })),
+    [save],
+  );
+
+  const setArrivalWindowMinutes = useCallback(
+    (next: number) =>
+      save((prev) => ({
+        ...prev,
+        arrivalWindowMinutes: Math.max(0, Math.min(240, Math.round(next))),
+      })),
+    [save],
+  );
+
+  const setCertainAreaEnabled = useCallback(
+    (next: boolean) => save((prev) => ({ ...prev, certainAreaEnabled: next })),
+    [save],
   );
 
   const addVan = useCallback(
     (van: MobileGroomingVan) =>
-      persistVans((prev) =>
-        prev.find((v) => v.id === van.id)
-          ? prev.map((v) => (v.id === van.id ? van : v))
-          : [...prev, van],
-      ),
-    [persistVans],
+      save((prev) => ({
+        ...prev,
+        vans: prev.vans.some((v) => v.id === van.id)
+          ? prev.vans.map((v) => (v.id === van.id ? van : v))
+          : [...prev.vans, van],
+      })),
+    [save],
   );
 
   const updateVan = useCallback(
     (van: MobileGroomingVan) =>
-      persistVans((prev) => prev.map((v) => (v.id === van.id ? van : v))),
-    [persistVans],
+      save((prev) => ({
+        ...prev,
+        vans: prev.vans.map((v) => (v.id === van.id ? van : v)),
+      })),
+    [save],
   );
 
   const deleteVan = useCallback(
-    (id: string) => persistVans((prev) => prev.filter((v) => v.id !== id)),
-    [persistVans],
+    (id: string) =>
+      save((prev) => ({ ...prev, vans: prev.vans.filter((v) => v.id !== id) })),
+    [save],
   );
 
   const toggleVanActive = useCallback(
     (id: string) =>
-      persistVans((prev) =>
-        prev.map((v) => (v.id === id ? { ...v, active: !v.active } : v)),
-      ),
-    [persistVans],
-  );
-
-  const persistAreas = useCallback(
-    (updater: (prev: ServiceArea[]) => ServiceArea[]) => {
-      setServiceAreas((prev) => {
-        const next = updater(prev);
-        if (hasHydrated) {
-          queueMicrotask(() =>
-            localStorage.setItem(AREAS_KEY, JSON.stringify(next)),
-          );
-        }
-        return next;
-      });
-    },
-    [hasHydrated],
+      save((prev) => ({
+        ...prev,
+        vans: prev.vans.map((v) =>
+          v.id === id ? { ...v, active: !v.active } : v,
+        ),
+      })),
+    [save],
   );
 
   const addServiceArea = useCallback(
     (area: ServiceArea) =>
-      persistAreas((prev) =>
-        prev.find((a) => a.id === area.id)
-          ? prev.map((a) => (a.id === area.id ? area : a))
-          : [...prev, area],
-      ),
-    [persistAreas],
+      save((prev) => ({
+        ...prev,
+        serviceAreas: prev.serviceAreas.some((a) => a.id === area.id)
+          ? prev.serviceAreas.map((a) => (a.id === area.id ? area : a))
+          : [...prev.serviceAreas, area],
+      })),
+    [save],
   );
 
   const updateServiceArea = useCallback(
     (area: ServiceArea) =>
-      persistAreas((prev) => prev.map((a) => (a.id === area.id ? area : a))),
-    [persistAreas],
+      save((prev) => ({
+        ...prev,
+        serviceAreas: prev.serviceAreas.map((a) =>
+          a.id === area.id ? area : a,
+        ),
+      })),
+    [save],
   );
 
   const deleteServiceArea = useCallback(
-    (id: string) => persistAreas((prev) => prev.filter((a) => a.id !== id)),
-    [persistAreas],
+    (id: string) =>
+      save((prev) => ({
+        ...prev,
+        serviceAreas: prev.serviceAreas.filter((a) => a.id !== id),
+      })),
+    [save],
   );
 
   const toggleServiceAreaActive = useCallback(
     (id: string) =>
-      persistAreas((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a)),
-      ),
-    [persistAreas],
+      save((prev) => ({
+        ...prev,
+        serviceAreas: prev.serviceAreas.map((a) =>
+          a.id === id ? { ...a, active: !a.active } : a,
+        ),
+      })),
+    [save],
   );
-
-  const setCertainAreaEnabled = useCallback(
-    (next: boolean) => {
-      setCertainAreaEnabledState(next);
-      if (hasHydrated) {
-        queueMicrotask(() =>
-          localStorage.setItem(CERTAIN_AREA_KEY, JSON.stringify(next)),
-        );
-      }
-    },
-    [hasHydrated],
-  );
-
-  const persistSchedules = useCallback(
-    (
-      updater: (prev: StaffServiceAreaSchedule[]) => StaffServiceAreaSchedule[],
-    ) => {
-      setStaffSchedules((prev) => {
-        const next = updater(prev);
-        if (hasHydrated) {
-          queueMicrotask(() =>
-            localStorage.setItem(STAFF_SCHEDULES_KEY, JSON.stringify(next)),
-          );
-        }
-        return next;
-      });
-    },
-    [hasHydrated],
-  );
-
-  function makeEmptyWeekly(): Record<string, string | null> {
-    const out: Record<string, string | null> = {};
-    for (let d = 0; d < 7; d++) out[String(d)] = null;
-    return out;
-  }
 
   const setStaffWeeklyDay = useCallback(
     (staffId: string, dayOfWeek: number, areaId: string | null) =>
-      persistSchedules((prev) => {
-        const existing = prev.find((s) => s.staffId === staffId);
-        if (existing) {
-          return prev.map((s) =>
-            s.staffId === staffId
-              ? {
-                  ...s,
-                  weeklyTemplate: {
-                    ...s.weeklyTemplate,
-                    [String(dayOfWeek)]: areaId,
-                  },
-                }
-              : s,
-          );
-        }
-        return [
-          ...prev,
-          {
-            staffId,
-            weeklyTemplate: {
-              ...makeEmptyWeekly(),
-              [String(dayOfWeek)]: areaId,
-            },
-            dateOverrides: {},
-          },
-        ];
+      save((prev) => {
+        const existing = prev.staffSchedules.find((s) => s.staffId === staffId);
+        const staffSchedules = existing
+          ? prev.staffSchedules.map((s) =>
+              s.staffId === staffId
+                ? {
+                    ...s,
+                    weeklyTemplate: {
+                      ...s.weeklyTemplate,
+                      [String(dayOfWeek)]: areaId,
+                    },
+                  }
+                : s,
+            )
+          : [
+              ...prev.staffSchedules,
+              {
+                staffId,
+                weeklyTemplate: {
+                  ...makeEmptyWeekly(),
+                  [String(dayOfWeek)]: areaId,
+                },
+                dateOverrides: {},
+              },
+            ];
+        return { ...prev, staffSchedules };
       }),
-    [persistSchedules],
-  );
-
-  const persistTravelZones = useCallback(
-    (updater: (prev: TravelZone[]) => TravelZone[]) => {
-      setTravelZones((prev) => {
-        const next = updater(prev);
-        if (hasHydrated) {
-          queueMicrotask(() =>
-            localStorage.setItem(TRAVEL_ZONES_KEY, JSON.stringify(next)),
-          );
-        }
-        return next;
-      });
-    },
-    [hasHydrated],
-  );
-
-  const upsertTravelZone = useCallback(
-    (zone: TravelZone) =>
-      persistTravelZones((prev) =>
-        prev.find((z) => z.id === zone.id)
-          ? prev.map((z) => (z.id === zone.id ? zone : z))
-          : [...prev, zone],
-      ),
-    [persistTravelZones],
-  );
-
-  const deleteTravelZone = useCallback(
-    (id: string) =>
-      persistTravelZones((prev) => prev.filter((z) => z.id !== id)),
-    [persistTravelZones],
-  );
-
-  const persistZipTaxRates = useCallback(
-    (updater: (prev: ZipTaxRate[]) => ZipTaxRate[]) => {
-      setZipTaxRates((prev) => {
-        const next = updater(prev);
-        if (hasHydrated) {
-          queueMicrotask(() =>
-            localStorage.setItem(ZIP_TAX_KEY, JSON.stringify(next)),
-          );
-        }
-        return next;
-      });
-    },
-    [hasHydrated],
-  );
-
-  const upsertZipTaxRate = useCallback(
-    (rate: ZipTaxRate) =>
-      persistZipTaxRates((prev) =>
-        prev.find((r) => r.id === rate.id)
-          ? prev.map((r) => (r.id === rate.id ? rate : r))
-          : [...prev, rate],
-      ),
-    [persistZipTaxRates],
-  );
-
-  const deleteZipTaxRate = useCallback(
-    (id: string) =>
-      persistZipTaxRates((prev) => prev.filter((r) => r.id !== id)),
-    [persistZipTaxRates],
-  );
-
-  const setDefaultZipTaxRate = useCallback(
-    (id: string) =>
-      persistZipTaxRates((prev) =>
-        prev.map((r) => ({ ...r, isDefault: r.id === id })),
-      ),
-    [persistZipTaxRates],
+    [save],
   );
 
   const setStaffDateOverride = useCallback(
     (staffId: string, dateStr: string, areaId: string | null | undefined) =>
-      persistSchedules((prev) => {
-        const existing = prev.find((s) => s.staffId === staffId);
+      save((prev) => {
+        const existing = prev.staffSchedules.find((s) => s.staffId === staffId);
         if (existing) {
           const overrides = { ...existing.dateOverrides };
           if (areaId === undefined) {
@@ -516,43 +364,56 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
           } else {
             overrides[dateStr] = areaId;
           }
-          return prev.map((s) =>
-            s.staffId === staffId ? { ...s, dateOverrides: overrides } : s,
-          );
+          return {
+            ...prev,
+            staffSchedules: prev.staffSchedules.map((s) =>
+              s.staffId === staffId ? { ...s, dateOverrides: overrides } : s,
+            ),
+          };
         }
         // Don't create a schedule entry just to record an override clear.
         if (areaId === undefined) return prev;
-        return [
+        return {
           ...prev,
-          {
-            staffId,
-            weeklyTemplate: makeEmptyWeekly(),
-            dateOverrides: { [dateStr]: areaId },
-          },
-        ];
+          staffSchedules: [
+            ...prev.staffSchedules,
+            {
+              staffId,
+              weeklyTemplate: makeEmptyWeekly(),
+              dateOverrides: { [dateStr]: areaId },
+            },
+          ],
+        };
       }),
-    [persistSchedules],
+    [save],
   );
 
+  const upsertTravelZone = useCallback(
+    (zone: TravelZone) =>
+      save((prev) => ({
+        ...prev,
+        travelZones: prev.travelZones.some((z) => z.id === zone.id)
+          ? prev.travelZones.map((z) => (z.id === zone.id ? zone : z))
+          : [...prev.travelZones, zone],
+      })),
+    [save],
+  );
+
+  const deleteTravelZone = useCallback(
+    (id: string) =>
+      save((prev) => ({
+        ...prev,
+        travelZones: prev.travelZones.filter((z) => z.id !== id),
+      })),
+    [save],
+  );
+
+  const offered = offeredQuery.data;
+  const zipCode = profileQuery.data?.address?.zipCode?.trim();
+
   const value = useMemo<MobileGroomingContextValue>(() => {
-    // Vans whose staff assignment was cleared get auto-deactivated so the
-    // hasActiveVans gate stays consistent with what the rest of the app
-    // treats as "operable."
-    const resolvedVans = vans.map((v) =>
-      v.assignedStaffIds.length === 0 ? { ...v, active: false } : v,
-    );
-    const hasActiveVans = resolvedVans.some((v) => v.active);
-    return {
-      enabled,
-      vans: resolvedVans,
-      hasActiveVans,
-      serviceAreas,
-      arrivalWindowMinutes,
-      certainAreaEnabled,
-      staffSchedules,
-      travelZones,
-      zipTaxRates,
-      setEnabled: persistEnabled,
+    const writes = {
+      setEnabled,
       setArrivalWindowMinutes,
       setCertainAreaEnabled,
       addVan,
@@ -567,20 +428,51 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
       setStaffDateOverride,
       upsertTravelZone,
       deleteTravelZone,
-      upsertZipTaxRate,
-      deleteZipTaxRate,
-      setDefaultZipTaxRate,
+    };
+    if (!staff) {
+      const shown = offered ?? NOTHING_OFFERED;
+      return {
+        enabled: shown.enabled,
+        vans: NO_ITEMS,
+        hasActiveVans: shown.hasActiveVans,
+        serviceAreas: shown.serviceAreas,
+        travelZones: shown.travelZones,
+        arrivalWindowMinutes: shown.arrivalWindowMinutes,
+        certainAreaEnabled: shown.certainAreaEnabled,
+        staffSchedules: NO_ITEMS,
+        basePostalCode: shown.basePostalCode ?? undefined,
+        isPending: offeredQuery.isPending,
+        ...writes,
+      };
+    }
+    const setting = { ...MOBILE_GROOMING_OFF, ...(saved ?? {}) };
+    // Vans whose staff assignment was cleared get auto-deactivated so the
+    // hasActiveVans gate stays consistent with what the rest of the app
+    // treats as "operable."
+    const resolvedVans = setting.vans.map((v) =>
+      v.assignedStaffIds.length === 0 ? { ...v, active: false } : v,
+    );
+    return {
+      enabled: setting.enabled,
+      vans: resolvedVans,
+      hasActiveVans: resolvedVans.some((v) => v.active),
+      serviceAreas: setting.serviceAreas,
+      travelZones: setting.travelZones,
+      arrivalWindowMinutes: setting.arrivalWindowMinutes,
+      certainAreaEnabled: setting.certainAreaEnabled,
+      staffSchedules: setting.staffSchedules,
+      basePostalCode: zipCode || undefined,
+      isPending: settingsQuery.isPending,
+      ...writes,
     };
   }, [
-    enabled,
-    vans,
-    serviceAreas,
-    arrivalWindowMinutes,
-    certainAreaEnabled,
-    staffSchedules,
-    travelZones,
-    zipTaxRates,
-    persistEnabled,
+    staff,
+    offered,
+    offeredQuery.isPending,
+    saved,
+    zipCode,
+    settingsQuery.isPending,
+    setEnabled,
     setArrivalWindowMinutes,
     setCertainAreaEnabled,
     addVan,
@@ -595,9 +487,6 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
     setStaffDateOverride,
     upsertTravelZone,
     deleteTravelZone,
-    upsertZipTaxRate,
-    deleteZipTaxRate,
-    setDefaultZipTaxRate,
   ]);
 
   return (
@@ -606,6 +495,10 @@ export function MobileGroomingProvider({ children }: { children: ReactNode }) {
     </MobileGroomingContext.Provider>
   );
 }
+
+const MobileGroomingContext = createContext<MobileGroomingContextValue | null>(
+  null,
+);
 
 export function useMobileGrooming(): MobileGroomingContextValue {
   const ctx = useContext(MobileGroomingContext);

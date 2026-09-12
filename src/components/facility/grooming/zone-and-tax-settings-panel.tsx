@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,12 +48,12 @@ function TravelZonesCard({
   onDelete,
 }: {
   zones: TravelZone[];
-  onUpsert: (zone: TravelZone) => void;
-  onDelete: (id: string) => void;
+  onUpsert: (zone: TravelZone) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const sorted = [...zones].sort((a, b) => a.maxMiles - b.maxMiles);
 
-  function addZone() {
+  async function addZone() {
     const nextMax =
       sorted.length === 0 ? 5 : Math.max(...sorted.map((z) => z.maxMiles)) + 10;
     const next: TravelZone = {
@@ -63,7 +64,12 @@ function TravelZonesCard({
       surchargeAmount: 10,
       active: true,
     };
-    onUpsert(next);
+    try {
+      await onUpsert(next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(`${next.label} added`);
   }
 
@@ -87,7 +93,9 @@ function TravelZonesCard({
         )}
         {sorted.map((zone) => (
           <TravelZoneRow
-            key={zone.id}
+            // Remounted when the saved zone changes, so the row's draft is
+            // the saved value until somebody edits it.
+            key={`${zone.id}:${JSON.stringify(zone)}`}
             zone={zone}
             onChange={onUpsert}
             onDelete={onDelete}
@@ -114,27 +122,48 @@ function TravelZoneRow({
   onDelete,
 }: {
   zone: TravelZone;
-  onChange: (zone: TravelZone) => void;
-  onDelete: (id: string) => void;
+  onChange: (zone: TravelZone) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
+  // Typing edits a draft and leaving the field saves it; a pick saves at
+  // once. Every keystroke was a localStorage write, and would be a settings
+  // save now.
+  const [draft, setDraft] = useState(zone);
+  function commit(next: TravelZone) {
+    if (JSON.stringify(next) === JSON.stringify(zone)) return;
+    onChange(next).catch((error: unknown) => {
+      setDraft(zone);
+      toast.error(error instanceof Error ? error.message : String(error));
+    });
+  }
+  function edit(p: Partial<TravelZone>) {
+    setDraft((d) => ({ ...d, ...p }));
+  }
   function patch(p: Partial<TravelZone>) {
-    onChange({ ...zone, ...p });
+    const next = { ...draft, ...p };
+    setDraft(next);
+    commit(next);
   }
   return (
     <div className="bg-card rounded-md border px-2.5 py-2">
       <div className="flex items-center gap-2">
         <Input
-          value={zone.label}
-          onChange={(e) => patch({ label: e.target.value })}
+          value={draft.label}
+          onChange={(e) => edit({ label: e.target.value })}
+          onBlur={() => commit(draft)}
           className="h-7 flex-1 text-xs font-semibold"
         />
         <button
           type="button"
           onClick={() => {
-            if (zones_confirm(`Delete ${zone.label}?`)) {
-              onDelete(zone.id);
-              toast.success(`${zone.label} removed`);
-            }
+            if (!zones_confirm(`Delete ${zone.label}?`)) return;
+            onDelete(zone.id)
+              .then(() => toast.success(`${zone.label} removed`))
+              .catch((error: unknown) =>
+                toast.error(
+                  error instanceof Error ? error.message : String(error),
+                ),
+              );
           }}
           className="text-destructive hover:text-destructive/80 shrink-0"
           aria-label="Delete zone"
@@ -150,10 +179,11 @@ function TravelZoneRow({
           <Input
             type="number"
             min={0}
-            value={zone.maxMiles}
+            value={draft.maxMiles}
             onChange={(e) =>
-              patch({ maxMiles: Math.max(0, Number(e.target.value) || 0) })
+              edit({ maxMiles: Math.max(0, Number(e.target.value) || 0) })
             }
+            onBlur={() => commit(draft)}
             className="mt-0.5 h-7 text-xs"
           />
         </div>
@@ -162,7 +192,7 @@ function TravelZoneRow({
             Mode
           </Label>
           <Select
-            value={zone.surchargeMode}
+            value={draft.surchargeMode}
             onValueChange={(v) =>
               patch({ surchargeMode: v as TravelZone["surchargeMode"] })
             }
@@ -182,18 +212,19 @@ function TravelZoneRow({
         </div>
         <div>
           <Label className="text-muted-foreground text-[10px] tracking-wide uppercase">
-            {zone.surchargeMode === "flat" ? "Amount $" : "Amount %"}
+            {draft.surchargeMode === "flat" ? "Amount $" : "Amount %"}
           </Label>
           <Input
             type="number"
             min={0}
-            step={zone.surchargeMode === "flat" ? 0.5 : 0.1}
-            value={zone.surchargeAmount}
+            step={draft.surchargeMode === "flat" ? 0.5 : 0.1}
+            value={draft.surchargeAmount}
             onChange={(e) =>
-              patch({
+              edit({
                 surchargeAmount: Math.max(0, Number(e.target.value) || 0),
               })
             }
+            onBlur={() => commit(draft)}
             className="mt-0.5 h-7 text-xs"
           />
         </div>
@@ -201,7 +232,7 @@ function TravelZoneRow({
       <label className="text-muted-foreground mt-2 flex items-center gap-2 text-[11px]">
         <input
           type="checkbox"
-          checked={zone.active}
+          checked={draft.active}
           onChange={(e) => patch({ active: e.target.checked })}
         />
         Active

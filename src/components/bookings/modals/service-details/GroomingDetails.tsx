@@ -1449,7 +1449,9 @@ function GroomingSchedule({
 
   // Decide which sections render. When mobile is on but the facility has no
   // mobile config (no vans), fall back to salon-only and warn.
-  const facilityHasMobile = mobile.enabled && mobile.vans.length > 0;
+  // A customer is never sent the vans themselves, only whether one is
+  // running (offered_mobile_grooming) — so this asks exactly that.
+  const facilityHasMobile = mobile.enabled && mobile.hasActiveVans;
 
   const finalBlockedDates = [...blockedDates, ...coverageDisabledDates];
   const finalBlockedMessages = {

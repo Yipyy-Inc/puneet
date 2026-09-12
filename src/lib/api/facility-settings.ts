@@ -10,6 +10,7 @@ import type { GroomingServiceChargesConfig } from "@/lib/settings/grooming-servi
 import type { TrainingProgramsConfig } from "@/lib/settings/training-programs";
 import type { IvrSettings } from "@/lib/settings/ivr";
 import type { CustomServiceModule, FacilityResource } from "@/types/facility";
+import type { MobileGroomingSettings } from "@/lib/settings/mobile-grooming";
 import type {
   CallingDispatch,
   CallingFollowUp,
@@ -257,6 +258,13 @@ export interface FacilitySettings {
    */
   custom_services: SettingState<{ modules: CustomServiceModule[] }>;
   facility_resources: SettingState<{ resources: FacilityResource[] }>;
+  /**
+   * Mobile grooming: the switch, vans, service areas, travel zones and each
+   * groomer's area schedule. OFF until configured. Read and written through
+   * useMobileGrooming(), never read by a customer (see
+   * lib/settings/mobile-grooming.ts).
+   */
+  mobile_grooming: SettingState<MobileGroomingSettings>;
 }
 
 /**

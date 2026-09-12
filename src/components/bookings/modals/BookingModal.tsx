@@ -365,10 +365,12 @@ export function BookingModal({
     useGroomingAddOns();
   // Travel-zone surcharge (Step 6). The ZIP-prefix TAX that came with it is
   // gone: see "NO TAX IN A BOOKING'S PRICE" in calculatePrice.
-  const { travelZones: groomingTravelZones } = useMobileGrooming();
-  // Real impl would read this from the facility config; the demo uses a
-  // downtown Montréal anchor consistent with the facility dialog.
-  const FACILITY_BASE_POSTAL = "H2X 1Z4";
+  // Distance to a travel zone is measured from the facility's own postal
+  // code; it was a constant ("H2X 1Z4") for every facility.
+  const {
+    travelZones: groomingTravelZones,
+    basePostalCode: facilityBasePostal,
+  } = useMobileGrooming();
 
   // Estimate mode — initialized from prop, key-remount resets it correctly
   const [isEstimateMode, setIsEstimateMode] = useState(estimateMode);
@@ -1810,7 +1812,7 @@ export function BookingModal({
         serviceSubtotal: basePrice,
         addOnTotal: pricingComputation.addOnsTotal,
         isMobile: true,
-        basePostalCode: FACILITY_BASE_POSTAL,
+        basePostalCode: facilityBasePostal,
         clientPostalCode: clientZip,
         zones: groomingTravelZones,
         // Tax stays out of this lookup — it's handled separately by the
@@ -1880,6 +1882,7 @@ export function BookingModal({
       groomingPriceBreakdown,
     };
   }, [
+    facilityBasePostal,
     selectedService,
     serviceType,
     boardingNights,

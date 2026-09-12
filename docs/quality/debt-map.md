@@ -13623,3 +13623,41 @@ the fixture services into a real facility), "Request a Change" (toasted
 nowhere; a custom service's check-in board, bookings and tasks pages still
 read `@/data/custom-service-checkins`, as does the kennel view's custom
 check-ins; and the unused `CustomerBookingModal` still reads the context.
+
+## 2026-09-12 — mobile grooming is the facility's
+
+`useMobileGrooming()` kept the whole feature in localStorage, seeded with two
+invented vans (plates, a Montréal home base), two Montréal service areas,
+three travel zones, a week of area schedules for fixture staff, and ZIP tax
+rates defaulting to Québec's: every facility's booking form could price a
+van visit with those zones, the calendar drew van columns nobody had set up,
+and nothing reached another device or a customer. It is the
+`mobile_grooming` settings domain now (`lib/settings/mobile-grooming.ts`),
+switched off with nothing configured until a facility sets it up. Writes
+re-read the current value and change only their own part; the panels wait
+for the save before they say so, and the arrival window and travel-zone
+fields save when the field is left rather than per keystroke. The ZIP tax
+rates are gone from the store (tax is the facility's tax settings).
+
+**Real groomers.** The van dialog, the area-schedule panel and the calendar's
+van columns picked and named staff from `@/data/facility-staff`. They use
+the facility's stylists now: a van stores stylist ids; a schedule is keyed by
+the stylist's `staffId` (else its id), which is what the New appointment
+dialog looks it up by.
+
+**The base postal code** a travel zone's distance is measured from was the
+constant "H2X 1Z4" in the booking modal and the grooming New appointment
+dialog, for every facility. It is the facility profile's `address.zipCode`;
+with none, no zone applies.
+
+**A customer never reads the row** — vans carry plates and a home address,
+and the schedules say which groomer is where on which day. The customer
+portal (`audience="customer"`) reads `public.offered_mobile_grooming()`
+(20260912183315) through `/api/customer/mobile-grooming`: the switches,
+whether a van is running, ACTIVE areas and zones projected to allowlists of
+keys, and the base postal code. SQL `offered-mobile-grooming.sql` (5); e2e
+`mobile-grooming.spec.ts` (3, full suite).
+
+**Still open:** distance to a zone is still `estimatePostalDistanceMiles`, a
+prefix heuristic, not a geocoded distance; and a grooming appointment does
+not record which van served it.

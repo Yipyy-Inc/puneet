@@ -81,7 +81,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
-import { facilityStaff } from "@/data/facility-staff";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -2563,10 +2562,11 @@ export function GroomingCalendar() {
       calendarColor: s.calendarColor,
     }));
     if (!mobileEnabled) return cols;
+    // A van's driver is one of the facility's groomers (a stylist id) — it
+    // was looked up in a fixture of invented staff.
     const nameFor = (id: string | undefined) => {
       if (!id) return null;
-      const s = facilityStaff.find((p) => p.id === id);
-      return s ? `${s.firstName} ${s.lastName}` : null;
+      return stylistsData.find((p) => p.id === id)?.name ?? null;
     };
     const vanCols = vans
       .filter((v) => v.active)

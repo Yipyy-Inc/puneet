@@ -399,6 +399,7 @@ export function NewAppointmentDialog({
     certainAreaEnabled,
     staffSchedules,
     travelZones,
+    basePostalCode,
   } = useMobileGrooming();
   // Whole mobile section (toggle + address + coverage) hides when the
   // facility has zero active vans — a salon with no van shouldn't offer a
@@ -418,7 +419,8 @@ export function NewAppointmentDialog({
   // Certain Area for Certain Days schedule (keyed by staffId) can be looked up.
   const selectedStaffId = useMemo(() => {
     if (!form.stylistId) return undefined;
-    return stylistsData.find((s) => s.id === form.stylistId)?.staffId;
+    const stylist = stylistsData.find((s) => s.id === form.stylistId);
+    return stylist ? (stylist.staffId ?? stylist.id) : undefined;
   }, [stylistsData, form.stylistId]);
 
   // Coverage check — when Certain Area for Certain Days is on and a stylist
@@ -1317,18 +1319,14 @@ export function NewAppointmentDialog({
     handleClose();
   }
 
-  // Facility base postal — used to compute the travel zone for mobile.
-  // Real impl would read this from the facility config; the demo uses a
-  // downtown Montréal anchor so the H-prefix zones get exercised.
-  const FACILITY_BASE_POSTAL = "H2X 1Z4";
-
   const totalsBreakdown = useMemo(
     () =>
       computeBookingTotals({
         serviceSubtotal: lineItemsSubtotal,
         addOnTotal,
         isMobile: form.isMobile,
-        basePostalCode: FACILITY_BASE_POSTAL,
+        // The facility's own postal code — it was "H2X 1Z4" for everybody.
+        basePostalCode,
         clientPostalCode: form.clientPostalCode || undefined,
         zones: travelZones,
         // ── NO TAX HERE ─────────────────────────────────────────────────
@@ -1346,6 +1344,7 @@ export function NewAppointmentDialog({
       form.isMobile,
       form.clientPostalCode,
       travelZones,
+      basePostalCode,
     ],
   );
 

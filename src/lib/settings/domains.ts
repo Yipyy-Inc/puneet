@@ -147,6 +147,10 @@ import {
   NO_CUSTOM_SERVICES,
   NO_FACILITY_RESOURCES,
 } from "@/lib/settings/custom-services";
+import {
+  MOBILE_GROOMING_OFF,
+  mobileGroomingSettingsSchema,
+} from "@/lib/settings/mobile-grooming";
 import type {
   BookingRules,
   DropOffPickUpOverride,
@@ -516,6 +520,16 @@ export const SETTING_DOMAINS = {
   facility_resources: {
     schema: facilityResourcesSchema,
     fallback: NO_FACILITY_RESOURCES,
+  },
+  // ── MOBILE GROOMING ────────────────────────────────────────────────────
+  //
+  // The switch, arrival window, vans, service areas, travel zones and each
+  // groomer's area schedule. localStorage seeded with invented vans and
+  // Montréal areas until 2026-09-12. Off until configured; see the banner in
+  // lib/settings/mobile-grooming.ts.
+  mobile_grooming: {
+    schema: mobileGroomingSettingsSchema,
+    fallback: MOBILE_GROOMING_OFF,
   },
   // ── RETAIL ─────────────────────────────────────────────────────────────
   //
