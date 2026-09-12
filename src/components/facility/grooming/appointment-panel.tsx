@@ -50,8 +50,6 @@ import { useClientRecord } from "@/lib/api/client";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { findZipTaxRate } from "@/lib/service-areas";
 import {
   MarkReadyDialog,
   type MarkReadyConfirmation,
@@ -156,7 +154,6 @@ export function AppointmentPanel({
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
-  const { zipTaxRates: paymentZipTaxRates } = useMobileGrooming();
   // Re-render every 30s so the elapsed timer + the running-long banner
   // refresh without depending on parent state.
   const [, setTick] = useState(0);
@@ -894,13 +891,6 @@ export function AppointmentPanel({
       />
       {(() => {
         const paymentClient = ownerClient;
-        // Step 7 — same ZIP-prefix tax lookup BookingModal uses on
-        // ConfirmStep so the two displays agree to the cent.
-        const matchedTax = findZipTaxRate(
-          paymentZipTaxRates,
-          paymentClient?.address?.zip ?? "",
-        );
-        const resolvedTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
         return (
           <PaymentDialog
             open={paymentOpen}
@@ -908,7 +898,6 @@ export function AppointmentPanel({
             apt={appointment}
             client={paymentClient}
             applicableCustomerPackages={applicableCustomerPackages}
-            taxRate={resolvedTaxRate}
             onConfirm={(result: PaymentResult) => {
               const summary = applyPaymentResult(appointment, result, {
                 clients: ownerClients,

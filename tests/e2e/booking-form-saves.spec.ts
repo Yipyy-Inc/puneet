@@ -40,6 +40,8 @@ interface BookingPayload {
   status?: string;
   startDate?: string;
   totalCost?: number;
+  basePrice?: number;
+  discount?: number;
   amountPaid?: number;
   specialRequests?: string;
   unitAssignment?: string;
@@ -306,5 +308,16 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     expect(made).toHaveLength(2);
     expect(made.every((b) => b.service === "daycare")).toBe(true);
     expect(new Set(made.map((b) => b.startDate)).size).toBe(2);
+    // The price is saved WITHOUT tax. The form added a tax it took from the
+    // mobile-grooming settings in localStorage — Québec 14.975% by default,
+    // for every facility and every service — into totalCost, and checkout
+    // then added the facility's own tax on top. Tax is charged at payment,
+    // from the facility's tax settings, and nowhere else.
+    for (const b of made) {
+      expect(b.totalCost, JSON.stringify(b)).toBeCloseTo(
+        (b.basePrice ?? 0) - (b.discount ?? 0),
+        2,
+      );
+    }
   });
 });
