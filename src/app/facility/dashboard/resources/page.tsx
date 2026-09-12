@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,37 +90,47 @@ export default function ResourcesPage() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  // Saved to the facility's settings (facility_resources) before the modal
+  // closes — it was localStorage, one browser's list.
+  const handleSave = async () => {
     if (!formName.trim()) return;
 
-    if (editingResource) {
-      updateResource(editingResource.id, {
-        name: formName,
-        type: formType,
-        capacity: formCapacity,
-        isAvailable: formAvailable,
-        description: formDescription,
-      });
-    } else {
-      addResource({
-        id: `res-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
-        facilityId: 11,
-        name: formName,
-        type: formType,
-        capacity: formCapacity,
-        isAvailable: formAvailable,
-        description: formDescription,
-      });
+    try {
+      await (editingResource
+        ? updateResource(editingResource.id, {
+            name: formName,
+            type: formType,
+            capacity: formCapacity,
+            isAvailable: formAvailable,
+            description: formDescription,
+          })
+        : addResource({
+            id: `res-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+            // Which facility is the settings row's; this legacy field is not read.
+            facilityId: 0,
+            name: formName,
+            type: formType,
+            capacity: formCapacity,
+            isAvailable: formAvailable,
+            description: formDescription,
+          }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
     setModalOpen(false);
   };
 
-  const handleDelete = () => {
-    if (deletingId) {
-      deleteResource(deletingId);
-      setDeleteModalOpen(false);
-      setDeletingId(null);
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await deleteResource(deletingId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
+    setDeleteModalOpen(false);
+    setDeletingId(null);
   };
 
   return (

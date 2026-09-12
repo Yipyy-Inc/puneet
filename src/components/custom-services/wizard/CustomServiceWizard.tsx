@@ -36,7 +36,7 @@ import {
   validateCustomServiceModule,
   hasBlockingIssues,
 } from "@/lib/custom-service-validation";
-import type { CustomServiceModule } from "@/types/facility";
+import type { CustomServiceModule, FacilityResource } from "@/types/facility";
 
 // ========================================
 // WIZARD STEPS CONFIG
@@ -199,6 +199,16 @@ interface CustomServiceWizardProps {
    * Ignored in edit mode (when `initialData` is provided).
    */
   facilityId?: number;
+  /**
+   * Where a NEW module is saved, when it is not the signed-in facility's own
+   * settings — the super-admin page saves into the facility it is configuring
+   * (/api/facilities/[id]/custom-services). Resolves once saved; rejects with
+   * the reason, which the wizard shows and stays put.
+   */
+  saveModule?: (module: CustomServiceModule) => Promise<void>;
+  /** The resources a module may book, when they are not the signed-in
+   *  facility's — the super-admin page passes the target facility's. */
+  resources?: FacilityResource[];
 }
 
 // ========================================
@@ -212,9 +222,16 @@ export function CustomServiceWizard({
   showFacilitySelector = false,
   redirectPath = "/facility/dashboard/services/custom",
   facilityId,
+  saveModule,
+  resources: resourcesFor,
 }: CustomServiceWizardProps) {
   const router = useRouter();
-  const { addModule, updateModule, resources } = useCustomServices();
+  const {
+    addModule,
+    updateModule,
+    resources: ownResources,
+  } = useCustomServices();
+  const resources = resourcesFor ?? ownResources;
   const isEditMode = !!initialData;
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -223,8 +240,9 @@ export function CustomServiceWizard({
   // Initialize form data — never from localStorage, always in-memory
   const [formData, setFormData] = useState<CustomServiceModule>(() => {
     if (initialData) return { ...initialData };
-    // Facility-scoped creation seeds the fixed facility; falls back to 11.
-    return createDefaultCustomServiceModule(facilityId ?? 11);
+    // Which facility a module belongs to is the settings row it is saved in;
+    // this legacy numeric field is not read. It fell back to fixture 11.
+    return createDefaultCustomServiceModule(facilityId ?? 0);
   });
 
   const handleChange = useCallback((updates: Partial<CustomServiceModule>) => {
@@ -296,19 +314,26 @@ export function CustomServiceWizard({
       return;
     }
 
+    // Saved before the wizard leaves — it wrote localStorage and navigated
+    // away as though that could not fail.
     setIsSaving(true);
     try {
       const now = new Date().toISOString();
       if (isEditMode) {
-        updateModule(formData.id, { ...formData, updatedAt: now });
+        await updateModule(formData.id, { ...formData, updatedAt: now });
+      } else if (saveModule) {
+        await saveModule({ ...formData, createdAt: now, updatedAt: now });
       } else {
-        addModule({ ...formData, createdAt: now, updatedAt: now });
+        await addModule({ ...formData, createdAt: now, updatedAt: now });
       }
-      onSaved?.(formData);
-      router.push(redirectPath);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     } finally {
       setIsSaving(false);
     }
+    onSaved?.(formData);
+    router.push(redirectPath);
   };
 
   const handleCancel = () => {

@@ -34,7 +34,7 @@ export function CustomerShell({
   const isAuthRoute = pathname?.startsWith("/customer/auth");
 
   return (
-    <SettingsProviderWrapper>
+    <SettingsProviderWrapper audience="customer">
       <CustomerFacilityProvider branding={branding}>
         <BookingModalProviderWrapper>
           {isAuthRoute ? (

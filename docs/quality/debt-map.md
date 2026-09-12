@@ -13585,3 +13585,41 @@ and `plannedExercisesForSession` keep their keys. e2e
 "Select instructor" placeholder that f0cf092f (2026-08-28) renamed to
 "Unassigned"; it was in neither suite, so nothing noticed for two weeks. It
 is fixed and in the full suite now.
+
+## 2026-09-12 — a custom service is the facility's
+
+`useCustomServices()` kept custom services and facility resources in
+localStorage, seeded from `src/data/custom-services.ts`: every facility, in
+every browser, showed the same invented services ("Yoda's Splash", a van
+route), an edit reached nobody else, and the customer booking flow — which
+offers every active, online-bookable module — offered customers services
+their facility had never heard of, and `create_booking` saved the booking
+(nothing checks a custom `service` slug). They are the `custom_services` and
+`facility_resources` settings domains now (`lib/settings/custom-services.ts`;
+slugs unique; empty fallbacks, because a service is something a facility
+sells). Every write re-reads the current list, saves the whole list and
+resolves once saved; callers wait before they toast.
+
+**A customer never reads the row.** A module carries internal notes, staff
+rules and a disable reason, so the domain stays off
+`customer_visible_setting_domains()`; the customer portal
+(`SettingsProviderWrapper audience="customer"`) reads
+`public.offered_custom_services()` (20260912172123) through
+`/api/customer/custom-services` — active, online-bookable modules projected to
+an ALLOWLIST of keys. SQL `offered-custom-services.sql` (5).
+
+**Creation is the platform's**, as the facility's own create page already
+said. The super-admin wizard read the facility with `Number(uuid)` (NaN) and
+saved into the admin's browser; it saves through
+`/api/facilities/[id]/custom-services` (platform admins only) into that
+facility's setting now. Removed as fakes: "Reset Demo" (it would now write
+the fixture services into a real facility), "Request a Change" (toasted
+"sent to Yipyy support"; there is no support inbox), and the Rates tab's
+"apply to upcoming appointments" (it changed fixture check-ins). e2e
+`custom-services.spec.ts` (4, full suite).
+
+**Still open:** the super-admin create page is reachable only by URL —
+`ModulesTab` and `ModuleRequestsInbox`, which linked to it, are rendered
+nowhere; a custom service's check-in board, bookings and tasks pages still
+read `@/data/custom-service-checkins`, as does the kennel view's custom
+check-ins; and the unused `CustomerBookingModal` still reads the context.

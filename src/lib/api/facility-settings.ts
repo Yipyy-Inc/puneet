@@ -9,6 +9,7 @@ import type { RetailConfig } from "@/data/retail-config";
 import type { GroomingServiceChargesConfig } from "@/lib/settings/grooming-service-charges";
 import type { TrainingProgramsConfig } from "@/lib/settings/training-programs";
 import type { IvrSettings } from "@/lib/settings/ivr";
+import type { CustomServiceModule, FacilityResource } from "@/types/facility";
 import type {
   CallingDispatch,
   CallingFollowUp,
@@ -248,6 +249,14 @@ export interface FacilitySettings {
    * `ivrIsAnswerable`.
    */
   ivr_config: SettingState<IvrSettings>;
+  /**
+   * The facility's custom services and the resources they book. Empty until
+   * configured: a service is something a facility sells. Read and written
+   * through useCustomServices(), never read by a customer (see
+   * lib/settings/custom-services.ts).
+   */
+  custom_services: SettingState<{ modules: CustomServiceModule[] }>;
+  facility_resources: SettingState<{ resources: FacilityResource[] }>;
 }
 
 /**

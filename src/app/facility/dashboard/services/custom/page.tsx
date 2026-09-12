@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   List,
   SlidersHorizontal,
-  RefreshCw,
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CustomServiceModuleCard } from "@/components/custom-services/CustomServiceModuleCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   CUSTOM_SERVICE_CATEGORIES_META,
@@ -121,13 +121,8 @@ function ModuleListRow({
 
 export default function CustomServicesListPage() {
   const router = useRouter();
-  const {
-    modules,
-    deleteModule,
-    duplicateModule,
-    setModuleStatus,
-    resetCustomServices,
-  } = useCustomServices();
+  const { modules, isPending, deleteModule, duplicateModule, setModuleStatus } =
+    useCustomServices();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomServiceStatus | "all">(
@@ -140,7 +135,6 @@ export default function CustomServicesListPage() {
   const [deleteTarget, setDeleteTarget] = useState<CustomServiceModule | null>(
     null,
   );
-  const [isResetting, setIsResetting] = useState(false);
 
   // Filtered modules
   const filtered = useMemo(() => {
@@ -168,9 +162,13 @@ export default function CustomServicesListPage() {
     [router],
   );
 
+  // Every write below is saved to the facility's settings before it says
+  // so (hooks/use-custom-services.tsx); they were localStorage.
   const handleDuplicate = useCallback(
     (id: string) => {
-      duplicateModule(id);
+      duplicateModule(id).catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : String(error)),
+      );
     },
     [duplicateModule],
   );
@@ -182,18 +180,22 @@ export default function CustomServicesListPage() {
     [modules],
   );
 
-  const handleDeleteConfirm = useCallback(() => {
-    if (deleteTarget) {
-      deleteModule(deleteTarget.id);
-      setDeleteTarget(null);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteModule(deleteTarget.id);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
+    setDeleteTarget(null);
   }, [deleteTarget, deleteModule]);
 
   const handleToggleStatus = useCallback(
-    (module: CustomServiceModule) => {
+    async (module: CustomServiceModule) => {
       const next: CustomServiceStatus =
         module.status === "active" ? "disabled" : "active";
-      const result = setModuleStatus(module.id, next);
+      const result = await setModuleStatus(module.id, next);
       if (!result.ok) {
         toast.error(result.reason ?? "Unable to change module status");
         return;
@@ -204,8 +206,8 @@ export default function CustomServicesListPage() {
   );
 
   const handleArchive = useCallback(
-    (id: string) => {
-      const result = setModuleStatus(id, "archived");
+    async (id: string) => {
+      const result = await setModuleStatus(id, "archived");
       if (!result.ok) {
         toast.error(result.reason ?? "Unable to archive module");
         return;
@@ -214,11 +216,6 @@ export default function CustomServicesListPage() {
     },
     [setModuleStatus],
   );
-
-  const handleReset = useCallback(() => {
-    setIsResetting(false);
-    resetCustomServices();
-  }, [resetCustomServices]);
 
   const activeFiltersCount = useMemo(
     () => (statusFilter !== "all" ? 1 : 0) + (categoryFilter !== "all" ? 1 : 0),
@@ -238,17 +235,6 @@ export default function CustomServicesListPage() {
               <p className="text-muted-foreground mt-1 text-sm">
                 Manage custom services assigned to your facility.
               </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsResetting(true)}
-                className="text-muted-foreground"
-              >
-                <RefreshCw className="size-3.5" />
-                <span className="hidden sm:inline">Reset Demo</span>
-              </Button>
             </div>
           </div>
         </div>
@@ -345,7 +331,11 @@ export default function CustomServicesListPage() {
 
       {/* Main content */}
       <div className="mx-auto max-w-7xl px-4 py-6">
-        {filtered.length === 0 ? (
+        {/* Loading is not "none assigned" (§5s): the list comes from the
+            facility's settings now. */}
+        {isPending ? (
+          <Skeleton className="h-48 w-full rounded-2xl" />
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             {modules.length === 0 ? (
               <div className="max-w-lg">
@@ -444,25 +434,6 @@ export default function CustomServicesListPage() {
             <Button variant="destructive" onClick={handleDeleteConfirm}>
               Delete Module
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reset demo dialog */}
-      <Dialog open={isResetting} onOpenChange={setIsResetting}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Demo Data</DialogTitle>
-            <DialogDescription>
-              This will restore the 3 seed modules (Yoda&apos;s Splash, Paws
-              Express, Birthday Pawty) and discard all your changes. Continue?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResetting(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReset}>Reset to Defaults</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

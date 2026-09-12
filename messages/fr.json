@@ -2391,6 +2391,12 @@
         "notSentTo": "Non envoyé à {name}",
         "recordsSubject": "Carnet de vaccination de {pet}",
         "recordsSentTo": "Demande de dossier envoyée à {name}"
+      },
+      "customModuleCreate": {
+        "backToModules": "{facility} · Modules",
+        "facility": "Établissement",
+        "newCustomModule": "Nouveau module personnalisé",
+        "notSaved": "Le service n’a pas été enregistré ({status})."
       }
     }
   },

@@ -19,6 +19,7 @@ import {
   ClipboardList,
   LogIn,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomServiceLayout({
   children,
@@ -28,13 +29,19 @@ export default function CustomServiceLayout({
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const pathname = usePathname();
-  const { getModuleBySlug, setModuleStatus } = useCustomServices();
+  const { getModuleBySlug, setModuleStatus, isPending } = useCustomServices();
 
   const serviceModule = getModuleBySlug(slug ?? "");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const [disableReason, setDisableReason] = useState("");
+
+  // The facility's list arrives from its settings; until then this is not
+  // "not found", it is loading (§5s).
+  if (!serviceModule && isPending) {
+    return <Skeleton className="m-6 h-48 rounded-2xl" />;
+  }
 
   if (!serviceModule) {
     return (
@@ -73,9 +80,10 @@ export default function CustomServiceLayout({
     setModalOpen(true);
   };
 
-  const handleConfirmToggle = () => {
+  // Saved to the facility's settings before it says so — it was localStorage.
+  const handleConfirmToggle = async () => {
     if (pendingEnabled !== null) {
-      const result = setModuleStatus(
+      const result = await setModuleStatus(
         serviceModule.id,
         pendingEnabled ? "active" : "disabled",
         !pendingEnabled ? disableReason : undefined,
