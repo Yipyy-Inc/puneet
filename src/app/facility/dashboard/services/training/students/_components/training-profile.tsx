@@ -269,7 +269,7 @@ export function TrainingProfile({ petId }: Props) {
                 </Badge>
               )}
               <TrainingProfilePackageChips
-                petId={petId}
+                ownerRef={ownerId}
                 todayISO={todayISO ?? ""}
               />
             </div>
@@ -377,6 +377,8 @@ export function TrainingProfile({ petId }: Props) {
           <TrainingProfileOverview
             petId={petId}
             petName={pet.name}
+            ownerRef={ownerId}
+            ownerName={ownerName}
             enrollments={enrollments}
             seriesById={seriesById}
             primaryEnrollment={primaryEnrollment}

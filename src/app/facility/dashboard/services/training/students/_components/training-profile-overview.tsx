@@ -175,6 +175,9 @@ function Panel({
 interface Props {
   petId: number;
   petName: string;
+  /** The dog's household — training packages belong to the client. */
+  ownerRef: number;
+  ownerName: string;
   enrollments: TrainingEnrollment[];
   seriesById: Map<string, TrainingSeries>;
   primaryEnrollment: TrainingEnrollment | null;
@@ -185,6 +188,8 @@ interface Props {
 export function TrainingProfileOverview({
   petId,
   petName,
+  ownerRef,
+  ownerName,
   enrollments,
   seriesById,
   primaryEnrollment,
@@ -308,8 +313,8 @@ export function TrainingProfileOverview({
         </section>
       )}
       <TrainingProfilePackagesPanel
-        petId={petId}
-        petName={petName}
+        ownerRef={ownerRef}
+        ownerName={ownerName}
         todayISO={todayISO}
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

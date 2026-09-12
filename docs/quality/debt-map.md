@@ -13661,3 +13661,78 @@ keys, and the base postal code. SQL `offered-mobile-grooming.sql` (5); e2e
 **Still open:** distance to a zone is still `estimatePostalDistanceMiles`, a
 prefix heuristic, not a geocoded distance; and a grooming appointment does
 not record which van served it.
+
+## 2026-09-12 — a groomer's ready estimate is kept, and the appointment page checks in
+
+The check-in dialog lets the groomer correct the ready time the lifecycle
+trigger derives at check-in (20260805140000: service plus add-on durations).
+It was toasted ("ready ~15:30") and dropped — the board, the owner's ETA and
+the running-late banner all kept the trigger's number. `PATCH
+/api/grooming/appointments` takes `estimatedReadyTime` ("HH:MM" on the
+facility's clock, on the check-in day) and applies it AFTER any status in the
+same request, so the trigger's stamp cannot overwrite it. It is refused before
+check-in and when it is not later than check-in. The panel, the board and the
+appointment page send it with their check-in. e2e
+`grooming-ready-estimate.spec.ts` (2, full suite).
+
+**The appointment page's check-in never worked.** It wrote `in-progress`
+straight away, and the same trigger refuses a groom in progress for a pet with
+no check-in time — so checking a pet in from that page failed with "This pet
+has not been checked in yet." It writes `checked-in` (with the estimate) and
+then `in-progress` now, each said once saved.
+
+**Found while checking the grants, not fixed here — it is production policy:**
+`grooming_appointments_update` admits `private.can_write_booking(booking_id)`,
+which is true for the booking's own CUSTOMER while the booking is `pending`,
+`request_submitted`, `estimate_sent` or `waitlisted`. With table-wide UPDATE
+granted to `authenticated`, such a customer can change `service_price`,
+`service_duration_min` or `check_in_at` on their own pending groom through the
+API directly. It needs a column grant or a stricter policy, decided with what
+the customer portal legitimately edits on a pending booking. `anon` also holds
+INSERT and UPDATE on the table; every policy names `authenticated`, so that
+grant is unreachable, but it should be revoked with the fix.
+
+## 2026-09-12 — the operations calendar keeps a viewer's settings per facility
+
+The operations calendar kept its display settings, resource type, axis and
+saved views in localStorage under keys built from fixture facility 11
+(`operations-calendar-*-11`), so every facility — and everybody who signed in
+on the same machine — shared one set. They are keyed by the active facility
+(`useActiveFacilityId()`, which shares the facility switcher's
+`/api/facility/switch` request) and the viewer now, read once both are known
+and written only to that scope, so a render before them cannot overwrite what
+was kept. The URL's own parameters still win over what was kept. Values kept
+under the old facility-11 keys are left where they are and no longer read.
+
+These stay per-viewer conveniences in the browser on purpose: nobody else
+needs to see how one person likes their calendar.
+
+**Still open:** the calendar's `saveCurrentView`, `applySavedView`,
+`deleteSavedView`, `toggleCardField` and `onExportReport` are defined and
+used by nothing (lint has reported them unused), so there is no control that
+saves a view — the storage is right, but the feature it serves is not wired.
+`FACILITY_ID = 11` also remains: the booking mapper stamps it on every booking
+and the calendar's builders filter on it, and it goes with that mapper.
+
+## 2026-09-12 — a trainer sees the packages a household really owns
+
+The trainer profile's package chips (header) and Training packages panel
+(Overview) read `clientTrainingPackages`, a fixture of invented purchases for
+invented dogs. They read `/api/packages/owned` for the dog's client now
+(`groomingQueries.customerPackagesForClient`), keeping the TRAINING lines of
+active packages (`lib/training-owned-packages.ts`, unit-tested): a package
+belongs to the client, so the panel says it is the household's.
+
+Removed or corrected as untrue:
+
+- "Send reminder" / "Send renewal reminder" stamped a date in the query cache
+  and toasted "Renewal reminder queued" — nothing was queued.
+- "Renew package" toasted "coming soon"; it opens the client file's Sell a
+  package dialog, which records the sale and its payment.
+- "Owner sees the same balance in their portal" was false — the customer
+  portal's training tabs still read the fixture — and is not said.
+
+**Still open:** the customer portal's training packages, credits banner and
+My Pets tab (`clientTrainingPackagesForClient`) still read the fixture; the
+now-unused `markRenewalReminderSent`, `fanOutClientTrainingPackageUpsert` and
+`trainingQueries.clientTrainingPackagesForPet` go with them.
