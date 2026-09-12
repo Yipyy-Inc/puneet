@@ -27,7 +27,6 @@ import {
   getHomeworkForEnrollments,
   sessionAttendances,
   trainingHomeworkRecords,
-  trainingReportCardRecords,
 } from "@/data/training-history";
 import {
   defaultTrainingModuleSettings,
@@ -272,12 +271,6 @@ export const trainingQueries = {
   allHomework: () => ({
     queryKey: ["training", "homework", "all"] as const,
     queryFn: async () => trainingHomeworkRecords,
-  }),
-  /** Unscoped catalog of every training report card — for any global view
-   *  (none today; reserved for a future facility-wide Report Cards board). */
-  allReportCards: () => ({
-    queryKey: ["training", "report-cards", "all"] as const,
-    queryFn: async () => trainingReportCardRecords,
   }),
   /** Sessions a trainer has marked briefed — `briefed_at` on the session
    *  (20260912170021). It was a cache-only list, so the reminder came back on
