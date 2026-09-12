@@ -35,9 +35,6 @@ export function CustomerMyPetsTab({ customerId }: Props) {
   const { data: seriesList = [] } = useQuery(trainingQueries.series());
   const { data: attendances = [] } = useQuery(trainingQueries.allAttendances());
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
-  const { data: packages = [] } = useQuery(
-    trainingQueries.clientTrainingPackagesForClient(customerId),
-  );
 
   const customer = useMemo(
     () => clients.find((c) => c.id === customerId),
@@ -70,7 +67,6 @@ export function CustomerMyPetsTab({ customerId }: Props) {
         seriesList,
         attendances,
         homework,
-        packages,
         todayISO,
         nowMs,
       }),
@@ -82,7 +78,6 @@ export function CustomerMyPetsTab({ customerId }: Props) {
     seriesList,
     attendances,
     homework,
-    packages,
     todayISO,
     nowMs,
   ]);

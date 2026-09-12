@@ -1148,7 +1148,7 @@ export default function CustomerTrainingPage() {
         </TabsContent>
 
         <TabsContent value="packages" className="space-y-4 pt-2">
-          <CustomerTrainingPackagesTab customerId={customerId ?? 0} />
+          <CustomerTrainingPackagesTab />
         </TabsContent>
 
         <TabsContent value="makeup" className="pt-2">

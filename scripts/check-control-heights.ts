@@ -96,10 +96,6 @@ const BASELINE = new Map<string, number>([
     3,
   ],
   [
-    "src/app/customer/training/_components/customer-training-packages-tab.tsx",
-    1,
-  ],
-  [
     "src/app/customer/training/_components/customer-training-series-card.tsx",
     1,
   ],

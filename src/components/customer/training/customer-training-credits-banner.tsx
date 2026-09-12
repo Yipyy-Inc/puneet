@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -8,52 +8,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, ArrowRight, Package, Sparkles } from "lucide-react";
-import { trainingQueries } from "@/lib/api/training";
-import {
-  aggregateActivePackagesForClient,
-  totalSessionsRemainingForClient,
-} from "@/lib/client-training-packages";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { NO_ITEMS } from "@/lib/no-items";
+import { trainingPackageRows } from "@/lib/training-owned-packages";
+import { localToday } from "@/lib/vaccinations";
 
-/** Slim "Training Credits" widget shown on the customer dashboard between
- *  the summary tiles and the loyalty rewards section. Designed to read at a
- *  glance — total sessions remaining + a "Low balance on N package" callout
- *  when applicable. Tapping it deep-links to the customer training page's
- *  Packages tab. */
-export function CustomerTrainingCreditsBanner({
-  customerId,
-}: {
-  customerId: number;
-}) {
+/** Slim "Training credits" widget on the customer dashboard — sessions left
+ *  across the household's active training packages, and how many need
+ *  renewing. Tapping it opens the training page's Packages tab.
+ *
+ *  It read `clientTrainingPackages`, a fixture, until 2026-09-12. It reads
+ *  what the customer owns (/api/packages/owned) through the same rows as the
+ *  Packages tab now, so the two cannot disagree. */
+export function CustomerTrainingCreditsBanner() {
   const { t, fill } = useCustomerText("dashboard");
-  const [nowMs] = useState(() => Date.now());
-  const todayISO = useMemo(
-    () => new Date(nowMs).toISOString().split("T")[0]!,
-    [nowMs],
-  );
+  const [todayISO] = useState(localToday);
+  const { data } = useQuery(groomingQueries.customerPackages());
 
-  const { data: packages = [] } = useQuery(
-    trainingQueries.clientTrainingPackagesForClient(customerId),
-  );
-
-  const totalRemaining = useMemo(
-    () => totalSessionsRemainingForClient(customerId, packages),
-    [customerId, packages],
-  );
-
-  const rows = useMemo(
-    () => aggregateActivePackagesForClient(customerId, packages, todayISO),
-    [customerId, packages, todayISO],
-  );
-
-  const lowCount = useMemo(
-    () => rows.filter((r) => r.lowBalance || r.exhausted).length,
-    [rows],
-  );
-
-  // Don't show anything if the customer has no active training packages.
+  const rows = trainingPackageRows(data ?? NO_ITEMS, todayISO);
+  // Nothing to show until the customer owns a training package.
   if (rows.length === 0) return null;
 
+  const totalRemaining = rows.reduce((sum, row) => sum + row.remaining, 0);
+  const lowCount = rows.filter((row) => row.lowBalance || row.exhausted).length;
   const hasAlert = lowCount > 0;
 
   return (
