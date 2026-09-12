@@ -192,9 +192,13 @@ export function AppointmentPanel({
   // checked in from the calendar was still "scheduled" on the board, and a
   // cancel or no-show from the menu was a toast. It sends the transition to
   // /api/grooming/appointments now and lets the calendar re-read.
-  const writeStatus = (status: GroomingStatus, onSaved?: () => void) =>
+  const writeStatus = (
+    status: GroomingStatus,
+    onSaved?: () => void,
+    extra?: { estimatedReadyTime?: string },
+  ) =>
     setAppointmentStatus(
-      { id: appointment.id, status },
+      { id: appointment.id, status, ...extra },
       {
         onSuccess: onSaved,
         onError: (error) =>
@@ -853,14 +857,19 @@ export function AppointmentPanel({
             ? ` · ready ~${result.estimatedReadyTime}`
             : "";
           // Said once the status is saved, not on the line after asking.
-          writeStatus("checked-in", () =>
-            toast.success(`${appointment.petName} — Checked In`, {
-              description:
-                (result.mattedSurcharge > 0
-                  ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
-                  : `Station ${result.stationName} · session started`) +
-                readyLine,
-            }),
+          // The groomer's ready estimate is saved with it (it was only
+          // toasted).
+          writeStatus(
+            "checked-in",
+            () =>
+              toast.success(`${appointment.petName} — Checked In`, {
+                description:
+                  (result.mattedSurcharge > 0
+                    ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+                    : `Station ${result.stationName} · session started`) +
+                  readyLine,
+              }),
+            { estimatedReadyTime: result.estimatedReadyTime || undefined },
           );
           setCheckInOpen(false);
         }}

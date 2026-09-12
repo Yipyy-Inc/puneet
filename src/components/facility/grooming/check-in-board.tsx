@@ -201,13 +201,17 @@ export function CheckInBoard() {
    */
   // `onSaved` runs once the write has landed — the success toasts used to
   // fire on the line after the call, so a refused change showed both.
-  function patch(next: GroomingAppointment, onSaved?: () => void) {
+  function patch(
+    next: GroomingAppointment,
+    onSaved?: () => void,
+    extra?: { estimatedReadyTime?: string },
+  ) {
     setPatches((prev) => ({ ...prev, [next.id]: next }));
 
     const before = appointments.find((a) => a.id === next.id);
     const statusChanged = before && before.status !== next.status;
     const stationChanged = before && before.stationId !== next.stationId;
-    if (!statusChanged && !stationChanged) {
+    if (!statusChanged && !stationChanged && !extra?.estimatedReadyTime) {
       onSaved?.();
       return;
     }
@@ -217,6 +221,9 @@ export function CheckInBoard() {
         id: next.id,
         ...(statusChanged ? { status: next.status } : {}),
         ...(stationChanged ? { stationId: next.stationId ?? null } : {}),
+        ...(extra?.estimatedReadyTime
+          ? { estimatedReadyTime: extra.estimatedReadyTime }
+          : {}),
       },
       {
         onSuccess: () => onSaved?.(),
@@ -256,10 +263,15 @@ export function CheckInBoard() {
     recordStationAssignmentHistory(next, result.stationName, "You");
     next.status = "checked-in";
     const pet = activeAppt.petName;
-    patch(next, () =>
-      toast.success(`${pet} — Checked In`, {
-        description: `Station ${result.stationName}`,
-      }),
+    // The groomer's ready estimate is saved with the check-in (it was
+    // dropped).
+    patch(
+      next,
+      () =>
+        toast.success(`${pet} — Checked In`, {
+          description: `Station ${result.stationName}`,
+        }),
+      { estimatedReadyTime: result.estimatedReadyTime || undefined },
     );
     closeDialog();
   }

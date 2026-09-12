@@ -20,6 +20,7 @@ import {
   bookingEventContext,
   emitAutomationEvent,
 } from "@/lib/automations/emit";
+import { instantFromWallClock, wallClockParts } from "@/lib/time/facility-time";
 
 // ============================================================================
 // Grooming appointments — the board's, the calendar's and the detail page's
@@ -39,6 +40,17 @@ import {
 // add-ons on the ticket, completion stamps check-out, reopening clears it. The
 // route deliberately does NOT compute or send any of those — a timestamp the
 // client chose is not a record of when something happened.
+//
+// ── ONE THING THE CALLER MAY SET: THE GROOMER'S READY ESTIMATE ─────────────
+//
+// `estimated_ready_at` is a forecast, not a record. The trigger derives it at
+// check-in from the ticket, and the check-in dialog then lets the groomer
+// correct it ("matted coat, give it another half hour") — which went nowhere:
+// the dialog toasted "ready ~15:30" and the board kept the trigger's number.
+// `estimatedReadyTime` ("HH:MM" on the facility's clock, on the day of the
+// check-in) is applied AFTER any status in the same request, so the trigger's
+// stamp cannot overwrite it, and it is refused before check-in or earlier
+// than check-in: an estimate for a dog that has not arrived is not one.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -170,11 +182,21 @@ export async function PATCH(request: NextRequest) {
     status?: string;
     stationId?: string | null;
     sessionProgress?: { step: string; done: boolean; at?: string }[];
+    estimatedReadyTime?: string;
   } | null;
 
   if (!body?.id) {
     return NextResponse.json(
       { error: "An appointment is required." },
+      { status: 422 },
+    );
+  }
+  if (
+    body.estimatedReadyTime !== undefined &&
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(body.estimatedReadyTime)
+  ) {
+    return NextResponse.json(
+      { error: "A ready time is HH:MM." },
       { status: 422 },
     );
   }
@@ -332,6 +354,52 @@ export async function PATCH(request: NextRequest) {
         });
       }
     }
+  }
+
+  // ── The groomer's ready estimate, after any status above ────────────────
+  if (body.estimatedReadyTime !== undefined) {
+    const { data: ext } = await supabase
+      .from("grooming_appointments")
+      .select("check_in_at")
+      .eq("booking_id", booking.id)
+      .maybeSingle();
+    const checkInAt = (ext as { check_in_at: string | null } | null)
+      ?.check_in_at;
+    if (!checkInAt) {
+      return NextResponse.json(
+        { error: "A ready time is set once the pet is checked in." },
+        { status: 422 },
+      );
+    }
+    const facility = await getFacilityContext();
+    const timeZone = facility?.timeZone ?? "UTC";
+    const readyAt = instantFromWallClock(
+      wallClockParts(checkInAt, timeZone).date,
+      body.estimatedReadyTime,
+      timeZone,
+    );
+    if (new Date(readyAt).getTime() <= new Date(checkInAt).getTime()) {
+      return NextResponse.json(
+        { error: "The ready time has to be after check-in." },
+        { status: 422 },
+      );
+    }
+    const { data: readyTouched, error: readyError } = await supabase
+      .from("grooming_appointments")
+      .update({ estimated_ready_at: readyAt } as never)
+      .eq("booking_id", booking.id)
+      .select("booking_id");
+    if (readyError) {
+      return writeFailure(readyError, {
+        denied: "Not allowed to change this appointment.",
+        duplicate: "That change conflicts with the current state.",
+      });
+    }
+    const readyDenied = deniedIfUntouched(
+      readyTouched,
+      "Not allowed to change this appointment.",
+    );
+    if (readyDenied) return readyDenied;
   }
 
   return new NextResponse(null, { status: 204 });

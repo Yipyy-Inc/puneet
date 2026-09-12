@@ -581,12 +581,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   // appointment was back where it started on the next visit and the board
   // never heard. The local state still moves at once, so the page answers the
   // click; the write follows, and a refused one puts the status back.
-  function commitStatus(next: GroomingStatus, onSaved?: () => void) {
+  function commitStatus(
+    next: GroomingStatus,
+    onSaved?: () => void,
+    extra?: { estimatedReadyTime?: string },
+  ) {
     if (!apt) return;
     const previous = status ?? apt.status;
     setStatus(next);
     setAppointmentStatus(
-      { id: apt.id, status: next },
+      { id: apt.id, status: next, ...extra },
       {
         onSuccess: onSaved,
         onError: (error) => {
@@ -619,14 +623,39 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     const readyLine = result.estimatedReadyTime
       ? ` · ready ~${result.estimatedReadyTime}`
       : "";
-    // Said once the status is saved — it was said on the line after asking.
-    commitStatus("in-progress", () =>
-      toast.success(`${apt.petName} — In Progress`, {
-        description:
-          (result.mattedSurcharge > 0
-            ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
-            : `Station ${result.stationName} · session started`) + readyLine,
-      }),
+    // ── CHECKED IN FIRST, THEN IN PROGRESS ──────────────────────────────
+    //
+    // This wrote "in-progress" straight away, and the lifecycle trigger
+    // (20260805140000) refuses a groom in progress for a pet with no check-in
+    // time — so checking a pet in from this page failed with "This pet has
+    // not been checked in yet." It is two saves now: the check-in, which
+    // stamps the clock and carries the groomer's ready estimate, then the
+    // session start. Each is said once it is saved.
+    commitStatus(
+      "checked-in",
+      () => {
+        setStatus("in-progress");
+        setAppointmentStatus(
+          { id: apt.id, status: "in-progress" },
+          {
+            onSuccess: () =>
+              toast.success(`${apt.petName} — In Progress`, {
+                description:
+                  (result.mattedSurcharge > 0
+                    ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+                    : `Station ${result.stationName} · session started`) +
+                  readyLine,
+              }),
+            onError: (error) => {
+              setStatus("checked-in");
+              toast.error(
+                error instanceof Error ? error.message : tAppt("notSaved"),
+              );
+            },
+          },
+        );
+      },
+      { estimatedReadyTime: result.estimatedReadyTime || undefined },
     );
     recordFieldChange("Status", before, STATUS_META["in-progress"].label);
     recordHistory(`Assigned to ${result.stationName} at check-in`);

@@ -44,6 +44,8 @@ export function useSetGroomingAppointmentStatus() {
       id: string;
       status?: GroomingStatus;
       stationId?: string | null;
+      /** The groomer's ready estimate, "HH:MM" — applied after the status. */
+      estimatedReadyTime?: string;
     }) => {
       const response = await fetch("/api/grooming/appointments", {
         method: "PATCH",
