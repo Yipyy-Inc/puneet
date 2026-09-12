@@ -13341,3 +13341,38 @@ asked first, `sent: false` with a reason is a normal answer).
   forever (payments are append-only, so the purge cannot remove it). It
   searches by its booking number now. Specs that need a booking to be FOUND
   should search for it, never rely on sort position.
+
+## 2026-09-12 — check:success-claims reads three more shapes
+
+Every lie Step 3 of the booking audit removed had passed
+`check:success-claims`. Three shapes hid them, and the gate now reads all
+three (the note above `CLAIM_BARE` in the script has the detail):
+
+- **A file that writes anything was exempt from everything.** A status write
+  proves nothing about a message, so a claim that something was SENT ("SMS
+  sent", "Reminder sent", "notified", "will be notified") now needs something
+  that sends — a messaging route or sender hook, in the file or one import
+  away — whatever else the file writes. In page text only a promise or a
+  completion counts ("will be notified", "have been notified", "sent!"), so a
+  record's state ("Manager notified") and a preference ("Get notified of new
+  logins") are not read as claims, and a denial ("nothing has been sent from
+  here") is skipped.
+- **The claim before the answer:** a toast as the very next statement after a
+  `mutate()` nothing waits for. Only the next statement, because reading the
+  rest of the block started matching other handlers' toasts.
+- **Verbs it did not know:** rescheduled, checked in/out, confirmed,
+  completed, logged, recorded, pinned, synced, connected, verified, enrolled,
+  booked, paid, closed, approved, declined, redeemed, notified, queued — and
+  `toast.info` / `toast.message` / `toast()` beside `toast.success`.
+
+Each rule was proven by planting its shape in a scratch file and watching it
+fail. Twenty-six files were newly revealed, none of them new code, and are
+baselined as their own group (121 in all). The escape hatch is now read from
+the file as written, so `{/* success-claim-ok: … */}` works inside JSX.
+
+**Still blind:** a mutation whose `mutationFn` reaches no server — a
+module-level store behind `useMutation`, like `breedMutations` in
+`src/lib/api/breeds.ts` — reads as a real write, because the gate sees
+`useMutation` and stops. Telling those apart needs the mutation's body read,
+and a first attempt at that (2026-09-12) flagged real writes made through
+helpers (`write()`, `json()`, `logCare`) as often as fake ones.

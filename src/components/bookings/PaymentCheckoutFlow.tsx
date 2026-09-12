@@ -933,6 +933,7 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
 </body></html>`);
                   w.document.close();
                   w.print();
+                  // success-claim-ok: w.print() above is the send — a printer, not a message
                   toast.success("Receipt sent to printer");
                 }}
               >
