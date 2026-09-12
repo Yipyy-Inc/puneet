@@ -29,6 +29,7 @@ import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
 import { toast } from "sonner";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { TipSelector } from "@/components/bookings/TipSelector";
 
 export type PaymentMethodKind =
@@ -79,8 +80,6 @@ interface PaymentDialogProps {
   /** Customer's active packages — drives the auto-detected "Apply 1 pass"
    *  affordance. Filtered down to ones with passes left + grooming module. */
   applicableCustomerPackages: CustomerPackageRecord[];
-  /** Tax rate (0–1) applied to the pre-tax subtotal. */
-  taxRate?: number;
   /** Pre-booking tip locked in by the customer online. When present, the tip
    *  picker is disabled and seeded with this value. */
   lockedTipAmount?: number;
@@ -93,7 +92,6 @@ export function PaymentDialog({
   apt,
   client,
   applicableCustomerPackages,
-  taxRate = 0,
   lockedTipAmount,
   onConfirm,
 }: PaymentDialogProps) {
@@ -150,19 +148,18 @@ export function PaymentDialog({
   const loyaltyDiscountAmount = loyaltyDiscount?.amount ?? 0;
   // The facility's tips, so this dialog offers what every other paying
   // surface offers. Falls back to the domain default when unconfigured.
-  const tipConfig = useFacilitySettings().settings.tip_config.value;
+  const { settings } = useFacilitySettings();
+  const tipConfig = settings.tip_config.value;
+  // ── THE FACILITY'S TAX, NOT A POSTAL CODE'S ────────────────────────────
+  //
+  // This took a single rate from the mobile-grooming settings, which live in
+  // the browser's localStorage and default to Québec's 14.975% — so every
+  // facility's grooming payment recorded Québec tax, whatever its province.
+  // It is the facility's tax configuration now, the one the booking checkout
+  // uses, line by line.
+  const taxConfig = settings.tax_config.value as TaxConfig;
 
   if (!apt) return null;
-
-  const taxAmount = preTaxSubtotal * taxRate;
-
-  // Tip: locked from booking, or computed from the chosen preset / custom.
-  const tipAmount =
-    lockedTipAmount !== undefined
-      ? lockedTipAmount
-      : Math.round(chosenTip * 100) / 100;
-
-  const grandTotal = preTaxSubtotal + taxAmount + tipAmount;
 
   // ── Package pass — same helper BookingModal uses on Confirm so the
   //    discount amount stays identical across the two surfaces.
@@ -172,6 +169,30 @@ export function PaymentDialog({
   const packagePassDiscount = selectedPackage
     ? computePackagePassDiscount({ baseService })
     : 0;
+
+  // A discount lowers the price of the supply, so it lowers the tax; store
+  // credit is a way of paying and does not. Nothing is added where the
+  // facility's prices already include tax.
+  const tax = taxConfig.pricesIncludeTax
+    ? { lines: [], totalCents: 0 }
+    : computeTax(
+        Math.round(
+          Math.max(
+            0,
+            preTaxSubtotal - packagePassDiscount - loyaltyDiscountAmount,
+          ) * 100,
+        ),
+        taxConfig,
+      );
+  const taxAmount = tax.totalCents / 100;
+
+  // Tip: locked from booking, or computed from the chosen preset / custom.
+  const tipAmount =
+    lockedTipAmount !== undefined
+      ? lockedTipAmount
+      : Math.round(chosenTip * 100) / 100;
+
+  const grandTotal = preTaxSubtotal + taxAmount + tipAmount;
 
   // ── Store credit — capped at the customer's balance and the post-pass total
   const postPassTotal = Math.max(
@@ -308,15 +329,18 @@ export function PaymentDialog({
             {apt.priceAdjustments.map((a) => (
               <Row key={a.id} label={a.description} value={a.amount} muted />
             ))}
-            {taxRate > 0 && (
+            {tax.lines.length > 0 && (
               <>
                 <Separator className="my-1.5" />
                 <Row label="Subtotal" value={preTaxSubtotal} muted />
-                <Row
-                  label={`Tax (${(taxRate * 100).toFixed(2)}%)`}
-                  value={taxAmount}
-                  muted
-                />
+                {tax.lines.map((line) => (
+                  <Row
+                    key={line.name}
+                    label={`${line.name} (${(line.rate * 100).toFixed(line.rate * 100 >= 10 ? 2 : 3)}%)`}
+                    value={line.amountCents / 100}
+                    muted
+                  />
+                ))}
               </>
             )}
             {tipAmount > 0 && (

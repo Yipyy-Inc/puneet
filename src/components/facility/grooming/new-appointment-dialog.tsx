@@ -68,7 +68,6 @@ import {
   formatDaysOfWeek,
   checkCoverageForStaffOnDate,
   computeBookingTotals,
-  findZipTaxRate,
 } from "@/lib/service-areas";
 import {
   Truck,
@@ -402,7 +401,6 @@ export function NewAppointmentDialog({
     certainAreaEnabled,
     staffSchedules,
     travelZones,
-    zipTaxRates,
   } = useMobileGrooming();
   // Whole mobile section (toggle + address + coverage) hides when the
   // facility has zero active vans — a salon with no van shouldn't offer a
@@ -1359,12 +1357,6 @@ export function NewAppointmentDialog({
   // downtown Montréal anchor so the H-prefix zones get exercised.
   const FACILITY_BASE_POSTAL = "H2X 1Z4";
 
-  // Manual tax override — when staff need to apply a rate the system
-  // doesn't have on file. null = use the auto-resolved ZIP tax. The state
-  // lives outside the form blob so it doesn't survive a reopen.
-  const [taxOverrideEnabled, setTaxOverrideEnabled] = useState(false);
-  const [taxOverridePercent, setTaxOverridePercent] = useState<string>("");
-
   const totalsBreakdown = useMemo(
     () =>
       computeBookingTotals({
@@ -1374,11 +1366,14 @@ export function NewAppointmentDialog({
         basePostalCode: FACILITY_BASE_POSTAL,
         clientPostalCode: form.clientPostalCode || undefined,
         zones: travelZones,
-        zipTaxRates,
-        manualTaxRatePercent:
-          taxOverrideEnabled && taxOverridePercent.trim() !== ""
-            ? Number(taxOverridePercent)
-            : undefined,
+        // ── NO TAX HERE ─────────────────────────────────────────────────
+        //
+        // This showed a tax from the mobile-grooming settings (localStorage,
+        // Québec's 14.975% by default) and a "Manual tax rate" box, and
+        // added it to the Total — but the booking is saved at the pre-tax
+        // price, so the total on this screen was never what was stored or
+        // charged. Tax is added at checkout, from the facility's settings.
+        zipTaxRates: [],
       }),
     [
       lineItemsSubtotal,
@@ -1386,20 +1381,7 @@ export function NewAppointmentDialog({
       form.isMobile,
       form.clientPostalCode,
       travelZones,
-      zipTaxRates,
-      taxOverrideEnabled,
-      taxOverridePercent,
     ],
-  );
-
-  // When the user hasn't explicitly overridden, surface what tax we'd apply
-  // so they can confirm before saving.
-  const autoTaxPreview = useMemo(
-    () =>
-      form.clientPostalCode
-        ? findZipTaxRate(zipTaxRates, form.clientPostalCode)
-        : null,
-    [zipTaxRates, form.clientPostalCode],
   );
 
   const selectedClient = useMemo(
@@ -2852,8 +2834,7 @@ export function NewAppointmentDialog({
                 )}
 
                 {/* Pre-tax subtotal — shown when there's anything tax-related to render. */}
-                {(totalsBreakdown.zoneSurcharge > 0 ||
-                  totalsBreakdown.taxAmount > 0) && (
+                {totalsBreakdown.zoneSurcharge > 0 && (
                   <div className="text-muted-foreground flex items-center justify-between py-1 text-xs">
                     <span>Subtotal</span>
                     <span className="tabular-nums">
@@ -2861,67 +2842,6 @@ export function NewAppointmentDialog({
                     </span>
                   </div>
                 )}
-
-                {/* Tax line — labelled with the matched ZIP rule or override. */}
-                {totalsBreakdown.taxSource !== "none" && (
-                  <div className="flex items-center justify-between gap-3 py-1 text-xs">
-                    <div className="min-w-0">
-                      <p className="font-medium">
-                        Tax (
-                        {(totalsBreakdown.taxRate * 100).toFixed(
-                          totalsBreakdown.taxRate * 100 >= 10 ? 2 : 3,
-                        )}
-                        %)
-                        <span className="text-muted-foreground ml-1.5 font-normal">
-                          {totalsBreakdown.taxSource === "override"
-                            ? "· manual override"
-                            : totalsBreakdown.appliedRate
-                              ? `· ${totalsBreakdown.appliedRate.label}`
-                              : ""}
-                        </span>
-                      </p>
-                    </div>
-                    <span className="shrink-0 font-semibold tabular-nums">
-                      +${totalsBreakdown.taxAmount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Tax override input — for ZIPs the system doesn't know about. */}
-                <label className="bg-card mt-1 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px]">
-                  <input
-                    type="checkbox"
-                    checked={taxOverrideEnabled}
-                    onChange={(e) => {
-                      setTaxOverrideEnabled(e.target.checked);
-                      if (!e.target.checked) setTaxOverridePercent("");
-                    }}
-                  />
-                  <span className="flex-1">
-                    Manual tax rate
-                    {autoTaxPreview && !taxOverrideEnabled && (
-                      <span className="text-muted-foreground ml-1.5">
-                        · auto: {autoTaxPreview.ratePercent}% (
-                        {autoTaxPreview.label})
-                      </span>
-                    )}
-                  </span>
-                  {taxOverrideEnabled && (
-                    <>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.001}
-                        value={taxOverridePercent}
-                        onChange={(e) => setTaxOverridePercent(e.target.value)}
-                        placeholder="0.000"
-                        className="h-6 w-20 text-[11px]"
-                      />
-                      <span className="text-muted-foreground">%</span>
-                    </>
-                  )}
-                </label>
 
                 <Separator className="my-2" />
                 <div className="flex items-center justify-between">
@@ -2940,6 +2860,9 @@ export function NewAppointmentDialog({
                     </span>
                   </div>
                 </div>
+                <p className="text-muted-foreground text-xs">
+                  Tax is added at checkout.
+                </p>
               </div>
             )}
           </div>

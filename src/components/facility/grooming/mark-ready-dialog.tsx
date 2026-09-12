@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import type { GroomingAppointment } from "@/types/grooming";
 
 export interface MarkReadyFinalCharge {
@@ -51,7 +53,6 @@ interface MarkReadyDialogProps {
   onOpenChange: (open: boolean) => void;
   apt: GroomingAppointment | null;
   /** Default tax rate applied to the final-total preview. */
-  taxRate?: number;
   facilityName?: string;
   onConfirm: (result: MarkReadyConfirmation) => void;
 }
@@ -62,7 +63,6 @@ export function MarkReadyDialog({
   open,
   onOpenChange,
   apt,
-  taxRate = 0,
   facilityName,
   onConfirm,
 }: MarkReadyDialogProps) {
@@ -104,6 +104,11 @@ export function MarkReadyDialog({
     setDraftLabel("");
     setDraftAmount("");
   }, [open, apt?.id]);
+
+  // The facility's tax — not the mobile-grooming rate from localStorage,
+  // which defaulted to Québec's 14.975% for every facility.
+  const taxConfig = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
 
   if (!apt) return null;
 
@@ -155,7 +160,10 @@ export function MarkReadyDialog({
   );
   const finalChargesTotal = finalCharges.reduce((s, c) => s + c.amount, 0);
   const preTaxSubtotal = baseService + existingAdjustments + finalChargesTotal;
-  const taxAmount = preTaxSubtotal * taxRate;
+  const tax = taxConfig.pricesIncludeTax
+    ? { lines: [], totalCents: 0 }
+    : computeTax(Math.round(preTaxSubtotal * 100), taxConfig);
+  const taxAmount = tax.totalCents / 100;
   const grandTotal = preTaxSubtotal + taxAmount;
 
   // A photo is required to notify the owner — but only demand one from staff who
@@ -375,15 +383,18 @@ export function MarkReadyDialog({
                 accent
               />
             ))}
-            {taxRate > 0 && (
+            {tax.lines.length > 0 && (
               <>
                 <Separator className="my-1.5" />
                 <Row label="Subtotal" value={preTaxSubtotal} muted />
-                <Row
-                  label={`Tax (${(taxRate * 100).toFixed(2)}%)`}
-                  value={taxAmount}
-                  muted
-                />
+                {tax.lines.map((line) => (
+                  <Row
+                    key={line.name}
+                    label={`${line.name} (${(line.rate * 100).toFixed(line.rate * 100 >= 10 ? 2 : 3)}%)`}
+                    value={line.amountCents / 100}
+                    muted
+                  />
+                ))}
               </>
             )}
             <Separator className="my-1.5" />

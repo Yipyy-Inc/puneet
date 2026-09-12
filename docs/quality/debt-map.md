@@ -13376,3 +13376,35 @@ module-level store behind `useMutation`, like `breedMutations` in
 `useMutation` and stops. Telling those apart needs the mutation's body read,
 and a first attempt at that (2026-09-12) flagged real writes made through
 helpers (`write()`, `json()`, `logCare`) as often as fake ones.
+
+## 2026-09-12 — Québec tax, from localStorage, on every facility's bookings
+
+The mobile-grooming settings kept a list of "ZIP / postal tax rates" in
+the browser's localStorage, defaulting to Québec's 14.975% as the fallback
+for any postal code — and five places used it as THE tax:
+
+- **The New Booking form** added it to `totalCost` for every service at every
+  facility (`findZipTaxRate` always fell back to the Québec row): a $77
+  daycare day was saved at $88.53, and checkout then added the facility's own
+  tax on top. Found by adding a price assertion to booking-form-saves, which
+  failed with exactly that figure. No real booking carries it (checked
+  2026-09-12), because real bookings have mostly come in by other paths.
+- **The grooming payment dialog** (check-in board, appointment panel,
+  appointment page) sent it as `tax` to `/api/payments`, which records what it
+  is given, so grooming payments carried Québec tax on the ledger.
+- **The mark-ready dialog** previewed it; **grooming's New Appointment
+  dialog** showed it, with a "Manual tax rate" box, in a total that was never
+  what it saved.
+
+All of them now use the facility's `tax_config` through `computeTax`, the
+same path as the booking checkout — on the price after discounts and before
+the tip; nothing is added where prices include tax. A booking's price never
+includes tax; only an estimate shows it, from the facility's settings (it
+read fixture facility 11's taxes before). The postal tax card is gone from the
+mobile-grooming settings.
+
+**Still open:** `/api/payments` records whatever `tax` the browser sends. The
+card routes compute it on the server (`facilityTaxConfig` / `taxToAddCents`);
+the cash/package/credit path trusts the client, so a screen that computes it
+wrong still writes it. Moving that to the server means knowing each caller's
+tax base (bookings, retail, packages) and is its own change.

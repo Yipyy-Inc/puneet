@@ -13,10 +13,8 @@ import {
   recordStationAssignmentHistory,
 } from "@/lib/grooming/check-in-actions";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
-import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
 import { useLoyaltyEngine } from "@/hooks/use-loyalty-engine";
-import { findZipTaxRate } from "@/lib/service-areas";
 import {
   CheckInConfirmationDialog,
   type CheckInConfirmation,
@@ -89,7 +87,6 @@ export function CheckInBoard() {
   const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
   const { mutate: saveIntake } = useSaveAppointmentIntake();
   const { mutate: recordPayment } = useRecordPayment();
-  const { zipTaxRates } = useMobileGrooming();
   const { entriesForDate } = useGroomingWaitlist();
   const { recordEvent } = useLoyaltyEngine();
 
@@ -345,11 +342,6 @@ export function CheckInBoard() {
 
   // Payment dialog dependencies for the active appointment.
   const paymentClient = activeAppt ? activeOwner : undefined;
-  const matchedTax = findZipTaxRate(
-    zipTaxRates,
-    paymentClient?.address?.zip ?? "",
-  );
-  const paymentTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
   const applicablePasses = activeAppt
     ? customerPackages.filter(
         (p) =>
@@ -461,7 +453,6 @@ export function CheckInBoard() {
         open={dialog === "mark-ready"}
         onOpenChange={(o) => !o && closeDialog()}
         apt={dialog === "mark-ready" ? activeAppt : null}
-        taxRate={paymentTaxRate}
         facilityName="Yipyy"
         onConfirm={handleMarkReadyConfirm}
       />
@@ -471,7 +462,6 @@ export function CheckInBoard() {
         apt={dialog === "payment" ? activeAppt : null}
         client={paymentClient}
         applicableCustomerPackages={applicablePasses}
-        taxRate={paymentTaxRate}
         onConfirm={handlePaymentConfirm}
       />
       <NewAppointmentDialog

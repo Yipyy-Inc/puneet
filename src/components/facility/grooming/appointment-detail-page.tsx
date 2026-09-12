@@ -116,8 +116,6 @@ import {
   applyMarkReadyResult,
   applyPaymentResult,
 } from "@/lib/grooming/check-in-actions";
-import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { findZipTaxRate } from "@/lib/service-areas";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -408,7 +406,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),
   );
-  const { zipTaxRates: paymentZipTaxRates } = useMobileGrooming();
   const [feeOverride, setFeeOverride] = useState<number | null>(null);
   const [scheduleOverride, setScheduleOverride] = useState<{
     date: string;
@@ -1808,13 +1805,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       />
       {(() => {
         const paymentClient = ownerClient;
-        // Step 7 — ZIP-prefix tax lookup. Same helper BookingModal uses on
-        // ConfirmStep so the two displays agree to the cent.
-        const matchedTax = findZipTaxRate(
-          paymentZipTaxRates,
-          paymentClient?.address?.zip ?? "",
-        );
-        const resolvedTaxRate = matchedTax ? matchedTax.ratePercent / 100 : 0;
         return (
           <PaymentDialog
             open={paymentOpen}
@@ -1822,7 +1812,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
             apt={apt}
             client={paymentClient}
             applicableCustomerPackages={applicableCustomerPackages}
-            taxRate={resolvedTaxRate}
             onConfirm={handlePaymentConfirm}
           />
         );

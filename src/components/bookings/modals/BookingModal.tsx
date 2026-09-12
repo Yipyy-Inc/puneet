@@ -11,9 +11,11 @@ import React, {
 } from "react";
 import {
   useDepositRules,
+  useFacilitySettings,
   usePricingRules,
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
+import type { TaxConfig } from "@/lib/settings/tax";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -55,7 +57,7 @@ import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
 import { getPetSize } from "@/lib/pet-size";
-import { computeBookingTotals, findZipTaxRate } from "@/lib/service-areas";
+import { computeBookingTotals } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
 import { useRedeemPackagePass } from "@/lib/api/customer-packages";
@@ -92,7 +94,6 @@ import { bookings as historicalBookings } from "@/data/bookings";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
-import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
 import {
@@ -363,11 +364,9 @@ export function BookingModal({
   // booking or recorded at a price the quote never showed.
   const { data: groomingAddOnCatalog = NO_GROOMING_ADD_ONS } =
     useGroomingAddOns();
-  // Travel-zone surcharge (Step 6) + ZIP-prefix tax (Step 7). Same lookups
-  // the facility dialog and PaymentDialog use — single source of truth so
-  // ConfirmStep and the at-pickup screen agree by construction.
-  const { travelZones: groomingTravelZones, zipTaxRates: groomingZipTaxRates } =
-    useMobileGrooming();
+  // Travel-zone surcharge (Step 6). The ZIP-prefix TAX that came with it is
+  // gone: see "NO TAX IN A BOOKING'S PRICE" in calculatePrice.
+  const { travelZones: groomingTravelZones } = useMobileGrooming();
   // Real impl would read this from the facility config; the demo uses a
   // downtown Montréal anchor consistent with the facility dialog.
   const FACILITY_BASE_POSTAL = "H2X 1Z4";
@@ -419,10 +418,10 @@ export function BookingModal({
     return () => window.removeEventListener("storage", handleStorage);
   }, [addOnsStorageKey]);
 
-  const facilityTaxConfig = useMemo(
-    () => facilities.find((facility) => facility.id === facilityId)?.taxConfig,
-    [facilityId],
-  );
+  // The facility's own tax settings. This read the fixture facilities list,
+  // so an estimate carried fixture facility 11's taxes whoever it was for.
+  const facilityTaxConfig = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
 
   const estimateTaxRate = useMemo(() => {
     if (!facilityTaxConfig || facilityTaxConfig.pricesIncludeTax) return 0;
@@ -1857,20 +1856,15 @@ export function BookingModal({
       subtotal = Math.max(0, subtotal);
     }
 
-    // Step 7 — Tax. ZIP/postal-prefix lookup is the source of truth across
-    // all three display points (ConfirmStep + PaymentDialog + facility
-    // dialog). Falls back to the legacy estimateTaxRate when no postal
-    // code is on file (guest estimate / no client picked yet) so estimates
-    // don't silently turn into $0 tax.
-    const matchedTax = findZipTaxRate(
-      groomingZipTaxRates,
-      selectedClient?.address?.zip ?? "",
-    );
-    const taxRate = matchedTax
-      ? matchedTax.ratePercent / 100
-      : isEstimateMode
-        ? estimateTaxRate
-        : 0;
+    // ── NO TAX IN A BOOKING'S PRICE ──────────────────────────────────────
+    //
+    // This added a tax taken from the mobile-grooming settings — localStorage,
+    // defaulting to Québec's 14.975% when no postal code matched — to EVERY
+    // booking's total, every service and every facility: a $77 daycare day was
+    // saved at $88.53, and checkout then added the facility's own tax on top.
+    // Tax is charged at payment, from the facility's tax settings. Only an
+    // estimate, which quotes what the client will pay, shows it here.
+    const taxRate = isEstimateMode ? estimateTaxRate : 0;
     const taxAmount = subtotal * taxRate;
     const total = subtotal + taxAmount;
 
@@ -1935,7 +1929,6 @@ export function BookingModal({
     groomingPetPricingOverrides,
     groomingIsMobile,
     groomingTravelZones,
-    groomingZipTaxRates,
     trainingCart,
     currentTrainingLineItems,
     // The grooming menu is fetched, so the quote has to recompute when it
