@@ -13,7 +13,6 @@ import {
   useDepositRules,
   usePricingRules,
   useServiceAddOns,
-  useYipyyGoConfig,
 } from "@/lib/api/facility-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -82,7 +81,8 @@ import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { boardingBasePrice } from "@/lib/boarding-pricing";
+import { boardingBasePrice, boardingNightlyRate } from "@/lib/boarding-pricing";
+import { boardingParts, daycareParts } from "@/lib/bookings/booking-parts";
 import { useDaycareLocationPrices } from "@/lib/api/hq-services";
 import {
   autoAssignDaycareSection,
@@ -95,9 +95,13 @@ import { customerEstimateLink } from "@/components/bookings/use-estimate-actions
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
-import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import {
+  groomingCatalogueQueries,
+  useGroomingAddOns,
+} from "@/lib/api/grooming-catalogue";
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
-import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
+import { useBookingWaivers } from "./use-booking-waivers";
 import {
   findApplicableDepositRule,
   computeDepositAmount,
@@ -114,6 +118,7 @@ import {
 } from "./TrainingEnrollmentCartPanel";
 import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
 import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
+import { useCreateClient, useCreatePet } from "@/lib/api/client";
 
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -135,7 +140,14 @@ export interface NewBookingModalProps {
   clients: Client[];
   facilityId: number;
   facilityName: string;
-  onCreateBooking: (booking: NewBooking) => void;
+  /**
+   * Saves the booking. The form WAITS for it: answer `false` (or throw) when
+   * it was not saved — having said why — and the form stays as it was.
+   * Anything else closes it. See `handleComplete`.
+   */
+  onCreateBooking: (
+    booking: NewBooking,
+  ) => void | boolean | Promise<void | boolean>;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
@@ -200,6 +212,8 @@ interface EstimatePricingSnapshot {
   adjustmentsSignature: string;
 }
 
+const NO_GROOMING_ADD_ONS: GroomingAddOnOption[] = [];
+
 const SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function buildAdjustmentsSignature(
@@ -247,12 +261,22 @@ function pricingSnapshotChanged(
   );
 }
 
+/**
+ * A picked calendar day as `YYYY-MM-DD`, read in the browser's own clock.
+ * `toISOString()` reads UTC, which names the day BEFORE for anyone east of
+ * Greenwich — the calendar hands back local midnight.
+ */
+function localDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function BookingModal({
   open,
   onOpenChange,
   clients,
   facilityId,
-  facilityName,
   onCreateBooking,
   preSelectedClientId,
   preSelectedPetId,
@@ -270,6 +294,7 @@ export function BookingModal({
   preSelectedExtraServices,
   preSelectedFeedingSchedule,
   preSelectedMedications,
+  preSelectedSpecialRequests,
   preSelectedNotificationEmail,
   preSelectedNotificationSMS,
   booking,
@@ -292,11 +317,7 @@ export function BookingModal({
     serviceNotifDefaults,
     tipConfig,
     evaluation: evaluationConfig,
-    notifications: notificationToggles,
   } = useSettings();
-  // The facility's Yipyy Go setup — read here for the lead time quoted in the
-  // "form sent" toast further down.
-  const { config: yipyyGoConfig } = useYipyyGoConfig();
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
@@ -336,6 +357,12 @@ export function BookingModal({
   const { data: groomingMenu = [] } = useQuery(
     groomingCatalogueQueries.services(),
   );
+  // The groom's own extras, from `grooming_add_ons` — the list create_booking
+  // checks every requested add-on against. The details step offered the
+  // sample-data list, so an add-on staff picked was either refused by the
+  // booking or recorded at a price the quote never showed.
+  const { data: groomingAddOnCatalog = NO_GROOMING_ADD_ONS } =
+    useGroomingAddOns();
   // Travel-zone surcharge (Step 6) + ZIP-prefix tax (Step 7). Same lookups
   // the facility dialog and PaymentDialog use — single source of truth so
   // ConfirmStep and the at-pickup screen agree by construction.
@@ -444,7 +471,6 @@ export function BookingModal({
   // other action handlers.
   const [draftClients, setDraftClients] = useState<Client[]>([]);
   const [addedPets, setAddedPets] = useState<Record<number, Pet[]>>({});
-  const nextDraftIdRef = useRef(-1);
 
   // Multi-dog training: `trainingCart` holds dogs already configured in earlier
   // passes through Steps 1–3; `currentTrainingSelection` is the series chosen
@@ -473,7 +499,6 @@ export function BookingModal({
       // Reset quick-create drafts so a re-opened wizard starts clean.
       setDraftClients([]);
       setAddedPets({});
-      nextDraftIdRef.current = -1;
       // Clear the multi-dog training cart.
       setTrainingCart([]);
       setCurrentTrainingSelection(null);
@@ -564,38 +589,51 @@ export function BookingModal({
     preSelectedPetId ? [preSelectedPetId] : [],
   );
 
-  // Quick-create callbacks — state is declared earlier (above prevOpen) so
-  // the close-side reset can clear it. Drafts use negative ids to avoid
-  // colliding with real records; the parent caller decides whether to
-  // persist them after submission.
-  const allocateDraftId = useCallback(() => {
-    const id = nextDraftIdRef.current;
-    nextDraftIdRef.current -= 1;
-    return id;
-  }, []);
+  // ── A CLIENT OR PET ADDED HERE IS SAVED HERE ─────────────────────────────
+  //
+  // These made DRAFTS with negative ids, and the comment said the caller
+  // "decides whether to persist them after submission". No caller did: the
+  // booking went to the server naming client -1, and came back 422 — "No
+  // client -1 you can book for" — after staff had filled in every step. They
+  // are written the moment they are added now, so the booking names real
+  // rows, and a refusal is said while the person is still at the first step.
+  //
+  // Kept in `draftClients` / `addedPets` still, under their REAL ids: the
+  // client list this form was opened with is a snapshot, and would not show
+  // them until it was reopened.
+  const createClient = useCreateClient();
+  const createPet = useCreatePet();
 
   const handleAddClient = useCallback(
-    (draft: { name: string; phone: string; email: string }): number => {
-      const id = allocateDraftId();
-      const trimmedPhone = draft.phone.trim();
-      const newClient: Client = {
-        id,
-        name: draft.name.trim(),
-        email: draft.email.trim(),
-        phone: trimmedPhone || undefined,
-        status: "Active",
-        facility: facilityName,
-        pets: [],
-        additionalContacts: [],
-      };
-      setDraftClients((prev) => [newClient, ...prev]);
-      return id;
+    async (draft: {
+      name: string;
+      phone: string;
+      email: string;
+    }): Promise<number | null> => {
+      try {
+        const { client } = await createClient.mutateAsync({
+          name: draft.name.trim(),
+          email: draft.email.trim(),
+          phone: draft.phone.trim() || undefined,
+        });
+        setDraftClients((prev) => [
+          { ...client, pets: client.pets ?? [] },
+          ...prev,
+        ]);
+        toast.success(t("clientSaved").replace("{name}", client.name));
+        return client.id;
+      } catch (error) {
+        toast.error(t("clientNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return null;
+      }
     },
-    [allocateDraftId, facilityName],
+    [createClient, t],
   );
 
   const handleAddPet = useCallback(
-    (
+    async (
       clientId: number,
       draft: {
         name: string;
@@ -605,43 +643,44 @@ export function BookingModal({
         ageMonths?: number;
         weight?: number;
       },
-    ): number => {
-      const id = allocateDraftId();
-      const newPet: Pet = {
-        id,
-        name: draft.name.trim(),
-        type: "Dog",
-        breed: draft.breed.trim(),
-        // Age stored as years (Pet schema) — convert from months input.
-        age:
-          draft.ageMonths !== undefined && draft.ageMonths > 0
-            ? Math.round((draft.ageMonths / 12) * 10) / 10
-            : 0,
-        weight: draft.weight ?? 0,
-        color: "",
-        microchip: "",
-        allergies: "",
-        specialNeeds: "",
-        coatType: (draft.coatType as Pet["coatType"]) || undefined,
-      };
-      setDraftClients((prev) => {
-        const draft = prev.find((c) => c.id === clientId);
-        if (!draft) return prev;
-        return prev.map((c) =>
-          c.id === clientId ? { ...c, pets: [...c.pets, newPet] } : c,
-        );
-      });
-      // For existing (prop) clients, accumulate in addedPets keyed by id.
-      const isDraftClient = draftClients.some((c) => c.id === clientId);
-      if (!isDraftClient) {
-        setAddedPets((prev) => ({
-          ...prev,
-          [clientId]: [...(prev[clientId] ?? []), newPet],
-        }));
+    ): Promise<number | null> => {
+      try {
+        const pet = await createPet.mutateAsync({
+          clientId,
+          name: draft.name.trim(),
+          type: "Dog",
+          breed: draft.breed.trim(),
+          // Age stored as years (Pet schema) — converted from the months input.
+          age:
+            draft.ageMonths !== undefined && draft.ageMonths > 0
+              ? Math.round((draft.ageMonths / 12) * 10) / 10
+              : 0,
+          weight: draft.weight ?? 0,
+          coatType: (draft.coatType as Pet["coatType"]) || undefined,
+        });
+        const isAddedClient = draftClients.some((c) => c.id === clientId);
+        if (isAddedClient) {
+          setDraftClients((prev) =>
+            prev.map((c) =>
+              c.id === clientId ? { ...c, pets: [...c.pets, pet] } : c,
+            ),
+          );
+        } else {
+          setAddedPets((prev) => ({
+            ...prev,
+            [clientId]: [...(prev[clientId] ?? []), pet],
+          }));
+        }
+        toast.success(t("petSaved").replace("{pet}", pet.name));
+        return pet.id;
+      } catch (error) {
+        toast.error(t("petNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return null;
       }
-      return id;
     },
-    [allocateDraftId, draftClients],
+    [createPet, draftClients, t],
   );
 
   // Service selection state
@@ -774,6 +813,28 @@ export function BookingModal({
         : preSelectedRoomId;
     return roomId ? [{ petId: preSelectedPetId, roomId }] : [];
   });
+  // The kennel — or play area — that was clicked to open this form. It was
+  // kept only when a pet came pre-selected too, and the occupancy grid opens
+  // the form with a room and a date but no pet: so the kennel staff clicked
+  // was forgotten by the time they chose the dog. Each dog chosen now starts
+  // in it, and the room step can still move them.
+  const preferredRoomId =
+    preSelectedService === "daycare"
+      ? (preSelectedDaycareSectionId ?? preSelectedRoomId)
+      : preSelectedRoomId;
+  useEffect(() => {
+    if (!preferredRoomId || selectedService !== preSelectedService) return;
+    setRoomAssignments((prev) => {
+      const missing = selectedPetIds.filter(
+        (petId) => !prev.some((a) => a.petId === petId),
+      );
+      if (missing.length === 0) return prev;
+      return [
+        ...prev,
+        ...missing.map((petId) => ({ petId, roomId: preferredRoomId })),
+      ];
+    });
+  }, [preferredRoomId, selectedPetIds, selectedService, preSelectedService]);
   const [feedingSchedule, setFeedingSchedule] = useState<FeedingScheduleItem[]>(
     preSelectedFeedingSchedule ?? [],
   );
@@ -786,6 +847,12 @@ export function BookingModal({
   >("feeding");
   const [extraServices, setExtraServices] = useState<ExtraService[]>(
     preSelectedExtraServices ?? [],
+  );
+  // What the owner asked for, in their words. There was no field for it, and
+  // what a customer typed into an online request was dropped when staff
+  // scheduled it, because nothing read `preSelectedSpecialRequests`.
+  const [specialRequests, setSpecialRequests] = useState(
+    preSelectedSpecialRequests ?? "",
   );
 
   // Derive notification defaults for a given service from settings
@@ -804,15 +871,12 @@ export function BookingModal({
   const [notificationSMS, setNotificationSMS] = useState(
     preSelectedNotificationSMS ?? initDefaults.sms,
   );
-  // Confirm-screen additions:
-  //   1) Express Check-In auto-send — sent after the booking is created. The
-  //      default flips per selected client (ON for new / draft clients, OFF
-  //      for returning clients who already have info on file). The effect
-  //      below re-evaluates whenever the selected client changes; staff can
-  //      override either way per booking.
-  //   2) Package redemption — when set, a session is debited from this
-  //      client package as part of the booking submission.
-  const [expressCheckInEnabled, setExpressCheckInEnabled] = useState(true);
+  // Package redemption — when set, a session is debited from this client
+  // package once the booking is saved.
+  //
+  // An "Express Check-In auto-send" switch sat beside it, ON by default, and
+  // a toast said the form had gone out. Nothing sent it — there is no sender
+  // for that form — so the switch is gone rather than kept as a promise.
   const [redeemedPackageId, setRedeemedPackageId] = useState<string | null>(
     null,
   );
@@ -857,29 +921,12 @@ export function BookingModal({
   // rule engine can swap out only the auto picks when the package or pet changes.
   const [groomingAutoAttachedAddOnIds, setGroomingAutoAttachedAddOnIds] =
     useState<string[]>([]);
-  // Track waiver ids signed during this wizard session — combined with the
-  // already-stored signatures in waiverSignatures (read on the Confirm step)
-  // to decide whether the customer can submit. Reset on form reset.
-  const [sessionSignedWaiverIds, setSessionSignedWaiverIds] = useState<
-    Set<string>
-  >(new Set());
   // Customer-mode card selection. When a deposit rule applies, the customer
   // must pick a card before they can submit; staff mode uses the existing
   // BookingDepositPrompt flow instead.
   const [customerPaymentMethodId, setCustomerPaymentMethodId] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    // "Returning" = the client has at least one historical booking.
-    // Draft clients (negative ids from the quick-create flow) always count
-    // as new — they were just created in this session.
-    const hasHistory =
-      selectedClientId !== null &&
-      selectedClientId > 0 &&
-      historicalBookings.some((b) => b.clientId === selectedClientId);
-    setExpressCheckInEnabled(!hasHistory);
-  }, [selectedClientId]);
 
   // Clear redemption whenever the client or service changes — otherwise a
   // stale "$0 - covered by package" carries over to a service the package
@@ -926,10 +973,13 @@ export function BookingModal({
   const [showingPackagePromptStep, setShowingPackagePromptStep] =
     useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
+  // OFF until staff say the money is in their hand. It used to default ON as
+  // "card on file", which recorded nothing; it records a real payment now, so
+  // defaulting it on would book cash nobody took.
   const [depositPrompt, setDepositPrompt] = useState<DepositPromptValue>({
-    collectNow: true,
+    collectNow: false,
     amount: 0,
-    method: "card",
+    method: "cash",
     ruleLabel: "",
     required: 0,
   });
@@ -1728,7 +1778,21 @@ export function BookingModal({
       });
     }
 
+    // The groom's add-ons, at the facility's prices, one line each. They were
+    // chosen on the details step and priced nowhere: the confirm total left
+    // them out while the appointment the database wrote charged for them.
+    let groomingAddOnsTotal = 0;
+    if (selectedService === "grooming") {
+      for (const id of groomingSelectedAddOnIds) {
+        const addOn = groomingAddOnCatalog.find((a) => a.id === id);
+        if (!addOn) continue;
+        groomingAddOnsTotal += addOn.price;
+        serviceFeeItems.push({ label: addOn.name, amount: addOn.price });
+      }
+    }
+
     let subtotal =
+      groomingAddOnsTotal +
       pricingComputation.total +
       medicationFeeTotal +
       feedingFeeTotal +
@@ -1823,6 +1887,7 @@ export function BookingModal({
       medicationFeeTotal,
       feedingFeeTotal,
       evaluationFeeTotal,
+      groomingAddOnsTotal,
       serviceFeeItems,
       groomingPriceBreakdown,
     };
@@ -1878,6 +1943,8 @@ export function BookingModal({
     // list and never corrects itself — and the React Compiler rejects a memo
     // that reaches into fetched state without depending on it.
     groomingMenu,
+    groomingSelectedAddOnIds,
+    groomingAddOnCatalog,
   ]);
 
   // Check if service requires evaluation
@@ -1922,13 +1989,25 @@ export function BookingModal({
     );
     setDepositPrompt((prev) => ({
       collectNow:
-        prev.ruleLabel === applicableDepositRule.label ? prev.collectNow : true,
+        prev.ruleLabel === applicableDepositRule.label
+          ? prev.collectNow
+          : false,
       amount: required,
-      method: prev.method ?? "card",
+      method: prev.method ?? "cash",
       ruleLabel: applicableDepositRule.label,
       required,
     }));
   }, [applicableDepositRule, calculatePrice.total]);
+
+  // The facility's waivers this client still has to sign for the service.
+  const waivers = useBookingWaivers({
+    service: selectedService,
+    clientRef:
+      selectedClientId !== null && selectedClientId > 0
+        ? selectedClientId
+        : undefined,
+    asCustomer: isCustomerMode,
+  });
 
   // Validation for each step
   const canProceed = useMemo(() => {
@@ -1989,21 +2068,12 @@ export function BookingModal({
           );
           if (hasExpired || hasFailed) return false;
         }
-        // Waivers: every active, signature-required waiver matching this
-        // service (or "general") must be signed before submit. Signatures
-        // can be either previously-stored or freshly captured this session.
-        const previouslySigned = new Set(
-          waiverSignatures.map((s) => s.waiverId),
-        );
-        const pending = digitalWaivers.filter(
-          (w) =>
-            w.isActive &&
-            w.requiresSignature &&
-            !previouslySigned.has(w.id) &&
-            !sessionSignedWaiverIds.has(w.id) &&
-            (w.type === selectedService || w.type === "general"),
-        );
-        if (pending.length > 0) return false;
+        // Waivers: a CUSTOMER signs what applies before asking — they are the
+        // signer, and they are here. Staff are not refused: a phone booking
+        // is taken without the client present, and the confirm step shows
+        // what is outstanding for the counter or check-in.
+        if (isCustomerMode && (waivers.loading || waivers.pending.length > 0))
+          return false;
         // Customer-mode deposit: when a rule applies and a deposit > 0 is
         // required, the customer must pick a card before they can submit.
         // Pass-redemption bookings skip payment entirely.
@@ -2037,7 +2107,8 @@ export function BookingModal({
     petHasExpiredEvaluation,
     petHasFailedEvaluation,
     petHasValidEvaluation,
-    sessionSignedWaiverIds,
+    waivers.loading,
+    waivers.pending.length,
     applicableDepositRule,
     customerPaymentMethodId,
     calculatePrice.total,
@@ -2295,14 +2366,15 @@ export function BookingModal({
     const lines: EstimateCreate["lineItems"] = [
       { label: serviceLabel, amount: cents(price.basePrice), quantity: 1 },
     ];
-    if (price.addOnsTotal > 0) {
+    const addOnsTotal = price.addOnsTotal + price.groomingAddOnsTotal;
+    if (addOnsTotal > 0) {
       lines.push({
         label: t("estimateLineAddOns"),
-        amount: cents(price.addOnsTotal),
+        amount: cents(addOnsTotal),
         quantity: 1,
       });
     }
-    const rest = cents(gross - price.basePrice - price.addOnsTotal);
+    const rest = cents(gross - price.basePrice - addOnsTotal);
     if (Math.abs(rest) >= 0.01) {
       lines.push({ label: t("estimateLineFees"), amount: rest, quantity: 1 });
     }
@@ -2335,9 +2407,45 @@ export function BookingModal({
     }
   };
 
-  const handleComplete = () => {
+  const [submitting, setSubmitting] = useState(false);
+
+  // The caller saves the booking. It answers `false` — or throws — when it did
+  // not, having said why; anything else means it is saved.
+  const saveThrough = async (booking: NewBooking): Promise<boolean> => {
+    try {
+      return (await onCreateBooking(booking)) !== false;
+    } catch (error) {
+      toast.error(t("bookingNotSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return false;
+    }
+  };
+
+  // ── THE FORM WAITS FOR ITS SAVE ───────────────────────────────────────────
+  //
+  // This called `onCreateBooking(booking)` and, on the next line, reset the
+  // form and closed it. The save was still in flight, so a refused booking — a
+  // kennel already taken, a pet that is not the client's — reported its error
+  // over a closed form, and everything staff had entered was gone. It waits
+  // now, and a booking that was not saved leaves the form exactly as it was.
+  const handleComplete = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      if (await completeBooking()) {
+        resetForm();
+        onOpenChange(false);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /** True when the form should close: what was asked for is saved. */
+  const completeBooking = async (): Promise<boolean> => {
     if (isEstimateMode && isGuestEstimate) {
-      void persistEstimate({
+      await persistEstimate({
         guest: {
           name: guestName.trim() || guestEmail.trim() || t("newInquiry"),
           email: guestEmail.trim() || undefined,
@@ -2346,7 +2454,7 @@ export function BookingModal({
         },
         petRefs: [],
       });
-      return;
+      return false;
     }
 
     const clientId = selectedClientId;
@@ -2367,54 +2475,7 @@ export function BookingModal({
     const petId: number | number[] =
       petIdList.length === 1 ? petIdList[0] : petIdList;
 
-    if (!clientId || petIdList.length === 0) return;
-
-    // Check if service requires evaluation
-    const requiresEvaluation = requiresEvaluationForService(selectedService);
-
-    // Not for a quote: an estimate books nothing, evaluations included.
-    if (requiresEvaluation && !isEstimateMode) {
-      const petsNeedingEvaluation = selectedPets.filter((pet) => {
-        const hasValidEval =
-          pet.evaluations?.some(
-            (e) => e.status === "passed" && e.isExpired !== true,
-          ) ?? false;
-        return !hasValidEval;
-      });
-
-      if (petsNeedingEvaluation.length > 0) {
-        // Create evaluation bookings for pets that need them
-        petsNeedingEvaluation.forEach((pet) => {
-          const evaluationBooking: NewBooking = {
-            clientId,
-            petId: pet.id,
-            facilityId,
-            service: "evaluation",
-            serviceType: evaluationConfig.duration,
-            startDate: new Date().toISOString().split("T")[0], // Schedule for today or next available
-            endDate: new Date().toISOString().split("T")[0],
-            checkInTime: "09:00",
-            checkOutTime:
-              evaluationConfig.duration === "half-day" ? "12:00" : "17:00",
-            status: "pending",
-            basePrice: evaluationConfig.price,
-            discount: 0,
-            totalCost: evaluationConfig.price,
-            notificationEmail: true,
-            notificationSMS: false,
-          };
-          onCreateBooking(evaluationBooking);
-        });
-        // Show confirmation message
-        alert(
-          t("evaluationsCreated").replace(
-            "{pets}",
-            petsNeedingEvaluation.map((pet) => pet.name).join(", "),
-          ),
-        );
-        // Still create the main booking - evaluations can be completed later
-      }
-    }
+    if (!clientId || petIdList.length === 0) return false;
 
     const booking: NewBooking = {
       clientId,
@@ -2425,15 +2486,15 @@ export function BookingModal({
         selectedService === "evaluation" ? "evaluation" : serviceType,
       startDate:
         selectedService === "daycare" && daycareSelectedDates.length > 0
-          ? daycareSelectedDates[0].toISOString().split("T")[0]
+          ? localDay(daycareSelectedDates[0])
           : selectedService === "boarding" && boardingRangeStart
-            ? boardingRangeStart.toISOString().split("T")[0]
+            ? localDay(boardingRangeStart)
             : startDate,
       endDate:
         selectedService === "evaluation"
           ? startDate
           : selectedService === "boarding" && boardingRangeEnd
-            ? boardingRangeEnd.toISOString().split("T")[0]
+            ? localDay(boardingRangeEnd)
             : endDate || startDate,
       checkInTime:
         selectedService === "boarding" && boardingDateTimes.length > 0
@@ -2443,26 +2504,36 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
-      status: approvalRequired ? "request_submitted" : "confirmed",
+      // Approval is for REQUESTS: a customer's booking waits for the facility
+      // to accept it. Staff are the facility, so theirs is confirmed — it read
+      // the approval switch for everyone, and a booking staff made at the desk
+      // landed in the requests queue for staff to approve.
+      status:
+        isCustomerMode && approvalRequired ? "request_submitted" : "confirmed",
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       totalCost: calculatePrice.total,
       // No paymentStatus: a new booking has taken no money, and the database
       // says so rather than being told. See 20260806680000.
+      specialRequests: specialRequests.trim() || undefined,
       daycareSelectedDates:
         daycareSelectedDates.length > 0
-          ? daycareSelectedDates.map((d) => d.toISOString().split("T")[0])
+          ? daycareSelectedDates.map(localDay)
           : undefined,
       daycareDateTimes:
         daycareDateTimes.length > 0 ? daycareDateTimes : undefined,
 
       kennel: kennel || undefined,
-      // Persist the first pet's auto/manual room assignment so the facility
-      // inherits it on the booking record. The facility can override from
-      // their side if they want a different room.
+      // Daycare areas are not rooms the database holds, so every dog's area
+      // travels with the booking; the first is kept as `sectionId`, which the
+      // daycare board reads.
       sectionId:
         selectedService === "daycare" && roomAssignments.length > 0
           ? roomAssignments[0].roomId
+          : undefined,
+      daycareAreaAssignments:
+        selectedService === "daycare" && roomAssignments.length > 0
+          ? roomAssignments
           : undefined,
       unitAssignment:
         selectedService === "boarding" && roomAssignments.length > 0
@@ -2520,10 +2591,15 @@ export function BookingModal({
           : undefined,
       // Grooming-specific add-ons (separate catalog from facility-wide
       // ServiceAddOns which still live on `extraServices`).
-      groomingAddOns:
-        selectedService === "grooming" && groomingSelectedAddOnIds.length > 0
-          ? groomingSelectedAddOnIds
-          : undefined,
+      // Only ids the facility's list still has: create_booking refuses the
+      // whole booking over one it does not know.
+      groomingAddOns: (() => {
+        if (selectedService !== "grooming") return undefined;
+        const known = groomingSelectedAddOnIds.filter((id) =>
+          groomingAddOnCatalog.some((a) => a.id === id),
+        );
+        return known.length > 0 ? known : undefined;
+      })(),
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
@@ -2540,17 +2616,16 @@ export function BookingModal({
             amount: required,
             method: "card",
             ruleLabel: applicableDepositRule.label,
-            collectedAt: new Date().toISOString(),
             paymentMethodId: customerPaymentMethodId,
           };
         }
-        // Staff flow: BookingDepositPrompt's collectNow / method / amount.
+        // Staff flow: recorded as a payment by the server, in the tender
+        // BookingDepositPrompt took it in.
         if (depositPrompt.collectNow && depositPrompt.amount > 0) {
           return {
             amount: depositPrompt.amount,
             method: depositPrompt.method,
             ruleLabel: applicableDepositRule.label,
-            collectedAt: new Date().toISOString(),
           };
         }
         return undefined;
@@ -2559,17 +2634,16 @@ export function BookingModal({
 
     if (isEstimateMode) {
       // In estimate mode the booking is not made: the quote is stored instead.
-      void persistEstimate({
+      await persistEstimate({
         clientRef: clientId,
         petRefs: petIdList.filter((id) => id > 0),
       });
-      return;
+      return false;
     }
 
     // Persist the grooming manual price/duration to this pet so the next
     // booking for the same pet+package starts from this number. Only fires
-    // when staff explicitly opted in and the pet has a real id (drafted-
-    // only pets get a negative id from the quick-create flow — skip those).
+    // when staff explicitly opted in.
     if (
       selectedService === "grooming" &&
       groomingSavePriceToPet &&
@@ -2589,252 +2663,266 @@ export function BookingModal({
       });
     }
 
-    // ── A TRAINING ENROLMENT IS AN ENROLMENT ──────────────────────────────
-    //
-    // This wrote each dog into the series caches — arrays gone on reload —
-    // and then created ONE plain training booking on the first session's
-    // date, with no enrolment row and no link to any session. Each dog is
-    // enrolled through enroll_in_training_series now, which books it into
-    // every remaining session itself; a cart of enrolments therefore creates
-    // no booking of its own. Drop-ins still go through the booking below.
-    let enrolmentsOnly = false;
-    if (selectedService === "training" && !isCustomerMode && selectedClient) {
-      const enrollItems = trainingItems.filter((li) => li.kind === "enroll");
-      if (enrollItems.length > 0) {
-        enrolmentsOnly = enrollItems.length === trainingItems.length;
-        const ownerRef = selectedClient.id;
-        void Promise.allSettled(
-          enrollItems.map((li) =>
-            enrollInSeries.mutateAsync({
-              seriesId: li.seriesId,
-              clientId: ownerRef,
-              petId: li.petId,
-            }),
-          ),
-        ).then((results) => {
-          void queryClient.invalidateQueries({ queryKey: ["training"] });
-          void queryClient.invalidateQueries({ queryKey: ["bookings"] });
-          const refused = results.filter(
-            (r): r is PromiseRejectedResult => r.status === "rejected",
-          );
-          const made = results.length - refused.length;
-          if (made > 0) {
-            toast.success(
-              t("trainingEnrolled").replace("{count}", String(made)),
-            );
-          }
-          if (refused.length > 0) {
-            toast.error(t("trainingEnrolFailed"), {
-              description:
-                refused[0].reason instanceof Error
-                  ? refused[0].reason.message
-                  : undefined,
-            });
-          }
-        });
-      }
-    }
-
     if (isCustomerMode) {
-      // Pass-redemption booking: auto-apply one prepaid pass (no payment) and
-      // surface the remaining count.
+      if (!(await saveThrough(booking))) return false;
+      // Pass-redemption booking: apply one prepaid pass once the booking
+      // exists, and say how many are left.
       if (passRedemption) {
         const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
         const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
-        const category = passRedemption.category;
-        void passRedemption
-          .onRedeem({ petId: primaryPetId, petName: primaryPet?.name })
-          .then((result) => {
-            if (result.ok) {
-              toast.success(t("bookingConfirmed"), {
-                description: t("passUsed")
-                  .replace("{category}", category)
-                  .replace("{left}", String(result.passesLeft)),
-              });
-              return;
-            }
-            // Previously silent. A redemption that fails after the booking is
-            // made means a visit nobody has paid for, and the customer is the
-            // only person who can see both facts.
-            toast.error(t("passNotApplied"), {
-              description: result.error ?? t("passNotAppliedHelp"),
-            });
+        const result = await passRedemption.onRedeem({
+          petId: primaryPetId,
+          petName: primaryPet?.name,
+        });
+        if (result.ok) {
+          toast.success(t("bookingConfirmed"), {
+            description: t("passUsed")
+              .replace("{category}", passRedemption.category)
+              .replace("{left}", String(result.passesLeft)),
           });
-      }
-      onCreateBooking(booking);
-      setBookingRequested(true);
-      return;
-    }
-
-    if (!enrolmentsOnly) onCreateBooking(booking);
-
-    // An EDIT sends no confirmation, schedules no reminder and collects no
-    // deposit — the toasts below describe a new booking. The caller reports
-    // what the edit itself did.
-    if (editMode) return;
-
-    // Post-submit side effects driven by Confirm-screen toggles.
-    // 1) Booking confirmation (email / SMS) — driven by the per-booking
-    //    notification toggles. The actual content (groomer name, address,
-    //    care instructions) is composed by the backend from the booking
-    //    record; here we just acknowledge dispatch.
-    if (notificationEmail || notificationSMS) {
-      const channel =
-        notificationEmail && notificationSMS
-          ? "email + SMS"
-          : notificationEmail
-            ? "email"
-            : "SMS";
-      toast.success(t("confirmationSent"), {
-        description: t("confirmationSentHelp").replace("{channel}", channel),
-      });
-    }
-
-    // 2) SMS / email reminder schedule — driven by the facility-wide
-    //    "Booking Reminder" toggle in Settings → Notifications.
-    const reminderToggle = notificationToggles.find(
-      (t) => t.name === "Booking Reminder",
-    );
-    if (reminderToggle) {
-      const channels = [
-        reminderToggle.email && "email",
-        reminderToggle.sms && "SMS",
-        reminderToggle.push && "push",
-      ].filter(Boolean);
-      if (channels.length > 0) {
-        toast.success(t("reminderScheduled"), {
-          description: t("reminderScheduledHelp").replace(
-            "{channels}",
-            channels.join(" + "),
-          ),
-        });
-      }
-    }
-
-    // 3) Deposit collected → invoice updated with paid amount + remaining
-    //    balance. Surfaces the same data the invoice surface will show.
-    if (
-      applicableDepositRule &&
-      depositPrompt.collectNow &&
-      depositPrompt.amount > 0
-    ) {
-      const remaining = Math.max(
-        0,
-        calculatePrice.total - depositPrompt.amount,
-      );
-      toast.success(
-        t("depositApplied").replace(
-          "{amount}",
-          formatMoney(depositPrompt.amount, locale),
-        ),
-        {
-          description: t("depositAppliedHelp").replace(
-            "{remaining}",
-            formatMoney(remaining, locale),
-          ),
-        },
-      );
-    }
-
-    if (expressCheckInEnabled) {
-      const channel =
-        selectedClient?.email && selectedClient.phone
-          ? "email + SMS"
-          : selectedClient?.email
-            ? "email"
-            : selectedClient?.phone
-              ? "SMS"
-              : t("contactOnFile");
-      // Lead time is configured per facility (Yipyy Go → Timing & Reminders →
-      // "Initial send time") and comes from `facility_settings` with the rest
-      // of the setup. It used to be a lazy `require` of the fixture, resolved
-      // against a module-level array no save had ever reached — so this toast
-      // quoted a seed file's lead time back at whoever sent the form.
-      const sendBefore = yipyyGoConfig.timing.initialSendTime;
-      toast.success(t("expressSent"), {
-        description: t("expressSentHelp")
-          .replace("{channel}", channel)
-          .replace(
-            "{lead}",
-            sendBefore
-              ? t("expressLead").replace("{hours}", String(sendBefore))
-              : "",
-          ),
-      });
-    }
-    if (redeemedPackageId) {
-      const legacyPkg = selectedClient?.packages?.find(
-        (p) => p.id === redeemedPackageId,
-      );
-      if (legacyPkg) {
-        toast.success(t("sessionRedeemed").replace("{name}", legacyPkg.name), {
-          description: t("sessionsRemaining").replace(
-            "{count}",
-            String(Math.max(0, legacyPkg.remainingCredits - 1)),
-          ),
-        });
-      } else {
-        const prepaid = customerPackagesData.find(
-          (p) => p.id === redeemedPackageId,
-        );
-        if (prepaid) {
-          const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
-          const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
-          // The pool to draw on. This modal knows the MODULE being booked but
-          // not the catalogue service id, so it takes the first pool for that
-          // module with passes left — not `passes[0]`, which the mock used and
-          // which happily pointed at an exhausted pool. A bundle whose pools
-          // are different services still cannot be aimed precisely from here;
-          // the grooming dialog can, and does.
-          const pool = prepaid.passes.find(
-            (pass) =>
-              pass.moduleId === selectedService &&
-              pass.totalPasses - pass.usedPasses > 0,
-          );
-          if (pool) {
-            const packageName = prepaid.packageName;
-            redeemPass(
-              {
-                customerPackageId: prepaid.id,
-                serviceId: pool.packageId,
-                serviceLabel: pool.serviceName,
-                petId: primaryPetId,
-                petName: primaryPet?.name,
-              },
-              {
-                onSuccess: ({ passesLeft }) => {
-                  // A $0 receipt so the books show the service was delivered
-                  // against a package rather than given away.
-                  syncRedeemedPassToQuickBooks(
-                    { facilityId: "11" },
-                    prepaid,
-                    { passesLeft, pool },
-                    { petName: primaryPet?.name },
-                  );
-                  toast.success(
-                    t("passRedeemed").replace("{name}", packageName),
-                    {
-                      description: t("passesRemaining").replace(
-                        "{count}",
-                        String(passesLeft),
-                      ),
-                    },
-                  );
-                },
-                onError: (error: Error) => {
-                  toast.error(t("passNotRedeemed"), {
-                    description: error.message,
-                  });
-                },
-              },
-            );
-          }
+        } else {
+          // A redemption that fails after the booking is made means a visit
+          // nobody has paid for, and the customer is the only person who can
+          // see both facts.
+          toast.error(t("passNotApplied"), {
+            description: result.error ?? t("passNotAppliedHelp"),
+          });
         }
       }
+      setBookingRequested(true);
+      return false;
     }
 
-    resetForm();
-    onOpenChange(false);
+    // ── A TRAINING ENROLMENT IS AN ENROLMENT ──────────────────────────────
+    //
+    // Each dog is enrolled through enroll_in_training_series, which books it
+    // into every remaining session itself — so enrolments make no booking of
+    // their own here. Drop-ins do, one per seat, linked to its session.
+    //
+    // A mixed cart used to price its drop-in booking at the WHOLE cart, the
+    // enrolments included, which the enrolment bookings then charged again.
+    // A drop-in costs its own seat now.
+    if (selectedService === "training" && selectedClient && !editMode) {
+      const enrollItems = trainingItems.filter((li) => li.kind === "enroll");
+      const dropIns = trainingItems.filter((li) => li.kind === "drop-in");
+      if (enrollItems.length > 0) {
+        const results = await Promise.allSettled(
+          enrollItems.map((li) =>
+            enrollInSeries.mutateAsync({
+              seriesId: li.seriesId,
+              clientId: selectedClient.id,
+              petId: li.petId,
+            }),
+          ),
+        );
+        void queryClient.invalidateQueries({ queryKey: ["training"] });
+        void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+        const refused = results.filter(
+          (r): r is PromiseRejectedResult => r.status === "rejected",
+        );
+        const made = results.length - refused.length;
+        if (made > 0) {
+          toast.success(t("trainingEnrolled").replace("{count}", String(made)));
+        }
+        if (refused.length > 0) {
+          toast.error(t("trainingEnrolFailed"), {
+            description:
+              refused[0].reason instanceof Error
+                ? refused[0].reason.message
+                : undefined,
+          });
+        }
+        // Nothing enrolled and nothing else to book: keep the form, so the
+        // reason can be acted on without entering it all again.
+        if (made === 0 && dropIns.length === 0) return false;
+      }
+      if (dropIns.length === 0) return true;
+      const saved = await saveThrough({
+        ...booking,
+        petId: dropIns.length === 1 ? dropIns[0].petId : petId,
+        parts: dropIns.map((li) => ({
+          petIds: [li.petId],
+          startDate: li.startDate,
+          endDate: li.startDate,
+          checkInTime: li.startTime,
+          checkOutTime: li.endTime,
+          basePrice: li.price,
+          discount: 0,
+          totalCost: li.price,
+          trainingSessionId: li.sessionId,
+        })),
+      });
+      return saved;
+    }
+
+    const saved = await saveThrough(
+      editMode ? booking : withBookingParts(booking),
+    );
+    if (!saved) return false;
+
+    // An EDIT creates no evaluation and redeems no pass — those describe a
+    // new booking. The caller reports what the edit itself did.
+    if (editMode) return true;
+
+    // Evaluations for the dogs that still need one, made once the booking
+    // they are for exists. Each goes through the same save, so each is real
+    // and each reports itself.
+    const requiresEvaluation = requiresEvaluationForService(selectedService);
+    if (requiresEvaluation) {
+      const petsNeedingEvaluation = selectedPets.filter(
+        (pet) =>
+          !(
+            pet.evaluations?.some(
+              (e) => e.status === "passed" && e.isExpired !== true,
+            ) ?? false
+          ),
+      );
+      for (const pet of petsNeedingEvaluation) {
+        const today = localDay(new Date());
+        await saveThrough({
+          clientId,
+          petId: pet.id,
+          facilityId,
+          service: "evaluation",
+          serviceType: evaluationConfig.duration,
+          startDate: today,
+          endDate: today,
+          checkInTime: "09:00",
+          checkOutTime:
+            evaluationConfig.duration === "half-day" ? "12:00" : "17:00",
+          status: "confirmed",
+          basePrice: evaluationConfig.price,
+          discount: 0,
+          totalCost: evaluationConfig.price,
+          notificationEmail: true,
+          notificationSMS: false,
+        });
+      }
+    }
+
+    if (redeemedPackageId) {
+      const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
+      redeemSelectedPackage(redeemedPackageId, primaryPetId);
+    }
+
+    return true;
+  };
+
+  // ── ONE BOOKING PER DAY, ONE PER ROOM ─────────────────────────────────────
+  //
+  // The database holds one attendance and one room per booking. Staff could
+  // pick three daycare days, or put two dogs in two kennels, and the form
+  // saved ONE booking — the first day, the first kennel; the rest was a list
+  // in `details` that no board reads. It now sends a PART per day or per room,
+  // and the server writes them all or none (`create_bookings`). A customer's
+  // request stays one booking: the facility schedules it.
+  const withBookingParts = (booking: NewBooking): NewBooking => {
+    if (isCustomerMode) return booking;
+    const money = {
+      basePrice: booking.basePrice,
+      discount: booking.discount,
+      totalCost: booking.totalCost,
+    };
+    const petIds = Array.isArray(booking.petId)
+      ? booking.petId
+      : [booking.petId];
+
+    if (selectedService === "daycare" && daycareSelectedDates.length > 1) {
+      return {
+        ...booking,
+        parts: daycareParts({
+          dates: daycareSelectedDates.map(localDay),
+          dateTimes: daycareDateTimes,
+          petIds,
+          checkInTime,
+          checkOutTime,
+          money,
+        }),
+      };
+    }
+
+    if (selectedService === "boarding" && petIds.length > 1) {
+      const parts = boardingParts({
+        petIds,
+        roomAssignments,
+        startDate: booking.startDate,
+        endDate: booking.endDate,
+        checkInTime: booking.checkInTime ?? checkInTime,
+        checkOutTime: booking.checkOutTime ?? checkOutTime,
+        money,
+        weightOf: (roomId) =>
+          roomId
+            ? boardingNightlyRate({
+                categories: roomCategories,
+                rooms: facilityRooms,
+                roomAssignments: [{ petId: petIds[0], roomId }],
+                fallbackNightlyRate: boarding.basePrice,
+                locationId: currentLocationId,
+              })
+            : boarding.basePrice,
+      });
+      return parts.length > 1 ? { ...booking, parts } : booking;
+    }
+
+    return booking;
+  };
+
+  // A session taken from a package, once the booking exists.
+  const redeemSelectedPackage = (packageId: string, primaryPetId: number) => {
+    const legacyPkg = selectedClient?.packages?.find((p) => p.id === packageId);
+    if (legacyPkg) {
+      toast.success(t("sessionRedeemed").replace("{name}", legacyPkg.name), {
+        description: t("sessionsRemaining").replace(
+          "{count}",
+          String(Math.max(0, legacyPkg.remainingCredits - 1)),
+        ),
+      });
+      return;
+    }
+    const prepaid = customerPackagesData.find((p) => p.id === packageId);
+    if (!prepaid) return;
+    const primaryPet = selectedPets.find((p) => p.id === primaryPetId);
+    // The pool to draw on. This modal knows the MODULE being booked but not
+    // the catalogue service id, so it takes the first pool for that module
+    // with passes left — not `passes[0]`, which the mock used and which
+    // happily pointed at an exhausted pool.
+    const pool = prepaid.passes.find(
+      (pass) =>
+        pass.moduleId === selectedService &&
+        pass.totalPasses - pass.usedPasses > 0,
+    );
+    if (!pool) return;
+    const packageName = prepaid.packageName;
+    redeemPass(
+      {
+        customerPackageId: prepaid.id,
+        serviceId: pool.packageId,
+        serviceLabel: pool.serviceName,
+        petId: primaryPetId,
+        petName: primaryPet?.name,
+      },
+      {
+        onSuccess: ({ passesLeft }) => {
+          // A $0 receipt so the books show the service was delivered against
+          // a package rather than given away.
+          syncRedeemedPassToQuickBooks(
+            { facilityId: "11" },
+            prepaid,
+            { passesLeft, pool },
+            { petName: primaryPet?.name },
+          );
+          toast.success(t("passRedeemed").replace("{name}", packageName), {
+            description: t("passesRemaining").replace(
+              "{count}",
+              String(passesLeft),
+            ),
+          });
+        },
+        onError: (error: Error) => {
+          toast.error(t("passNotRedeemed"), { description: error.message });
+        },
+      },
+    );
   };
 
   const resetForm = () => {
@@ -2878,7 +2966,7 @@ export function BookingModal({
     setBookingRequested(false);
     setSelectedStaffId(null);
     setRedeemedPackageId(null);
-    setExpressCheckInEnabled(true);
+    setSpecialRequests("");
     setGroomingIsMobile(false);
     setGroomingStylistId("");
     setGroomingAdditionalStylistIds([]);
@@ -2889,7 +2977,6 @@ export function BookingModal({
     setGroomingSavePriceToPet(false);
     setGroomingSelectedAddOnIds([]);
     setGroomingAutoAttachedAddOnIds([]);
-    setSessionSignedWaiverIds(new Set());
     setCustomerPaymentMethodId(null);
   };
 
@@ -4434,20 +4521,14 @@ export function BookingModal({
                         setNotificationEmail={setNotificationEmail}
                         notificationSMS={notificationSMS}
                         setNotificationSMS={setNotificationSMS}
-                        expressCheckInEnabled={expressCheckInEnabled}
-                        setExpressCheckInEnabled={setExpressCheckInEnabled}
                         redeemedPackageId={redeemedPackageId}
                         setRedeemedPackageId={setRedeemedPackageId}
                         selectedStaffId={selectedStaffId}
                         setSelectedStaffId={setSelectedStaffId}
                         isMobileGrooming={groomingIsMobile}
-                        onWaiverSigned={(waiverId) =>
-                          setSessionSignedWaiverIds((prev) => {
-                            const next = new Set(prev);
-                            next.add(waiverId);
-                            return next;
-                          })
-                        }
+                        specialRequests={specialRequests}
+                        setSpecialRequests={setSpecialRequests}
+                        isCustomerMode={isCustomerMode}
                         tipConfig={tipConfig}
                         tipAmount={tipAmount}
                         onTipChange={setTipAmount}
@@ -4510,22 +4591,23 @@ export function BookingModal({
                     ) : (
                       <Button
                         type="button"
-                        onClick={handleComplete}
-                        disabled={!canProceed}
+                        onClick={() => void handleComplete()}
+                        disabled={!canProceed || submitting || estimateBusy}
+                        aria-busy={submitting || estimateBusy}
                         className={
                           selectedService && canProceed
                             ? `${accent.btnBg} text-white`
                             : ""
                         }
                       >
-                        {editMode
-                          ? t("saveChanges")
-                          : isEstimateMode
-                            ? t("createEstimate")
-                            : isCustomerMode
-                              ? t("requestBooking")
-                              : approvalRequired
-                                ? t("submitRequest")
+                        {submitting
+                          ? t("savingBooking")
+                          : editMode
+                            ? t("saveChanges")
+                            : isEstimateMode
+                              ? t("createEstimate")
+                              : isCustomerMode
+                                ? t("requestBooking")
                                 : t("createBooking")}
                       </Button>
                     )}

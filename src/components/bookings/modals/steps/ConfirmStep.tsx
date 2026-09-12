@@ -33,8 +33,9 @@ import {
   Pen,
   CheckCircle,
   Gift,
-  Send,
+  MessageSquareText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { facilityStaff } from "@/data/facility-staff";
 import { useSettings } from "@/hooks/use-settings";
 import type { ServiceModule } from "@/types/facility-staff";
@@ -84,8 +85,10 @@ function formatAddonUnit(
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
-import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
 import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useSignWaiver, type WaiverRow } from "@/lib/api/waivers";
+import { useBookingWaivers } from "../use-booking-waivers";
 import type { SignatureResult } from "@/components/shared/SignaturePad";
 import { Button } from "@/components/ui/button";
 
@@ -131,13 +134,13 @@ interface ConfirmStepProps {
   setNotificationEmail: (value: boolean) => void;
   notificationSMS: boolean;
   setNotificationSMS: (value: boolean) => void;
-  /**
-   * When true, an Express Check-In form is auto-sent to the client after the
-   * booking is created. Defaults ON for new clients and OFF for returning
-   * clients with bookings on file — staff can flip either way.
-   */
-  expressCheckInEnabled: boolean;
-  setExpressCheckInEnabled: (value: boolean) => void;
+  /** What the owner asked for, saved on the booking as `special_requests`. */
+  specialRequests: string;
+  setSpecialRequests: (value: string) => void;
+  /** A customer must sign what applies before asking; staff see what is
+   *  outstanding and may capture it at the counter, but a phone booking is
+   *  not refused over a waiver the client will sign at check-in. */
+  isCustomerMode: boolean;
   /**
    * Set to the id of a client package when staff opts to redeem a session
    * at confirmation. Otherwise null. Honored on submit (the booking gets
@@ -156,9 +159,6 @@ interface ConfirmStepProps {
   /** Grooming-only: true when the customer chose mobile (van) service. Drives
    *  the "Mobile" badge + the "Arrival window" time label. */
   isMobileGrooming?: boolean;
-  /** Lifts signed-waiver ids up to the parent so the wizard's Submit button
-   *  can stay disabled until all pending waivers are signed. */
-  onWaiverSigned?: (waiverId: string) => void;
   tipConfig: TipConfig;
   tipAmount: number;
   onTipChange: (amount: number) => void;
@@ -273,14 +273,14 @@ export function ConfirmStep({
   notificationEmail,
   setNotificationEmail,
   notificationSMS,
-  expressCheckInEnabled,
-  setExpressCheckInEnabled,
+  specialRequests,
+  setSpecialRequests,
+  isCustomerMode,
   redeemedPackageId,
   setRedeemedPackageId,
   selectedStaffId,
   setSelectedStaffId,
   isMobileGrooming,
-  onWaiverSigned,
   setNotificationSMS,
   facilityTaxes,
   tipConfig,
@@ -313,25 +313,42 @@ export function ConfirmStep({
   const t = useShellText("booking");
   const locale = useShellLocale();
 
-  // Pending waivers for this service type
-  const [signingWaiver, setSigningWaiver] = useState<
-    (typeof digitalWaivers)[number] | null
-  >(null);
-  const [signedIds, setSignedIds] = useState<Set<string>>(
-    () => new Set(waiverSignatures.map((s) => s.waiverId)),
-  );
-  const pendingWaivers = digitalWaivers.filter(
-    (w) =>
-      w.isActive &&
-      w.requiresSignature &&
-      !signedIds.has(w.id) &&
-      (w.type === selectedService || w.type === "general"),
-  );
-  const handleWaiverSigned = (_result: SignatureResult) => {
-    if (!signingWaiver) return;
-    setSignedIds((prev) => new Set([...prev, signingWaiver.id]));
-    onWaiverSigned?.(signingWaiver.id);
-    setSigningWaiver(null);
+  // The facility's waivers that apply here, less what this client has
+  // validly signed — see use-booking-waivers for what this replaced.
+  const clientRef =
+    selectedClient && selectedClient.id > 0 ? selectedClient.id : undefined;
+  const { pending: pendingWaivers, applicable: applicableWaivers } =
+    useBookingWaivers({
+      service: selectedService,
+      clientRef,
+      asCustomer: isCustomerMode,
+    });
+  const signWaiver = useSignWaiver();
+  const [signingWaiver, setSigningWaiver] = useState<WaiverRow | null>(null);
+  // A signature is a ROW now: the server copies the waiver's text and hashes
+  // it, and the list above re-reads once it lands.
+  const handleWaiverSigned = (result: SignatureResult) => {
+    if (!signingWaiver || !selectedClient || clientRef === undefined) return;
+    const waiver = signingWaiver;
+    signWaiver.mutate(
+      {
+        waiverId: waiver.id,
+        clientRef,
+        signatureName: selectedClient.name,
+        signatureData: result.signatureData,
+        witnessName: result.witnessName,
+      },
+      {
+        onSuccess: () => {
+          setSigningWaiver(null);
+          toast.success(
+            t("agreementSignedToast").replace("{name}", waiver.name),
+          );
+        },
+        onError: (error) =>
+          toast.error(t("agreementNotSigned"), { description: error.message }),
+      },
+    );
   };
 
   // #1 — Missing data warnings
@@ -1131,28 +1148,25 @@ export function ConfirmStep({
               onCheckedChange={setNotificationSMS}
             />
           </div>
-          <div className="bg-muted/30 flex items-start justify-between gap-4 rounded-lg border border-dashed px-3 py-2">
-            <Label
-              htmlFor="confirm-express-checkin"
-              className="flex cursor-pointer items-start gap-2"
-            >
-              <Send className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
-              <div>
-                <p className="text-sm font-medium">{t("sendExpressForm")}</p>
-                <p className="text-muted-foreground text-[11px]">
-                  {expressCheckInEnabled
-                    ? t("sendExpressFormOn")
-                    : t("sendExpressFormOff")}
-                </p>
-              </div>
-            </Label>
-            <Switch
-              id="confirm-express-checkin"
-              checked={expressCheckInEnabled}
-              onCheckedChange={setExpressCheckInEnabled}
-            />
-          </div>
         </div>
+      </div>
+
+      {/* ── Special requests ──────────────────────────────────── */}
+      <div className="rounded-2xl border p-4">
+        <SectionHeader icon={MessageSquareText} label={t("specialRequests")} />
+        <Label htmlFor="booking-special-requests" className="sr-only">
+          {t("specialRequests")}
+        </Label>
+        <Textarea
+          id="booking-special-requests"
+          value={specialRequests}
+          onChange={(event) => setSpecialRequests(event.target.value)}
+          placeholder={t("specialRequestsPlaceholder")}
+          rows={3}
+        />
+        <p className="text-muted-foreground mt-2 text-[11px]">
+          {t("specialRequestsHelp")}
+        </p>
       </div>
 
       {/* Tip amount summary — shown when a tip was added in the tip step */}
@@ -1187,8 +1201,8 @@ export function ConfirmStep({
               >
                 <div>
                   <p className="text-sm font-medium">{waiver.name}</p>
-                  <p className="text-muted-foreground text-[11px] capitalize">
-                    {waiver.type} · v{waiver.version}
+                  <p className="text-muted-foreground text-[11px]">
+                    v{waiver.version}
                   </p>
                 </div>
                 <Button
@@ -1196,6 +1210,7 @@ export function ConfirmStep({
                   variant="outline"
                   className="gap-1.5"
                   onClick={() => setSigningWaiver(waiver)}
+                  disabled={clientRef === undefined || signWaiver.isPending}
                 >
                   <Pen className="size-3" />
                   {t("signAgreement")}
@@ -1204,27 +1219,22 @@ export function ConfirmStep({
             ))}
           </div>
           <p className="text-muted-foreground mt-2 text-[11px]">
-            {t("agreementsRequiredHelp")}
+            {isCustomerMode
+              ? t("agreementsRequiredHelp")
+              : t("agreementsOutstandingHelp")}
           </p>
         </div>
       )}
 
       {/* Signed waivers confirmation */}
-      {pendingWaivers.length === 0 &&
-        digitalWaivers.some(
-          (w) =>
-            w.isActive &&
-            w.requiresSignature &&
-            signedIds.has(w.id) &&
-            (w.type === selectedService || w.type === "general"),
-        ) && (
-          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">
-            <CheckCircle className="size-4 text-green-600" />
-            <p className="text-xs font-medium text-green-800">
-              {t("agreementsAllSigned")}
-            </p>
-          </div>
-        )}
+      {pendingWaivers.length === 0 && applicableWaivers.length > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">
+          <CheckCircle className="size-4 text-green-600" />
+          <p className="text-xs font-medium text-green-800">
+            {t("agreementsAllSigned")}
+          </p>
+        </div>
+      )}
 
       {/* Signing dialog */}
       {signingWaiver && (
@@ -1232,7 +1242,7 @@ export function ConfirmStep({
           open={!!signingWaiver}
           onOpenChange={() => setSigningWaiver(null)}
           title={signingWaiver.name}
-          agreementContent={signingWaiver.content}
+          agreementContent={signingWaiver.body}
           requiresWitness={signingWaiver.requiresWitness}
           onSigned={handleWaiverSigned}
           clientName={selectedClient?.name}

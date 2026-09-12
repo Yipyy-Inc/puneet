@@ -617,7 +617,7 @@ export default function ClientBookingDetailPage({
     fill: gcFill,
     locale: gcLocale,
   } = useStaffText("checkoutGiftCard");
-  const { openBookingModal, closeBookingModal } = useBookingModal();
+  const { openBookingModal } = useBookingModal();
   const createBooking = useCreateBookingFromModal();
   const { profile: facilityProfile } = useFacilityProfile();
   // The printed invoice/receipt: the facility's own identity and its own tax,
@@ -951,9 +951,7 @@ export default function ClientBookingDetailPage({
                       ? booking.petId[0]
                       : booking.petId,
                     preSelectedService: "evaluation",
-                    onCreateBooking: async (created) => {
-                      if (await createBooking(created)) closeBookingModal();
-                    },
+                    onCreateBooking: createBooking,
                   })
                 }
               >
@@ -1991,25 +1989,27 @@ export default function ClientBookingDetailPage({
           preSelectedFeedingSchedule={booking.feedingSchedule}
           preSelectedMedications={booking.medications}
           preSelectedSpecialRequests={booking.specialRequests}
-          onCreateBooking={(edited) => {
-            // It closed and said "updated" here, and wrote nothing.
-            saveEdit.mutate(edited, {
-              onSuccess: (changed) => {
-                setEditOpen(false);
-                toast.success(
-                  changed
-                    ? detailFill("bookingUpdated", { ref: bookingRef })
-                    : detailT("nothingChanged"),
-                );
-              },
-              onError: (error) =>
-                toast.error(
-                  detailFill("bookingNotUpdated", { ref: bookingRef }),
-                  {
-                    description: error.message,
-                  },
-                ),
-            });
+          onCreateBooking={async (edited) => {
+            // It closed and said "updated" here, and wrote nothing. The wizard
+            // waits for this answer now, and stays open on `false`.
+            try {
+              const changed = await saveEdit.mutateAsync(edited);
+              toast.success(
+                changed
+                  ? detailFill("bookingUpdated", { ref: bookingRef })
+                  : detailT("nothingChanged"),
+              );
+              return true;
+            } catch (error) {
+              toast.error(
+                detailFill("bookingNotUpdated", { ref: bookingRef }),
+                {
+                  description:
+                    error instanceof Error ? error.message : undefined,
+                },
+              );
+              return false;
+            }
           }}
         />
         <CancelBookingModal

@@ -3,7 +3,7 @@
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatMoney } from "@/lib/i18n/format";
 import { useState } from "react";
-import { CreditCard, Banknote, Smartphone, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, Banknote, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +14,13 @@ import { computeDepositAmount } from "@/lib/settings/deposits";
 export interface DepositPromptValue {
   collectNow: boolean;
   amount: number;
-  method: "card" | "cash" | "terminal";
+  /**
+   * Cash or e-transfer: the tenders the server can record as the booking is
+   * made. "Card on file" and "Terminal" were offered here and charged nothing
+   * — the deposit was a note on the booking — so a card deposit is taken from
+   * the booking page's checkout, where the card is actually charged.
+   */
+  method: "cash" | "e_transfer";
   ruleLabel: string;
   required: number;
 }
@@ -27,9 +33,12 @@ interface BookingDepositPromptProps {
 }
 
 const METHODS = [
-  { value: "card" as const, labelKey: "methodCardOnFile", Icon: CreditCard },
   { value: "cash" as const, labelKey: "methodCash", Icon: Banknote },
-  { value: "terminal" as const, labelKey: "methodTerminal", Icon: Smartphone },
+  {
+    value: "e_transfer" as const,
+    labelKey: "methodETransfer",
+    Icon: ArrowLeftRight,
+  },
 ];
 
 export function BookingDepositPrompt({
@@ -152,7 +161,7 @@ export function BookingDepositPrompt({
               <p className="mb-1.5 text-[10px] font-semibold tracking-wider text-emerald-900/70 uppercase">
                 {t("paymentMethod")}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {METHODS.map(({ value: m, labelKey, Icon }) => (
                   <button
                     key={m}

@@ -6369,7 +6369,12 @@
       "bookingCreatedBody": "The {service} booking has been created.",
       "switchFacility": "Switch facility",
       "yourFacilities": "Your facilities",
-      "switchFacilityFailed": "That facility could not be opened."
+      "switchFacilityFailed": "That facility could not be opened.",
+      "bookingsCreated": "{count} bookings created",
+      "bookingsCreatedBody": "One {service} booking per day or room: {refs}.",
+      "depositRecorded": "Deposit of {amount} recorded",
+      "depositNotRecorded": "The booking is saved, but the deposit was not recorded",
+      "depositNotRecordedHelp": "{reason} Take it from the booking page."
     },
     "account": {
       "signedIn": "Signed in",
@@ -6847,7 +6852,7 @@
       "depositRuleBefore": "Per facility rules, this booking needs a",
       "depositRuleAfter": "deposit before it can be confirmed.",
       "collectDepositNow": "Collect deposit now",
-      "collectDepositHelp": "Turn off to skip — staff can charge later from the booking page",
+      "collectDepositHelp": "Turn on once the deposit is in hand — or take it later from the booking page",
       "amount": "Amount",
       "useRule": "Use rule ({amount})",
       "custom": "Custom",
@@ -7283,7 +7288,19 @@
       "estimateLineFees": "Fees and adjustments",
       "estimateSaveFailed": "The estimate was not saved",
       "trainingEnrolled": "Enrolled {count} — each dog is booked into every remaining session",
-      "trainingEnrolFailed": "Not every dog was enrolled"
+      "trainingEnrolFailed": "Not every dog was enrolled",
+      "bookingNotSaved": "The booking was not saved",
+      "savingBooking": "Saving…",
+      "clientSaved": "{name} saved as a new client",
+      "clientNotSaved": "The client was not saved",
+      "petSaved": "{pet} saved to this client",
+      "petNotSaved": "The pet was not saved",
+      "agreementSignedToast": "{name} signed",
+      "agreementNotSigned": "The agreement was not signed",
+      "agreementsOutstandingHelp": "Not signed yet. Capture the signature now if the client is here, or collect it at check-in.",
+      "specialRequestsPlaceholder": "Anything the team should know, in the owner’s words",
+      "specialRequestsHelp": "Saved on the booking and shown to the team.",
+      "methodETransfer": "E-transfer"
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",
