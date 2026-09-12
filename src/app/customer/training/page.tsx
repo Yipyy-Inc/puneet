@@ -1140,7 +1140,7 @@ export default function CustomerTrainingPage() {
         </TabsContent>
 
         <TabsContent value="homework" className="space-y-4 pt-2">
-          <CustomerHomeworkTab customerId={customerId ?? 0} />
+          <CustomerHomeworkTab />
         </TabsContent>
 
         <TabsContent value="report-cards" className="space-y-4 pt-2">

@@ -2076,7 +2076,10 @@
       },
       "trainingProfile": {
         "notFound": "No student with that id at this facility.",
-        "loading": "Loading student…"
+        "loading": "Loading student…",
+        "homeworkLoading": "Loading the homework…",
+        "homeworkLoadFailedTitle": "The homework could not be loaded",
+        "homeworkLoadFailed": "Reload the page to try again."
       },
       "trainingSession": {
         "completed": "Session marked held — attendance saved for {count} dog(s)",
@@ -8947,6 +8950,7 @@
         "uploadAVideoOptional": "Upload a video (optional)",
         "max20Seconds": "max 20 s",
         "aboutYourClip": "about your clip from {date}",
+        "aboutPracticeOn": "about your practice on {date}",
         "demoVideoOf": "{title} — demo video",
         "referenceImageOf": "{title} — reference image",
         "notEnrolledYet": "{pet} isn’t enrolled in a training series yet — browse upcoming classes to get started.",
@@ -8975,6 +8979,9 @@
         "rcLoading": "Loading your training report cards…",
         "rcLoadFailedTitle": "Your training report cards could not be loaded",
         "rcLoadFailed": "Reload the page to try again.",
+        "hwLoading": "Loading your training homework…",
+        "hwLoadFailedTitle": "Your training homework could not be loaded",
+        "hwLoadFailed": "Reload the page to try again.",
         "rcEmptyTitle": "No training report cards yet",
         "rcEmptyBody": "When your instructor sends one, it shows here and on your Report cards page.",
         "rcListLabel": "Your training report cards",

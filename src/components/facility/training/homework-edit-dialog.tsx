@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,10 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { BookOpen, Clock } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
-import { fanOutHomeworkUpsert } from "@/lib/training-homework";
+import {
+  useAssignHomework,
+  useUpdateHomework,
+} from "@/lib/api/training-homework";
 import {
   getDisciplineIdForClassName,
   type TrainingExerciseDef,
@@ -73,12 +76,6 @@ function nextDay(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-let standaloneHomeworkSeed = 0;
-function nextStandaloneHomeworkId(): string {
-  standaloneHomeworkSeed += 1;
-  return `homework-standalone-${standaloneHomeworkSeed}`;
-}
-
 const EMPTY_FORM: FormState = {
   enrollmentId: "",
   exerciseId: "",
@@ -97,7 +94,9 @@ export function HomeworkEditDialog({
   restrictToPetId,
   todayISO,
 }: Props) {
-  const queryClient = useQueryClient();
+  const assign = useAssignHomework();
+  const update = useUpdateHomework();
+  const saving = assign.isPending || update.isPending;
   const { data: enrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
@@ -178,7 +177,7 @@ export function HomeworkEditDialog({
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.enrollmentId) {
       toast.error("Pick which dog this homework is for.");
       return;
@@ -197,37 +196,41 @@ export function HomeworkEditDialog({
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    if (editing) {
-      const updated: TrainingHomework = {
-        ...editing,
-        title: form.title.trim(),
-        description: form.description.trim(),
-        instructions,
-        frequency: form.frequency.trim() || undefined,
-        nextDueDate: form.nextDueDate || null,
-      };
-      fanOutHomeworkUpsert(queryClient, updated);
-      toast.success(`"${updated.title}" updated.`);
-    } else {
-      const created: TrainingHomework = {
-        id: nextStandaloneHomeworkId(),
-        enrollmentId: form.enrollmentId,
-        sessionNumber: enrollment.currentSessionNumber,
-        sessionDate: todayISO,
-        title: form.title.trim(),
-        description: form.description.trim(),
-        instructions,
-        frequency: form.frequency.trim() || undefined,
-        nextDueDate: form.nextDueDate || null,
-        unlocked: true,
-        unlockedDate: todayISO,
-        completed: false,
-        completedDate: null,
-      };
-      fanOutHomeworkUpsert(queryClient, created);
-      toast.success(`"${created.title}" assigned to ${enrollment.petName}.`);
+    // Said once the row exists — this wrote the query cache and nothing else.
+    try {
+      if (editing) {
+        const updated = await update.mutateAsync({
+          id: editing.id,
+          patch: {
+            title: form.title.trim(),
+            description: form.description.trim(),
+            instructions,
+            frequency: form.frequency.trim() || null,
+            nextDueDate: form.nextDueDate || null,
+          },
+        });
+        toast.success(`"${updated.title}" updated.`);
+      } else {
+        await assign.mutateAsync([
+          {
+            enrollmentId: form.enrollmentId,
+            sessionNumber: enrollment.currentSessionNumber || 1,
+            sessionDate: todayISO,
+            title: form.title.trim(),
+            description: form.description.trim(),
+            instructions,
+            frequency: form.frequency.trim() || undefined,
+            nextDueDate: form.nextDueDate || null,
+          },
+        ]);
+        toast.success(
+          `"${form.title.trim()}" assigned to ${enrollment.petName}.`,
+        );
+      }
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     }
-    onOpenChange(false);
   }
 
   const enrollmentLocked = !!(editing || lockedEnrollmentId);
@@ -377,7 +380,8 @@ export function HomeworkEditDialog({
             Cancel
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
+            loading={saving}
             disabled={!form.enrollmentId || !form.title.trim()}
           >
             {editing ? "Save changes" : "Assign homework"}

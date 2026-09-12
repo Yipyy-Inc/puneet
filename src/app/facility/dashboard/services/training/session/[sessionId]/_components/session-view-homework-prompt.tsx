@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   ChevronRight,
@@ -36,11 +36,9 @@ import { trainingQueries } from "@/lib/api/training";
 import { useHomeworkTemplateWrites } from "@/lib/api/training-catalog";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import { toast } from "sonner";
-import {
-  fanOutHomeworkUpsert,
-  type PresentStudentSummary,
-} from "./session-view-save";
-import type { TrainingHomework } from "@/lib/training-enrollment";
+import type { PresentStudentSummary } from "./session-view-save";
+import { useAssignHomework } from "@/lib/api/training-homework";
+import type { TrainingHomeworkCreate } from "@/lib/api/mappers/training-homework";
 import type {
   HomeworkTemplate,
   HomeworkTemplateItem,
@@ -122,7 +120,7 @@ export function SessionHomeworkPromptDialog({
   sessionNumber,
   onDone,
 }: Props) {
-  const queryClient = useQueryClient();
+  const assign = useAssignHomework();
   const templateWrites = useHomeworkTemplateWrites();
   const { data: exercises = [] } = useQuery(trainingQueries.exercises());
   const { data: templatesData } = useQuery(trainingQueries.homeworkTemplates());
@@ -282,50 +280,46 @@ export function SessionHomeworkPromptDialog({
     onDone();
   }
 
-  function handleAssign() {
+  // Every exercise for every dog is one insert, all or none, and the dialog
+  // says so only once it exists — this wrote the query cache and nothing else.
+  async function handleAssign() {
     const validItems = items.filter((it) => it.exerciseId);
     if (validItems.length === 0 || recipients.length === 0) {
       onOpenChange(false);
       onDone();
       return;
     }
-    const nowISO = new Date().toISOString();
-    let assignedCount = 0;
-    for (const student of recipients) {
-      if (!student.seriesEnrollment) continue;
-      for (const item of validItems) {
-        const instructionBullets = item.instructions
+    const assigned = recipients.flatMap((student) =>
+      student.seriesEnrollment ? [student.seriesEnrollment] : [],
+    );
+    const records: TrainingHomeworkCreate[] = assigned.flatMap((enrollment) =>
+      validItems.map((item) => ({
+        enrollmentId: enrollment.id,
+        sessionNumber: enrollment.currentSessionNumber || 1,
+        sessionDate,
+        title: item.exerciseName,
+        instructions: item.instructions
           .split("\n")
           .map((s) => s.trim())
-          .filter(Boolean);
-        const resourceLinks = item.resources
+          .filter(Boolean),
+        resources: item.resources
           .split("\n")
           .map((s) => s.trim())
-          .filter(Boolean);
-        const record: TrainingHomework = {
-          id: `hw-${student.seriesEnrollment.id}-${item.localId}-${nowISO}`,
-          enrollmentId: student.seriesEnrollment.id,
-          sessionNumber: student.seriesEnrollment.currentSessionNumber || 1,
-          sessionDate,
-          title: item.exerciseName,
-          description: "",
-          instructions: instructionBullets,
-          resources: resourceLinks.length > 0 ? resourceLinks : undefined,
-          frequency: item.frequency,
-          nextDueDate: computeDueDate(sessionDate, item.dueDayOffset),
-          unlocked: true,
-          unlockedDate: nowISO,
-          completed: false,
-          completedDate: null,
-        };
-        fanOutHomeworkUpsert(queryClient, record);
-      }
-      assignedCount++;
+          .filter(Boolean),
+        frequency: item.frequency.trim() || undefined,
+        nextDueDate: computeDueDate(sessionDate, item.dueDayOffset),
+      })),
+    );
+    try {
+      await assign.mutateAsync(records);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
     onOpenChange(false);
     onDone();
     toast.success(
-      `Assigned ${validItems.length} item${validItems.length === 1 ? "" : "s"} to ${assignedCount} student${assignedCount === 1 ? "" : "s"}.`,
+      `Assigned ${validItems.length} item${validItems.length === 1 ? "" : "s"} to ${assigned.length} student${assigned.length === 1 ? "" : "s"}.`,
     );
     void exercises;
   }
@@ -489,7 +483,8 @@ export function SessionHomeworkPromptDialog({
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
-                      onClick={handleAssign}
+                      onClick={() => void handleAssign()}
+                      loading={assign.isPending}
                       disabled={!hasAnyExercise || recipients.length === 0}
                       className="h-11 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
                     >
@@ -721,7 +716,8 @@ export function SessionHomeworkPromptDialog({
           </Button>
           <Button
             type="button"
-            onClick={handleAssign}
+            onClick={() => void handleAssign()}
+            loading={assign.isPending}
             disabled={!hasAnyExercise || recipients.length === 0}
             className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
           >

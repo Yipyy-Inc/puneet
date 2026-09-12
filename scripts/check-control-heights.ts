@@ -90,7 +90,6 @@ const ANSI = {
  * change so the grip stays tight.
  */
 const BASELINE = new Map<string, number>([
-  ["src/app/customer/training/_components/customer-homework-tab.tsx", 3],
   [
     "src/app/customer/training/_components/customer-pet-training-dashboard.tsx",
     3,

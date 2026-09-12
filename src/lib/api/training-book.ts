@@ -1,4 +1,5 @@
 import type { Trainer, TrainerNote, TrainingPackage } from "@/types/training";
+import type { TrainingHomework } from "@/lib/training-enrollment";
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
@@ -124,6 +125,28 @@ export async function fetchTrainerNotes(): Promise<TrainerNote[]> {
     throw new Error(`Could not load the training notes (${response.status})`);
   }
   return (await response.json()) as TrainerNote[];
+}
+
+/**
+ * Training homework, from `training_homework`, each with the days it was
+ * practised — it was the `trainingHomeworkRecords` fixture, written with
+ * setQueryData. `enrollmentIds` narrows to those enrollments. Writes:
+ * lib/api/training-homework.
+ */
+export async function fetchTrainingHomework(
+  enrollmentIds?: string[],
+): Promise<TrainingHomework[]> {
+  const query = enrollmentIds
+    ? `?enrollmentIds=${enrollmentIds.map(encodeURIComponent).join(",")}`
+    : "";
+  const response = await fetch(`/api/training/homework${query}`);
+  // Signed out there is no homework to read: an empty list, not an error on
+  // every training screen.
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Could not load the homework (${response.status})`);
+  }
+  return (await response.json()) as TrainingHomework[];
 }
 
 /**

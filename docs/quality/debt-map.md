@@ -13826,3 +13826,47 @@ both go when the session view is converted.
 e2e `customer-training-report-cards.spec.ts` (full suite). It sends Alice one
 training card and removes it with the service role in afterAll, because a sent
 card cannot be discarded through the API.
+
+## 2026-09-12 — training homework is a row, and so is each day it was practised
+
+Every homework screen — the trainer's Homework board, a student's Homework tab
+and its "Assign homework", the prompt after a session, and the owner's
+Homework tab and My Pets checklist — read `trainingHomeworkRecords`, a
+fixture, and wrote with `fanOutHomeworkUpsert`, which edits the query cache.
+Homework assigned to a real dog was gone on reload, and an owner's "Mark as
+done" never reached the trainer.
+
+Homework is `training_homework` now, and each practised day a
+`training_homework_practice` row (20260912205812), behind
+`/api/training/homework`. Staff assign, edit, complete and delete
+(`training_log_progress`). A day of practice is logged only through
+`log_homework_practice()` — by staff or by the dog's owner, once a day — and
+it moves the next due date by the homework's cadence
+(`private.homework_next_due`, kept in step with `bumpNextDueDate`). The
+trainer's response is saved on that day's row. The fan-out helpers are
+deleted.
+
+Removed as untrue or unreachable:
+
+- The owner's practice video. It was a `blob:` URL that lived in the owner's
+  browser tab, so the trainer's "Owner submissions" list could never show one,
+  and a facility that required a video left its owners unable to mark anything
+  done. There is no upload for practice videos, and
+  `requireVideoForHomeworkSubmission` in the training settings decides
+  nothing until there is.
+- "Response sent to owner" — nothing is sent; the owner reads the response on
+  their Homework tab, so the toast says it is shared.
+- "Homework unlocks when {pet} completes a session" — a trainer assigns it.
+- "Marie Tremblay", a mock trainer stamped on every response; the author is
+  the signed-in user.
+- "No homework assigned to {pet} yet" on a student's Homework tab, and "No
+  homework yet" on the owner's, while the homework was still loading and again
+  when it failed to load. Both tabs say which instead.
+
+**Still open:** make-ups (`/services/training/makeup`) and a session's
+exercise ratings are still local, and `trainingHomeworkRecords` still feeds
+the training report-card fixture, which nothing reads.
+
+SQL `training-homework.sql`. e2e `training-homework.spec.ts` (full suite)
+gives Buddy a real enrollment on a MARKER series through the service role and
+deletes the series afterwards, which takes the homework with it.

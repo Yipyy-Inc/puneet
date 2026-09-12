@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RouteState } from "@/components/ui/route-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +27,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   Clock,
   Edit,
   Flame,
@@ -38,30 +41,33 @@ import {
 } from "lucide-react";
 import { HomeworkSubmissionsSection } from "./homework-submissions-section";
 
-// Mock current trainer — matches the convention used elsewhere in the app
-// (Smart Insights, etc.). A real auth context will own this later.
-const TRAINER_USER_NAME = "Marie Tremblay";
 import { trainingQueries } from "@/lib/api/training";
 import type {
   TrainingEnrollment,
   TrainingHomework,
 } from "@/lib/training-enrollment";
 import {
-  bumpNextDueDate,
-  fanOutHomeworkDelete,
-  fanOutHomeworkUpsert,
   getHomeworkBoardStatus,
   getLastPracticedDate,
   getPracticeStreakDays,
   hasPracticedToday,
-  setTrainerResponseForDate,
 } from "@/lib/training-homework";
+import {
+  useDeleteHomework,
+  useLogHomeworkPractice,
+  useRespondToHomeworkPractice,
+  useUpdateHomework,
+} from "@/lib/api/training-homework";
+import { localToday } from "@/lib/vaccinations";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
 
 interface Props {
   petId: number;
   petName: string;
   enrollments: TrainingEnrollment[];
+  /** Where the enrollments' own read is — the homework is looked up by them. */
+  enrollmentsStatus: "pending" | "error" | "success";
 }
 
 interface HomeworkRow {
@@ -122,7 +128,10 @@ function HomeworkCard({
   onEdit: () => void;
   onMarkPracticed: () => void;
   onDelete: () => void;
-  onSaveTrainerResponse: (practiceDate: string, response: string) => void;
+  onSaveTrainerResponse: (
+    practiceDate: string,
+    response: string,
+  ) => Promise<void>;
 }) {
   const { homework, enrollment } = row;
   const assignedLabel = homework.unlockedDate ?? homework.sessionDate;
@@ -387,9 +396,15 @@ export function TrainingProfileHomework({
   petId,
   petName,
   enrollments,
+  enrollmentsStatus,
 }: Props) {
-  const queryClient = useQueryClient();
-  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
+  const logPractice = useLogHomeworkPractice();
+  const updateHomework = useUpdateHomework();
+  const deleteHomework = useDeleteHomework();
+  const respond = useRespondToHomeworkPractice();
+  const { t } = useStaffText("trainingProfile");
+  // The facility's day rather than UTC's.
+  const [todayISO] = useState(localToday);
 
   const enrollmentIds = useMemo(
     () => enrollments.map((e) => e.id),
@@ -405,7 +420,11 @@ export function TrainingProfileHomework({
   );
 
   const homeworkQuery = trainingQueries.homeworkForEnrollments(enrollmentIds);
-  const { data: homeworkRecords = [] } = useQuery(homeworkQuery);
+  const {
+    data: homeworkRecords = [],
+    error: homeworkError,
+    isPending: homeworkPending,
+  } = useQuery(homeworkQuery);
 
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -440,51 +459,70 @@ export function TrainingProfileHomework({
     return { active: a, completed: c };
   }, [homeworkRecords, enrollmentById]);
 
-  function toggleHomeworkComplete(homework: TrainingHomework) {
+  // Each write is awaited before it is announced; they wrote the query cache.
+  async function toggleHomeworkComplete(homework: TrainingHomework) {
     const becomesCompleted = !homework.completed;
-    fanOutHomeworkUpsert(queryClient, {
-      ...homework,
-      completed: becomesCompleted,
-      completedDate: becomesCompleted ? todayISO : null,
-      nextDueDate: becomesCompleted ? null : homework.nextDueDate,
-    });
-    toast.success(
-      becomesCompleted
-        ? `"${homework.title}" marked complete.`
-        : `"${homework.title}" reopened.`,
-    );
+    try {
+      await updateHomework.mutateAsync({
+        id: homework.id,
+        patch: { completed: becomesCompleted },
+      });
+      toast.success(
+        becomesCompleted
+          ? `"${homework.title}" marked complete.`
+          : `"${homework.title}" reopened.`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
-  function markPracticed(homework: TrainingHomework) {
-    const next = bumpNextDueDate(homework, todayISO);
-    fanOutHomeworkUpsert(queryClient, { ...homework, nextDueDate: next });
-    toast.success(`Next practice ${next}.`);
+  async function markPracticed(homework: TrainingHomework) {
+    try {
+      const updated = await logPractice.mutateAsync({
+        id: homework.id,
+        date: todayISO,
+      });
+      toast.success(
+        `Next practice ${updated.nextDueDate ? formatDate(updated.nextDueDate) : "—"}.`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
-  function saveTrainerResponse(
+  // Rethrows, so the response box keeps what was typed when the save fails.
+  async function saveTrainerResponse(
     homework: TrainingHomework,
     practiceDate: string,
     response: string,
   ) {
-    const updated = setTrainerResponseForDate(
-      homework,
-      practiceDate,
-      response,
-      TRAINER_USER_NAME,
-    );
-    fanOutHomeworkUpsert(queryClient, updated);
+    try {
+      await respond.mutateAsync({
+        id: homework.id,
+        date: practiceDate,
+        response,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      throw error;
+    }
     if (response.trim().length === 0) {
       toast(`Response cleared for "${homework.title}".`);
     } else {
-      toast.success(`Response sent to owner for "${homework.title}".`);
+      toast.success(`Response shared with the owner for "${homework.title}".`);
     }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleting) return;
-    fanOutHomeworkDelete(queryClient, deleting.id);
-    toast.success(`"${deleting.title}" deleted.`);
-    setDeleting(null);
+    try {
+      await deleteHomework.mutateAsync(deleting.id);
+      toast.success(`"${deleting.title}" deleted.`);
+      setDeleting(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
   function openAdd() {
@@ -502,15 +540,42 @@ export function TrainingProfileHomework({
 
   const canAddHomework = activeEnrollments.length > 0;
 
+  // Homework is looked up by enrollment, so it is loading while either read
+  // is — and both used to fall through to "No homework assigned", which was
+  // untrue while the rows were on their way and untrue when the read failed.
+  if (enrollmentsStatus === "error" || homeworkError) {
+    // §5d2's ladder: a panel that would not load takes `error`.
+    return (
+      <RouteState
+        surface="card"
+        className="min-h-0 p-0"
+        pose="error"
+        icon={CircleAlert}
+        inkClassName="text-destructive"
+        title={t("homeworkLoadFailedTitle")}
+        description={t("homeworkLoadFailed")}
+      />
+    );
+  }
+  if (
+    enrollmentsStatus === "pending" ||
+    (enrollmentIds.length > 0 && homeworkPending)
+  ) {
+    return (
+      <div className="space-y-3" aria-busy="true">
+        <span className="sr-only">{t("homeworkLoading")}</span>
+        <Skeleton className="h-40 rounded-2xl motion-reduce:animate-none" />
+        <Skeleton className="h-40 rounded-2xl motion-reduce:animate-none" />
+      </div>
+    );
+  }
+
   if (homeworkRecords.length === 0) {
     return (
       <>
         <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
           <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-          <p>
-            No homework assigned yet — homework unlocks when {petName} completes
-            a session.
-          </p>
+          <p>No homework assigned to {petName} yet.</p>
           {canAddHomework && (
             <Button className="mt-4" size="sm" onClick={openAdd}>
               <Plus className="mr-1.5 size-4" />
@@ -597,9 +662,11 @@ export function TrainingProfileHomework({
                 key={row.homework.id}
                 row={row}
                 todayISO={todayISO}
-                onToggleComplete={() => toggleHomeworkComplete(row.homework)}
+                onToggleComplete={() =>
+                  void toggleHomeworkComplete(row.homework)
+                }
                 onEdit={() => openEdit(row.homework)}
-                onMarkPracticed={() => markPracticed(row.homework)}
+                onMarkPracticed={() => void markPracticed(row.homework)}
                 onDelete={() => setDeleting(row.homework)}
                 onSaveTrainerResponse={(date, response) =>
                   saveTrainerResponse(row.homework, date, response)
@@ -642,9 +709,11 @@ export function TrainingProfileHomework({
                   key={row.homework.id}
                   row={row}
                   todayISO={todayISO}
-                  onToggleComplete={() => toggleHomeworkComplete(row.homework)}
+                  onToggleComplete={() =>
+                    void toggleHomeworkComplete(row.homework)
+                  }
                   onEdit={() => openEdit(row.homework)}
-                  onMarkPracticed={() => markPracticed(row.homework)}
+                  onMarkPracticed={() => void markPracticed(row.homework)}
                   onDelete={() => setDeleting(row.homework)}
                   onSaveTrainerResponse={(date, response) =>
                     saveTrainerResponse(row.homework, date, response)
@@ -685,7 +754,7 @@ export function TrainingProfileHomework({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => void confirmDelete()}
               className="bg-red-600 text-white hover:bg-red-700"
             >
               Delete

@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,11 +30,9 @@ import {
   User2,
 } from "lucide-react";
 import type { PetTrainingDashboard } from "@/lib/customer-training-dashboard";
-import {
-  fanOutHomeworkUpsert,
-  hasPracticedToday,
-  markPracticedToday,
-} from "@/lib/training-homework";
+import { hasPracticedToday } from "@/lib/training-homework";
+import { useLogHomeworkPractice } from "@/lib/api/training-homework";
+import { localToday } from "@/lib/vaccinations";
 import type {
   SessionAttendance,
   TrainingEnrollment,
@@ -772,16 +769,22 @@ function HomeworkRow({
   todayISO: string;
 }) {
   const { t, fill, locale } = useCustomerText("training");
-  const queryClient = useQueryClient();
-  const [practicedNow, setPracticedNow] = useState(false);
-  const practiced = practicedNow || hasPracticedToday(item, todayISO);
+  const logPractice = useLogHomeworkPractice();
+  // The owner's own day rather than UTC's, for the practice they log.
+  const [practiceDay] = useState(localToday);
+  const practiced =
+    hasPracticedToday(item, practiceDay) || hasPracticedToday(item, todayISO);
 
-  function markDone() {
+  // Said once the day is logged; the refetch that follows marks it done here,
+  // and the trainer reads the same row. It wrote the query cache.
+  async function markDone() {
     if (practiced) return;
-    const updated = markPracticedToday(item, todayISO);
-    fanOutHomeworkUpsert(queryClient, updated);
-    setPracticedNow(true);
-    toast.success(fill("markedDoneToday", { title: item.title }));
+    try {
+      await logPractice.mutateAsync({ id: item.id, date: practiceDay });
+      toast.success(fill("markedDoneToday", { title: item.title }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
   const dueLabel = item.nextDueDate
@@ -825,7 +828,8 @@ function HomeworkRow({
         </div>
         <Button
           size="sm"
-          onClick={markDone}
+          onClick={() => void markDone()}
+          loading={logPractice.isPending}
           disabled={practiced}
           className={cn(
             "h-8 shrink-0 gap-1 px-3",

@@ -10385,6 +10385,159 @@ export type Database = {
           },
         ];
       };
+      training_homework: {
+        Row: {
+          author_name: string | null;
+          client_id: string;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          enrollment_id: string;
+          facility_id: string;
+          frequency: string | null;
+          id: string;
+          instructions: string[];
+          next_due_date: string | null;
+          pet_id: string;
+          resources: string[];
+          session_date: string | null;
+          session_number: number;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          client_id: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          enrollment_id: string;
+          facility_id: string;
+          frequency?: string | null;
+          id?: string;
+          instructions?: string[];
+          next_due_date?: string | null;
+          pet_id: string;
+          resources?: string[];
+          session_date?: string | null;
+          session_number?: number;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          client_id?: string;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          enrollment_id?: string;
+          facility_id?: string;
+          frequency?: string | null;
+          id?: string;
+          instructions?: string[];
+          next_due_date?: string | null;
+          pet_id?: string;
+          resources?: string[];
+          session_date?: string | null;
+          session_number?: number;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_homework_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_homework_enrollment_id_fkey";
+            columns: ["enrollment_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_enrollments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_homework_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_homework_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_homework_practice: {
+        Row: {
+          client_id: string;
+          facility_id: string;
+          homework_id: string;
+          id: string;
+          logged_by: string;
+          marked_at: string;
+          practice_date: string;
+          trainer_responded_at: string | null;
+          trainer_responded_by: string | null;
+          trainer_response: string | null;
+        };
+        Insert: {
+          client_id: string;
+          facility_id: string;
+          homework_id: string;
+          id?: string;
+          logged_by: string;
+          marked_at?: string;
+          practice_date: string;
+          trainer_responded_at?: string | null;
+          trainer_responded_by?: string | null;
+          trainer_response?: string | null;
+        };
+        Update: {
+          client_id?: string;
+          facility_id?: string;
+          homework_id?: string;
+          id?: string;
+          logged_by?: string;
+          marked_at?: string;
+          practice_date?: string;
+          trainer_responded_at?: string | null;
+          trainer_responded_by?: string | null;
+          trainer_response?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_homework_practice_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_homework_practice_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_homework_practice_homework_id_fkey";
+            columns: ["homework_id"];
+            isOneToOne: false;
+            referencedRelation: "training_homework";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       training_notes: {
         Row: {
           author_name: string | null;
@@ -12086,6 +12239,27 @@ export type Database = {
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
+      };
+      log_homework_practice: {
+        Args: { p_homework_id: string; p_practice_date: string };
+        Returns: {
+          client_id: string;
+          facility_id: string;
+          homework_id: string;
+          id: string;
+          logged_by: string;
+          marked_at: string;
+          practice_date: string;
+          trainer_responded_at: string | null;
+          trainer_responded_by: string | null;
+          trainer_response: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_homework_practice";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       mark_report_card_viewed: {
         Args: { p_card_id: string };
