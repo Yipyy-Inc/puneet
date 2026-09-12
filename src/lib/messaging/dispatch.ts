@@ -231,6 +231,8 @@ async function dispatchClaimed(
     return result;
   }
 
+  const switchedOff = await confirmationChannelsSwitchedOff(db, event);
+
   for (const rule of candidates) {
     // Location scope. Empty means every location, never "no locations" — an
     // empty array meaning none would silently stop every rule the day somebody
@@ -255,6 +257,10 @@ async function dispatchClaimed(
     if (rule.sms_template_id) channels.push("sms");
 
     for (const channel of channels) {
+      if (switchedOff.has(channel)) {
+        result.skipped += 1;
+        continue;
+      }
       const outcome = await deliver(db, {
         event,
         rule,
@@ -270,6 +276,37 @@ async function dispatchClaimed(
   }
 
   return result;
+}
+
+/**
+ * The channels the person who MADE the booking switched off for its
+ * confirmation.
+ *
+ * The New Booking form has an "Email confirmation" and an "SMS notification"
+ * switch, and its help text says turning one off skips it for this booking.
+ * Nothing read them: the switch was stored in `details` and the confirmation
+ * went out regardless. Only `booking_created` consults them — the switches are
+ * about the confirmation, not about every message a booking will ever cause.
+ * An absent value is ON, which is what every booking made before them meant.
+ */
+async function confirmationChannelsSwitchedOff(
+  db: SupabaseClient,
+  event: EventRow,
+): Promise<Set<"email" | "sms">> {
+  const off = new Set<"email" | "sms">();
+  if (event.kind !== "booking_created" || !event.booking_id) return off;
+  const { data } = await db
+    .from("bookings")
+    .select("details")
+    .eq("id", event.booking_id)
+    .maybeSingle();
+  const details = (data?.details ?? {}) as {
+    notificationEmail?: unknown;
+    notificationSMS?: unknown;
+  };
+  if (details.notificationEmail === false) off.add("email");
+  if (details.notificationSMS === false) off.add("sms");
+  return off;
 }
 
 type BookingStatusForDisplay = NonNullable<

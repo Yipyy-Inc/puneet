@@ -143,6 +143,7 @@ const COLUMN_FIELDS = [
   "specialRequests",
   "assignedStaff",
   "locationId",
+  "trainingSessionId",
   // Read-only: the database stamps it. Listed so a PATCH, which merges the
   // stored booking into the input, never copies it into `details`.
   "createdAt",
@@ -201,6 +202,9 @@ export function bookingToRow(
   if (input.tipAmount !== undefined) row.tip_amount = input.tipAmount;
   if (input.specialRequests !== undefined) {
     row.special_requests = input.specialRequests;
+  }
+  if (input.trainingSessionId !== undefined) {
+    row.training_series_session_id = input.trainingSessionId;
   }
 
   // Dates are the facility's wall clock on the way in, exactly as on the way

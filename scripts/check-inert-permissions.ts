@@ -126,6 +126,13 @@ const BASELINE = new Set([
   "export_clients",
   "reschedule_bookings",
   "manage_waitlist",
+  // Not newly inert — newly VISIBLE. The platform catalogue's `create_booking`
+  // (src/types/staff.ts) read as consulted only because the bookings route
+  // called an RPC of the same name, `supabase.rpc("create_booking", …)`. The
+  // route calls `create_bookings` since 2026-09-12, and the match went with
+  // it. No gate ever asked about this key; bookings are gated by
+  // `create_bookings`, plural, in RLS.
+  "create_booking",
 
   // ── Service-module actions. The modules exist; the switches do not reach
   // them.
