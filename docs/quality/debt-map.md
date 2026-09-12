@@ -13530,3 +13530,40 @@ its "Save as template" is real now, but ASSIGNING homework from it is still
 cache-only — it passes by the gate's per-file rule, not on its merits.
 Homework itself, make-ups, the profile's report cards and packages, block
 time and the pre-session "briefed" state remain cache-only.
+
+## 2026-09-12 — training's block time is a calendar event
+
+"Block this time" on the training day view wrote into the query cache
+(`fanOutTimeBlockUpsert`): "Time blocked on Marcus's schedule" was toasted,
+and the striped block was gone on reload and invisible to every other screen.
+It is a `calendar_events` row of kind `block-time` now — the table the
+facility calendar and the grooming calendar's time blocks already write
+(20260910223523) — aimed at the trainer (`affects: "staff"`,
+`affectedStaff` = the trainer id) or at the facility. The day view reads the
+calendar's events, so a facility-wide block made on the facility calendar
+stops every trainer column too. Clicking a block soft-deletes it (the
+calendar recovers deleted events for 30 days). e2e `training-block-time.spec.ts`
+(2, full suite; afterAll deletes its rows as service_role).
+
+**Two seams to know.** The facility calendar's "Block time" stores the staff
+member's NAME in `affectedStaff` and the grooming calendar stores the id, so
+`blocksForTrainerOnDate` matches either. And a recurring block made on the
+facility calendar is drawn on its first day only — the training day view does
+not expand recurrence.
+
+## 2026-09-12 — a customer is shown their facility's training
+
+The customer portal read `training_module_settings`, `training_pathways` and
+`training_disciplines` through `/api/facility/settings`, which resolves the
+facility from a staff membership a customer does not have — so every customer
+got the shipped defaults: a facility that required video for homework, or
+priced a drop-in, changed nothing its customers were told. 20260912163211 put
+the three on `private.customer_visible_setting_domains()` (the trainers'
+exercises, homework templates and course types stay off it), and
+`/api/customer/training-settings` reads them through the client row, as
+`/api/customer/yipyy-go` does. SQL `customer-visible-settings.sql` (11) and a
+fourth test in `training-catalog.spec.ts`.
+
+**Still open (training):** homework and make-ups (each needs a table), the
+student profile's report cards and packages, the pre-session "briefed" state,
+and assigning homework from the session prompt remain cache-only.

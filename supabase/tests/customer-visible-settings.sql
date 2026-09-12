@@ -202,6 +202,48 @@ end $$;
 
 reset role;
 
+-- ── 9–10. Training's customer-facing domains (20260912163211) ─────────────
+--
+-- The rules a customer trains under and the journeys on their catalogue are
+-- readable at their own facility and not at another; the trainers' exercise
+-- library, set at the same facility, is not readable at all.
+
+insert into public.facility_settings (facility_id, domain, value)
+select id, d.domain, d.value
+  from public.facilities
+ cross join (values
+   ('training_pathways', jsonb_build_object('pathways', '[]'::jsonb)),
+   ('training_exercises', jsonb_build_object('exercises', '[]'::jsonb))
+ ) as d(domain, value)
+ where slug in ('gamma-pets-cvs', 'delta-pets-cvs')
+on conflict (facility_id, domain) do update set value = excluded.value;
+
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_cvsWren0000000000000000000000','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare own int; other int; library int;
+begin
+  select count(*) into own from public.facility_settings fs
+    join public.facilities f on f.id = fs.facility_id
+   where f.slug = 'gamma-pets-cvs' and fs.domain = 'training_pathways';
+  select count(*) into other from public.facility_settings fs
+    join public.facilities f on f.id = fs.facility_id
+   where f.slug = 'delta-pets-cvs' and fs.domain = 'training_pathways';
+  select count(*) into library from public.facility_settings fs
+    join public.facilities f on f.id = fs.facility_id
+   where f.slug = 'gamma-pets-cvs' and fs.domain = 'training_exercises';
+  perform pg_temp.t(9,
+    'a client reads training_pathways at their own facility and not at another',
+    own = 1 and other = 0, 'own ' || own || ', other ' || other);
+  perform pg_temp.t(10,
+    'a client CANNOT read the trainers'' exercise library at their own facility',
+    library = 0, library || ' rows');
+end $$;
+
+reset role;
+
 -- ── The list itself ───────────────────────────────────────────────────────
 --
 -- Asserted separately from the policy so a failure says WHICH of the two moved:
@@ -220,6 +262,10 @@ begin
   perform pg_temp.t(8,
     'mobile_app_config is on the customer allowlist',
     'mobile_app_config' = any(domains), array_length(domains, 1) || ' domains');
+  perform pg_temp.t(11,
+    'training_module_settings, training_pathways and training_disciplines are on the customer allowlist',
+    array['training_module_settings', 'training_pathways', 'training_disciplines'] <@ domains,
+    array_to_string(domains, ', '));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

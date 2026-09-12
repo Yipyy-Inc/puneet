@@ -39,6 +39,7 @@ import type { Pet } from "@/types/pet";
 import { TrainingWaiversSection } from "./training-waivers-section";
 import { allRequiredWaiversSigned } from "@/data/training-waivers";
 import { trainingQueries } from "@/lib/api/training";
+import { customerTrainingSettingsQueries } from "@/lib/api/customer-training-settings";
 import {
   buildDropInCountsBySessionId,
   fanOutDropInUpsert,
@@ -90,7 +91,12 @@ export function DropInDialog({ open, onOpenChange, series, pets }: Props) {
   const [busy, setBusy] = useState(false);
   const [openedAtMs] = useState<number>(nowMs);
 
-  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  // The facility's own rules, through the client row — trainingQueries goes
+  // through a staff membership, so a customer only ever saw the defaults.
+  const { data: moduleSettings } = useQuery({
+    ...customerTrainingSettingsQueries.all(),
+    select: (s) => s.moduleSettings,
+  });
   const { data: dropInBookings = [] } = useQuery(
     trainingQueries.dropInBookings(),
   );

@@ -2,6 +2,7 @@ import type { Trainer, TrainerNote, TrainingPackage } from "@/types/training";
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
+import type { CustomerTrainingSettings } from "@/app/api/customer/training-settings/route";
 
 // ============================================================================
 // THE BOOK AND THE TEAM ARE THE FACILITY'S
@@ -170,4 +171,23 @@ export async function fetchTrainingSettingValue<T extends object>(
     { value?: Partial<T> } | undefined
   >;
   return { ...fallback, ...(settings[domain]?.value ?? {}) };
+}
+
+/**
+ * The training a CUSTOMER is offered, through the client row
+ * (/api/customer/training-settings). Here rather than in
+ * customer-training-settings.ts for the reason at the top of this file: the
+ * customer homework tab reads its module settings, and a request one import
+ * away would make its still cache-only "done" look real to
+ * `check:success-claims`.
+ */
+export async function fetchCustomerTrainingSettings(): Promise<CustomerTrainingSettings> {
+  const response = await fetch("/api/customer/training-settings");
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(detail?.error ?? `Failed (${response.status})`);
+  }
+  return (await response.json()) as CustomerTrainingSettings;
 }

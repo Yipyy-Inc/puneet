@@ -31,6 +31,7 @@ import {
   Users,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
+import { customerTrainingSettingsQueries } from "@/lib/api/customer-training-settings";
 import {
   REPORT_CARD_THEME_ACCENT,
   TRAINING_LEVEL_BADGE_CLS,
@@ -150,7 +151,12 @@ export function CustomerReportCardsTab({ customerId }: Props) {
   // message") for any whose follow-up window has elapsed without an
   // enrollment, then stamp `graduationFollowUpSentAt` so it only fires
   // once. Real-world this would be a server cron.
-  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  // The facility's own rules, through the client row — trainingQueries goes
+  // through a staff membership, so a customer only ever saw the defaults.
+  const { data: moduleSettings } = useQuery({
+    ...customerTrainingSettingsQueries.all(),
+    select: (s) => s.moduleSettings,
+  });
   // Not before hydration: until then `t` is the English one, and this runs
   // once — so without the gate the toast would always be English, and with
   // `t` alone in the deps it would fire twice.
