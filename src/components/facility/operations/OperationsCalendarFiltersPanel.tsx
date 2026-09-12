@@ -1,7 +1,5 @@
 "use client";
 
-import { toast } from "sonner";
-import { CalendarPlus, Copy, RefreshCw } from "lucide-react";
 import { FilterSection } from "@/components/facility/operations/OperationsCalendarViews";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +8,6 @@ import type {
   OperationsCalendarFilters,
   OperationsCalendarFilterOptions,
 } from "@/lib/operations-calendar";
-import {
-  EXTERNAL_PLATFORM_META,
-  formatLastSynced,
-  getYipyyIcsExportUrl,
-  syncExternalCalendar,
-  useExternalCalendars,
-} from "@/lib/external-calendars";
 
 type ToggleGroupKey =
   | "modules"
@@ -42,7 +33,6 @@ interface OperationsCalendarFiltersPanelProps {
   onToggleGroupValue: (group: ToggleGroupKey, value: string) => void;
   onClearAll: () => void;
   onClose: () => void;
-  onConnectCalendar: () => void;
 }
 
 export function OperationsCalendarFiltersPanel({
@@ -52,18 +42,10 @@ export function OperationsCalendarFiltersPanel({
   onToggleGroupValue,
   onClearAll,
   onClose,
-  onConnectCalendar,
 }: OperationsCalendarFiltersPanelProps) {
-  const externalCalendars = useExternalCalendars();
-
   if (!open) {
     return null;
   }
-
-  const copyExportUrl = () => {
-    navigator.clipboard?.writeText(getYipyyIcsExportUrl());
-    toast.success("Export URL copied");
-  };
 
   const selectedLocation = filters.locations[0] ?? "";
   // Location is hidden for single-location facilities (one or no location).
@@ -132,89 +114,10 @@ export function OperationsCalendarFiltersPanel({
           onToggle={(value) => onToggleGroupValue("bookingSources", value)}
         />
 
-        {/* External calendars (spec 6.4 / Tables 75 & 77) */}
-        <div className="space-y-2 rounded-xl border border-slate-200/70 bg-white/90 p-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-              External Calendars
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1 px-2 text-xs text-sky-600 hover:text-sky-700"
-              onClick={onConnectCalendar}
-            >
-              <CalendarPlus className="size-3.5" />
-              Connect External Calendar
-            </Button>
-          </div>
-
-          {externalCalendars.length === 0 ? (
-            <p className="py-1 text-[11px] text-slate-400">
-              No external calendars connected.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {externalCalendars.map((calendar) => {
-                const meta = EXTERNAL_PLATFORM_META[calendar.platform];
-                return (
-                  <div
-                    key={calendar.id}
-                    className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-2.5 py-1.5"
-                  >
-                    <span
-                      className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-white text-[9px] font-black ring-1 ring-slate-200"
-                      style={{ color: meta.color }}
-                    >
-                      {meta.glyph}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-semibold text-slate-700">
-                        {calendar.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        Last synced: {formatLastSynced(calendar.lastSyncedAt)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 shrink-0 text-slate-400 hover:text-slate-700"
-                      title="Sync now"
-                      onClick={() => {
-                        syncExternalCalendar(calendar.id);
-                        toast.success(`${calendar.name} synced`);
-                      }}
-                    >
-                      <RefreshCw className="size-3.5" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Read-only .ics export URL (Task 36 / Table 77) */}
-          <div className="mt-1 border-t border-slate-100 pt-2">
-            <p className="mb-1 text-[10px] font-medium text-slate-500">
-              Yipyy calendar export (read-only .ics)
-            </p>
-            <div className="flex items-center gap-1.5">
-              <code className="min-w-0 flex-1 truncate rounded-sm bg-slate-100 px-2 py-1 text-[10px] text-slate-600">
-                {getYipyyIcsExportUrl()}
-              </code>
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-6 shrink-0"
-                title="Copy export URL"
-                onClick={copyExportUrl}
-              >
-                <Copy className="size-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
+        {/* No "External Calendars" block. It listed connected calendars
+            nobody had connected, its "Sync now" only moved a timestamp, and
+            the ".ics export" URL carried a hardcoded token to a feed that does
+            not exist. It returns with a real calendar integration. */}
 
         {/* Footer (spec Table 48) */}
         <div className="flex items-center justify-between gap-2 border-t border-slate-200 pt-3">

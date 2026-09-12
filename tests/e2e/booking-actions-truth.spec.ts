@@ -178,6 +178,29 @@ test.describe("the booking page's actions do what they say", () => {
     expect(nothingOwed.status()).toBe(409);
   });
 
+  test("a message to a client is refused when it cannot be sent", async ({
+    page,
+  }) => {
+    // The calendar drawer's "Send reminder SMS" and composer toasted "SMS
+    // sent" over an in-memory array. They go through this route now; its
+    // refusals are what can be pinned without sending a real message.
+    await signIn(page, ACCOUNTS.owner);
+    const badChannel = await page.request.post(
+      `/api/clients/${BOB.client}/message`,
+      { data: { channel: "pigeon", body: "Hello" } },
+    );
+    expect(badChannel.status()).toBe(422);
+    const empty = await page.request.post(
+      `/api/clients/${BOB.client}/message`,
+      { data: { channel: "sms", body: "   " } },
+    );
+    expect(empty.status()).toBe(422);
+    const nobody = await page.request.post("/api/clients/999999999/message", {
+      data: { channel: "sms", body: "Hello" },
+    });
+    expect(nobody.status()).toBe(404);
+  });
+
   test("Mark as ready writes the ready status", async ({ page }) => {
     test.slow();
     await signIn(page, ACCOUNTS.owner);

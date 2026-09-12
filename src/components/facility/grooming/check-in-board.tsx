@@ -202,13 +202,18 @@ export function CheckInBoard() {
    * those fields are lost on reload today, exactly as they were before this
    * change, and they stop being lost when their tables land.
    */
-  function patch(next: GroomingAppointment) {
+  // `onSaved` runs once the write has landed — the success toasts used to
+  // fire on the line after the call, so a refused change showed both.
+  function patch(next: GroomingAppointment, onSaved?: () => void) {
     setPatches((prev) => ({ ...prev, [next.id]: next }));
 
     const before = appointments.find((a) => a.id === next.id);
     const statusChanged = before && before.status !== next.status;
     const stationChanged = before && before.stationId !== next.stationId;
-    if (!statusChanged && !stationChanged) return;
+    if (!statusChanged && !stationChanged) {
+      onSaved?.();
+      return;
+    }
 
     setAppointmentStatus(
       {
@@ -217,6 +222,7 @@ export function CheckInBoard() {
         ...(stationChanged ? { stationId: next.stationId ?? null } : {}),
       },
       {
+        onSuccess: () => onSaved?.(),
         onError: (error) =>
           toast.error(
             error instanceof Error
@@ -235,8 +241,10 @@ export function CheckInBoard() {
   function handleCheckInConfirm(result: CheckInConfirmation) {
     if (!activeAppt) return;
     if (result.markNoShow) {
-      patch({ ...activeAppt, status: "no-show" });
-      toast.warning(`${activeAppt.petName} — No-Show`);
+      const pet = activeAppt.petName;
+      patch({ ...activeAppt, status: "no-show" }, () =>
+        toast.warning(`${pet} — No-Show`),
+      );
       closeDialog();
       return;
     }
@@ -252,10 +260,12 @@ export function CheckInBoard() {
     );
     recordStationAssignmentHistory(next, result.stationName, "You");
     next.status = "checked-in";
-    patch(next);
-    toast.success(`${activeAppt.petName} — Checked In`, {
-      description: `Station ${result.stationName}`,
-    });
+    const pet = activeAppt.petName;
+    patch(next, () =>
+      toast.success(`${pet} — Checked In`, {
+        description: `Station ${result.stationName}`,
+      }),
+    );
     closeDialog();
   }
 
@@ -269,15 +279,17 @@ export function CheckInBoard() {
       beforePhotos: [],
       mattingFeeWarning: false,
     };
-    patch({
-      ...apt,
-      status: "in-progress",
-      intake: {
-        ...baseIntake,
-        sessionStartedAt: baseIntake.sessionStartedAt ?? now,
+    patch(
+      {
+        ...apt,
+        status: "in-progress",
+        intake: {
+          ...baseIntake,
+          sessionStartedAt: baseIntake.sessionStartedAt ?? now,
+        },
       },
-    });
-    toast.success(`${apt.petName} — Grooming started`);
+      () => toast.success(`${apt.petName} — Grooming started`),
+    );
   }
 
   function handleMarkReadyConfirm(result: MarkReadyConfirmation) {
@@ -290,8 +302,8 @@ export function CheckInBoard() {
       facilityName: "Yipyy",
     });
     next.status = "ready-for-pickup";
-    patch(next);
-    toast.success(`${activeAppt.petName} — Ready for Pickup`);
+    const pet = activeAppt.petName;
+    patch(next, () => toast.success(`${pet} — Ready for Pickup`));
     closeDialog();
   }
 
@@ -306,21 +318,27 @@ export function CheckInBoard() {
     });
     // The payment and, when credit was spent, its ledger entry — one
     // transaction (record_payment). applyPaymentResult decided what it says.
+    // The groom completes only once its payment is on the ledger: it was
+    // marked completed whether or not the payment was refused.
+    const apt = activeAppt;
     recordPayment(summary.paymentRecord, {
       onError: (error) => toast.error(error.message),
-    });
-    // applyPaymentResult already sets status = "completed".
-    patch(next);
-    recordEvent({
-      type: "booking_completed",
-      id: String(activeAppt.id),
-      customerId: activeAppt.ownerId,
-      amount: summary.grandTotal,
-      serviceType: "grooming",
-      isService: true,
-    });
-    toast.success(`${activeAppt.petName} — Completed`, {
-      description: `$${summary.amountCharged.toFixed(2)} charged`,
+      onSuccess: () => {
+        // applyPaymentResult already sets status = "completed".
+        patch(next, () =>
+          toast.success(`${apt.petName} — Completed`, {
+            description: `$${summary.amountCharged.toFixed(2)} recorded`,
+          }),
+        );
+        recordEvent({
+          type: "booking_completed",
+          id: String(apt.id),
+          customerId: apt.ownerId,
+          amount: summary.grandTotal,
+          serviceType: "grooming",
+          isService: true,
+        });
+      },
     });
     closeDialog();
   }

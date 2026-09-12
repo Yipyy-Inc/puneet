@@ -394,19 +394,18 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
 
   const save = () => {
     if (!form.name.trim()) return;
+    // Said once saved — both toasted on the line after asking, and the hook
+    // swallowed a refusal, so a failed save read as a success.
     if (dialog.editing) {
-      updateStation(form);
-      toast.success("Station updated");
+      updateStation(form, () => toast.success("Station updated"));
     } else {
-      addStation(form);
-      toast.success("Station added");
+      addStation(form, () => toast.success("Station added"));
     }
     closeDialog();
   };
 
   const remove = (id: string) => {
-    deleteStation(id);
-    toast.success("Station removed");
+    deleteStation(id, () => toast.success("Station removed"));
   };
 
   const toggle = (id: string) => toggleStation(id);
@@ -433,8 +432,9 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
   );
 
   const handleStatusChange = (id: string, next: GroomingStationStatus) => {
-    setStationStatus(id, next);
-    toast.success(`Station marked ${STATUS_META[next].label.toLowerCase()}`);
+    setStationStatus(id, next, undefined, () =>
+      toast.success(`Station marked ${STATUS_META[next].label.toLowerCase()}`),
+    );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

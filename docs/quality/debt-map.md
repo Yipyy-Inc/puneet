@@ -13277,3 +13277,67 @@ the nightly suite.
   beside the rules lists statuses the database does not have ("Checked out",
   "Overdue", "Planned", "Refunded"); a pay-link send is not recorded in
   `message_sends`.
+
+## 2026-09-12 — the operations calendar and the grooming board stop inventing
+
+Step 3 of the booking audit, the screens staff use daily. A read-only survey
+listed every success message in grooming, training, the calendars, the kiosk
+and custom services against what its handler writes; this entry is the part
+done. `POST /api/clients/[ref]/message` is new: one staff message to one
+client through `lib/messaging/send` (staging refuses, the opt-out list is
+asked first, `sent: false` with a reason is a normal answer).
+
+**Operations calendar**
+
+- Invented events are gone: a Google "Vet Conference — Dr. Alvarez" and a
+  Calendly consult drawn every day, two sample custom-module group sessions,
+  the sample shop's sales and sample custom-service check-ins
+  (`buildUnifiedEvents` / `OperationsCalendar.tsx`). The waitlist store seeded
+  three invented clients onto today and the cancel flow offered to "notify"
+  them; it starts empty and the offer is gone.
+- Check-in, check-out, staff assignment, cancel and drag-reschedule toast in
+  the write's `onSuccess` — a refused save showed success and error at once.
+- The drawer's Notes tab is the booking's real notes (`NotesList`), not one
+  local text box. Attaching an add-on bills it (`/api/bookings/[ref]/line-items`)
+  at the facility's price. "Send reminder SMS" and the message composer send
+  through the new route; "Flag for review" (no review queue) is gone.
+- "Connect Calendar", the external-calendars block, "Sync now" and the
+  `.ics` export URL (a hardcoded token to a feed that does not exist) are
+  removed with `ExternalCalendarWizard` and `lib/external-calendars`.
+
+**Grooming**
+
+- The payment dialog no longer offers "Card on file" / "New card": both
+  recorded a CARD payment through `record_payment` without charging anything.
+  Cards are taken at the booking's checkout. Its SMS/Email receipt boxes
+  (nothing sends a receipt) are gone.
+- "SMS sent to {owner}" at check-in and mark-ready, and "Receipt sent", are
+  gone — nothing sent them. Status toasts on the board, the calendar panel and
+  the appointment page wait for the write; a groom is marked completed only
+  once its payment is on the ledger.
+- Session "issues" file real incidents (`/api/incidents`); taking one back
+  closes it. Pinning a profile note writes `is_pinned`. Bulk reschedule,
+  cancel and follow-up write through the booking and grooming routes and
+  report how many landed; drag-reschedule no longer shows the text of an SMS
+  nobody sent. Editing a service no longer offers to "apply to upcoming
+  appointments" (it rewrote the cache only); it says they keep what they were
+  booked at, which is what the database does.
+- **Still open (grooming):** charges added at check-in / mark-ready change the
+  appointment in memory (should be line items); check-in and after photos are
+  blob URLs ("saved to the profile" is not true); the pre-visit surcharge;
+  the waitlist's "Expire & Pass" toasts before its two writes land; the
+  groomer page, route planner and live tracking read fixtures; grooming
+  settings (`useState`), mobile grooming (`localStorage`, which also sets
+  the payment tax per browser), the "save this price for the pet" store
+  (`localStorage`), and the shared module Tasks tab.
+- **Still open elsewhere:** the training student profile, homework, report
+  cards, make-ups, courses and training settings (cache over fixtures); the
+  QR check-in kiosk (`/facility/checkin`, entirely in-memory); custom
+  services (`localStorage` per browser, no table); the calendar's recurring
+  "cancel this occurrence" (a module-level Set) and saved views
+  (`localStorage`).
+- **A spec lesson:** booking-payment-screens looked for its booking on page
+  one of a newest-first list, and every test booking that took money stays
+  forever (payments are append-only, so the purge cannot remove it). It
+  searches by its booking number now. Specs that need a booking to be FOUND
+  should search for it, never rely on sort position.

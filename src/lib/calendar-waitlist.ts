@@ -28,39 +28,12 @@ export interface WaitlistDisplayEntry extends CalendarWaitlistEntry {
   position: number;
 }
 
-// Seed a couple of full-slot waiters on today so the section + freed-slot flow
-// are demonstrable. Times align with commonly-full demo slots.
-function isoToday(hour: number, minute: number): string {
-  const date = new Date();
-  date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
-}
-
-let entries: CalendarWaitlistEntry[] = [
-  {
-    id: "wait-seed-1",
-    clientName: "Amanda Reyes",
-    petName: "Bella",
-    service: "Full Grooming",
-    requestedStart: isoToday(14, 0),
-    staff: "Sofia Martinez",
-  },
-  {
-    id: "wait-seed-2",
-    clientName: "Marcus Lee",
-    petName: "Cooper",
-    service: "Full Grooming",
-    requestedStart: isoToday(14, 0),
-  },
-  {
-    id: "wait-seed-3",
-    clientName: "Priya Nair",
-    petName: "Milo",
-    service: "Daycare Full Day",
-    requestedStart: isoToday(9, 0),
-  },
-];
-
+// NO SEED. It put three invented clients ("Amanda Reyes", "Marcus Lee",
+// "Priya Nair") on today's column of every facility's calendar, and the
+// cancel flow offered to notify them. The waitlist a facility actually keeps is
+// the grooming one (`/api/grooming/waitlist`); until this store reads it, it is
+// empty rather than invented.
+let entries: CalendarWaitlistEntry[] = [];
 let seq = entries.length;
 const listeners = new Set<() => void>();
 const EMPTY: CalendarWaitlistEntry[] = [];

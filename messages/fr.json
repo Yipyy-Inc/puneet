@@ -2058,7 +2058,12 @@
         "notBooked": "Le rendez-vous n’a pas été réservé",
         "notSaved": "Cette modification n’a pas été enregistrée.",
         "moveNotSaved": "Ce déplacement n’a pas été enregistré",
-        "blockNotSaved": "Le blocage n’a pas été enregistré"
+        "blockNotSaved": "Le blocage n’a pas été enregistré",
+        "incidentLogged": "Incident consigné · {kind}",
+        "incidentOnScreen": "Il figure à l’écran Incidents pour examen.",
+        "incidentNotLogged": "L’incident n’a pas été consigné",
+        "incidentClosed": "Incident clos",
+        "incidentNotClosed": "L’incident n’a pas été clos"
       },
       "trainingProfile": {
         "notFound": "Aucun élève avec cet identifiant dans cet établissement.",

@@ -152,15 +152,8 @@ export function applyCheckInResult(
       })),
     ];
     apt.totalPrice = apt.totalPrice + addedTotal;
-    const labelList =
-      newlyAdded.length === 1
-        ? `[${newlyAdded[0]}]`
-        : `[${newlyAdded.join(", ")}]`;
-    const smsBody = `We've added ${labelList} to ${apt.petName}'s appointment today. Updated total: $${apt.totalPrice.toFixed(2)}.`;
-    deps.notify(`SMS sent to ${apt.ownerName}`, {
-      description: smsBody,
-      duration: 8000,
-    });
+    // It announced "SMS sent to {owner}" with the text of a message nothing
+    // sent. No sender is wired to a check-in, so nothing is announced.
   }
 
   // ── 5. Promote arrival flags into carry-forward alert notes ────────────
@@ -411,12 +404,9 @@ export function applyMarkReadyResult(
     deps.setStationStatus(apt.stationId, "needs-cleaning");
   }
 
-  // ── 6. Pickup SMS — bundles ready + updated total per the spec ─────────
-  const smsBody = `${apt.petName} is clean and ready! 🐾 Come pick them up at ${deps.facilityName}. Your total today is $${apt.totalPrice.toFixed(2)}.`;
-  deps.notify(`SMS sent to ${apt.ownerName}`, {
-    description: smsBody,
-    duration: 8000,
-  });
+  // ── 6. No pickup SMS. It announced "SMS sent to {owner}" with a message
+  // nothing sent; ready-for-pickup triggers no automation either
+  // (/api/grooming/appointments). Nothing is announced that did not happen.
 
   return {
     finalChargesTotal,
@@ -579,29 +569,7 @@ export function applyPaymentResult(
     deps.setStationStatus(apt.stationId, "available");
   }
 
-  // ── 5. Receipt notification(s) — SMS / Email per the channels picked ───
-  const channelLabel = result.receiptChannels
-    .map((c) => (c === "sms" ? "SMS" : "Email"))
-    .join(" + ");
-  const methodLabel = (() => {
-    switch (result.method) {
-      case "card-on-file":
-        return "card on file";
-      case "new-card":
-        return "new card";
-      case "cash":
-        return "cash";
-      case "package-pass":
-        return "package pass";
-      case "store-credit":
-        return "store credit";
-    }
-  })();
-  const receiptBody = `Receipt · ${methodLabel} · charged $${result.amountCharged.toFixed(2)} (total $${result.grandTotal.toFixed(2)}). Thanks for visiting ${deps.facilityName}!`;
-  deps.notify(`Receipt sent to ${apt.ownerName} (${channelLabel})`, {
-    description: receiptBody,
-    duration: 8000,
-  });
+  // ── 5. No receipt notification. No "Receipt sent to {owner}": nothing sends a groom's receipt.
 
   return {
     amountCharged: result.amountCharged,

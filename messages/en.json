@@ -2058,7 +2058,12 @@
         "notBooked": "The appointment was not booked",
         "notSaved": "That change was not saved.",
         "moveNotSaved": "That move was not saved",
-        "blockNotSaved": "The block was not saved"
+        "blockNotSaved": "The block was not saved",
+        "incidentLogged": "Incident logged · {kind}",
+        "incidentOnScreen": "It is on the Incidents screen for review.",
+        "incidentNotLogged": "The incident was not logged",
+        "incidentClosed": "Incident closed",
+        "incidentNotClosed": "The incident was not closed"
       },
       "trainingProfile": {
         "notFound": "No student with that id at this facility.",

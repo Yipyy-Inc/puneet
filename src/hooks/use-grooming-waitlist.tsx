@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import type {
   GroomingWaitlistEntry,
@@ -75,7 +76,8 @@ interface WaitlistContextValue {
   setStatus: (
     id: string,
     status: GroomingWaitlistStatus,
-    patch?: Partial<GroomingWaitlistEntry>,
+    /** Runs once the change is saved — for the caller's success message. */
+    onSaved?: () => void,
   ) => void;
   /**
    * Auto-match: given a date and a freed slot, find the highest-priority
@@ -262,6 +264,12 @@ export function GroomingWaitlistProvider({
         },
       }),
     onSuccess: invalidate,
+    // Failures were silent: no caller passed an error handler, so a refused
+    // write left a success toast standing on its own.
+    onError: (error: Error) =>
+      toast.error("The waitlist was not changed", {
+        description: error.message,
+      }),
   });
 
   const { mutate: patch } = useMutation({
@@ -271,6 +279,10 @@ export function GroomingWaitlistProvider({
         body: input.body,
       }),
     onSuccess: invalidate,
+    onError: (error: Error) =>
+      toast.error("The waitlist was not changed", {
+        description: error.message,
+      }),
   });
 
   /**
@@ -297,12 +309,11 @@ export function GroomingWaitlistProvider({
   );
 
   const setStatus = useCallback(
-    (id: string, status: GroomingWaitlistStatus) => {
-      // The `patch` argument is deliberately not forwarded. Every field it was
-      // ever used to carry — offeredAt, offeredUntil, offeredSlot — is now the
-      // server's, and `offerSlot` below is the way to set the one that is still
-      // caller-supplied. Kept in the signature so the call sites compile.
-      patch({ id, body: { status } });
+    (id: string, status: GroomingWaitlistStatus, onSaved?: () => void) => {
+      // Only the status travels. Every field a patch was ever used to carry —
+      // offeredAt, offeredUntil, offeredSlot — is now the server's, and
+      // `offerSlot` below is the way to set the one still caller-supplied.
+      patch({ id, body: { status } }, { onSuccess: () => onSaved?.() });
     },
     [patch],
   );

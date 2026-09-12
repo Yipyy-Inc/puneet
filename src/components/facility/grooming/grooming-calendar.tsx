@@ -69,7 +69,6 @@ import {
   getBookedStationIdsInWindow,
 } from "@/lib/grooming-scheduling";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
-import { buildBookingChangeMessage } from "@/lib/grooming-post-booking";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2485,14 +2484,9 @@ export function GroomingCalendar() {
         appointmentId: apt.id,
         description: trail,
       });
-      toast.success(`${apt.petName} reassigned to ${drop.targetStylistName}`, {
-        description: buildBookingChangeMessage({
-          kind: "reassign",
-          petName: apt.petName,
-          clientName: apt.ownerName,
-          newGroomerName: drop.targetStylistName,
-        }),
-      });
+      // The description was the text of an SMS to the owner that nothing
+      // sent. The move is saved; the owner is not told by it.
+      toast.success(`${apt.petName} reassigned to ${drop.targetStylistName}`);
     } else {
       const updated: GroomingAppointment = {
         ...apt,
@@ -2521,14 +2515,7 @@ export function GroomingCalendar() {
         appointmentId: apt.id,
         description: trail,
       });
-      toast.success(`${apt.petName} rescheduled to ${drop.newTime}`, {
-        description: buildBookingChangeMessage({
-          kind: "reschedule",
-          petName: apt.petName,
-          clientName: apt.ownerName,
-          newTime: drop.newTime,
-        }),
-      });
+      toast.success(`${apt.petName} rescheduled to ${drop.newTime}`);
     }
   }
 
@@ -3014,9 +3001,9 @@ export function GroomingCalendar() {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {pendingDrop?.kind === "reassign"
-                  ? `Reassign ${pendingDrop.apt.petName} to ${pendingDrop.targetStylistName}? The owner will be notified.`
+                  ? `Reassign ${pendingDrop.apt.petName} to ${pendingDrop.targetStylistName}? The owner is not messaged from here.`
                   : pendingDrop
-                    ? `Reschedule ${pendingDrop.apt.petName} to ${pendingDrop.newTime}? The owner will be notified.`
+                    ? `Reschedule ${pendingDrop.apt.petName} to ${pendingDrop.newTime}? The owner is not messaged from here.`
                     : ""}
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -120,6 +120,15 @@ test.describe("the payment button reaches the ledger", () => {
     ).json()) as BookingPayload;
 
     await page.goto("/facility/dashboard/bookings");
+    // SEARCHED FOR, not expected on page one. The list is newest-date first,
+    // and every test booking that took money stays forever (payments are
+    // append-only, so the purge cannot remove it) — by 2026-09-12 nineteen of
+    // them sat further in the future than this one and pushed it off the
+    // first page. Its number is what makes it this booking; search by it.
+    await page
+      .getByPlaceholder(/search by booking id/i)
+      .first()
+      .fill(String(created.id), { timeout: 30_000 });
     await expect(
       page.getByText(String(created.id), { exact: false }).first(),
     ).toBeVisible({ timeout: 30_000 });
