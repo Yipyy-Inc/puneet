@@ -20,57 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { facilities } from "@/data/facilities";
 
 // ── Color mapping for custom statuses ────────────────────────────────────────
-
-const COLOR_MAP: Record<string, { dot: string; bg: string }> = {
-  red: {
-    dot: "bg-red-500",
-    bg: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
-  },
-  orange: {
-    dot: "bg-orange-500",
-    bg: "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100",
-  },
-  amber: {
-    dot: "bg-amber-500",
-    bg: "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100",
-  },
-  yellow: {
-    dot: "bg-yellow-500",
-    bg: "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100",
-  },
-  emerald: {
-    dot: "bg-emerald-500",
-    bg: "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100",
-  },
-  teal: {
-    dot: "bg-teal-500",
-    bg: "bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100",
-  },
-  blue: {
-    dot: "bg-blue-500",
-    bg: "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100",
-  },
-  violet: {
-    dot: "bg-violet-500",
-    bg: "bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100",
-  },
-  purple: {
-    dot: "bg-purple-500",
-    bg: "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100",
-  },
-  pink: {
-    dot: "bg-pink-500",
-    bg: "bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100",
-  },
-  slate: {
-    dot: "bg-slate-400",
-    bg: "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100",
-  },
-};
 
 // ── Status definitions ───────────────────────────────────────────────────────
 
@@ -208,25 +159,9 @@ export function BookingStatusDropdown({
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
   const current = getStatusDef(currentStatus);
 
-  // Load custom statuses from facility config
-  const facility = facilities.find((f) => f.id === 11);
-  const customStatuses: StatusDef[] = (
-    (facility?.bookingStatusConfig?.customStatuses as {
-      id: string;
-      name: string;
-      color: string;
-      position: number;
-    }[]) ?? []
-  ).map((cs) => {
-    const colors = COLOR_MAP[cs.color] ?? COLOR_MAP.blue;
-    return {
-      id: cs.id,
-      label: cs.name,
-      dot: colors.dot,
-      bg: colors.bg,
-      group: "custom" as const,
-    };
-  });
+  // Custom statuses are not offered. They came from fixture facility 11, and
+  // `bookings.status` is an enum: picking one was refused by the database
+  // after the menu had already said it was done.
 
   const flowStatuses = SYSTEM_STATUSES.filter((s) => s.group === "flow");
   const terminalStatuses = SYSTEM_STATUSES.filter(
@@ -252,10 +187,10 @@ export function BookingStatusDropdown({
     applyChange(statusId);
   };
 
+  // The caller writes the status and reports what happened. This toasted
+  // "Status updated" on the same line, before the write had started.
   const applyChange = (statusId: string) => {
-    const def = getStatusDef(statusId);
     onStatusChange(statusId);
-    toast.success(`Status updated to ${def.label}`);
     setConfirmTarget(null);
   };
 
@@ -313,24 +248,6 @@ export function BookingStatusDropdown({
               {s.label}
             </DropdownMenuItem>
           ))}
-          {customStatuses.length > 0 && (
-            <>
-              <DropdownMenuSeparator />
-              {customStatuses.map((s) => (
-                <DropdownMenuItem
-                  key={s.id}
-                  onClick={() => handleSelect(s.id)}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 text-xs",
-                    s.id === currentStatus && "bg-accent font-semibold",
-                  )}
-                >
-                  <div className={cn("size-2 rounded-full", s.dot)} />
-                  {s.label}
-                </DropdownMenuItem>
-              ))}
-            </>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

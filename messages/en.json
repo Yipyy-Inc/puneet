@@ -1738,7 +1738,13 @@
         "declinedDone": "{ref} is declined",
         "earlyCheckoutDone": "{ref} now ends {date}",
         "earlyCheckoutHelp": "A refund, credit or fee from the early-checkout policy is not applied for you — settle it at the till.",
-        "earlyCheckoutFailed": "The early checkout was not recorded"
+        "earlyCheckoutFailed": "The early checkout was not recorded",
+        "payLinkEmailed": "Payment link emailed to {name}",
+        "payLinkTexted": "Payment link texted to {name}",
+        "payLinkNotSent": "The payment link was not sent",
+        "markedReady": "{ref} is ready to go home",
+        "finishedUnpaid": "Finished — the balance stays open for later",
+        "bookingConfirmed": "{ref} confirmed"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",
@@ -4595,7 +4601,9 @@
         "calStatus_Overdue": "Overdue",
         "calStatus_Scheduled": "Scheduled",
         "calStatus_Planned": "Planned",
-        "calStatus_Refunded": "Refunded"
+        "calStatus_Refunded": "Refunded",
+        "saving": "Saving…",
+        "saveFailed": "The status settings were not saved"
       },
       "estimate-settings": {
         "brandingNote": "Estimate emails use your invoice template's branding.",

@@ -133,6 +133,11 @@ const BASELINE = new Set([
   // it. No gate ever asked about this key; bookings are gated by
   // `create_bookings`, plural, in RLS.
   "create_booking",
+  // Its one consumer was InvoicePanel's "Apply discount", which edited the
+  // fixture `invoice` blob a migrated booking carried and never the booking.
+  // The panel went on 2026-09-12 (the booking page shows the ledger for every
+  // booking); a real booking has no manual discount to gate yet.
+  "apply_discount",
 
   // ── Service-module actions. The modules exist; the switches do not reach
   // them.
