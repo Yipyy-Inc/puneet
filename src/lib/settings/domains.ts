@@ -141,6 +141,12 @@ import {
   trainingConfig,
   weatherWarningRules,
 } from "@/data/settings";
+import {
+  customServicesSchema,
+  facilityResourcesSchema,
+  NO_CUSTOM_SERVICES,
+  NO_FACILITY_RESOURCES,
+} from "@/lib/settings/custom-services";
 import type {
   BookingRules,
   DropOffPickUpOverride,
@@ -496,6 +502,20 @@ export const SETTING_DOMAINS = {
   training_module_settings: {
     schema: trainingModuleSettingsSchema,
     fallback: SHIPPED_TRAINING_MODULE_SETTINGS,
+  },
+  // ── CUSTOM SERVICES ────────────────────────────────────────────────────
+  //
+  // The facility's own services beyond the four built in, and the resources
+  // they book. localStorage seeded from a fixture until 2026-09-12, so every
+  // facility showed the same invented services. Sold things, so the fallbacks
+  // are empty; see the banner in lib/settings/custom-services.ts.
+  custom_services: {
+    schema: customServicesSchema,
+    fallback: NO_CUSTOM_SERVICES,
+  },
+  facility_resources: {
+    schema: facilityResourcesSchema,
+    fallback: NO_FACILITY_RESOURCES,
   },
   // ── RETAIL ─────────────────────────────────────────────────────────────
   //

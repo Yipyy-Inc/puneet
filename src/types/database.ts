@@ -12157,6 +12157,10 @@ export type Database = {
         Returns: Json;
       };
       onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      offered_custom_services: {
+        Args: { p_facility_id: string };
+        Returns: Json;
+      };
       open_payment_intent: {
         Args: {
           p_amount_cents: number;

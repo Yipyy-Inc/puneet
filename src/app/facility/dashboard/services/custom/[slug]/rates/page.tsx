@@ -20,19 +20,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import type {
-  CustomServiceCheckIn,
-  CustomServiceVariant,
-} from "@/types/facility";
+import type { CustomServiceVariant } from "@/types/facility";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { addOnsForService } from "@/lib/settings/addons";
-import { customServiceCheckIns as initialCustomServiceCheckIns } from "@/data/custom-service-checkins";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
-import {
-  ApplyToUpcomingPrompt,
-  type ApplyToUpcomingAffected,
-  type ApplyToUpcomingChange,
-} from "@/components/facility/services/apply-to-upcoming-prompt";
 import {
   DollarSign,
   Clock,
@@ -262,16 +253,6 @@ export default function CustomServiceRatesPage() {
   const [deletingVariant, setDeletingVariant] =
     useState<CustomServiceVariant | null>(null);
 
-  const [checkIns, setCheckIns] = useState<CustomServiceCheckIn[]>(
-    initialCustomServiceCheckIns,
-  );
-  const [propagationPrompt, setPropagationPrompt] = useState<{
-    previous: CustomServiceVariant;
-    next: CustomServiceVariant;
-    affected: CustomServiceCheckIn[];
-    changes: ApplyToUpcomingChange[];
-  } | null>(null);
-
   // The facility's own extras for this custom service. One of thirteen
   // localStorage loaders, with a `storage` listener that reached the other
   // tabs of one browser and nothing else.
@@ -300,13 +281,21 @@ export default function CustomServiceRatesPage() {
     ? Math.max(...variants.map((v) => v.price))
     : serviceModule.pricing.basePrice;
 
-  function persistVariants(next: CustomServiceVariant[]) {
-    updateModule(serviceModule!.id, {
-      pricing: { ...serviceModule!.pricing, variants: next },
-    });
+  // Saved to the facility's settings before it says so — it was
+  // localStorage. Rejects with the server's reason, toasted here.
+  async function persistVariants(next: CustomServiceVariant[]) {
+    try {
+      await updateModule(serviceModule!.id, {
+        pricing: { ...serviceModule!.pricing, variants: next },
+      });
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
   }
 
-  function handleVariantSave(
+  async function handleVariantSave(
     form: VariantFormState,
     editing: CustomServiceVariant | null,
   ) {
@@ -321,83 +310,34 @@ export default function CustomServiceRatesPage() {
       capacityOverride: form.capacityOverride,
       onlineBookingEnabled: form.onlineBookingEnabled,
     };
-    persistVariants(
+    const saved = await persistVariants(
       editing
         ? variants.map((v) => (v.id === editing.id ? next : v))
         : [...variants, next],
     );
+    if (!saved) return;
     toast.success(
       editing ? `"${next.name}" updated` : `"${next.name}" created`,
     );
     setVariantDialogOpen(false);
     setEditingVariant(null);
 
-    if (editing && serviceModule) {
-      const priceChanged = editing.price !== next.price;
-      const durationChanged = editing.durationMinutes !== next.durationMinutes;
-      if (!priceChanged && !durationChanged) return;
-      const today = new Date().toISOString().split("T")[0];
-      const affected = checkIns.filter(
-        (c) =>
-          c.moduleId === serviceModule.id &&
-          c.status === "scheduled" &&
-          c.price === editing.price &&
-          c.durationMinutes === editing.durationMinutes &&
-          c.checkInTime.slice(0, 10) >= today,
-      );
-      if (affected.length === 0) return;
-      const changes: ApplyToUpcomingChange[] = [];
-      if (priceChanged) {
-        changes.push({
-          label: "Price",
-          from: `$${editing.price}`,
-          to: `$${next.price}`,
-        });
-      }
-      if (durationChanged) {
-        changes.push({
-          label: "Duration",
-          from: `${editing.durationMinutes} min`,
-          to: `${next.durationMinutes} min`,
-        });
-      }
-      setPropagationPrompt({ previous: editing, next, affected, changes });
-    }
+    // A variant's new price or length applies to new bookings. The "apply
+    // to upcoming appointments" prompt that offered more changed fixture
+    // check-ins in this page's state, not the facility's bookings.
   }
 
-  function applyPropagation() {
-    if (!propagationPrompt) return;
-    const { next, affected } = propagationPrompt;
-    const affectedIds = new Set(affected.map((a) => a.id));
-    setCheckIns((prev) =>
-      prev.map((c) =>
-        affectedIds.has(c.id)
-          ? { ...c, price: next.price, durationMinutes: next.durationMinutes }
-          : c,
-      ),
-    );
-    toast.success(
-      `Updated ${affected.length} upcoming appointment${
-        affected.length === 1 ? "" : "s"
-      } with the new price and duration.`,
-    );
-    setPropagationPrompt(null);
-  }
-
-  function skipPropagation() {
-    toast.info(
-      "Change applies to new bookings only — existing appointments untouched.",
-    );
-    setPropagationPrompt(null);
-  }
-  function handleVariantDelete() {
+  async function handleVariantDelete() {
     if (!deletingVariant) return;
-    persistVariants(variants.filter((v) => v.id !== deletingVariant.id));
+    const saved = await persistVariants(
+      variants.filter((v) => v.id !== deletingVariant.id),
+    );
+    if (!saved) return;
     toast.success(`"${deletingVariant.name}" deleted`);
     setDeletingVariant(null);
   }
   function toggleVariant(id: string) {
-    persistVariants(
+    void persistVariants(
       variants.map((v) => (v.id === id ? { ...v, isActive: !v.isActive } : v)),
     );
   }
@@ -637,28 +577,6 @@ export default function CustomServiceRatesPage() {
         serviceCapacity={serviceCapacity}
         defaultOnlineBooking={defaultOnlineBooking}
       />
-
-      {propagationPrompt && (
-        <ApplyToUpcomingPrompt
-          open={!!propagationPrompt}
-          onOpenChange={(o) => {
-            if (!o) setPropagationPrompt(null);
-          }}
-          serviceName={propagationPrompt.next.name}
-          serviceKind="service variant"
-          changes={propagationPrompt.changes}
-          affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
-            (c) => ({
-              id: c.id,
-              primary: c.petName,
-              secondary: c.ownerName,
-              date: c.checkInTime.slice(0, 10),
-            }),
-          )}
-          onApply={applyPropagation}
-          onSkip={skipPropagation}
-        />
-      )}
 
       {/* Variant delete confirmation */}
       <Dialog

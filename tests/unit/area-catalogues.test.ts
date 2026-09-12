@@ -48,6 +48,7 @@ const SAME_IN_BOTH = new Set([
   "staff.sellPackage.total", // Total / Total
   "staff.joinMembership.total", // Total / Total
   "staff.promoCodes.colCode", // Code / Code
+  "staff.customModuleCreate.backToModules", // {facility} · Modules / {facility} · Modules
   "staff.promoCodes.colActions", // Actions / Actions
   "staff.profileTabs.date",
   "staff.profile.tabNotifications",

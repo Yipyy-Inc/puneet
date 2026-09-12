@@ -2391,6 +2391,12 @@
         "notSentTo": "Not sent to {name}",
         "recordsSubject": "{pet}'s vaccine records",
         "recordsSentTo": "Records request sent to {name}"
+      },
+      "customModuleCreate": {
+        "backToModules": "{facility} · Modules",
+        "facility": "Facility",
+        "newCustomModule": "New custom module",
+        "notSaved": "The service was not saved ({status})."
       }
     }
   },

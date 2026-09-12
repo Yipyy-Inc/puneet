@@ -159,8 +159,6 @@ const BASELINE = new Set<string>([
   "src/app/employee/(shell)/tasks/my-tasks-view.tsx",
   "src/app/facility/account/payment-method/_components/payment-method-view.tsx",
   "src/app/facility/dashboard/inventory/InventoryClient.tsx",
-  "src/app/facility/dashboard/services/custom/[slug]/settings/_components/FacilitySettingsEditor.tsx",
-  "src/app/facility/dashboard/services/custom/page.tsx",
   "src/app/facility/dashboard/services/training/students/_components/homework-board.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-report-cards.tsx",

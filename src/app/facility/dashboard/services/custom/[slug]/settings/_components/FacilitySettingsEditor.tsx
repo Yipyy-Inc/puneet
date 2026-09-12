@@ -11,16 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { Pencil, Save, Send } from "lucide-react";
+import { Pencil, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { CustomServiceModule } from "@/types/facility";
 
@@ -30,9 +22,13 @@ interface FacilitySettingsEditorProps {
 
 /**
  * The only settings a facility can edit on a published custom module. Everything
- * else is locked to the superadmin's configuration and changed via "Request a
- * Change". The cancellation bounds (hours/fee) are locked; only the
- * customer-facing policy text is editable here.
+ * else is locked to the superadmin's configuration. The cancellation bounds
+ * (hours/fee) are locked; only the customer-facing policy text is editable
+ * here.
+ *
+ * "Request a Change" was removed on 2026-09-12: it toasted "Change request
+ * sent to Yipyy support" and sent nothing — there is no support inbox to
+ * send it to.
  */
 export function FacilitySettingsEditor({
   module,
@@ -49,8 +45,7 @@ export function FacilitySettingsEditor({
     module.onlineBooking.confirmationMessage ?? "",
   );
 
-  const [requestOpen, setRequestOpen] = useState(false);
-  const [requestText, setRequestText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const dirty =
     description !== (module.description ?? "") ||
@@ -58,25 +53,26 @@ export function FacilitySettingsEditor({
     cancellationText !== (cancel.text ?? "") ||
     confirmationMessage !== (module.onlineBooking.confirmationMessage ?? "");
 
-  const handleSave = () => {
-    updateModule(module.id, {
-      description,
-      internalNotes,
-      onlineBooking: {
-        ...module.onlineBooking,
-        confirmationMessage,
-        cancellationPolicy: { ...cancel, text: cancellationText },
-      },
-    });
+  // Saved to the facility's settings before it says so — it was localStorage.
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateModule(module.id, {
+        description,
+        internalNotes,
+        onlineBooking: {
+          ...module.onlineBooking,
+          confirmationMessage,
+          cancellationPolicy: { ...cancel, text: cancellationText },
+        },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    } finally {
+      setSaving(false);
+    }
     toast.success("Settings saved");
-  };
-
-  const handleSendRequest = () => {
-    toast.success("Change request sent to Yipyy support", {
-      description: "Our team will review your request and follow up by email.",
-    });
-    setRequestOpen(false);
-    setRequestText("");
   };
 
   return (
@@ -89,19 +85,9 @@ export function FacilitySettingsEditor({
               Settings You Can Edit
             </CardTitle>
             <CardDescription>
-              Everything else is configured by Yipyy. Use “Request a Change” to
-              ask us to adjust a locked setting.
+              Everything else is configured by Yipyy.
             </CardDescription>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => setRequestOpen(true)}
-          >
-            <Send className="mr-1.5 size-3.5" />
-            Request a Change
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -163,44 +149,12 @@ export function FacilitySettingsEditor({
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={!dirty}>
+          <Button onClick={handleSave} disabled={!dirty || saving}>
             <Save className="mr-1.5 size-4" />
             Save Changes
           </Button>
         </div>
       </CardContent>
-
-      <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Request a Change</DialogTitle>
-            <DialogDescription>
-              Ask Yipyy to modify a locked setting for {module.name}. Our team
-              reviews requests and follows up by email.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5 py-1">
-            <Label htmlFor="change-request">What would you like changed?</Label>
-            <Textarea
-              id="change-request"
-              rows={4}
-              value={requestText}
-              onChange={(e) => setRequestText(e.target.value)}
-              placeholder="e.g. Increase max simultaneous bookings from 4 to 6, or change the pricing model."
-              className="resize-none"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRequestOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSendRequest} disabled={!requestText.trim()}>
-              <Send className="mr-1.5 size-4" />
-              Send Request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

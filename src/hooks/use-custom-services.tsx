@@ -3,11 +3,11 @@
 import {
   createContext,
   useContext,
-  useState,
   useCallback,
   useMemo,
   type ReactNode,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CustomServiceModule,
   CustomServiceStatus,
@@ -16,76 +16,149 @@ import type {
 import {
   getModuleWorkflowQuestionnaire,
   normalizeCustomServiceModule,
-  defaultCustomServiceModules,
-  defaultFacilityResources,
 } from "@/data/custom-services";
+import { facilitySettingsQueries } from "@/lib/api/facility-settings";
+import { NO_ITEMS } from "@/lib/no-items";
 
-// ========================================
-// CONTEXT INTERFACE
-// ========================================
+// ============================================================================
+// A facility's custom services and resources — the facility's own settings.
+//
+// ── WHAT IT REPLACES ──────────────────────────────────────────────────────
+//
+// Both lists lived in the browser's localStorage, seeded from
+// src/data/custom-services.ts: every facility, in every browser, showed the
+// same invented services, an edit reached nobody else, and the customer
+// booking flow offered customers services their facility did not sell. They
+// are the `custom_services` and `facility_resources` settings domains now
+// (lib/settings/custom-services.ts), and a facility that has configured
+// neither has none.
+//
+// ── TWO AUDIENCES ─────────────────────────────────────────────────────────
+//
+//   staff      reads and writes the facility's settings.
+//   customer   reads `public.offered_custom_services()` through
+//              /api/customer/custom-services — the active, online-bookable
+//              modules with the facility's own fields left out
+//              (20260912172123). A customer has no resources and no writes.
+//
+// ── WRITES ARE PROMISES ───────────────────────────────────────────────────
+//
+// Every write reads the CURRENT list from the server, applies its change and
+// saves the whole list — not the copy the screen loaded minutes ago — and
+// resolves once it is saved, or rejects with the server's reason. They were
+// synchronous, and every caller toasted before anything could have failed.
+// ============================================================================
+
+export type CustomServicesAudience = "staff" | "customer";
 
 interface CustomServicesContextValue {
   modules: CustomServiceModule[];
   activeModules: CustomServiceModule[];
   resources: FacilityResource[];
+  /** True until the facility's list has arrived. */
+  isPending: boolean;
   // Module CRUD
-  addModule: (module: CustomServiceModule) => void;
-  updateModule: (id: string, updates: Partial<CustomServiceModule>) => void;
-  deleteModule: (id: string) => void;
-  duplicateModule: (id: string) => CustomServiceModule | null;
+  addModule: (module: CustomServiceModule) => Promise<void>;
+  updateModule: (
+    id: string,
+    updates: Partial<CustomServiceModule>,
+  ) => Promise<void>;
+  deleteModule: (id: string) => Promise<void>;
+  duplicateModule: (id: string) => Promise<CustomServiceModule | null>;
   setModuleStatus: (
     id: string,
     status: CustomServiceStatus,
     reason?: string,
-  ) => { ok: boolean; reason?: string };
+  ) => Promise<{ ok: boolean; reason?: string }>;
   // Resource CRUD
-  addResource: (resource: FacilityResource) => void;
-  updateResource: (id: string, updates: Partial<FacilityResource>) => void;
-  deleteResource: (id: string) => void;
+  addResource: (resource: FacilityResource) => Promise<void>;
+  updateResource: (
+    id: string,
+    updates: Partial<FacilityResource>,
+  ) => Promise<void>;
+  deleteResource: (id: string) => Promise<void>;
   // Queries
   getModuleBySlug: (slug: string) => CustomServiceModule | undefined;
   getModuleById: (id: string) => CustomServiceModule | undefined;
   getResourcesByType: (type: FacilityResource["type"]) => FacilityResource[];
-  // Reset
-  resetCustomServices: () => void;
 }
 
 const CustomServicesContext = createContext<CustomServicesContextValue | null>(
   null,
 );
 
-// ========================================
-// STORAGE HELPERS
-// ========================================
+const OFFERED_KEY = ["customer", "custom-services"] as const;
 
-const MODULES_KEY = "custom-services";
-const RESOURCES_KEY = "facility-resources";
-
-function loadStored<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) return JSON.parse(stored) as T;
-  } catch {
-    // ignore parse errors
-  }
-  return fallback;
+async function readError(response: Response, fallback: string) {
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+  } | null;
+  return new Error(body?.error ?? fallback);
 }
 
-// ========================================
-// PROVIDER
-// ========================================
+async function fetchOffered(): Promise<CustomServiceModule[]> {
+  const response = await fetch("/api/customer/custom-services");
+  if (response.status === 401 || response.status === 404) return [];
+  if (!response.ok) {
+    throw await readError(response, "Could not load the services on offer.");
+  }
+  return ((await response.json()) as { modules: CustomServiceModule[] })
+    .modules;
+}
 
-export function CustomServicesProvider({ children }: { children: ReactNode }) {
-  // Lazy-initialize from localStorage to avoid SSR flash
-  const [modules, setModules] = useState<CustomServiceModule[]>(() =>
-    loadStored(MODULES_KEY, defaultCustomServiceModules).map(
-      normalizeCustomServiceModule,
-    ),
+async function saveDomain(
+  domain: "custom_services" | "facility_resources",
+  value: unknown,
+) {
+  const response = await fetch("/api/facility/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domain, value }),
+  });
+  if (!response.ok) {
+    throw await readError(response, `Request failed (${response.status})`);
+  }
+}
+
+const NOT_YOURS = "Custom services are changed by the facility.";
+
+export function CustomServicesProvider({
+  children,
+  audience = "staff",
+}: {
+  children: ReactNode;
+  audience?: CustomServicesAudience;
+}) {
+  const queryClient = useQueryClient();
+  const staff = audience === "staff";
+
+  const settingsQuery = useQuery({
+    ...facilitySettingsQueries.all(),
+    enabled: staff,
+  });
+  const offeredQuery = useQuery({
+    queryKey: OFFERED_KEY,
+    queryFn: fetchOffered,
+    enabled: !staff,
+  });
+
+  const rawModules = staff
+    ? settingsQuery.data?.custom_services?.value.modules
+    : offeredQuery.data;
+  const rawResources = staff
+    ? settingsQuery.data?.facility_resources?.value.resources
+    : undefined;
+
+  const modules = useMemo(
+    () =>
+      ((rawModules as CustomServiceModule[] | undefined) ?? NO_ITEMS).map(
+        normalizeCustomServiceModule,
+      ),
+    [rawModules],
   );
-  const [resources, setResources] = useState<FacilityResource[]>(() =>
-    loadStored(RESOURCES_KEY, defaultFacilityResources),
-  );
+  const resources =
+    (rawResources as FacilityResource[] | undefined) ?? NO_ITEMS;
+  const isPending = staff ? settingsQuery.isPending : offeredQuery.isPending;
 
   // Derived state — computed once per modules change, shared by all consumers
   const activeModules = useMemo(
@@ -93,46 +166,62 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
     [modules],
   );
 
-  // Persist helpers — side effect kept outside updater for concurrent-mode safety
-  const persistModules = useCallback(
-    (updater: (prev: CustomServiceModule[]) => CustomServiceModule[]) => {
-      setModules((prev) => {
-        const updated = updater(prev);
-        // Schedule localStorage write outside the updater
-        queueMicrotask(() =>
-          localStorage.setItem(MODULES_KEY, JSON.stringify(updated)),
-        );
-        return updated;
-      });
-    },
-    [],
+  // ── The current lists, from the server ──────────────────────────────────
+  const current = useCallback(async () => {
+    const settings = await queryClient.fetchQuery({
+      ...facilitySettingsQueries.all(),
+      staleTime: 0,
+    });
+    return {
+      modules: (settings.custom_services?.value.modules ??
+        []) as CustomServiceModule[],
+      resources: (settings.facility_resources?.value.resources ??
+        []) as FacilityResource[],
+    };
+  }, [queryClient]);
+
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["facility", "settings"] }),
+    [queryClient],
   );
 
-  const persistResources = useCallback(
-    (updater: (prev: FacilityResource[]) => FacilityResource[]) => {
-      setResources((prev) => {
-        const updated = updater(prev);
-        queueMicrotask(() =>
-          localStorage.setItem(RESOURCES_KEY, JSON.stringify(updated)),
-        );
-        return updated;
+  const saveModules = useCallback(
+    async (
+      change: (prev: CustomServiceModule[]) => CustomServiceModule[],
+    ): Promise<void> => {
+      if (!staff) throw new Error(NOT_YOURS);
+      const { modules: prev } = await current();
+      await saveDomain("custom_services", {
+        modules: change(prev).map(normalizeCustomServiceModule),
       });
+      await refresh();
     },
-    [],
+    [staff, current, refresh],
+  );
+
+  const saveResources = useCallback(
+    async (
+      change: (prev: FacilityResource[]) => FacilityResource[],
+    ): Promise<void> => {
+      if (!staff) throw new Error(NOT_YOURS);
+      const { resources: prev } = await current();
+      await saveDomain("facility_resources", { resources: change(prev) });
+      await refresh();
+    },
+    [staff, current, refresh],
   );
 
   // --- Module CRUD ---
 
   const addModule = useCallback(
-    (module: CustomServiceModule) => {
-      persistModules((prev) => [...prev, normalizeCustomServiceModule(module)]);
-    },
-    [persistModules],
+    (module: CustomServiceModule) =>
+      saveModules((prev) => [...prev, normalizeCustomServiceModule(module)]),
+    [saveModules],
   );
 
   const updateModule = useCallback(
-    (id: string, updates: Partial<CustomServiceModule>) => {
-      persistModules((prev) =>
+    (id: string, updates: Partial<CustomServiceModule>) =>
+      saveModules((prev) =>
         prev.map((m) =>
           m.id === id
             ? normalizeCustomServiceModule({
@@ -142,57 +231,55 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
               })
             : m,
         ),
-      );
-    },
-    [persistModules],
+      ),
+    [saveModules],
   );
 
   const deleteModule = useCallback(
-    (id: string) => {
-      persistModules((prev) => prev.filter((m) => m.id !== id));
-    },
-    [persistModules],
+    (id: string) => saveModules((prev) => prev.filter((m) => m.id !== id)),
+    [saveModules],
   );
 
   const duplicateModule = useCallback(
-    (id: string): CustomServiceModule | null => {
-      // Build duplicate from current snapshot before persisting
-      const source = modules.find((m) => m.id === id);
-      if (!source) return null;
-      const now = new Date().toISOString();
-      const baseSlug = `${source.slug}-copy`;
-      const existingSlugs = new Set(modules.map((m) => m.slug));
-      let slug = baseSlug;
-      let counter = 2;
-      while (existingSlugs.has(slug)) {
-        slug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-      const duplicate: CustomServiceModule = {
-        ...source,
-        id: `csm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name: `${source.name} (Copy)`,
-        slug,
-        status: "draft",
-        workflow: source.workflow
-          ? {
-              ...source.workflow,
-              questionnaireCompleted: false,
-              questionnaireCompletedAt: undefined,
-            }
-          : source.workflow,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const normalized = normalizeCustomServiceModule(duplicate);
-      persistModules((prev) => [...prev, normalized]);
-      return normalized;
+    async (id: string): Promise<CustomServiceModule | null> => {
+      let duplicate: CustomServiceModule | null = null;
+      await saveModules((prev) => {
+        const source = prev.find((m) => m.id === id);
+        if (!source) return prev;
+        const now = new Date().toISOString();
+        const baseSlug = `${source.slug}-copy`;
+        const existingSlugs = new Set(prev.map((m) => m.slug));
+        let slug = baseSlug;
+        let counter = 2;
+        while (existingSlugs.has(slug)) {
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+        duplicate = normalizeCustomServiceModule({
+          ...source,
+          id: `csm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: `${source.name} (Copy)`,
+          slug,
+          status: "draft",
+          workflow: source.workflow
+            ? {
+                ...source.workflow,
+                questionnaireCompleted: false,
+                questionnaireCompletedAt: undefined,
+              }
+            : source.workflow,
+          createdAt: now,
+          updatedAt: now,
+        });
+        return [...prev, duplicate];
+      });
+      return duplicate;
     },
-    [modules, persistModules],
+    [saveModules],
   );
 
   const setModuleStatus = useCallback(
-    (id: string, status: CustomServiceStatus, reason?: string) => {
+    async (id: string, status: CustomServiceStatus, reason?: string) => {
       const target = modules.find((module) => module.id === id);
       if (!target) {
         return {
@@ -212,47 +299,49 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      persistModules((prev) =>
-        prev.map((m) =>
-          m.id === id
-            ? normalizeCustomServiceModule({
-                ...m,
-                status,
-                disableReason: status === "disabled" ? reason : undefined,
-                updatedAt: new Date().toISOString(),
-              })
-            : m,
-        ),
-      );
-
+      try {
+        await saveModules((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? normalizeCustomServiceModule({
+                  ...m,
+                  status,
+                  disableReason: status === "disabled" ? reason : undefined,
+                  updatedAt: new Date().toISOString(),
+                })
+              : m,
+          ),
+        );
+      } catch (error) {
+        return {
+          ok: false,
+          reason: error instanceof Error ? error.message : String(error),
+        };
+      }
       return { ok: true };
     },
-    [modules, persistModules],
+    [modules, saveModules],
   );
 
   // --- Resource CRUD ---
 
   const addResource = useCallback(
-    (resource: FacilityResource) => {
-      persistResources((prev) => [...prev, resource]);
-    },
-    [persistResources],
+    (resource: FacilityResource) =>
+      saveResources((prev) => [...prev, resource]),
+    [saveResources],
   );
 
   const updateResource = useCallback(
-    (id: string, updates: Partial<FacilityResource>) => {
-      persistResources((prev) =>
+    (id: string, updates: Partial<FacilityResource>) =>
+      saveResources((prev) =>
         prev.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-      );
-    },
-    [persistResources],
+      ),
+    [saveResources],
   );
 
   const deleteResource = useCallback(
-    (id: string) => {
-      persistResources((prev) => prev.filter((r) => r.id !== id));
-    },
-    [persistResources],
+    (id: string) => saveResources((prev) => prev.filter((r) => r.id !== id)),
+    [saveResources],
   );
 
   // --- Queries ---
@@ -273,21 +362,13 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
     [resources],
   );
 
-  // --- Reset ---
-
-  const resetCustomServices = useCallback(() => {
-    persistModules(() =>
-      defaultCustomServiceModules.map(normalizeCustomServiceModule),
-    );
-    persistResources(() => defaultFacilityResources);
-  }, [persistModules, persistResources]);
-
   // Memoize context value to avoid unnecessary consumer re-renders
   const contextValue = useMemo<CustomServicesContextValue>(
     () => ({
       modules,
       activeModules,
       resources,
+      isPending,
       addModule,
       updateModule,
       deleteModule,
@@ -299,12 +380,12 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
       getModuleBySlug,
       getModuleById,
       getResourcesByType,
-      resetCustomServices,
     }),
     [
       modules,
       activeModules,
       resources,
+      isPending,
       addModule,
       updateModule,
       deleteModule,
@@ -316,7 +397,6 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
       getModuleBySlug,
       getModuleById,
       getResourcesByType,
-      resetCustomServices,
     ],
   );
 
