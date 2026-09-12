@@ -3,12 +3,11 @@
 /**
  * Dialog for marking a calendar slot as unavailable. Opens from the empty-
  * slot right-click context menu — prefilled with the trainer + time the
- * trainer right-clicked on. Persists via the shared time-blocks cache so
- * the striped overlay shows up on the calendar immediately.
+ * trainer right-clicked on. Saves a block-time calendar event
+ * (lib/training-time-blocks.ts), and says so once it is saved.
  */
 
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -27,13 +26,13 @@ import { cn } from "@/lib/utils";
 import { Ban, Hammer, Lock, PartyPopper, UserX } from "lucide-react";
 import {
   BLOCK_TIME_REASON_LABELS,
-  fanOutTimeBlockUpsert,
+  eventFromTrainingBlock,
   minutesToTime,
-  nextTimeBlockId,
   snapToHalfHour,
   timeToMinutes,
   type BlockTimeReasonKind,
 } from "@/lib/training-time-blocks";
+import { useCalendarEventMutations } from "@/lib/api/calendar-events";
 
 interface Props {
   open: boolean;
@@ -73,7 +72,7 @@ export function BlockTimeDialog({
   trainerId,
   trainerName,
 }: Props) {
-  const queryClient = useQueryClient();
+  const { create } = useCalendarEventMutations();
   // Default end-time = start + 60min, snapped to half-hour.
   const defaultEndTime = () =>
     minutesToTime(snapToHalfHour(timeToMinutes(startTime) + 60));
@@ -95,24 +94,30 @@ export function BlockTimeDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, startTime, trainerId]);
 
-  function handleSave() {
+  async function handleSave() {
     const startMin = timeToMinutes(startTime);
     const endMin = timeToMinutes(end);
     if (endMin <= startMin) {
       toast.error("End time has to be after the start time.");
       return;
     }
-    fanOutTimeBlockUpsert(queryClient, {
-      id: nextTimeBlockId(),
-      date,
-      startTime,
-      endTime: end,
-      trainerId: scopeToTrainer && trainerId ? trainerId : undefined,
-      reasonKind: reason,
-      reasonNote: note.trim() || undefined,
-      createdByName: "Staff",
-      createdAt: new Date().toISOString(),
-    });
+    const scoped = scopeToTrainer && trainerId ? trainerId : undefined;
+    try {
+      await create.mutateAsync(
+        eventFromTrainingBlock({
+          date,
+          startTime,
+          endTime: end,
+          trainerId: scoped,
+          trainerName: scoped ? trainerName : undefined,
+          reasonKind: reason,
+          reasonNote: note.trim() || undefined,
+        }),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(
       scopeToTrainer && trainerName
         ? `Time blocked on ${trainerName}'s schedule.`
@@ -220,6 +225,7 @@ export function BlockTimeDialog({
           </Button>
           <Button
             onClick={handleSave}
+            disabled={create.isPending}
             className="bg-rose-600 text-white hover:bg-rose-700"
           >
             <Ban className="mr-1.5 size-4" />

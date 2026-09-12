@@ -1,14 +1,21 @@
 /**
  * Calendar time blocks — facility-curated "this slot is unavailable" markers
- * on the training calendar. Drives the striped gray overlay that prevents
- * new sessions from being scheduled into a slot held for trainer downtime,
- * equipment maintenance, room booking conflicts, etc.
+ * on the training calendar. Drives the striped overlay that keeps new
+ * sessions out of a slot held for trainer downtime, equipment maintenance, a
+ * room booking conflict and so on.
  *
- * Mock layer today: persisted via the shared TanStack Query cache so the
- * day view + the new-session dialog see new blocks instantly.
+ * ── A BLOCK IS A CALENDAR EVENT ─────────────────────────────────────────────
+ *
+ * This was a list in the query cache (`fanOutTimeBlockUpsert`): "Time
+ * blocked" was toasted, and the block was gone on reload and invisible to
+ * everybody else. It is a `calendar_events` row of kind `block-time` now —
+ * the same row the facility calendar's "Block time" and the grooming
+ * calendar's time blocks write (20260910223523). A trainer's block is aimed
+ * at the trainer (`affects: "staff"`, `affectedStaff` = the trainer id); a
+ * facility-wide one at the facility. So a closure blocked on the facility
+ * calendar shows here too, and one blocked here shows there.
  */
-import type { QueryClient } from "@tanstack/react-query";
-import { trainingQueries } from "@/lib/api/training";
+import type { ManualFacilityEvent } from "@/lib/operations-calendar";
 
 /** Common reasons surfaced as quick-pick chips on the Block Time dialog. */
 export type BlockTimeReasonKind =
@@ -28,64 +35,97 @@ export const BLOCK_TIME_REASON_LABELS: Record<BlockTimeReasonKind, string> = {
 
 export interface TrainingTimeBlock {
   id: string;
-  /** YYYY-MM-DD — the day the block applies to. */
-  date: string;
-  /** HH:MM (24-hour, local). */
+  /** YYYY-MM-DD — the day the block starts and the day it ends. */
+  startDate: string;
+  endDate: string;
+  /** HH:MM (24-hour, the facility's wall clock). */
   startTime: string;
   endTime: string;
-  /** Trainer the block is scoped to. When unset, blocks the slot across
-   *  every trainer column on the day view — useful for facility-wide
-   *  closures. */
-  trainerId?: string;
-  reasonKind: BlockTimeReasonKind;
-  /** Optional free-text supplement to the picked reason — surfaced as the
-   *  tooltip on the striped overlay. */
+  /** Who the block is aimed at: a trainer id (this calendar, the grooming
+   *  one) or a name (the facility calendar's "Block time" stores the name).
+   *  Unset blocks the slot in every trainer column — a facility closure. */
+  staff?: string;
+  /** What the block says — the reason's label, or the facility calendar's
+   *  own title for a block made there. */
+  label: string;
   reasonNote?: string;
-  /** Who created the block — surfaced in the tooltip for accountability. */
-  createdByName: string;
-  createdAt: string;
 }
 
-let blockSeed = 0;
-export function nextTimeBlockId(): string {
-  blockSeed += 1;
-  return `block-${Date.now()}-${blockSeed}`;
+/** The block-time events this calendar draws: aimed at a person, or at the
+ *  whole facility. One aimed at a room (`affects: "resource"`) does not stop
+ *  a trainer, and a deleted one — recoverable for 30 days — stops nobody. */
+export function trainingBlocksFromEvents(
+  events: ManualFacilityEvent[],
+): TrainingTimeBlock[] {
+  const out: TrainingTimeBlock[] = [];
+  for (const e of events) {
+    if (e.kind !== "block-time" || e.deletedAt) continue;
+    if (e.affects === "resource") continue;
+    if (e.affects === "staff" && !e.affectedStaff) continue;
+    const [startDate, startTime = "00:00"] = e.start.split("T");
+    const [endDate, endTime = "23:59"] = e.end.split("T");
+    out.push({
+      id: e.id,
+      startDate,
+      endDate,
+      startTime: e.allDay ? "00:00" : startTime.slice(0, 5),
+      endTime: e.allDay ? "23:59" : endTime.slice(0, 5),
+      staff: e.affects === "staff" ? e.affectedStaff : undefined,
+      label: e.title,
+      reasonNote: e.notes || undefined,
+    });
+  }
+  return out;
 }
 
-/** Add or update a block, write-through to the shared cache. */
-export function fanOutTimeBlockUpsert(
-  queryClient: QueryClient,
-  block: TrainingTimeBlock,
-): void {
-  const key = trainingQueries.calendarTimeBlocks().queryKey;
-  queryClient.setQueryData<TrainingTimeBlock[]>(key, (prev = []) => {
-    const exists = prev.some((b) => b.id === block.id);
-    if (exists) return prev.map((b) => (b.id === block.id ? block : b));
-    return [...prev, block];
-  });
+/** The calendar event a block from this calendar is saved as. */
+export function eventFromTrainingBlock(block: {
+  date: string;
+  startTime: string;
+  endTime: string;
+  trainerId?: string;
+  trainerName?: string;
+  reasonKind: BlockTimeReasonKind;
+  reasonNote?: string;
+}): ManualFacilityEvent {
+  return {
+    id: "",
+    title: BLOCK_TIME_REASON_LABELS[block.reasonKind],
+    subtype: "blocked-time",
+    kind: "block-time",
+    start: `${block.date}T${block.startTime}`,
+    end: `${block.date}T${block.endTime}`,
+    allDay: false,
+    location: "",
+    staff: block.trainerId ? (block.trainerName ?? "") : "",
+    // french-ok: a stored status value, the one the facility calendar writes
+    status: "Scheduled",
+    notes: block.reasonNote,
+    affects: block.trainerId ? "staff" : "facility",
+    affectedStaff: block.trainerId,
+    visibility: "all-staff",
+  };
 }
 
-/** Remove a block from the shared cache. */
-export function fanOutTimeBlockDelete(
-  queryClient: QueryClient,
-  blockId: string,
-): void {
-  const key = trainingQueries.calendarTimeBlocks().queryKey;
-  queryClient.setQueryData<TrainingTimeBlock[]>(key, (prev = []) =>
-    prev.filter((b) => b.id !== blockId),
-  );
-}
-
-/** Blocks scoped to a given trainer column on a given date. Blocks with no
- *  trainerId apply to every column (facility-wide closures). */
+/** The blocks in one trainer's column on one day, clipped to that day. A
+ *  block aimed at nobody in particular is in every column. */
 export function blocksForTrainerOnDate(
   blocks: TrainingTimeBlock[],
   date: string,
-  trainerId: string,
+  trainer: { id: string; name: string },
 ): TrainingTimeBlock[] {
-  return blocks.filter(
-    (b) => b.date === date && (!b.trainerId || b.trainerId === trainerId),
-  );
+  return blocks
+    .filter(
+      (b) =>
+        b.startDate <= date &&
+        b.endDate >= date &&
+        (!b.staff || b.staff === trainer.id || b.staff === trainer.name),
+    )
+    .map((b) => ({
+      ...b,
+      startTime: b.startDate === date ? b.startTime : "00:00",
+      endTime: b.endDate === date ? b.endTime : "23:59",
+    }));
 }
 
 /** Convert HH:MM → minutes-since-midnight, used to position blocks on the

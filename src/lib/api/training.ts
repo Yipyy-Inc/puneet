@@ -37,7 +37,6 @@ import {
 } from "@/lib/training-module-settings";
 import type { MakeupSession } from "@/lib/training-makeup";
 import type { TrainingDropInBooking } from "@/lib/training-drop-ins";
-import type { TrainingTimeBlock } from "@/lib/training-time-blocks";
 
 /** Seeded dog-specific private session plans (mock), keyed by petId. Charlie
  *  (14) is a reactive dog doing 1-on-1 work (session-006, an adaptive Private
@@ -346,15 +345,6 @@ export const trainingQueries = {
   allMakeupSessions: () => ({
     queryKey: ["training", "makeup-sessions", "all"] as const,
     queryFn: async (): Promise<MakeupSession[]> => [],
-    staleTime: Infinity,
-  }),
-  /** Calendar time blocks — facility-curated unavailable slots that show as
-   *  striped gray overlays on the training calendar. Persisted via the
-   *  shared cache today; the dialog + day view read from the same key so
-   *  a freshly-created block lights up the column instantly. */
-  calendarTimeBlocks: () => ({
-    queryKey: ["training", "calendar-time-blocks"] as const,
-    queryFn: async (): Promise<TrainingTimeBlock[]> => [],
     staleTime: Infinity,
   }),
   /** Drop-in bookings — single-session attendance for series with
