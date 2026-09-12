@@ -13769,3 +13769,36 @@ an Edit button.
   into the query cache only.
 - The level and theme tables in `lib/training-report-cards.ts` now serve only
   those two.
+
+## 2026-09-12 — a customer's training packages are the ones they own
+
+The customer training page's Packages tab and the dashboard's Training
+credits banner read `clientTrainingPackages`, a fixture that gave Alice
+(client 15) a "Basic Obedience 6-Pack" and a "Private Coaching 10-Pack" she
+never bought. Both read `groomingQueries.customerPackages()`
+(/api/packages/owned) through `trainingPackageRows` now — the rows the
+trainer's profile shows — so the portal, the dashboard and the trainer read
+one balance.
+
+Removed as untrue:
+
+- "Renew package" toasted "Renewal for … is coming soon. Your instructor was
+  notified." Nobody was. It is a link to the package shop,
+  `/customer/packages`.
+- "Your balance updates the moment a session is completed." No training
+  screen calls `redeem_package_pass`, so completing a session spends nothing.
+- Each package named a dog and a class type. A real package belongs to the
+  household and has neither.
+
+The fixture, its cache helpers (`lib/client-training-packages.ts`), the
+`ClientTrainingPackage` type and the three
+`trainingQueries.clientTrainingPackages*` factories are deleted. The My Pets
+tab built a packages section it never rendered, and no longer asks for one.
+
+**Still open:** attending a training session spends no training pass, so a
+balance moves only when a pass is redeemed from a booking or the customer's
+own package card.
+
+e2e `customer-training-packages.spec.ts` (full suite). Alice owns no
+training package today, so it pins the empty state and the banner's absence;
+the populated rows are `trainingPackageRows`, which is unit-tested.

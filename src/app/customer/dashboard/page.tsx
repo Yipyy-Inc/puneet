@@ -976,9 +976,7 @@ export default function CustomerDashboardPage() {
           </Link>
         )}
 
-        {customerId != null && (
-          <CustomerTrainingCreditsBanner customerId={customerId} />
-        )}
+        {customerId != null && <CustomerTrainingCreditsBanner />}
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (

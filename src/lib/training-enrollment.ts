@@ -353,38 +353,6 @@ export interface TrainingReportCard {
   graduationFollowUpSentAt?: string;
 }
 
-/** A purchased training-package balance — distinct from `TrainingEnrollment`
- *  (which binds a pet to one specific series) and from the generic
- *  `CustomerPackagePurchase` (which has no per-pet binding). Used for the
- *  "Sessions Remaining" badge on the trainer profile + customer portal, and
- *  drives the auto-renewal reminder when the balance gets low. */
-export interface ClientTrainingPackage {
-  id: string;
-  clientId: number;
-  petId: number;
-  petName: string;
-  /** References `TrainingPackage.id` from the program catalog. */
-  packageId: string;
-  /** Snapshot of the catalog name so historic records stay correct even if
-   *  the catalog entry is later renamed. */
-  packageName: string;
-  /** Class type at purchase time — drives the iconography (group vs private). */
-  classType: "group" | "private";
-  sessionsPurchased: number;
-  sessionsUsed: number;
-  purchaseDate: string;
-  /** ISO date — past this point the remaining sessions are considered
-   *  expired. Null = no expiry (rare; some lifetime memberships). */
-  expiresAt: string | null;
-  pricePaid: number;
-  status: "active" | "expired" | "exhausted" | "refunded";
-  /** ISO timestamp of the most recent renewal reminder. Used to throttle the
-   *  auto-reminder so we don't email the owner every page load. */
-  lastRenewalReminderAt: string | null;
-  /** Optional staff note attached at purchase time. */
-  notes?: string;
-}
-
 export interface TrainingCertificate {
   id: string;
   enrollmentId: string;

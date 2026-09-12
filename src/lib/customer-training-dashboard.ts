@@ -13,7 +13,6 @@
  * unit-test the rollups without standing up a renderer.
  */
 import type {
-  ClientTrainingPackage,
   SessionAttendance,
   TrainingEnrollment,
   TrainingHomework,
@@ -23,10 +22,6 @@ import type {
   TrainingSeriesSession,
 } from "@/lib/training-series";
 import type { Pet } from "@/types/pet";
-import {
-  aggregateActivePackagesForPet,
-  type ClientTrainingPackageRow,
-} from "@/lib/client-training-packages";
 import {
   getLastPracticedDate,
   getPracticeStreakDays,
@@ -127,16 +122,6 @@ export interface HomeworkSection {
   needsPracticeToday: boolean;
 }
 
-/** "Training Credits" section payload — kept around so the rest of the
- *  customer training surfaces can still reference it via the same helper,
- *  even though the dashboard itself no longer renders it as a panel. */
-export interface PackagesSection {
-  rows: ClientTrainingPackageRow[];
-  totalSessionsRemaining: number;
-  lowBalanceCount: number;
-  exhaustedCount: number;
-}
-
 export interface PetTrainingDashboard {
   pet: Pet;
   ownerName: string;
@@ -144,7 +129,6 @@ export interface PetTrainingDashboard {
   sessionHistory: SessionHistorySection;
   progressCharts: ProgressChartsSection;
   homework: HomeworkSection;
-  packages: PackagesSection;
 }
 
 interface BuildInput {
@@ -154,7 +138,6 @@ interface BuildInput {
   seriesList: TrainingSeries[];
   attendances: SessionAttendance[];
   homework: TrainingHomework[];
-  packages: ClientTrainingPackage[];
   todayISO: string;
   nowMs: number;
   /** How many sessions to surface in the History timeline. Defaults to 5
@@ -176,7 +159,6 @@ export function buildPetTrainingDashboard(
     sessionHistory: buildSessionHistory(input),
     progressCharts: buildProgressCharts(input),
     homework: buildHomework(input),
-    packages: buildPackages(input),
   };
 }
 
@@ -411,23 +393,6 @@ function buildHomework(input: BuildInput): HomeworkSection {
     overdueCount,
     needsPracticeToday,
   };
-}
-
-function buildPackages(input: BuildInput): PackagesSection {
-  const rows = aggregateActivePackagesForPet(
-    input.pet.id,
-    input.packages,
-    input.todayISO,
-  );
-  let totalSessionsRemaining = 0;
-  let lowBalanceCount = 0;
-  let exhaustedCount = 0;
-  for (const row of rows) {
-    totalSessionsRemaining += row.sessionsRemaining;
-    if (row.exhausted) exhaustedCount++;
-    else if (row.lowBalance) lowBalanceCount++;
-  }
-  return { rows, totalSessionsRemaining, lowBalanceCount, exhaustedCount };
 }
 
 /** Convenience filter — the pets a customer should see on the My Pets tab.

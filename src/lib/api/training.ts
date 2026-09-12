@@ -29,7 +29,6 @@ import {
   trainingHomeworkRecords,
   trainingReportCardRecords,
 } from "@/data/training-history";
-import { clientTrainingPackages } from "@/data/client-training-packages";
 import {
   defaultTrainingModuleSettings,
   type TrainingModuleSettings,
@@ -279,23 +278,6 @@ export const trainingQueries = {
   allReportCards: () => ({
     queryKey: ["training", "report-cards", "all"] as const,
     queryFn: async () => trainingReportCardRecords,
-  }),
-  /** All client-owned training packages — drives the unscoped catalogs.
-   *  Per-pet and per-client variants below match the cache fan-out scopes
-   *  in `client-training-packages.ts`. */
-  clientTrainingPackages: () => ({
-    queryKey: ["training", "client-packages", "all"] as const,
-    queryFn: async () => clientTrainingPackages,
-  }),
-  clientTrainingPackagesForPet: (petId: number) => ({
-    queryKey: ["training", "client-packages", "pet", petId] as const,
-    queryFn: async () =>
-      clientTrainingPackages.filter((p) => p.petId === petId),
-  }),
-  clientTrainingPackagesForClient: (clientId: number) => ({
-    queryKey: ["training", "client-packages", "client", clientId] as const,
-    queryFn: async () =>
-      clientTrainingPackages.filter((p) => p.clientId === clientId),
   }),
   /** Sessions a trainer has marked briefed — `briefed_at` on the session
    *  (20260912170021). It was a cache-only list, so the reminder came back on

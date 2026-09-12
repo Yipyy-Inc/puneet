@@ -1,272 +1,225 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import Image from "next/image";
+import { CircleAlert, CircleCheck, Clock3, Package, Plus } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  Inbox,
-  Package,
-  PawPrint,
-  RefreshCcw,
-  Sparkles,
-  User2,
-  Users,
-} from "lucide-react";
-import { trainingQueries } from "@/lib/api/training";
-import {
-  aggregateActivePackagesForClient,
-  totalSessionsRemainingForClient,
-} from "@/lib/client-training-packages";
-import { clients } from "@/data/clients";
+import { RouteState } from "@/components/ui/route-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { groomingQueries } from "@/lib/api/grooming";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
-import type { AppLocale } from "@/lib/language-settings";
 import { formatDateLong } from "@/lib/i18n/format";
 import { rich } from "@/lib/i18n/rich";
+import { NO_ITEMS } from "@/lib/no-items";
+import {
+  trainingPackageRows,
+  type TrainingPackageRow,
+} from "@/lib/training-owned-packages";
+import { localToday } from "@/lib/vaccinations";
 
-interface Props {
-  customerId: number;
-}
+/** Where a customer buys a pack of sessions. */
+const SHOP_HREF = "/customer/packages";
 
-// A calendar date, read at local midnight so no zone can move it.
-function formatDate(iso: string, locale: AppLocale): string {
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
-  return formatDateLong(new Date(y, m - 1, d), locale);
-}
+type CustomerText = ReturnType<typeof useCustomerText>;
 
-export function CustomerTrainingPackagesTab({ customerId }: Props) {
-  const { t, fill, locale } = useCustomerText("training");
-  const [nowMs] = useState(() => Date.now());
-  const todayISO = useMemo(
-    () => new Date(nowMs).toISOString().split("T")[0]!,
-    [nowMs],
+/** The Packages tab on the customer's training page — each active package
+ *  with training sessions on it, and how many are left.
+ *
+ *  ── WHAT CHANGED (2026-09-12) ────────────────────────────────────────────
+ *
+ *  It read `clientTrainingPackages`, a fixture that gave Alice two packages
+ *  she never bought. It reads what the customer owns from
+ *  /api/packages/owned now, keeping the training lines of active packages
+ *  (`trainingPackageRows`, which the trainer's profile reads too). A package
+ *  belongs to the household rather than to one dog, so it no longer names a
+ *  dog. "Renew package" toasted that a renewal was coming and "your
+ *  instructor was notified" — nobody was — and it is a link to the package
+ *  shop now. "Your balance updates the moment a session is completed" is not
+ *  said: completing a training session spends no pass. */
+export function CustomerTrainingPackagesTab() {
+  const text = useCustomerText("training");
+  const { t } = text;
+  const [todayISO] = useState(localToday);
+  const { data, error, isPending } = useQuery(
+    groomingQueries.customerPackages(),
   );
 
-  const { data: packages = [] } = useQuery(
-    trainingQueries.clientTrainingPackagesForClient(customerId),
-  );
-
-  const rows = useMemo(
-    () => aggregateActivePackagesForClient(customerId, packages, todayISO),
-    [customerId, packages, todayISO],
-  );
-
-  const petImageById = useMemo(() => {
-    const m = new Map<number, string | undefined>();
-    const customer = clients.find((c) => c.id === customerId);
-    for (const pet of customer?.pets ?? []) m.set(pet.id, pet.imageUrl);
-    return m;
-  }, [customerId]);
-
-  const totalSessions = useMemo(
-    () => totalSessionsRemainingForClient(customerId, packages),
-    [customerId, packages],
-  );
-
-  if (rows.length === 0) {
+  if (error) {
+    // §5d2's ladder: a panel that would not load takes `error`.
     return (
-      <div className="text-muted-foreground rounded-xl border border-dashed py-16 text-center text-sm">
-        <Inbox className="text-muted-foreground/30 mx-auto mb-2 size-8" />
-        {t("noTrainingPackagesYet")}
+      <RouteState
+        surface="card"
+        className="min-h-0 p-0"
+        pose="error"
+        icon={CircleAlert}
+        inkClassName="text-destructive"
+        title={t("pkgLoadFailedTitle")}
+        description={t("pkgLoadFailed")}
+      />
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="space-y-3" aria-busy>
+        <span className="sr-only">{t("pkgLoading")}</span>
+        <Skeleton className="h-40 rounded-2xl motion-reduce:animate-none" />
       </div>
     );
   }
 
+  const rows = trainingPackageRows(data ?? NO_ITEMS, todayISO);
+
+  if (rows.length === 0) {
+    // Never had data: training's pose is `idea` (§5d2), and an empty state's
+    // one action is the screen's prominent control (§1).
+    return (
+      <RouteState
+        surface="card"
+        className="min-h-0 p-0"
+        pose="idea"
+        icon={Package}
+        inkClassName="text-ink-secondary"
+        title={t("pkgEmptyTitle")}
+        description={t("pkgEmptyBody")}
+        action={{ label: t("pkgBrowse"), icon: Package, href: SHOP_HREF }}
+      />
+    );
+  }
+
+  const remaining = rows.reduce((sum, row) => sum + row.remaining, 0);
+
   return (
-    <div className="space-y-4">
-      <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-3 text-sm text-slate-700">
-          <Package className="size-4 text-indigo-500" />
-          <span>
-            {rich(
-              t(
-                totalSessions === 1
-                  ? "trainingSessionsRemainingOne"
-                  : "trainingSessionsRemainingOther",
-              ),
-              {
-                n: (
-                  <span className="font-semibold text-slate-900 tabular-nums">
-                    {totalSessions}
-                  </span>
-                ),
-              },
-            )}
-          </span>
-        </div>
-        <p className="text-muted-foreground inline-flex items-center gap-1 text-[12px]">
-          <Sparkles className="size-3" />
-          {t("yourBalanceUpdatesTheMoment")}
-        </p>
-      </div>
-
-      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {rows.map((row) => {
-          const pkg = row.pkg;
-          const lowOrOut = row.lowBalance || row.exhausted;
-          const ClassIcon = pkg.classType === "private" ? User2 : Users;
-          const petImage = petImageById.get(pkg.petId);
-          return (
-            <li
-              key={pkg.id}
-              className={cn(
-                "bg-card overflow-hidden rounded-xl border shadow-sm",
-                row.exhausted && "ring-2 ring-rose-200",
-                row.lowBalance && !row.exhausted && "ring-2 ring-amber-200",
-              )}
-            >
-              <div className="space-y-3 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <div className="relative shrink-0">
-                    {petImage ? (
-                      <div className="size-10 overflow-hidden rounded-xl shadow-sm ring-2 ring-white">
-                        <Image
-                          src={petImage}
-                          alt={pkg.petName}
-                          width={40}
-                          height={40}
-                          className="size-full object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    ) : (
-                      <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-xl shadow-sm ring-2 ring-white">
-                        <PawPrint className="size-4" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-semibold text-slate-800">
-                      {pkg.packageName}
-                    </p>
-                    <p className="text-muted-foreground mt-0.5 inline-flex items-center gap-1.5 text-[11px]">
-                      <PawPrint className="size-3" />
-                      {fill("forPet", { pet: pkg.petName })}
-                      <span className="text-muted-foreground/50">·</span>
-                      <ClassIcon className="size-3" />
-                      {pkg.classType === "private" ? t("private") : t("group")}
-                    </p>
-                  </div>
-                  {row.exhausted ? (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
-                    >
-                      <AlertTriangle className="size-3" />
-                      {t("out")}
-                    </Badge>
-                  ) : row.lowBalance ? (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-                    >
-                      <AlertTriangle className="size-3" />
-                      {t("low")}
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-                    >
-                      <CheckCircle2 className="size-3" />
-                      {t("active")}
-                    </Badge>
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between">
-                    <span
-                      className={cn(
-                        "text-3xl font-bold tabular-nums",
-                        lowOrOut ? "text-amber-700" : "text-slate-900",
-                      )}
-                    >
-                      {row.sessionsRemaining}
-                      <span className="text-muted-foreground text-lg font-normal">
-                        {" "}
-                        / {pkg.sessionsPurchased}
-                      </span>
-                    </span>
-                    <span className="text-muted-foreground text-[11px]">
-                      {t("sessionsLeft")}
-                    </span>
-                  </div>
-                  <Progress
-                    value={row.progressPct}
-                    className={cn(
-                      "mt-2 h-2",
-                      lowOrOut && "[&>div]:bg-amber-500",
-                    )}
-                  />
-                </div>
-
-                <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                  <span>
-                    {fill("purchasedOn", {
-                      date: formatDate(pkg.purchaseDate, locale),
-                    })}
-                    {pkg.expiresAt &&
-                      ` · ${fill("expiresOn", { date: formatDate(pkg.expiresAt, locale) })}`}
-                  </span>
-                  {row.expiringSoon && (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-                    >
-                      <CalendarClock className="size-3" />
-                      {t("expiringSoon")}
-                    </Badge>
-                  )}
-                </div>
-
-                {lowOrOut && (
-                  <div
-                    className={cn(
-                      "rounded-lg border px-3 py-2.5",
-                      row.exhausted
-                        ? "border-rose-200 bg-rose-50/60"
-                        : "border-amber-200 bg-amber-50/60",
-                    )}
-                  >
-                    <p className="text-[12.5px]/relaxed text-slate-700">
-                      {row.exhausted
-                        ? fill("outOfSessions", { pet: pkg.petName })
-                        : fill(
-                            row.sessionsRemaining === 1
-                              ? "sessionsLeftOne"
-                              : "sessionsLeftOther",
-                            { pet: pkg.petName, n: row.sessionsRemaining },
-                          )}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-2 h-8 gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                      onClick={() =>
-                        toast.info(
-                          fill("renewalComingSoon", {
-                            package: pkg.packageName,
-                          }),
-                        )
-                      }
-                    >
-                      <RefreshCcw className="size-3.5" />
-                      {t("renewPackage")}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </li>
-          );
-        })}
+    <div className="space-y-3">
+      <p className="text-body-ink text-body">
+        {rich(
+          t(
+            remaining === 1
+              ? "trainingSessionsRemainingOne"
+              : "trainingSessionsRemainingOther",
+          ),
+          {
+            n: <span className="font-semibold tabular-nums">{remaining}</span>,
+          },
+        )}
+      </p>
+      <ul
+        aria-label={t("pkgListLabel")}
+        className="grid grid-cols-1 gap-3 lg:grid-cols-2"
+      >
+        {rows.map((row) => (
+          <PackageItem key={row.id} row={row} text={text} />
+        ))}
       </ul>
     </div>
+  );
+}
+
+function PackageItem({
+  row,
+  text,
+}: {
+  row: TrainingPackageRow;
+  text: CustomerText;
+}) {
+  const { t, fill, locale } = text;
+  const purchased = fill("purchasedOn", {
+    date: formatDateLong(row.purchasedAt, locale),
+  });
+  const dates = row.expiresAt
+    ? `${purchased} · ${fill("expiresOn", { date: formatDateLong(row.expiresAt, locale) })}`
+    : purchased;
+  // The bar is the balance, so it empties as sessions are used.
+  const leftPct = Math.round((row.remaining / Math.max(1, row.total)) * 100);
+  const balance = fill("pkgRemaining", {
+    remaining: row.remaining,
+    total: row.total,
+  });
+
+  return (
+    <li className="border-line bg-card shadow-card min-w-0 rounded-2xl border p-[22px]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          {/* The facility's own name for it, never translated (§5q). */}
+          <h3 className="text-body-ink text-body-strong">{row.packageName}</h3>
+          <p className="text-ink-tertiary text-meta mt-0.5">
+            {t("pkgHousehold")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <BalanceChip row={row} t={t} />
+          {row.expiringSoon && (
+            <Badge variant="pending">
+              <Clock3 aria-hidden />
+              {t("expiringSoon")}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="text-body-ink text-section tabular-nums">
+            {balance}
+          </span>
+          <span className="text-ink-tertiary text-meta">
+            {t("sessionsLeft")}
+          </span>
+        </div>
+        <Progress value={leftPct} aria-label={balance} />
+        <p className="text-ink-tertiary text-meta">{dates}</p>
+      </div>
+
+      {(row.exhausted || row.lowBalance) && (
+        <div className="border-line mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+          <p className="text-body-ink text-body min-w-0">
+            {t(row.exhausted ? "pkgOut" : "pkgLow")}
+          </p>
+          <Button asChild variant="outline">
+            <Link href={SHOP_HREF}>
+              <Plus aria-hidden />
+              {t("pkgBuyMore")}
+            </Link>
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/** §3: ink, glyph and word together. An empty package can book nothing
+ *  (overdue ink); one session left needs attention (pending). */
+function BalanceChip({
+  row,
+  t,
+}: {
+  row: TrainingPackageRow;
+  t: CustomerText["t"];
+}) {
+  if (row.exhausted) {
+    return (
+      <Badge variant="overdue">
+        <CircleAlert aria-hidden />
+        {t("pkgOutChip")}
+      </Badge>
+    );
+  }
+  if (row.lowBalance) {
+    return (
+      <Badge variant="pending">
+        <Clock3 aria-hidden />
+        {t("pkgLowChip")}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="confirmed">
+      <CircleCheck aria-hidden />
+      {t("active")}
+    </Badge>
   );
 }

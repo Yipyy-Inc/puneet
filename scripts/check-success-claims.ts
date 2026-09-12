@@ -258,7 +258,6 @@ const BASELINE = new Set<string>([
   "src/app/customer/bookings/[id]/page.tsx",
   "src/app/customer/settings/_components/LoginSecurityCard.tsx",
   "src/app/customer/training/_components/customer-homework-tab.tsx",
-  "src/app/customer/training/_components/customer-training-packages-tab.tsx",
   "src/app/customer/training/page.tsx",
   "src/app/dashboard/facilities/page.tsx",
   "src/app/dashboard/support/calling/_components/call-log-detail.tsx",
