@@ -28,11 +28,24 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { BelongingEntry } from "@/types/booking";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface BelongingsSectionProps {
   entries: BelongingEntry[];
   isCompleted?: boolean;
   required?: boolean;
+  /**
+   * Saves the list on the booking. Every change here — an item added, an
+   * item handed back — was component state with a success toast, gone on
+   * reload, which is the one record a facility needs when an owner asks
+   * where the blanket went. With `onSave` each change is written first and
+   * rolled back on screen if it was refused.
+   *
+   * Photos are not offered when saving: an image read as a data URL would
+   * be stored in the booking's JSON and sent with every booking list. They
+   * wait for file storage (debt map, 2026-09-12).
+   */
+  onSave?: (entries: BelongingEntry[]) => Promise<void>;
 }
 
 function fmtTimestamp(ts: string) {
@@ -50,8 +63,36 @@ export function BelongingsSection({
   entries,
   isCompleted,
   required,
+  onSave,
 }: BelongingsSectionProps) {
+  const { t } = useStaffText("bookingDetail");
   const [items, setItems] = useState(entries);
+  const [saving, setSaving] = useState(false);
+  const persists = Boolean(onSave);
+
+  /** Show the change, write it, and put it back if the write is refused. */
+  const commit = async (next: BelongingEntry[], done?: string) => {
+    const before = items;
+    setItems(next);
+    if (!onSave) {
+      if (done) toast.success(done);
+      return true;
+    }
+    setSaving(true);
+    try {
+      await onSave(next);
+      if (done) toast.success(done);
+      return true;
+    } catch (error) {
+      setItems(before);
+      toast.error(t("belongingsNotSaved"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [newItem, setNewItem] = useState({
@@ -65,32 +106,36 @@ export function BelongingsSection({
   const returnedCount = items.filter((i) => i.returned).length;
   const unreturnedCount = totalItems - returnedCount;
 
+  // "You" is only true on the screen that wrote it, so a saved list records
+  // WHEN, not a pronoun every other reader would take for themselves.
+  const who = persists ? undefined : "You";
+
   const handleReturn = (id: string, checked: boolean) => {
-    setItems((prev) =>
-      prev.map((e) =>
+    void commit(
+      items.map((e) =>
         e.id === id
           ? {
               ...e,
               returned: checked,
               returnedAt: checked ? new Date().toISOString() : undefined,
-              returnedBy: checked ? "You" : undefined,
+              returnedBy: checked ? who : undefined,
             }
           : e,
       ),
+      checked ? "Item marked as returned" : undefined,
     );
-    if (checked) toast.success("Item marked as returned");
   };
 
   const handleReturnAll = () => {
     const now = new Date().toISOString();
-    setItems((prev) =>
-      prev.map((e) =>
+    void commit(
+      items.map((e) =>
         e.returned
           ? e
-          : { ...e, returned: true, returnedAt: now, returnedBy: "You" },
+          : { ...e, returned: true, returnedAt: now, returnedBy: who },
       ),
+      `All ${unreturnedCount} items marked as returned`,
     );
-    toast.success(`All ${unreturnedCount} items marked as returned`);
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,22 +154,26 @@ export function BelongingsSection({
       return;
     }
     _belId += 1;
-    setItems((prev) => [
-      ...prev,
-      {
-        id: `bel-new-${_belId}`,
-        name: newItem.name,
-        description: newItem.description || undefined,
-        photoUrl: newItem.photoUrl || undefined,
-        condition: "Good",
-        checkedInAt: new Date().toISOString(),
-        checkedInBy: "You",
-        returned: false,
-      },
-    ]);
-    setNewItem({ name: "", description: "", photoUrl: "" });
-    setAddOpen(false);
-    toast.success("Belonging added");
+    void commit(
+      [
+        ...items,
+        {
+          id: persists ? `bel-${crypto.randomUUID()}` : `bel-new-${_belId}`,
+          name: newItem.name,
+          description: newItem.description || undefined,
+          photoUrl: persists ? undefined : newItem.photoUrl || undefined,
+          condition: "Good",
+          checkedInAt: new Date().toISOString(),
+          checkedInBy: who,
+          returned: false,
+        },
+      ],
+      "Belonging added",
+    ).then((saved) => {
+      if (!saved) return;
+      setNewItem({ name: "", description: "", photoUrl: "" });
+      setAddOpen(false);
+    });
   };
 
   return (
@@ -224,62 +273,64 @@ export function BelongingsSection({
                 </div>
 
                 {/* Photo upload */}
-                <div>
-                  <Label className="text-[11px]">
-                    Photo (optional — documents condition at check-in)
-                  </Label>
-                  <div className="mt-1 flex items-center gap-2">
-                    {newItem.photoUrl ? (
-                      <div className="relative">
-                        <img
-                          src={newItem.photoUrl}
-                          alt="Preview"
-                          className="ring-border size-16 rounded-lg object-cover ring-1"
-                        />
-                        <button
-                          className="bg-destructive absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-[10px] text-white"
-                          onClick={() =>
-                            setNewItem((p) => ({ ...p, photoUrl: "" }))
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 text-xs"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <Upload className="size-3.5" />
-                          Upload
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 text-xs"
-                          onClick={() => {
-                            // In production: use navigator.mediaDevices.getUserMedia
-                            fileInputRef.current?.click();
-                          }}
-                        >
-                          <Camera className="size-3.5" />
-                          Camera
-                        </Button>
-                      </div>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
+                {!persists && (
+                  <div>
+                    <Label className="text-[11px]">
+                      Photo (optional — documents condition at check-in)
+                    </Label>
+                    <div className="mt-1 flex items-center gap-2">
+                      {newItem.photoUrl ? (
+                        <div className="relative">
+                          <img
+                            src={newItem.photoUrl}
+                            alt="Preview"
+                            className="ring-border size-16 rounded-lg object-cover ring-1"
+                          />
+                          <button
+                            className="bg-destructive absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-[10px] text-white"
+                            onClick={() =>
+                              setNewItem((p) => ({ ...p, photoUrl: "" }))
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="size-3.5" />
+                            Upload
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
+                            onClick={() => {
+                              // In production: use navigator.mediaDevices.getUserMedia
+                              fileInputRef.current?.click();
+                            }}
+                          >
+                            <Camera className="size-3.5" />
+                            Camera
+                          </Button>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handlePhotoUpload}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2">
                   <Button
@@ -294,6 +345,8 @@ export function BelongingsSection({
                     size="sm"
                     className="h-7 text-[11px]"
                     onClick={handleAdd}
+                    disabled={saving}
+                    aria-busy={saving}
                   >
                     Add Item
                   </Button>
@@ -362,52 +415,54 @@ export function BelongingsSection({
                             View Full Photo
                           </button>
                         )}
-                        <button
-                          className="hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
-                          onClick={() => {
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.accept = "image/*";
-                            input.capture = "environment";
-                            input.onchange = (e) => {
-                              const file = (e.target as HTMLInputElement)
-                                .files?.[0];
-                              if (!file) return;
-                              const reader = new FileReader();
-                              reader.onload = () => {
-                                setItems((prev) =>
-                                  prev.map((b) =>
-                                    b.id === item.id
-                                      ? {
-                                          ...b,
-                                          photoUrl: reader.result as string,
-                                        }
-                                      : b,
-                                  ),
-                                );
-                                toast.success("Photo updated");
+                        {!persists && (
+                          <button
+                            className="hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.capture = "environment";
+                              input.onchange = (e) => {
+                                const file = (e.target as HTMLInputElement)
+                                  .files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  setItems((prev) =>
+                                    prev.map((b) =>
+                                      b.id === item.id
+                                        ? {
+                                            ...b,
+                                            photoUrl: reader.result as string,
+                                          }
+                                        : b,
+                                    ),
+                                  );
+                                  toast.success("Photo updated");
+                                };
+                                reader.readAsDataURL(file);
                               };
-                              reader.readAsDataURL(file);
-                            };
-                            input.click();
-                          }}
-                        >
-                          <Upload className="size-3.5" />
-                          {item.photoUrl ? "Replace Photo" : "Upload Photo"}
-                        </button>
+                              input.click();
+                            }}
+                          >
+                            <Upload className="size-3.5" />
+                            {item.photoUrl ? "Replace Photo" : "Upload Photo"}
+                          </button>
+                        )}
                         {item.photoUrl && (
                           <button
                             className="hover:bg-destructive/10 text-destructive flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
-                            onClick={() => {
-                              setItems((prev) =>
-                                prev.map((b) =>
+                            onClick={() =>
+                              void commit(
+                                items.map((b) =>
                                   b.id === item.id
                                     ? { ...b, photoUrl: undefined }
                                     : b,
                                 ),
-                              );
-                              toast.success("Photo removed");
-                            }}
+                                "Photo removed",
+                              )
+                            }
                           >
                             <Trash2 className="size-3.5" />
                             Remove Photo
@@ -456,6 +511,7 @@ export function BelongingsSection({
                     <Checkbox
                       id={`return-${item.id}`}
                       checked={item.returned}
+                      disabled={saving}
                       onCheckedChange={(c) => handleReturn(item.id, c === true)}
                     />
                     <label
