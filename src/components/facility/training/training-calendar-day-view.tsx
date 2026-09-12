@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Ban, GraduationCap, Plus, User2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,15 @@ import {
   colorForTrainer,
   formatHour,
 } from "./training-calendar-utils";
-import { trainingQueries } from "@/lib/api/training";
 import {
-  BLOCK_TIME_REASON_LABELS,
+  useCalendarEventMutations,
+  useCalendarEvents,
+} from "@/lib/api/calendar-events";
+import { NO_ITEMS } from "@/lib/no-items";
+import {
   blocksForTrainerOnDate,
-  fanOutTimeBlockDelete,
   timeToMinutes,
+  trainingBlocksFromEvents,
 } from "@/lib/training-time-blocks";
 
 interface Props {
@@ -135,9 +138,12 @@ export function TrainingCalendarDayView({
   onSlotNewPrivate,
   onSlotBlockTime,
 }: Props) {
-  const queryClient = useQueryClient();
-  const { data: timeBlocks = [] } = useQuery(
-    trainingQueries.calendarTimeBlocks(),
+  // Block time is the facility calendar's own events (training-time-blocks.ts).
+  const { data: calendarEvents } = useCalendarEvents();
+  const { update: updateCalendarEvent } = useCalendarEventMutations();
+  const timeBlocks = useMemo(
+    () => trainingBlocksFromEvents(calendarEvents ?? NO_ITEMS),
+    [calendarEvents],
   );
 
   // Context-menu state — opened on right-click / long-press, positioned at
@@ -291,7 +297,7 @@ export function TrainingCalendarDayView({
             const trainerBlocks = blocksForTrainerOnDate(
               timeBlocks,
               selectedDate,
-              trainer.id,
+              trainer,
             );
 
             const slotTimeFromY = (rect: DOMRect, clientY: number): string => {
@@ -399,7 +405,7 @@ export function TrainingCalendarDayView({
                       2,
                     20,
                   );
-                  const label = BLOCK_TIME_REASON_LABELS[block.reasonKind];
+                  const label = block.label;
                   return (
                     <button
                       key={block.id}
@@ -411,7 +417,14 @@ export function TrainingCalendarDayView({
                             `Remove this blocked time?\n\n${block.startTime}–${block.endTime} · ${label}`,
                           )
                         ) {
-                          fanOutTimeBlockDelete(queryClient, block.id);
+                          // Deleted, not destroyed: the facility calendar
+                          // can recover it for 30 days.
+                          updateCalendarEvent.mutate(
+                            { id: block.id, deleted: true },
+                            {
+                              onError: (error) => toast.error(error.message),
+                            },
+                          );
                         }
                       }}
                       onContextMenu={(e) => e.stopPropagation()}
