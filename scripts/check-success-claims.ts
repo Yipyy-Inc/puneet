@@ -100,7 +100,6 @@ const BASELINE = new Set<string>([
   //
   // Each of these is a real claim over a file with nothing that performs it.
   // They are recorded, not excused.
-  "src/app/facility/dashboard/services/training/courses/page.tsx",
   "src/components/grooming/GroomingIntakeForm.tsx",
   // YipyyGoSettings.tsx left on 2026-09-06, by being fixed. Its "Express
   // Check-in settings saved successfully" sat over `saveYipyyGoConfig()`,
@@ -162,7 +161,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/dashboard/inventory/InventoryClient.tsx",
   "src/app/facility/dashboard/services/custom/[slug]/settings/_components/FacilitySettingsEditor.tsx",
   "src/app/facility/dashboard/services/custom/page.tsx",
-  "src/app/facility/dashboard/services/training/session/[sessionId]/_components/session-view-homework-prompt.tsx",
   "src/app/facility/dashboard/services/training/students/_components/homework-board.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx",
   "src/app/facility/dashboard/services/training/students/_components/training-profile-report-cards.tsx",
@@ -205,9 +203,6 @@ const BASELINE = new Set<string>([
   "src/components/facility/grooming/zone-and-tax-settings-panel.tsx",
   "src/components/facility/training/homework-edit-dialog.tsx",
   "src/components/facility/training/report-card-send-dialog.tsx",
-  "src/components/facility/training/training-disciplines-manager.tsx",
-  "src/components/facility/training/training-exercises-manager.tsx",
-  "src/components/facility/training/training-module-settings.tsx",
   "src/components/forms/FormNotificationSettings.tsx",
   "src/components/grooming/PriceAdjustmentForm.tsx",
   "src/components/messaging/CampaignsView.tsx",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { hexToRgba } from "@/lib/color-utils";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { trainingQueries } from "@/lib/api/training";
+import { useSaveTrainingCatalog } from "@/lib/api/training-catalog";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { TrainingDiscipline } from "@/types/training";
 
@@ -75,7 +76,9 @@ export function TrainingDisciplinesManager() {
   const plural = (n: number, one: string, other: string) =>
     t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
 
-  const queryClient = useQueryClient();
+  const { save, saving } = useSaveTrainingCatalog<TrainingDiscipline>(
+    "training_disciplines",
+  );
   const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
 
   // Edit dialog state.
@@ -114,17 +117,18 @@ export function TrainingDisciplinesManager() {
     return { active, inactive, total: disciplines.length };
   }, [disciplines]);
 
-  /** Persist a fresh discipline list into both query caches so the manager
-   *  view (all) and downstream pickers (active-only) update together. */
-  function pushDisciplines(next: TrainingDiscipline[]) {
-    queryClient.setQueryData<TrainingDiscipline[]>(
-      trainingQueries.allDisciplines().queryKey,
-      next,
-    );
-    queryClient.setQueryData<TrainingDiscipline[]>(
-      trainingQueries.disciplines().queryKey,
-      next.filter((d) => d.isActive),
-    );
+  /** Save the whole list to the facility's `training_disciplines` setting.
+   *  It went into the query cache and was gone on reload. Resolves true once
+   *  saved, and says so only then; false (with the reason) when refused. */
+  async function pushDisciplines(next: TrainingDiscipline[], saved?: string) {
+    try {
+      await save(next);
+      if (saved) toast.success(saved);
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
   }
 
   function openAdd() {
@@ -137,7 +141,7 @@ export function TrainingDisciplinesManager() {
     setDialogOpen(true);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) {
       toast.error(t("discNameRequired"));
       return;
@@ -154,8 +158,11 @@ export function TrainingDisciplinesManager() {
             }
           : d,
       );
-      pushDisciplines(next);
-      toast.success(t("discUpdated").replace("{name}", form.name.trim()));
+      const ok = await pushDisciplines(
+        next,
+        t("discUpdated").replace("{name}", form.name.trim()),
+      );
+      if (!ok) return;
     } else {
       const created: TrainingDiscipline = {
         id: nextDisciplineId(),
@@ -164,8 +171,11 @@ export function TrainingDisciplinesManager() {
         color: form.color,
         isActive: form.isActive,
       };
-      pushDisciplines([...disciplines, created]);
-      toast.success(t("discAdded").replace("{name}", created.name));
+      const ok = await pushDisciplines(
+        [...disciplines, created],
+        t("discAdded").replace("{name}", created.name),
+      );
+      if (!ok) return;
     }
     setDialogOpen(false);
     setEditingDiscipline(null);
@@ -175,15 +185,17 @@ export function TrainingDisciplinesManager() {
     const next = disciplines.map((d) =>
       d.id === id ? { ...d, isActive: !d.isActive } : d,
     );
-    pushDisciplines(next);
+    void pushDisciplines(next);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingDiscipline) return;
     const next = disciplines.filter((d) => d.id !== deletingDiscipline.id);
-    pushDisciplines(next);
-    toast.success(t("discDeleted").replace("{name}", deletingDiscipline.name));
-    setDeletingDiscipline(null);
+    const ok = await pushDisciplines(
+      next,
+      t("discDeleted").replace("{name}", deletingDiscipline.name),
+    );
+    if (ok) setDeletingDiscipline(null);
   }
 
   return (
@@ -371,7 +383,7 @@ export function TrainingDisciplinesManager() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleSave} disabled={!form.name.trim()}>
+            <Button onClick={handleSave} disabled={saving || !form.name.trim()}>
               {editingDiscipline ? t("saveChanges") : t("discAdd")}
             </Button>
           </DialogFooter>
@@ -404,6 +416,7 @@ export function TrainingDisciplinesManager() {
                 `--destructive`, which is the one measured against white. */}
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={saving}
               className="bg-destructive hover:bg-destructive/90 text-white"
             >
               {t("delete")}

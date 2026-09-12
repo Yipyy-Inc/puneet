@@ -10,6 +10,20 @@ import {
   trainingProgramsSchema,
 } from "@/lib/settings/training-programs";
 import {
+  NO_TRAINING_PATHWAYS,
+  SHIPPED_COURSE_TYPES,
+  SHIPPED_HOMEWORK_TEMPLATES,
+  SHIPPED_TRAINING_DISCIPLINES,
+  SHIPPED_TRAINING_EXERCISES,
+  SHIPPED_TRAINING_MODULE_SETTINGS,
+  trainingCourseTypesSchema,
+  trainingDisciplinesSchema,
+  trainingExercisesSchema,
+  trainingHomeworkTemplatesSchema,
+  trainingModuleSettingsSchema,
+  trainingPathwaysSchema,
+} from "./training-catalog";
+import {
   retailConfigSchema,
   SHIPPED_RETAIL_SETTINGS,
 } from "@/lib/settings/retail-config";
@@ -452,6 +466,36 @@ export const SETTING_DOMAINS = {
   training_programs: {
     schema: trainingProgramsSchema,
     fallback: NO_TRAINING_PROGRAMS,
+  },
+  // ── TRAINING CATALOGUE ────────────────────────────────────────────────
+  //
+  // Disciplines, exercises, homework templates, pathways and course types:
+  // fixtures saved with setQueryData until 2026-09-12. One list per domain;
+  // the shipped library is the fallback, except pathways — see the banner in
+  // lib/settings/training-catalog.ts.
+  training_disciplines: {
+    schema: trainingDisciplinesSchema,
+    fallback: SHIPPED_TRAINING_DISCIPLINES,
+  },
+  training_exercises: {
+    schema: trainingExercisesSchema,
+    fallback: SHIPPED_TRAINING_EXERCISES,
+  },
+  training_homework_templates: {
+    schema: trainingHomeworkTemplatesSchema,
+    fallback: SHIPPED_HOMEWORK_TEMPLATES,
+  },
+  training_pathways: {
+    schema: trainingPathwaysSchema,
+    fallback: NO_TRAINING_PATHWAYS,
+  },
+  training_course_types: {
+    schema: trainingCourseTypesSchema,
+    fallback: SHIPPED_COURSE_TYPES,
+  },
+  training_module_settings: {
+    schema: trainingModuleSettingsSchema,
+    fallback: SHIPPED_TRAINING_MODULE_SETTINGS,
   },
   // ── RETAIL ─────────────────────────────────────────────────────────────
   //

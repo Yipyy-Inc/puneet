@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -57,14 +57,13 @@ import {
 import { ExercisePicker } from "@/components/facility/training/exercise-picker";
 import { VideoLinksTextarea } from "./video-links-textarea";
 import { trainingQueries } from "@/lib/api/training";
+import { useHomeworkTemplateWrites } from "@/lib/api/training-catalog";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import type {
   HomeworkTemplate,
   HomeworkTemplateItem,
 } from "@/data/training-homework-templates";
 import {
-  fanOutHomeworkTemplateDelete,
-  fanOutHomeworkTemplateUpsert,
   nextHomeworkTemplateId,
   nextHomeworkTemplateItemId,
   normalizeCourseName,
@@ -88,7 +87,7 @@ export function HomeworkTemplatesSheet({
   onOpenChange,
   courseTypeName,
 }: Props) {
-  const queryClient = useQueryClient();
+  const templateWrites = useHomeworkTemplateWrites();
   const { data: allTemplates = [] } = useQuery(
     trainingQueries.allHomeworkTemplates(),
   );
@@ -134,21 +133,25 @@ export function HomeworkTemplatesSheet({
     const aOrd = template.sortOrder ?? idx;
     const bOrd = neighbour.sortOrder ?? target;
     const nowISO = new Date().toISOString();
-    fanOutHomeworkTemplateUpsert(queryClient, {
-      ...template,
-      sortOrder: bOrd,
-      updatedAt: nowISO,
-    });
-    fanOutHomeworkTemplateUpsert(queryClient, {
-      ...neighbour,
-      sortOrder: aOrd,
-      updatedAt: nowISO,
-    });
+    // Both halves of the swap in one save.
+    templateWrites
+      .upsert(
+        { ...template, sortOrder: bOrd, updatedAt: nowISO },
+        { ...neighbour, sortOrder: aOrd, updatedAt: nowISO },
+      )
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : String(error)),
+      );
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingTemplate) return;
-    fanOutHomeworkTemplateDelete(queryClient, deletingTemplate.id);
+    try {
+      await templateWrites.remove(deletingTemplate.id);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(`"${deletingTemplate.name}" deleted.`);
     setDeletingTemplate(null);
   }
@@ -387,7 +390,7 @@ function TemplateEditorDialog({
   editing: HomeworkTemplate | null;
   courseTypeName: string;
 }) {
-  const queryClient = useQueryClient();
+  const templateWrites = useHomeworkTemplateWrites();
   const preferredDisciplineId = useMemo(
     () => getDisciplineIdForClassName(courseTypeName),
     [courseTypeName],
@@ -433,7 +436,7 @@ function TemplateEditorDialog({
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const trimmed = state.name.trim();
     if (!trimmed) {
       toast.error("Template name is required.");
@@ -461,7 +464,12 @@ function TemplateEditorDialog({
       createdAt: editing?.createdAt ?? nowISO,
       updatedAt: nowISO,
     };
-    fanOutHomeworkTemplateUpsert(queryClient, record);
+    try {
+      await templateWrites.upsert(record);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(editing ? "Template updated." : "Template created.");
     onOpenChange(false);
   }
