@@ -7,6 +7,7 @@ import {
   fetchTrainers,
   fetchTrainingBook,
   fetchTrainingCatalog,
+  fetchTrainingHomework,
   fetchTrainingSettingValue,
   fetchTrainingPrograms,
 } from "@/lib/api/training-book";
@@ -24,9 +25,7 @@ import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
 import {
   getAttendanceForPet,
-  getHomeworkForEnrollments,
   sessionAttendances,
-  trainingHomeworkRecords,
 } from "@/data/training-history";
 import {
   defaultTrainingModuleSettings,
@@ -259,18 +258,19 @@ export const trainingQueries = {
     queryKey: ["training", "attendances", "all"] as const,
     queryFn: async () => sessionAttendances,
   }),
-  /** Homework records for a pet's enrollments — driven from the enrollment
-   *  ids rather than petId because homework is per-enrollment in the data
-   *  model. */
+  /** Homework on these enrollments, from `training_homework` — keyed by
+   *  enrollment because homework belongs to one. It was the
+   *  `trainingHomeworkRecords` fixture. Writes: lib/api/training-homework. */
   homeworkForEnrollments: (enrollmentIds: string[]) => ({
     queryKey: ["training", "homework", enrollmentIds] as const,
-    queryFn: async () => getHomeworkForEnrollments(enrollmentIds),
+    queryFn: () => fetchTrainingHomework(enrollmentIds),
     enabled: enrollmentIds.length > 0,
   }),
-  /** Catalog of all homework records — for any view that needs them. */
+  /** Every piece of homework the caller may see — the facility's for staff,
+   *  their own dogs' for an owner in the portal. */
   allHomework: () => ({
     queryKey: ["training", "homework", "all"] as const,
-    queryFn: async () => trainingHomeworkRecords,
+    queryFn: () => fetchTrainingHomework(),
   }),
   /** Sessions a trainer has marked briefed — `briefed_at` on the session
    *  (20260912170021). It was a cache-only list, so the reminder came back on

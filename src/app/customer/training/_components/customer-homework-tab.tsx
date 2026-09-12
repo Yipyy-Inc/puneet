@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RouteState } from "@/components/ui/route-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   Circle,
+  CircleAlert,
   Clock,
   Flame,
   ImageIcon,
@@ -25,21 +28,15 @@ import {
   PawPrint,
   PlayCircle,
   Sparkles,
-  Trash2,
-  Video,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
-import { customerTrainingSettingsQueries } from "@/lib/api/customer-training-settings";
+import { useLogHomeworkPractice } from "@/lib/api/training-homework";
 import {
-  detachTodaysVideo,
-  fanOutHomeworkUpsert,
   getLastPracticedDate,
   getPracticeStreakDays,
   hasPracticedToday,
-  markPracticedToday,
 } from "@/lib/training-homework";
 import type {
-  TrainingEnrollment,
   TrainingHomework,
   TrainingHomeworkMedia,
 } from "@/lib/training-enrollment";
@@ -49,19 +46,13 @@ import {
   formatDateLong,
   formatDateShort,
   formatDayRelative,
-  formatNumber,
 } from "@/lib/i18n/format";
 import { rich } from "@/lib/i18n/rich";
-
-interface Props {
-  /** Customer (owner) ID — used to scope the view to that owner's pets. */
-  customerId: number;
-}
+import { localToday } from "@/lib/vaccinations";
 
 interface PetHomeworkGroup {
   petId: number;
   petName: string;
-  petImageUrl?: string;
   active: TrainingHomework[];
   completed: TrainingHomework[];
 }
@@ -73,82 +64,72 @@ function formatDate(iso: string, locale: AppLocale): string {
   return formatDateLong(new Date(y, m - 1, d), locale);
 }
 
-export function CustomerHomeworkTab({ customerId }: Props) {
-  const { t, fill, locale } = useCustomerText("training");
-  const queryClient = useQueryClient();
-  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
-
-  const { data: enrollments = [] } = useQuery(
-    trainingQueries.allSeriesEnrollments(),
-  );
-  const { data: homework = [] } = useQuery(trainingQueries.allHomework());
-  // The facility's own rules, through the client row — trainingQueries goes
-  // through a staff membership, so a customer only ever saw the defaults.
-  const { data: moduleSettings } = useQuery({
-    ...customerTrainingSettingsQueries.all(),
-    select: (s) => s.moduleSettings,
-  });
-  const requireVideo =
-    moduleSettings?.requireVideoForHomeworkSubmission ?? false;
+/** The Homework tab on the customer's training page — each dog's homework,
+ *  with "Mark as done for today".
+ *
+ *  ── WHAT CHANGED (2026-09-12) ────────────────────────────────────────────
+ *
+ *  It read `trainingHomeworkRecords`, a fixture, and "Mark as done" wrote the
+ *  query cache, so the trainer never saw it. Homework is `training_homework`
+ *  now, and a day's practice is logged through `log_homework_practice()` —
+ *  one row a day, which the trainer's board and the dog's profile read. It
+ *  is grouped by the dog each piece of homework names, so it does not depend
+ *  on what a customer session may read of the training book.
+ *
+ *  The video upload is gone. It kept a `blob:` URL that lived in this tab and
+ *  nowhere else, so a "submitted" clip never reached a trainer — and when the
+ *  facility required a video, the owner could not mark anything done. There
+ *  is no upload for practice videos yet; until there is, a practice is the
+ *  tap. */
+export function CustomerHomeworkTab() {
+  const { t, fill } = useCustomerText("training");
+  const [todayISO] = useState(localToday);
+  const {
+    data: homework = [],
+    error: homeworkError,
+    isPending: homeworkPending,
+  } = useQuery(trainingQueries.allHomework());
+  const logPractice = useLogHomeworkPractice();
 
   const [showCompleted, setShowCompleted] = useState(false);
 
   const groups = useMemo<PetHomeworkGroup[]>(() => {
-    // Scope to this customer's enrollments only.
-    const ownerEnrollments = enrollments.filter(
-      (e) => e.ownerId === customerId,
-    );
-    const enrollmentIds = new Set(ownerEnrollments.map((e) => e.id));
-    const enrollmentById = new Map(ownerEnrollments.map((e) => [e.id, e]));
-
-    // Bucket homework per pet via its enrollment.
-    const byPet = new Map<
-      number,
-      {
-        enrollment: TrainingEnrollment;
-        active: TrainingHomework[];
-        completed: TrainingHomework[];
-      }
-    >();
-    for (const e of ownerEnrollments) {
-      if (!byPet.has(e.petId)) {
-        byPet.set(e.petId, { enrollment: e, active: [], completed: [] });
-      }
-    }
+    // RLS gives an owner their own dogs' homework, and each row names its dog.
+    const byPet = new Map<number, PetHomeworkGroup>();
     for (const hw of homework) {
-      if (!enrollmentIds.has(hw.enrollmentId)) continue;
-      const enrollment = enrollmentById.get(hw.enrollmentId);
-      if (!enrollment) continue;
-      const bucket = byPet.get(enrollment.petId);
-      if (!bucket) continue;
-      if (hw.completed) bucket.completed.push(hw);
-      else bucket.active.push(hw);
+      if (hw.petId === undefined) continue;
+      let group = byPet.get(hw.petId);
+      if (!group) {
+        group = {
+          petId: hw.petId,
+          petName: hw.petName ?? "",
+          active: [],
+          completed: [],
+        };
+        byPet.set(hw.petId, group);
+      }
+      if (hw.completed) group.completed.push(hw);
+      else group.active.push(hw);
     }
 
-    // Order each pet's active list by next-due ascending (oldest first), then
-    // completed by completedDate descending (most recent first).
-    const ordered: PetHomeworkGroup[] = [];
-    for (const [petId, bucket] of byPet.entries()) {
-      bucket.active.sort((a, b) => {
-        const ad = a.nextDueDate ?? a.sessionDate;
-        const bd = b.nextDueDate ?? b.sessionDate;
-        return ad.localeCompare(bd);
-      });
-      bucket.completed.sort((a, b) => {
-        const ad = a.completedDate ?? a.sessionDate;
-        const bd = b.completedDate ?? b.sessionDate;
-        return bd.localeCompare(ad);
-      });
-      ordered.push({
-        petId,
-        petName: bucket.enrollment.petName,
-        active: bucket.active,
-        completed: bucket.completed,
-      });
+    // Each dog's active list by next-due ascending (oldest first), then its
+    // completed list by completion descending (most recent first).
+    const ordered = [...byPet.values()];
+    for (const group of ordered) {
+      group.active.sort((a, b) =>
+        (a.nextDueDate ?? a.sessionDate).localeCompare(
+          b.nextDueDate ?? b.sessionDate,
+        ),
+      );
+      group.completed.sort((a, b) =>
+        (b.completedDate ?? b.sessionDate).localeCompare(
+          a.completedDate ?? a.sessionDate,
+        ),
+      );
     }
     ordered.sort((a, b) => a.petName.localeCompare(b.petName));
     return ordered;
-  }, [enrollments, homework, customerId]);
+  }, [homework]);
 
   const totalActive = useMemo(
     () => groups.reduce((sum, g) => sum + g.active.length, 0),
@@ -168,30 +149,41 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     return n;
   }, [groups, todayISO]);
 
-  function handleMarkDone(hw: TrainingHomework) {
+  async function handleMarkDone(hw: TrainingHomework) {
     if (hasPracticedToday(hw, todayISO)) return;
-    const updated = markPracticedToday(hw, todayISO);
-    fanOutHomeworkUpsert(queryClient, updated);
-    toast.success(`Nice work — "${hw.title}" marked done for today.`);
-  }
-
-  function handleAttachVideo(hw: TrainingHomework, videoUrl: string) {
-    const updated = markPracticedToday(hw, todayISO, videoUrl);
-    fanOutHomeworkUpsert(queryClient, updated);
-    toast.success(`Video attached for "${hw.title}".`);
-  }
-
-  function handleRemoveVideo(hw: TrainingHomework) {
-    // Free the blob URL we created when the file was picked.
-    const todayEntry = hw.practiceLog?.find(
-      (e) => e.date === todayISO && !!e.videoUrl,
-    );
-    if (todayEntry?.videoUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(todayEntry.videoUrl);
+    // Said once the day is logged — the trainer reads the same row.
+    try {
+      await logPractice.mutateAsync({ id: hw.id, date: todayISO });
+      toast.success(fill("markedDoneToday", { title: hw.title }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
     }
-    const updated = detachTodaysVideo(hw, todayISO);
-    fanOutHomeworkUpsert(queryClient, updated);
-    toast(`Video removed from "${hw.title}".`);
+  }
+
+  // A read still on its way, or one that failed, used to fall through to
+  // "No homework yet".
+  if (homeworkError) {
+    // §5d2's ladder: a panel that would not load takes `error`.
+    return (
+      <RouteState
+        surface="card"
+        className="min-h-0 p-0"
+        pose="error"
+        icon={CircleAlert}
+        inkClassName="text-destructive"
+        title={t("hwLoadFailedTitle")}
+        description={t("hwLoadFailed")}
+      />
+    );
+  }
+
+  if (homeworkPending) {
+    return (
+      <div className="space-y-3" aria-busy>
+        <span className="sr-only">{t("hwLoading")}</span>
+        <Skeleton className="h-32 rounded-2xl motion-reduce:animate-none" />
+      </div>
+    );
   }
 
   if (totalActive === 0 && totalCompleted === 0) {
@@ -264,10 +256,11 @@ export function CustomerHomeworkTab({ customerId }: Props) {
                     key={hw.id}
                     homework={hw}
                     todayISO={todayISO}
-                    requireVideo={requireVideo}
-                    onMarkDone={() => handleMarkDone(hw)}
-                    onAttachVideo={(url) => handleAttachVideo(hw, url)}
-                    onRemoveVideo={() => handleRemoveVideo(hw)}
+                    marking={
+                      logPractice.isPending &&
+                      logPractice.variables?.id === hw.id
+                    }
+                    onMarkDone={() => void handleMarkDone(hw)}
                   />
                 ))}
               </ul>
@@ -276,160 +269,117 @@ export function CustomerHomeworkTab({ customerId }: Props) {
         ))}
 
         {totalCompleted > 0 && (
-          <Collapsible open={showCompleted} onOpenChange={setShowCompleted}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 rounded-xl border bg-slate-50/60 px-4 py-2.5 text-left hover:bg-slate-100/60"
-              >
-                <div className="flex items-center gap-2">
-                  {showCompleted ? (
-                    <ChevronDown className="text-muted-foreground size-4" />
-                  ) : (
-                    <ChevronRight className="text-muted-foreground size-4" />
-                  )}
-                  <h3 className="text-sm font-semibold text-slate-700">
-                    {t("completedHomework")}
-                  </h3>
-                  <span className="text-muted-foreground text-[11px] tabular-nums">
-                    {totalCompleted}
-                  </span>
-                </div>
-                <span className="text-muted-foreground text-[11px]">
-                  {showCompleted ? t("hide") : t("showArchive")}
-                </span>
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-3">
-              {groups
-                .filter((g) => g.completed.length > 0)
-                .map((g) => (
-                  <ul key={g.petId} className="space-y-2">
-                    {g.completed.map((hw) => (
-                      <li
-                        key={hw.id}
-                        className="bg-card rounded-xl border px-4 py-3 opacity-80 shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-700 line-through decoration-slate-300">
-                              {hw.title}
-                            </p>
-                            <p className="text-muted-foreground text-[11px]">
-                              {g.petName} ·{" "}
-                              {hw.completedDate
-                                ? fill("doneOn", {
-                                    date: formatDate(hw.completedDate, locale),
-                                  })
-                                : t("done")}
-                            </p>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            {t("completed")}
-                          </Badge>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-            </CollapsibleContent>
-          </Collapsible>
+          <CompletedArchive
+            groups={groups}
+            total={totalCompleted}
+            open={showCompleted}
+            onOpenChange={setShowCompleted}
+          />
         )}
       </div>
     </div>
   );
 }
 
+function CompletedArchive({
+  groups,
+  total,
+  open,
+  onOpenChange,
+}: {
+  groups: PetHomeworkGroup[];
+  total: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t, fill, locale } = useCustomerText("training");
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 rounded-xl border bg-slate-50/60 px-4 py-2.5 text-left hover:bg-slate-100/60"
+        >
+          <div className="flex items-center gap-2">
+            {open ? (
+              <ChevronDown className="text-muted-foreground size-4" />
+            ) : (
+              <ChevronRight className="text-muted-foreground size-4" />
+            )}
+            <h3 className="text-sm font-semibold text-slate-700">
+              {t("completedHomework")}
+            </h3>
+            <span className="text-muted-foreground text-[11px] tabular-nums">
+              {total}
+            </span>
+          </div>
+          <span className="text-muted-foreground text-[11px]">
+            {open ? t("hide") : t("showArchive")}
+          </span>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-3">
+        {groups
+          .filter((g) => g.completed.length > 0)
+          .map((g) => (
+            <ul key={g.petId} className="space-y-2">
+              {g.completed.map((hw) => (
+                <li
+                  key={hw.id}
+                  className="bg-card rounded-xl border px-4 py-3 opacity-80 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700 line-through decoration-slate-300">
+                        {hw.title}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {g.petName} ·{" "}
+                        {hw.completedDate
+                          ? fill("doneOn", {
+                              date: formatDate(hw.completedDate, locale),
+                            })
+                          : t("done")}
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+                    >
+                      <CheckCircle2 className="size-3" />
+                      {t("completed")}
+                    </Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function HomeworkCard({
   homework,
   todayISO,
-  requireVideo,
+  marking,
   onMarkDone,
-  onAttachVideo,
-  onRemoveVideo,
 }: {
   homework: TrainingHomework;
   todayISO: string;
-  requireVideo: boolean;
+  marking: boolean;
   onMarkDone: () => void;
-  onAttachVideo: (videoUrl: string) => void;
-  onRemoveVideo: () => void;
 }) {
   const { t, fill, locale } = useCustomerText("training");
   const practiced = hasPracticedToday(homework, todayISO);
   const streak = getPracticeStreakDays(homework, todayISO);
   const lastPracticed = getLastPracticedDate(homework);
-  const todayEntry = homework.practiceLog?.find(
-    (entry) => entry.date === todayISO,
-  );
-  const submittedVideoUrl = todayEntry?.videoUrl;
 
-  // Most-recent submission that has a trainer response — so the owner sees
-  // the trainer's reply next time they open the homework, even if they
-  // haven't practiced again yet today.
-  const latestReviewedSubmission = useMemo(() => {
-    const log = homework.practiceLog ?? [];
-    return [...log]
-      .filter((entry) => !!entry.videoUrl && !!entry.trainerResponse)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-  }, [homework.practiceLog]);
-
-  // Today's response (if the trainer reviewed today's submission already).
-  const todaysResponse = todayEntry?.trainerResponse;
-
-  const videoInputRef = useRef<HTMLInputElement | null>(null);
-  const [validating, setValidating] = useState(false);
-
-  function pickVideo() {
-    videoInputRef.current?.click();
-  }
-
-  function onVideoFile(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("video/")) {
-      toast.error(t("pleasePickAVideoFile"));
-      return;
-    }
-    setValidating(true);
-    const probeUrl = URL.createObjectURL(file);
-    const probe = document.createElement("video");
-    probe.preload = "metadata";
-    probe.muted = true;
-    probe.src = probeUrl;
-    const cleanup = () => {
-      setValidating(false);
-      if (videoInputRef.current) videoInputRef.current.value = "";
-    };
-    probe.onloadedmetadata = () => {
-      // Allow a small buffer beyond 20 s so 20.x clips don't get rejected on
-      // a metadata rounding edge.
-      if (probe.duration > 21) {
-        URL.revokeObjectURL(probeUrl);
-        toast.error(
-          fill("clipTooLong", {
-            seconds: formatNumber(Math.round(probe.duration), locale),
-          }),
-        );
-        cleanup();
-        return;
-      }
-      // Hand the blob URL up — the parent persists it on today's practice
-      // entry. In production this is where the real upload-and-compress
-      // pipeline runs and we'd swap the blob URL for the returned server URL.
-      onAttachVideo(probeUrl);
-      cleanup();
-    };
-    probe.onerror = () => {
-      URL.revokeObjectURL(probeUrl);
-      toast.error(t("couldnTReadThatVideo"));
-      cleanup();
-    };
-  }
+  // The trainer's latest response to any day the dog practised, so the owner
+  // sees it the next time they open the homework.
+  const latestResponse = [...(homework.practiceLog ?? [])]
+    .filter((entry) => !!entry.trainerResponse)
+    .sort((a, b) => b.date.localeCompare(a.date))[0];
 
   return (
     <li className="bg-card rounded-xl border shadow-sm">
@@ -524,14 +474,10 @@ function HomeworkCard({
             <Button
               size="sm"
               onClick={onMarkDone}
-              disabled={practiced || (requireVideo && !submittedVideoUrl)}
-              title={
-                requireVideo && !submittedVideoUrl && !practiced
-                  ? "Upload a video first — this facility requires proof of practice."
-                  : undefined
-              }
+              loading={marking}
+              disabled={practiced}
               className={cn(
-                "h-9 gap-1.5 px-4",
+                "gap-1.5",
                 practiced
                   ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
                   : "bg-emerald-600 text-white hover:bg-emerald-700",
@@ -542,117 +488,16 @@ function HomeworkCard({
             </Button>
           </div>
 
-          {requireVideo && !submittedVideoUrl && !practiced && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/40 dark:bg-amber-950/30">
-              <p className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-800 dark:text-amber-200">
-                <Video className="size-3.5" />
-                {t("yourTrainerRequiresAShort")}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-[11px]">
-                {t("uploadClipBelow")}
-              </p>
-            </div>
-          )}
-
-          {/* Video submission — owner records / uploads a short clip of the
-              dog performing the exercise. Attaches to today's practice entry
-              so the trainer sees the actual practice, not just the tap. */}
-          {submittedVideoUrl ? (
-            <div className="space-y-1.5">
-              <div className="bg-card relative overflow-hidden rounded-lg border">
-                <video
-                  src={submittedVideoUrl}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="aspect-video w-full bg-slate-900 object-contain"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
-                  <PlayCircle className="size-3" />
-                  {t(
-                    todayEntry?.videoAttachedAt
-                      ? "videoSubmittedToday"
-                      : "videoSubmitted",
-                  )}
-                  {" — "}
-                  {t(
-                    todaysResponse
-                      ? "trainerRespondedBelow"
-                      : "trainerCanReviewNextSession",
-                  )}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={pickVideo}
-                    className="text-muted-foreground h-8 gap-1.5 px-2 text-[11px]"
-                    disabled={validating}
-                  >
-                    <Video className="size-3.5" />
-                    {t("replace")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={onRemoveVideo}
-                    className="h-8 gap-1.5 px-2 text-[11px] text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                  >
-                    <Trash2 className="size-3.5" />
-                    {t("remove")}
-                  </Button>
-                </div>
-              </div>
-              {todaysResponse && (
-                <TrainerResponseBlock
-                  message={todaysResponse}
-                  trainerName={todayEntry?.trainerRespondedBy}
-                  respondedAtISO={todayEntry?.trainerRespondedAt}
-                />
-              )}
-            </div>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={pickVideo}
-              disabled={validating}
-              className="h-9 w-full gap-1.5 border-dashed text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-950/30"
-            >
-              <Video className="size-4" />
-              {validating
-                ? t("readingClip")
-                : requireVideo
-                  ? t("uploadAVideoRequired")
-                  : t("uploadAVideoOptional")}
-              <span className="text-muted-foreground ml-1 text-[10px] font-normal">
-                · {t("max20Seconds")}
-              </span>
-            </Button>
-          )}
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/*"
-            capture="environment"
-            onChange={(e) => onVideoFile(e.target.files)}
-            className="hidden"
-          />
-
-          {/* If today's submission has no trainer response yet, but an older
-              submission has one on file, surface it so the owner sees the
-              trainer's feedback the next time they open the homework. */}
-          {!todaysResponse && latestReviewedSubmission && (
+          {latestResponse?.trainerResponse && (
             <TrainerResponseBlock
-              message={latestReviewedSubmission.trainerResponse!}
-              trainerName={latestReviewedSubmission.trainerRespondedBy}
-              respondedAtISO={latestReviewedSubmission.trainerRespondedAt}
-              practiceDate={latestReviewedSubmission.date}
+              message={latestResponse.trainerResponse}
+              trainerName={latestResponse.trainerRespondedBy}
+              respondedAtISO={latestResponse.trainerRespondedAt}
+              practiceDate={
+                latestResponse.date === todayISO
+                  ? undefined
+                  : latestResponse.date
+              }
             />
           )}
         </div>
@@ -670,27 +515,27 @@ function TrainerResponseBlock({
   message: string;
   trainerName?: string;
   respondedAtISO?: string;
-  /** When set, surfaces "for {date}'s submission" — used by the fallback
-   *  block so it's clear the response is about an older video, not today's. */
+  /** When set, says which day's practice the response is about — for a
+   *  response to an earlier day than today. */
   practiceDate?: string;
 }) {
   const { t, fill, locale } = useCustomerText("training");
   const when = respondedAtISO ? formatDateShort(respondedAtISO, locale) : null;
   return (
-    <div className="space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 dark:border-indigo-900/40 dark:bg-indigo-950/30">
-      <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase dark:text-indigo-200">
+    <div className="space-y-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2">
+      <p className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-indigo-700 uppercase">
         <Sparkles className="size-3" />
         {t("trainerSays")}
         {practiceDate && (
           <span className="text-muted-foreground ml-1 font-normal tracking-normal normal-case">
             ·{" "}
-            {fill("aboutYourClip", { date: formatDate(practiceDate, locale) })}
+            {fill("aboutPracticeOn", {
+              date: formatDate(practiceDate, locale),
+            })}
           </span>
         )}
       </p>
-      <p className="text-[13px]/relaxed text-slate-700 dark:text-slate-200">
-        {message}
-      </p>
+      <p className="text-[13px]/relaxed text-slate-700">{message}</p>
       {(trainerName || when) && (
         <p className="text-muted-foreground text-[10px]">
           {trainerName ?? t("yourTrainer")}

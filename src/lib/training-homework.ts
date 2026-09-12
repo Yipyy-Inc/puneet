@@ -10,10 +10,10 @@
  * This avoids storing trainer/pet redundantly on TrainingHomework — both
  * derive cleanly from the enrollment + series chain.
  *
- * Also exposes the cache fan-out helpers used by the board + dialog + per-pet
- * Homework tab so a single mutation lights up every consumer in sync.
+ * Homework and its practice log are `training_homework` rows now; the
+ * writes are lib/api/training-homework. The cache fan-out helpers that lived
+ * here wrote the query cache and nothing else, and are gone (2026-09-12).
  */
-import type { QueryClient } from "@tanstack/react-query";
 import type {
   TrainingEnrollment,
   TrainingHomework,
@@ -140,8 +140,10 @@ export function aggregateHomeworkBoard(
   return rows;
 }
 
-/** Bump `nextDueDate` forward — used when staff marks a homework as
- *  "practiced today" without completing it. The cadence is intentionally
+/** Bump `nextDueDate` forward. The database applies this same rule when a
+ *  practice is logged (`private.homework_next_due`, 20260912205812); keep the
+ *  two in step. Originally used when staff marked a homework "practiced
+ *  today" without completing it. The cadence is intentionally
  *  loose: a frequency string of "Daily" pushes one day, anything else
  *  defaults to a week. The string is freeform so we can only do a soft
  *  heuristic here. */
@@ -168,104 +170,6 @@ export function hasPracticedToday(
 ): boolean {
   const target = todayISO.slice(0, 10);
   return (homework.practiceLog ?? []).some((entry) => entry.date === target);
-}
-
-/** Append a practice entry for `todayISO`. Idempotent — if the owner already
- *  logged the same day, returns the unchanged record (or with the video
- *  attached to today's existing entry when `videoUrl` is provided). Also
- *  bumps `nextDueDate` forward via `bumpNextDueDate()` so the trainer's
- *  board reflects the next practice target. */
-export function markPracticedToday(
-  homework: TrainingHomework,
-  todayISO: string,
-  videoUrl?: string,
-): TrainingHomework {
-  const date = todayISO.slice(0, 10);
-  const nowISO = new Date().toISOString();
-  const log = homework.practiceLog ?? [];
-  const existingIdx = log.findIndex((entry) => entry.date === date);
-
-  if (existingIdx >= 0) {
-    // Already practiced today. If a video came in, stamp it onto the
-    // existing entry; otherwise nothing to do.
-    if (!videoUrl) return homework;
-    const updated = log.slice();
-    updated[existingIdx] = {
-      ...updated[existingIdx]!,
-      videoUrl,
-      videoAttachedAt: nowISO,
-    };
-    return { ...homework, practiceLog: updated };
-  }
-
-  // Fresh entry — append plus optional video.
-  return {
-    ...homework,
-    practiceLog: [
-      ...log,
-      {
-        date,
-        markedAt: nowISO,
-        ...(videoUrl ? { videoUrl, videoAttachedAt: nowISO } : {}),
-      },
-    ],
-    // Re-aim the next practice target so the board's overdue badge clears
-    // immediately when the owner logs today.
-    nextDueDate: bumpNextDueDate(homework, todayISO),
-  };
-}
-
-/** Write a trainer response onto the practice entry matching `practiceDate`.
- *  No-ops if there's no entry on that day. Trimming an empty response clears
- *  the response cleanly so the customer-portal view goes back to "awaiting
- *  trainer review". */
-export function setTrainerResponseForDate(
-  homework: TrainingHomework,
-  practiceDate: string,
-  response: string,
-  trainerName: string,
-): TrainingHomework {
-  const log = homework.practiceLog ?? [];
-  const idx = log.findIndex((entry) => entry.date === practiceDate);
-  if (idx === -1) return homework;
-  const target = log[idx]!;
-  const trimmed = response.trim();
-  const nowISO = new Date().toISOString();
-  const updated = log.slice();
-  if (trimmed.length === 0) {
-    updated[idx] = {
-      date: target.date,
-      markedAt: target.markedAt,
-      ...(target.videoUrl
-        ? { videoUrl: target.videoUrl, videoAttachedAt: target.videoAttachedAt }
-        : {}),
-    };
-  } else {
-    updated[idx] = {
-      ...target,
-      trainerResponse: trimmed,
-      trainerRespondedAt: nowISO,
-      trainerRespondedBy: trainerName,
-    };
-  }
-  return { ...homework, practiceLog: updated };
-}
-
-/** Remove the owner-attached video from today's practice entry. Leaves the
- *  practice entry itself intact (the owner already reported practice). */
-export function detachTodaysVideo(
-  homework: TrainingHomework,
-  todayISO: string,
-): TrainingHomework {
-  const date = todayISO.slice(0, 10);
-  const log = homework.practiceLog ?? [];
-  const idx = log.findIndex((entry) => entry.date === date);
-  if (idx === -1) return homework;
-  const target = log[idx]!;
-  if (!target.videoUrl) return homework;
-  const updated = log.slice();
-  updated[idx] = { date: target.date, markedAt: target.markedAt };
-  return { ...homework, practiceLog: updated };
 }
 
 /** ISO date of the most recent practice entry, or `null` when the owner has
@@ -310,64 +214,4 @@ export function getPracticeStreakDays(
 
 function toIsoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-/** True when the given homework cache scope (the third query-key segment)
- *  should receive the given record. The `allHomework` cache is unscoped;
- *  per-enrollment caches only accept records whose enrollmentId is in their
- *  scope. */
-function scopeAcceptsRecord(scope: unknown, record: TrainingHomework): boolean {
-  if (scope === "all") return true;
-  if (Array.isArray(scope)) {
-    return scope.includes(record.enrollmentId);
-  }
-  return false;
-}
-
-/** Insert-or-replace a homework record across every cached training-homework
- *  query. Used by the standalone dialog (add + edit), the per-pet Homework
- *  tab, and the board's row actions so a single mutation lights up every
- *  consumer in sync. */
-export function fanOutHomeworkUpsert(
-  queryClient: QueryClient,
-  record: TrainingHomework,
-): void {
-  const cache = queryClient.getQueryCache();
-  cache.findAll({ queryKey: ["training", "homework"] }).forEach((query) => {
-    const key = query.queryKey;
-    if (key.length !== 3) return;
-    const scope = key[2];
-    if (!scopeAcceptsRecord(scope, record)) {
-      // The record doesn't belong in this scope, but it might have been here
-      // previously (an enrollment change is rare but possible). Drop it
-      // either way so a stale copy doesn't linger.
-      queryClient.setQueryData<TrainingHomework[]>(key, (prev = []) =>
-        prev.filter((h) => h.id !== record.id),
-      );
-      return;
-    }
-    queryClient.setQueryData<TrainingHomework[]>(key, (prev = []) => {
-      const idx = prev.findIndex((h) => h.id === record.id);
-      if (idx === -1) return [...prev, record];
-      const next = prev.slice();
-      next[idx] = record;
-      return next;
-    });
-  });
-}
-
-/** Remove a homework record by id from every cached training-homework
- *  query. */
-export function fanOutHomeworkDelete(
-  queryClient: QueryClient,
-  id: string,
-): void {
-  const cache = queryClient.getQueryCache();
-  cache.findAll({ queryKey: ["training", "homework"] }).forEach((query) => {
-    const key = query.queryKey;
-    if (key.length !== 3) return;
-    queryClient.setQueryData<TrainingHomework[]>(key, (prev = []) =>
-      prev.filter((h) => h.id !== id),
-    );
-  });
 }

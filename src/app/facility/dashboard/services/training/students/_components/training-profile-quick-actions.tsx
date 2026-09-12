@@ -149,10 +149,9 @@ export function TrainingProfileQuickActions({
         ownerEmail={ownerEmail}
         ownerPhone={ownerPhone}
       />
-      {/* Same assign modal the Homework tab uses — writes through
-          fanOutHomeworkUpsert so the record lands in the shared
-          ["training","homework"] store and the owner sees it in their portal,
-          identical to the session-completion auto-assign path. */}
+      {/* The assign dialog the Homework tab uses: it writes
+          training_homework, which the owner's portal reads, as the prompt
+          after a session does. */}
       <HomeworkEditDialog
         open={homeworkOpen}
         onOpenChange={setHomeworkOpen}

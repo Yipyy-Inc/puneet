@@ -410,6 +410,10 @@ export interface HomeworkPracticeEntry {
 export interface TrainingHomework {
   id: string;
   enrollmentId: string;
+  /** The dog's ref and name, from the homework row itself — so an owner's
+   *  portal can group homework by dog without reading the training book. */
+  petId?: number;
+  petName?: string;
   sessionNumber: number;
   sessionDate: string;
   title: string;

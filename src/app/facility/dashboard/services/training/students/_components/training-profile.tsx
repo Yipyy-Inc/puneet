@@ -101,7 +101,7 @@ export function TrainingProfile({ petId }: Props) {
 
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const { data: allEnrollments = [] } = useQuery(
+  const { data: allEnrollments = [], status: enrollmentsStatus } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: allSeries = [] } = useQuery(trainingQueries.series());
@@ -413,6 +413,7 @@ export function TrainingProfile({ petId }: Props) {
             petId={petId}
             petName={pet.name}
             enrollments={enrollments}
+            enrollmentsStatus={enrollmentsStatus}
           />
         </TabsContent>
 

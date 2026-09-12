@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -47,9 +47,6 @@ import { useFacilityClientList } from "@/lib/api/facility-clients";
 import {
   DUE_SOON_WINDOW_DAYS,
   aggregateHomeworkBoard,
-  bumpNextDueDate,
-  fanOutHomeworkDelete,
-  fanOutHomeworkUpsert,
   getLastPracticedDate,
   getPracticeStreakDays,
   hasPracticedToday,
@@ -58,6 +55,12 @@ import {
 } from "@/lib/training-homework";
 import type { TrainingHomework } from "@/lib/training-enrollment";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
+import {
+  useDeleteHomework,
+  useLogHomeworkPractice,
+  useUpdateHomework,
+} from "@/lib/api/training-homework";
+import { localToday } from "@/lib/vaccinations";
 
 const STATUS_META: Record<
   HomeworkBoardStatus,
@@ -110,10 +113,18 @@ export function HomeworkBoard() {
   // The facility's own clients and their pets. This read `@/data/clients`
   // — another facility's — and matched it to real enrolments by numeric ref.
   const { clients } = useFacilityClientList();
-  const queryClient = useQueryClient();
   const router = useRouter();
+  const logPractice = useLogHomeworkPractice();
+  const updateHomework = useUpdateHomework();
+  const deleteHomework = useDeleteHomework();
+  const writing =
+    logPractice.isPending ||
+    updateHomework.isPending ||
+    deleteHomework.isPending;
 
-  const todayISO = useMemo(() => new Date().toISOString().split("T")[0]!, []);
+  // The facility's day rather than UTC's: a practice logged at 20:00 in
+  // Montréal belongs to today.
+  const [todayISO] = useState(localToday);
 
   const { data: homeworkRecords = [] } = useQuery(
     trainingQueries.allHomework(),
@@ -230,35 +241,49 @@ export function HomeworkBoard() {
     setDialogOpen(true);
   }
 
-  function markPracticed(row: HomeworkBoardRow) {
-    const nextDue = bumpNextDueDate(row.homework, todayISO);
-    fanOutHomeworkUpsert(queryClient, {
-      ...row.homework,
-      nextDueDate: nextDue,
-    });
-    toast.success(`${row.petName}: next practice ${formatDate(nextDue)}.`);
+  // Each write is awaited before it is announced; they wrote the query cache.
+  // Practising logs a day through log_homework_practice(), which also moves
+  // the next due date by the homework's cadence.
+  async function markPracticed(row: HomeworkBoardRow) {
+    try {
+      const updated = await logPractice.mutateAsync({
+        id: row.homework.id,
+        date: todayISO,
+      });
+      toast.success(
+        `${row.petName}: next practice ${updated.nextDueDate ? formatDate(updated.nextDueDate) : "—"}.`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
-  function toggleComplete(row: HomeworkBoardRow) {
+  async function toggleComplete(row: HomeworkBoardRow) {
     const becomesCompleted = !row.homework.completed;
-    fanOutHomeworkUpsert(queryClient, {
-      ...row.homework,
-      completed: becomesCompleted,
-      completedDate: becomesCompleted ? todayISO : null,
-      nextDueDate: becomesCompleted ? null : row.homework.nextDueDate,
-    });
-    toast.success(
-      becomesCompleted
-        ? `"${row.homework.title}" marked complete.`
-        : `"${row.homework.title}" reopened.`,
-    );
+    try {
+      await updateHomework.mutateAsync({
+        id: row.homework.id,
+        patch: { completed: becomesCompleted },
+      });
+      toast.success(
+        becomesCompleted
+          ? `"${row.homework.title}" marked complete.`
+          : `"${row.homework.title}" reopened.`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleting) return;
-    fanOutHomeworkDelete(queryClient, deleting.id);
-    toast.success(`"${deleting.homework.title}" deleted.`);
-    setDeleting(null);
+    try {
+      await deleteHomework.mutateAsync(deleting.id);
+      toast.success(`"${deleting.homework.title}" deleted.`);
+      setDeleting(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
   const columns: ColumnDef<HomeworkBoardRow>[] = [
@@ -565,9 +590,10 @@ export function HomeworkBoard() {
           className="h-7 gap-1 text-[11px]"
           onClick={(e) => {
             e.stopPropagation();
-            markPracticed(row);
+            void markPracticed(row);
           }}
           title="Owner practiced — push next due date forward"
+          disabled={writing}
         >
           <Clock className="size-3" />
           Practiced
@@ -580,7 +606,7 @@ export function HomeworkBoard() {
           className="h-7 gap-1 text-[11px]"
           onClick={(e) => {
             e.stopPropagation();
-            toggleComplete(row);
+            void toggleComplete(row);
           }}
         >
           <RotateCcw className="size-3" />
@@ -592,7 +618,7 @@ export function HomeworkBoard() {
           className="h-7 gap-1 bg-emerald-600 text-[11px] text-white hover:bg-emerald-700"
           onClick={(e) => {
             e.stopPropagation();
-            toggleComplete(row);
+            void toggleComplete(row);
           }}
         >
           <CheckCircle2 className="size-3" />
@@ -734,7 +760,7 @@ export function HomeworkBoard() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={() => void confirmDelete()}
               className="bg-red-600 text-white hover:bg-red-700"
             >
               Delete

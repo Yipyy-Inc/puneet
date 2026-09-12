@@ -3,13 +3,11 @@ import type { TrainingSession } from "@/types/training";
 import type {
   SessionAttendance,
   TrainingEnrollment,
-  TrainingHomework,
   SessionExerciseRating,
 } from "@/lib/training-enrollment";
 import { trainingQueries } from "@/lib/api/training";
 import { buildTrainingReportCard } from "@/lib/training-report-cards";
 import { fanOutReportCardUpsert } from "@/lib/training-report-cards";
-import { fanOutHomeworkUpsert } from "@/lib/training-homework";
 import type {
   AttendanceMark,
   SessionExerciseEntry,
@@ -388,8 +386,3 @@ function bumpSeriesEnrollmentProgress(
       );
     });
 }
-
-// Re-exported here so the homework-prompt dialog can fan out without
-// re-importing it through a deeper chain.
-export { fanOutHomeworkUpsert };
-export type { TrainingHomework };

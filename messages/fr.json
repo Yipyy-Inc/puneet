@@ -2076,7 +2076,10 @@
       },
       "trainingProfile": {
         "notFound": "Aucun élève avec cet identifiant dans cet établissement.",
-        "loading": "Chargement de l’élève…"
+        "loading": "Chargement de l’élève…",
+        "homeworkLoading": "Chargement des devoirs…",
+        "homeworkLoadFailedTitle": "Les devoirs n’ont pas pu être chargés",
+        "homeworkLoadFailed": "Rechargez la page pour réessayer."
       },
       "trainingSession": {
         "completed": "Séance marquée comme donnée — présence enregistrée pour {count} chien(s)",
@@ -8947,6 +8950,7 @@
         "uploadAVideoOptional": "Téléverser une vidéo (facultatif)",
         "max20Seconds": "max. 20 s",
         "aboutYourClip": "au sujet de votre vidéo du {date}",
+        "aboutPracticeOn": "au sujet de votre pratique du {date}",
         "demoVideoOf": "{title} — vidéo de démonstration",
         "referenceImageOf": "{title} — image de référence",
         "notEnrolledYet": "{pet} n’est encore inscrit à aucune série de dressage — parcourez les cours à venir pour commencer.",
@@ -8975,6 +8979,9 @@
         "rcLoading": "Chargement de vos bulletins de dressage…",
         "rcLoadFailedTitle": "Vos bulletins de dressage n’ont pas pu être chargés",
         "rcLoadFailed": "Rechargez la page pour réessayer.",
+        "hwLoading": "Chargement de vos devoirs de dressage…",
+        "hwLoadFailedTitle": "Vos devoirs de dressage n’ont pas pu être chargés",
+        "hwLoadFailed": "Rechargez la page pour réessayer.",
         "rcEmptyTitle": "Aucun bulletin de dressage pour l’instant",
         "rcEmptyBody": "Quand votre instructeur en envoie un, il s’affiche ici et dans votre page Bulletins.",
         "rcListLabel": "Vos bulletins de dressage",
