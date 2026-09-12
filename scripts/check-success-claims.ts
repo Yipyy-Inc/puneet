@@ -248,6 +248,53 @@ const BASELINE = new Set<string>([
   // is named here. (The file's second claim, "Note saved", sits in `NotesTab`,
   // which nothing imports — dead code, recorded in the debt map.)
   "src/app/facility/dashboard/staff/[id]/staff-profile-tabs.tsx",
+
+  // ── REVEALED ON 2026-09-12, BY THE THREE RULES ADDED THAT DAY ──────────
+  //
+  // Step 3 of the booking audit removed some forty lies from the booking
+  // page, the calendar and the grooming board, and every one had passed this
+  // gate (see the note above CLAIM_BARE for the three shapes). Widening it to
+  // those shapes found these twenty-six, and none is new code. A sample of
+  // what they say: "Offer sent to {owner}" over a make-up that is not stored;
+  // "Receipt sent via email" as an alert over nothing; "{n} clients notified
+  // of new times" from a route planner that notifies nobody; "Onboarding email
+  // sent to {email}" over notifyStaffLifecycle(), which records a MOCK email;
+  // an estimate the customer "accepted" with a toast and no request.
+  //
+  // BreedManagement.tsx is here for the claim-before-the-answer rule, and the
+  // answer would not help it: both of its mutations call a module-level store
+  // (breedMutations in src/lib/api/breeds.ts), so there is no server to wait
+  // for. That is the gap this gate still has — a mutation whose mutationFn
+  // reaches no server reads as a real write. Recorded in the debt map.
+  //
+  // Recorded, not excused. Step 3's remaining work removes the training,
+  // grooming and guest-journal entries as it converts those screens.
+  "src/app/customer/bookings/[id]/page.tsx",
+  "src/app/customer/settings/_components/LoginSecurityCard.tsx",
+  "src/app/customer/training/_components/customer-homework-tab.tsx",
+  "src/app/customer/training/_components/customer-training-packages-tab.tsx",
+  "src/app/customer/training/page.tsx",
+  "src/app/dashboard/facilities/page.tsx",
+  "src/app/dashboard/support/calling/_components/call-log-detail.tsx",
+  "src/app/employee/(shell)/schedule/staff-schedule-view.tsx",
+  "src/app/facility/dashboard/services/retail/page.tsx",
+  "src/app/facility/dashboard/services/training/makeup/page.tsx",
+  "src/app/facility/dashboard/services/training/session/[sessionId]/_components/request-records-button.tsx",
+  "src/app/facility/dashboard/services/training/students/_components/training-profile-package-chips.tsx",
+  "src/app/facility/dashboard/services/training/students/_components/training-profile-packages-panel.tsx",
+  "src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx",
+  "src/app/facility/dashboard/staff/_components/write-ups-tab.tsx",
+  "src/app/facility/dashboard/tasks/CareTasks.tsx",
+  "src/components/admin/ModuleRequestsInbox.tsx",
+  "src/components/dashboard/facilities/OverviewTab.tsx",
+  "src/components/employee/RegisterCloseReminder.tsx",
+  "src/components/facility/BreedManagement.tsx",
+  "src/components/facility/grooming/live-tracking-page.tsx",
+  "src/components/facility/grooming/route-planner-page.tsx",
+  "src/components/grooming/GroomingCheckInButton.tsx",
+  "src/components/guest-journal/ReservationJournalPanel.tsx",
+  "src/components/support/support-chat-tab.tsx",
+  "src/components/system-admin/data-management/restore-approval-modal.tsx",
 ]);
 
 /**
@@ -298,7 +345,51 @@ const CLAIM =
  * verb is one, however it is worded.
  */
 const CLAIM_BARE =
-  /toast\.success\s*\([^)]*\b(?:created|sent|saved|updated|deleted|processed|issued|added|charged|refunded|removed|archived|cancelled|canceled|scheduled|assigned|applied|published|restored|duplicated|renamed|moved)\b/i;
+  /toast(?:\.(?:success|info|message))?\s*\([^)]*\b(?:created|sent|saved|updated|deleted|processed|issued|added|charged|refunded|removed|archived|cancelled|canceled|scheduled|rescheduled|assigned|applied|published|restored|duplicated|renamed|moved|checked in|checked out|confirmed|completed|logged|recorded|pinned|unpinned|synced|connected|verified|enrolled|booked|paid|closed|approved|declined|redeemed|notified|queued)\b/i;
+
+/**
+ * ── AND SINCE 2026-09-12, THE THREE SHAPES STEP 3 OF THE BOOKING AUDIT FOUND ─
+ *
+ * Every lie removed from the booking page, the operations calendar and the
+ * grooming board that week had passed this gate. Three shapes, in order of
+ * how many they hid:
+ *
+ * 1. A FILE THAT WRITES ANYTHING WAS EXEMPT FROM EVERYTHING. The grooming
+ *    check-in board saves statuses, so its "SMS sent to {owner}" was never
+ *    read; the calendar drawer saved notes, so "Reminder sent" over an
+ *    in-memory array was never read. A status write proves nothing about a
+ *    message. So a claim that something was SENT — a text, an email, a
+ *    receipt, a reminder, an offer, "notified", "will be notified" — needs
+ *    something that SENDS, in the file or one import away, whatever else the
+ *    file writes.
+ *
+ * 2. THE CLAIM BEFORE THE ANSWER. `mutate(x); toast.success("Saved")` says
+ *    saved before the server has said anything, and a refusal then shows
+ *    success and error together. The toast belongs in onSuccess. Only the
+ *    very next statement is read, because that is the shape that shipped and
+ *    anything wider started reading other handlers' toasts.
+ *
+ * 3. VERBS THE LIST DID NOT HAVE. "rescheduled" is not "scheduled" at a word
+ *    boundary; "checked in", "confirmed", "logged", "pinned", "synced",
+ *    "notified" were not there at all; and toast.info / toast() make the same
+ *    claim as toast.success in a different colour.
+ */
+const SEND_CLAIM =
+  /\b(?:(?:sms|text|email|e-mail|receipt|reminder|message|notification|invoice|link|confirmation|offer|invite|invitation)s?\s+(?:sent|queued|delivered|emailed|texted)\b|notified\b|(?:emailed|texted)\s+to\b|will be (?:notified|emailed|texted)\b|will receive (?:an? )?(?:sms|text|email))/i;
+
+/**
+ * Page text is held to less. A toast is said at the moment of an action, so
+ * "notified" there is a claim about that action; on a page it is as often a
+ * record's state ("Manager notified" beside an incident) or a preference ("Get
+ * notified of new logins"). So in JSX text only a promise or a completion
+ * counts: "will be notified", "have been notified", "Notification sent!".
+ */
+const SEND_CLAIM_TEXT =
+  /\b(?:will be (?:notified|emailed|texted)|(?:has|have) been (?:notified|sent|emailed|texted)|(?:is|are) notified by|will receive (?:an? )?(?:sms|text|email)|sent!)/i;
+
+/** Something that can actually send a message. */
+const SENDS =
+  /\/api\/[^"'`\s]*(?:message|send|notif|remind|invit|pay-link|receipt|resend|sms|email|signing)|\b(?:sendEmail|sendSms|sendMessage|useMessageClient|use\w*(?:Send|Resend|Invite|Notify|Remind)\w*)\b/i;
 
 /** Anything that could actually perform the action being claimed. */
 const PERFORMS =
@@ -435,6 +526,48 @@ function resolveImport(from: string, spec: string): string | null {
   return null;
 }
 
+const SENDS_MEMO = new Map<string, boolean>();
+function sends(file: string, depth = 1): boolean {
+  const key = `${file}:${depth}`;
+  const hit = SENDS_MEMO.get(key);
+  if (hit !== undefined) return hit;
+  SENDS_MEMO.set(key, false);
+  const source = sourceOf(file);
+  let answer = SENDS.test(source);
+  if (!answer && depth > 0) {
+    for (const match of source.matchAll(/from\s+["']([^"']+)["']/g)) {
+      const target = resolveImport(file, match[1]);
+      if (target && sends(target, depth - 1)) {
+        answer = true;
+        break;
+      }
+    }
+  }
+  SENDS_MEMO.set(key, answer);
+  return answer;
+}
+
+/** Index of the paren closing the one at `open`, skipping string contents. */
+function matchParen(source: string, open: number): number {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = open; i < source.length; i++) {
+    const c = source[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === "(") depth++;
+    else if (c === ")" && --depth === 0) return i;
+  }
+  return -1;
+}
+
+const lineAt = (source: string, index: number) =>
+  source.slice(0, index).split("\n").length;
+
 const PERFORMS_MEMO = new Map<string, boolean>();
 function performs(file: string, depth = 1): boolean {
   const key = `${file}:${depth}`;
@@ -469,7 +602,8 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-type Offence = { file: string; line: number; text: string };
+type Rule = "performs" | "sends" | "answer";
+type Offence = { file: string; line: number; text: string; rule: Rule };
 
 const offences: Offence[] = [];
 
@@ -482,26 +616,84 @@ for (const file of walk("src")) {
   // check-derived-location both strip for the same reason: prose about the bug
   // must not read as the bug.
   const source = sourceOf(file);
+  const lines = source.split("\n");
+  // The escape hatch is read from the file as WRITTEN: inside JSX it can only
+  // be a {/* block comment */}, which sourceOf() has already blanked.
+  const written = readFileSync(file, "utf8").split("\n");
+  const allowed = (line: number) =>
+    ALLOW.test(written[line - 1] ?? "") || ALLOW.test(written[line - 2] ?? "");
+  const seen = new Set<string>();
+  const report = (line: number, rule: Rule) => {
+    if (allowed(line) || seen.has(`${line}:${rule}`)) return;
+    const text = (lines[line - 1] ?? "").trim();
+    if (text.startsWith("//") || text.startsWith("*")) return;
+    seen.add(`${line}:${rule}`);
+    offences.push({ file, line, text: text.slice(0, 110), rule });
+  };
 
   // A file that can perform the action is not making an empty claim. This is
   // per-FILE rather than per-line on purpose: proving the claim belongs to the
   // request would need real dataflow analysis, and the cheap version already
   // catches the shape that shipped.
-  if (performs(file)) continue;
+  if (!performs(file)) {
+    lines.forEach((line, index) => {
+      // The line as a READER sees it: a translation key resolved to its
+      // English words, so a claim does not escape by being translated.
+      const readable = resolveKeys(line);
+      if (CLAIM.test(readable) || CLAIM_BARE.test(readable)) {
+        report(index + 1, "performs");
+      }
+    });
+  }
 
-  source.split("\n").forEach((line, index) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("//") || trimmed.startsWith("*")) return;
-    if (ALLOW.test(line)) return;
-    if (index > 0 && ALLOW.test(source.split("\n")[index - 1] ?? "")) return;
-    // The line as a READER sees it: a translation key resolved to its
-    // English words, so a claim does not escape by being translated.
-    const readable = resolveKeys(line);
-    if (CLAIM.test(readable) || CLAIM_BARE.test(readable)) {
-      offences.push({ file, line: index + 1, text: trimmed.slice(0, 110) });
+  // A message claimed is a message sent — whatever else the file writes.
+  // Read where a reader meets it: a toast or an alert, and JSX text.
+  if (!sends(file)) {
+    for (const call of source.matchAll(/\b(?:toast(?:\.\w+)?|alert)\s*\(/g)) {
+      const open = (call.index ?? 0) + call[0].length - 1;
+      const close = matchParen(source, open);
+      const args = source.slice(open, close < 0 ? open + 400 : close + 1);
+      const raw = args.search(SEND_CLAIM);
+      if (raw >= 0) report(lineAt(source, open + raw), "sends");
+      else if (SEND_CLAIM.test(resolveKeys(args)))
+        report(lineAt(source, open), "sends");
     }
-  });
+    // Line comments blanked first, so a note in an expression is not text.
+    const markup = source.replace(/\/\/[^\n]*/g, (c) => " ".repeat(c.length));
+    for (const text of markup.matchAll(/(?<![=-])>([^<>{}`"']+)</g)) {
+      const at = text[1].search(SEND_CLAIM_TEXT);
+      // "Nothing has been sent from here" is the opposite of a claim.
+      const denied = /\b(?:nothing|not|never|no)\b[^.!?]*$/i.test(
+        text[1].slice(0, Math.max(at, 0)),
+      );
+      if (at >= 0 && !denied)
+        report(lineAt(source, (text.index ?? 0) + 1 + at), "sends");
+    }
+  }
+
+  // The claim before the answer: a toast as the very next statement after a
+  // mutate() that nothing waits for.
+  for (const call of source.matchAll(/\.mutate\s*\(/g)) {
+    const open = (call.index ?? 0) + call[0].length - 1;
+    const close = matchParen(source, open);
+    if (close < 0) continue;
+    const next = source
+      .slice(close + 1, close + 200)
+      .match(/^\s*;?\s*toast(?:\.(?:success|info|message))?\s*\(/);
+    if (next) {
+      report(lineAt(source, close + 1 + next[0].indexOf("toast")), "answer");
+    }
+  }
 }
+
+const WHY: Record<Rule, string> = {
+  performs:
+    "claims an action succeeded, but this file contains nothing that performs one.",
+  sends:
+    "claims a message was sent, but nothing in this file or one import away can send one.",
+  answer:
+    "claims success before the write has answered — move the toast into onSuccess.",
+};
 
 const offending = new Set(offences.map((o) => o.file));
 const introduced = offences.filter((o) => !BASELINE.has(o.file));
@@ -514,9 +706,7 @@ console.log(
 for (const offence of introduced) {
   console.log(`  ${ANSI.red}NEW${ANSI.reset}  ${offence.file}:${offence.line}`);
   console.log(`        ${offence.text}`);
-  console.log(
-    `        ${ANSI.dim}claims an action succeeded, but this file contains nothing that performs one.${ANSI.reset}`,
-  );
+  console.log(`        ${ANSI.dim}${WHY[offence.rule]}${ANSI.reset}`);
   console.log(
     `        ${ANSI.dim}Wire it up, or — if the outcome is passed in — mark the line // success-claim-ok: <reason>.${ANSI.reset}\n`,
   );
