@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,6 +28,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { bookingMutations } from "@/lib/api/booking";
+import { useSetGroomingAppointmentStatus } from "@/lib/api/grooming-appointments";
 import type { GroomingAppointment, Stylist } from "@/types/grooming";
 
 export type BulkActionMode = "reschedule" | "book-again" | "cancel";
@@ -100,6 +101,8 @@ export function BulkActionsDialog({
   allStylists: Stylist[];
 }) {
   const queryClient = useQueryClient();
+  const setStatus = useSetGroomingAppointmentStatus();
+  const [busy, setBusy] = useState(false);
 
   // Affected = unfinished only. Finished ones are surfaced as a separate
   // "skipped" count so the manager understands what's NOT moving.
@@ -118,9 +121,6 @@ export function BulkActionsDialog({
   // Book-again options.
   const [followUpDate, setFollowUpDate] = useState<string>(addDays(date, 7));
 
-  // Cancel options.
-  const [notifyClients, setNotifyClients] = useState(true);
-
   // Reset state every time the dialog opens or mode changes so stale picks
   // don't leak between sessions.
   useEffect(() => {
@@ -128,7 +128,6 @@ export function BulkActionsDialog({
     setTargetStylistId(sourceStylist.id);
     setTargetDate(date);
     setFollowUpDate(addDays(date, 7));
-    setNotifyClients(true);
   }, [open, mode, sourceStylist.id, date]);
 
   const meta = MODE_META[mode];
@@ -138,78 +137,87 @@ export function BulkActionsDialog({
     targetStylistId !== sourceStylist.id || targetDate !== date;
 
   const submitDisabled =
+    busy ||
     affected.length === 0 ||
     (mode === "reschedule" && !rescheduleHasChange) ||
     (mode === "book-again" && !followUpDate);
 
-  function handleConfirm() {
-    if (affected.length === 0) return;
+  // ── EVERY MODE WRITES ───────────────────────────────────────────────────
+  //
+  // All three rewrote the query cache and toasted — "Rescheduled 6", "Created
+  // 6 follow-ups", "Cancelled 6 · notifications queued to each client" — and a
+  // reload put every appointment back. They go through the same writes the
+  // single-appointment actions use, one per appointment, and report how many
+  // landed. Nothing notifies clients, so nothing says it did.
+  async function handleConfirm() {
+    if (affected.length === 0 || busy) return;
+    setBusy(true);
+    const targetStylist = allStylists.find((s) => s.id === targetStylistId);
 
-    if (mode === "reschedule") {
-      const targetStylist = allStylists.find((s) => s.id === targetStylistId);
-      queryClient.setQueryData<GroomingAppointment[]>(
-        ["grooming", "appointments"],
-        (prev = []) =>
-          prev.map((a) =>
-            affected.some((x) => x.id === a.id)
-              ? {
-                  ...a,
-                  date: targetDate,
-                  stylistId: targetStylistId,
-                  stylistName: targetStylist?.name ?? a.stylistName,
-                }
-              : a,
-          ),
-      );
-      const moved = affected.length;
+    const results = await Promise.allSettled(
+      affected.map((a) => {
+        if (mode === "reschedule") {
+          return bookingMutations.update(Number(a.id), {
+            startDate: targetDate,
+            endDate: targetDate,
+            ...(targetStylistId !== a.stylistId
+              ? { stylistPreference: targetStylistId }
+              : {}),
+          });
+        }
+        if (mode === "cancel") {
+          return setStatus.mutateAsync({ id: a.id, status: "cancelled" });
+        }
+        return bookingMutations.create({
+          clientId: a.ownerId,
+          petId: a.petId,
+          facilityId: 0,
+          service: "grooming",
+          serviceType: a.packageId,
+          startDate: followUpDate,
+          endDate: followUpDate,
+          checkInTime: a.startTime,
+          checkOutTime: a.endTime,
+          status: "confirmed",
+          basePrice: a.basePrice,
+          discount: 0,
+          totalCost: a.basePrice,
+          stylistPreference: a.stylistId || undefined,
+        });
+      }),
+    );
+    setBusy(false);
+    await queryClient.invalidateQueries({ queryKey: ["grooming"] });
+    await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+
+    const failed = results.filter(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    const done = results.length - failed.length;
+    const plural = (n: number) => (n === 1 ? "" : "s");
+    if (done > 0) {
       toast.success(
-        `Rescheduled ${moved} appointment${moved === 1 ? "" : "s"} to ${
-          targetStylist?.name ?? "selected groomer"
-        } on ${targetDate}`,
-      );
-    } else if (mode === "book-again") {
-      const newAppointments: GroomingAppointment[] = affected.map((a) => ({
-        ...a,
-        id: `${a.id}-fu-${Date.now().toString(36)}-${Math.random()
-          .toString(36)
-          .slice(2, 5)}`,
-        date: followUpDate,
-        status: "scheduled",
-        checkInTime: null,
-        checkOutTime: null,
-        priceAdjustments: [],
-        createdAt: new Date().toISOString(),
-        // Strip workflow state that shouldn't carry forward.
-        history: undefined,
-        ticketComments: undefined,
-        // Keep alertNotes — alerts are the kind of thing that follows the pet.
-      }));
-      queryClient.setQueryData<GroomingAppointment[]>(
-        ["grooming", "appointments"],
-        (prev = []) => [...prev, ...newAppointments],
-      );
-      toast.success(
-        `Created ${affected.length} follow-up appointment${
-          affected.length === 1 ? "" : "s"
-        } for ${followUpDate}`,
-      );
-    } else if (mode === "cancel") {
-      queryClient.setQueryData<GroomingAppointment[]>(
-        ["grooming", "appointments"],
-        (prev = []) =>
-          prev.map((a) =>
-            affected.some((x) => x.id === a.id)
-              ? { ...a, status: "cancelled" }
-              : a,
-          ),
-      );
-      toast.success(
-        `Cancelled ${affected.length} appointment${
-          affected.length === 1 ? "" : "s"
-        }${notifyClients ? " · notifications queued to each client" : ""}`,
+        mode === "reschedule"
+          ? `Rescheduled ${done} appointment${plural(done)} to ${
+              targetStylist?.name ?? "the selected groomer"
+            } on ${targetDate}`
+          : mode === "cancel"
+            ? `Cancelled ${done} appointment${plural(done)}`
+            : `Created ${done} follow-up appointment${plural(done)} for ${followUpDate}`,
       );
     }
-
+    if (failed.length > 0) {
+      toast.error(
+        `${failed.length} appointment${plural(failed.length)} not changed`,
+        {
+          description:
+            failed[0].reason instanceof Error
+              ? failed[0].reason.message
+              : undefined,
+        },
+      );
+      return;
+    }
     onOpenChange(false);
   }
 
@@ -363,18 +371,9 @@ export function BulkActionsDialog({
 
           {mode === "cancel" && (
             <section className="space-y-2">
-              <label className="bg-card flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
-                <Checkbox
-                  checked={notifyClients}
-                  onCheckedChange={(v) => setNotifyClients(v === true)}
-                />
-                <div>
-                  <p className="font-medium">Notify each client</p>
-                  <p className="text-muted-foreground text-[10px]">
-                    Send a cancellation email/SMS to every affected owner.
-                  </p>
-                </div>
-              </label>
+              <p className="text-muted-foreground text-[10px]">
+                Clients are not messaged from here.
+              </p>
               <p className="text-[10px] text-red-700 dark:text-red-300">
                 This sets each appointment&apos;s status to cancelled. The
                 original schedule is preserved on the appointment record.

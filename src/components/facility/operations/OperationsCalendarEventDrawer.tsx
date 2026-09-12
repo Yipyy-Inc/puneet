@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { NotesList } from "@/components/shared/NotesList";
+import { useMessageClient } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import {
   Ban,
@@ -14,7 +16,6 @@ import {
   Clock,
   CreditCard,
   FileText,
-  Flag,
   LogIn,
   LogOut,
   Mail,
@@ -101,7 +102,6 @@ import {
   useAttendeeCheckIns,
 } from "@/lib/group-attendance";
 import {
-  sendNotification,
   useEventNotifications,
   type NotificationChannel,
   type SentNotification,
@@ -134,6 +134,8 @@ export type BookingDrawerTab =
 export interface BookingDrawerAddOnItem {
   id: string;
   name: string;
+  /** The facility's price, billed when the add-on is attached. */
+  price?: number;
   scheduledAt?: string;
   assignedStaff?: string;
   status: "pending" | "completed";
@@ -187,11 +189,6 @@ interface OperationsCalendarEventDrawerProps {
     updates: Partial<BookingDrawerAddOnItem>,
   ) => void;
   onRemoveBookingAddOn: (bookingId: number, addOnId: string) => void;
-  onUpdateNotes: (
-    section: "booking" | "pet" | "customer",
-    content: string,
-    editorName: string,
-  ) => void;
   onMessageCustomer: (bookingId: number) => void;
   onRescheduleBooking: (bookingId: number) => void;
   onCancelBooking: (bookingId: number, reason: string) => void;
@@ -254,7 +251,6 @@ export function OperationsCalendarEventDrawer({
   onMarkTaskComplete,
   onAddBookingAddOn,
   onUpdateBookingAddOn,
-  onUpdateNotes,
   onRescheduleBooking,
   onCancelBooking,
 }: OperationsCalendarEventDrawerProps) {
@@ -608,6 +604,7 @@ export function OperationsCalendarEventDrawer({
               onAddBookingAddOn(eventNumericId, {
                 id: `addon-${option.id}-${eventNumericId}`,
                 name: option.name,
+                price: option.price,
                 status: "pending",
               })
             }
@@ -628,15 +625,27 @@ export function OperationsCalendarEventDrawer({
             canComplete={canCheckInOut && !isReadOnlyEvent}
           />
         )}
+        {/* The booking's REAL notes (`/api/notes`), the same list the
+            booking page's Notes button shows. This tab was one local text box
+            per booking that "Notes updated" saved into component state. */}
         {effectiveTab === "notes" && (
-          <NotesTab
-            key={event.id}
-            note={notesState.booking}
-            readOnly={isReadOnlyEvent}
-            onSave={(content) =>
-              onUpdateNotes("booking", content, userDisplayName)
-            }
-          />
+          <div className="p-5">
+            {hasBooking ? (
+              <NotesList
+                category="booking"
+                entityId={eventNumericId}
+                readOnly={isReadOnlyEvent}
+                compact
+              />
+            ) : (
+              <NotesTab
+                key={event.id}
+                note={notesState.booking}
+                readOnly
+                onSave={() => undefined}
+              />
+            )}
+          </div>
         )}
         {effectiveTab === "billing" && (
           <HistoryTab
@@ -736,12 +745,6 @@ function DrawerHeaderMenu({
     window.open(`/facility/dashboard/bookings?${params.toString()}`, "_blank");
   };
 
-  const flagForReview = () => {
-    toast.success("Flagged for review", {
-      description: `${recipientName || event.title} was added to the review queue.`,
-    });
-  };
-
   return (
     <>
       <DropdownMenu>
@@ -816,12 +819,6 @@ function DrawerHeaderMenu({
             </DropdownMenuItem>
           )}
 
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2" onClick={flagForReview}>
-            <Flag className="size-4" />
-            Flag for Review
-          </DropdownMenuItem>
-
           {(hasBooking || isRecurring) && !isTerminal && (
             <>
               <DropdownMenuSeparator />
@@ -856,6 +853,7 @@ function DrawerHeaderMenu({
       <SendReminderSmsDialog
         open={smsOpen}
         onOpenChange={setSmsOpen}
+        clientRef={clientId}
         recipientName={recipientName}
         recipientPhone={recipientPhone}
         event={event}
@@ -1029,29 +1027,52 @@ function RecurringCancelDialog({
 function SendReminderSmsDialog({
   open,
   onOpenChange,
+  clientRef,
   recipientName,
   recipientPhone,
   event,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  clientRef?: number;
   recipientName: string;
   recipientPhone?: string;
   event: OperationsCalendarEvent;
 }) {
+  const messageClient = useMessageClient();
   const defaultMessage = `Hi ${recipientName || "there"}, this is a reminder for your ${event.service} appointment on ${event.start.toLocaleDateString(
     "en-US",
     { weekday: "long", month: "short", day: "numeric" },
   )}. Reply to this message with any questions. See you soon!`;
   const [message, setMessage] = useState(defaultMessage);
 
-  const send = () => {
-    toast.success("Reminder SMS sent", {
-      description: recipientPhone
-        ? `Sent to ${recipientName} (${recipientPhone}).`
-        : `Sent to ${recipientName}.`,
-    });
-    onOpenChange(false);
+  // It toasted "Reminder SMS sent — to {name}" and sent nothing. It sends
+  // through /api/clients/[ref]/message now, and says when it did not.
+  const send = async () => {
+    if (clientRef === undefined) return;
+    try {
+      const result = await messageClient.mutateAsync({
+        clientRef,
+        channel: "sms",
+        body: message,
+      });
+      if (!result.sent) {
+        toast.warning("The reminder was not sent", {
+          description: result.detail,
+        });
+        return;
+      }
+      toast.success("Reminder sent", {
+        description: recipientPhone
+          ? `To ${recipientName} (${recipientPhone}).`
+          : `To ${recipientName}.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("The reminder was not sent", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -1081,8 +1102,13 @@ function SendReminderSmsDialog({
           </Button>
           <Button
             className="bg-emerald-600 text-white hover:bg-emerald-700"
-            disabled={message.trim().length === 0}
-            onClick={send}
+            disabled={
+              message.trim().length === 0 ||
+              clientRef === undefined ||
+              messageClient.isPending
+            }
+            aria-busy={messageClient.isPending}
+            onClick={() => void send()}
           >
             <MessageSquare className="size-3.5" />
             Send SMS
@@ -1098,20 +1124,21 @@ function SendReminderSmsDialog({
    ═══════════════════════════════════════════════════ */
 
 function NotifyComposer({
-  event,
+  clientRef,
   petName,
   recipientName,
   recipientPhone,
   recipientEmail,
-  senderName,
 }: {
   event: OperationsCalendarEvent;
+  clientRef?: number;
   petName: string;
   recipientName: string;
   recipientPhone?: string;
   recipientEmail?: string;
   senderName: string;
 }) {
+  const messageClient = useMessageClient();
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<NotificationChannel>("sms");
   const [subject, setSubject] = useState(
@@ -1131,22 +1158,36 @@ function NotifyComposer({
   const insert = (text: string) =>
     setBody((prev) => (prev.trim() ? `${prev}\n${text}` : text));
 
-  const send = () => {
-    sendNotification({
-      eventId: event.id,
-      channel,
-      subject: channel === "email" ? subject.trim() : undefined,
-      body: body.trim(),
-      recipient: recipientName,
-      sentBy: senderName,
-    });
-    toast.success(channel === "sms" ? "SMS sent" : "Email sent", {
-      description: address
-        ? `To ${recipientName} · ${address}`
-        : `To ${recipientName}`,
-    });
-    setBody("");
-    setOpen(false);
+  // It pushed onto an in-memory array and toasted "SMS sent"; the History
+  // tab then listed the "sent" message. It sends for real now, or says why
+  // not, and keeps what was typed when it does not.
+  const send = async () => {
+    if (clientRef === undefined) return;
+    try {
+      const result = await messageClient.mutateAsync({
+        clientRef,
+        channel,
+        body: body.trim(),
+        subject: channel === "email" ? subject.trim() : undefined,
+      });
+      if (!result.sent) {
+        toast.warning("The message was not sent", {
+          description: result.detail,
+        });
+        return;
+      }
+      toast.success(channel === "sms" ? "SMS sent" : "Email sent", {
+        description: address
+          ? `To ${recipientName} · ${address}`
+          : `To ${recipientName}`,
+      });
+      setBody("");
+      setOpen(false);
+    } catch (error) {
+      toast.error("The message was not sent", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -1228,8 +1269,13 @@ function NotifyComposer({
           <Button
             size="sm"
             className="bg-emerald-600 text-white hover:bg-emerald-700"
-            disabled={body.trim().length === 0}
-            onClick={send}
+            disabled={
+              body.trim().length === 0 ||
+              clientRef === undefined ||
+              messageClient.isPending
+            }
+            aria-busy={messageClient.isPending}
+            onClick={() => void send()}
           >
             <Send className="size-3.5" />
             Send
@@ -1448,6 +1494,7 @@ function DrawerActionBar({
     onAddBookingAddOn(eventNumericId, {
       id: `addon-${option.id}-${eventNumericId}`,
       name: option.name,
+      price: option.price,
       status: "pending",
     });
   };
@@ -1526,6 +1573,7 @@ function DrawerActionBar({
         </Button>
         <NotifyComposer
           event={event}
+          clientRef={clientId}
           petName={petName}
           recipientName={recipientName}
           recipientPhone={recipientPhone}
@@ -1589,6 +1637,7 @@ function DrawerActionBar({
 
       <NotifyComposer
         event={event}
+        clientRef={clientId}
         petName={petName}
         recipientName={recipientName}
         recipientPhone={recipientPhone}

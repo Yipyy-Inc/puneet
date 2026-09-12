@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import type { GroomingStation, GroomingStationStatus } from "@/types/rooms";
 
@@ -56,9 +57,10 @@ interface GroomingStationsContextValue {
   stations: GroomingStation[];
 
   // CRUD
-  addStation: (station: GroomingStation) => void;
-  updateStation: (station: GroomingStation) => void;
-  deleteStation: (id: string) => void;
+  /** `onSaved` runs once the write lands — for the caller's toast. */
+  addStation: (station: GroomingStation, onSaved?: () => void) => void;
+  updateStation: (station: GroomingStation, onSaved?: () => void) => void;
+  deleteStation: (id: string, onSaved?: () => void) => void;
   toggleStation: (id: string) => void;
 
   // Real-time status
@@ -66,6 +68,7 @@ interface GroomingStationsContextValue {
     id: string,
     status: GroomingStationStatus,
     occupancy?: { petName?: string; stylistName?: string },
+    onSaved?: () => void,
   ) => void;
 
   // Queries
@@ -144,6 +147,8 @@ export function GroomingStationsProvider({
     mutationFn: (station: GroomingStation) =>
       json<{ id: string }>(BASE, { method: "POST", body: toPayload(station) }),
     onSuccess: invalidate,
+    onError: (error: Error) =>
+      toast.error("The station was not saved", { description: error.message }),
   });
 
   const { mutate: patch } = useMutation({
@@ -153,37 +158,49 @@ export function GroomingStationsProvider({
         body: input.body,
       }),
     onSuccess: invalidate,
+    onError: (error: Error) =>
+      toast.error("The station was not saved", { description: error.message }),
   });
 
   const { mutate: remove } = useMutation({
     mutationFn: (id: string) =>
       json<void>(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" }),
     onSuccess: invalidate,
+    onError: (error: Error) =>
+      toast.error("The station was not saved", { description: error.message }),
   });
 
   const addStation = useCallback(
-    (station: GroomingStation) => {
+    (station: GroomingStation, onSaved?: () => void) => {
       // The old provider treated add-with-an-existing-id as an update. Kept,
       // because the stations screen relies on it when saving an edited row
       // through the same dialog.
       const exists = stations.some((s) => s.id === station.id);
+      const done = { onSuccess: () => onSaved?.() };
       if (exists) {
-        patch({ id: station.id, body: toPayload(station) });
+        patch({ id: station.id, body: toPayload(station) }, done);
       } else {
-        create(station);
+        create(station, done);
       }
     },
     [stations, create, patch],
   );
 
   const updateStation = useCallback(
-    (station: GroomingStation) => {
-      patch({ id: station.id, body: toPayload(station) });
+    (station: GroomingStation, onSaved?: () => void) => {
+      patch(
+        { id: station.id, body: toPayload(station) },
+        { onSuccess: () => onSaved?.() },
+      );
     },
     [patch],
   );
 
-  const deleteStation = useCallback((id: string) => remove(id), [remove]);
+  const deleteStation = useCallback(
+    (id: string, onSaved?: () => void) =>
+      remove(id, { onSuccess: () => onSaved?.() }),
+    [remove],
+  );
 
   const toggleStation = useCallback(
     (id: string) => {
@@ -195,14 +212,19 @@ export function GroomingStationsProvider({
   );
 
   const setStationStatus = useCallback(
-    (id: string, status: GroomingStationStatus) => {
+    (
+      id: string,
+      status: GroomingStationStatus,
+      _occupancy?: { petName?: string; stylistName?: string },
+      onSaved?: () => void,
+    ) => {
       // All four statuses go through, including `in-use` — see the note in the
       // PATCH route. The OCCUPANCY argument is what has nowhere to go: there is
       // no currentPetName column, because who is on a table comes from the
       // appointment. GET fills those fields in from the join when a real
       // appointment exists, and reports nobody when it does not, which is the
       // honest answer while the check-in flow still writes to the mock cache.
-      patch({ id, body: { status } });
+      patch({ id, body: { status } }, { onSuccess: () => onSaved?.() });
     },
     [patch],
   );

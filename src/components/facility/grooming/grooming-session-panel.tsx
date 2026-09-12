@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useReportIncident, useUpdateIncident } from "@/lib/api/incidents";
 import { cn } from "@/lib/utils";
 import { petQueries } from "@/lib/api/pet";
 import { getGroomingPhotoRequirements } from "@/lib/api/grooming";
@@ -31,6 +32,7 @@ import {
   useUploadAppointmentPhoto,
 } from "@/lib/api/grooming-appointments";
 import { useSettings } from "@/hooks/use-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   BehaviorTag,
   CareLogEntry,
@@ -50,6 +52,19 @@ const BEHAVIOR_OPTIONS: { value: BehaviorTag; label: string; emoji: string }[] =
     { value: "reactive", label: "Reactive", emoji: "⚠️" },
     { value: "needed-muzzle", label: "Needed muzzle", emoji: "🛡️" },
   ];
+
+/** The incident a session issue becomes (`public.incidents`). */
+const INCIDENT_TYPE: Record<
+  SessionIssueKind,
+  "injury" | "illness" | "behavioral" | "other"
+> = {
+  "matting-found": "other",
+  "skin-condition": "illness",
+  "ear-issue": "illness",
+  "nail-issue": "other",
+  "behavioral-concern": "behavioral",
+  "injury-during-groom": "injury",
+};
 
 const ISSUE_META: Record<
   SessionIssueKind,
@@ -119,6 +134,9 @@ export function GroomingSessionPanel({
 
   const { mutate: saveProgress } = useSetSessionProgress();
   const { mutate: uploadPhoto } = useUploadAppointmentPhoto();
+  const reportIncident = useReportIncident();
+  const updateIncident = useUpdateIncident();
+  const { t: tAppt, fill: fillAppt } = useStaffText("groomingAppointment");
   const { mutate: removePhoto } = useRemoveAppointmentPhoto();
   const { mutate: saveIntake } = useSaveAppointmentIntake();
 
@@ -359,32 +377,71 @@ export function GroomingSessionPanel({
     );
   }
 
+  // ── AN ISSUE IS AN INCIDENT ────────────────────────────────────────────
+  //
+  // This set component state and toasted "Incident logged · Linked to
+  // appointment … Manager notified" — its own comment called it a mock. It
+  // files a real incident now (`/api/incidents`, the Incidents screen reads
+  // them), linked to the pet and the booking. Nobody is notified by it, so it
+  // does not say anyone was.
   function flagIssue(kind: SessionIssueKind) {
     const note = (issueDrafts[kind] ?? "").trim();
-    const entry: SessionIssue = {
-      id: `iss-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      kind,
-      note: note || undefined,
-      reportedBy: "You",
-      reportedAt: new Date().toISOString(),
-      status: "pending",
-    };
-    setIssues((prev) => [...prev, entry]);
-    setIssueDrafts((prev) => ({ ...prev, [kind]: "" }));
     const meta = ISSUE_META[kind];
-    // Mock incident creation + manager notification — surfaced via toasts so
-    // staff can see both events happened. A real backend would write an
-    // incident record here and trigger the in-app/push channels.
-    toast.success(`Incident logged · ${meta.label}`, {
-      description: `Linked to appointment ${appointment.id}. Manager notified${
-        meta.urgent ? " (urgent)" : ""
-      }.`,
-    });
+    const bookingRef = Number(appointment.id);
+    reportIncident.mutate(
+      {
+        type: INCIDENT_TYPE[kind],
+        severity: meta.urgent ? "high" : "low",
+        title: `${meta.label} — ${appointment.petName}`,
+        description: note,
+        petRefs: [appointment.petId],
+        bookingRef:
+          Number.isInteger(bookingRef) && bookingRef > 0
+            ? bookingRef
+            : undefined,
+        incidentDate: new Date().toISOString(),
+      },
+      {
+        onSuccess: (incident) => {
+          setIssues((prev) => [
+            ...prev,
+            {
+              id: String(incident.id),
+              kind,
+              note: note || undefined,
+              reportedBy: "You",
+              reportedAt: new Date().toISOString(),
+              status: "pending",
+            } satisfies SessionIssue,
+          ]);
+          setIssueDrafts((prev) => ({ ...prev, [kind]: "" }));
+          toast.success(fillAppt("incidentLogged", { kind: meta.label }), {
+            description: tAppt("incidentOnScreen"),
+          });
+        },
+        onError: (error) =>
+          toast.error(tAppt("incidentNotLogged"), {
+            description: error.message,
+          }),
+      },
+    );
   }
 
+  // An incident is a record, and is never deleted: taking one back closes it.
   function removeIssue(id: string) {
-    setIssues((prev) => prev.filter((i) => i.id !== id));
-    toast.info("Issue removed");
+    updateIncident.mutate(
+      { id, patch: { status: "closed" } },
+      {
+        onSuccess: () => {
+          setIssues((prev) => prev.filter((i) => i.id !== id));
+          toast.info(tAppt("incidentClosed"));
+        },
+        onError: (error) =>
+          toast.error(tAppt("incidentNotClosed"), {
+            description: error.message,
+          }),
+      },
+    );
   }
 
   function toggleCare(id: string) {

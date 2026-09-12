@@ -290,3 +290,39 @@ export function useUpdateClient() {
     },
   });
 }
+
+/**
+ * Send one client one message, by email or SMS, through the server's sender.
+ * `sent: false` with a `detail` is a normal answer — staging sends nothing, a
+ * client may have no address or may have opted out — and a screen says so
+ * rather than claiming a send.
+ */
+export function useMessageClient() {
+  return useMutation({
+    mutationFn: async (input: {
+      clientRef: number;
+      channel: "email" | "sms";
+      body: string;
+      subject?: string;
+    }): Promise<{ sent: boolean; detail?: string }> => {
+      const response = await fetch(`/api/clients/${input.clientRef}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: input.channel,
+          body: input.body,
+          subject: input.subject,
+        }),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        detail?: string;
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+      }
+      return { sent: Boolean(parsed?.sent), detail: parsed?.detail };
+    },
+  });
+}

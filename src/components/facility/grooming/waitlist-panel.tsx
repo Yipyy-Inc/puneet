@@ -329,11 +329,12 @@ export function WaitlistPanel({
                             size="sm"
                             className="h-8 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
                             onClick={() => {
-                              setStatus(e.id, "confirmed");
-                              onBookFromWaitlist?.(e);
-                              toast.success(
-                                `${e.petName} confirmed — booking the offered slot`,
+                              setStatus(e.id, "confirmed", () =>
+                                toast.success(
+                                  `${e.petName} confirmed — booking the offered slot`,
+                                ),
                               );
+                              onBookFromWaitlist?.(e);
                             }}
                           >
                             <CheckCircle2 className="size-3.5" />
@@ -416,7 +417,15 @@ export function WaitlistPanel({
                         size="sm"
                         variant="outline"
                         className="h-8 gap-1.5"
-                        onClick={() => toast.info(`Messaging ${e.ownerName}`)}
+                        // It toasted "Messaging {owner}" and opened nothing. It
+                        // opens the client's messages, where a message is sent.
+                        onClick={() =>
+                          window.open(
+                            `/facility/dashboard/clients/${e.clientId}/messages`,
+                            "_blank",
+                          )
+                        }
+                        disabled={!e.clientId}
                       >
                         <MessageCircle className="size-3.5" />
                         Message
@@ -427,8 +436,11 @@ export function WaitlistPanel({
                           variant="ghost"
                           className="text-destructive/70 hover:text-destructive ml-auto h-8 gap-1.5"
                           onClick={() => {
-                            setStatus(e.id, "removed");
-                            toast.success(`Removed ${e.petName} from waitlist`);
+                            setStatus(e.id, "removed", () =>
+                              toast.success(
+                                `Removed ${e.petName} from waitlist`,
+                              ),
+                            );
                           }}
                         >
                           Remove

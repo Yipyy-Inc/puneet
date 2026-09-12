@@ -6,10 +6,8 @@ import {
   CheckCircle2,
   CreditCard,
   Gift,
-  Mail,
   PackageCheck,
   Receipt,
-  Smartphone,
   Sparkles,
 } from "lucide-react";
 import {
@@ -23,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { GroomingAppointment } from "@/types/grooming";
 import type { Client } from "@/types/client";
@@ -90,20 +87,6 @@ interface PaymentDialogProps {
   onConfirm: (result: PaymentResult) => void;
 }
 
-function brandLabel(brand: string): string {
-  return (
-    (
-      {
-        visa: "Visa",
-        mastercard: "Mastercard",
-        amex: "Amex",
-        discover: "Discover",
-        other: "Card",
-      } as Record<string, string>
-    )[brand] ?? "Card"
-  );
-}
-
 export function PaymentDialog({
   open,
   onOpenChange,
@@ -114,7 +97,15 @@ export function PaymentDialog({
   lockedTipAmount,
   onConfirm,
 }: PaymentDialogProps) {
-  const [method, setMethod] = useState<PaymentMethodKind>("card-on-file");
+  // ── NO CARD HERE ───────────────────────────────────────────────────────
+  //
+  // "Card on file" and "New card — enter card details at the terminal" were
+  // offered, and confirming either wrote a CARD payment to the ledger through
+  // record_payment without touching a card or a terminal: the groom read as
+  // paid by card and no money moved. Cards are charged at the booking's own
+  // checkout (Accept payment), which reaches the terminal and the saved card.
+  // This dialog records what is in hand: cash, a package pass, store credit.
+  const [method, setMethod] = useState<PaymentMethodKind>("cash");
   const [selectedSavedCardId, setSelectedSavedCardId] = useState<string>("");
   const [cashReceived, setCashReceived] = useState<string>("");
   const [applyPackagePassId, setApplyPackagePassId] = useState<string>("");
@@ -124,8 +115,6 @@ export function PaymentDialog({
   // percent-shaped state cannot represent them. This dialog previously
   // hardcoded 0/15/18/20 — a set nobody had chosen.
   const [chosenTip, setChosenTip] = useState<number>(0);
-  const [receiptSms, setReceiptSms] = useState(true);
-  const [receiptEmail, setReceiptEmail] = useState(true);
 
   const savedCards = useMemo(() => client?.savedCards ?? [], [client]);
   const defaultCard =
@@ -135,14 +124,12 @@ export function PaymentDialog({
   // Seed defaults whenever the dialog re-opens for a new appointment.
   useEffect(() => {
     if (!open) return;
-    setMethod(defaultCard ? "card-on-file" : "new-card");
+    setMethod("cash");
     setSelectedSavedCardId(defaultCard?.id ?? "");
     setCashReceived("");
     setApplyPackagePassId("");
     setStoreCreditApplied(0);
     setChosenTip(lockedTipAmount ?? 0);
-    setReceiptSms(true);
-    setReceiptEmail(true);
   }, [open, apt?.id, defaultCard, lockedTipAmount]);
 
   // ── Itemized total ─────────────────────────────────────────────────────
@@ -219,17 +206,14 @@ export function PaymentDialog({
 
   const canConfirm = (() => {
     if (effectiveMethod === "package-pass" && !selectedPackage) return false;
-    if (effectiveMethod === "card-on-file" && !selectedSavedCardId)
-      return false;
     if (effectiveMethod === "cash" && cashShort) return false;
-    if (!receiptSms && !receiptEmail) return false;
     return true;
   })();
 
   async function handleConfirm() {
+    // No receipt channels: nothing sends a groom's receipt, and the SMS and
+    // Email boxes this required were read as a promise that one went out.
     const channels: ("sms" | "email")[] = [];
-    if (receiptSms) channels.push("sms");
-    if (receiptEmail) channels.push("email");
 
     // ── THE REWARD IS SPENT FIRST, AND CAN REFUSE ──────────────────────────
     //
@@ -511,56 +495,10 @@ export function PaymentDialog({
             </p>
           ) : (
             <div className="space-y-2">
-              {/* Card on file */}
-              {savedCards.length > 0 && (
-                <MethodCard
-                  selected={method === "card-on-file"}
-                  onClick={() => setMethod("card-on-file")}
-                  icon={CreditCard}
-                  label="Card on file"
-                  sub={
-                    savedCards.length === 1
-                      ? `${brandLabel(savedCards[0].brand)} **** ${savedCards[0].last4} — tap to charge $${amountCharged.toFixed(2)}`
-                      : `${savedCards.length} cards saved — pick one`
-                  }
-                >
-                  {method === "card-on-file" && savedCards.length > 1 && (
-                    <div className="mt-2 space-y-1">
-                      {savedCards.map((c) => (
-                        <label
-                          key={c.id}
-                          className={cn(
-                            "flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1 text-xs",
-                            selectedSavedCardId === c.id
-                              ? "border-emerald-400 bg-emerald-50/60"
-                              : "hover:bg-muted/40",
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name="saved-card"
-                            checked={selectedSavedCardId === c.id}
-                            onChange={() => setSelectedSavedCardId(c.id)}
-                          />
-                          <span>
-                            {brandLabel(c.brand)} **** {c.last4} ·{" "}
-                            {String(c.expMonth).padStart(2, "0")}/
-                            {String(c.expYear).slice(-2)}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </MethodCard>
-              )}
-              {/* New card */}
-              <MethodCard
-                selected={method === "new-card"}
-                onClick={() => setMethod("new-card")}
-                icon={Smartphone}
-                label="New card"
-                sub="Enter card details at the terminal"
-              />
+              <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
+                To pay by card, use Accept payment on the booking — that is
+                where the terminal and saved cards are connected.
+              </p>
               {/* Cash */}
               <MethodCard
                 selected={method === "cash"}
@@ -603,31 +541,6 @@ export function PaymentDialog({
         </Section>
 
         <Separator />
-
-        {/* 6 · Receipt delivery */}
-        <Section icon={Mail} title="Receipt">
-          <div className="flex items-center gap-4 text-sm">
-            <label className="flex cursor-pointer items-center gap-2">
-              <Checkbox
-                checked={receiptSms}
-                onCheckedChange={(v) => setReceiptSms(!!v)}
-              />
-              SMS
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <Checkbox
-                checked={receiptEmail}
-                onCheckedChange={(v) => setReceiptEmail(!!v)}
-              />
-              Email
-            </label>
-            {!receiptSms && !receiptEmail && (
-              <span className="text-destructive text-[11px]">
-                Pick at least one channel.
-              </span>
-            )}
-          </div>
-        </Section>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

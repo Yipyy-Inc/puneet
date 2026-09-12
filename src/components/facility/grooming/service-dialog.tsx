@@ -28,14 +28,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   groomingQueries,
   findAffectedUpcomingAppointments,
-  propagatePackageChangesToUpcoming,
 } from "@/lib/api/grooming";
 import { useSaveGroomingService } from "@/lib/api/grooming-catalogue";
-import type { GroomingAppointment } from "@/types/grooming";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown,
@@ -505,14 +503,10 @@ export function ServiceDialog({
   locationId,
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
-  const queryClient = useQueryClient();
   const { mutate: saveService, isPending: saving } = useSaveGroomingService();
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { data: appointmentsData = [] } = useQuery(
     groomingQueries.appointments(),
-  );
-  const { data: petPricingData = [] } = useQuery(
-    groomingQueries.allPetServicePricing(),
   );
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),
@@ -522,19 +516,6 @@ export function ServiceDialog({
   // State for the "apply to upcoming unconfirmed appointments?" prompt that
   // fires after editing an existing service. Set on save; cleared by the
   // prompt's actions.
-  const [propagationPrompt, setPropagationPrompt] = useState<{
-    updatedPackage: GroomingPackage;
-    affected: GroomingAppointment[];
-    summary: {
-      basePriceChanged: boolean;
-      sizePricingChanged: boolean;
-      durationChanged: boolean;
-      previousBasePrice: number;
-      newBasePrice: number;
-      previousDurationMin: number;
-      newDurationMin: number;
-    };
-  } | null>(null);
 
   // ── Form state ──
   const [name, setName] = useState("");
@@ -878,58 +859,19 @@ export function ServiceDialog({
           next.id,
           appointmentsData,
         );
+        // It offered to "apply to upcoming appointments" and then rewrote
+        // the query cache: each appointment keeps the price and duration it
+        // was BOOKED at (grooming_appointments), and nothing rewrites those
+        // in bulk. So it says what is true instead of offering it.
         if (affected.length > 0) {
-          setPropagationPrompt({
-            updatedPackage: next,
-            affected,
-            summary: {
-              basePriceChanged,
-              sizePricingChanged,
-              durationChanged,
-              previousBasePrice: prev.basePrice,
-              newBasePrice: next.basePrice,
-              previousDurationMin: prev.duration,
-              newDurationMin: next.duration,
-            },
-          });
-          // Keep ServiceDialog closed and the prompt visible until the user
-          // decides. Closing the editor is fine — the package change is
-          // already saved either way.
-          onOpenChange(false);
-          return;
+          toast.info(
+            `${affected.length} upcoming appointment${affected.length === 1 ? "" : "s"} keep the price and duration they were booked at. The change applies to new bookings.`,
+          );
         }
       }
     }
 
     onOpenChange(false);
-  }
-
-  function applyPropagation() {
-    if (!propagationPrompt) return;
-    const { next, affected } = propagatePackageChangesToUpcoming({
-      packageId: propagationPrompt.updatedPackage.id,
-      updatedPackage: propagationPrompt.updatedPackage,
-      appointments: appointmentsData,
-      petPricingOverrides: petPricingData,
-    });
-    queryClient.setQueryData<GroomingAppointment[]>(
-      ["grooming", "appointments"],
-      next,
-    );
-    toast.success(
-      `Updated ${affected.length} upcoming appointment${
-        affected.length === 1 ? "" : "s"
-      } with the new pricing & duration.`,
-    );
-    setPropagationPrompt(null);
-  }
-
-  function skipPropagation() {
-    if (!propagationPrompt) return;
-    toast.info(
-      "Change applies to new bookings only — existing appointments untouched.",
-    );
-    setPropagationPrompt(null);
   }
 
   const previewPrice = sizePricing.large;
@@ -1909,137 +1851,6 @@ export function ServiceDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-
-      {/* Propagation prompt — fires after editing an existing service when
-          price or duration changed AND there are upcoming unconfirmed
-          appointments using this service. */}
-      <Dialog
-        open={!!propagationPrompt}
-        onOpenChange={(o) => {
-          if (!o) setPropagationPrompt(null);
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base">
-              Apply to upcoming appointments?
-            </DialogTitle>
-          </DialogHeader>
-          {propagationPrompt && (
-            <div className="space-y-3 py-1 text-sm">
-              <p>
-                <strong>
-                  {propagationPrompt.affected.length} upcoming unconfirmed
-                  appointment
-                  {propagationPrompt.affected.length === 1 ? "" : "s"}
-                </strong>{" "}
-                use this service. Do you want to apply the updated price and
-                duration to{" "}
-                {propagationPrompt.affected.length === 1
-                  ? "this booking"
-                  : "all of them"}
-                ?
-              </p>
-
-              {/* Diff summary */}
-              <div className="bg-muted/30 space-y-1 rounded-md border px-3 py-2 text-xs">
-                {propagationPrompt.summary.basePriceChanged && (
-                  <p>
-                    <span className="font-medium">Base price:</span>{" "}
-                    <span className="text-muted-foreground line-through">
-                      ${propagationPrompt.summary.previousBasePrice}
-                    </span>{" "}
-                    →{" "}
-                    <span className="font-semibold text-sky-700 dark:text-sky-300">
-                      ${propagationPrompt.summary.newBasePrice}
-                    </span>
-                  </p>
-                )}
-                {propagationPrompt.summary.sizePricingChanged && (
-                  <p>
-                    <span className="font-medium">Size pricing:</span> one or
-                    more size brackets changed
-                  </p>
-                )}
-                {propagationPrompt.summary.durationChanged && (
-                  <p>
-                    <span className="font-medium">Duration:</span>{" "}
-                    <span className="text-muted-foreground line-through">
-                      {propagationPrompt.summary.previousDurationMin} min
-                    </span>{" "}
-                    →{" "}
-                    <span className="font-semibold text-sky-700 dark:text-sky-300">
-                      {propagationPrompt.summary.newDurationMin} min
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              {/* Preview list — capped so very large pushes don't blow the
-                  modal. Pet-custom and stylist-specific overrides are
-                  preserved by the propagator. */}
-              {propagationPrompt.affected.length > 0 && (
-                <details className="bg-card rounded-md border px-3 py-2 text-xs">
-                  <summary className="cursor-pointer font-medium">
-                    Show affected appointments (
-                    {propagationPrompt.affected.length})
-                  </summary>
-                  <ul className="mt-2 max-h-40 space-y-0.5 overflow-y-auto">
-                    {propagationPrompt.affected
-                      .sort((a, b) =>
-                        `${a.date} ${a.startTime}`.localeCompare(
-                          `${b.date} ${b.startTime}`,
-                        ),
-                      )
-                      .slice(0, 50)
-                      .map((a) => (
-                        <li
-                          key={a.id}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span className="text-muted-foreground font-mono text-[11px] tabular-nums">
-                            {a.date} {a.startTime}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate">
-                            {a.petName}
-                          </span>
-                          <span className="text-muted-foreground shrink-0">
-                            {a.stylistName}
-                          </span>
-                        </li>
-                      ))}
-                    {propagationPrompt.affected.length > 50 && (
-                      <li className="text-muted-foreground text-[10px] italic">
-                        + {propagationPrompt.affected.length - 50} more
-                      </li>
-                    )}
-                  </ul>
-                </details>
-              )}
-
-              <p className="text-muted-foreground text-[11px]">
-                Only <strong>scheduled</strong> appointments dated today or
-                later are affected. Checked-in, completed, cancelled, and
-                no-show bookings are left untouched. Pet-specific and
-                stylist-specific price overrides survive — only the size / age /
-                coat tier is re-derived from the new service config.
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={skipPropagation}>
-              No, new bookings only
-            </Button>
-            <Button
-              onClick={applyPropagation}
-              className="bg-sky-600 text-white hover:bg-sky-700"
-            >
-              Apply to {propagationPrompt?.affected.length ?? 0} appointment
-              {propagationPrompt?.affected.length === 1 ? "" : "s"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Dialog>
   );
 }

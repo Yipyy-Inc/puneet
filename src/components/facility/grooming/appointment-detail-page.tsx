@@ -614,13 +614,23 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     // No-show path — staff ticked "Mark as No-Show" in the check-in dialog.
     if (result.markNoShow) {
       const beforeNoShow = STATUS_META[status ?? apt.status].label;
-      commitStatus("no-show");
+      commitStatus("no-show", () => toast.warning(`${apt.petName} — No-Show`));
       recordFieldChange("Status", beforeNoShow, STATUS_META["no-show"].label);
-      toast.warning(`${apt.petName} — No-Show`);
       return;
     }
     const before = STATUS_META[status ?? apt.status].label;
-    commitStatus("in-progress");
+    const readyLine = result.estimatedReadyTime
+      ? ` · ready ~${result.estimatedReadyTime}`
+      : "";
+    // Said once the status is saved — it was said on the line after asking.
+    commitStatus("in-progress", () =>
+      toast.success(`${apt.petName} — In Progress`, {
+        description:
+          (result.mattedSurcharge > 0
+            ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+            : `Station ${result.stationName} · session started`) + readyLine,
+      }),
+    );
     recordFieldChange("Status", before, STATUS_META["in-progress"].label);
     recordHistory(`Assigned to ${result.stationName} at check-in`);
     if (result.dropOffObservations) {
@@ -679,22 +689,12 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       recordHistory(`Pet profile alert · ${note.text}`);
     }
 
-    const readyLine = result.estimatedReadyTime
-      ? ` · ready ~${result.estimatedReadyTime}`
-      : "";
-    toast.success(`${apt.petName} — In Progress`, {
-      description:
-        (result.mattedSurcharge > 0
-          ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
-          : `Station ${result.stationName} · session started`) + readyLine,
-    });
     setCheckInOpen(false);
   }
 
   function handleMarkReadyConfirm(result: MarkReadyConfirmation) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
-    commitStatus("ready-for-pickup");
     recordFieldChange("Status", before, STATUS_META["ready-for-pickup"].label);
     const summary = applyMarkReadyResult(apt, result, {
       clients: ownerClients,
@@ -720,16 +720,17 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         `+$${summary.finalChargesTotal.toFixed(2)}`,
       );
     }
-    toast.success(`${apt.petName} — Ready for Pickup`, {
-      description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
-    });
+    commitStatus("ready-for-pickup", () =>
+      toast.success(`${apt.petName} — Ready for Pickup`, {
+        description: `Total $${summary.updatedTotal.toFixed(2)}`,
+      }),
+    );
     setMarkReadyOpen(false);
   }
 
   function handlePaymentConfirm(result: PaymentResult) {
     if (!apt) return;
     const before = STATUS_META[status ?? apt.status].label;
-    commitStatus("completed");
     recordFieldChange("Status", before, STATUS_META.completed.label);
     const summary = applyPaymentResult(apt, result, {
       clients: ownerClients,
@@ -739,8 +740,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     });
     // The payment and, when credit was spent, its ledger entry — one
     // transaction (record_payment). applyPaymentResult decided what it says.
+    // Completed only once the payment is on the ledger — it was completed
+    // whether or not the payment was refused.
     recordPayment(summary.paymentRecord, {
       onError: (error) => toast.error(error.message),
+      onSuccess: () =>
+        commitStatus("completed", () =>
+          toast.success(`${apt.petName} — Completed`, {
+            description: `$${summary.amountCharged.toFixed(2)} recorded`,
+          }),
+        ),
     });
     recordHistory(
       `Payment · ${result.method.replace(/-/g, " ")} · $${result.amountCharged.toFixed(2)}`,
@@ -761,9 +770,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         `Store credit applied · −$${result.appliedStoreCredit.toFixed(2)} (balance $${(summary.storeCreditAfter ?? 0).toFixed(2)})`,
       );
     }
-    toast.success(`${apt.petName} — Completed`, {
-      description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
-    });
     // Loyalty automation: earn points, apply tier discount, upgrade tier, fire
     // badges — all from the completed grooming booking.
     recordEvent({
@@ -780,18 +786,16 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   function handleCancelConfirm(r: CancelResult) {
     if (!apt) return;
     const beforeStatus = STATUS_META[status ?? apt.status].label;
-    commitStatus("cancelled");
+    commitStatus("cancelled", () => {
+      if (!r.notifyClient) toast.success("Appointment cancelled");
+    });
     setFeeOverride(r.fee);
     const reasonLabel =
       r.reason === "other" ? r.reasonNote || "other" : r.reason;
     recordFieldChange("Status", beforeStatus, "Cancelled");
     if (r.fee > 0) recordFieldChange("Cancellation Fee", null, `$${r.fee}`);
     recordHistory(`Cancellation reason: ${reasonLabel}`);
-    if (r.notifyClient) {
-      toastClientNotification(apt, "cancellation");
-    } else {
-      toast.success("Appointment cancelled");
-    }
+    if (r.notifyClient) toastClientNotification(apt, "cancellation");
     // Slot just opened — offer it to the first matching waitlist client.
     autoMatchAndOffer("cancellation");
     setCancelOpen(false);
@@ -886,12 +890,13 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       addedAt: new Date().toISOString(),
       status: "waiting",
     });
-    commitStatus("cancelled");
+    commitStatus("cancelled", () =>
+      toast.success(
+        `${apt.petName} moved to the waitlist — appointment cancelled.`,
+      ),
+    );
     recordHistory(
       `Moved to waitlist · originally ${apt.date} ${apt.startTime}`,
-    );
-    toast.success(
-      `${apt.petName} moved to the waitlist — appointment cancelled.`,
     );
     autoMatchAndOffer("cancellation");
   }
@@ -962,9 +967,22 @@ export function AppointmentDetailPage({ id }: { id: string }) {
     setNewComment("");
   }
 
-  function togglePin(note: PetNote) {
+  // The notes are rows (`/api/notes`); a pin is too. It flipped a local
+  // override and toasted, so a reload put every note back where it was.
+  async function togglePin(note: PetNote) {
     const current = pinnedOverrides[note.id] ?? note.pinned;
     setPinnedOverrides((prev) => ({ ...prev, [note.id]: !current }));
+    const response = await fetch(`/api/notes/${note.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPinned: !current }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      setPinnedOverrides((prev) => ({ ...prev, [note.id]: current }));
+      toast.error(tAppt("notSaved"));
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["pet-notes"] });
     toast.success(!current ? "Note pinned to top" : "Note unpinned");
   }
 
@@ -1572,7 +1590,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                     key={n.id}
                     note={n}
                     pinnedOverride={pinnedOverrides[n.id]}
-                    onTogglePin={() => togglePin(n)}
+                    onTogglePin={() => void togglePin(n)}
                   />
                 ))}
               </ul>
@@ -1607,7 +1625,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
                     key={n.id}
                     note={n}
                     pinnedOverride={pinnedOverrides[n.id]}
-                    onTogglePin={() => togglePin(n)}
+                    onTogglePin={() => void togglePin(n)}
                   />
                 ))}
               </ul>

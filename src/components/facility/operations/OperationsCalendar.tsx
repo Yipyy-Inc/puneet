@@ -13,13 +13,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { useFacilityVaccinations } from "@/lib/api/vaccinations";
 import { useTagCatalogue } from "@/lib/api/tags";
 import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
-import { customServiceCheckIns } from "@/data/custom-service-checkins";
+import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import type { FacilityTask } from "@/data/facility-tasks";
 import {
   taskQueries,
@@ -27,7 +28,6 @@ import {
   useUpdateTask,
   type TaskRow,
 } from "@/lib/api/facility-tasks";
-import { getAllTransactions } from "@/data/retail";
 import { users } from "@/data/users";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { Booking } from "@/types/booking";
@@ -40,7 +40,6 @@ import {
   OperationsCalendarEventDrawer,
 } from "@/components/facility/operations/OperationsCalendarEventDrawer";
 import { OperationsCalendarFiltersPanel } from "@/components/facility/operations/OperationsCalendarFiltersPanel";
-import { ExternalCalendarWizard } from "@/components/facility/operations/ExternalCalendarWizard";
 import {
   activeFiltersCount,
   canAccessSavedView,
@@ -76,10 +75,6 @@ import {
   isOccurrenceCancelled,
   useRecurringCancellations,
 } from "@/lib/recurring-events";
-import {
-  findWaitlistCandidate,
-  notifyWaitlistEntry,
-} from "@/lib/calendar-waitlist";
 import { facilityConfig } from "@/data/facility-config";
 import {
   OperationsCalendarPrintSheet,
@@ -500,6 +495,10 @@ function buildCsv(
 }
 
 const NO_MANUAL_EVENTS: ManualFacilityEvent[] = [];
+const NO_CUSTOM_CHECKINS: CustomServiceCheckIn[] = [];
+const NO_TRANSACTIONS: Parameters<
+  typeof buildUnifiedEvents
+>[0]["transactions"] = [];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -589,6 +588,7 @@ export function OperationsCalendar() {
    * anything outside the column list into `details`, so a status, a staff
    * assignment and a cancellation reason all persist through the same call.
    */
+  const addLineItems = useAddLineItems();
   const patchBooking = useMutation({
     mutationFn: (input: { id: number; patch: Partial<Booking> }) =>
       bookingMutations.update(input.id, input.patch),
@@ -784,7 +784,6 @@ export function OperationsCalendar() {
     x: number;
     y: number;
   } | null>(null);
-  const [externalCalWizardOpen, setExternalCalWizardOpen] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -872,9 +871,13 @@ export function OperationsCalendar() {
     const merged = buildUnifiedEvents({
       bookings: bookingRecords,
       clients: clientRecords,
-      customServiceCheckIns,
+      // Neither is this facility's: both were fixture arrays — the sample
+      // shop's sales and sample custom-service check-ins — drawn on every
+      // calendar. Empty until retail sales and custom services are read from
+      // Postgres here (debt map, 2026-09-12).
+      customServiceCheckIns: NO_CUSTOM_CHECKINS,
       tasks: taskRecords,
-      transactions: getAllTransactions(),
+      transactions: NO_TRANSACTIONS,
       customModules: activeModules,
       facilityId: FACILITY_ID,
       view,
@@ -2471,9 +2474,14 @@ export function OperationsCalendar() {
       }
     }
 
-    patchBooking.mutate({ id: bookingId, patch: { status: "in_progress" } });
+    patchBooking.mutate(
+      { id: bookingId, patch: { status: "in_progress" } },
+      {
+        onSuccess: () =>
+          toast.success(`Checked in by ${toDisplayRole(userRole)}`),
+      },
+    );
     appendAuditEntry("booking_checkin", { bookingId });
-    toast.success(`Checked in by ${toDisplayRole(userRole)}`);
   };
 
   const checkOutBooking = (bookingId: number) => {
@@ -2497,10 +2505,15 @@ export function OperationsCalendar() {
       }
     }
 
-    patchBooking.mutate({ id: bookingId, patch: { status: "completed" } });
+    patchBooking.mutate(
+      { id: bookingId, patch: { status: "completed" } },
+      {
+        onSuccess: () =>
+          toast.success(`Checked out by ${toDisplayRole(userRole)}`),
+      },
+    );
 
     appendAuditEntry("booking_checkout", { bookingId });
-    toast.success(`Checked out by ${toDisplayRole(userRole)}`);
   };
 
   const assignBookingStaff = (
@@ -2516,16 +2529,20 @@ export function OperationsCalendar() {
     // Training bookings carry a trainer; everything else carries a stylist
     // preference. Read from the query rather than a local array.
     const target = bookingRecords.find((entry) => entry.id === bookingId);
-    patchBooking.mutate({
-      id: bookingId,
-      patch:
-        target?.service.toLowerCase() === "training"
-          ? { trainerId: primary === "Unassigned" ? undefined : primary }
-          : {
-              stylistPreference: primary === "Unassigned" ? undefined : primary,
-              trainerId: secondary || target?.trainerId,
-            },
-    });
+    patchBooking.mutate(
+      {
+        id: bookingId,
+        patch:
+          target?.service.toLowerCase() === "training"
+            ? { trainerId: primary === "Unassigned" ? undefined : primary }
+            : {
+                stylistPreference:
+                  primary === "Unassigned" ? undefined : primary,
+                trainerId: secondary || target?.trainerId,
+              },
+      },
+      { onSuccess: () => toast.success("Staff assignment updated") },
+    );
 
     appendAuditEntry("booking_edited", {
       bookingId,
@@ -2533,7 +2550,6 @@ export function OperationsCalendar() {
       secondaryStaff: secondary,
       field: "staff-assignment",
     });
-    toast.success("Staff assignment updated");
   };
 
   const addBookingTask = (bookingId: number, task: Partial<FacilityTask>) => {
@@ -2632,23 +2648,40 @@ export function OperationsCalendar() {
       return;
     }
 
-    setBookingAddOnState((previous) => ({
-      ...previous,
-      [bookingId]: [addOn, ...(previous[bookingId] ?? [])],
-    }));
-
-    // NOT written to the booking. `bookingAddOnState` above is what the drawer
-    // renders, and the mirror this replaced only ever edited a local array —
-    // it did not bill the add-on, which is what attaching one is for. Billing
-    // is `/api/bookings/[ref]/line-items`, which the booking page uses; wiring
-    // this drawer to it is its own change.
-
-    appendAuditEntry("booking_edited", {
-      bookingId,
-      field: "addon-added",
-      addOnName: addOn.name,
-    });
-    toast.success("Add-on attached to booking");
+    // BILLED, through the same line-items write the booking page uses. It
+    // edited a local array and toasted "Add-on attached to booking" — the
+    // add-on was never on the bill, which is what attaching one is for.
+    addLineItems.mutate(
+      {
+        bookingRef: bookingId,
+        items: [
+          {
+            kind: "item",
+            name: addOn.name,
+            unitPrice: addOn.price ?? 0,
+            quantity: 1,
+          },
+        ],
+      },
+      {
+        onSuccess: () => {
+          setBookingAddOnState((previous) => ({
+            ...previous,
+            [bookingId]: [addOn, ...(previous[bookingId] ?? [])],
+          }));
+          appendAuditEntry("booking_edited", {
+            bookingId,
+            field: "addon-added",
+            addOnName: addOn.name,
+          });
+          toast.success(`${addOn.name} added to the booking's bill`);
+        },
+        onError: (error) =>
+          toast.error("The add-on was not added", {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const updateBookingAddOn = (
@@ -2755,42 +2788,6 @@ export function OperationsCalendar() {
     toast.success("Add-on removed");
   };
 
-  const updateNotes = (
-    section: "booking" | "pet" | "customer",
-    content: string,
-    editorName: string,
-  ) => {
-    if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to update booking notes");
-      return;
-    }
-
-    if (!selectedBooking) return;
-
-    setNoteStateByBooking((previous) => {
-      const existing =
-        previous[selectedBooking.id] ?? createDefaultNotesState();
-      return {
-        ...previous,
-        [selectedBooking.id]: {
-          ...existing,
-          [section]: {
-            content,
-            lastEditedBy: editorName,
-            lastEditedAt: new Date().toISOString(),
-          },
-        },
-      };
-    });
-
-    appendAuditEntry("booking_edited", {
-      bookingId: selectedBooking.id,
-      field: `${section}-notes-updated`,
-      editorName,
-    });
-    toast.success("Notes updated");
-  };
-
   const messageCustomer = (bookingId: number) => {
     if (!permissions.canEditBookings) {
       toast.error(
@@ -2844,54 +2841,22 @@ export function OperationsCalendar() {
     );
     if (!confirmed) return;
 
-    patchBooking.mutate({
-      id: bookingId,
-      patch: { status: "cancelled", cancellationReason: reason },
-    });
+    patchBooking.mutate(
+      {
+        id: bookingId,
+        patch: { status: "cancelled", cancellationReason: reason },
+      },
+      { onSuccess: () => toast.success("Booking cancelled") },
+    );
 
     appendAuditEntry("booking_cancelled", {
       bookingId,
       reason,
       source: "calendar-drawer",
     });
-    toast.success("Booking cancelled");
 
-    // A freed slot may unblock the top waitlist entry (spec 8.4 / Table 89).
-    const cancelledEvent = allEvents.find(
-      (event) => event.bookingId === bookingId,
-    );
-    if (cancelledEvent) {
-      const candidate = findWaitlistCandidate(
-        cancelledEvent.start,
-        cancelledEvent.service,
-      );
-      if (candidate) {
-        const timeLabel = cancelledEvent.start.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        });
-        toast.info(
-          `Slot available! ${candidate.clientName} is #1 on the waitlist for ${timeLabel} ${candidate.service}. Notify them?`,
-          {
-            duration: 12000,
-            action: {
-              label: "Send Notification",
-              onClick: () => {
-                notifyWaitlistEntry(candidate.id);
-                appendAuditEntry("booking_cancelled", {
-                  bookingId,
-                  waitlistNotified: candidate.clientName,
-                  source: "calendar-waitlist-promotion",
-                });
-                toast.success(
-                  `${candidate.clientName} notified — slot offered via SMS/email`,
-                );
-              },
-            },
-          },
-        );
-      }
-    }
+    // It offered to notify the #1 waitlist entry — a sample client — and
+    // toasted "notified — slot offered via SMS/email" without sending.
   };
 
   const updateManualEvent = (
@@ -3046,21 +3011,29 @@ export function OperationsCalendar() {
       const toTime = (date: Date) =>
         `${`${date.getHours()}`.padStart(2, "0")}:${`${date.getMinutes()}`.padStart(2, "0")}`;
 
-      patchBooking.mutate({
-        id: event.bookingId,
-        patch: {
-          startDate: formatDateKey(newStart),
-          endDate: formatDateKey(newEnd),
-          checkInTime: toTime(newStart),
-          checkOutTime: toTime(newEnd),
-          ...(newStaff
-            ? {
-                stylistPreference:
-                  newStaff === "Unassigned" ? undefined : newStaff,
-              }
-            : {}),
+      patchBooking.mutate(
+        {
+          id: event.bookingId,
+          patch: {
+            startDate: formatDateKey(newStart),
+            endDate: formatDateKey(newEnd),
+            checkInTime: toTime(newStart),
+            checkOutTime: toTime(newEnd),
+            ...(newStaff
+              ? {
+                  stylistPreference:
+                    newStaff === "Unassigned" ? undefined : newStaff,
+                }
+              : {}),
+          },
         },
-      });
+        {
+          onSuccess: () =>
+            toast.success(calT("rescheduled"), {
+              description: notify ? calT("ownerNotMessaged") : undefined,
+            }),
+        },
+      );
     }
 
     // A facility event dragged to a new slot keeps its length. It used to
@@ -3089,10 +3062,8 @@ export function OperationsCalendar() {
       notify,
     });
     // "Rescheduled — owner notified via SMS/email" sent nothing; nothing here
-    // sends a reschedule notice, so it does not say one went out.
-    toast.success(calT("rescheduled"), {
-      description: notify ? calT("ownerNotMessaged") : undefined,
-    });
+    // sends a reschedule notice, so it does not say one went out. The toast
+    // is the write's own, above.
     setPendingReschedule(null);
   };
 
@@ -3262,7 +3233,6 @@ export function OperationsCalendar() {
           staffOptions={staffOptions}
           hiddenStaff={hiddenStaff}
           onToggleStaffVisibility={toggleStaffVisibility}
-          onConnectCalendar={() => setExternalCalWizardOpen(true)}
           onPrintDay={handlePrintDay}
           onExportDayPdf={handleExportDayPdf}
           newEventMenu={
@@ -3293,13 +3263,6 @@ export function OperationsCalendar() {
           onToggleGroupValue={updateFilterGroup}
           onClearAll={clearAllFilters}
           onClose={() => setShowFilters(false)}
-          onConnectCalendar={() => setExternalCalWizardOpen(true)}
-        />
-
-        <ExternalCalendarWizard
-          open={externalCalWizardOpen}
-          onOpenChange={setExternalCalWizardOpen}
-          staffOptions={staffOptions}
         />
 
         <Dialog
@@ -3453,7 +3416,6 @@ export function OperationsCalendar() {
         onAddBookingAddOn={addBookingAddOn}
         onUpdateBookingAddOn={updateBookingAddOn}
         onRemoveBookingAddOn={removeBookingAddOn}
-        onUpdateNotes={updateNotes}
         onMessageCustomer={messageCustomer}
         onRescheduleBooking={rescheduleBooking}
         onCancelBooking={cancelBooking}

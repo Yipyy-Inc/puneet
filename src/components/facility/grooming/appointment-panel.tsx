@@ -831,8 +831,9 @@ export function AppointmentPanel({
         apt={appointment}
         onConfirm={(result: CheckInConfirmation) => {
           if (result.markNoShow) {
-            writeStatus("no-show");
-            toast.warning(`${appointment.petName} — No-Show`);
+            writeStatus("no-show", () =>
+              toast.warning(`${appointment.petName} — No-Show`),
+            );
             setCheckInOpen(false);
             return;
           }
@@ -855,17 +856,19 @@ export function AppointmentPanel({
             result.stationName,
             "You",
           );
-          writeStatus("checked-in");
           const readyLine = result.estimatedReadyTime
             ? ` · ready ~${result.estimatedReadyTime}`
             : "";
-          toast.success(`${appointment.petName} — Checked In`, {
-            description:
-              (result.mattedSurcharge > 0
-                ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
-                : `Station ${result.stationName} · session started`) +
-              readyLine,
-          });
+          // Said once the status is saved, not on the line after asking.
+          writeStatus("checked-in", () =>
+            toast.success(`${appointment.petName} — Checked In`, {
+              description:
+                (result.mattedSurcharge > 0
+                  ? `Station ${result.stationName} · matting fee +$${result.mattedSurcharge}`
+                  : `Station ${result.stationName} · session started`) +
+                readyLine,
+            }),
+          );
           setCheckInOpen(false);
         }}
       />
@@ -881,10 +884,11 @@ export function AppointmentPanel({
             notify: (title, detail) => toast.message(title, detail),
             facilityName: "Yipyy",
           });
-          writeStatus("ready-for-pickup");
-          toast.success(`${appointment.petName} — Ready for Pickup`, {
-            description: `Owner notified · total $${summary.updatedTotal.toFixed(2)}`,
-          });
+          writeStatus("ready-for-pickup", () =>
+            toast.success(`${appointment.petName} — Ready for Pickup`, {
+              description: `Total $${summary.updatedTotal.toFixed(2)}`,
+            }),
+          );
           setMarkReadyOpen(false);
         }}
       />
@@ -914,21 +918,26 @@ export function AppointmentPanel({
               });
               // The payment and, when credit was spent, its ledger entry — one
               // transaction (record_payment). applyPaymentResult decided what it says.
+              // Completed only once the payment is on the ledger — it was
+              // completed whether or not the payment was refused.
               recordPayment(summary.paymentRecord, {
                 onError: (error) => toast.error(error.message),
-              });
-              writeStatus("completed");
-              toast.success(`${appointment.petName} — Completed`, {
-                description: `Receipt sent · $${summary.amountCharged.toFixed(2)} charged`,
-              });
-              // Loyalty automation off the completed grooming booking.
-              recordEvent({
-                type: "booking_completed",
-                id: String(appointment.id),
-                customerId: appointment.ownerId,
-                amount: summary.grandTotal,
-                serviceType: "grooming",
-                isService: true,
+                onSuccess: () => {
+                  writeStatus("completed", () =>
+                    toast.success(`${appointment.petName} — Completed`, {
+                      description: `$${summary.amountCharged.toFixed(2)} recorded`,
+                    }),
+                  );
+                  // Loyalty automation off the completed grooming booking.
+                  recordEvent({
+                    type: "booking_completed",
+                    id: String(appointment.id),
+                    customerId: appointment.ownerId,
+                    amount: summary.grandTotal,
+                    serviceType: "grooming",
+                    isService: true,
+                  });
+                },
               });
               setPaymentOpen(false);
             }}

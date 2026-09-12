@@ -1,15 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  CalendarPlus,
-  Filter,
-  FileDown,
-  Gauge,
-  Printer,
-  Search,
-  Users,
-} from "lucide-react";
+import { Filter, FileDown, Gauge, Printer, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,7 +34,6 @@ interface OperationsCalendarToolbarProps {
   staffOptions: string[];
   hiddenStaff: string[];
   onToggleStaffVisibility: (name: string) => void;
-  onConnectCalendar: () => void;
   onPrintDay: () => void;
   onExportDayPdf: () => void;
 }
@@ -64,7 +55,6 @@ export function OperationsCalendarToolbar({
   staffOptions,
   hiddenStaff,
   onToggleStaffVisibility,
-  onConnectCalendar,
   onPrintDay,
   onExportDayPdf,
 }: OperationsCalendarToolbarProps) {
@@ -240,16 +230,10 @@ export function OperationsCalendarToolbar({
             </div>
           )}
 
-          {/* Connect external calendar (spec 6.4) */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onConnectCalendar}
-            className="ml-auto h-8 gap-1.5 rounded-full px-3 text-[13px] text-sky-600 hover:bg-sky-50 hover:text-sky-700"
-          >
-            <CalendarPlus className="size-4" />
-            Connect Calendar
-          </Button>
+          {/* "Connect Calendar" opened a wizard whose OAuth button set a flag
+              and toasted "connected — syncing". There is no calendar sync; the
+              spacer keeps the print menu where the button left it. */}
+          <div className="ml-auto" />
 
           {/* Print Day (spec 8.8 / Table 93) */}
           <DropdownMenu>
