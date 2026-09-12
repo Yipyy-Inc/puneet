@@ -1683,7 +1683,9 @@ export default function ClientBookingDetailPage({
                       className="rounded-xl transition-shadow"
                     >
                       <MedicationSection
-                        key={`med-${careLogStamp(careLog)}`}
+                        // Remounted when the booking's own list changes, so an
+                        // added medication appears from the row it was saved to.
+                        key={`med-${careLogStamp(careLog)}-${booking.medications?.length ?? 0}`}
                         entries={applyMedicationLog(
                           booking.medicationInstructions?.length
                             ? booking.medicationInstructions
@@ -1695,7 +1697,14 @@ export default function ClientBookingDetailPage({
                           logDay,
                         )}
                         required={medicationMode === "required"}
-                        bookingId={booking.id}
+                        onAdd={async (item) => {
+                          await bookingMutations.update(booking.id, {
+                            medications: [...(booking.medications ?? []), item],
+                          });
+                          await queryClient.invalidateQueries({
+                            queryKey: ["bookings"],
+                          });
+                        }}
                         onLog={(medicationId, scheduledAt, outcome, notes) =>
                           recordCare.mutate({
                             bookingRef: booking.id,
@@ -1718,6 +1727,14 @@ export default function ClientBookingDetailPage({
                       entries={booking.belongings ?? []}
                       isCompleted={booking.status === "completed"}
                       required={belongingsMode === "required"}
+                      onSave={async (belongings) => {
+                        await bookingMutations.update(booking.id, {
+                          belongings,
+                        });
+                        await queryClient.invalidateQueries({
+                          queryKey: ["bookings"],
+                        });
+                      }}
                     />
                   )}
                 </>

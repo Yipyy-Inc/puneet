@@ -13260,6 +13260,16 @@ the nightly suite.
 - **`apply_discount`** went inert with InvoicePanel, its only consumer (it
   gated a discount on the fixture invoice). Baselined in
   `check:inert-permissions` with that reason.
+- **Belongings and medications on the booking page save.** Adding an item,
+  ticking one returned, or adding a medication was component state and a
+  toast. They write `booking.belongings` / `booking.medications` now (the
+  lists the booking form and the customer's pre-arrival form write), and roll
+  back on screen when refused. A new medication's doses were stamped on a
+  hardcoded 2026-04-15. The panel also merged medication from FIXTURE
+  incidents matched by booking number; gone. Belonging photos are not offered
+  when saving — a data URL in `details` would ride along on every booking
+  list — until there is file storage for them.
+- **Deleted, rendered nowhere:** `BookingActionBar`, `BookingRequestsPanel`.
 - **599px:** the status settings card grew to its widest row inside the
   settings grid (a grid item is `min-width: auto`); `min-w-0` on its root.
 - **Still open:** `mappers/booking.ts` still maps `facilityId: 11`, which the

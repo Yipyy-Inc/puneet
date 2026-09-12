@@ -1744,7 +1744,10 @@
         "payLinkNotSent": "Le lien de paiement n’a pas été envoyé",
         "markedReady": "{ref} : prête pour le départ",
         "finishedUnpaid": "Terminé — le solde reste ouvert pour plus tard",
-        "bookingConfirmed": "{ref} confirmée"
+        "bookingConfirmed": "{ref} confirmée",
+        "belongingsNotSaved": "Les effets personnels n’ont pas été enregistrés",
+        "medicationNotSaved": "Le médicament n’a pas été enregistré",
+        "medicationAdded": "Médicament ajouté"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",

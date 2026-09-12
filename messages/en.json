@@ -1744,7 +1744,10 @@
         "payLinkNotSent": "The payment link was not sent",
         "markedReady": "{ref} is ready to go home",
         "finishedUnpaid": "Finished — the balance stays open for later",
-        "bookingConfirmed": "{ref} confirmed"
+        "bookingConfirmed": "{ref} confirmed",
+        "belongingsNotSaved": "The belongings were not saved",
+        "medicationNotSaved": "The medication was not saved",
+        "medicationAdded": "Medication added"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",

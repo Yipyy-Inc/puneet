@@ -33,19 +33,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { MedicationEntry } from "@/types/booking";
-import type { IncidentMedication } from "@/types/incidents";
-import { getIncidentsForBooking } from "@/data/incidents";
+import type { MedicationEntry, MedicationItem } from "@/types/booking";
+import type { MedForm, MedFrequency } from "@/types/base";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface MedicationSectionProps {
   entries: MedicationEntry[];
   required?: boolean;
-  /**
-   * When set, medications filed against this booking's incidents (2B.3) are
-   * merged in and rendered identically to parent-provided meds — same Give/Log
-   * button. Source (incidentId) is kept in the data only, never shown to staff.
-   */
-  bookingId?: number;
   /**
    * Whether staff may record a dose or add a medication here.
    *
@@ -71,30 +65,30 @@ interface MedicationSectionProps {
     outcome: string,
     notes?: string,
   ) => void;
+  /**
+   * Save a medication onto the booking's own list (`booking.medications`,
+   * the list the booking form writes). "Add medication" was component state
+   * and a toast, with its doses stamped on a hardcoded 15 April 2026. With
+   * `onAdd` it is written, and the parent re-renders the list from the row.
+   */
+  onAdd?: (item: MedicationItem) => Promise<void>;
 }
 
-// Map an incident-sourced medication onto the booking medication shape so the
-// existing UI renders it identically. One pending dose gives it a Give button.
-function incidentMedToEntry(m: IncidentMedication): MedicationEntry {
-  return {
-    id: m.id,
-    name: m.name,
-    dosage: m.dosage,
-    method: m.medType.charAt(0).toUpperCase() + m.medType.slice(1),
-    frequency: m.frequency,
-    times: [],
-    instructions: m.instructions || undefined,
-    isCritical: m.critical,
-    doses: [{ scheduledAt: m.createdAt, status: "pending" as const }],
-  };
-}
-
-function incidentMedsForBooking(bookingId?: number): MedicationEntry[] {
-  if (bookingId == null) return [];
-  return getIncidentsForBooking(bookingId)
-    .flatMap((i) => i.incidentMedications)
-    .map(incidentMedToEntry);
-}
+/** The form's words, in the booking record's vocabulary. */
+const FORM_OF: Record<string, MedForm> = {
+  Oral: "pill",
+  Topical: "topical",
+  Injection: "injection",
+  "Mixed with food": "powder",
+  "Eye drops": "eye_drops",
+  "Ear drops": "ear_drops",
+};
+const FREQUENCY_OF: Record<string, MedFrequency> = {
+  "Once daily": "once_daily",
+  "Twice daily": "twice_daily",
+  "Every 8 hours": "every_8hrs",
+  "As needed": "prn",
+};
 
 const MED_METHODS = [
   "Oral",
@@ -103,7 +97,6 @@ const MED_METHODS = [
   "Mixed with food",
   "Eye drops",
   "Ear drops",
-  "Other",
 ];
 const FREQUENCIES = [
   "Once daily",
@@ -145,14 +138,16 @@ let _medId = 200;
 export function MedicationSection({
   entries,
   required,
-  bookingId,
   canLog = true,
   onLog,
+  onAdd,
 }: MedicationSectionProps) {
-  const [meds, setMeds] = useState<MedicationEntry[]>(() => [
-    ...entries,
-    ...incidentMedsForBooking(bookingId),
-  ]);
+  const { t } = useStaffText("bookingDetail");
+  // The booking's own list. It also merged the medication of FIXTURE
+  // incidents matched by booking number — a real booking could show a
+  // sample dog's prescription.
+  const [meds, setMeds] = useState<MedicationEntry[]>(() => entries);
+  const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [notePopover, setNotePopover] = useState<string | null>(null);
   const [doseNote, setDoseNote] = useState("");
@@ -214,7 +209,7 @@ export function MedicationSection({
     // the dose sends the note along with it, which is the path that persists.
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newMed.name) {
       toast.error("Medication name is required");
       return;
@@ -222,8 +217,50 @@ export function MedicationSection({
     _medId += 1;
     const times = newMed.times
       .split(",")
-      .map((t) => t.trim())
+      .map((time) => time.trim())
       .filter(Boolean);
+
+    if (onAdd) {
+      const frequency = FREQUENCY_OF[newMed.frequency] ?? "other";
+      const item: MedicationItem = {
+        id: `med-${crypto.randomUUID()}`,
+        name: newMed.name.trim(),
+        amount: newMed.dosage.trim(),
+        form: FORM_OF[newMed.method] ?? "pill",
+        frequency,
+        frequencyNotes: frequency === "other" ? newMed.frequency : undefined,
+        times,
+        adminInstructions:
+          newMed.method === "Mixed with food" ? ["with_food"] : [],
+        ifMissed: "call_parent",
+        isHighRisk: newMed.isCritical || undefined,
+        notes: newMed.instructions.trim(),
+      };
+      setSaving(true);
+      try {
+        await onAdd(item);
+      } catch (error) {
+        toast.error(t("medicationNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return;
+      } finally {
+        setSaving(false);
+      }
+      setNewMed({
+        name: "",
+        dosage: "",
+        method: "Oral",
+        frequency: "Once daily",
+        times: "08:00",
+        instructions: "",
+        isCritical: false,
+      });
+      setAddOpen(false);
+      toast.success(t("medicationAdded"));
+      return;
+    }
+
     setMeds((prev) => [
       ...prev,
       {
@@ -253,7 +290,7 @@ export function MedicationSection({
       isCritical: false,
     });
     setAddOpen(false);
-    toast.success("Medication added");
+    toast.success(t("medicationAdded"));
   };
 
   return (
@@ -404,7 +441,9 @@ export function MedicationSection({
                 <Button
                   size="sm"
                   className="h-7 text-[11px]"
-                  onClick={handleAdd}
+                  onClick={() => void handleAdd()}
+                  disabled={saving}
+                  aria-busy={saving}
                 >
                   Add Medication
                 </Button>
