@@ -25,14 +25,17 @@ import {
   CalendarPlus,
   Check,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ActiveCall, CallTag } from "@/types/calling";
 import { useCallTags } from "@/hooks/use-call-tags";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { clients as allClients } from "@/data/clients";
-import { facilities } from "@/data/facilities";
+import { useQuery } from "@tanstack/react-query";
+import { clientQueries } from "@/lib/api/client";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import type { Client } from "@/types/client";
+
+const NO_CLIENTS: Client[] = [];
 
 // ─── Yipyy brand palette ─────────────────────────────────────────────────────
 // #CDEAF5  — logo signature sky (light tint, text / subtle fills)
@@ -1090,6 +1093,12 @@ export function ActiveCallPanel({
   const timer = useCallTimer(call.startTime);
   const { tags: callTags } = useCallTags();
   const { openBookingModal } = useBookingModal();
+  const createBooking = useCreateBookingFromModal();
+  // The facility's own clients, RLS-scoped. This offered the sample-data list
+  // filtered to "facility 11", so the caller could be matched to somebody who
+  // does not exist — or, worse, share a number with somebody who does.
+  const { data: liveClients = NO_CLIENTS } = useQuery(clientQueries.all());
+  const { profile } = useFacilityProfile();
 
   const toggleTag = (id: string) =>
     setSelectedTags((prev) =>
@@ -1099,19 +1108,18 @@ export function ActiveCallPanel({
   // Open the shared Bookings drawer without leaving the call, pre-filled with
   // the identified caller. On save, mark the call so it's logged as a booking.
   const handleCreateBooking = () => {
-    const facility = facilities.find((f) => f.id === 11);
     openBookingModal({
-      clients: (allClients as Client[]).filter(
-        (c) => !facility || c.facility === facility.name,
-      ),
-      facilityId: 11,
-      facilityName: facility?.name ?? "Facility",
+      clients: liveClients,
+      facilityId: 0,
+      facilityName: profile.businessName,
       preSelectedClientId: call.clientId,
-      onCreateBooking: () => {
-        setBooked(true);
-        toast.success("Booking created during call", {
-          description: "It will be logged as this call's outcome.",
-        });
+      // It marked the call "booked" and toasted "Booking created during call"
+      // without creating anything. The booking is written first now, and the
+      // call is marked only if it was.
+      onCreateBooking: async (booking) => {
+        const saved = await createBooking(booking);
+        if (saved) setBooked(true);
+        return saved;
       },
     });
   };

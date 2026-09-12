@@ -41,7 +41,6 @@ import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
-import { useLocationContext } from "@/hooks/use-location-context";
 import type {
   RoomCategory,
   DaycarePlayArea,
@@ -49,6 +48,7 @@ import type {
 } from "@/types/rooms";
 import type { OccupancyKennel } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { PageHeader } from "@/components/ui/page-header";
 import { OccupancyMeter } from "@/components/ui/occupancy-meter";
 
@@ -294,7 +294,9 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   const [serviceType, setServiceType] = useState<ServiceType>("boarding");
 
   const { openBookingModal } = useBookingModal();
-  const { currentLocationId } = useLocationContext();
+  // The shared staff save: it writes the booking, refreshes the board, says
+  // what was made, and answers whether it saved — the form stays open on no.
+  const createBooking = useCreateBookingFromModal();
 
   // Generic move handler that works for both boarding and daycare — the calendar
   // calls it with the same kennel-id shape regardless of service.
@@ -482,33 +484,20 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
         preSelectedService: "boarding",
         preSelectedRoomId: kennelId,
         preSelectedStartDate: date,
-        onCreateBooking: async (newBooking) => {
-          // This used to be `console.log("Booking created from occupancy
-          // grid", newBooking)`. The wizard closed, the operator believed a
-          // kennel was booked, and nothing had happened.
-          try {
-            const created = await bookingMutations.create(
-              newBooking,
-              currentLocationId,
-            );
-            // The board itself is derived from the occupancy read, so it has
-            // to be refetched or the new guest does not appear in the kennel
-            // that was just clicked.
-            await queryClient.invalidateQueries({
-              queryKey: ["boarding-rooms"],
-            });
-            await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            toast.success(`Booking #${created.id} created`);
-          } catch (error) {
-            toast.error("Could not create that booking", {
-              description:
-                error instanceof Error ? error.message : "Please try again.",
-            });
-          }
-        },
+        // This used to be `console.log("Booking created from occupancy grid",
+        // newBooking)`. The wizard closed, the operator believed a kennel was
+        // booked, and nothing had happened. The shared save also refetches
+        // the board, so the guest appears in the kennel that was clicked.
+        onCreateBooking: createBooking,
       });
     },
-    [kennels, openBookingModal, liveClients, profile.businessName, queryClient],
+    [
+      kennels,
+      openBookingModal,
+      liveClients,
+      profile.businessName,
+      createBooking,
+    ],
   );
 
   const handleAddDaycareBookingFromCell = useCallback(
@@ -520,27 +509,12 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
         facilityId: 11,
         facilityName: profile.businessName,
         preSelectedService: "daycare",
-        preSelectedRoomId: sectionId,
+        preSelectedDaycareSectionId: sectionId,
         preSelectedStartDate: date,
-        onCreateBooking: async (newBooking) => {
-          // Same as the boarding grid above: this logged to the console and
-          // reported nothing, so a daycare place booked from this screen was
-          // never booked. The SECTIONS on this half are still fixtures — there
-          // is no daycare-areas table — but the BOOKING it creates is real.
-          try {
-            const created = await bookingMutations.create(
-              newBooking,
-              currentLocationId,
-            );
-            await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            toast.success(`Booking #${created.id} created`);
-          } catch (error) {
-            toast.error("Could not create that booking", {
-              description:
-                error instanceof Error ? error.message : "Please try again.",
-            });
-          }
-        },
+        // Same as the boarding grid above: this logged to the console and
+        // reported nothing. The SECTIONS on this half are still fixtures —
+        // there is no daycare-areas table — but the BOOKING it creates is real.
+        onCreateBooking: createBooking,
       });
     },
     [
@@ -548,7 +522,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
       openBookingModal,
       liveClients,
       profile.businessName,
-      queryClient,
+      createBooking,
     ],
   );
 

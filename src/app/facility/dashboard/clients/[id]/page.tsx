@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { useLocationContext } from "@/hooks/use-location-context";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
 import {
@@ -46,11 +45,11 @@ import {
   useClientRecord,
   useUpdateClient,
 } from "@/lib/api/client";
-import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { paymentQueries } from "@/lib/api/payments";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { NewBooking } from "@/types/booking";
+import { useQuery } from "@tanstack/react-query";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import type { Evaluation } from "@/types/pet";
 import type { Incident } from "@/types/incidents";
@@ -155,7 +154,6 @@ export default function ClientDetailPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { openBookingModal } = useBookingModal();
-  const { currentLocationId } = useLocationContext();
   // Field masking (spec Table 21): hide contact info, LTV, and financial amounts
   // from staff without the required permission. TODO: also strip server-side.
   const { maskContact, maskAmount, canSee } = useFieldMask();
@@ -261,8 +259,6 @@ export default function ClientDetailPage({
     enabled: Boolean(client),
   });
 
-  const queryClient = useQueryClient();
-
   /**
    * Actually create the booking.
    *
@@ -273,18 +269,10 @@ export default function ClientDetailPage({
    * real client it costed the booking against nobody. The invoice id it printed
    * referred to no document — there is no invoices table.
    */
-  const persistBooking = async (booking: NewBooking) => {
-    try {
-      const created = await bookingMutations.create(booking, currentLocationId);
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      toast.success(`Booking #${created.id} created`);
-    } catch (error) {
-      toast.error("Could not create that booking", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
-  };
+  // The shared staff handler: it writes the booking, reports the deposit
+  // and every booking a multi-day request made, and answers whether it saved
+  // — the form waits for that answer and stays open on `false`.
+  const persistBooking = useCreateBookingFromModal();
 
   // Resume-from-unfinished-booking: when staff clicks Schedule on an
   // unfinished booking, the URL gets `?resumeBooking=<ub-id>`. We look it up,
@@ -312,9 +300,7 @@ export default function ClientDetailPage({
       facilityId: facilityRef,
       facilityName: profile.businessName,
       ...preselection,
-      onCreateBooking: (booking) => {
-        void persistBooking(booking);
-      },
+      onCreateBooking: persistBooking,
     });
 
     // Strip the query param so refresh or back nav doesn't relaunch the modal.
@@ -693,9 +679,7 @@ export default function ClientDetailPage({
                       facilityId: facilityRef,
                       facilityName: profile.businessName,
                       preSelectedClientId: client.id,
-                      onCreateBooking: (booking) => {
-                        void persistBooking(booking);
-                      },
+                      onCreateBooking: persistBooking,
                     });
                   }
                 }}
@@ -1201,9 +1185,7 @@ export default function ClientDetailPage({
                         facilityId: facilityRef,
                         facilityName: profile.businessName,
                         preSelectedClientId: client.id,
-                        onCreateBooking: (booking) => {
-                          void persistBooking(booking);
-                        },
+                        onCreateBooking: persistBooking,
                       });
                     }
                   }}

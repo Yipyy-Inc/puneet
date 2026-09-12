@@ -403,10 +403,10 @@ export default function PetDetailPage({
   };
 
   // It logged "Creating booking:" and closed. The modal now closes only once
-  // the booking is written, keeping what was entered if it was not.
-  const handleCreateBooking = async (bookingData: BookingData) => {
-    if (await createBooking(bookingData)) setBookingModalOpen(false);
-  };
+  // the booking is written, keeping what was entered if it was not — it waits
+  // for this answer and closes itself.
+  const handleCreateBooking = (bookingData: BookingData) =>
+    createBooking(bookingData);
 
   return (
     <div>

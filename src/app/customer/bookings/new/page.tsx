@@ -141,7 +141,7 @@ export default function NewBookingPage() {
           isCustomerMode={true}
           bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
           onCreateBooking={async (booking: NewBooking) => {
-            if (!customer || !selectedFacility) return;
+            if (!customer || !selectedFacility) return false;
 
             const petId = Array.isArray(booking.petId)
               ? booking.petId[0]
@@ -208,6 +208,7 @@ export default function NewBookingPage() {
                 description:
                   error instanceof Error ? error.message : t("tryAgainPlain"),
               });
+              return false;
             }
           }}
         />

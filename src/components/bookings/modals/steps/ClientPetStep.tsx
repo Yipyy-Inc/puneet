@@ -82,14 +82,15 @@ interface ClientPetStepProps {
   guestPetWeights?: string[];
   setGuestPetWeights?: React.Dispatch<React.SetStateAction<string[]>>;
   /**
-   * Quick-create hooks. The wizard owns the merged client/pet list and
-   * synthesizes ids for newly-added records, so the step can stay UI-only.
+   * Quick-create hooks. The wizard SAVES the record and answers with its real
+   * id, or `null` when it was refused (having said why) — in which case the
+   * little form stays filled in.
    */
   onAddClient?: (draft: {
     name: string;
     phone: string;
     email: string;
-  }) => number;
+  }) => Promise<number | null>;
   onAddPet?: (
     clientId: number,
     draft: {
@@ -100,7 +101,7 @@ interface ClientPetStepProps {
       ageMonths?: number;
       weight?: number;
     },
-  ) => number;
+  ) => Promise<number | null>;
 }
 
 export function ClientPetStep({
@@ -160,16 +161,21 @@ export function ClientPetStep({
     weight: "",
   });
 
-  const handleSubmitNewClient = () => {
-    if (!onAddClient) return;
+  const [savingClient, setSavingClient] = React.useState(false);
+  const [savingPet, setSavingPet] = React.useState(false);
+
+  const handleSubmitNewClient = async () => {
+    if (!onAddClient || savingClient) return;
     const name = newClientDraft.name.trim();
     const email = newClientDraft.email.trim();
     if (!name || !email) return;
-    const newId = onAddClient({
+    setSavingClient(true);
+    const newId = await onAddClient({
       name,
       email,
       phone: newClientDraft.phone.trim(),
-    });
+    }).finally(() => setSavingClient(false));
+    if (newId === null) return;
     setSelectedClientId(newId);
     setSelectedPetIds([]);
     setNewClientDraft({ name: "", email: "", phone: "" });
@@ -184,8 +190,8 @@ export function ClientPetStep({
     setIsAddingNewClient(false);
   };
 
-  const handleSubmitNewPet = () => {
-    if (!onAddPet || selectedClientId === null) return;
+  const handleSubmitNewPet = async () => {
+    if (!onAddPet || selectedClientId === null || savingPet) return;
     const name = newPetDraft.name.trim();
     if (!name || !newPetDraft.size) return;
     const ageMonthsNum = newPetDraft.ageMonths.trim()
@@ -194,14 +200,16 @@ export function ClientPetStep({
     const weightNum = newPetDraft.weight.trim()
       ? Math.max(0, Number(newPetDraft.weight))
       : undefined;
-    const newId = onAddPet(selectedClientId, {
+    setSavingPet(true);
+    const newId = await onAddPet(selectedClientId, {
       name,
       breed: newPetDraft.breed.trim(),
       size: newPetDraft.size,
       coatType: newPetDraft.coatType || undefined,
       ageMonths: ageMonthsNum,
       weight: weightNum,
-    });
+    }).finally(() => setSavingPet(false));
+    if (newId === null) return;
     setSelectedPetIds((prev) => [...prev, newId]);
     setNewPetDraft({
       name: "",
@@ -813,13 +821,15 @@ export function ClientPetStep({
                   <Button
                     type="button"
                     size="sm"
-                    onClick={handleSubmitNewClient}
+                    onClick={() => void handleSubmitNewClient()}
                     disabled={
+                      savingClient ||
                       !newClientDraft.name.trim() ||
                       !newClientDraft.email.trim()
                     }
+                    aria-busy={savingClient}
                   >
-                    {t("addClient")}
+                    {savingClient ? t("savingBooking") : t("addClient")}
                   </Button>
                 </div>
               </div>
@@ -1165,10 +1175,15 @@ export function ClientPetStep({
                     <Button
                       type="button"
                       size="sm"
-                      onClick={handleSubmitNewPet}
-                      disabled={!newPetDraft.name.trim() || !newPetDraft.size}
+                      onClick={() => void handleSubmitNewPet()}
+                      disabled={
+                        savingPet ||
+                        !newPetDraft.name.trim() ||
+                        !newPetDraft.size
+                      }
+                      aria-busy={savingPet}
                     >
-                      {t("addPet")}
+                      {savingPet ? t("savingBooking") : t("addPet")}
                     </Button>
                   </div>
                 </div>

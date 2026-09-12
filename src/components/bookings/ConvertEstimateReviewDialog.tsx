@@ -99,7 +99,8 @@ export function ConvertEstimateReviewDialog({
 
   // Both paths end here: the booking through /api/bookings, then the
   // estimate pointed at it. The toast names the booking only once it exists.
-  const run = async (booking: NewBooking) => {
+  /** True when the booking was made; the wizard stays open on false. */
+  const run = async (booking: NewBooking): Promise<boolean> => {
     try {
       const bookingRef = await convert.mutateAsync({ estimate, booking });
       toast.success(
@@ -110,10 +111,12 @@ export function ConvertEstimateReviewDialog({
       );
       onConverted?.(bookingRef);
       onOpenChange(false);
+      return true;
     } catch (error) {
       toast.error(t("convertFailed"), {
         description: error instanceof Error ? error.message : undefined,
       });
+      return false;
     }
   };
 
@@ -132,9 +135,7 @@ export function ConvertEstimateReviewDialog({
       preSelectedCheckInTime: estimate.checkInTime,
       preSelectedCheckOutTime: estimate.checkOutTime,
       preSelectedSpecialRequests: notes,
-      onCreateBooking: (booking) => {
-        void run(booking);
-      },
+      onCreateBooking: run,
     });
     onOpenChange(false);
   };

@@ -13159,5 +13159,69 @@ money it had not taken. Fixed, with `booking-checkout-truth` added to the gate:
   fixture facility 11 (`mappers/booking.ts` sets `facilityId: 11`);
   InvoicePanel / AutoAppliedBenefits on migrated bookings, Email invoice, SMS
   link, Send estimate, QuickBooks resync, medication and belongings edits,
-  Undo check-in and Mark as ready still claim what they do not do; the New
-  Booking form does not wait for its save and drops special requests.
+  Undo check-in and Mark as ready still claim what they do not do. (The New
+  Booking form: see the next entry.)
+
+## 2026-09-12 — the New Booking form saves what it was given
+
+Step 2 of the booking audit. `booking-form-saves` joins the gate.
+
+- **The form waits for its save.** `handleComplete` called
+  `onCreateBooking(booking)` and closed on the next line, so a refused booking
+  reported itself over a closed form and what staff entered was gone. The
+  prop's contract is now "answer `false` (or throw) when not saved", every
+  caller answers, and the button has a busy state. The customer's new-booking
+  page returned nothing on failure and showed "request received" regardless.
+- **One booking per daycare day, one per boarding room.** The database holds
+  one attendance and one room per booking; the form saved the first day and
+  the first dog's kennel. It sends `parts` now (`lib/bookings/booking-parts`,
+  unit tested: the parts add back to the quote to the cent) and
+  `create_bookings` (20260911234642) writes them all or none — a kennel taken
+  on the second stay leaves the first unwritten too. Each carries
+  `details.bookingGroup`. **Staff only:** a customer's request stays one
+  booking, and confirming a multi-day REQUEST still keeps its first day — the
+  online-booking "Schedule" path edits the one booking.
+- **The deposit is a payment.** `initialDeposit` was a note in `details` with
+  a `collectedAt`, and a toast said "Deposit applied". The route records it
+  through `record_payment` (cash or e-transfer, tax on top, spread over the
+  bookings in order) and reports `depositProblem` if it could not. The prompt
+  is OFF until staff turn it on, and offers only those two tenders — its card
+  and terminal options charged nothing.
+- **Special requests** have a field, and what a customer typed into an online
+  request survives scheduling (`preSelectedSpecialRequests` was never read).
+- **Staff bookings are confirmed.** The approval switch — for customer
+  requests — was read for everyone, so a desk booking could land in the
+  requests queue.
+- **Grooming add-ons** come from `grooming_add_ons` (`useGroomingAddOns`), and
+  are in the quote; the sample list offered extras the booking refused.
+- **Training:** a mixed cart priced its drop-in booking at the whole cart,
+  enrolments included, which the enrolments then charged again. Each drop-in
+  is its own booking at its own seat price, linked to its session
+  (`trainingSessionId` → `training_series_session_id`); enrolments are
+  awaited.
+- **Quick-create saves.** A client or pet added in the form was a draft with a
+  negative id that no caller persisted — the booking came back 422, "No client
+  -1". They are written when added.
+- **Waivers are the facility's.** The gate read the sample waivers and ANY
+  sample signature. It reads the facility's active waivers and this client's
+  valid signatures, and a signature taken in the form is a real one. A
+  customer must sign before asking; staff are shown what is outstanding but
+  not refused — a phone booking has no client at the counter.
+- **The kennel clicked on the occupancy grid is kept**, and the daycare cell
+  passes its section as a section.
+- **What the confirm step promised and did not do:** "Express check-in form
+  sent" (no sender exists — the switch is gone), "Confirmation sent" and
+  "Reminder scheduled" toasts (removed). The email/SMS switches now DO decide
+  whether the `booking_created` confirmation goes out
+  (`confirmationChannelsSwitchedOff` in `lib/messaging/dispatch`).
+- **The call panel's "Create booking"** created nothing and offered the sample
+  client list; it uses the facility's clients and the shared save.
+- **`check:inert-permissions`:** the platform catalogue's `create_booking`
+  was counted as consulted only because the route called an RPC with that
+  name. It is in the baseline now, with that explanation — it never decided
+  anything.
+- **Still open:** multi-dog grooming is one booking priced by the first dog's
+  size in the database; the customer-portal "Quick book", report-card and
+  package "Book" buttons create nothing (their `onCreateBooking` is empty);
+  a customer's card deposit is not charged; the form's estimate tax reads
+  fixture facility 11.

@@ -29,8 +29,10 @@ import { useGroomingStations } from "@/hooks/use-grooming-stations";
 // import. The rates screen writes `grooming_services`, and since 20260806560000
 // the appointment is priced from that same table — so a fixture here would quote
 // the customer one number while the booking recorded another.
-import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
-import { GROOMING_ADD_ONS as ADD_ONS } from "@/data/grooming-add-ons";
+import {
+  groomingCatalogueQueries,
+  useGroomingAddOns,
+} from "@/lib/api/grooming-catalogue";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { SERVICE_ACCENTS } from "../constants";
 import { Switch } from "@/components/ui/switch";
@@ -79,6 +81,7 @@ const SIZE_WORD_KEY: Record<string, string> = {
   giant: "sizeWord_giant",
 };
 import type { Pet } from "@/types/pet";
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import type { Client } from "@/types/client";
 import { coatTypeEnum, type AppointmentStage } from "@/types/grooming";
 import type { GroomingStationPetSize } from "@/types/rooms";
@@ -90,6 +93,8 @@ import {
   formatMoney,
   formatTimeOfDay,
 } from "@/lib/i18n/format";
+
+const NO_GROOMING_ADD_ONS: GroomingAddOnOption[] = [];
 
 const formatDateString = (date: Date): string => {
   const y = date.getFullYear();
@@ -151,7 +156,7 @@ interface GroomingDetailsProps {
    *  on submit so future bookings pre-fill with it. */
   savePriceToPet: boolean;
   setSavePriceToPet: (next: boolean) => void;
-  /** Full list of selected grooming-specific add-on ids (GROOMING_ADD_ONS). */
+  /** Selected grooming add-on ids, from the facility's `grooming_add_ons`. */
   selectedGroomingAddOnIds: string[];
   setSelectedGroomingAddOnIds: (ids: string[]) => void;
   /** Subset of selectedGroomingAddOnIds that came from the package's
@@ -1874,9 +1879,12 @@ function GroomingAddOns({
     }
   }
 
-  // Grooming-package add-ons: pull straight from the GROOMING_ADD_ONS catalog
-  // (these are tied to package rules, separate from facility-wide ServiceAddOns).
-  const groomingAddOnCatalog = ADD_ONS;
+  // The facility's grooming add-ons, from `grooming_add_ons` — the list the
+  // booking is checked against. This offered the sample-data catalogue, so an
+  // add-on picked here was one the facility might not have at all, and the
+  // booking was refused over it.
+  const { data: groomingAddOnCatalog = NO_GROOMING_ADD_ONS } =
+    useGroomingAddOns();
   const groomingAddOnSubtotal = selectedGroomingAddOnIds.reduce((sum, id) => {
     const ao = groomingAddOnCatalog.find((a) => a.id === id);
     return sum + (ao?.price ?? 0);
@@ -1958,7 +1966,7 @@ function GroomingAddOns({
       </div>
 
       {/* Package-driven grooming add-ons (auto-attached + manual). Rendered
-          when a package is chosen — these come from GROOMING_ADD_ONS and the
+          when a package is chosen — these come from grooming_add_ons and the
           package's defaultAddOnRules. */}
       {selectedPackage && (
         <div className="space-y-2">

@@ -250,7 +250,7 @@ export default function OnlineBookingPage() {
   const facilityId = 11;
   const router = useRouter();
   const { t, fill } = useStaffText("bookingRequests");
-  const { openBookingModal, closeBookingModal } = useBookingModal();
+  const { openBookingModal } = useBookingModal();
   const { profile } = useFacilityProfile();
   const { data: bookings = [] } = useQuery(bookingQueries.all());
   const { data: facilityClients = [] } = useQuery(clientQueries.all());
@@ -321,35 +321,35 @@ export default function OnlineBookingPage() {
     setScheduling(bookingsById.get(Number(req.id)) ?? null);
   };
 
-  const confirmScheduled = (edited: NewBookingPayload) => {
+  // The wizard waits for this answer, and stays open on `false`.
+  const confirmScheduled = async (
+    edited: NewBookingPayload,
+  ): Promise<boolean> => {
     const booking = scheduling;
-    if (!booking) return;
+    if (!booking) return false;
     const pet = facilityRequests.find(
       (r) => r.id === String(booking.id),
     )?.petName;
-    saveEdit.mutate(edited, {
-      onSuccess: async () => {
-        try {
-          await updateStatus.mutateAsync({
-            id: booking.id,
-            status: "confirmed",
-          });
-          toast.success(
-            fill("requestConfirmed", { pet: pet || `#${booking.id}` }),
-            {
-              description: t("customerNotMessaged"),
-            },
-          );
-          setScheduling(null);
-        } catch (error) {
-          toast.error(t("requestNotChanged"), {
-            description: error instanceof Error ? error.message : undefined,
-          });
-        }
-      },
-      onError: (error) =>
-        toast.error(t("requestNotChanged"), { description: error.message }),
-    });
+    try {
+      await saveEdit.mutateAsync(edited);
+      await updateStatus.mutateAsync({
+        id: booking.id,
+        status: "confirmed",
+      });
+      toast.success(
+        fill("requestConfirmed", { pet: pet || `#${booking.id}` }),
+        {
+          description: t("customerNotMessaged"),
+        },
+      );
+      setScheduling(null);
+      return true;
+    } catch (error) {
+      toast.error(t("requestNotChanged"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return false;
+    }
   };
 
   const handleScheduleUnfinished = (ub: UnfinishedBooking) => {
@@ -371,9 +371,7 @@ export default function OnlineBookingPage() {
       facilityName: profile.businessName,
       ...preselection,
       // It toasted "Booking completed" and wrote nothing.
-      onCreateBooking: async (booking) => {
-        if (await createBooking(booking)) closeBookingModal();
-      },
+      onCreateBooking: createBooking,
     });
   };
 
