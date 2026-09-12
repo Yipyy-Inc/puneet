@@ -1,8 +1,9 @@
-import { trainerNotes, progressRecords } from "@/data/training";
+import { progressRecords } from "@/data/training";
 // trainers, classes, sessions and enrollments are the facility's own — see
 // src/lib/api/training-book.ts, where they are fetched.
 import {
   fetchFacilityVaccinations,
+  fetchTrainerNotes,
   fetchTrainers,
   fetchTrainingBook,
   fetchTrainingPrograms,
@@ -85,14 +86,18 @@ export const trainingQueries = {
         (e) => e.classId === classId,
       ),
   }),
+  // The trainers' notes, from `training_notes` (it was the fixture, written
+  // with setQueryData). Writes: useTrainingNoteMutations in training-notes.ts.
   trainerNotes: () => ({
     queryKey: ["training", "notes"] as const,
-    queryFn: async () => trainerNotes,
+    queryFn: fetchTrainerNotes,
   }),
   notesByEnrollment: (enrollmentId: string) => ({
     queryKey: ["training", "notes", enrollmentId] as const,
     queryFn: async () =>
-      trainerNotes.filter((n) => n.enrollmentId === enrollmentId),
+      (await fetchTrainerNotes()).filter(
+        (n) => n.enrollmentId === enrollmentId,
+      ),
   }),
   progressRecords: () => ({
     queryKey: ["training", "progress"] as const,

@@ -13468,3 +13468,34 @@ make-ups, the course catalog, disciplines, exercises, module settings, block
 time and the pre-session briefing all write to the query cache only. The quick
 actions' "Add note" is one of them, and passes `check:success-claims` only
 because the same file now reaches a real sender — the gate's per-file limit.
+
+## 2026-09-12 — a trainer's note is a row (`training_notes`)
+
+Every trainer note was the `trainerNotes` fixture written with
+`queryClient.setQueryData`: the profile's Notes tab (add, edit, pin, delete,
+lift an alert), the quick actions' "Add note", and a completed session's
+per-dog note. The calendar card, the pre-session briefing and the profile's
+alert banner read the same fixture, so a real pet whose ref matched a fixture
+pet showed that pet's notes and alerts. Migration `20260912153352` adds
+`training_notes` (facility and owner from the pet by trigger; read on
+`view_pet_records` or by the owner for a note that is not private; written on
+`training_log_progress`; one pin per pet; an alert lifted only with a
+reason). `/api/training/notes` serves it, `trainingQueries.trainerNotes()`
+keeps its key so every reader moved at once, and the writes are
+`useTrainingNoteMutations`. SQL test `training-notes.sql` (6) and e2e
+`training-notes.spec.ts` (5, in the full suite).
+
+**A gate lesson from the same change:** the first draft put the fetch in
+`src/lib/api/training.ts`, and `check:success-claims` promptly reported eleven
+training screens as fixed — homework, disciplines, exercises, the course
+catalog — because a real request was now one import away from all of them.
+None of them had changed. The fetch lives in `training-book.ts` (two imports
+away), and the gate went back to seeing them as the cache-only screens they
+still are. A shared query module that gains one real request can launder
+every screen that imports it; when a baseline shrinks by more than the
+change touched, read why before removing the entries.
+
+**Still open (training):** homework, the profile's report cards and packages,
+make-ups, the course catalog, disciplines, exercises, homework templates,
+module settings, block time and the pre-session "briefed" state all write to
+the query cache only.

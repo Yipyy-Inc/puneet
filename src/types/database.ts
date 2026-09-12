@@ -10385,6 +10385,111 @@ export type Database = {
           },
         ];
       };
+      training_notes: {
+        Row: {
+          author_name: string | null;
+          body: string;
+          category: string;
+          class_name: string | null;
+          client_id: string | null;
+          created_at: string;
+          created_by: string | null;
+          deactivated_at: string | null;
+          deactivated_by_name: string | null;
+          deactivation_reason: string | null;
+          enrollment_id: string | null;
+          facility_id: string;
+          id: string;
+          is_active_alert: boolean;
+          is_pinned: boolean;
+          is_private: boolean;
+          pet_id: string;
+          pinned_at: string | null;
+          session_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          body: string;
+          category: string;
+          class_name?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          deactivated_at?: string | null;
+          deactivated_by_name?: string | null;
+          deactivation_reason?: string | null;
+          enrollment_id?: string | null;
+          facility_id: string;
+          id?: string;
+          is_active_alert?: boolean;
+          is_pinned?: boolean;
+          is_private?: boolean;
+          pet_id: string;
+          pinned_at?: string | null;
+          session_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          body?: string;
+          category?: string;
+          class_name?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          deactivated_at?: string | null;
+          deactivated_by_name?: string | null;
+          deactivation_reason?: string | null;
+          enrollment_id?: string | null;
+          facility_id?: string;
+          id?: string;
+          is_active_alert?: boolean;
+          is_pinned?: boolean;
+          is_private?: boolean;
+          pet_id?: string;
+          pinned_at?: string | null;
+          session_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_notes_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_notes_enrollment_id_fkey";
+            columns: ["enrollment_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_enrollments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_notes_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_notes_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_notes_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       training_series: {
         Row: {
           capacity: number;

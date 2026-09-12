@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trainingQueries } from "@/lib/api/training";
+import { useTrainingNoteMutations } from "@/lib/api/training-notes";
 import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
 import { isAlertActive } from "@/lib/training-active-alerts";
 
@@ -158,8 +159,12 @@ interface Props {
 }
 
 export function TrainingProfileNotes({ petId, petName }: Props) {
-  const queryClient = useQueryClient();
   const todayISO = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const notes = useTrainingNoteMutations();
+  const saving =
+    notes.create.isPending || notes.update.isPending || notes.remove.isPending;
+  const failed = (error: unknown) =>
+    toast.error(error instanceof Error ? error.message : String(error));
 
   const notesQuery = trainingQueries.trainerNotes();
   const { data: allNotes = [] } = useQuery(notesQuery);
@@ -194,7 +199,9 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
       })
       .sort((a, b) => {
         if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-        return a.id < b.id ? 1 : -1;
+        // Same day: newest first, by the instant the row was written.
+        const at = (n: TrainerNote) => String(n.createdAt ?? "");
+        return at(a) < at(b) ? 1 : at(a) > at(b) ? -1 : 0;
       });
   }, [petNotes, search, categoryFilter, privacyFilter]);
 
@@ -238,123 +245,99 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
     setComposerOpen(true);
   }
 
-  function persistNote(next: TrainerNote, isEdit: boolean) {
-    queryClient.setQueryData<TrainerNote[]>(
-      notesQuery.queryKey,
-      (prev = []) => {
-        if (isEdit) return prev.map((n) => (n.id === next.id ? next : n));
-        return [next, ...prev];
-      },
-    );
-  }
-
-  function togglePin(target: TrainerNote) {
-    const now = new Date().toISOString();
+  // ── EVERY WRITE GOES TO training_notes ──────────────────────────────────
+  //
+  // These wrote into the query cache (setQueryData) over the trainerNotes
+  // fixture, so a note, a pin, a delete or a lifted alert lasted until the tab
+  // was reloaded. They go through /api/training/notes now, and say so only
+  // once it has answered.
+  async function togglePin(target: TrainerNote) {
     const willPin = !target.isPinnedToProfile;
-    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) =>
-      prev.map((n) => {
-        // Only one pin per pet — unpin every other note for this pet, then
-        // flip the target's pin state.
-        if (n.petId !== target.petId) return n;
-        if (n.id === target.id) {
-          return {
-            ...n,
-            isPinnedToProfile: willPin,
-            pinnedAtISO: willPin ? now : undefined,
-          };
-        }
-        if (willPin && n.isPinnedToProfile) {
-          return { ...n, isPinnedToProfile: false, pinnedAtISO: undefined };
-        }
-        return n;
-      }),
-    );
-    toast.success(
-      willPin
-        ? "Pinned to profile — visible at the top of the Overview tab."
-        : "Unpinned from profile.",
-    );
+    try {
+      await notes.update.mutateAsync({
+        id: target.id,
+        patch: { isPinnedToProfile: willPin },
+      });
+      toast.success(
+        willPin
+          ? "Pinned to profile — visible at the top of the Overview tab."
+          : "Unpinned from profile.",
+      );
+    } catch (error) {
+      failed(error);
+    }
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const trimmed = form.note.trim();
     if (!trimmed) {
       toast.error("Note can't be empty.");
       return;
     }
-    if (editingNote) {
-      // If the trainer toggled the alert flag off via the composer, clear
-      // any stale deactivation metadata so the lifecycle is unambiguous.
-      const droppingAlert =
-        editingNote.isActiveAlert &&
-        !editingNote.deactivatedAt &&
-        !form.isActiveAlert;
-      const next: TrainerNote = {
-        ...editingNote,
-        note: trimmed,
-        category: form.category,
-        isPrivate: form.isPrivate,
-        isActiveAlert: form.isActiveAlert,
-        ...(droppingAlert
-          ? {
-              deactivatedAt: new Date().toISOString(),
-              deactivationReason:
-                editingNote.deactivationReason ??
-                "Alert removed from composer.",
-              deactivatedByName: editingNote.deactivatedByName ?? "Staff",
-            }
-          : !form.isActiveAlert
-            ? {}
-            : {
-                // Re-activated through the composer — clear deactivation
-                // metadata so the banner picks it up again.
-                deactivatedAt: undefined,
-                deactivationReason: undefined,
-                deactivatedByName: undefined,
-              }),
-      };
-      persistNote(next, true);
-      toast.success(
-        form.isActiveAlert
-          ? "Note updated — alert is active."
-          : "Note updated.",
-      );
-    } else {
-      const next: TrainerNote = {
-        id: `note-${Date.now()}`,
-        enrollmentId: "",
-        petId,
-        petName,
-        classId: "",
-        className: "",
-        trainerId: "trainer-001",
-        trainerName: "Staff",
-        date: todayISO,
-        note: trimmed,
-        category: form.category,
-        isPrivate: form.isPrivate,
-        isActiveAlert: form.isActiveAlert,
-      };
-      persistNote(next, false);
-      toast.success(
-        form.isActiveAlert
-          ? "Alert added — visible at the top of this profile."
-          : form.isPrivate
-            ? "Private note added."
-            : "Note added and shared.",
-      );
+    try {
+      if (editingNote) {
+        // Turning the alert off in the composer lifts it — with a reason,
+        // because the table keeps one for every lift.
+        const droppingAlert =
+          editingNote.isActiveAlert &&
+          !editingNote.deactivatedAt &&
+          !form.isActiveAlert;
+        await notes.update.mutateAsync({
+          id: editingNote.id,
+          patch: {
+            note: trimmed,
+            category: form.category,
+            isPrivate: form.isPrivate,
+            ...(droppingAlert
+              ? {
+                  deactivate: {
+                    reason:
+                      editingNote.deactivationReason ??
+                      "Alert removed from composer.",
+                  },
+                }
+              : form.isActiveAlert
+                ? { isActiveAlert: true }
+                : {}),
+          },
+        });
+        toast.success(
+          form.isActiveAlert
+            ? "Note updated — alert is active."
+            : "Note updated.",
+        );
+      } else {
+        await notes.create.mutateAsync({
+          petRef: petId,
+          note: trimmed,
+          category: form.category,
+          isPrivate: form.isPrivate,
+          isActiveAlert: form.isActiveAlert,
+        });
+        toast.success(
+          form.isActiveAlert
+            ? "Alert added — visible at the top of this profile."
+            : form.isPrivate
+              ? "Private note added."
+              : "Note added and shared.",
+        );
+      }
+      setComposerOpen(false);
+      setEditingNote(null);
+    } catch (error) {
+      failed(error);
     }
-    setComposerOpen(false);
-    setEditingNote(null);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deletingNote) return;
-    queryClient.setQueryData<TrainerNote[]>(notesQuery.queryKey, (prev = []) =>
-      prev.filter((n) => n.id !== deletingNote.id),
-    );
-    toast.success("Note deleted.");
-    setDeletingNote(null);
+    try {
+      await notes.remove.mutateAsync(deletingNote.id);
+      toast.success("Note deleted.");
+      setDeletingNote(null);
+    } catch (error) {
+      failed(error);
+    }
   }
 
   function openDeactivate(note: TrainerNote) {
@@ -362,48 +345,35 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
     setDeactivationReason("");
   }
 
-  function confirmDeactivate() {
+  async function confirmDeactivate() {
     if (!deactivatingNote) return;
     const reason = deactivationReason.trim();
     if (!reason) {
       toast.error("Add a reason so the audit trail explains the lift.");
       return;
     }
-    const now = new Date().toISOString();
     const target = deactivatingNote;
-    // Flip the original alert closed.
-    const updated: TrainerNote = {
-      ...target,
-      deactivatedAt: now,
-      deactivationReason: reason,
-      deactivatedByName: "Staff",
-    };
-    // Drop a follow-up note explaining the deactivation. This gives the
-    // history view a permanent record of *why* the alert was lifted.
-    const followUp: TrainerNote = {
-      id: `note-${Date.now()}`,
-      enrollmentId: target.enrollmentId,
-      petId: target.petId,
-      petName: target.petName,
-      classId: target.classId,
-      className: target.className,
-      trainerId: target.trainerId,
-      trainerName: "Staff",
-      date: todayISO,
-      note: `Alert deactivated: ${reason} (was: "${target.note}")`,
-      category: "general",
-      isPrivate: true,
-    };
-    queryClient.setQueryData<TrainerNote[]>(
-      notesQuery.queryKey,
-      (prev = []) => [
-        followUp,
-        ...prev.map((n) => (n.id === updated.id ? updated : n)),
-      ],
-    );
-    toast.success("Alert deactivated.");
-    setDeactivatingNote(null);
-    setDeactivationReason("");
+    try {
+      // Lift the alert — the note stays, with who and why — then leave a
+      // follow-up note, so the history reads the lift in order.
+      await notes.update.mutateAsync({
+        id: target.id,
+        patch: { deactivate: { reason } },
+      });
+      await notes.create.mutateAsync({
+        petRef: target.petId,
+        note: `Alert deactivated: ${reason} (was: "${target.note}")`,
+        category: "general",
+        isPrivate: true,
+        enrollmentId: target.enrollmentId || undefined,
+        className: target.className || undefined,
+      });
+      toast.success("Alert deactivated.");
+      setDeactivatingNote(null);
+      setDeactivationReason("");
+    } catch (error) {
+      failed(error);
+    }
   }
 
   return (
@@ -808,7 +778,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!form.note.trim()}
+              disabled={saving || !form.note.trim()}
               className="bg-emerald-600 text-white hover:bg-emerald-700"
             >
               {editingNote ? "Save changes" : "Add note"}
@@ -873,7 +843,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
             </Button>
             <Button
               onClick={confirmDeactivate}
-              disabled={!deactivationReason.trim()}
+              disabled={saving || !deactivationReason.trim()}
               className="bg-rose-600 text-white hover:bg-rose-700"
             >
               <BellOff className="mr-1.5 size-4" />
@@ -899,6 +869,7 @@ export function TrainingProfileNotes({ petId, petName }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              disabled={saving}
               onClick={confirmDelete}
               className="bg-red-600 text-white hover:bg-red-700"
             >
