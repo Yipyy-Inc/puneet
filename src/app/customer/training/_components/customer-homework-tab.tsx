@@ -29,6 +29,7 @@ import {
   Video,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
+import { customerTrainingSettingsQueries } from "@/lib/api/customer-training-settings";
 import {
   detachTodaysVideo,
   fanOutHomeworkUpsert,
@@ -81,7 +82,12 @@ export function CustomerHomeworkTab({ customerId }: Props) {
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: homework = [] } = useQuery(trainingQueries.allHomework());
-  const { data: moduleSettings } = useQuery(trainingQueries.moduleSettings());
+  // The facility's own rules, through the client row — trainingQueries goes
+  // through a staff membership, so a customer only ever saw the defaults.
+  const { data: moduleSettings } = useQuery({
+    ...customerTrainingSettingsQueries.all(),
+    select: (s) => s.moduleSettings,
+  });
   const requireVideo =
     moduleSettings?.requireVideoForHomeworkSubmission ?? false;
 

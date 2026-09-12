@@ -30,6 +30,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trainingQueries } from "@/lib/api/training";
+import { customerTrainingSettingsQueries } from "@/lib/api/customer-training-settings";
+import { NO_ITEMS } from "@/lib/no-items";
 import { SKILL_LEVEL_LABELS } from "@/types/training";
 import type { Pet } from "@/types/pet";
 import type { TrainingPackage } from "@/types/training";
@@ -118,8 +120,12 @@ export function CustomerTrainingCatalog({
 }: Props) {
   const { t } = useCustomerText("training");
   const { data: packages = [] } = useQuery(trainingQueries.packages());
-  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
-  const { data: pathways = [] } = useQuery(trainingQueries.trainingPathways());
+  // The facility's own disciplines and pathways, through the client row —
+  // trainingQueries goes through a staff membership, so a customer only ever
+  // saw the shipped library.
+  const { data: offered } = useQuery(customerTrainingSettingsQueries.all());
+  const disciplines = offered?.disciplines ?? NO_ITEMS;
+  const pathways = offered?.pathways ?? NO_ITEMS;
 
   const disciplineById = useMemo(
     () => new Map(disciplines.map((d) => [d.id, d])),

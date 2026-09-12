@@ -146,6 +146,70 @@ test.describe("the training catalogue is saved", () => {
     expect(course.ok()).toBe(false);
   });
 
+  test("a customer is shown the facility's pathways and rules, not the defaults", async ({
+    page,
+    browser,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const requireVideo = !(
+      (original.get("training_module_settings")?.value
+        .requireVideoForHomeworkSubmission as boolean | undefined) ?? false
+    );
+    for (const [domain, value] of [
+      [
+        "training_pathways",
+        {
+          pathways: [
+            {
+              id: "e2e-shown",
+              name: `${MARKER} Shown`,
+              steps: [],
+              isActive: true,
+            },
+            {
+              id: "e2e-hidden",
+              name: `${MARKER} Hidden`,
+              steps: [],
+              isActive: false,
+            },
+          ],
+        },
+      ],
+      [
+        "training_module_settings",
+        {
+          ...original.get("training_module_settings")?.value,
+          requireVideoForHomeworkSubmission: requireVideo,
+        },
+      ],
+    ] as [Domain, unknown][]) {
+      const res = await write(page, domain, value);
+      expect(res.ok(), `${domain}: ${await res.text()}`).toBe(true);
+    }
+
+    // The customer reads through their client row (20260912163211) — not
+    // /api/facility/settings, which only ever gave them the defaults.
+    const context = await browser.newContext();
+    const customer = await context.newPage();
+    try {
+      await signIn(customer, ACCOUNTS.customer);
+      const res = await customer.request.get("/api/customer/training-settings");
+      expect(res.ok(), await res.text()).toBe(true);
+      const offered = (await res.json()) as {
+        pathways: { id: string }[];
+        moduleSettings: { requireVideoForHomeworkSubmission: boolean };
+      };
+      const ids = offered.pathways.map((p) => p.id);
+      expect(ids).toContain("e2e-shown");
+      expect(ids).not.toContain("e2e-hidden");
+      expect(offered.moduleSettings.requireVideoForHomeworkSubmission).toBe(
+        requireVideo,
+      );
+    } finally {
+      await context.close();
+    }
+  });
+
   test("through Settings → Training: an added discipline survives a reload", async ({
     page,
   }) => {
