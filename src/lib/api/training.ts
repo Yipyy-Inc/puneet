@@ -304,23 +304,24 @@ export const trainingQueries = {
     queryFn: async () =>
       clientTrainingPackages.filter((p) => p.clientId === clientId),
   }),
-  /** Local-only set of session IDs the trainer has marked "briefed". Pure
-   *  client-state — no backend; the query exists so the briefing tasks list
-   *  and the panel "Mark briefed" button share the same cache. */
+  /** Sessions a trainer has marked briefed — `briefed_at` on the session
+   *  (20260912170021). It was a cache-only list, so the reminder came back on
+   *  reload. Written by useTrainingSessionPrep. */
   preSessionBriefedSessionIds: () => ({
     queryKey: ["training", "pre-session", "briefed"] as const,
-    queryFn: async (): Promise<string[]> => [],
-    staleTime: Infinity,
+    queryFn: async (): Promise<string[]> =>
+      (await fetchTrainingBook()).sessions
+        .filter((s) => s.briefedAt)
+        .map((s) => s.id),
   }),
-  /** Exercises the trainer planned during the pre-session briefing for a
-   *  given session. The Session View's Exercises section reads from this
-   *  on first mount so the trainer walks in with their plan pre-loaded.
-   *  Pure client-state — defaults to an empty list and is mutated via
-   *  setQueryData from the briefing panel. */
+  /** Exercises the trainer planned in the pre-session briefing, which the
+   *  session view pre-loads — `planned_exercise_ids` on the session
+   *  (20260912170021). Written by useTrainingSessionPrep. */
   plannedExercisesForSession: (sessionId: string) => ({
     queryKey: ["training", "planned-exercises", sessionId] as const,
-    queryFn: async (): Promise<string[]> => [],
-    staleTime: Infinity,
+    queryFn: async (): Promise<string[]> =>
+      (await fetchTrainingBook()).sessions.find((s) => s.id === sessionId)
+        ?.plannedExerciseIds ?? [],
   }),
   /** A dog-specific, week-by-week session plan built in the student profile for
    *  an individual pet — a "private curriculum" that follows the dog rather than

@@ -150,6 +150,12 @@ export const trainingSessionSchema = z
      *  open with an empty exercise list (no curriculum / continuity pre-load),
      *  `structured` sessions pre-load the course plan. */
     curriculumStyle: z.enum(["structured", "adaptive"]).optional(),
+    /** When a trainer marked the pre-session briefing reviewed — kept on the
+     *  session (20260912170021). Absent until then. */
+    briefedAt: z.string().optional(),
+    /** Exercises planned in the briefing, in order; the session view
+     *  pre-loads them. */
+    plannedExerciseIds: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 

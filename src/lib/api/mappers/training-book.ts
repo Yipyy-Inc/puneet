@@ -78,6 +78,9 @@ export interface BookSessionRow {
   start_at: string;
   end_at: string;
   status: "scheduled" | "completed" | "cancelled";
+  /** 20260912170021 — the trainer's preparation, kept on the session. */
+  briefed_at?: string | null;
+  planned_exercise_ids?: string[] | null;
 }
 
 export interface BookEnrollmentRow {
@@ -241,6 +244,8 @@ export function buildTrainingBook(input: {
       attendees: rosterBySeries.get(s.series_id) ?? [],
       notes: "",
       sessionNumber: s.session_number,
+      ...(s.briefed_at ? { briefedAt: s.briefed_at } : {}),
+      plannedExerciseIds: s.planned_exercise_ids ?? [],
       // Attendance is written against these when the session is completed.
       bookingRefByPet: Object.fromEntries(
         input.bookingRefs?.get(s.id) ?? new Map<number, number>(),

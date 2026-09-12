@@ -10643,30 +10643,39 @@ export type Database = {
       };
       training_series_sessions: {
         Row: {
+          briefed_at: string | null;
+          briefed_by_name: string | null;
           created_at: string;
           end_at: string;
           facility_id: string;
           id: string;
+          planned_exercise_ids: string[];
           series_id: string;
           session_number: number;
           start_at: string;
           status: string;
         };
         Insert: {
+          briefed_at?: string | null;
+          briefed_by_name?: string | null;
           created_at?: string;
           end_at: string;
           facility_id: string;
           id?: string;
+          planned_exercise_ids?: string[];
           series_id: string;
           session_number: number;
           start_at: string;
           status?: string;
         };
         Update: {
+          briefed_at?: string | null;
+          briefed_by_name?: string | null;
           created_at?: string;
           end_at?: string;
           facility_id?: string;
           id?: string;
+          planned_exercise_ids?: string[];
           series_id?: string;
           session_number?: number;
           start_at?: string;
