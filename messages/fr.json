@@ -2397,6 +2397,22 @@
         "facility": "Établissement",
         "newCustomModule": "Nouveau module personnalisé",
         "notSaved": "Le service n’a pas été enregistré ({status})."
+      },
+      "trainingPackages": {
+        "title": "Forfaits de dressage",
+        "activeCount": "{count} actifs",
+        "household": "Les forfaits appartiennent au foyer de {owner} et couvrent chacun de ses chiens.",
+        "purchased": "Acheté le {date}",
+        "expires": "Expire le {date}",
+        "outOfSessions": "Plus de séances",
+        "lowBalance": "Une séance restante",
+        "active": "Actif",
+        "expiringSoon": "Expire bientôt",
+        "sessions": "Séances",
+        "remaining": "{remaining} sur {total} restantes · {used} utilisées",
+        "chip": "{name} : {remaining} sur {total} restantes",
+        "renew": "Vendre un renouvellement",
+        "loadFailed": "Les forfaits de dressage n’ont pas pu être chargés."
       }
     }
   },

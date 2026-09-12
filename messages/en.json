@@ -2397,6 +2397,22 @@
         "facility": "Facility",
         "newCustomModule": "New custom module",
         "notSaved": "The service was not saved ({status})."
+      },
+      "trainingPackages": {
+        "title": "Training packages",
+        "activeCount": "{count} active",
+        "household": "Packages belong to {owner}'s household and cover each of their dogs.",
+        "purchased": "Purchased {date}",
+        "expires": "Expires {date}",
+        "outOfSessions": "Out of sessions",
+        "lowBalance": "One session left",
+        "active": "Active",
+        "expiringSoon": "Expiring soon",
+        "sessions": "Sessions",
+        "remaining": "{remaining} of {total} left · {used} used",
+        "chip": "{name}: {remaining} of {total} left",
+        "renew": "Sell a renewal",
+        "loadFailed": "The training packages could not be loaded."
       }
     }
   },

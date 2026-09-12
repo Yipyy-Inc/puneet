@@ -1,89 +1,68 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, BellRing, Package } from "lucide-react";
-import { trainingQueries } from "@/lib/api/training";
-import {
-  aggregateActivePackagesForPet,
-  markRenewalReminderSent,
-} from "@/lib/client-training-packages";
+import { groomingQueries } from "@/lib/api/grooming";
+import { NO_ITEMS } from "@/lib/no-items";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { trainingPackageRows } from "@/lib/training-owned-packages";
 
-/** Compact "Sessions Remaining" chips shown in the trainer Profile header
- *  alongside the No-Show Risk + other status badges. Each active package is
- *  one chip; low-balance ones flip amber and surface a "Send reminder"
- *  action. The same data feeds the larger Overview panel below. */
+/** Compact "sessions left" chips in the trainer profile header — one per
+ *  active training package the dog's household owns, low or empty ones in
+ *  the warning ink. The larger Overview panel reads the same rows.
+ *
+ *  They read what the client really owns (/api/packages/owned). Until
+ *  2026-09-12 they read `clientTrainingPackages`, a fixture of invented
+ *  purchases, and "Send reminder" stamped a date in the query cache and
+ *  toasted "Renewal reminder queued" — nothing was queued, so it is gone. */
 export function TrainingProfilePackageChips({
-  petId,
+  ownerRef,
   todayISO,
 }: {
-  petId: number;
+  ownerRef: number;
   todayISO: string;
 }) {
-  const queryClient = useQueryClient();
-  const { data: packages = [] } = useQuery(
-    trainingQueries.clientTrainingPackagesForPet(petId),
+  const { fill } = useStaffText("trainingPackages");
+  const { data } = useQuery(
+    groomingQueries.customerPackagesForClient(
+      ownerRef > 0 ? ownerRef : undefined,
+    ),
   );
 
   const rows = useMemo(
-    () => aggregateActivePackagesForPet(petId, packages, todayISO),
-    [petId, packages, todayISO],
+    () => trainingPackageRows(data ?? NO_ITEMS, todayISO),
+    [data, todayISO],
   );
 
   if (rows.length === 0) return null;
 
-  function sendReminder(rowIdx: number) {
-    const row = rows[rowIdx];
-    if (!row) return;
-    markRenewalReminderSent(queryClient, row.pkg);
-    toast.success(
-      `Renewal reminder queued for ${row.pkg.petName}'s ${row.pkg.packageName}.`,
-    );
-  }
-
   return (
     <>
-      {rows.map((row, idx) => {
-        const remainingLabel = `${row.sessionsRemaining}/${row.pkg.sessionsPurchased} left`;
-        const tone = row.exhausted
-          ? "rose"
+      {rows.map((row) => {
+        const label = fill("chip", {
+          name: row.packageName,
+          remaining: row.remaining,
+          total: row.total,
+        });
+        const toneCls = row.exhausted
+          ? "border-rose-200 bg-rose-50 text-rose-700"
           : row.lowBalance
-            ? "amber"
-            : "slate";
-        const toneCls = {
-          rose: "border-rose-200 bg-rose-50 text-rose-700",
-          amber: "border-amber-200 bg-amber-50 text-amber-700",
-          slate: "border-slate-200 bg-slate-50 text-slate-600",
-        }[tone];
+            ? "border-amber-200 bg-amber-50 text-amber-700"
+            : "border-slate-200 bg-slate-50 text-slate-600";
         const Icon = row.exhausted || row.lowBalance ? AlertTriangle : Package;
         return (
-          <span key={row.pkg.id} className="inline-flex items-center gap-1">
-            <Badge
-              variant="outline"
-              className={cn("gap-1", toneCls)}
-              title={`${row.pkg.packageName} · ${remainingLabel}`}
-            >
-              <Icon className="size-3" />
-              {row.pkg.packageName}: {remainingLabel}
-            </Badge>
-            {row.reminderDue && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-6 gap-1 border-amber-200 px-2 text-[11px] text-amber-700 hover:bg-amber-50"
-                onClick={() => sendReminder(idx)}
-                title="Send the owner a renewal reminder (simulated email)"
-              >
-                <BellRing className="size-3" />
-                Send reminder
-              </Button>
-            )}
-          </span>
+          <Badge
+            key={row.id}
+            variant="outline"
+            className={cn("gap-1", toneCls)}
+            title={label}
+          >
+            <Icon className="size-3" />
+            {label}
+          </Badge>
         );
       })}
     </>

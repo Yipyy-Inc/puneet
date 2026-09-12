@@ -267,8 +267,6 @@ const BASELINE = new Set<string>([
   "src/app/employee/(shell)/schedule/staff-schedule-view.tsx",
   "src/app/facility/dashboard/services/retail/page.tsx",
   "src/app/facility/dashboard/services/training/makeup/page.tsx",
-  "src/app/facility/dashboard/services/training/students/_components/training-profile-package-chips.tsx",
-  "src/app/facility/dashboard/services/training/students/_components/training-profile-packages-panel.tsx",
   "src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx",
   "src/app/facility/dashboard/staff/_components/write-ups-tab.tsx",
   "src/app/facility/dashboard/tasks/CareTasks.tsx",
