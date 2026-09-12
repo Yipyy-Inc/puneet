@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -71,6 +71,7 @@ import {
 import { cn } from "@/lib/utils";
 import { hexToRgba } from "@/lib/color-utils";
 import { trainingQueries } from "@/lib/api/training";
+import { useSaveTrainingCatalog } from "@/lib/api/training-catalog";
 import {
   DIFFICULTY_BADGE_CLS,
   DIFFICULTY_LEVELS,
@@ -117,7 +118,8 @@ export function TrainingExercisesManager() {
   const plural = (n: number, one: string, other: string) =>
     t(rules.select(n) === "one" ? one : other).replace("{n}", String(n));
 
-  const queryClient = useQueryClient();
+  const { save, saving } =
+    useSaveTrainingCatalog<TrainingExerciseDef>("training_exercises");
   const { data: exercises = [] } = useQuery(trainingQueries.allExercises());
   const { data: disciplines = [] } = useQuery(trainingQueries.allDisciplines());
 
@@ -210,15 +212,18 @@ export function TrainingExercisesManager() {
     return ids;
   }, [disciplines, groupedByTier]);
 
-  function pushExercises(next: TrainingExerciseDef[]) {
-    queryClient.setQueryData<TrainingExerciseDef[]>(
-      trainingQueries.allExercises().queryKey,
-      next,
-    );
-    queryClient.setQueryData<TrainingExerciseDef[]>(
-      trainingQueries.exercises().queryKey,
-      next.filter((e) => !e.isHidden),
-    );
+  /** Save the whole library to the facility's `training_exercises`
+   *  setting — it went into the query cache and was gone on reload. Says so
+   *  only once saved; false (with the reason) when refused. */
+  async function pushExercises(next: TrainingExerciseDef[], saved?: string) {
+    try {
+      await save(next);
+      if (saved) toast.success(saved);
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
   }
 
   function openAdd() {
@@ -231,7 +236,7 @@ export function TrainingExercisesManager() {
     setDialogOpen(true);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) {
       toast.error(t("exNameRequired"));
       return;
@@ -262,8 +267,11 @@ export function TrainingExercisesManager() {
             }
           : ex,
       );
-      pushExercises(next);
-      toast.success(t("exUpdated").replace("{name}", form.name.trim()));
+      const ok = await pushExercises(
+        next,
+        t("exUpdated").replace("{name}", form.name.trim()),
+      );
+      if (!ok) return;
     } else {
       const created: TrainingExerciseDef = {
         id: nextExerciseId(),
@@ -275,26 +283,31 @@ export function TrainingExercisesManager() {
         isHidden: form.isHidden,
         isCustom: true,
       };
-      pushExercises([...exercises, created]);
-      toast.success(t("exAdded").replace("{name}", created.name));
+      const ok = await pushExercises(
+        [...exercises, created],
+        t("exAdded").replace("{name}", created.name),
+      );
+      if (!ok) return;
     }
     setDialogOpen(false);
     setEditing(null);
   }
 
   function toggleHidden(id: string) {
-    pushExercises(
+    void pushExercises(
       exercises.map((ex) =>
         ex.id === id ? { ...ex, isHidden: !ex.isHidden } : ex,
       ),
     );
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleting) return;
-    pushExercises(exercises.filter((ex) => ex.id !== deleting.id));
-    toast.success(t("exDeleted").replace("{name}", deleting.name));
-    setDeleting(null);
+    const ok = await pushExercises(
+      exercises.filter((ex) => ex.id !== deleting.id),
+      t("exDeleted").replace("{name}", deleting.name),
+    );
+    if (ok) setDeleting(null);
   }
 
   /** Reorder within a single (discipline, tier) bucket. The renumber bumps
@@ -321,7 +334,7 @@ export function TrainingExercisesManager() {
     const next = exercises.map((ex) =>
       orderById.has(ex.id) ? { ...ex, order: orderById.get(ex.id)! } : ex,
     );
-    pushExercises(next);
+    void pushExercises(next);
   }
 
   const empty = exercises.length === 0;
@@ -604,7 +617,7 @@ export function TrainingExercisesManager() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!form.name.trim() || !form.disciplineId}
+              disabled={saving || !form.name.trim() || !form.disciplineId}
             >
               {editing ? t("saveChanges") : t("exAdd")}
             </Button>
@@ -627,6 +640,7 @@ export function TrainingExercisesManager() {
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
+              disabled={saving}
               className="bg-destructive hover:bg-destructive/90 text-white"
             >
               {t("delete")}

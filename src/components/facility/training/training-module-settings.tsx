@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { trainingQueries } from "@/lib/api/training";
+import { useSaveFacilitySetting } from "@/lib/api/facility-settings";
+import { useSaveTrainingCatalog } from "@/lib/api/training-catalog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +65,6 @@ import {
 import {
   DURATION_OPTIONS,
   REPORT_CARD_SEND_MODE_LABELS,
-  defaultTrainingModuleSettings,
   type ReportCardSendMode,
   type TrainingLocation,
   type TrainingModuleSettings,
@@ -102,7 +104,39 @@ function nextPathwayId(): string {
   return `pathway-custom-${newPathwaySeed}`;
 }
 
+// ── LOADED FIRST, THEN SEEDED ─────────────────────────────────────────────
+//
+// The form keeps a draft in useState, seeded from what is saved. That was
+// safe while "saved" was a constant; it is the facility's settings now, which
+// arrive after the first render — and a useState seeded before they land
+// keeps the shipped defaults forever, and saves them over the facility's own.
+// So the saved values are loaded here, and the form is rendered only once
+// they have arrived.
 export function TrainingModuleSettings() {
+  const moduleQuery = useQuery(trainingQueries.moduleSettings());
+  const pathwaysQuery = useQuery(trainingQueries.allTrainingPathways());
+  const error = moduleQuery.error ?? pathwaysQuery.error;
+  if (error) {
+    return <p className="text-destructive text-sm">{error.message}</p>;
+  }
+  if (!moduleQuery.data || !pathwaysQuery.data) {
+    return <Skeleton className="h-64 w-full rounded-2xl" />;
+  }
+  return (
+    <TrainingModuleSettingsForm
+      persisted={moduleQuery.data}
+      persistedPathways={pathwaysQuery.data}
+    />
+  );
+}
+
+function TrainingModuleSettingsForm({
+  persisted,
+  persistedPathways,
+}: {
+  persisted: TrainingModuleSettings;
+  persistedPathways: TrainingPathway[];
+}) {
   const { locale, section } = useSettingsText();
   const t = section("training");
   const labels = useTrainingLabels();
@@ -112,17 +146,11 @@ export function TrainingModuleSettings() {
     t(rules.select(n) === "one" ? one : other);
 
   const queryClient = useQueryClient();
-  // Hydrate from the shared cache so the toggle persists across navigations
-  // within the session — consumers (customer Homework tab) read from the
-  // same key.
-  const { data: persisted = defaultTrainingModuleSettings } = useQuery(
-    trainingQueries.moduleSettings(),
-  );
-  // Pathways live in their own cache key; the page-local draft mirrors them
-  // so save/revert stays atomic with the rest of the module settings.
-  const { data: persistedPathways = [] } = useQuery(
-    trainingQueries.allTrainingPathways(),
-  );
+  const { mutateAsync: saveSetting, isPending: savingModule } =
+    useSaveFacilitySetting();
+  const { save: savePathways, saving: savingPathways } =
+    useSaveTrainingCatalog<TrainingPathway>("training_pathways");
+  const saving = savingModule || savingPathways;
   const { data: programs = [] } = useQuery(trainingQueries.packages());
   const [draft, setDraft] = useState<TrainingModuleSettings>(persisted);
   const [saved, setSaved] = useState<TrainingModuleSettings>(persisted);
@@ -165,20 +193,24 @@ export function TrainingModuleSettings() {
     }));
   }
 
-  function handleSave() {
+  // Both halves go to the facility's settings — the module's own, and the
+  // pathways list — and the toast waits for both. It wrote them into the
+  // query cache ("Persistence to a real backend lands later").
+  async function handleSave() {
+    try {
+      await Promise.all([
+        saveSetting({ domain: "training_module_settings", value: draft }),
+        savePathways(pathwaysDraft),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    await queryClient.invalidateQueries({
+      queryKey: trainingQueries.moduleSettings().queryKey,
+    });
     setSaved(draft);
     setPathwaysSaved(pathwaysDraft);
-    // Write through to the shared cache so consumers (e.g. customer Homework
-    // tab) react immediately. Persistence to a real backend lands later.
-    queryClient.setQueryData(trainingQueries.moduleSettings().queryKey, draft);
-    queryClient.setQueryData(
-      trainingQueries.allTrainingPathways().queryKey,
-      pathwaysDraft,
-    );
-    queryClient.setQueryData(
-      trainingQueries.trainingPathways().queryKey,
-      pathwaysDraft.filter((p) => p.isActive),
-    );
     toast.success(t("savedToast"));
   }
 
@@ -1024,7 +1056,12 @@ export function TrainingModuleSettings() {
             <Button variant="outline" size="sm" onClick={handleRevert}>
               {t("revert")}
             </Button>
-            <Button size="sm" onClick={handleSave} className="gap-1">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              className="gap-1"
+            >
               <Save className="size-4" />
               {t("saveChanges")}
             </Button>

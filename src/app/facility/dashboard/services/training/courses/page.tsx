@@ -54,7 +54,6 @@ import {
   type TrainingClassFormat,
   type CourseCurriculumWeek,
   type CurriculumStyle,
-  defaultTrainingCourseTypes,
   getEffectiveCurriculumStyle,
   AVAILABLE_VACCINES,
   TRAINING_CLASS_FORMATS,
@@ -66,20 +65,31 @@ import { CourseCurriculumEditor } from "./_components/course-curriculum-editor";
 import { trainingQueries } from "@/lib/api/training";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { trainingClasses as initialTrainingClasses } from "@/data/training";
-import type { TrainingClass } from "@/types/training";
-import {
-  ApplyToUpcomingPrompt,
-  type ApplyToUpcomingAffected,
-  type ApplyToUpcomingChange,
-} from "@/components/facility/services/apply-to-upcoming-prompt";
+import { useSaveTrainingCatalog } from "@/lib/api/training-catalog";
+import { NO_ITEMS } from "@/lib/no-items";
 import { PageHeader } from "@/components/ui/page-header";
 import { settingsHref } from "@/lib/settings/nav";
 
 export default function TrainingCourseCatalogPage() {
-  const [courseTypes, setCourseTypes] = useState<TrainingCourseType[]>(
-    defaultTrainingCourseTypes,
-  );
+  // ── THE CATALOGUE IS THE FACILITY'S ─────────────────────────────────────
+  //
+  // This was useState(defaultTrainingCourseTypes): every create, edit and
+  // delete toasted "successfully" and was gone on reload. It is the
+  // `training_course_types` setting, saved whole, and each toast waits for it.
+  const { data: courseTypesData } = useQuery(trainingQueries.allCourseTypes());
+  const courseTypes = courseTypesData ?? NO_ITEMS;
+  const { save: saveCourseTypes, saving } =
+    useSaveTrainingCatalog<TrainingCourseType>("training_course_types");
+  async function setCourseTypes(next: TrainingCourseType[], saved: string) {
+    try {
+      await saveCourseTypes(next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
+    toast.success(saved);
+    return true;
+  }
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<TrainingCourseType | null>(
     null,
@@ -88,16 +98,6 @@ export default function TrainingCourseCatalogPage() {
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
   const [templatesForCourse, setTemplatesForCourse] =
     useState<TrainingCourseType | null>(null);
-
-  const [classes, setClasses] = useState<TrainingClass[]>(
-    initialTrainingClasses,
-  );
-  const [propagationPrompt, setPropagationPrompt] = useState<{
-    previous: TrainingCourseType;
-    next: TrainingCourseType;
-    affected: TrainingClass[];
-    changes: ApplyToUpcomingChange[];
-  } | null>(null);
 
   const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
 
@@ -173,7 +173,7 @@ export default function TrainingCourseCatalogPage() {
     setIsDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deletingCourseId) return;
 
     // Check if any other courses depend on this one
@@ -190,13 +190,16 @@ export default function TrainingCourseCatalogPage() {
       return;
     }
 
-    setCourseTypes(courseTypes.filter((c) => c.id !== deletingCourseId));
-    toast.success("Course type deleted successfully");
+    const ok = await setCourseTypes(
+      courseTypes.filter((c) => c.id !== deletingCourseId),
+      "Course type deleted successfully",
+    );
+    if (!ok) return;
     setIsDeleteModalOpen(false);
     setDeletingCourseId(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim() || !formData.description.trim()) {
       toast.error("Please fill in all required fields");
       return;
@@ -246,96 +249,24 @@ export default function TrainingCourseCatalogPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    if (editingCourse) {
-      setCourseTypes(
-        courseTypes.map((c) => (c.id === editingCourse.id ? courseData : c)),
-      );
-      toast.success("Course type updated successfully");
-      detectAndPromptPropagation(editingCourse, courseData);
-    } else {
-      setCourseTypes([...courseTypes, courseData]);
-      toast.success("Course type created successfully");
-    }
+    // A course type change does not rewrite series already scheduled under
+    // it: they keep the sessions and rules they were created with. The
+    // "apply to upcoming classes" prompt that offered to changed fixture
+    // classes in this page's state, not the facility's series.
+    const ok = editingCourse
+      ? await setCourseTypes(
+          courseTypes.map((c) => (c.id === editingCourse.id ? courseData : c)),
+          "Course type updated successfully",
+        )
+      : await setCourseTypes(
+          [...courseTypes, courseData],
+          "Course type created successfully",
+        );
+    if (!ok) return;
 
     setIsAddEditModalOpen(false);
     setEditingCourse(null);
   };
-
-  function detectAndPromptPropagation(
-    previous: TrainingCourseType,
-    next: TrainingCourseType,
-  ) {
-    const weeksChanged = previous.defaultWeeks !== next.defaultWeeks;
-    const vaccinesChanged =
-      JSON.stringify([...previous.requiredVaccines].sort()) !==
-      JSON.stringify([...next.requiredVaccines].sort());
-    const ageChanged =
-      previous.ageRange.minWeeks !== next.ageRange.minWeeks ||
-      previous.ageRange.maxWeeks !== next.ageRange.maxWeeks;
-    if (!weeksChanged && !vaccinesChanged && !ageChanged) return;
-
-    const today = new Date().toISOString().split("T")[0];
-    const previousName = previous.name.trim().toLowerCase();
-    const affected = classes.filter(
-      (c) =>
-        c.name.trim().toLowerCase() === previousName &&
-        c.startDate >= today &&
-        c.status === "active",
-    );
-    if (affected.length === 0) return;
-
-    const changes: ApplyToUpcomingChange[] = [];
-    if (weeksChanged) {
-      changes.push({
-        label: "Duration",
-        from: `${previous.defaultWeeks} weeks`,
-        to: `${next.defaultWeeks} weeks`,
-      });
-    }
-    if (vaccinesChanged) {
-      changes.push({
-        label: "Required vaccines",
-        description: next.requiredVaccines.join(", ") || "none",
-      });
-    }
-    if (ageChanged) {
-      const fmt = (r: TrainingCourseType["ageRange"]) =>
-        r.maxWeeks
-          ? `${r.minWeeks}-${r.maxWeeks} weeks`
-          : `${r.minWeeks}+ weeks`;
-      changes.push({
-        label: "Age range",
-        from: fmt(previous.ageRange),
-        to: fmt(next.ageRange),
-      });
-    }
-
-    setPropagationPrompt({ previous, next, affected, changes });
-  }
-
-  function applyPropagation() {
-    if (!propagationPrompt) return;
-    const { next, affected } = propagationPrompt;
-    const affectedIds = new Set(affected.map((a) => a.id));
-    setClasses((prev) =>
-      prev.map((c) =>
-        affectedIds.has(c.id) ? { ...c, totalSessions: next.defaultWeeks } : c,
-      ),
-    );
-    toast.success(
-      `Updated ${affected.length} upcoming class${
-        affected.length === 1 ? "" : "es"
-      } with the new course settings.`,
-    );
-    setPropagationPrompt(null);
-  }
-
-  function skipPropagation() {
-    toast.info(
-      "Change applies to new classes only — existing classes untouched.",
-    );
-    setPropagationPrompt(null);
-  }
 
   // Get available courses for prerequisites (exclude self and courses that would create circular dependencies)
   const availablePrerequisites = useMemo(() => {
@@ -970,7 +901,7 @@ export default function TrainingCourseCatalogPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={saving}>
               {editingCourse ? "Update Course" : "Create Course"}
             </Button>
           </DialogFooter>
@@ -999,35 +930,16 @@ export default function TrainingCourseCatalogPage() {
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={saving}
+            >
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {propagationPrompt && (
-        <ApplyToUpcomingPrompt
-          open={!!propagationPrompt}
-          onOpenChange={(o) => {
-            if (!o) setPropagationPrompt(null);
-          }}
-          serviceName={propagationPrompt.next.name}
-          serviceKind="course type"
-          changes={propagationPrompt.changes}
-          affected={propagationPrompt.affected.map<ApplyToUpcomingAffected>(
-            (c) => ({
-              id: c.id,
-              primary: c.name,
-              secondary: c.trainerName,
-              date: c.startDate,
-            }),
-          )}
-          onApply={applyPropagation}
-          onSkip={skipPropagation}
-          footerNote="Only classes that haven't started yet are affected. In-progress and completed classes are left untouched."
-        />
-      )}
 
       <HomeworkTemplatesSheet
         open={!!templatesForCourse}

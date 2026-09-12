@@ -6,14 +6,20 @@ import {
   fetchTrainerNotes,
   fetchTrainers,
   fetchTrainingBook,
+  fetchTrainingCatalog,
+  fetchTrainingSettingValue,
   fetchTrainingPrograms,
 } from "@/lib/api/training-book";
+import type { TrainingDiscipline } from "@/types/training";
+import type { TrainingPathway } from "@/data/training-pathways";
+import type { HomeworkTemplate } from "@/data/training-homework-templates";
+import type { TrainingExerciseDef } from "@/data/training-exercises";
+import type { TrainingCourseType } from "@/lib/training-config";
 import { defaultTrainingDisciplines } from "@/data/training-disciplines";
 import {
   defaultTrainingCourseTypes,
   type CourseCurriculumWeek,
 } from "@/lib/training-config";
-import { defaultTrainingPathways } from "@/data/training-pathways";
 import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
 import {
@@ -47,6 +53,39 @@ const seededPrivateSessionPlans: Record<number, CourseCurriculumWeek[]> = {
     },
   ],
 };
+
+// ── THE CATALOGUE IS THE FACILITY'S ─────────────────────────────────────────
+//
+// Disciplines, exercises, homework templates, pathways and course types are
+// settings domains (lib/settings/training-catalog.ts). These read them; the
+// editors write them through useSaveTrainingCatalog. They were the fixtures,
+// and the editors "saved" with setQueryData.
+const disciplineList = () =>
+  fetchTrainingCatalog<TrainingDiscipline>(
+    "training_disciplines",
+    "disciplines",
+    defaultTrainingDisciplines,
+  );
+const exerciseList = () =>
+  fetchTrainingCatalog<TrainingExerciseDef>(
+    "training_exercises",
+    "exercises",
+    trainingExercises,
+  );
+const homeworkTemplateList = () =>
+  fetchTrainingCatalog<HomeworkTemplate>(
+    "training_homework_templates",
+    "templates",
+    defaultHomeworkTemplates,
+  );
+const pathwayList = () =>
+  fetchTrainingCatalog<TrainingPathway>("training_pathways", "pathways", []);
+const courseTypeList = () =>
+  fetchTrainingCatalog<TrainingCourseType>(
+    "training_course_types",
+    "courseTypes",
+    defaultTrainingCourseTypes,
+  );
 
 export const trainingQueries = {
   trainers: () => ({
@@ -121,7 +160,7 @@ export const trainingQueries = {
   courseTypes: () => ({
     queryKey: ["training", "course-types"] as const,
     queryFn: async () => [
-      ...defaultTrainingCourseTypes.filter((c) => c.isActive),
+      ...(await courseTypeList()).filter((c) => c.isActive),
       ...(await fetchTrainingBook()).extraCourseTypes,
     ],
   }),
@@ -129,7 +168,7 @@ export const trainingQueries = {
    *  inactive course types too. */
   allCourseTypes: () => ({
     queryKey: ["training", "course-types", "all"] as const,
-    queryFn: async () => defaultTrainingCourseTypes,
+    queryFn: courseTypeList,
   }),
   // The facility's series and who is in them — the booking step, the
   // Students tab and make-ups read these. They were `@/data/training-series`.
@@ -157,13 +196,13 @@ export const trainingQueries = {
   }),
   disciplines: () => ({
     queryKey: ["training", "disciplines"] as const,
-    queryFn: async () => defaultTrainingDisciplines.filter((d) => d.isActive),
+    queryFn: async () => (await disciplineList()).filter((d) => d.isActive),
   }),
   /** Unfiltered discipline list — used by Settings → Training so staff can
    *  toggle inactive disciplines back on. */
   allDisciplines: () => ({
     queryKey: ["training", "disciplines", "all"] as const,
-    queryFn: async () => defaultTrainingDisciplines,
+    queryFn: disciplineList,
   }),
   /** Homework templates — saved homework assignments a trainer can load
    *  into the post-session prompt or curate per course in the Course
@@ -171,25 +210,26 @@ export const trainingQueries = {
    *  for editing hidden templates). */
   homeworkTemplates: () => ({
     queryKey: ["training", "homework-templates"] as const,
-    queryFn: async () => defaultHomeworkTemplates.filter((t) => t.isActive),
+    queryFn: async () =>
+      (await homeworkTemplateList()).filter((t) => t.isActive),
   }),
   /** Unfiltered template catalog — used by the Course Catalog manager and
    *  the "Save as template" action to validate name uniqueness. */
   allHomeworkTemplates: () => ({
     queryKey: ["training", "homework-templates", "all"] as const,
-    queryFn: async () => defaultHomeworkTemplates,
+    queryFn: homeworkTemplateList,
   }),
   /** Active training pathways — feeds the customer "Pathway Journey" panel
    *  and the "Part of {Pathway}" badge on the Training Classes catalog. */
   trainingPathways: () => ({
     queryKey: ["training", "pathways"] as const,
-    queryFn: async () => defaultTrainingPathways.filter((p) => p.isActive),
+    queryFn: async () => (await pathwayList()).filter((p) => p.isActive),
   }),
   /** Unfiltered pathway catalog — used by Settings → Training so staff can
    *  edit/toggle hidden pathways. */
   allTrainingPathways: () => ({
     queryKey: ["training", "pathways", "all"] as const,
-    queryFn: async () => defaultTrainingPathways,
+    queryFn: pathwayList,
   }),
   /** Exercise library — feeds the Session Completion Step 2 picker. The list
    *  is grouped per discipline in the data file; the consumer is responsible
@@ -198,13 +238,13 @@ export const trainingQueries = {
    *  picker without losing their record in historical attendance logs. */
   exercises: () => ({
     queryKey: ["training", "exercises"] as const,
-    queryFn: async () => trainingExercises.filter((e) => !e.isHidden),
+    queryFn: async () => (await exerciseList()).filter((e) => !e.isHidden),
   }),
   /** Unfiltered exercise list — used by Settings → Training so staff can
    *  toggle hidden exercises back on or edit them. */
   allExercises: () => ({
     queryKey: ["training", "exercises", "all"] as const,
-    queryFn: async () => trainingExercises,
+    queryFn: exerciseList,
   }),
   /** Vaccination records — the Students tab uses these to flag expiring
    *  vaccines so staff can chase owners before a series cuts them out. */
@@ -329,10 +369,14 @@ export const trainingQueries = {
   /** Facility-wide Training module settings. Pure client-state today —
    *  Settings → Training writes to this cache; consumers (customer Homework
    *  tab, etc.) read from it so a flip propagates to every surface. */
+  // Settings → Training, from the `training_module_settings` domain. It
+  // returned the shipped defaults, forever (staleTime: Infinity).
   moduleSettings: () => ({
     queryKey: ["training", "module-settings"] as const,
-    queryFn: async (): Promise<TrainingModuleSettings> =>
-      defaultTrainingModuleSettings,
-    staleTime: Infinity,
+    queryFn: (): Promise<TrainingModuleSettings> =>
+      fetchTrainingSettingValue(
+        "training_module_settings",
+        defaultTrainingModuleSettings,
+      ),
   }),
 };

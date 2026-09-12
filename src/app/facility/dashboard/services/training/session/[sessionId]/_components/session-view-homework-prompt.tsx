@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ExercisePicker } from "@/components/facility/training/exercise-picker";
 import { trainingQueries } from "@/lib/api/training";
+import { useHomeworkTemplateWrites } from "@/lib/api/training-catalog";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import { toast } from "sonner";
 import {
@@ -45,7 +46,6 @@ import type {
   HomeworkTemplateItem,
 } from "@/data/training-homework-templates";
 import {
-  fanOutHomeworkTemplateUpsert,
   filterTemplatesForCourse,
   findTemplateForSession,
   nextHomeworkTemplateId,
@@ -123,6 +123,7 @@ export function SessionHomeworkPromptDialog({
   onDone,
 }: Props) {
   const queryClient = useQueryClient();
+  const templateWrites = useHomeworkTemplateWrites();
   const { data: exercises = [] } = useQuery(trainingQueries.exercises());
   const { data: templatesData } = useQuery(trainingQueries.homeworkTemplates());
   // Stable while loading — see lib/no-items.ts.
@@ -228,7 +229,7 @@ export function SessionHomeworkPromptDialog({
     );
   }
 
-  function handleSaveTemplate() {
+  async function handleSaveTemplate() {
     const trimmed = saveTemplateName.trim();
     if (!trimmed) {
       toast.error("Give the template a name first.");
@@ -264,7 +265,12 @@ export function SessionHomeworkPromptDialog({
       createdAt: nowISO,
       updatedAt: nowISO,
     };
-    fanOutHomeworkTemplateUpsert(queryClient, record);
+    try {
+      await templateWrites.upsert(record);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(`Saved as "${trimmed}".`);
     setSaveTemplateOpen(false);
     setSaveTemplateName("");

@@ -808,7 +808,7 @@
     "src/app/facility/dashboard/services/training/courses/_components/course-curriculum-editor.tsx": 22,
     "src/app/facility/dashboard/services/training/courses/_components/homework-templates-sheet.tsx": 43,
     "src/app/facility/dashboard/services/training/courses/_components/video-links-textarea.tsx": 2,
-    "src/app/facility/dashboard/services/training/courses/page.tsx": 75,
+    "src/app/facility/dashboard/services/training/courses/page.tsx": 66,
     "src/app/facility/dashboard/services/training/layout.tsx": 2,
     "src/app/facility/dashboard/services/training/makeup/page.tsx": 45,
     "src/app/facility/dashboard/services/training/rates/_components/program-card.tsx": 14,

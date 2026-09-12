@@ -124,3 +124,50 @@ export async function fetchTrainerNotes(): Promise<TrainerNote[]> {
   }
   return (await response.json()) as TrainerNote[];
 }
+
+/**
+ * One list from a training-catalogue settings domain (training_disciplines,
+ * training_exercises, training_homework_templates, training_pathways,
+ * training_course_types) — see lib/settings/training-catalog.ts.
+ *
+ * The API serves the shipped library, marked unconfigured, to a facility that
+ * has never saved one. A session that cannot read facility settings (the
+ * customer portal) gets `fallback` — the same shipped list the screens read
+ * before this, so a customer's booking flow is not emptied by the change.
+ */
+export async function fetchTrainingCatalog<T>(
+  domain: string,
+  key: string,
+  fallback: T[],
+): Promise<T[]> {
+  const response = await fetch("/api/facility/settings");
+  if (response.status === 401 || response.status === 403) return fallback;
+  if (!response.ok) {
+    throw new Error(`Failed to load ${domain} (${response.status})`);
+  }
+  const settings = (await response.json()) as Record<
+    string,
+    { value?: Record<string, unknown> } | undefined
+  >;
+  const list = settings[domain]?.value?.[key];
+  return Array.isArray(list) ? (list as T[]) : fallback;
+}
+
+/** A training settings domain that holds one object (training_module_settings),
+ *  read over `fallback` so a field added later has a value. A session that
+ *  cannot read facility settings gets the fallback. */
+export async function fetchTrainingSettingValue<T extends object>(
+  domain: string,
+  fallback: T,
+): Promise<T> {
+  const response = await fetch("/api/facility/settings");
+  if (response.status === 401 || response.status === 403) return fallback;
+  if (!response.ok) {
+    throw new Error(`Failed to load ${domain} (${response.status})`);
+  }
+  const settings = (await response.json()) as Record<
+    string,
+    { value?: Partial<T> } | undefined
+  >;
+  return { ...fallback, ...(settings[domain]?.value ?? {}) };
+}

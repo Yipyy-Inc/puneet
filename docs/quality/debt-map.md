@@ -13499,3 +13499,34 @@ change touched, read why before removing the entries.
 make-ups, the course catalog, disciplines, exercises, homework templates,
 module settings, block time and the pre-session "briefed" state all write to
 the query cache only.
+
+## 2026-09-12 — training's catalogue and module settings are the facility's
+
+Disciplines, the exercise library, homework templates, pathways, course
+types and Settings → Training's own settings were fixtures (or
+`useState(DEFAULTS)`) "saved" with `queryClient.setQueryData`: every Add /
+Edit / Delete toasted and was gone on reload. They are six settings domains
+now (`training_disciplines`, `training_exercises`,
+`training_homework_templates`, `training_pathways`, `training_course_types`,
+`training_module_settings` — schemas in `lib/settings/training-catalog.ts`),
+one list each so two editors of different lists cannot overwrite each other.
+The shipped library is the fallback, except pathways: every shipped pathway
+named fixture programs, so a facility starts with none. Reads keep their
+`trainingQueries` keys (fetched in `training-book.ts`, so the shared module
+still performs no request — see the laundering note above); writes are
+`useSaveTrainingCatalog` / `useHomeworkTemplateWrites`, which read the
+current list before saving. Settings → Training now loads what is saved
+before seeding its form: a `useState` seeded before the settings arrived
+would have kept the defaults and saved them over the facility's own.
+The course catalog's "apply to upcoming classes" prompt is gone — it changed
+fixture classes in the page's state, not the facility's series. e2e
+`training-catalog.spec.ts` (3, full suite).
+
+**Still open:** the customer portal cannot read facility settings, so it
+reads the shipped course types and no pathways (a customer-visible grant is a
+migration — `private.customer_visible_setting_domains()`);
+`session-view-homework-prompt.tsx` left the success-claims baseline because
+its "Save as template" is real now, but ASSIGNING homework from it is still
+cache-only — it passes by the gate's per-file rule, not on its merits.
+Homework itself, make-ups, the profile's report cards and packages, block
+time and the pre-session "briefed" state remain cache-only.
