@@ -13802,3 +13802,27 @@ own package card.
 e2e `customer-training-packages.spec.ts` (full suite). Alice owns no
 training package today, so it pins the empty state and the banner's absence;
 the populated rows are `trainingPackageRows`, which is unit-tested.
+
+## 2026-09-12 — a customer's training report cards are the ones sent to them
+
+The customer training page's Report cards tab read
+`trainingQueries.allReportCards()`, the training fixture's invented cards,
+matched to the customer through `@/data/clients`. Opening one "marked it
+viewed" with `fanOutReportCardUpsert` — the query cache only — and on load it
+fired a toast dressed as a system message about a graduation follow-up. It
+lists `reportCardQueries.mine()` (sent cards only) for the training service
+now, and each card links to `/customer/report-cards?report=<id>`, which opens
+it and records the view; favourites, replies and ratings are that page's real
+writes.
+
+Removed as untrue: "your instructor will send a progress summary after each
+session" and "Each card is a progress summary across every session" — nothing
+sends one, and a real card is one visit's write-up.
+
+**Still open:** `session-view-save.ts` still drafts fixture cards into a
+cache nothing reads any more, and `trainingReportCardRecords` feeds nothing;
+both go when the session view is converted.
+
+e2e `customer-training-report-cards.spec.ts` (full suite). It sends Alice one
+training card and removes it with the service role in afterAll, because a sent
+card cannot be discarded through the API.
