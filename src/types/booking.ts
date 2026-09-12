@@ -164,6 +164,25 @@ export const newBookingPaymentStatusEnum = z.enum([
   "refunded",
 ]);
 
+/**
+ * One of the bookings a request makes — see `@/lib/bookings/booking-parts`.
+ * Consumed by POST /api/bookings; never stored.
+ */
+export const bookingPartSchema = z.object({
+  petIds: z.array(z.number()),
+  startDate: z.string(),
+  endDate: z.string(),
+  checkInTime: z.string().optional(),
+  checkOutTime: z.string().optional(),
+  basePrice: z.number(),
+  discount: z.number(),
+  totalCost: z.number(),
+  unitAssignment: z.string().optional(),
+  trainingSessionId: z.string().optional(),
+});
+
+export type BookingPart = z.infer<typeof bookingPartSchema>;
+
 export const newBookingSchema = z.object({
   clientId: z.number(),
   petId: z.union([z.number(), z.array(z.number())]),
@@ -222,6 +241,23 @@ export const newBookingSchema = z.object({
    * resolved duration so staff can shorten / extend the slot block. */
   groomingDurationOverrideMin: z.number().optional(),
   trainingType: z.string().optional(),
+  /** Training drop-in: the class session (`training_series_sessions.id`) this
+   * booking is a seat in. An enrolment links its own sessions; a drop-in made
+   * from the booking form used to link none, so the class roster never saw it. */
+  trainingSessionId: z.string().optional(),
+  /** Set by the server when one request made several bookings — each daycare
+   * day, each boarding room. Lets a screen say "day 2 of 3". */
+  bookingGroup: z
+    .object({ id: z.string(), part: z.number(), of: z.number() })
+    .optional(),
+  /** The bookings this request makes, when it is more than one. Read by
+   * POST /api/bookings and removed there; a stored booking never has it. */
+  parts: z.array(bookingPartSchema).optional(),
+  /** Daycare: the play area each dog was placed in. `sectionId` keeps the
+   * first, which is what the daycare board reads. */
+  daycareAreaAssignments: z
+    .array(z.object({ petId: z.number(), roomId: z.string() }))
+    .optional(),
   trainerId: z.string().optional(),
   trainingGoals: z.string().optional(),
   vetReason: z.string().optional(),

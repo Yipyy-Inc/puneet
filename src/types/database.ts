@@ -11662,6 +11662,14 @@ export type Database = {
           booking_ref: number;
         }[];
       };
+      create_bookings: {
+        Args: { p_items: Json };
+        Returns: {
+          item_index: number;
+          booking_id: string;
+          booking_ref: number;
+        }[];
+      };
       create_training_series: {
         Args: {
           p_capacity?: number;

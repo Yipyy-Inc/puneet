@@ -1,6 +1,14 @@
 import { NextResponse, after, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
+import {
+  allocateDeposit,
+  expandBookingParts,
+  MAX_BOOKING_PARTS,
+} from "@/lib/bookings/booking-parts";
+import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
+import type { Json } from "@/types/database";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   BOOKING_SELECT,
@@ -134,6 +142,18 @@ export async function POST(request: NextRequest) {
   const input = (await request.json()) as NewBooking;
   const supabase = await createServerClient();
 
+  if (
+    input.parts !== undefined &&
+    (!Array.isArray(input.parts) || input.parts.length > MAX_BOOKING_PARTS)
+  ) {
+    return NextResponse.json(
+      {
+        error: `A request can make between 1 and ${MAX_BOOKING_PARTS} bookings.`,
+      },
+      { status: 422 },
+    );
+  }
+
   // The client arrives as the app's numeric ref; the row needs the uuid.
   // Resolved through RLS, so a caller who cannot see a client cannot book for
   // them — the lookup simply returns nothing.
@@ -187,13 +207,23 @@ export async function POST(request: NextRequest) {
   // insert cannot be tidied up: it would leave a booking with no animals on
   // it and no way to withdraw it. Checking first is what keeps that row from
   // existing at all.
-  const petRefs = Array.isArray(input.petId) ? input.petId : [input.petId];
-  const wanted = petRefs.filter((ref): ref is number => ref != null);
+  //
+  // ONE REQUEST, SEVERAL BOOKINGS. A request carrying `parts` means one
+  // booking per part — each daycare day, each boarding room — because the
+  // database holds one attendance and one room per booking. Every part's pets
+  // are checked here, before anything is written, exactly as a single
+  // booking's are.
+  const planned = expandBookingParts(input, { id: crypto.randomUUID() });
+  const refsOf = (booking: NewBooking) =>
+    (Array.isArray(booking.petId) ? booking.petId : [booking.petId]).filter(
+      (ref): ref is number => ref != null,
+    );
+  const wanted = [...new Set(planned.flatMap(refsOf))];
 
   // RLS-scoped, so a caller who cannot see a pet gets nothing back for it and
   // the count check below is what turns that into a refusal.
   const { data: pets } = wanted.length
-    ? await supabase.from("pets").select("id, client_id").in("ref", wanted)
+    ? await supabase.from("pets").select("id, client_id, ref").in("ref", wanted)
     : { data: [] };
 
   const resolved = pets ?? [];
@@ -213,13 +243,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const row = bookingToRow(input, {
-    facilityId: facility.facilityId,
-    clientRowId: client.id,
-    locationId: facility.locationId,
-    timeZone: facility.timeZone,
-  });
-
   // ── THE GROOMER ─────────────────────────────────────────────────────────
   //
   // A groom is booked WITH somebody, and the board, the calendar's stylist
@@ -229,17 +252,40 @@ export async function POST(request: NextRequest) {
   // app landed in nobody's column. The stylist id is the profile's (its
   // legacy id, or its uuid); the staff row behind it is what the column
   // holds (`staffForStylist`).
-  if (input.service === "grooming" && input.stylistPreference) {
-    const stylist = await staffForStylist(
-      supabase,
-      facility.facilityId,
-      input.stylistPreference,
-    );
+  const stylist =
+    input.service === "grooming" && input.stylistPreference
+      ? await staffForStylist(
+          supabase,
+          facility.facilityId,
+          input.stylistPreference,
+        )
+      : null;
+
+  // ── THE DEPOSIT IS A PAYMENT, NOT A NOTE ────────────────────────────────
+  //
+  // The form sent `initialDeposit` and it landed in `details` with a
+  // `collectedAt`, and a toast said "Deposit applied". No payment row was
+  // written, so the booking owed its full price and the cash in the drawer
+  // had no record. It is taken off the booking here and recorded below.
+  const petIdByRef = new Map(resolved.map((p) => [p.ref, p.id]));
+  const items = planned.map(({ initialDeposit: _deposit, ...booking }) => {
+    const row = bookingToRow(booking, {
+      facilityId: facility.facilityId,
+      clientRowId: client.id,
+      locationId: facility.locationId,
+      timeZone: facility.timeZone,
+    });
     if (stylist) {
       row.assigned_staff_id = stylist.staffId;
       row.assigned_staff_name ??= stylist.name;
     }
-  }
+    return {
+      booking: row,
+      petIds: refsOf(booking).map((ref) => petIdByRef.get(ref)),
+      grooming: groomingFor(booking),
+      boarding: boardingFor(booking),
+    };
+  });
 
   // THE BOOKING, ITS PETS AND — PER MODULE — ITS APPOINTMENT OR ITS KENNEL,
   // IN ONE TRANSACTION.
@@ -258,38 +304,12 @@ export async function POST(request: NextRequest) {
   // better message than a constraint name — but it is no longer the thing
   // standing between us and an orphan row.
   //
-  // The grooming payload carries CHOICES, not money: which service, which
-  // add-ons, which station. The RPC reads the prices from the catalogue,
-  // because a price in a request body is a suggestion.
-  const grooming =
-    input.service === "grooming"
-      ? {
-          serviceId: input.serviceType ?? null,
-          addOnIds: input.groomingAddOns ?? [],
-          stationId: input.stationAssignment ?? null,
-          durationOverrideMin: input.groomingDurationOverrideMin ?? null,
-        }
-      : null;
-
-  // Boarding is the mirror image of grooming here: a groom must name its
-  // service, a stay need not name a room. Kennels are routinely assigned on the
-  // ops board after the booking exists, so an absent room is a real state
-  // rather than an incomplete request.
-  //
-  // `unitAssignment` is what the modal already sends for boarding
-  // (BookingModal.tsx) — it just had nowhere to land: every boarding row in
-  // this database has `details->>'unitAssignment'` = null, because the room was
-  // React state and no table held it.
-  const boarding =
-    input.service === "boarding" && input.unitAssignment
-      ? { roomId: input.unitAssignment }
-      : null;
-
-  const { data: createdRows, error } = await supabase.rpc("create_booking", {
-    p_booking: row,
-    p_pet_ids: resolved.map((p) => p.id),
-    p_grooming: grooming,
-    p_boarding: boarding,
+  // SEVERAL BOOKINGS ARE ONE TRANSACTION TOO. `create_bookings`
+  // (20260911234642) runs each item through create_booking, so a kennel taken
+  // on the third night takes the first two nights' bookings down with it
+  // instead of leaving them behind.
+  const { data: createdRows, error } = await supabase.rpc("create_bookings", {
+    p_items: items as unknown as Json,
   });
 
   if (error) {
@@ -322,8 +342,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const created = createdRows?.[0];
-  if (!created) {
+  const created = [...(createdRows ?? [])].sort(
+    (a, b) => a.item_index - b.item_index,
+  );
+  if (created.length !== items.length) {
     return NextResponse.json(
       { error: "The booking could not be created." },
       { status: 500 },
@@ -333,8 +355,42 @@ export async function POST(request: NextRequest) {
   const { data: full } = await supabase
     .from("bookings")
     .select(BOOKING_SELECT)
-    .eq("id", created.booking_id)
+    .eq("id", created[0].booking_id)
     .single();
+
+  // ── THE DEPOSIT ─────────────────────────────────────────────────────────
+  //
+  // Staff only, and only the tenders that need no device: cash and
+  // e-transfer. A card deposit needs the card or the terminal, which is the
+  // booking page's checkout, after the booking exists.
+  //
+  // Recorded AFTER the bookings, and outside their transaction, because a
+  // refused payment must not un-make a booking somebody is standing at the
+  // desk for. So a refusal is reported, not hidden: `depositProblem` says
+  // what was not recorded, and the booking page can take it.
+  const deposit = input.initialDeposit;
+  const isStaff = Boolean(viewer && viewer.memberships.length > 0);
+  let depositRecorded = 0;
+  let depositProblem: string | undefined;
+  if (
+    isStaff &&
+    deposit &&
+    deposit.amount > 0 &&
+    (DEPOSIT_TENDERS as readonly string[]).includes(deposit.method)
+  ) {
+    const outcome = await recordDeposit(supabase, {
+      sessionFacilityId: facility.facilityId,
+      clientId: client.id,
+      method: deposit.method,
+      amount: deposit.amount,
+      bookings: created.map((c, i) => ({
+        id: c.booking_id,
+        totalCost: planned[i].totalCost,
+      })),
+    });
+    depositRecorded = outcome.recorded;
+    depositProblem = outcome.problem;
+  }
 
   // ── AUTOMATIONS ─────────────────────────────────────────────────────────
   //
@@ -345,47 +401,170 @@ export async function POST(request: NextRequest) {
   // worth that risk. A trigger also cannot tell a real booking from
   // `scripts/apply-operational-seed.ts`, which would mail every seeded client.
   //
-  // This is the only caller of `create_booking`, so the coverage is the same.
+  // This is the only caller of `create_bookings`, and enrolments through
+  // `enroll_in_training_series` are the only other way into `create_booking`,
+  // so the coverage is the same.
   //
   // The emit is idempotent on `dedupe_key`, and BEST EFFORT: a booking that
   // succeeded must not be reported as failed because its confirmation could
   // not be queued.
-  let eventId: number | null = null;
-  try {
-    const { data: emitted, error: emitError } = await supabase.rpc(
-      "emit_automation_event",
-      {
-        p_facility_id: facility.facilityId,
-        p_kind: "booking_created",
-        p_dedupe_key: `booking_created:${created.booking_id}`,
-        p_client_id: client.id,
-        p_booking_id: created.booking_id,
-        ...(facility.locationId ? { p_location_id: facility.locationId } : {}),
-      },
-    );
-    if (emitError) {
-      console.warn("[automations] emit failed:", emitError.message);
-    }
-    // NULL means the event already existed — a retried request, not a failure.
-    // Nothing to dispatch either way, because whoever created it dispatches it.
-    eventId = (emitted as number | null) ?? null;
-  } catch (emitFailure) {
-    console.warn("[automations] emit threw:", emitFailure);
-  }
-
-  // `after()` runs once the response is on its way, so the customer waits for
-  // the booking and not for Resend. The row in `automation_events` is the
-  // durable part: if this process dies before the callback runs, the event is
-  // still unclaimed and the tick picks it up.
-  if (eventId !== null) {
-    after(async () => {
-      const { dispatchEvent } = await import("@/lib/messaging/dispatch");
-      const result = await dispatchEvent(eventId);
-      if (result.problems.length > 0) {
-        console.warn("[automations] dispatch problems:", result.problems);
+  //
+  // One event per booking made, so a three-day request is three confirmations
+  // if the facility has a rule that sends them — each for its own day.
+  for (const made of created) {
+    let eventId: number | null = null;
+    try {
+      const { data: emitted, error: emitError } = await supabase.rpc(
+        "emit_automation_event",
+        {
+          p_facility_id: facility.facilityId,
+          p_kind: "booking_created",
+          p_dedupe_key: `booking_created:${made.booking_id}`,
+          p_client_id: client.id,
+          p_booking_id: made.booking_id,
+          ...(facility.locationId
+            ? { p_location_id: facility.locationId }
+            : {}),
+        },
+      );
+      if (emitError) {
+        console.warn("[automations] emit failed:", emitError.message);
       }
-    });
+      // NULL means the event already existed — a retried request, not a
+      // failure. Nothing to dispatch either way, because whoever created it
+      // dispatches it.
+      eventId = (emitted as number | null) ?? null;
+    } catch (emitFailure) {
+      console.warn("[automations] emit threw:", emitFailure);
+    }
+
+    // `after()` runs once the response is on its way, so the customer waits
+    // for the booking and not for Resend. The row in `automation_events` is
+    // the durable part: if this process dies before the callback runs, the
+    // event is still unclaimed and the tick picks it up.
+    if (eventId !== null) {
+      const id = eventId;
+      after(async () => {
+        const { dispatchEvent } = await import("@/lib/messaging/dispatch");
+        const result = await dispatchEvent(id);
+        if (result.problems.length > 0) {
+          console.warn("[automations] dispatch problems:", result.problems);
+        }
+      });
+    }
   }
 
-  return NextResponse.json(full ? rowToBooking(full) : null, { status: 201 });
+  // The FIRST booking, as this route has always answered — every caller reads
+  // `.id` — plus the refs of all of them when there were several, and what
+  // happened to the deposit.
+  return NextResponse.json(
+    full
+      ? {
+          ...rowToBooking(full),
+          ...(created.length > 1
+            ? { groupRefs: created.map((c) => c.booking_ref) }
+            : {}),
+          ...(depositRecorded > 0 ? { depositRecorded } : {}),
+          ...(depositProblem ? { depositProblem } : {}),
+        }
+      : null,
+    { status: 201 },
+  );
+}
+
+/** Tenders a deposit can be recorded in without a card or a device present. */
+const DEPOSIT_TENDERS = ["cash", "e_transfer"] as const;
+
+/**
+ * The grooming payload carries CHOICES, not money: which service, which
+ * add-ons, which station. The RPC reads the prices from the catalogue, because
+ * a price in a request body is a suggestion.
+ */
+function groomingFor(booking: NewBooking) {
+  return booking.service === "grooming"
+    ? {
+        serviceId: booking.serviceType ?? null,
+        addOnIds: booking.groomingAddOns ?? [],
+        stationId: booking.stationAssignment ?? null,
+        durationOverrideMin: booking.groomingDurationOverrideMin ?? null,
+      }
+    : null;
+}
+
+/**
+ * Boarding is the mirror image of grooming here: a groom must name its
+ * service, a stay need not name a room. Kennels are routinely assigned on the
+ * ops board after the booking exists, so an absent room is a real state rather
+ * than an incomplete request.
+ *
+ * `unitAssignment` had nowhere to land until 20260804161002: every boarding row
+ * then had `details->>'unitAssignment'` = null, because the room was React
+ * state and no table held it.
+ */
+function boardingFor(booking: NewBooking) {
+  return booking.service === "boarding" && booking.unitAssignment
+    ? { roomId: booking.unitAssignment }
+    : null;
+}
+
+/**
+ * The deposit, into the ledger: spread over the bookings in order, none past
+ * its own price (`allocateDeposit`), each share with the facility's tax on
+ * top — a booking's balance is the pre-tax supply, and the tax is recorded on
+ * the payment, as every other tender does since 2026-09-11.
+ */
+async function recordDeposit(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  deposit: {
+    /** From getFacilityContext(), never from the request. */
+    sessionFacilityId: string;
+    clientId: string;
+    method: string;
+    amount: number;
+    bookings: { id: string; totalCost: number }[];
+  },
+): Promise<{ recorded: number; problem?: string }> {
+  const { shares, left } = allocateDeposit(
+    deposit.amount,
+    deposit.bookings.map((b) => b.totalCost),
+  );
+  // More than the bookings cost stays on the first: the money was taken, and
+  // an overpaid booking is visible where a dropped payment is not.
+  if (left > 0 && shares.length > 0) shares[0] += left;
+
+  const taxConfig = await facilityTaxConfig(
+    supabase as unknown as SupabaseClient,
+    deposit.sessionFacilityId,
+  );
+  let recorded = 0;
+  for (const [i, share] of shares.entries()) {
+    if (share <= 0) continue;
+    const tax = taxToAddCents(taxConfig, Math.round(share * 100)) / 100;
+    const total = Math.round((share + tax) * 100) / 100;
+    const { error } = await supabase.rpc("record_payment", {
+      p_facility_id: deposit.sessionFacilityId,
+      p_method: deposit.method,
+      p_subtotal: share,
+      p_tax: tax,
+      p_tip: 0,
+      p_amount_charged: total,
+      p_grand_total: total,
+      p_booking_id: deposit.bookings[i].id,
+      p_client_id: deposit.clientId,
+      p_cash_received: deposit.method === "cash" ? total : null,
+      p_receipt_channels: [],
+      p_credit_note: "",
+    } as never);
+    if (error) {
+      return {
+        recorded,
+        problem:
+          error.code === "42501"
+            ? "You are not allowed to take payments, so the deposit was not recorded."
+            : error.message,
+      };
+    }
+    recorded += share;
+  }
+  return { recorded: Math.round(recorded * 100) / 100 };
 }
