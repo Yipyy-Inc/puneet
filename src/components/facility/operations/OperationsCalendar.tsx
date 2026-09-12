@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/calendar-events";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useQuery } from "@tanstack/react-query";
+import { useActiveFacilityId } from "@/lib/api/active-facility";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -124,11 +125,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { NO_ITEMS } from "@/lib/no-items";
 
+// The booking mapper still stamps every booking with this legacy id, and the
+// calendar's builders filter on it — so it stays until that mapper does. It
+// no longer names where anything is kept.
 const FACILITY_ID = 11;
-const VISUAL_CONFIG_KEY = `operations-calendar-visual-config-${FACILITY_ID}`;
-const SAVED_VIEWS_KEY = `operations-calendar-saved-views-${FACILITY_ID}`;
-const CALENDAR_AXIS_KEY = `operations-calendar-axis-${FACILITY_ID}`;
-const CALENDAR_RESOURCE_TYPE_KEY = `operations-calendar-resource-type-${FACILITY_ID}`;
+
+// ── A VIEWER'S CALENDAR, PER FACILITY ───────────────────────────────────────
+//
+// The display settings, saved views, axis and resource type are one person's
+// conveniences, kept in this browser. They were keyed to fixture facility 11,
+// so every facility — and everybody who signed in on the machine — shared one
+// set: a view saved at one facility appeared at the next. They are keyed by
+// the active facility and the viewer now, and read once both are known.
+type CalendarStored =
+  | "visual-config"
+  | "saved-views"
+  | "axis"
+  | "resource-type";
+function calendarStorageKey(scope: string, name: CalendarStored): string {
+  return `operations-calendar-${name}-${scope}`;
+}
 
 interface TaskCompletionAuditEntry {
   id: string;
@@ -656,8 +672,9 @@ export function OperationsCalendar() {
     () => {
       const incoming = searchParams.get("resourceType");
       if (incoming && incoming.length > 0) return incoming;
-      if (typeof window === "undefined") return "pool";
-      return localStorage.getItem(CALENDAR_RESOURCE_TYPE_KEY) ?? "pool";
+      // What this viewer last chose here is applied once the facility and
+      // the viewer are known (below).
+      return "pool";
     },
   );
 
@@ -688,12 +705,12 @@ export function OperationsCalendar() {
     ),
   }));
 
-  const [visualConfig, setVisualConfig] = useState<CalendarVisualConfig>(() => {
-    const stored = loadStoredJson<CalendarVisualConfig>(
-      VISUAL_CONFIG_KEY,
-      DEFAULT_VISUAL_CONFIG,
-    );
-
+  // Built from what this viewer kept at this facility, with the URL's own
+  // parameters winning. Nothing is kept until the facility and the viewer are
+  // known, so the first render builds from the defaults.
+  const buildVisualConfig = (
+    stored: Partial<CalendarVisualConfig>,
+  ): CalendarVisualConfig => {
     const colorMode = searchParams.get("colorMode");
     const colorStyle = searchParams.get("colorStyle");
     const zoomLevel = searchParams.get("zoom");
@@ -735,7 +752,11 @@ export function OperationsCalendar() {
           : (stored.completedTaskDecoration ??
             DEFAULT_VISUAL_CONFIG.completedTaskDecoration),
     };
-  });
+  };
+
+  const [visualConfig, setVisualConfig] = useState<CalendarVisualConfig>(() =>
+    buildVisualConfig({}),
+  );
 
   const [showFilters, setShowFilters] = useState<boolean>(() => {
     return searchParams.get("filters") === "open";
@@ -770,7 +791,7 @@ export function OperationsCalendar() {
   };
 
   const [savedViews, setSavedViews] = useState<OperationsCalendarSavedView[]>(
-    () => loadStoredJson<OperationsCalendarSavedView[]>(SAVED_VIEWS_KEY, []),
+    () => [],
   );
   const [selectedSavedViewId, setSelectedSavedViewId] = useState<string>("");
 
@@ -819,21 +840,73 @@ export function OperationsCalendar() {
     setVisibilityRoles(parseVisibilityRolesFromCookie());
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(VISUAL_CONFIG_KEY, JSON.stringify(visualConfig));
-  }, [visualConfig]);
+  // This viewer, at the facility the page is for. Until both are known
+  // nothing is read or written, so a render before them cannot overwrite what
+  // was kept with the defaults.
+  const activeFacilityId = useActiveFacilityId();
+  // "facility-user" is the placeholder until the session cookie is read.
+  const storageScope =
+    activeFacilityId && userId && userId !== "facility-user"
+      ? `${activeFacilityId}:${userId}`
+      : null;
+  const [hydratedScope, setHydratedScope] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(savedViews));
-  }, [savedViews]);
+    if (!storageScope || hydratedScope === storageScope) return;
+    setVisualConfig(
+      buildVisualConfig(
+        loadStoredJson<Partial<CalendarVisualConfig>>(
+          calendarStorageKey(storageScope, "visual-config"),
+          {},
+        ),
+      ),
+    );
+    setSavedViews(
+      loadStoredJson<OperationsCalendarSavedView[]>(
+        calendarStorageKey(storageScope, "saved-views"),
+        [],
+      ),
+    );
+    if (!searchParams.get("resourceType")) {
+      const storedType = localStorage.getItem(
+        calendarStorageKey(storageScope, "resource-type"),
+      );
+      if (storedType) setSelectedResourceType(storedType);
+    }
+    setHydratedScope(storageScope);
+    // buildVisualConfig reads searchParams; hydratedScope keeps this to once
+    // per scope however often they change identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageScope, hydratedScope]);
 
   useEffect(() => {
-    localStorage.setItem(CALENDAR_AXIS_KEY, axisMode);
-  }, [axisMode]);
+    if (!hydratedScope) return;
+    localStorage.setItem(
+      calendarStorageKey(hydratedScope, "visual-config"),
+      JSON.stringify(visualConfig),
+    );
+  }, [hydratedScope, visualConfig]);
 
   useEffect(() => {
-    localStorage.setItem(CALENDAR_RESOURCE_TYPE_KEY, selectedResourceType);
-  }, [selectedResourceType]);
+    if (!hydratedScope) return;
+    localStorage.setItem(
+      calendarStorageKey(hydratedScope, "saved-views"),
+      JSON.stringify(savedViews),
+    );
+  }, [hydratedScope, savedViews]);
+
+  useEffect(() => {
+    if (!hydratedScope) return;
+    localStorage.setItem(calendarStorageKey(hydratedScope, "axis"), axisMode);
+  }, [hydratedScope, axisMode]);
+
+  useEffect(() => {
+    if (!hydratedScope) return;
+    localStorage.setItem(
+      calendarStorageKey(hydratedScope, "resource-type"),
+      selectedResourceType,
+    );
+  }, [hydratedScope, selectedResourceType]);
 
   const permissions = useMemo(
     () => buildPermissionSet(permissionLevel),
