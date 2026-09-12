@@ -45,6 +45,7 @@ import {
 import { ExercisePicker } from "@/components/facility/training/exercise-picker";
 import { getDisciplineIdForClassName } from "@/data/training-exercises";
 import { trainingQueries } from "@/lib/api/training";
+import { useTrainingSessionPrep } from "@/lib/api/training-attendance";
 import { useFacilityClientList } from "@/lib/api/facility-clients";
 import { NO_ITEMS } from "@/lib/no-items";
 import { useTagCatalogue } from "@/lib/api/tags";
@@ -140,7 +141,6 @@ export function PreSessionBriefingPanel({
   onOpenChange: (open: boolean) => void;
   task: PreSessionBriefingTask | null;
 }) {
-  const queryClient = useQueryClient();
   const router = useRouter();
   // The facility's own clients and their pets. This read `@/data/clients`
   // — another facility's — and matched it to real enrolments by numeric ref.
@@ -239,17 +239,16 @@ export function PreSessionBriefingPanel({
     });
   }, [rows, sessionRecord, attendances]);
 
-  function markBriefed() {
+  // Kept on the session (20260912170021), so the reminder does not come back
+  // on reload or on the next trainer's device. It was a cache-only list.
+  const prep = useTrainingSessionPrep();
+  async function markBriefed() {
     if (!task) return;
-    const prev =
-      queryClient.getQueryData<string[]>(
-        trainingQueries.preSessionBriefedSessionIds().queryKey,
-      ) ?? [];
-    if (!prev.includes(task.sessionId)) {
-      queryClient.setQueryData<string[]>(
-        trainingQueries.preSessionBriefedSessionIds().queryKey,
-        [...prev, task.sessionId],
-      );
+    try {
+      await prep.mutateAsync({ sessionId: task.sessionId, briefed: true });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
     toast.success("Briefing reviewed. Have a great session!");
     onOpenChange(false);
@@ -444,7 +443,8 @@ export function PreSessionBriefingPanel({
                 size="sm"
                 variant="outline"
                 className="gap-1"
-                onClick={markBriefed}
+                onClick={() => void markBriefed()}
+                disabled={prep.isPending}
                 title="Mark this briefing as reviewed."
               >
                 <CheckCircle2 className="size-4" />
@@ -459,7 +459,7 @@ export function PreSessionBriefingPanel({
                   // Auto-stamp the briefing as reviewed when starting — the
                   // trainer is past the briefing if they're walking into the
                   // session.
-                  markBriefed();
+                  void markBriefed();
                   router.push(
                     `/facility/dashboard/services/training/session/${task.sessionId}`,
                   );
@@ -712,10 +712,21 @@ function PlannedExercisesSection({
     [exercises],
   );
 
+  // The plan is kept on the session (20260912170021) — it was a cache
+  // entry, gone on the floor tablet. Shown at once, put back if refused.
+  const prep = useTrainingSessionPrep();
   function writePlanned(next: string[]) {
-    queryClient.setQueryData<string[]>(
-      trainingQueries.plannedExercisesForSession(sessionId).queryKey,
-      next,
+    const key = trainingQueries.plannedExercisesForSession(sessionId).queryKey;
+    const before = queryClient.getQueryData<string[]>(key);
+    queryClient.setQueryData<string[]>(key, next);
+    prep.mutate(
+      { sessionId, plannedExerciseIds: next },
+      {
+        onError: (error) => {
+          queryClient.setQueryData<string[]>(key, before);
+          toast.error(error.message);
+        },
+      },
     );
   }
 

@@ -71,7 +71,9 @@ export async function GET() {
     await Promise.all([
       supabase
         .from("training_series_sessions")
-        .select("id, series_id, session_number, start_at, end_at, status")
+        .select(
+          "id, series_id, session_number, start_at, end_at, status, briefed_at, planned_exercise_ids",
+        )
         .match(inFacility(scope))
         .in("series_id", seriesIds)
         .order("start_at", { ascending: true }),

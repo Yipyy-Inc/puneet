@@ -149,3 +149,38 @@ export function useMarkTrainingSession() {
     },
   });
 }
+
+/**
+ * The trainer's preparation for a session: the briefing marked reviewed, and
+ * the exercises planned for it (20260912170021). Both were cache entries —
+ * the briefing reminder came back on reload, and a plan made at the desk was
+ * not there on the floor tablet.
+ */
+export function useTrainingSessionPrep() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      sessionId: string;
+      briefed?: boolean;
+      plannedExerciseIds?: string[];
+    }) => {
+      const response = await fetch(
+        `/api/training/sessions/${encodeURIComponent(input.sessionId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            briefed: input.briefed,
+            plannedExerciseIds: input.plannedExerciseIds,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw await readError(response, "Could not save that session.");
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["training"] });
+    },
+  });
+}

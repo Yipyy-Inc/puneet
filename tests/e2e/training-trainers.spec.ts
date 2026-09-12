@@ -115,8 +115,12 @@ test.describe("training trainers", () => {
       await openButton.click();
       await expect(dialog).toBeVisible({ timeout: 3_000 });
     }).toPass({ timeout: 60_000 });
+    // The instructor picker rests on "Unassigned" — its placeholder was
+    // "Select instructor" until f0cf092f (2026-08-28), and this spec, in no
+    // suite, went on waiting for it until 2026-09-12.
     await dialog
-      .getByText(/select instructor/i)
+      .getByRole("combobox")
+      .filter({ hasText: /unassigned/i })
       .first()
       .click();
 

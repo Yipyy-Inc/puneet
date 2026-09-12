@@ -13567,3 +13567,21 @@ fourth test in `training-catalog.spec.ts`.
 **Still open (training):** homework and make-ups (each needs a table), the
 student profile's report cards and packages, the pre-session "briefed" state,
 and assigning homework from the session prompt remain cache-only.
+
+## 2026-09-12 — a trainer's briefing and plan are kept on the session
+
+The pre-session briefing's "Mark briefed" and its planned exercises were
+query-cache entries: "Briefing reviewed. Have a great session!" was toasted
+and the reminder came back on reload; a plan made at the desk was not on the
+floor tablet. 20260912170021 adds `briefed_at`, `briefed_by_name` and
+`planned_exercise_ids` to `training_series_sessions`, joined to the column
+grant that already let `status` move (nothing else on the session becomes
+writable). `PATCH /api/training/sessions/[id]` takes `briefed` and
+`plannedExerciseIds`; the book carries both, so `preSessionBriefedSessionIds`
+and `plannedExercisesForSession` keep their keys. e2e
+`training-session-prep.spec.ts` (3, full suite).
+
+**A spec in no suite, again.** `training-trainers.spec.ts` had waited for a
+"Select instructor" placeholder that f0cf092f (2026-08-28) renamed to
+"Unassigned"; it was in neither suite, so nothing noticed for two weeks. It
+is fixed and in the full suite now.
