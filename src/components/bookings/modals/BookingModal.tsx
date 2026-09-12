@@ -101,7 +101,6 @@ import {
   useGroomingAddOns,
 } from "@/lib/api/grooming-catalogue";
 import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
-import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { useBookingWaivers } from "./use-booking-waivers";
 import {
   findApplicableDepositRule,
@@ -906,9 +905,6 @@ export function BookingModal({
   const [groomingManualDuration, setGroomingManualDuration] = useState<
     number | undefined
   >(undefined);
-  // Grooming-only: when true, the manual price/duration is persisted as the
-  // pet's per-service rate on submit so the next booking pre-fills with it.
-  const [groomingSavePriceToPet, setGroomingSavePriceToPet] = useState(false);
   // Grooming-only: ids of grooming-specific add-ons (GROOMING_ADD_ONS catalog)
   // selected for this booking. Separate from `extraServices` which holds
   // facility-wide service add-ons (different catalog, per-pet quantities).
@@ -941,7 +937,6 @@ export function BookingModal({
     if (selectedService !== "grooming") return;
     setGroomingManualPrice(undefined);
     setGroomingManualDuration(undefined);
-    setGroomingSavePriceToPet(false);
   }, [selectedService, serviceType, selectedPetIds]);
 
   // Clear staff selection when the service changes — the previously chosen
@@ -962,7 +957,6 @@ export function BookingModal({
       setGroomingStages([]);
       setGroomingManualPrice(undefined);
       setGroomingManualDuration(undefined);
-      setGroomingSavePriceToPet(false);
       setGroomingSelectedAddOnIds([]);
       setGroomingAutoAttachedAddOnIds([]);
     }
@@ -2634,28 +2628,6 @@ export function BookingModal({
       return false;
     }
 
-    // Persist the grooming manual price/duration to this pet so the next
-    // booking for the same pet+package starts from this number. Only fires
-    // when staff explicitly opted in.
-    if (
-      selectedService === "grooming" &&
-      groomingSavePriceToPet &&
-      effectiveSelectedPets.length > 0 &&
-      effectiveSelectedPets[0].id > 0 &&
-      serviceType &&
-      (groomingManualPrice !== undefined ||
-        groomingManualDuration !== undefined)
-    ) {
-      saveCustomPetPricingOverride({
-        petId: effectiveSelectedPets[0].id,
-        packageId: serviceType,
-        customPrice: groomingManualPrice,
-        customDurationMin: groomingManualDuration,
-        note: t("savedFromBooking").replace("{date}", startDate || t("today")),
-        createdBy: "facility-staff",
-      });
-    }
-
     if (isCustomerMode) {
       if (!(await saveThrough(booking))) return false;
       // Pass-redemption booking: apply one prepaid pass once the booking
@@ -2967,7 +2939,6 @@ export function BookingModal({
     setGroomingStages([]);
     setGroomingManualPrice(undefined);
     setGroomingManualDuration(undefined);
-    setGroomingSavePriceToPet(false);
     setGroomingSelectedAddOnIds([]);
     setGroomingAutoAttachedAddOnIds([]);
     setCustomerPaymentMethodId(null);
@@ -4201,8 +4172,6 @@ export function BookingModal({
                       setGroomingManualPrice={setGroomingManualPrice}
                       groomingManualDuration={groomingManualDuration}
                       setGroomingManualDuration={setGroomingManualDuration}
-                      groomingSavePriceToPet={groomingSavePriceToPet}
-                      setGroomingSavePriceToPet={setGroomingSavePriceToPet}
                       groomingSelectedAddOnIds={groomingSelectedAddOnIds}
                       setGroomingSelectedAddOnIds={setGroomingSelectedAddOnIds}
                       groomingAutoAttachedAddOnIds={

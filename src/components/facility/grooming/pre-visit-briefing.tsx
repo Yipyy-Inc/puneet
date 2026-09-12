@@ -10,17 +10,8 @@ import {
   Camera,
   Sparkle,
   ShieldAlert,
-  DollarSign,
-  Plus,
-  Ban,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import {
-  applyPreApprovedSurcharge,
-  hasPreApprovedSurcharge,
-} from "@/lib/grooming/pre-approved-surcharge";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +33,6 @@ import type {
   GroomingAppointment,
   BehaviorTag,
   SessionIssueKind,
-  SurchargeApproval,
 } from "@/types/grooming";
 import { getFormTemplateForService } from "@/data/yipyygo-config";
 import { useYipyyGoConfig } from "@/lib/api/facility-settings";
@@ -127,23 +117,12 @@ export function PreVisitBriefing({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [fullFormOpen, setFullFormOpen] = useState(false);
 
-  // Client price pre-approvals (Table 103). Local state just tracks which fees
-  // were added this session so the button flips to "Added"; the source of truth
-  // is the appointment's priceAdjustments (mutated by the helper).
-  const surchargeApprovals = submission?.surchargeApprovals ?? [];
-  const [, forceRerender] = useState(0);
-
-  const handleAddFee = (approval: SurchargeApproval) => {
-    const adj = applyPreApprovedSurcharge(appointment, approval);
-    if (adj) {
-      forceRerender((n) => n + 1);
-      toast.success(
-        `Added $${approval.amount} ${approval.label.toLowerCase()} to ${appointment.petName}'s appointment`,
-      );
-    } else {
-      toast.info("This fee has already been added.");
-    }
-  };
+  // Client price pre-approvals (Table 103) are gone from here. "Add fee"
+  // set a price adjustment on the appointment object in memory — never
+  // charged, gone on reload — and the approvals come from an express
+  // check-in submission that nothing stores (the mapper leaves it empty), so
+  // with real data the block could not appear. A charge goes on the booking's
+  // bill, at check-in or mark-ready.
 
   return (
     <div className={cn("space-y-3", isNarrow ? "" : "space-y-4")}>
@@ -239,80 +218,6 @@ export function PreVisitBriefing({
           )}
         </div>
       </div>
-
-      {/* Client price pre-approvals (Table 103) */}
-      {surchargeApprovals.length > 0 && (
-        <div className="bg-card rounded-xl border shadow-sm">
-          <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm font-semibold">
-            <DollarSign className="text-muted-foreground size-4" />
-            Price Pre-Approvals
-          </div>
-          <div className="space-y-2 px-4 py-3">
-            {surchargeApprovals.map((sa) => {
-              const decidedLabel = new Date(sa.decidedAt).toLocaleString(
-                "en-CA",
-                {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                },
-              );
-              if (sa.decision === "approved") {
-                const alreadyAdded = hasPreApprovedSurcharge(appointment, sa);
-                return (
-                  <div
-                    key={sa.id}
-                    className="flex items-center justify-between gap-3 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/30"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
-                        <CheckCircle2 className="mr-1 inline size-3.5" />
-                        Client approved {sa.label.toLowerCase()} (+$
-                        {sa.amount})
-                      </p>
-                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80">
-                        Approved {decidedLabel} — add the fee without calling.
-                      </p>
-                    </div>
-                    {alreadyAdded ? (
-                      <Badge className="shrink-0 border-0 bg-emerald-600 text-white">
-                        <CheckCircle2 className="mr-1 size-3" />
-                        Added
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="h-8 shrink-0 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-                        onClick={() => handleAddFee(sa)}
-                      >
-                        <Plus className="size-3.5" />
-                        Add ${sa.amount} fee
-                      </Button>
-                    )}
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={sa.id}
-                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-900 dark:bg-amber-950/30"
-                >
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                    <Ban className="mr-1 inline size-3.5" />
-                    Client declined {sa.label.toLowerCase()} pre-approval —
-                    discuss at drop-off
-                  </p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300/80">
-                    Declined {decidedLabel}. Don&apos;t add the ${sa.amount} fee
-                    without talking to the owner first.
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Coat + size + service quick facts */}
       <div className="bg-card rounded-xl border shadow-sm">

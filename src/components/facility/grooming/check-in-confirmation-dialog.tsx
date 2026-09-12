@@ -33,7 +33,8 @@ import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
-import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
+import { useGroomingAddOns } from "@/lib/api/grooming-catalogue";
+import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
 import { useQuery } from "@tanstack/react-query";
 
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
@@ -137,11 +138,14 @@ export interface CheckInConfirmation {
   arrivalCoatCondition?: ArrivalCoatCondition;
   arrivalBehavior?: ArrivalBehavior;
   arrivalHealthFlags?: ArrivalHealthFlag[];
-  /** 1–3 pre-groom photos captured at check-in. Liability protection — the
-   *  photo proves the condition the pet arrived in. Stored as object URLs in
-   *  the prototype; a real backend would upload these to durable storage and
-   *  swap in the hosted URLs. */
+  /** Previews of the 1–3 pre-groom photos — object URLs, for this screen
+   *  only. Liability protection: the photo proves the condition the pet
+   *  arrived in. */
   beforePhotos: string[];
+  /** The photos themselves, for the caller to upload to the appointment
+   *  (`useUploadAppointmentPhoto`). A blob URL is gone on reload; these were
+   *  the only thing ever kept, and the dialog said they were saved. */
+  beforePhotoFiles: File[];
   /** HH:MM (24h). Computed at check-in from now + service duration + add-on
    *  durations; the groomer can nudge it ±5 min in the dialog before
    *  confirming. Surfaced to the owner in their customer portal. */
@@ -156,6 +160,7 @@ export interface CheckInConfirmation {
 }
 
 const MAX_BEFORE_PHOTOS = 3;
+const NO_ADD_ONS: GroomingAddOnOption[] = [];
 
 function nowHHMM(): string {
   const d = new Date();
@@ -232,6 +237,10 @@ export function CheckInConfirmationDialog({
   // Pre-groom photos — captured object URLs so previews work locally. Revoked
   // when the photo is removed or the dialog closes to avoid blob leaks.
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
+  const [beforeFiles, setBeforeFiles] = useState<File[]>([]);
+  // The facility's add-ons, priced as the booking prices them. This read the
+  // fixture list, so an add-on chosen here had the sample catalogue's price.
+  const { data: addOnCatalog = NO_ADD_ONS } = useGroomingAddOns();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Section 3B / Table 4 — pre-groom photo step requires grooming_upload_photos
   // (all-access fallback keeps it for admin outside the RBAC provider). Check-in
@@ -281,6 +290,7 @@ export function CheckInConfirmationDialog({
         }
         return [];
       });
+      setBeforeFiles([]);
       return;
     }
     setPetConfirmed(false);
@@ -296,6 +306,7 @@ export function CheckInConfirmationDialog({
     setBehaviorAtArrival(undefined);
     setHealthFlags([]);
     setBeforePhotos([]);
+    setBeforeFiles([]);
     setCheckInAnchor(nowHHMM());
     setReadyTimeEdited(false);
     setEstimatedReadyTime("");
@@ -308,7 +319,7 @@ export function CheckInConfirmationDialog({
     if (!open || !checkInAnchor || readyTimeEdited) return;
     const serviceMin = packageConfig?.duration ?? 60;
     const addOnMin = selectedAddOns.reduce((sum, name) => {
-      const addOn = groomingAddOnsList.find((a) => a.name === name);
+      const addOn = addOnCatalog.find((a) => a.name === name);
       return sum + (addOn?.duration ?? 0);
     }, 0);
     setEstimatedReadyTime(addMin(checkInAnchor, serviceMin + addOnMin));
@@ -318,6 +329,7 @@ export function CheckInConfirmationDialog({
     readyTimeEdited,
     packageConfig?.duration,
     selectedAddOns,
+    addOnCatalog,
   ]);
 
   // Auto-assign the best available station the moment the dialog opens, so the
@@ -356,20 +368,19 @@ export function CheckInConfirmationDialog({
 
   function handlePhotoSelect(files: FileList | null) {
     if (!files || files.length === 0) return;
-    setBeforePhotos((prev) => {
-      const next = [...prev];
-      for (
-        let i = 0;
-        i < files.length && next.length < MAX_BEFORE_PHOTOS;
-        i++
-      ) {
-        next.push(URL.createObjectURL(files[i]));
-      }
-      return next;
-    });
+    const picked = Array.from(files).slice(
+      0,
+      Math.max(0, MAX_BEFORE_PHOTOS - beforeFiles.length),
+    );
+    setBeforeFiles((prev) => [...prev, ...picked]);
+    setBeforePhotos((prev) => [
+      ...prev,
+      ...picked.map((file) => URL.createObjectURL(file)),
+    ]);
   }
 
   function handlePhotoRemove(index: number) {
+    setBeforeFiles((prev) => prev.filter((_, i) => i !== index));
     setBeforePhotos((prev) => {
       const next = [...prev];
       const [removed] = next.splice(index, 1);
@@ -390,8 +401,8 @@ export function CheckInConfirmationDialog({
 
   if (!apt) return null;
 
-  const inactiveAddOns = groomingAddOnsList.filter(
-    (a) => a.isActive && !selectedAddOns.includes(a.name),
+  const inactiveAddOns = addOnCatalog.filter(
+    (a) => !selectedAddOns.includes(a.name),
   );
 
   // Size-eligible stations that are actually free right now. Empty (while
@@ -441,6 +452,7 @@ export function CheckInConfirmationDialog({
         arrivalBehavior: behaviorAtArrival,
         arrivalHealthFlags: healthFlags.length > 0 ? healthFlags : undefined,
         beforePhotos: [],
+        beforePhotoFiles: [],
         estimatedReadyTime: estimatedReadyTime,
         checkInTime: checkInAnchor,
         markNoShow: true,
@@ -459,6 +471,7 @@ export function CheckInConfirmationDialog({
       arrivalBehavior: behaviorAtArrival,
       arrivalHealthFlags: healthFlags.length > 0 ? healthFlags : undefined,
       beforePhotos: beforePhotos,
+      beforePhotoFiles: beforeFiles,
       estimatedReadyTime: estimatedReadyTime,
       checkInTime: checkInAnchor,
       markNoShow: false,
@@ -795,8 +808,7 @@ export function CheckInConfirmationDialog({
             </div>
             <p className="text-muted-foreground mt-2 text-[10px]">
               {beforePhotos.length}/{MAX_BEFORE_PHOTOS} photos · saved to this
-              appointment and {apt.petName}&rsquo;s profile for the before/after
-              comparison.
+              appointment for the before/after comparison.
             </p>
           </Section>
         )}
@@ -805,13 +817,12 @@ export function CheckInConfirmationDialog({
 
         {/* 4 · Service + add-ons — confirms what's booked and lets the
               groomer add anything the owner verbally requested at drop-off.
-              Newly-added items trigger an SMS confirming the change + the
-              updated total. */}
+              Newly-added items go on the booking's bill. */}
         <Section
           step={4}
           icon={Scissors}
           title="Confirm add-ons"
-          subtitle="Add anything the owner requested at drop-off. Owner gets an SMS for any add-on added now."
+          subtitle="Add anything the owner requested at drop-off. It goes on the booking's bill."
         >
           <div className="bg-muted/30 rounded-md border px-3 py-2 text-sm">
             <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
@@ -844,7 +855,7 @@ export function CheckInConfirmationDialog({
                       )}
                       title={
                         isNew
-                          ? "Added at check-in — owner will be notified via SMS"
+                          ? "Added at check-in — on the booking's bill"
                           : "Booked at scheduling"
                       }
                     >
@@ -897,7 +908,7 @@ export function CheckInConfirmationDialog({
           {(() => {
             const serviceMin = packageConfig?.duration ?? 60;
             const addOnMin = selectedAddOns.reduce((sum, name) => {
-              const addOn = groomingAddOnsList.find((a) => a.name === name);
+              const addOn = addOnCatalog.find((a) => a.name === name);
               return sum + (addOn?.duration ?? 0);
             }, 0);
             const autoTotal = serviceMin + addOnMin;
@@ -1129,7 +1140,7 @@ export function CheckInConfirmationDialog({
           step={8}
           icon={AlertTriangle}
           title="Matted surcharge"
-          subtitle="Apply if the coat requires significant dematting work. The owner will be notified."
+          subtitle="Apply if the coat requires significant dematting work. It goes on the booking's bill."
         >
           {/* Toggle */}
           <div

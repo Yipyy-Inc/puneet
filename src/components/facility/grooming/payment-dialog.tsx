@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Banknote,
   CheckCircle2,
@@ -30,6 +31,11 @@ import { toast } from "sonner";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { balanceOf } from "@/lib/api/booking-money";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
+
+const NO_LINE_ITEMS: BookingLineItem[] = [];
 import { TipSelector } from "@/components/bookings/TipSelector";
 
 export type PaymentMethodKind =
@@ -134,9 +140,33 @@ export function PaymentDialog({
   // Computed before the early return so the loyalty-discount hook runs
   // unconditionally (Rules of Hooks); guarded for a null appointment.
   const baseService = apt?.basePrice ?? 0;
-  const adjustmentsTotal =
-    apt?.priceAdjustments.reduce((s, a) => s + a.amount, 0) ?? 0;
-  const preTaxSubtotal = baseService + adjustmentsTotal;
+  const { t: tAppt } = useStaffText("groomingAppointment");
+  // ── THE BALANCE, AS THE DATABASE HAS IT ────────────────────────────────
+  //
+  // This charged the base price plus in-memory adjustments. A deposit already
+  // taken was charged again — nine open grooms carried one on 2026-09-12 —
+  // and anything on the booking's bill (an add-on at check-in, a bag of food)
+  // was never charged at all. It charges what the booking checkout charges
+  // now: what the booking costs, less what was paid, with the bill listed.
+  const { data: lineItems = NO_LINE_ITEMS } = useQuery({
+    queryKey: ["bookings", Number(apt?.id), "line-items"],
+    queryFn: async (): Promise<BookingLineItem[]> => {
+      const response = await fetch(`/api/bookings/${apt?.id}/line-items`);
+      if (!response.ok) throw new Error("Could not read the bill.");
+      return (await response.json()) as BookingLineItem[];
+    },
+    enabled: open && Boolean(apt),
+  });
+  const booked = apt?.amountDue ?? apt?.totalPrice ?? 0;
+  const paid = apt?.amountPaid ?? 0;
+  const extrasTotal = lineItems.reduce((sum, item) => sum + item.price, 0);
+  const preTaxSubtotal = apt
+    ? balanceOf({
+        totalCost: apt.totalPrice,
+        amountDue: booked,
+        amountPaid: paid,
+      })
+    : 0;
 
   // Auto-applied loyalty discount voucher (tier / badge / earn-rule reward).
   const { discount: loyaltyDiscount, consume: consumeLoyaltyDiscount } =
@@ -166,8 +196,10 @@ export function PaymentDialog({
   const selectedPackage = applicableCustomerPackages.find(
     (p) => p.id === applyPackagePassId,
   );
+  // Never more than is still owed: a pass covers the service, and a deposit
+  // may already have paid for part of it.
   const packagePassDiscount = selectedPackage
-    ? computePackagePassDiscount({ baseService })
+    ? Math.min(computePackagePassDiscount({ baseService }), preTaxSubtotal)
     : 0;
 
   // A discount lowers the price of the supply, so it lowers the tax; store
@@ -325,10 +357,13 @@ export function PaymentDialog({
         {/* 1 · Itemized total */}
         <Section icon={Receipt} title="Itemized total">
           <div className="bg-muted/30 space-y-1 rounded-lg border px-3 py-2.5 text-sm">
-            <Row label={apt.packageName} value={baseService} />
-            {apt.priceAdjustments.map((a) => (
-              <Row key={a.id} label={a.description} value={a.amount} muted />
+            <Row label={apt.packageName} value={booked - extrasTotal} />
+            {lineItems.map((item) => (
+              <Row key={item.id} label={item.name} value={item.price} muted />
             ))}
+            {paid > 0 && (
+              <Row label={tAppt("alreadyPaid")} value={-paid} muted />
+            )}
             {tax.lines.length > 0 && (
               <>
                 <Separator className="my-1.5" />

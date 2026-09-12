@@ -13408,3 +13408,63 @@ card routes compute it on the server (`facilityTaxConfig` / `taxToAddCents`);
 the cash/package/credit path trusts the client, so a screen that computes it
 wrong still writes it. Moving that to the server means knowing each caller's
 tax base (bookings, retail, packages) and is its own change.
+
+## 2026-09-12 — grooming check-in, mark-ready and payment keep what they take
+
+The rest of Step 3's grooming list (the entry above "the operations calendar
+and the grooming board stop inventing" named them as still open):
+
+- **Check-in and mark-ready** set the add-ons added at the door, the matting
+  surcharge and the final charges on the appointment object in memory, priced
+  from the fixture catalogue, and kept the photos as blob URLs — the dialog
+  called them "saved to this appointment and {pet}'s profile". All of it was
+  gone on reload: the work was done and never charged. They are now booking
+  line items (`useAddLineItems`, priced from `useGroomingAddOns`), photo rows
+  (`useUploadAppointmentPhoto`), and the intake / session notes — written by
+  one hook, `src/hooks/use-grooming-visit-writes.ts`, for all three screens,
+  naming whichever part failed. The "owner will be notified via SMS" lines and
+  the "Notify Owner" button are gone: nothing notifies the owner.
+- **The grooming payment dialog charged base price plus in-memory
+  adjustments.** A deposit already taken was charged again (nine open grooms
+  carried one on 2026-09-12) and the booking's line items were never charged.
+  It charges `balanceOf()` now — cost less paid, as the booking checkout does —
+  and lists the bill and "Already paid". A package pass is capped at what is
+  owed.
+- **The pre-visit "Price pre-approvals" block** is gone: its "Add fee" set an
+  in-memory adjustment, and its data (an express check-in submission) is never
+  stored, so it could not appear with real data.
+- **Grooming settings** was a form over `useState(DEFAULTS)` whose Save toasted
+  and wrote nothing. It lists where each setting really lives instead.
+- **Route planner, live tracking and the groomer page are removed.** The
+  planner drew invented coordinates and "notified" nobody; tracking plotted
+  generated van pings; the groomer page (linked from nowhere) read the fixture
+  appointments. None had a source that could make it true.
+- **"Save this price for {pet}"** kept prices in localStorage, and the fixture
+  it merged with priced real pets 1 and 14 (pet refs are real). The per-pet
+  price list is empty until a table exists; the rate engine still takes it.
+- **The module Tasks tab's "Today's Tasks"** was invented from the templates
+  (every task "Alex R.", a four-name booking pool, status by position). It is
+  the day's real bookings, planned from the templates and ticked into
+  `facility_tasks` with the booking page's own `source_ref` scheme
+  (`src/lib/tasks/use-module-day-tasks.ts`). The grooming and training
+  calendar sidebars count from the same source.
+- **Waitlist "Expire & Pass"** awaits the expiry, then the offer, and says so
+  only after both; it no longer shows the text of an offer message nothing
+  sends.
+- **Training "Send message" and "Request records"** send through
+  `/api/clients/[ref]/message` (the first was a 500 ms timer, the second a
+  toast printing the message). Request records was gated on two fixture
+  lookups, so for real clients it appeared only when a fixture shared the ref.
+
+**Still open (grooming):** mobile grooming (vans, areas, travel zones) is
+localStorage per browser and needs a settings domain plus a customer-visible
+grant; the calendar's recurring "cancel this occurrence" is dead code (nothing
+sets `recurrenceSeriesId`, so it cannot be reached); calendar preferences and
+saved views are keyed to fixture facility 11 in localStorage, so two
+facilities in one browser share them; the estimated ready time edited at
+check-in is not saved (the database derives its own at `checked_in`).
+**Still open (training):** notes, homework, report cards on the profile,
+make-ups, the course catalog, disciplines, exercises, module settings, block
+time and the pre-session briefing all write to the query cache only. The quick
+actions' "Add note" is one of them, and passes `check:success-claims` only
+because the same file now reaches a real sender — the gate's per-file limit.

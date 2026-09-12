@@ -47,7 +47,6 @@ import {
   stylistMeetsSkillRequirement,
   type EffectivePricing,
 } from "@/lib/api/grooming";
-import { saveCustomPetPricingOverride } from "@/lib/grooming-pet-pricing-store";
 import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import { syncRedeemedPassToQuickBooks } from "@/lib/quickbooks/document-sync";
 import { GroomingWaitlistDialog } from "@/components/bookings/modals/service-details/GroomingWaitlistDialog";
@@ -230,7 +229,6 @@ export function NewAppointmentDialog({
   const [priceOverrideReason, setPriceOverrideReason] = useState("");
   // When true, the manual price/duration is written back to the pet on
   // submit so future bookings for the same pet/package pre-fill with it.
-  const [savePriceToPet, setSavePriceToPet] = useState(false);
   const queryClient = useQueryClient();
   const { t: tBook, fill: fillBook } = useStaffText("groomingAppointment");
   const { mutate: redeemPass } = useRedeemPackagePass();
@@ -545,7 +543,6 @@ export function NewAppointmentDialog({
     setManualPriceOverride(undefined);
     setManualDurationOverride(undefined);
     setPriceOverrideReason("");
-    setSavePriceToPet(false);
   }, [form.packageId, form.petId]);
 
   // ─── Step 2 derived data: eligibility, last booked, last groomer, preferred ─
@@ -1032,7 +1029,6 @@ export function NewAppointmentDialog({
     setManualPriceOverride(undefined);
     setManualDurationOverride(undefined);
     setPriceOverrideReason("");
-    setSavePriceToPet(false);
     onOpenChange(false);
   }
 
@@ -1165,37 +1161,6 @@ export function NewAppointmentDialog({
       toast.error("Add a note explaining the price override before booking.");
       return;
     }
-    // Persist the manual price/duration as a saved override on this pet so
-    // future bookings of the same pet+package start from this number. Only
-    // fires when staff explicitly opted in and there's a known pet to attach
-    // it to (drafted-only pets get a negative id from the picker — skip
-    // those since they can't be looked up next time).
-    if (
-      savePriceToPet &&
-      form.petId !== undefined &&
-      form.petId > 0 &&
-      form.packageId
-    ) {
-      const finalPrice = manualPriceOverride;
-      const finalDuration = manualDurationOverride;
-      if (finalPrice !== undefined || finalDuration !== undefined) {
-        saveCustomPetPricingOverride({
-          petId: form.petId,
-          packageId: form.packageId,
-          customPrice: finalPrice,
-          customDurationMin: finalDuration,
-          note:
-            priceOverrideReason.trim() ||
-            `Saved from booking on ${form.date || "today"}.`,
-          createdBy: "facility-staff",
-        });
-        // Invalidate so the next read (next dialog open) sees the new row.
-        void queryClient.invalidateQueries({
-          queryKey: ["pet-service-pricing"],
-        });
-      }
-    }
-
     // ── THE APPOINTMENT ITSELF ──────────────────────────────────────────
     //
     // This toasted "Appointment booked" and closed; no row was written, so a
@@ -1805,7 +1770,6 @@ export function NewAppointmentDialog({
                     const priceEdited = manualPriceOverride !== undefined;
                     const durationEdited = manualDurationOverride !== undefined;
                     const anyEdited = priceEdited || durationEdited;
-                    const canSaveToPet = form.petId !== undefined && anyEdited;
                     return (
                       <div className="bg-card mt-3 rounded-lg border p-3">
                         <div className="mb-2 flex items-center justify-between">
@@ -1896,37 +1860,11 @@ export function NewAppointmentDialog({
                               setManualPriceOverride(undefined);
                               setManualDurationOverride(undefined);
                               setPriceOverrideReason("");
-                              setSavePriceToPet(false);
                             }}
                             className="text-muted-foreground hover:text-foreground mt-1.5 text-[10px]"
                           >
                             Reset to {sourceLabel.toLowerCase()}
                           </button>
-                        )}
-                        {form.petId !== undefined && (
-                          <label
-                            className={cn(
-                              "mt-2.5 flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs",
-                              canSaveToPet
-                                ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20"
-                                : "border-dashed opacity-60",
-                            )}
-                          >
-                            <Checkbox
-                              checked={savePriceToPet}
-                              onCheckedChange={(v) =>
-                                setSavePriceToPet(canSaveToPet && !!v)
-                              }
-                              disabled={!canSaveToPet}
-                            />
-                            <span className="flex-1">
-                              Save this price for{" "}
-                              <strong>
-                                {form.petName?.trim() || "this pet"}
-                              </strong>{" "}
-                              so future bookings start here.
-                            </span>
-                          </label>
                         )}
                       </div>
                     );

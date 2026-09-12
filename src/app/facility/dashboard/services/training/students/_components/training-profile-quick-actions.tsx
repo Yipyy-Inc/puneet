@@ -7,7 +7,7 @@
  *
  *   1. Enroll in series       — deep-link to the new-enrollment flow
  *   2. Assign homework        — opens the homework prompt in-place
- *   3. Send message to owner  — small compose dialog that toasts a mock send
+ *   3. Send message to owner  — email or SMS through /api/clients/[ref]/message
  *   4. Add note               — opens the Notes composer in-place
  *   5. Book private session   — deep-link to the booking flow, private preset
  */
@@ -45,12 +45,16 @@ import {
   StickyNote,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
+import { useMessageClient } from "@/lib/api/client";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
 import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
 
 interface Props {
   petId: number;
   petName: string;
+  /** The owner's client reference — who a message goes to. */
+  ownerRef: number;
   ownerName: string;
   ownerEmail?: string;
   ownerPhone?: string;
@@ -67,6 +71,7 @@ const CATEGORY_LABEL: Record<TrainerNoteCategory, string> = {
 export function TrainingProfileQuickActions({
   petId,
   petName,
+  ownerRef,
   ownerName,
   ownerEmail,
   ownerPhone,
@@ -140,6 +145,7 @@ export function TrainingProfileQuickActions({
         open={messageOpen}
         onOpenChange={setMessageOpen}
         petName={petName}
+        ownerRef={ownerRef}
         ownerName={ownerName}
         ownerEmail={ownerEmail}
         ownerPhone={ownerPhone}
@@ -327,6 +333,7 @@ function SendMessageDialog({
   open,
   onOpenChange,
   petName,
+  ownerRef,
   ownerName,
   ownerEmail,
   ownerPhone,
@@ -334,11 +341,14 @@ function SendMessageDialog({
   open: boolean;
   onOpenChange: (next: boolean) => void;
   petName: string;
+  ownerRef: number;
   ownerName: string;
   ownerEmail?: string;
   ownerPhone?: string;
 }) {
   type Channel = "email" | "sms";
+  const { mutateAsync: sendMessage } = useMessageClient();
+  const { fill } = useStaffText("clientMessage");
   const [channel, setChannel] = useState<Channel>(ownerEmail ? "email" : "sms");
   const [subject, setSubject] = useState(`Update about ${petName}`);
   const [body, setBody] = useState("");
@@ -351,8 +361,21 @@ function SendMessageDialog({
       return;
     }
     setBusy(true);
+    // It waited 500 ms and toasted "Email sent to …" — nothing was sent. The
+    // route sends, or says why it did not (no address, opted out, staging).
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const result = await sendMessage({
+        clientRef: ownerRef,
+        channel,
+        body: trimmed,
+        subject: channel === "email" ? subject.trim() : undefined,
+      });
+      if (!result.sent) {
+        toast.error(fill("notSentTo", { name: ownerName }), {
+          description: result.detail,
+        });
+        return;
+      }
       toast.success(
         channel === "email"
           ? `Email sent to ${ownerName} at ${ownerEmail}.`
@@ -360,6 +383,10 @@ function SendMessageDialog({
       );
       setBody("");
       onOpenChange(false);
+    } catch (error) {
+      toast.error(fill("notSentTo", { name: ownerName }), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setBusy(false);
     }

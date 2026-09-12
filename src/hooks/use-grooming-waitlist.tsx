@@ -100,8 +100,9 @@ interface WaitlistContextValue {
   ) => void;
   /**
    * Expire the current offer and hand the freed slot to the next matching
-   * client (Table 96 "no response in 4h → offer to next person"). Returns the
-   * newly-offered entry, or null if nobody else qualifies.
+   * client (Table 96 "no response in 4h → offer to next person"). Resolves
+   * with the newly-offered entry, or null if nobody else qualifies, once BOTH
+   * writes have landed; rejects if either is refused.
    */
   expireAndOfferNext: (
     expiredId: string,
@@ -114,7 +115,7 @@ interface WaitlistContextValue {
       serviceName?: string;
     },
     windowMinutes?: number,
-  ) => GroomingWaitlistEntry | null;
+  ) => Promise<GroomingWaitlistEntry | null>;
 }
 
 const WaitlistContext = createContext<WaitlistContextValue | null>(null);
@@ -272,7 +273,7 @@ export function GroomingWaitlistProvider({
       }),
   });
 
-  const { mutate: patch } = useMutation({
+  const { mutate: patch, mutateAsync: patchAsync } = useMutation({
     mutationFn: (input: { id: string; body: Record<string, unknown> }) =>
       json<GroomingWaitlistEntry>(`${BASE}/${encodeURIComponent(input.id)}`, {
         method: "PATCH",
@@ -343,18 +344,22 @@ export function GroomingWaitlistProvider({
   );
 
   const expireAndOfferNext = useCallback(
-    (
+    async (
       expiredId: string,
       slot: SlotMatchInput,
       windowMinutes: number = DEFAULT_OFFER_WINDOW_MINUTES,
-    ): GroomingWaitlistEntry | null => {
+    ): Promise<GroomingWaitlistEntry | null> => {
       // Next person in line for the same slot, skipping the one who lapsed.
-      // Computed from the cache so the caller still gets an answer to render
-      // immediately; the two writes below are what make it true.
+      //
+      // IN ORDER, AND AWAITED. The two writes were fired together and the
+      // caller announced "passed to {next}" at once — so an expire that was
+      // refused beside an offer that landed left two live offers for one slot,
+      // under a toast saying it had been handed on. The offer is made only
+      // once the expiry is saved. Still two requests, not one transaction.
       const next = pickNextMatch(entries, slot, expiredId);
-      patch({ id: expiredId, body: { status: "expired" } });
+      await patchAsync({ id: expiredId, body: { status: "expired" } });
       if (next) {
-        patch({
+        await patchAsync({
           id: next.id,
           body: {
             status: "offered",
@@ -365,7 +370,7 @@ export function GroomingWaitlistProvider({
       }
       return next;
     },
-    [entries, patch],
+    [entries, patchAsync],
   );
 
   const value = useMemo<WaitlistContextValue>(

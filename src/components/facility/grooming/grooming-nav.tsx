@@ -13,12 +13,8 @@ import {
   DollarSign,
   Building2,
   ClipboardList,
-  Route,
-  Activity,
   LayoutDashboard,
 } from "lucide-react";
-import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { useGroomingStations } from "@/hooks/use-grooming-stations";
 import { settingsHref } from "@/lib/settings/nav";
 
 type Tab = {
@@ -40,16 +36,6 @@ const tabs: Tab[] = [
     name: "Calendar",
     href: "/facility/dashboard/services/grooming/calendar",
     icon: Calendar,
-  },
-  {
-    name: "Route Planner",
-    href: "/facility/dashboard/services/grooming/route-planner",
-    icon: Route,
-  },
-  {
-    name: "Live Tracking",
-    href: "/facility/dashboard/services/grooming/live-tracking",
-    icon: Activity,
   },
   {
     name: "Stations",
@@ -95,35 +81,12 @@ const tabs: Tab[] = [
 
 export function GroomingNav() {
   const pathname = usePathname();
-  const { enabled: mobileEnabled, hasActiveVans } = useMobileGrooming();
-  const { stations } = useGroomingStations();
-  // Mobile-only tabs hide when the facility has the feature flag off OR
-  // when there are zero active vans (solo-salon facility type) — there's
-  // nothing for Route Planner or Live Tracking to show without a van.
-  const showMobileTabs = mobileEnabled && hasActiveVans;
-  // Mobile-only facility — has vans but no stations. Route Planner takes
-  // over as the primary daily view, so it bumps to the front of the nav.
-  const isMobileOnly = hasActiveVans && stations.length === 0;
-
-  const filteredTabs = tabs.filter((tab) => {
-    if (tab.name === "Route Planner") return showMobileTabs;
-    if (tab.name === "Live Tracking") return showMobileTabs;
-    return true;
-  });
-  // When mobile-only, lift Route Planner to position 0 and push Calendar
-  // behind it. Order otherwise stays as authored.
-  const visibleTabs = isMobileOnly
-    ? (() => {
-        const routeIdx = filteredTabs.findIndex(
-          (t) => t.name === "Route Planner",
-        );
-        if (routeIdx <= 0) return filteredTabs;
-        const next = [...filteredTabs];
-        const [route] = next.splice(routeIdx, 1);
-        next.unshift(route);
-        return next;
-      })()
-    : filteredTabs;
+  // Route Planner and Live Tracking are gone (2026-09-12). The planner drew
+  // stops at coordinates invented from the address text, matched vans to
+  // groomers by an id they never share, and its "Confirm & Notify Clients"
+  // notified nobody; live tracking plotted generated van pings. There is no
+  // GPS source and no route table, so neither could be made true.
+  const visibleTabs = tabs;
 
   return (
     <nav className="flex gap-0.5 overflow-x-auto px-4">

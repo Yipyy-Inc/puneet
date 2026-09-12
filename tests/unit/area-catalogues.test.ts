@@ -94,6 +94,10 @@ const SAME_IN_BOTH = new Set([
   "customerPages.bookingDetail.date", // Date / Date
   "customerPages.bookingDetail.services", // Services / Services
   "customerPages.bookingDetail.total", // Total / Total
+  // Grooming visit writes and module tasks — the same word in French.
+  "staff.groomingAppointment.partNotes", // Notes / Notes
+  "staff.groomingAppointment.partPhotos", // Photo / Photo
+  "staff.moduleTasks.catTransport", // Transport / Transport
   // The pet profile's cognates — each the same word in French.
   "customerPages.petProfile.vaccineException",
   "customerPages.petProfile.colDocument",
