@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { buildTodayTasks } from "@/lib/today-tasks";
+import { useModuleDayTasks } from "@/lib/tasks/use-module-day-tasks";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import type { TrainingSession } from "@/types/training";
 import { DAY_INITIALS, formatISODate } from "./training-calendar-utils";
@@ -150,17 +150,14 @@ export function TrainingCalendarSidebar({
   const { data: trainingTemplates = [] } = useQuery(
     taskTemplateQueries.byModule("training"),
   );
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((n) => n + 1), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  const pendingTasks = useMemo(() => {
-    void tick;
-    return buildTodayTasks(trainingTemplates).filter(
-      (t) => t.status === "pending",
-    ).length;
-  }, [trainingTemplates, tick]);
+  // Today's real training tasks, as the Tasks tab lists them.
+  const { tasks: trainingDayTasks } = useModuleDayTasks(
+    "training",
+    trainingTemplates,
+  );
+  const pendingTasks = trainingDayTasks.filter(
+    (t) => t.dayStatus === "pending" || t.dayStatus === "missed",
+  ).length;
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
     month: "long",

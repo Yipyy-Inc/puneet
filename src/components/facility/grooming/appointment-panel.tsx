@@ -12,10 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import {
-  useRecordPayment,
-  useSaveAppointmentIntake,
-} from "@/lib/api/grooming-appointments";
+import { useRecordPayment } from "@/lib/api/grooming-appointments";
 import {
   Phone,
   Mail,
@@ -37,6 +34,7 @@ import {
 } from "lucide-react";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
 import { toast } from "sonner";
+import { useGroomingVisitWrites } from "@/hooks/use-grooming-visit-writes";
 import { STATUS_META } from "./grooming-calendar";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -143,7 +141,7 @@ export function AppointmentPanel({
   const { data: allAppointments = [] } = useQuery(
     groomingQueries.appointments(),
   );
-  const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const visit = useGroomingVisitWrites();
   const { mutate: recordPayment } = useRecordPayment();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [markReadyOpen, setMarkReadyOpen] = useState(false);
@@ -839,10 +837,8 @@ export function AppointmentPanel({
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
           });
-          saveIntake(
-            { appointmentId: appointment.id, ...summary.intakePatch },
-            { onError: (error) => toast.error(error.message) },
-          );
+          // The intake, the add-ons and surcharge as bill lines, the photos.
+          void visit.checkIn(appointment, summary, result.beforePhotoFiles);
           // Record the station assignment on the appointment history so
           // station utilization can be reported later (spec Table 9). The
           // caller owns the decision to record (pure-mutation policy); the
@@ -873,18 +869,15 @@ export function AppointmentPanel({
         open={markReadyOpen}
         onOpenChange={setMarkReadyOpen}
         apt={appointment}
-        facilityName="Yipyy"
         onConfirm={(result: MarkReadyConfirmation) => {
-          const summary = applyMarkReadyResult(appointment, result, {
+          applyMarkReadyResult(appointment, result, {
             clients: ownerClients,
             setStationStatus,
             notify: (title, detail) => toast.message(title, detail),
-            facilityName: "Yipyy",
           });
+          void visit.markReady(appointment, result);
           writeStatus("ready-for-pickup", () =>
-            toast.success(`${appointment.petName} — Ready for Pickup`, {
-              description: `Total $${summary.updatedTotal.toFixed(2)}`,
-            }),
+            toast.success(`${appointment.petName} — Ready for Pickup`),
           );
           setMarkReadyOpen(false);
         }}

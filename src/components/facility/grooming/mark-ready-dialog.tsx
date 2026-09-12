@@ -30,6 +30,8 @@ import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { balanceOf } from "@/lib/api/booking-money";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { GroomingAppointment } from "@/types/grooming";
 
 export interface MarkReadyFinalCharge {
@@ -40,8 +42,10 @@ export interface MarkReadyFinalCharge {
 }
 
 export interface MarkReadyConfirmation {
-  /** 1–3 post-groom photos. URLs in the prototype, hosted URLs after upload. */
+  /** Previews of the 1–3 post-groom photos — object URLs, this screen only. */
   afterPhotos: string[];
+  /** The photos themselves, for the caller to upload to the appointment. */
+  afterPhotoFiles: File[];
   /** Groomer's session notes — drives the Report Card body + pet profile. */
   sessionNotes: string;
   /** Charges added during the groom (matting, extra time, etc.). */
@@ -52,8 +56,6 @@ interface MarkReadyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   apt: GroomingAppointment | null;
-  /** Default tax rate applied to the final-total preview. */
-  facilityName?: string;
   onConfirm: (result: MarkReadyConfirmation) => void;
 }
 
@@ -63,10 +65,11 @@ export function MarkReadyDialog({
   open,
   onOpenChange,
   apt,
-  facilityName,
   onConfirm,
 }: MarkReadyDialogProps) {
   const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
+  const [afterFiles, setAfterFiles] = useState<File[]>([]);
+  const { t: tAppt, fill: fillAppt } = useStaffText("groomingAppointment");
   const [sessionNotes, setSessionNotes] = useState("");
   const [finalCharges, setFinalCharges] = useState<MarkReadyFinalCharge[]>([]);
   const [draftLabel, setDraftLabel] = useState("");
@@ -96,9 +99,11 @@ export function MarkReadyDialog({
         }
         return [];
       });
+      setAfterFiles([]);
       return;
     }
     setAfterPhotos([]);
+    setAfterFiles([]);
     setSessionNotes("");
     setFinalCharges([]);
     setDraftLabel("");
@@ -114,16 +119,19 @@ export function MarkReadyDialog({
 
   function handlePhotoSelect(files: FileList | null) {
     if (!files || files.length === 0) return;
-    setAfterPhotos((prev) => {
-      const next = [...prev];
-      for (let i = 0; i < files.length && next.length < MAX_AFTER_PHOTOS; i++) {
-        next.push(URL.createObjectURL(files[i]));
-      }
-      return next;
-    });
+    const picked = Array.from(files).slice(
+      0,
+      Math.max(0, MAX_AFTER_PHOTOS - afterFiles.length),
+    );
+    setAfterFiles((prev) => [...prev, ...picked]);
+    setAfterPhotos((prev) => [
+      ...prev,
+      ...picked.map((file) => URL.createObjectURL(file)),
+    ]);
   }
 
   function handlePhotoRemove(index: number) {
+    setAfterFiles((prev) => prev.filter((_, i) => i !== index));
     setAfterPhotos((prev) => {
       const next = [...prev];
       const [removed] = next.splice(index, 1);
@@ -151,15 +159,18 @@ export function MarkReadyDialog({
     setFinalCharges((prev) => prev.filter((c) => c.id !== id));
   }
 
-  // Itemized total preview — base service + booked add-ons (from
-  // priceAdjustments already on the appointment) + new final charges + tax.
-  const baseService = apt.basePrice;
-  const existingAdjustments = apt.priceAdjustments.reduce(
-    (sum, a) => sum + a.amount,
-    0,
-  );
+  // What is still owed, as the database has it — the service and anything
+  // already on the bill, less what was paid — plus what is added now. It was
+  // base price plus in-memory adjustments, blind to a deposit or a line item.
+  const booked = apt.amountDue ?? apt.totalPrice;
+  const paid = apt.amountPaid ?? 0;
   const finalChargesTotal = finalCharges.reduce((s, c) => s + c.amount, 0);
-  const preTaxSubtotal = baseService + existingAdjustments + finalChargesTotal;
+  const preTaxSubtotal =
+    balanceOf({
+      totalCost: apt.totalPrice,
+      amountDue: booked,
+      amountPaid: paid,
+    }) + finalChargesTotal;
   const tax = taxConfig.pricesIncludeTax
     ? { lines: [], totalCents: 0 }
     : computeTax(Math.round(preTaxSubtotal * 100), taxConfig);
@@ -180,7 +191,7 @@ export function MarkReadyDialog({
           </DialogTitle>
           <p className="text-muted-foreground text-xs">
             Snap an after photo, jot the session notes, add any late charges,
-            then notify the owner.
+            then mark it ready for pickup.
           </p>
         </DialogHeader>
 
@@ -247,7 +258,7 @@ export function MarkReadyDialog({
             </div>
             <p className="text-muted-foreground mt-2 text-[10px]">
               {afterPhotos.length}/{MAX_AFTER_PHOTOS} photos · at least one
-              required before notifying the owner.
+              required.
             </p>
           </Section>
         )}
@@ -282,7 +293,7 @@ export function MarkReadyDialog({
           step={3}
           icon={DollarSign}
           title="Final charges"
-          subtitle="Anything that came up during the groom — matting, extra time, special treatment. Owner sees these in the pickup SMS."
+          subtitle="Anything that came up during the groom — matting, extra time, special treatment. They go on the booking's bill."
         >
           {finalCharges.length > 0 && (
             <ul className="mb-2 space-y-1.5">
@@ -368,13 +379,13 @@ export function MarkReadyDialog({
           step={4}
           icon={Receipt}
           title="Confirm the total"
-          subtitle="What the owner will see in the pickup SMS."
+          subtitle={tAppt("stillOwedSubtitle")}
         >
           <div className="bg-muted/30 space-y-1 rounded-lg border px-3 py-2.5 text-sm">
-            <Row label={apt.packageName} value={baseService} />
-            {apt.priceAdjustments.map((a) => (
-              <Row key={a.id} label={a.description} value={a.amount} muted />
-            ))}
+            <Row label={apt.packageName} value={booked} />
+            {paid > 0 && (
+              <Row label={tAppt("alreadyPaid")} value={-paid} muted />
+            )}
             {finalCharges.map((c) => (
               <Row
                 key={c.id}
@@ -417,19 +428,15 @@ export function MarkReadyDialog({
             onClick={() => {
               onConfirm({
                 afterPhotos,
+                afterPhotoFiles: afterFiles,
                 sessionNotes: sessionNotes.trim(),
                 finalCharges,
               });
             }}
-            title={
-              !canConfirm
-                ? "Take at least one post-groom photo before notifying the owner."
-                : undefined
-            }
+            title={!canConfirm ? tAppt("photoFirst") : undefined}
           >
             <CheckCircle2 className="mr-1.5 size-4" />
-            Notify Owner — Ready for Pickup
-            {facilityName ? ` · ${facilityName}` : ""}
+            {fillAppt("markReadyFor", { pet: apt.petName })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -487,7 +494,9 @@ function Row({
       )}
     >
       <span className="min-w-0 truncate">{label}</span>
-      <span className="tabular-nums">${value.toFixed(2)}</span>
+      <span className="tabular-nums">
+        {value < 0 ? "−" : ""}${Math.abs(value).toFixed(2)}
+      </span>
     </div>
   );
 }

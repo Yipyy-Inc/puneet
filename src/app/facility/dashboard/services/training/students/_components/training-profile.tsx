@@ -334,6 +334,7 @@ export function TrainingProfile({ petId }: Props) {
       <TrainingProfileQuickActions
         petId={petId}
         petName={pet.name}
+        ownerRef={ownerId}
         ownerName={ownerName}
         ownerEmail={owningClient?.email}
         ownerPhone={ownerPhone || undefined}

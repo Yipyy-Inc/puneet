@@ -60,7 +60,7 @@ import { WaitlistPanel } from "./waitlist-panel";
 import { PrintableDaySheet } from "./printable-day-sheet";
 import { PrintableAppointmentCards } from "./printable-appointment-cards";
 import { BulkActionsDialog, type BulkActionMode } from "./bulk-actions-dialog";
-import { getMissedTaskCount } from "@/lib/today-tasks";
+import { useModuleDayTasks } from "@/lib/tasks/use-module-day-tasks";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { useSettings } from "@/hooks/use-settings";
 import { computeSupplyAlerts } from "@/lib/grooming-supply-alerts";
@@ -414,15 +414,16 @@ function GroomingSidebar({
   );
   // Stable while loading — see lib/no-items.ts.
   const groomingTaskTemplates = groomingTaskTemplatesData ?? NO_ITEMS;
-  const [missedTaskCount, setMissedTaskCount] = useState(0);
-  useEffect(() => {
-    function refresh() {
-      setMissedTaskCount(getMissedTaskCount(groomingTaskTemplates));
-    }
-    refresh();
-    const id = setInterval(refresh, 60_000);
-    return () => clearInterval(id);
-  }, [groomingTaskTemplates]);
+  // Today's real grooming tasks — the board's own source, so the two agree.
+  // This counted tasks invented from the templates, a third of them
+  // "pending" by position.
+  const { tasks: groomingDayTasks } = useModuleDayTasks(
+    "grooming",
+    groomingTaskTemplates,
+  );
+  const missedTaskCount = groomingDayTasks.filter(
+    (t) => t.dayStatus === "missed",
+  ).length;
 
   const upcomingToday = useMemo(() => {
     const nowMin =
@@ -2867,7 +2868,7 @@ export function GroomingCalendar() {
           <div className="mt-2 mb-2 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
-                <ActivitySquare className="h-5 w-5" />
+                <ActivitySquare className="size-5" />
               </div>
               <h2 className="text-xl font-bold">Client Schedule</h2>
             </div>

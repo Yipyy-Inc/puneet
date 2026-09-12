@@ -1,11 +1,9 @@
 import type { AlertNote, GroomingAppointment } from "@/types/grooming";
 import type { GroomingStation, GroomingStationStatus } from "@/types/rooms";
 import type { Client } from "@/types/client";
-import type { Pet } from "@/types/pet";
 import type { CheckInConfirmation } from "@/components/facility/grooming/check-in-confirmation-dialog";
 import type { MarkReadyConfirmation } from "@/components/facility/grooming/mark-ready-dialog";
 import type { PaymentResult } from "@/components/facility/grooming/payment-dialog";
-import { groomingAddOnsList } from "@/data/grooming-pricing-rules";
 
 export interface CheckInActionDeps {
   clients: Client[];
@@ -22,10 +20,16 @@ export interface CheckInActionDeps {
 }
 
 export interface CheckInActionSummary {
-  /** Names of add-ons added at check-in (not present in the original booking). */
+  /**
+   * Names of add-ons added at check-in (not present in the original booking),
+   * for the caller to put on the booking's bill with the matting surcharge —
+   * see `useGroomingVisitWrites`. They used to be written onto the
+   * appointment object in memory, priced from the fixture catalogue, and
+   * were gone on reload: the add-on was done and never charged.
+   */
   newlyAddedAddOns: string[];
-  /** Total $ added from those new add-ons. */
-  addedTotal: number;
+  /** The matting surcharge applied at check-in, 0 when none. */
+  mattedSurcharge: number;
   /** Alert notes promoted from this check-in's arrival flags. */
   promotedAlerts: AlertNote[];
   /**
@@ -55,11 +59,12 @@ export interface CheckInActionSummary {
 /**
  * Single source of truth for the side effects a check-in must produce.
  *
- * Mutates the appointment in place, mirrors the photos onto the pet's profile,
- * flips the station card on the Grooming Stations board, promotes notable
- * arrival flags into carry-forward alert notes, and fires the customer SMS
- * for any add-on added at the door. Returns a summary the caller can use for
- * its own history-log / status-update concerns.
+ * Updates the appointment object for this screen, flips the station card on
+ * the Grooming Stations board, and promotes notable arrival flags into
+ * carry-forward alert notes. Everything that must SURVIVE — the intake, the
+ * add-ons and surcharge as bill lines, the photos — is returned for the
+ * caller to write (`useGroomingVisitWrites`): this module is not a
+ * component and holds no mutation.
  *
  * Pure-mutation policy: callers handle their own React state (status,
  * dialog open/close) and their own history-record bookkeeping. This helper
@@ -81,15 +86,11 @@ export function applyCheckInResult(
     return d.toISOString();
   })();
 
-  // ── 1. Newly-added add-ons (vs. original booking) → price + SMS ─────────
+  // ── 1. Newly-added add-ons (vs. original booking) ──────────────────────
   const originalAddOns = apt.addOns ?? [];
   const newlyAdded = result.addOns.filter(
     (name) => !originalAddOns.includes(name),
   );
-  const newlyAddedDetails = newlyAdded
-    .map((name) => groomingAddOnsList.find((a) => a.name === name))
-    .filter((a): a is (typeof groomingAddOnsList)[number] => !!a);
-  const addedTotal = newlyAddedDetails.reduce((sum, a) => sum + a.price, 0);
 
   // ── 2. Mutate the appointment record ───────────────────────────────────
   (apt as typeof apt & { intake?: typeof apt.intake }).intake = {
@@ -118,42 +119,6 @@ export function applyCheckInResult(
   apt.checkInTime = checkInIso;
   if (result.estimatedReadyTime) {
     apt.estimatedReadyTime = result.estimatedReadyTime;
-  }
-
-  // ── 3. Matted surcharge → priceAdjustment ──────────────────────────────
-  if (result.mattedSurcharge > 0) {
-    apt.priceAdjustments = [
-      ...apt.priceAdjustments,
-      {
-        id: `adj-matted-${Date.now()}`,
-        amount: result.mattedSurcharge,
-        reason: "matting-fee" as const,
-        description: `Matting surcharge added at check-in — $${result.mattedSurcharge}`,
-        addedBy: "Staff",
-        addedAt: nowIso,
-        customerNotified: false,
-      },
-    ];
-    apt.totalPrice = apt.totalPrice + result.mattedSurcharge;
-  }
-
-  // ── 4. Newly-added add-ons → priceAdjustments + SMS toast ──────────────
-  if (newlyAddedDetails.length > 0) {
-    apt.priceAdjustments = [
-      ...apt.priceAdjustments,
-      ...newlyAddedDetails.map((a, i) => ({
-        id: `adj-addon-${Date.now()}-${i}`,
-        amount: a.price,
-        reason: "other" as const,
-        description: `${a.name} added at check-in — +$${a.price}`,
-        addedBy: "Staff",
-        addedAt: nowIso,
-        customerNotified: true,
-      })),
-    ];
-    apt.totalPrice = apt.totalPrice + addedTotal;
-    // It announced "SMS sent to {owner}" with the text of a message nothing
-    // sent. No sender is wired to a check-in, so nothing is announced.
   }
 
   // ── 5. Promote arrival flags into carry-forward alert notes ────────────
@@ -201,28 +166,6 @@ export function applyCheckInResult(
     apt.alertNotes = [...(apt.alertNotes ?? []), ...promotedAlerts];
   }
 
-  // ── 6. Pet profile updates — visit photos ──────────────────────────────
-  // Find the pet across the clients list and append each captured before-
-  // photo as a visitPhoto entry. Initializes the array if absent.
-  if (result.beforePhotos && result.beforePhotos.length > 0) {
-    outer: for (const client of deps.clients) {
-      for (const pet of client.pets as Pet[]) {
-        if (pet.id !== apt.petId) continue;
-        const next = pet as Pet & { visitPhotos?: Pet["visitPhotos"] };
-        next.visitPhotos = [
-          ...(next.visitPhotos ?? []),
-          ...result.beforePhotos.map((url) => ({
-            url,
-            capturedAt: nowIso,
-            appointmentId: apt.id,
-            kind: "before" as const,
-          })),
-        ];
-        break outer;
-      }
-    }
-  }
-
   // ── 7. Station board real-time update ──────────────────────────────────
   deps.setStationStatus(result.stationId, "in-use", {
     petName: apt.petName,
@@ -231,7 +174,7 @@ export function applyCheckInResult(
 
   return {
     newlyAddedAddOns: newlyAdded,
-    addedTotal,
+    mattedSurcharge: result.mattedSurcharge,
     promotedAlerts,
     // The drop-off, for the caller to persist. `beforePhotos` is deliberately
     // absent: photos are rows with their own upload path now
@@ -305,23 +248,19 @@ export interface MarkReadyActionDeps {
     title: string,
     detail: { description: string; duration?: number },
   ) => void;
-  /** Facility name interpolated into the pickup SMS. */
-  facilityName: string;
 }
 
 export interface MarkReadyActionSummary {
   /** Final-charge dollar total added at mark-ready. */
   finalChargesTotal: number;
-  /** New apt.totalPrice (after final charges, pre-tax). */
-  updatedTotal: number;
 }
 
 /**
- * Mark-ready counterpart to {@link applyCheckInResult}. Owns every side
- * effect the "Notify Owner — Ready for Pickup" action implies: stores the
- * after-photos on the appointment and on the pet's profile, persists the
- * groomer's session notes, appends final-charge price adjustments, fires the
- * pickup SMS with the updated total, and releases the station.
+ * Mark-ready counterpart to {@link applyCheckInResult}. Releases the
+ * station. The photos, the session notes and the final charges are the
+ * caller's to write (`useGroomingVisitWrites`) — they were set on the
+ * appointment object in memory, and on a copy of the pet nothing reads, and
+ * were gone on reload.
  *
  * Pure-mutation policy: callers handle their own React state (status flip,
  * dialog close) and their own history-record bookkeeping.
@@ -331,73 +270,10 @@ export function applyMarkReadyResult(
   result: MarkReadyConfirmation,
   deps: MarkReadyActionDeps,
 ): MarkReadyActionSummary {
-  const nowIso = new Date().toISOString();
-
-  // ── 1. After-photos onto the appointment record ────────────────────────
-  const newAfterPhotos = result.afterPhotos.map((url, i) => ({
-    id: `photo-after-${Date.now()}-${i}`,
-    url,
-    type: "after" as const,
-    takenAt: nowIso,
-    takenBy: "Groomer",
-  }));
-  apt.afterPhotos = [...(apt.afterPhotos ?? []), ...newAfterPhotos];
-
-  // ── 2. Session notes onto the intake ───────────────────────────────────
-  if (result.sessionNotes) {
-    (apt as typeof apt & { intake?: typeof apt.intake }).intake = {
-      ...(apt.intake ?? {
-        coatCondition: "normal",
-        behaviorNotes: "",
-        allergies: apt.allergies,
-        specialInstructions: apt.specialInstructions,
-        beforePhotos: [],
-        mattingFeeWarning: false,
-      }),
-      sessionNotes: result.sessionNotes,
-    };
-  }
-
-  // ── 3. Final charges → priceAdjustments + total bump ───────────────────
   const finalChargesTotal = result.finalCharges.reduce(
     (sum, c) => sum + c.amount,
     0,
   );
-  if (result.finalCharges.length > 0) {
-    apt.priceAdjustments = [
-      ...apt.priceAdjustments,
-      ...result.finalCharges.map((c) => ({
-        id: c.id,
-        amount: c.amount,
-        reason: "other" as const,
-        description: `${c.label} (added at mark-ready)`,
-        addedBy: "Groomer",
-        addedAt: nowIso,
-        customerNotified: true,
-      })),
-    ];
-    apt.totalPrice = apt.totalPrice + finalChargesTotal;
-  }
-
-  // ── 4. Pet profile updates — push after-photos to visitPhotos ──────────
-  if (result.afterPhotos.length > 0) {
-    outer: for (const client of deps.clients) {
-      for (const pet of client.pets as Pet[]) {
-        if (pet.id !== apt.petId) continue;
-        const next = pet as Pet & { visitPhotos?: Pet["visitPhotos"] };
-        next.visitPhotos = [
-          ...(next.visitPhotos ?? []),
-          ...result.afterPhotos.map((url) => ({
-            url,
-            capturedAt: nowIso,
-            appointmentId: apt.id,
-            kind: "after" as const,
-          })),
-        ];
-        break outer;
-      }
-    }
-  }
 
   // ── 5. Release the station to needs-cleaning ───────────────────────────
   if (apt.stationId) {
@@ -408,10 +284,7 @@ export function applyMarkReadyResult(
   // nothing sent; ready-for-pickup triggers no automation either
   // (/api/grooming/appointments). Nothing is announced that did not happen.
 
-  return {
-    finalChargesTotal,
-    updatedTotal: apt.totalPrice,
-  };
+  return { finalChargesTotal };
 }
 
 export interface PaymentActionDeps {

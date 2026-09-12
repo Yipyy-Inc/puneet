@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useGroomingVisitWrites } from "@/hooks/use-grooming-visit-writes";
 import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import type { GroomingAppointment, GroomingStatus } from "@/types/grooming";
@@ -34,7 +35,6 @@ import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useClientRecord } from "@/lib/api/client";
 import {
   useRecordPayment,
-  useSaveAppointmentIntake,
   useSetGroomingAppointmentStatus,
 } from "@/lib/api/grooming-appointments";
 
@@ -85,7 +85,7 @@ export function CheckInBoard() {
 
   const { setStationStatus } = useGroomingStations();
   const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
-  const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const visit = useGroomingVisitWrites();
   const { mutate: recordPayment } = useRecordPayment();
   const { entriesForDate } = useGroomingWaitlist();
   const { recordEvent } = useLoyaltyEngine();
@@ -251,10 +251,8 @@ export function CheckInBoard() {
       setStationStatus,
       notify,
     });
-    saveIntake(
-      { appointmentId: next.id, ...summary.intakePatch },
-      { onError: (error) => toast.error(error.message) },
-    );
+    // The intake, the add-ons and surcharge as bill lines, and the photos.
+    void visit.checkIn(next, summary, result.beforePhotoFiles);
     recordStationAssignmentHistory(next, result.stationName, "You");
     next.status = "checked-in";
     const pet = activeAppt.petName;
@@ -296,8 +294,8 @@ export function CheckInBoard() {
       clients: ownerClients,
       setStationStatus,
       notify,
-      facilityName: "Yipyy",
     });
+    void visit.markReady(next, result);
     next.status = "ready-for-pickup";
     const pet = activeAppt.petName;
     patch(next, () => toast.success(`${pet} — Ready for Pickup`));
@@ -453,7 +451,6 @@ export function CheckInBoard() {
         open={dialog === "mark-ready"}
         onOpenChange={(o) => !o && closeDialog()}
         apt={dialog === "mark-ready" ? activeAppt : null}
-        facilityName="Yipyy"
         onConfirm={handleMarkReadyConfirm}
       />
       <PaymentDialog

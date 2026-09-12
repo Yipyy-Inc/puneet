@@ -30,7 +30,6 @@ import type {
   GroomingWaitlistStatus,
 } from "@/data/grooming-waitlist";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
-import { buildWaitlistOfferForEntry } from "@/lib/grooming-waitlist-offer";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -344,26 +343,29 @@ export function WaitlistPanel({
                             size="sm"
                             variant="outline"
                             className="h-8 gap-1.5"
-                            onClick={() => {
+                            onClick={async () => {
                               const [startTime, endTime] = (
                                 e.offeredSlot ?? "–"
                               ).split("–");
                               // Table 96 — expire this offer and hand the slot
-                              // to the next matching client.
-                              const next = expireAndOfferNext(e.id, {
-                                date: e.date,
-                                startTime: startTime || "",
-                                endTime: endTime || "",
-                                serviceName: e.serviceName,
-                              });
+                              // to the next matching client. Said once both
+                              // are saved; a refusal is reported by the write.
+                              // The next client is not messaged from here, so
+                              // the offer text is not shown as if it had gone.
+                              let next;
+                              try {
+                                next = await expireAndOfferNext(e.id, {
+                                  date: e.date,
+                                  startTime: startTime || "",
+                                  endTime: endTime || "",
+                                  serviceName: e.serviceName,
+                                });
+                              } catch {
+                                return;
+                              }
                               if (next) {
-                                const { message } = buildWaitlistOfferForEntry(
-                                  next,
-                                  { date: e.date, startTime: startTime || "" },
-                                );
                                 toast.info(
                                   `Offer to ${e.petName} expired — passed to ${next.petName}`,
-                                  { description: message },
                                 );
                               } else {
                                 toast.info(

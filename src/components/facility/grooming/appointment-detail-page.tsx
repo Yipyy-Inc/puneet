@@ -9,7 +9,6 @@ import {
   useRecordAppointmentHistory,
   useRemoveAppointmentAlert,
   useRecordPayment,
-  useSaveAppointmentIntake,
   useSetGroomingAppointmentStatus,
 } from "@/lib/api/grooming-appointments";
 import { bookingMutations } from "@/lib/api/booking";
@@ -65,6 +64,7 @@ import {
   Hourglass,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useGroomingVisitWrites } from "@/hooks/use-grooming-visit-writes";
 import { cn } from "@/lib/utils";
 import { groomingQueries, getEffectiveAlertNotes } from "@/lib/api/grooming";
 import { applyCheckInResult } from "@/lib/grooming/check-in-actions";
@@ -322,7 +322,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
   const { mutate: addNote } = useAddAppointmentNote();
   const { mutate: removeAlertNote } = useRemoveAppointmentAlert();
   const { mutate: recordTrail } = useRecordAppointmentHistory();
-  const { mutate: saveIntake } = useSaveAppointmentIntake();
+  const visit = useGroomingVisitWrites();
   const { mutate: recordPayment } = useRecordPayment();
   const { mutate: setAppointmentStatus } = useSetGroomingAppointmentStatus();
   const queryClient = useQueryClient();
@@ -662,24 +662,22 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       recordFieldChange("Matting Fee", null, `+$${result.mattedSurcharge}`);
     }
 
-    // All the side effects live in one place — apt mutations, station board
-    // update, pet visitPhoto write, alert-note promotion, add-on SMS.
+    // The screen's side effects in one place — the appointment object, the
+    // station board, alert-note promotion. What must survive is written below.
     const summary = applyCheckInResult(apt, result, {
       clients: ownerClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
     });
 
-    // The drop-off record. `applyCheckInResult` decides what it says; the write
-    // lives here because that module is not a component and cannot hold a hook.
-    saveIntake(
-      { appointmentId: apt.id, ...summary.intakePatch },
-      { onError: (error) => toast.error(error.message) },
-    );
+    // The drop-off record, the add-ons and surcharge as bill lines, and the
+    // photos. `applyCheckInResult` decides what they say; the writes live in
+    // a hook because that module is not a component.
+    void visit.checkIn(apt, summary, result.beforePhotoFiles);
 
     if (summary.newlyAddedAddOns.length > 0) {
       recordHistory(
-        `Add-ons added at check-in · ${summary.newlyAddedAddOns.join(", ")} (+$${summary.addedTotal})`,
+        `Add-ons added at check-in · ${summary.newlyAddedAddOns.join(", ")}`,
       );
     }
     for (const note of summary.promotedAlerts) {
@@ -697,8 +695,8 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       clients: ownerClients,
       setStationStatus,
       notify: (title, detail) => toast.message(title, detail),
-      facilityName: "Yipyy",
     });
+    void visit.markReady(apt, result);
     if (result.afterPhotos.length > 0) {
       recordHistory(
         `Post-groom photos · ${result.afterPhotos.length} captured`,
@@ -718,9 +716,7 @@ export function AppointmentDetailPage({ id }: { id: string }) {
       );
     }
     commitStatus("ready-for-pickup", () =>
-      toast.success(`${apt.petName} — Ready for Pickup`, {
-        description: `Total $${summary.updatedTotal.toFixed(2)}`,
-      }),
+      toast.success(`${apt.petName} — Ready for Pickup`),
     );
     setMarkReadyOpen(false);
   }
@@ -1800,7 +1796,6 @@ export function AppointmentDetailPage({ id }: { id: string }) {
         open={markReadyOpen}
         onOpenChange={setMarkReadyOpen}
         apt={apt}
-        facilityName="Yipyy"
         onConfirm={handleMarkReadyConfirm}
       />
       {(() => {

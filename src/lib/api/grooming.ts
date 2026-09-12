@@ -14,10 +14,8 @@ import { groomingProducts, inventoryOrders } from "@/data/grooming";
 import type { CustomerPackageRecord } from "@/data/customer-packages";
 import type { PetNote } from "@/types/pet";
 import type { Note } from "@/types/tags";
-import { petServicePricing } from "@/data/grooming-pet-pricing";
 import { groomingPetPreferences } from "@/data/grooming-pet-preferences";
 import type { GroomingPetPreference } from "@/data/grooming-pet-preferences";
-import { loadCustomPetPricingOverrides } from "@/lib/grooming-pet-pricing-store";
 import type {
   GroomingAppointment,
   Stylist,
@@ -438,47 +436,26 @@ export const groomingQueries = {
     queryKey: ["pet-notes", "client", clientId] as const,
     queryFn: () => fetchProfileNotes("client", clientId),
   }),
+  // ── NO PER-PET PRICES, UNTIL THERE IS A TABLE FOR THEM ────────────────
+  //
+  // These merged a fixture with a localStorage store. The fixture priced pet
+  // 1's full groom at $95 and pet 14's bath at $42 — and pet refs are real,
+  // so the booking form priced two real dogs from sample data; the store kept
+  // "Save this price for {pet}" in one browser, which the server never saw.
+  // The rate engine still takes the list, so a real one can fill it.
   petServicePricing: (petId: number) => ({
     queryKey: ["pet-service-pricing", petId] as const,
-    queryFn: async () => {
-      const local = loadCustomPetPricingOverrides();
-      return mergePetServicePricing(petServicePricing, local).filter(
-        (p) => p.petId === petId,
-      ) as PetServicePricingOverride[];
-    },
+    queryFn: async (): Promise<PetServicePricingOverride[]> => [],
   }),
   allPetServicePricing: () => ({
     queryKey: ["pet-service-pricing"] as const,
-    queryFn: async () => {
-      const local = loadCustomPetPricingOverrides();
-      return mergePetServicePricing(
-        petServicePricing,
-        local,
-      ) as PetServicePricingOverride[];
-    },
+    queryFn: async (): Promise<PetServicePricingOverride[]> => [],
   }),
   petPreferences: () => ({
     queryKey: ["grooming", "pet-preferences"] as const,
     queryFn: async () => groomingPetPreferences as GroomingPetPreference[],
   }),
 };
-
-/**
- * Combine the static mock catalogue with any localStorage-saved overrides.
- * Local entries replace catalogue entries for the same pet/package combo —
- * the user just saved a new price, so it should win on the next render.
- */
-function mergePetServicePricing(
-  base: PetServicePricingOverride[],
-  local: PetServicePricingOverride[],
-): PetServicePricingOverride[] {
-  if (local.length === 0) return base;
-  const localKeys = new Set(local.map((o) => `${o.petId}:${o.packageId}`));
-  const filtered = base.filter(
-    (o) => !localKeys.has(`${o.petId}:${o.packageId}`),
-  );
-  return [...filtered, ...local];
-}
 
 /**
  * Resolve the effective price + duration for a given pet/package/stylist

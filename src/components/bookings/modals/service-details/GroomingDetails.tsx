@@ -39,7 +39,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -152,10 +151,6 @@ interface GroomingDetailsProps {
   setManualPrice: (price: number | undefined) => void;
   manualDuration: number | undefined;
   setManualDuration: (mins: number | undefined) => void;
-  /** When true, the manual price is persisted as the pet's per-service rate
-   *  on submit so future bookings pre-fill with it. */
-  savePriceToPet: boolean;
-  setSavePriceToPet: (next: boolean) => void;
   /** Selected grooming add-on ids, from the facility's `grooming_add_ons`. */
   selectedGroomingAddOnIds: string[];
   setSelectedGroomingAddOnIds: (ids: string[]) => void;
@@ -195,8 +190,6 @@ export function GroomingDetails({
   setManualPrice,
   manualDuration,
   setManualDuration,
-  savePriceToPet,
-  setSavePriceToPet,
   selectedGroomingAddOnIds,
   setSelectedGroomingAddOnIds,
   autoAttachedAddOnIds,
@@ -221,8 +214,6 @@ export function GroomingDetails({
         setManualPrice={setManualPrice}
         manualDuration={manualDuration}
         setManualDuration={setManualDuration}
-        savePriceToPet={savePriceToPet}
-        setSavePriceToPet={setSavePriceToPet}
       />
     );
   }
@@ -277,8 +268,6 @@ function GroomingService({
   setManualPrice,
   manualDuration,
   setManualDuration,
-  savePriceToPet,
-  setSavePriceToPet,
 }: {
   selectedPackageId: string;
   onSelectPackage: (id: string) => void;
@@ -296,8 +285,6 @@ function GroomingService({
   setManualPrice: (price: number | undefined) => void;
   manualDuration: number | undefined;
   setManualDuration: (mins: number | undefined) => void;
-  savePriceToPet: boolean;
-  setSavePriceToPet: (next: boolean) => void;
 }) {
   const t = useShellText("booking");
   return (
@@ -344,8 +331,6 @@ function GroomingService({
             setManualPrice={setManualPrice}
             manualDuration={manualDuration}
             setManualDuration={setManualDuration}
-            savePriceToPet={savePriceToPet}
-            setSavePriceToPet={setSavePriceToPet}
           />
         </>
       ) : (
@@ -1034,8 +1019,6 @@ function GroomingPriceOverride({
   setManualPrice,
   manualDuration,
   setManualDuration,
-  savePriceToPet,
-  setSavePriceToPet,
 }: {
   selectedPackageId: string;
   selectedPets: Pet[];
@@ -1044,8 +1027,6 @@ function GroomingPriceOverride({
   setManualPrice: (price: number | undefined) => void;
   manualDuration: number | undefined;
   setManualDuration: (mins: number | undefined) => void;
-  savePriceToPet: boolean;
-  setSavePriceToPet: (next: boolean) => void;
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -1158,32 +1139,6 @@ function GroomingPriceOverride({
             )}
         </div>
       </div>
-
-      {/* Save-to-pet — only enabled when the user actually changed something,
-          and the pet has a real id (drafted clients get negative ids). */}
-      <label
-        className={cn(
-          "mt-3 flex items-center gap-2 text-[11px]",
-          (manualPrice === undefined && manualDuration === undefined) ||
-            primaryPet.id < 0
-            ? "opacity-50"
-            : "",
-        )}
-      >
-        <Checkbox
-          checked={savePriceToPet}
-          disabled={
-            (manualPrice === undefined && manualDuration === undefined) ||
-            primaryPet.id < 0
-          }
-          onCheckedChange={(v) => setSavePriceToPet(!!v)}
-        />
-        <span>
-          {t("savePriceAsPetRate")
-            .replace("{pet}", primaryPet.name)
-            .replace("{package}", selectedPackage!.name)}
-        </span>
-      </label>
     </div>
   );
 }

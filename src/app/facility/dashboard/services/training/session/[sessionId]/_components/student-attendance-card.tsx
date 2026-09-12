@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { hasMessagingProfile } from "@/lib/messaging-profile";
-import { isClientBlocked } from "@/lib/blocked-clients";
 import type { Enrollment } from "@/types/training";
 import type { StudentBriefingRow } from "@/lib/training-pre-session";
 import type { AttendanceMark } from "./session-view-types";
@@ -297,9 +295,9 @@ export function StudentAttendanceCard({
               module (and not blocked). */}
             {row.vaccineWarning.hasWarning &&
               enrollment &&
-              hasMessagingProfile(enrollment.ownerId) &&
-              !isClientBlocked(enrollment.ownerId) && (
+              Boolean(enrollment.ownerEmail || enrollment.ownerPhone) && (
                 <RequestRecordsButton
+                  ownerRef={enrollment.ownerId}
                   ownerName={enrollment.ownerName}
                   ownerEmail={enrollment.ownerEmail || undefined}
                   ownerPhone={enrollment.ownerPhone || undefined}

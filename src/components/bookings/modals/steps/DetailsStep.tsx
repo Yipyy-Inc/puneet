@@ -102,9 +102,6 @@ interface DetailsStepProps {
   setGroomingManualPrice?: (price: number | undefined) => void;
   groomingManualDuration?: number;
   setGroomingManualDuration?: (mins: number | undefined) => void;
-  /** Grooming-only: when true, persist the manual price as a per-pet override. */
-  groomingSavePriceToPet?: boolean;
-  setGroomingSavePriceToPet?: (next: boolean) => void;
   /** Grooming-only: full list of selected grooming-specific add-on ids. */
   groomingSelectedAddOnIds?: string[];
   setGroomingSelectedAddOnIds?: (ids: string[]) => void;
@@ -167,8 +164,6 @@ export function DetailsStep({
   setGroomingManualPrice,
   groomingManualDuration,
   setGroomingManualDuration,
-  groomingSavePriceToPet,
-  setGroomingSavePriceToPet,
   groomingSelectedAddOnIds,
   setGroomingSelectedAddOnIds,
   groomingAutoAttachedAddOnIds,
@@ -276,8 +271,6 @@ export function DetailsStep({
           setManualPrice={setGroomingManualPrice ?? (() => {})}
           manualDuration={groomingManualDuration}
           setManualDuration={setGroomingManualDuration ?? (() => {})}
-          savePriceToPet={groomingSavePriceToPet ?? false}
-          setSavePriceToPet={setGroomingSavePriceToPet ?? (() => {})}
           selectedGroomingAddOnIds={groomingSelectedAddOnIds ?? []}
           setSelectedGroomingAddOnIds={
             setGroomingSelectedAddOnIds ?? (() => {})
