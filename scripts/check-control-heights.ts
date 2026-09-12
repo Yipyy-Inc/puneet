@@ -200,10 +200,6 @@ const BASELINE = new Map<string, number>([
     "src/app/facility/dashboard/services/training/students/_components/training-profile-packages-panel.tsx",
     2,
   ],
-  [
-    "src/app/facility/dashboard/services/training/students/_components/training-profile-report-cards.tsx",
-    4,
-  ],
   ["src/app/facility/dashboard/staff/_components/access-tab.tsx", 4],
   ["src/app/facility/dashboard/staff/_components/offboarding-tab.tsx", 2],
   [

@@ -726,10 +726,3 @@ export const trainingReportCardRecords: TrainingReportCard[] =
       viewedByOwner: seed.viewedByOwner,
     };
   }).filter((c): c is TrainingReportCard => c !== null);
-
-/** Per-pet helper — used by the Report Cards tab on a pet's profile. */
-export function getReportCardsForPet(petId: number): TrainingReportCard[] {
-  return trainingReportCardRecords
-    .filter((r) => r.petId === petId)
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}

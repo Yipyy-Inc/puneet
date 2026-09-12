@@ -13736,3 +13736,36 @@ Removed or corrected as untrue:
 My Pets tab (`clientTrainingPackagesForClient`) still read the fixture; the
 now-unused `markRenewalReminderSent`, `fanOutClientTrainingPackageUpsert` and
 `trainingQueries.clientTrainingPackagesForPet` go with them.
+
+## 2026-09-12 — a trainer's Report Cards tab lists the dog's real cards
+
+The Report Cards tab on a student's training profile read
+`getReportCardsForPet`, cards the training fixture invented from fixture
+enrolments. "Save assessment" and "Cancel schedule" rewrote the query cache
+and toasted; "Send / Schedule" opened `ReportCardSendDialog`, which did the
+same while telling the trainer "Email + portal notification go out now".
+Nothing reached `report_cards`. The tab reads `reportCardQueries.byPet` now,
+keeps the training cards, and shows what the owner reads — the written
+sections, photos, delivery, the owner's rating and reply — with a link to
+Report cards, where a card is written, published and discarded. The dialog is
+deleted, and the empty state no longer says a card is drafted after every
+session.
+
+**What a real training card does not have:** the fixture carried attendance
+counts, exercises with star ratings, homework and a training level.
+`report_cards` has no such columns — a training card is the facility's
+generic card, `input` plus the generated prose — so the tab does not show
+them, and there is no staff edit of a card's text or schedule to put behind
+an Edit button.
+
+**Still open:**
+
+- The customer portal's training Report Cards tab
+  (`customer-report-cards-tab.tsx`) reads `trainingQueries.allReportCards()`
+  and fakes the owner's favourite, reply and rating with
+  `fanOutReportCardUpsert`; the real owner writes already exist on
+  `/customer/report-cards`.
+- Completing a session (`session-view-save.ts`) puts drafted fixture cards
+  into the query cache only.
+- The level and theme tables in `lib/training-report-cards.ts` now serve only
+  those two.
