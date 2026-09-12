@@ -14,8 +14,8 @@ import { GroomingWaitlistProvider } from "@/hooks/use-grooming-waitlist";
 
 /**
  * `audience` says who is reading: the customer portal passes "customer", so a
- * customer is shown the services their facility OFFERS (a projection without
- * the facility's own notes) rather than asking for staff settings they
+ * customer is shown the services and the mobile grooming their facility OFFERS
+ * (projections without the facility's own notes, vans or staff schedules) rather than asking for staff settings they
  * cannot read. Every other portal is staff.
  */
 export function SettingsProviderWrapper({
@@ -31,7 +31,7 @@ export function SettingsProviderWrapper({
         <RoomsProvider>
           <DaycareAreasProvider>
             <GroomingStationsProvider>
-              <MobileGroomingProvider>
+              <MobileGroomingProvider audience={audience}>
                 <GroomingWaitlistProvider>{children}</GroomingWaitlistProvider>
               </MobileGroomingProvider>
             </GroomingStationsProvider>

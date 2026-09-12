@@ -15,7 +15,9 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { CalendarClock, Plus, X } from "lucide-react";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { facilityStaff } from "@/data/facility-staff";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
+import { NO_ITEMS } from "@/lib/no-items";
 import { DAY_SHORT } from "@/lib/service-areas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,18 +40,25 @@ export function CertainAreaForCertainDaysPanel() {
     setStaffDateOverride,
   } = useMobileGrooming();
 
+  // The facility's own groomers, keyed by staff id — the key the booking
+  // dialog looks a schedule up by. They were a fixture of invented staff.
+  const { data: stylistsData } = useQuery(groomingQueries.stylists());
   const groomers = useMemo(
-    () => facilityStaff.filter((s) => s.primaryRole === "groomer"),
-    [],
+    () =>
+      (stylistsData ?? NO_ITEMS)
+        .filter((s) => s.status !== "inactive")
+        .map((s) => ({ id: s.staffId ?? s.id, name: s.name })),
+    [stylistsData],
   );
   const activeAreas = useMemo(
     () => serviceAreas.filter((a) => a.active),
     [serviceAreas],
   );
 
-  const [selectedStaffId, setSelectedStaffId] = useState<string>(
-    groomers[0]?.id ?? "",
-  );
+  // The groomers arrive after the first render, so the first of them is the
+  // pick until somebody chooses.
+  const [pickedStaffId, setSelectedStaffId] = useState<string>("");
+  const selectedStaffId = pickedStaffId || groomers[0]?.id || "";
   const [overrideDate, setOverrideDate] = useState<string>("");
   const [overrideAreaId, setOverrideAreaId] = useState<string>("");
 
@@ -70,34 +79,52 @@ export function CertainAreaForCertainDaysPanel() {
     return activeAreas.find((a) => a.id === areaId)?.color;
   }
 
-  function applyWeeklyChange(dow: number, raw: string) {
+  // Each change is saved to the facility's settings before it says so — it
+  // was localStorage (hooks/use-mobile-grooming.tsx).
+  async function saved(write: Promise<void>): Promise<boolean> {
+    try {
+      await write;
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }
+
+  async function applyWeeklyChange(dow: number, raw: string) {
     const next = raw === NO_AREA_VALUE ? null : raw;
-    setStaffWeeklyDay(selectedStaffId, dow, next);
+    if (!(await saved(setStaffWeeklyDay(selectedStaffId, dow, next)))) return;
     toast.success(
       next === null
-        ? `${selectedStaff?.firstName ?? "Staff"} is off on ${DAY_SHORT[dow]}s`
+        ? `${selectedStaff?.name ?? "Staff"} is off on ${DAY_SHORT[dow]}s`
         : `${DAY_SHORT[dow]}s set to ${areaName(next)}`,
     );
   }
 
-  function addOverride() {
+  async function addOverride() {
     if (!overrideDate || !overrideAreaId) {
       toast.error("Pick a date and an area to override");
       return;
     }
     const next = overrideAreaId === NO_AREA_VALUE ? null : overrideAreaId;
-    setStaffDateOverride(selectedStaffId, overrideDate, next);
+    if (
+      !(await saved(setStaffDateOverride(selectedStaffId, overrideDate, next)))
+    )
+      return;
     toast.success(
       next === null
-        ? `Marked ${overrideDate} as off for ${selectedStaff?.firstName ?? "staff"}`
+        ? `Marked ${overrideDate} as off for ${selectedStaff?.name ?? "staff"}`
         : `Override saved: ${overrideDate} → ${areaName(next)}`,
     );
     setOverrideDate("");
     setOverrideAreaId("");
   }
 
-  function clearOverride(dateStr: string) {
-    setStaffDateOverride(selectedStaffId, dateStr, undefined);
+  async function clearOverride(dateStr: string) {
+    if (
+      !(await saved(setStaffDateOverride(selectedStaffId, dateStr, undefined)))
+    )
+      return;
     toast.success(`Override cleared for ${dateStr}`);
   }
 
@@ -126,7 +153,7 @@ export function CertainAreaForCertainDaysPanel() {
           </span>
           <Switch
             checked={certainAreaEnabled}
-            onCheckedChange={setCertainAreaEnabled}
+            onCheckedChange={(v) => void saved(setCertainAreaEnabled(v))}
             aria-label="Toggle Certain Area for Certain Days"
           />
         </div>
@@ -153,7 +180,7 @@ export function CertainAreaForCertainDaysPanel() {
                 <SelectContent>
                   {groomers.map((g) => (
                     <SelectItem key={g.id} value={g.id} className="text-xs">
-                      {g.firstName} {g.lastName}
+                      {g.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

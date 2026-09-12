@@ -12161,6 +12161,10 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: Json;
       };
+      offered_mobile_grooming: {
+        Args: { p_facility_id: string };
+        Returns: Json;
+      };
       open_payment_intent: {
         Args: {
           p_amount_cents: number;

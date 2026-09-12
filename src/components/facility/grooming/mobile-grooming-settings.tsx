@@ -35,14 +35,15 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
-import { facilityStaff } from "@/data/facility-staff";
+import { useQuery } from "@tanstack/react-query";
+import { groomingQueries } from "@/lib/api/grooming";
+import { NO_ITEMS } from "@/lib/no-items";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { MobileGroomingVan, ServiceArea } from "@/types/grooming";
 import { formatDaysOfWeek } from "@/lib/service-areas";
 import { CertainAreaForCertainDaysPanel } from "./certain-area-for-certain-days-panel";
 import { ZoneAndTaxSettingsPanel } from "./zone-and-tax-settings-panel";
 import { ServiceAreaDialog } from "./service-area-dialog";
-
-const FACILITY_ID = 11;
 
 // Same palette the service-area dialog uses — keeps the swatch set consistent
 // across the create flow and the inline recolor on each list row.
@@ -97,7 +98,7 @@ function ColorPalette({
 function blankVan(): MobileGroomingVan {
   return {
     id: `van-${Date.now()}`,
-    facilityId: FACILITY_ID,
+    facilityId: 0,
     name: "",
     licensePlate: "",
     homeBaseAddress: "",
@@ -124,6 +125,7 @@ export function MobileGroomingSettings() {
     vans,
     serviceAreas,
     arrivalWindowMinutes,
+    isPending,
     setEnabled,
     setArrivalWindowMinutes,
     addVan,
@@ -142,7 +144,26 @@ export function MobileGroomingSettings() {
   const [areaDialogOpen, setAreaDialogOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<ServiceArea | null>(null);
 
-  const groomers = facilityStaff.filter((s) => s.primaryRole === "groomer");
+  // The facility's own groomers — a van's driver was picked from a fixture of
+  // invented staff.
+  const { data: stylistsData } = useQuery(groomingQueries.stylists());
+  const groomers = (stylistsData ?? NO_ITEMS).filter(
+    (s) => s.status !== "inactive",
+  );
+  // The custom arrival window is saved when the field is left, not per key.
+  const [windowDraft, setWindowDraft] = useState<string | null>(null);
+
+  // Every change is saved to the facility's settings before it says so — it
+  // was localStorage (hooks/use-mobile-grooming.tsx).
+  function run(write: Promise<void>, done?: string) {
+    write
+      .then(() => {
+        if (done) toast.success(done);
+      })
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : String(error)),
+      );
+  }
 
   function openAdd() {
     setEditing(null);
@@ -154,19 +175,19 @@ export function MobileGroomingSettings() {
     setForm({ ...v });
     setDialogOpen(true);
   }
-  function save() {
+  async function save() {
     if (!form.name.trim()) {
       toast.error("Van name is required");
       return;
     }
     const synced = syncAssignedIds(form);
-    if (editing) {
-      updateVan(synced);
-      toast.success("Van updated");
-    } else {
-      addVan(synced);
-      toast.success("Van added");
+    try {
+      await (editing ? updateVan(synced) : addVan(synced));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
     }
+    toast.success(editing ? "Van updated" : "Van added");
     setDialogOpen(false);
   }
 
@@ -181,14 +202,14 @@ export function MobileGroomingSettings() {
     setAreaDialogOpen(true);
   }
   function handleAreaSave(next: ServiceArea) {
-    if (editingArea) {
-      updateServiceArea(next);
-      toast.success("Service area updated");
-    } else {
-      addServiceArea(next);
-      toast.success("Service area added");
-    }
+    run(
+      editingArea ? updateServiceArea(next) : addServiceArea(next),
+      editingArea ? "Service area updated" : "Service area added",
+    );
   }
+
+  // Not "switched off" while the facility's setting loads (§5s).
+  if (isPending) return <Skeleton className="h-48 w-full rounded-2xl" />;
 
   return (
     <div className="space-y-6">
@@ -212,7 +233,10 @@ export function MobileGroomingSettings() {
               each van shows as a column on the day-view calendar.
             </p>
           </div>
-          <Switch checked={enabled} onCheckedChange={setEnabled} />
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => run(setEnabled(v))}
+          />
         </CardContent>
       </Card>
 
@@ -233,7 +257,7 @@ export function MobileGroomingSettings() {
                 <button
                   key={m}
                   type="button"
-                  onClick={() => setArrivalWindowMinutes(m)}
+                  onClick={() => run(setArrivalWindowMinutes(m))}
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                     arrivalWindowMinutes === m
@@ -249,17 +273,27 @@ export function MobileGroomingSettings() {
                 </button>
               ))}
               <div className="ml-auto flex items-center gap-1.5 text-xs">
-                <Label className="text-muted-foreground text-[10px] uppercase">
+                <Label
+                  htmlFor="arrival-window-minutes"
+                  className="text-muted-foreground text-[10px] uppercase"
+                >
                   Custom
                 </Label>
                 <Input
+                  id="arrival-window-minutes"
                   type="number"
                   min={0}
                   max={240}
-                  value={arrivalWindowMinutes}
-                  onChange={(e) =>
-                    setArrivalWindowMinutes(Number(e.target.value) || 0)
-                  }
+                  value={windowDraft ?? arrivalWindowMinutes}
+                  onChange={(e) => setWindowDraft(e.target.value)}
+                  onBlur={() => {
+                    if (windowDraft === null) return;
+                    const next = Number(windowDraft) || 0;
+                    setWindowDraft(null);
+                    if (next !== arrivalWindowMinutes) {
+                      run(setArrivalWindowMinutes(next));
+                    }
+                  }}
                   className="h-8 w-20 text-sm"
                 />
                 <span className="text-muted-foreground">min</span>
@@ -363,7 +397,7 @@ export function MobileGroomingSettings() {
                     <div className="flex items-center gap-2 pt-1">
                       <Switch
                         checked={v.active && v.assignedStaffIds.length > 0}
-                        onCheckedChange={() => toggleVanActive(v.id)}
+                        onCheckedChange={() => run(toggleVanActive(v.id))}
                         disabled={v.assignedStaffIds.length === 0}
                         className="scale-75"
                       />
@@ -380,10 +414,7 @@ export function MobileGroomingSettings() {
                         variant="ghost"
                         size="sm"
                         className="text-destructive/70 hover:text-destructive"
-                        onClick={() => {
-                          deleteVan(v.id);
-                          toast.success("Van removed");
-                        }}
+                        onClick={() => run(deleteVan(v.id), "Van removed")}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -508,10 +539,12 @@ export function MobileGroomingSettings() {
                           >
                             <ColorPalette
                               value={color}
-                              onChange={(nextColor) => {
-                                updateServiceArea({ ...a, color: nextColor });
-                                toast.success(`${a.name || "Area"} recolored`);
-                              }}
+                              onChange={(nextColor) =>
+                                run(
+                                  updateServiceArea({ ...a, color: nextColor }),
+                                  `${a.name || "Area"} recolored`,
+                                )
+                              }
                             />
                           </PopoverContent>
                         </Popover>
@@ -590,7 +623,9 @@ export function MobileGroomingSettings() {
                       <div className="flex items-center gap-2 border-t border-dashed pt-3">
                         <Switch
                           checked={a.active}
-                          onCheckedChange={() => toggleServiceAreaActive(a.id)}
+                          onCheckedChange={() =>
+                            run(toggleServiceAreaActive(a.id))
+                          }
                           className="scale-75"
                         />
                         <Button
@@ -606,10 +641,9 @@ export function MobileGroomingSettings() {
                           variant="ghost"
                           size="icon"
                           className="text-destructive/70 hover:text-destructive size-8"
-                          onClick={() => {
-                            deleteServiceArea(a.id);
-                            toast.success("Service area removed");
-                          }}
+                          onClick={() =>
+                            run(deleteServiceArea(a.id), "Service area removed")
+                          }
                           aria-label="Delete service area"
                         >
                           <Trash2 className="size-3.5" />
@@ -711,7 +745,7 @@ export function MobileGroomingSettings() {
                   <option value="">Choose a primary driver…</option>
                   {groomers.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.firstName} {s.lastName}
+                      {s.name}
                     </option>
                   ))}
                 </select>
@@ -742,7 +776,7 @@ export function MobileGroomingSettings() {
                     .filter((s) => s.id !== form.primaryDriverId)
                     .map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.firstName} {s.lastName}
+                        {s.name}
                       </option>
                     ))}
                 </select>
