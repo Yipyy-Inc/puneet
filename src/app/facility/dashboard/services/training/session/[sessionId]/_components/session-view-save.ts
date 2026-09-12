@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { TrainerNote, TrainingSession } from "@/types/training";
+import type { TrainingSession } from "@/types/training";
 import type {
   SessionAttendance,
   TrainingEnrollment,
@@ -156,25 +156,8 @@ export function saveSession(input: SaveSessionInput): PresentStudentSummary[] {
       bumpSeriesEnrollmentProgress(queryClient, seriesEnrollment.id);
     }
 
-    // Per-student trainer-only note — saves to the student's Notes tab.
-    if (perStudent) {
-      const note: TrainerNote = {
-        id: `note-${row.enrollmentId}-${session.id}`,
-        enrollmentId: row.enrollmentId,
-        petId: row.petId,
-        petName: row.petName,
-        classId: session.classId,
-        className: session.className,
-        sessionId: session.id,
-        trainerId,
-        trainerName,
-        date: session.date,
-        note: perStudent,
-        category: "general",
-        isPrivate: true,
-      };
-      fanOutTrainerNote(queryClient, note);
-    }
+    // The per-student trainer note is written by the session screen, to
+    // training_notes (persistSession) — it was put in the query cache here.
 
     presentSummary.push({
       classEnrollmentId: row.enrollmentId,
@@ -340,33 +323,6 @@ function fanOutAttendance(
       next[idx] = record;
       return next;
     });
-  });
-}
-
-function fanOutTrainerNote(queryClient: QueryClient, note: TrainerNote): void {
-  const cache = queryClient.getQueryCache();
-  cache
-    .findAll({ queryKey: trainingQueries.trainerNotes().queryKey })
-    .forEach((query) => {
-      queryClient.setQueryData<TrainerNote[]>(query.queryKey, (prev = []) => {
-        const idx = prev.findIndex((n) => n.id === note.id);
-        if (idx === -1) return [note, ...prev];
-        const next = prev.slice();
-        next[idx] = note;
-        return next;
-      });
-    });
-  // Per-enrollment note cache, if it's been populated.
-  const perEnrollmentKey = trainingQueries.notesByEnrollment(
-    note.enrollmentId,
-  ).queryKey;
-  queryClient.setQueryData<TrainerNote[]>(perEnrollmentKey, (prev) => {
-    if (!prev) return prev;
-    const idx = prev.findIndex((n) => n.id === note.id);
-    if (idx === -1) return [note, ...prev];
-    const next = prev.slice();
-    next[idx] = note;
-    return next;
   });
 }
 

@@ -14,7 +14,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +43,11 @@ import {
   Send,
   StickyNote,
 } from "lucide-react";
-import { trainingQueries } from "@/lib/api/training";
+import { useTrainingNoteMutations } from "@/lib/api/training-notes";
 import { useMessageClient } from "@/lib/api/client";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { HomeworkEditDialog } from "@/components/facility/training/homework-edit-dialog";
-import type { TrainerNote, TrainerNoteCategory } from "@/types/training";
+import type { TrainerNoteCategory } from "@/types/training";
 
 interface Props {
   petId: number;
@@ -181,48 +180,32 @@ function AddNoteDialog({
   petId: number;
   petName: string;
 }) {
-  const queryClient = useQueryClient();
+  const { create } = useTrainingNoteMutations();
   const [note, setNote] = useState("");
   const [category, setCategory] = useState<TrainerNoteCategory>("general");
   const [isPrivate, setIsPrivate] = useState(true);
   const [pinToProfile, setPinToProfile] = useState(false);
 
-  function handleSave() {
+  // It wrote the note into the query cache over the fixture; it is a
+  // training_notes row now, and the pin clears the last one server-side.
+  async function handleSave() {
     const trimmed = note.trim();
     if (!trimmed) {
       toast.error("Note can't be empty.");
       return;
     }
-    const todayISO = new Date().toISOString().split("T")[0]!;
-    const nowISO = new Date().toISOString();
-    const record: TrainerNote = {
-      id: `note-${Date.now()}`,
-      enrollmentId: "",
-      petId,
-      petName,
-      classId: "",
-      className: "",
-      trainerId: "trainer-001",
-      trainerName: "Staff",
-      date: todayISO,
-      note: trimmed,
-      category,
-      isPrivate,
-      isPinnedToProfile: pinToProfile,
-      pinnedAtISO: pinToProfile ? nowISO : undefined,
-    };
-    const key = trainingQueries.trainerNotes().queryKey;
-    queryClient.setQueryData<TrainerNote[]>(key, (prev = []) => {
-      // Only one pin per pet — clear any prior pin when this one is pinned.
-      const next = pinToProfile
-        ? prev.map((n) =>
-            n.petId === petId && n.isPinnedToProfile
-              ? { ...n, isPinnedToProfile: false, pinnedAtISO: undefined }
-              : n,
-          )
-        : prev;
-      return [record, ...next];
-    });
+    try {
+      await create.mutateAsync({
+        petRef: petId,
+        note: trimmed,
+        category,
+        isPrivate,
+        isPinnedToProfile: pinToProfile,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+      return;
+    }
     toast.success(
       pinToProfile
         ? "Note added and pinned to the profile."
@@ -313,7 +296,7 @@ function AddNoteDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!note.trim()}
+            disabled={create.isPending || !note.trim()}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
             Add note

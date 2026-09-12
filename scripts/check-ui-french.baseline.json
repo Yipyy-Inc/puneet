@@ -832,7 +832,7 @@
     "src/app/facility/dashboard/services/training/students/_components/training-profile-alert-banner.tsx": 7,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-history.tsx": 41,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx": 42,
-    "src/app/facility/dashboard/services/training/students/_components/training-profile-notes.tsx": 78,
+    "src/app/facility/dashboard/services/training/students/_components/training-profile-notes.tsx": 77,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-overview.tsx": 56,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-package-chips.tsx": 3,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-packages-panel.tsx": 17,

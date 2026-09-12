@@ -1,4 +1,4 @@
-import type { Trainer, TrainingPackage } from "@/types/training";
+import type { Trainer, TrainerNote, TrainingPackage } from "@/types/training";
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
@@ -108,4 +108,19 @@ export async function fetchTrainingPrograms(): Promise<TrainingPackage[]> {
     training_programs?: { value?: { programs?: TrainingPackage[] } };
   };
   return settings.training_programs?.value?.programs ?? [];
+}
+
+/**
+ * The trainers' notes, from `training_notes` — they were the `trainerNotes`
+ * fixture, written with setQueryData. Writes: useTrainingNoteMutations.
+ */
+export async function fetchTrainerNotes(): Promise<TrainerNote[]> {
+  const response = await fetch("/api/training/notes");
+  // Signed out, or a portal with no staff session, has no trainer notes to
+  // read: an empty list, not an error on every training screen.
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Could not load the training notes (${response.status})`);
+  }
+  return (await response.json()) as TrainerNote[];
 }

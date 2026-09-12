@@ -33,6 +33,7 @@ import {
   useTrainingCheckIn,
   useTrainingVisitUpdate,
 } from "@/lib/api/training-attendance";
+import { useTrainingNoteMutations } from "@/lib/api/training-notes";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   AttendanceMark,
@@ -48,6 +49,9 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const queryClient = useQueryClient();
   const { mutateAsync: checkIn } = useTrainingCheckIn();
   const { mutateAsync: updateVisit } = useTrainingVisitUpdate();
+  const {
+    create: { mutateAsync: createNote },
+  } = useTrainingNoteMutations();
   const { mutateAsync: markSession } = useMarkTrainingSession();
   const { t: tSession, fill: fillSession } = useStaffText("trainingSession");
   // The facility's own clients and their pets. This read `@/data/clients`
@@ -339,8 +343,30 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
         !r.enrollmentId.startsWith("drop-") &&
         ["present", "late"].includes(attendance[r.enrollmentId]?.status ?? ""),
     );
-    const results = await Promise.allSettled(
-      present.map(async (r) => {
+    // Each dog's own note is a training note on its profile — written here,
+    // with the visit, instead of into the query cache.
+    const noteWrites = rows
+      .filter(
+        (r) =>
+          (studentNotes[r.enrollmentId] ?? "").trim() &&
+          ["present", "late"].includes(
+            attendance[r.enrollmentId]?.status ?? "",
+          ),
+      )
+      .map((r) =>
+        createNote({
+          petRef: r.petId,
+          note: (studentNotes[r.enrollmentId] ?? "").trim(),
+          category: "general",
+          isPrivate: true,
+          enrollmentId: r.enrollmentId,
+          sessionId: session.id,
+          className: session.className,
+        }),
+      );
+    const results = await Promise.allSettled([
+      ...noteWrites,
+      ...present.map(async (r) => {
         const bookingRef = refs[String(r.petId)];
         if (!bookingRef)
           throw new Error(fillSession("noBooking", { pet: r.petName }));
@@ -351,7 +377,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
         await checkIn({ bookingRef });
         await updateVisit({ bookingRef, checkOut: true, notes });
       }),
-    );
+    ]);
     let held = true;
     try {
       await markSession({ sessionId: session.id, status: "completed" });
