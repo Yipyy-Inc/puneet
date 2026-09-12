@@ -13225,3 +13225,45 @@ Step 2 of the booking audit. `booking-form-saves` joins the gate.
   package "Book" buttons create nothing (their `onCreateBooking` is empty);
   a customer's card deposit is not charged; the form's estimate tax reads
   fixture facility 11.
+
+## 2026-09-12 — the booking page's other buttons
+
+Step 3 of the booking audit, the booking page. `booking-actions-truth` joins
+the nightly suite.
+
+- **Status rules are the facility's.** `BookingStatusSettings` saved into
+  fixture facility 11 in the browser (`saveBookingStatusConfig`, now deleted);
+  the booking page and the status dropdown read that fixture for every
+  facility, because `mappers/booking.ts` stamps `facilityId: 11`. They live in
+  `facility_settings` as `booking_status_rules` (lib/settings/booking-statuses).
+  A rule aimed at a CUSTOM status is skipped: `bookings.status` is an enum.
+  Custom statuses are saved as labels for the flow diagram; the dropdown no
+  longer offers them, since the database refused every one.
+- **The status dropdown** toasted "Status updated" before its caller wrote;
+  the caller reports the outcome now.
+- **Email invoice / SMS link** send the `/pay/{ref}` link through
+  `lib/messaging/send` (`POST /api/bookings/[ref]/pay-link`), after the opt-out
+  list, and report `sent: false` with the reason — staging suppresses sends,
+  and a client may have no address.
+- **Mark as ready** writes `ready`; it ran the check-in rule on a checked-in
+  booking and changed nothing. **Finish without payment** falls back to
+  `completed` when no checkout rule is set (it did nothing, silently).
+- **Removed, because each claimed what it did not do:** the Care Sheet print
+  on non-boarding bookings ("Care sheet printed"), the QuickBooks resync
+  panel (an 800 ms timer, then "resync completed" — there is no QuickBooks
+  connection), Send/Resend estimate on a booking (estimates are their own
+  records now), and `InvoicePanel` + `AutoAppliedBenefits` +
+  `InvoiceActivityLog`: a booking carrying a fixture `invoice` blob showed
+  that blob's numbers; every booking shows the ledger breakdown now. The
+  "Confirm booking" on an estimate-sent booking writes the status instead of
+  toasting first.
+- **`apply_discount`** went inert with InvoicePanel, its only consumer (it
+  gated a discount on the fixture invoice). Baselined in
+  `check:inert-permissions` with that reason.
+- **599px:** the status settings card grew to its widest row inside the
+  settings grid (a grid item is `min-width: auto`); `min-w-0` on its root.
+- **Still open:** `mappers/booking.ts` still maps `facilityId: 11`, which the
+  booking modal's estimate tax and a few labels read; `StatusColorSettings`
+  beside the rules lists statuses the database does not have ("Checked out",
+  "Overdue", "Planned", "Refunded"); a pay-link send is not recorded in
+  `message_sends`.

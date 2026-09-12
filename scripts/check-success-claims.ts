@@ -177,13 +177,9 @@ const BASELINE = new Set<string>([
   "src/app/facility/settings/billing/_components/billing-self-service-view.tsx",
   "src/components/analytics/CustomReportsManager.tsx",
   "src/components/bookings/AbandonmentRecoverySettings.tsx",
-  "src/components/bookings/AutoAppliedBenefits.tsx",
   "src/components/bookings/BelongingsSection.tsx",
   "src/components/bookings/BookingActionBar.tsx",
-  "src/components/bookings/BookingStatusDropdown.tsx",
-  "src/components/bookings/InvoicePanel.tsx",
   "src/components/bookings/MedicationSection.tsx",
-  "src/components/bookings/SendEstimateModal.tsx",
   "src/components/bookings/UnfinishedBookingDetailSheet.tsx",
   "src/components/camera-integration/CameraIntegrationSettings.tsx",
   "src/components/custom-services/wizard/steps/YipyyGoConfigStep.tsx",
@@ -205,7 +201,6 @@ const BASELINE = new Set<string>([
   // so it resets when this page reloads", which is true and is the thing a
   // person actually reads.
   "src/components/facility/BookingRequestsPanel.tsx",
-  "src/components/facility/BookingStatusSettings.tsx",
   "src/components/facility/CareTaskSettings.tsx",
   "src/components/facility/DepartmentSettings.tsx",
   "src/components/facility/RouteView.tsx",

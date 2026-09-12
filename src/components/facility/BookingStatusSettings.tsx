@@ -28,7 +28,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { facilities, saveBookingStatusConfig } from "@/data/facilities";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useBookingStatusRules,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { BookingStatusRules } from "@/lib/settings/booking-statuses";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 
@@ -109,58 +114,7 @@ const BASE_SERVICE_OPTIONS: {
   { value: "grooming", labelKey: "svcGrooming" },
   { value: "training", labelKey: "svcTraining" },
   { value: "evaluation", labelKey: "svcEvaluation" },
-  // french-ok: one facility's own custom service, shipped in a shared
-  // constant. §5q — a name the facility typed never passes through the
-  // locale layer. That it reaches every OTHER facility's dropdown is a
-  // separate defect, recorded in the debt map.
-  { value: "yodas-splash", name: "Yoda's Splash" },
-  { value: "paws-express", labelKey: "svcYipyyExpress" },
 ];
-
-const DEFAULT_IFTTT_RULES: IftttTransitionRule[] = [
-  {
-    id: "ifttt-grooming-checkin",
-    service: "grooming",
-    action: "onCheckIn",
-    currentStatus: "any",
-    targetStatus: "in_progress",
-    enabled: true,
-  },
-  {
-    id: "ifttt-yodas-checkin",
-    service: "yodas-splash",
-    action: "onCheckIn",
-    currentStatus: "any",
-    targetStatus: "in_progress",
-    enabled: true,
-  },
-  {
-    id: "ifttt-daycare-checkin",
-    service: "daycare",
-    action: "onCheckIn",
-    currentStatus: "any",
-    targetStatus: "checked_in",
-    enabled: true,
-  },
-  {
-    id: "ifttt-daycare-checkout",
-    service: "daycare",
-    action: "onCheckout",
-    currentStatus: "any",
-    targetStatus: "completed",
-    enabled: true,
-  },
-];
-
-const defaultFacility = facilities.find((f) => f.id === 11);
-const defaultConfig = defaultFacility?.bookingStatusConfig as
-  | {
-      customStatuses?: CustomStatus[];
-      autoTransitions?: AutoTransitions;
-      iftttTransitionRules?: IftttTransitionRule[];
-      advancedAutoTransitions?: IftttTransitionRule[];
-    }
-  | undefined;
 
 let _customId = 600;
 let _iftttRuleId = 1200;
@@ -178,30 +132,38 @@ const EVENT_ARROW_KEYS: Record<AutoTransitionAction, string> = {
   onCheckout: "arrowCheckout",
 };
 
+// ── WHERE THESE RULES LIVE ──────────────────────────────────────────────────
+//
+// In `facility_settings` (`booking_status_rules`) since 2026-09-12. Save
+// wrote them into fixture facility 11 in `src/data/facilities.ts` — an
+// assignment into an imported module, gone on reload — and the booking page
+// read them from there for every facility.
+//
+// Wrapper gates on the load; the editor seeds from props. A `useState`
+// initialiser runs once, so mounting before the facility's own rules arrive
+// would show the defaults and write them back on the first Save.
 export function BookingStatusSettings() {
+  const { rules, isPending } = useBookingStatusRules();
+  if (isPending) return <Skeleton className="h-96 w-full rounded-xl" />;
+  return <BookingStatusEditor initial={rules} />;
+}
+
+function BookingStatusEditor({ initial }: { initial: BookingStatusRules }) {
   const t = useSettingsText().section("booking-statuses");
   const { role } = useFacilityRole();
+  const saveSetting = useSaveFacilitySetting();
 
   const [showFlow, setShowFlow] = useState(true);
 
   const [customStatuses, setCustomStatuses] = useState<CustomStatus[]>(
-    (defaultConfig?.customStatuses as CustomStatus[]) ?? [],
+    initial.customStatuses,
   );
   const [autoTransitions, setAutoTransitions] = useState<AutoTransitions>(
-    (defaultConfig?.autoTransitions as AutoTransitions) ?? {
-      onDepositPaid: "confirmed",
-      onCheckIn: "checked_in",
-      onCheckout: "completed",
-      onPaymentComplete: "confirmed",
-    },
+    initial.autoTransitions,
   );
   const [iftttTransitionRules, setIftttTransitionRules] = useState<
     IftttTransitionRule[]
-  >(
-    (defaultConfig?.iftttTransitionRules as IftttTransitionRule[]) ??
-      (defaultConfig?.advancedAutoTransitions as IftttTransitionRule[]) ??
-      DEFAULT_IFTTT_RULES,
-  );
+  >(initial.iftttTransitionRules);
 
   const serviceOptions = (() => {
     const map = new Map<string, string>();
@@ -211,21 +173,6 @@ export function BookingStatusSettings() {
         option.value,
         option.labelKey ? t(option.labelKey) : (option.name ?? option.value),
       );
-    }
-
-    for (const location of defaultFacility?.locationsList ?? []) {
-      for (const service of location.services ?? []) {
-        if (!map.has(service)) {
-          map.set(
-            service,
-            service
-              .split(/[-_]/g)
-              .filter(Boolean)
-              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(" "),
-          );
-        }
-      }
     }
 
     return Array.from(map.entries()).map(([value, label]) => ({
@@ -344,20 +291,21 @@ export function BookingStatusSettings() {
       return;
     }
 
-    // The write itself moved to src/data/facilities.ts. It is the same
-    // assignment into the same imported fixture, but the React Compiler
-    // refuses one inside a component scope (react-hooks/immutability) and it
-    // has to stay for now: unlike care-tasks, this fixture IS re-read on every
-    // render by the booking detail page and BookingStatusDropdown, so removing
-    // it would break the edit within the session as well as after a reload.
-    // It still does not survive a reload — see the debt map.
-    saveBookingStatusConfig({
-      customStatuses,
-      autoTransitions,
-      iftttTransitionRules,
-      advancedAutoTransitions: iftttTransitionRules,
-    });
-    toast.success(t("savedToast"));
+    saveSetting.mutate(
+      {
+        domain: "booking_status_rules",
+        value: {
+          customStatuses,
+          autoTransitions,
+          iftttTransitionRules,
+        } satisfies BookingStatusRules,
+      },
+      {
+        onSuccess: () => toast.success(t("savedToast")),
+        onError: (error) =>
+          toast.error(t("saveFailed"), { description: error.message }),
+      },
+    );
   };
 
   if (role !== "owner" && role !== "manager") {
@@ -371,8 +319,10 @@ export function BookingStatusSettings() {
     );
   }
 
+  // min-w-0: a grid item is `min-width: auto`, so below lg this card grew to
+  // its widest row and the page scrolled sideways at 599px (§6 rule 7).
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div>
         <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
       </div>
@@ -713,8 +663,13 @@ export function BookingStatusSettings() {
 
       {/* Save */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} className="gap-1.5">
-          {t("save")}
+        <Button
+          onClick={handleSave}
+          className="gap-1.5"
+          disabled={saveSetting.isPending}
+          aria-busy={saveSetting.isPending}
+        >
+          {saveSetting.isPending ? t("saving") : t("save")}
         </Button>
       </div>
     </div>
@@ -737,13 +692,13 @@ function TransitionRule({
   const t = useSettingsText().section("booking-statuses");
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Zap className="text-muted-foreground size-3.5" />
         <span className="text-sm">{label}</span>
       </div>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="min-w-[180px]">
+        <SelectTrigger className="w-full sm:w-auto sm:min-w-[180px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

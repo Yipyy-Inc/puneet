@@ -667,3 +667,36 @@ export function useMarkBookingNoShow() {
     },
   });
 }
+
+/**
+ * Send the client the link to pay what their booking still owes, by email or
+ * SMS. The answer says whether it went: `sent: false` with a `detail` is a
+ * normal outcome — staging sends nothing, a client may have no address, or
+ * may have opted out — and the screen reports it rather than claiming a send.
+ */
+export function useSendPayLink() {
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+      channel: "email" | "sms";
+    }): Promise<{ sent: boolean; detail?: string }> => {
+      const response = await fetch(
+        `/api/bookings/${input.bookingRef}/pay-link`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: input.channel }),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        detail?: string;
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(body?.error ?? `Request failed (${response.status})`);
+      }
+      return { sent: Boolean(body?.sent), detail: body?.detail };
+    },
+  });
+}

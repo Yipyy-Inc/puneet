@@ -58,11 +58,14 @@ export interface BookingDetailActionBarProps {
   // Secondary
   onEdit: () => void;
   onAddItem: () => void;
-  onSendEstimate: () => void;
+  /** Offered only when given. Estimates are their own records now, sent from
+   *  the Estimates screen; the booking page no longer passes one. */
+  onSendEstimate?: () => void;
   onChargeDeposit: () => void;
   onTakePrepayment: () => void;
   onPrintInvoice: () => void;
-  onPrintCareSheet: () => void;
+  /** Offered only when given — only a boarding guest has a care sheet. */
+  onPrintCareSheet?: () => void;
   onEmailInvoice: () => void;
   onSmsLink: () => void;
 
@@ -168,7 +171,8 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
   const isCompleted = booking.status === "completed";
   const isOpenForEdits = !isCancelled && !isCompleted && !isPaid;
 
-  const showSendEstimate = invoice?.status === "estimate";
+  const showSendEstimate =
+    invoice?.status === "estimate" && Boolean(props.onSendEstimate);
   const showChargeDeposit =
     invoice?.status === "estimate" &&
     !isCancelled &&
@@ -331,10 +335,12 @@ export function BookingDetailActionBar(props: BookingDetailActionBarProps) {
               <FileText className="size-4" />
               Invoice / Receipt
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={props.onPrintCareSheet}>
-              <ClipboardList className="size-4" />
-              Care Sheet
-            </DropdownMenuItem>
+            {props.onPrintCareSheet && (
+              <DropdownMenuItem onClick={props.onPrintCareSheet}>
+                <ClipboardList className="size-4" />
+                Care Sheet
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

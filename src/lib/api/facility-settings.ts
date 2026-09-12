@@ -47,6 +47,7 @@ import type {
 } from "@/lib/settings/deposits";
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import type { EstimateSettings } from "@/lib/settings/estimates";
+import type { BookingStatusRules } from "@/lib/settings/booking-statuses";
 import type { IncidentReportingConfig } from "@/lib/settings/incidents";
 import type {
   AddOnCategory,
@@ -113,6 +114,8 @@ export interface FacilitySettings {
   vaccination_rules: SettingState<VaccinationRules>;
   /** How estimates are numbered, when they expire, who may accept one. */
   estimate_settings: SettingState<EstimateSettings>;
+  /** What a deposit, a check-in and a checkout do to a booking's status. */
+  booking_status_rules: SettingState<BookingStatusRules>;
   /** Who is told when an animal is hurt, and what a report must carry. */
   incident_reporting: SettingState<IncidentReportingConfig>;
   /** The extras this facility sells on a booking, and their categories. */
@@ -372,6 +375,20 @@ export function useVaccinationRules(): {
   return {
     rules: settings.vaccination_rules.value,
     configured: settings.vaccination_rules.configured,
+    isPending,
+  };
+}
+
+/** What a deposit, a check-in and a checkout do to this facility's bookings. */
+export function useBookingStatusRules(): {
+  rules: BookingStatusRules;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    rules: settings.booking_status_rules.value,
+    configured: settings.booking_status_rules.configured,
     isPending,
   };
 }

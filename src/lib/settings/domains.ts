@@ -52,6 +52,10 @@ import {
   estimateSettingsSchema,
 } from "@/lib/settings/estimates";
 import {
+  bookingStatusRulesSchema,
+  DEFAULT_BOOKING_STATUS_RULES,
+} from "@/lib/settings/booking-statuses";
+import {
   DEFAULT_INCIDENT_REPORTING,
   incidentReportingConfigSchema,
 } from "@/lib/settings/incidents";
@@ -370,6 +374,16 @@ export const SETTING_DOMAINS = {
   estimate_settings: {
     schema: estimateSettingsSchema,
     fallback: DEFAULT_ESTIMATE_SETTINGS,
+  },
+  // ── BOOKING STATUS RULES ────────────────────────────────────────────────
+  //
+  // What a deposit, a check-in and a checkout do to a booking's status. They
+  // lived on fixture facility 11 until 2026-09-12, so every facility used the
+  // demo facility's rules and an edit lasted until the tab reloaded. See the
+  // banner in lib/settings/booking-statuses.ts.
+  booking_status_rules: {
+    schema: bookingStatusRulesSchema,
+    fallback: DEFAULT_BOOKING_STATUS_RULES,
   },
   // ── INCIDENT REPORTING ─────────────────────────────────────────────────
   //

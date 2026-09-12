@@ -5,7 +5,6 @@ import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import {
   PawPrint,
-  Send,
   CreditCard,
   Banknote,
   ClipboardList,
@@ -47,7 +46,6 @@ import { facilities } from "@/data/facilities";
 import { boardingGuests, type BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import {
   AcceptPaymentButton,
   BookingPaymentBreakdown,
@@ -99,7 +97,6 @@ import {
   findApplicableDepositRule,
   computeDepositAmount,
 } from "@/lib/settings/deposits";
-import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
 import {
@@ -111,6 +108,8 @@ import { useLocationContext } from "@/hooks/use-location-context";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useBookingStatusRules } from "@/lib/api/facility-settings";
+import { isBookingStatus } from "@/lib/settings/booking-statuses";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
 import {
@@ -120,6 +119,7 @@ import {
   useChargeBooking,
   useRefundBooking,
   useRefundBookingToCard,
+  useSendPayLink,
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
@@ -131,13 +131,11 @@ import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { NotesList } from "@/components/shared/NotesList";
 import { TagsButton } from "@/components/shared/TagsButton";
-import { QuickBooksSyncPanel } from "@/components/bookings/QuickBooksSyncPanel";
 import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdown";
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { BookingJournal } from "@/components/guest-journal/BookingJournal";
-import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { ExtraService } from "@/types/booking";
 import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
@@ -181,7 +179,6 @@ export default function ClientBookingDetailPage({
   params: Promise<{ id: string; bookingId: string }>;
 }) {
   const { id, bookingId: bookingIdStr } = use(params);
-  const { role } = useFacilityRole();
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
@@ -266,6 +263,7 @@ export default function ClientBookingDetailPage({
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
   const refundToCard = useRefundBookingToCard();
+  const sendPayLink = useSendPayLink();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
   const initialBooking = useMemo(
@@ -381,20 +379,13 @@ export default function ClientBookingDetailPage({
     enabled: boolean;
   };
 
-  const bookingStatusConfig = facility?.bookingStatusConfig as
-    | {
-        autoTransitions?: Record<string, string>;
-        iftttTransitionRules?: IftttTransitionRule[];
-        advancedAutoTransitions?: IftttTransitionRule[];
-      }
-    | undefined;
-
-  const autoTransitions = bookingStatusConfig?.autoTransitions;
-
-  const iftttTransitionRules =
-    bookingStatusConfig?.iftttTransitionRules ??
-    bookingStatusConfig?.advancedAutoTransitions ??
-    [];
+  // THE FACILITY'S OWN RULES (`booking_status_rules`). These were read off
+  // fixture facility 11 — every booking is mapped with `facilityId: 11` — so
+  // every facility checked in and out by the demo facility's rules.
+  const { rules: statusRules } = useBookingStatusRules();
+  const autoTransitions: Record<string, string> = statusRules.autoTransitions;
+  const iftttTransitionRules: IftttTransitionRule[] =
+    statusRules.iftttTransitionRules;
 
   const resolveAutoTransition = (action: AutoTransitionAction) => {
     if (!booking) {
@@ -419,7 +410,9 @@ export default function ClientBookingDetailPage({
         rule.currentStatus === "any" || rule.currentStatus === bookingStatus;
       if (!statusMatches) return false;
 
-      return Boolean(rule.targetStatus && rule.targetStatus !== "none");
+      // A custom status is a label: `bookings.status` is an enum and would
+      // refuse it, so a rule aimed at one is passed over.
+      return isBookingStatus(rule.targetStatus);
     });
 
     if (matchedRule) {
@@ -429,8 +422,8 @@ export default function ClientBookingDetailPage({
       };
     }
 
-    const fallbackTarget = autoTransitions?.[action];
-    if (fallbackTarget && fallbackTarget !== "none") {
+    const fallbackTarget = autoTransitions[action];
+    if (fallbackTarget && isBookingStatus(fallbackTarget)) {
       return {
         target: fallbackTarget,
         sourceLabel: "default rule",
@@ -530,7 +523,6 @@ export default function ClientBookingDetailPage({
   );
   const [depositOpen, setDepositOpen] = useState(false);
   const [prepaymentOpen, setPrepaymentOpen] = useState(false);
-  const [estimateOpen, setEstimateOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [retailOpen, setRetailOpen] = useState(false);
   const [boardingSheetOpen, setBoardingSheetOpen] = useState(false);
@@ -772,6 +764,30 @@ export default function ClientBookingDetailPage({
    * `sync_boarding_stay` releases the kennel on a no-show, and
    * `sync_grooming_lifecycle` reopens a groom's checkout.
    */
+  const sendPayLinkBy = async (channel: "email" | "sms") => {
+    try {
+      const result = await sendPayLink.mutateAsync({
+        bookingRef: booking.id,
+        channel,
+      });
+      if (result.sent) {
+        toast.success(
+          detailFill(channel === "email" ? "payLinkEmailed" : "payLinkTexted", {
+            name: client.name,
+          }),
+        );
+      } else {
+        toast.warning(detailT("payLinkNotSent"), {
+          description: result.detail,
+        });
+      }
+    } catch (error) {
+      toast.error(detailT("payLinkNotSent"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   const revertTo = async (status: Booking["status"], doneKey: string) => {
     try {
       await updateStatus.mutateAsync({ id: booking.id, status });
@@ -1010,22 +1026,14 @@ export default function ClientBookingDetailPage({
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-100"
-                onClick={() => setEstimateOpen(true)}
-              >
-                <Send className="size-3.5" />
-                Resend
-              </Button>
+              {/* "Resend" opened a modal whose Send was a toast. An estimate is
+                  its own record now, resent from the Estimates screen. And
+                  Confirm said "confirmed" before — and whether or not — the
+                  deposit rule moved anything; it writes the status now. */}
               <Button
                 size="sm"
                 className="gap-1.5"
-                onClick={() => {
-                  toast.success("Booking confirmed — deposit rules now apply");
-                  void autoTransition("onDepositPaid");
-                }}
+                onClick={() => void revertTo("confirmed", "bookingConfirmed")}
               >
                 <CheckCircle2 className="size-3.5" />
                 Confirm Booking
@@ -1274,7 +1282,6 @@ export default function ClientBookingDetailPage({
             }}
             onEdit={() => setEditOpen(true)}
             onAddItem={() => setRetailOpen(true)}
-            onSendEstimate={() => setEstimateOpen(true)}
             onChargeDeposit={() => setDepositOpen(true)}
             onTakePrepayment={() => setPrepaymentOpen(true)}
             onPrintInvoice={() => {
@@ -1396,38 +1403,40 @@ export default function ClientBookingDetailPage({
               w.document.close();
               w.print();
             }}
-            onPrintCareSheet={() => {
-              if (isBoarding && boardingGuestForPrint) {
-                setBoardingSheetOpen(true);
-              } else {
-                toast.success("Care sheet printed");
-              }
-            }}
-            onEmailInvoice={() => toast.success("Invoice emailed")}
-            onSmsLink={() => toast.success("SMS sent")}
+            // A care sheet exists for a boarding guest. For anything else this
+            // said "Care sheet printed" and printed nothing, so it is offered
+            // only where there is a sheet to print.
+            onPrintCareSheet={
+              isBoarding && boardingGuestForPrint
+                ? () => setBoardingSheetOpen(true)
+                : undefined
+            }
+            // Both were a success toast and nothing else. They send the link
+            // to /pay/{ref} now, and say whether it went.
+            onEmailInvoice={() => void sendPayLinkBy("email")}
+            onSmsLink={() => void sendPayLinkBy("sms")}
             onReportIncident={() => setIncidentOpen(true)}
             onTransfer={() => setTransferOpen(true)}
+            // It ran the CHECK-IN rule — on a booking already checked in, so
+            // it changed nothing — and said "Marked as ready". It writes the
+            // `ready` status the database has for exactly this.
             onMarkAsReady={() =>
-              guardCheckout(() => {
-                void (async () => {
-                  const moved = await autoTransition("onCheckIn");
-                  if (moved) {
-                    toast.success("Marked as ready — proceed to checkout");
-                  }
-                })();
-              })
+              guardCheckout(() => void revertTo("ready", "markedReady"))
             }
             onEarlyCheckout={() =>
               guardCheckout(() => setEarlyCheckoutOpen(true))
             }
+            // With no checkout rule configured this did nothing and said
+            // nothing. It falls back to `completed`, as check-in falls back
+            // to `checked_in`.
             onFinishWithoutPayment={() => {
               void (async () => {
                 const moved = await autoTransition("onCheckout");
                 if (moved) {
-                  toast.success(
-                    "Finished — the invoice stays open for later billing",
-                  );
+                  toast.success(detailT("finishedUnpaid"));
+                  return;
                 }
+                await revertTo("completed", "finishedUnpaid");
               })();
             }}
             onSplitTips={() => setTipSplitOpen(true)}
@@ -1900,66 +1909,53 @@ export default function ClientBookingDetailPage({
                   </Button>
                 )}
               {/* Invoice / payment panel — omitted without view_booking_financials (3C) */}
-              {canSeeBookingAmounts &&
-                (invoice ? (
-                  <InvoicePanel
-                    invoice={invoice}
-                    client={client}
-                    pendingCare={careStatus.pending}
-                    hasCriticalCare={careStatus.hasCritical}
-                    extraServiceItems={incidentCareItems}
-                  />
-                ) : (
-                  // ── THE BREAKDOWN, LINE BY LINE ──────────────────────────
-                  //
-                  // This was Base Price / Discount / Added Items / Total, with
-                  // "Added Items" aggregating every line into one number, no
-                  // tip, and no paid-or-owing at all — so a booking with
-                  // nothing added showed two rows, which is what the facility
-                  // reported. Each line now names what it is and where it came
-                  // from; see the component for which source each has.
-                  <BookingPaymentBreakdown
-                    booking={booking}
-                    incidentCareTotal={incidentCareTotal}
-                    action={
-                      !isPaid && !isCancelled ? (
-                        <AcceptPaymentButton
-                          amount={balanceOf(booking)}
-                          // Opens the CHECKOUT FLOW, the one with a terminal.
-                          // It used to open ProcessPaymentModal, which offered
-                          // card and cash only — so the button sitting directly
-                          // under the itemised breakdown was the one that could
-                          // not reach a card reader, while the one that could
-                          // was elsewhere on the page.
-                          //
-                          // Same care gate as the action bar's own payment
-                          // actions: reaching checkout by a different button
-                          // must not skip the unlogged-care check.
-                          onClick={() => {
-                            if (careStatus.pending.length > 0) {
-                              setCareGateOpen(true);
-                              return;
-                            }
-                            openCheckout();
-                          }}
-                        />
-                      ) : null
-                    }
-                  />
-                ))}
+              {/* The LEDGER, for every booking. A booking carrying a fixture
+                  `invoice` blob showed InvoicePanel instead — that blob's
+                  numbers and its "3 benefits applied" box, which never moved
+                  the amount due — while every other booking showed this. */}
+              {canSeeBookingAmounts && (
+                // ── THE BREAKDOWN, LINE BY LINE ──────────────────────────
+                //
+                // This was Base Price / Discount / Added Items / Total, with
+                // "Added Items" aggregating every line into one number, no
+                // tip, and no paid-or-owing at all — so a booking with
+                // nothing added showed two rows, which is what the facility
+                // reported. Each line now names what it is and where it came
+                // from; see the component for which source each has.
+                <BookingPaymentBreakdown
+                  booking={booking}
+                  incidentCareTotal={incidentCareTotal}
+                  action={
+                    !isPaid && !isCancelled ? (
+                      <AcceptPaymentButton
+                        amount={balanceOf(booking)}
+                        // Opens the CHECKOUT FLOW, the one with a terminal.
+                        // It used to open ProcessPaymentModal, which offered
+                        // card and cash only — so the button sitting directly
+                        // under the itemised breakdown was the one that could
+                        // not reach a card reader, while the one that could
+                        // was elsewhere on the page.
+                        //
+                        // Same care gate as the action bar's own payment
+                        // actions: reaching checkout by a different button
+                        // must not skip the unlogged-care check.
+                        onClick={() => {
+                          if (careStatus.pending.length > 0) {
+                            setCareGateOpen(true);
+                            return;
+                          }
+                          openCheckout();
+                        }}
+                      />
+                    ) : null
+                  }
+                />
+              )}
             </div>
           </div>
         </div>
 
         <PageAuditTrail area="bookings" />
-
-        {/* QuickBooks Sync — owner/manager only, below Change History */}
-        {(role === "owner" || role === "manager") && (
-          <QuickBooksSyncPanel
-            sync={booking.quickbooksSync}
-            invoiceId={invoice?.id}
-          />
-        )}
 
         {/* Edit Booking Wizard — pre-filled with current booking details */}
         <BookingModal
@@ -2312,23 +2308,6 @@ export default function ClientBookingDetailPage({
             });
             toast.success(
               `$${charged.toFixed(2)} recorded in advance — the bill stays open`,
-            );
-          }}
-        />
-        <SendEstimateModal
-          open={estimateOpen}
-          onOpenChange={setEstimateOpen}
-          clientName={client.name}
-          clientEmail={client.email}
-          clientPhone={client.phone}
-          subtotal={invoice?.subtotal ?? booking.totalCost}
-          discount={invoice?.discount ?? booking.discount}
-          taxAmount={invoice?.taxAmount ?? 0}
-          total={invoice?.total ?? booking.totalCost}
-          depositRequired={ruleDepositAmount}
-          onApplyDiscount={(amount, reason) => {
-            toast.success(
-              `Discount applied: $${amount.toFixed(2)} — ${reason}`,
             );
           }}
         />

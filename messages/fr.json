@@ -1738,7 +1738,13 @@
         "declinedDone": "{ref} est refusée",
         "earlyCheckoutDone": "{ref} se termine maintenant le {date}",
         "earlyCheckoutHelp": "Le remboursement, le crédit ou les frais prévus pour un départ anticipé ne sont pas appliqués automatiquement : réglez-les à la caisse.",
-        "earlyCheckoutFailed": "Le départ anticipé n’a pas été enregistré"
+        "earlyCheckoutFailed": "Le départ anticipé n’a pas été enregistré",
+        "payLinkEmailed": "Lien de paiement envoyé par courriel à {name}",
+        "payLinkTexted": "Lien de paiement envoyé par texto à {name}",
+        "payLinkNotSent": "Le lien de paiement n’a pas été envoyé",
+        "markedReady": "{ref} : prête pour le départ",
+        "finishedUnpaid": "Terminé — le solde reste ouvert pour plus tard",
+        "bookingConfirmed": "{ref} confirmée"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
@@ -4566,9 +4572,9 @@
         "fallbackHelp": "Elles s’appliquent quand aucune règle propre à un service ne correspond.",
         "noAutoTransition": "Aucune transition automatique",
         "iftttTitle": "Règles de statut automatiques",
-        "iftttHelp": "Définissez des conditions qui font passer une réservation à un statut donné — par exemple, mettre les réservations de toilettage à « En cours » à l’arrivée de l’animal.",
+        "iftttHelp": "Définissez des conditions qui font passer une réservation à un statut donné — par exemple, mettre les réservations de toilettage à « En cours » à l’arrivée de l’animal.",
         "addIfttt": "Ajouter une règle automatique",
-        "noIfttt": "Aucune règle automatique pour l’instant. Ajoutez-en une, par exemple : à l’arrivée de l’animal d’une réservation de toilettage, la mettre à « En cours ».",
+        "noIfttt": "Aucune règle automatique pour l’instant. Ajoutez-en une, par exemple : à l’arrivée de l’animal d’une réservation de toilettage, la mettre à « En cours ».",
         "ifService": "SI le service est",
         "whenEvent": "QUAND ceci se produit",
         "andStatus": "ET que le statut actuel est",
@@ -4595,7 +4601,9 @@
         "calStatus_Overdue": "En retard",
         "calStatus_Scheduled": "Planifiée",
         "calStatus_Planned": "Prévue",
-        "calStatus_Refunded": "Remboursée"
+        "calStatus_Refunded": "Remboursée",
+        "saving": "Enregistrement…",
+        "saveFailed": "Les réglages des statuts n’ont pas été enregistrés"
       },
       "estimate-settings": {
         "brandingNote": "Les courriels d’estimation reprennent l’image de marque de votre modèle de facture.",
