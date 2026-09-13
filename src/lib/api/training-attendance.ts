@@ -52,6 +52,10 @@ function useTrainingInvalidation() {
     // Attendance is the training half of a BOOKING, and `booking_presence`
     // reads it, so every booking list is now out of date too.
     void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    // And a dog's training history, which reads the same rows.
+    void queryClient.invalidateQueries({
+      queryKey: ["training", "attendances"],
+    });
   };
 }
 
@@ -59,7 +63,12 @@ function useTrainingInvalidation() {
 export function useTrainingCheckIn() {
   const invalidate = useTrainingInvalidation();
   return useMutation({
-    mutationFn: async (input: { bookingRef: number; notes?: string }) => {
+    mutationFn: async (input: {
+      bookingRef: number;
+      notes?: string;
+      /** late, or absent / excused: an absence has no times. */
+      mark?: "late" | "absent" | "excused";
+    }) => {
       const response = await fetch("/api/training/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

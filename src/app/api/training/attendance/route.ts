@@ -96,7 +96,11 @@ export async function GET(request: NextRequest) {
 interface CheckInInput {
   bookingRef?: number;
   notes?: string;
+  /** late, or absent / excused — see 20260913100835. None is a plain arrival. */
+  mark?: string;
 }
+
+const MARKS = new Set(["late", "absent", "excused"]);
 
 /**
  * A dog arrives for its class.
@@ -121,6 +125,13 @@ export async function POST(request: NextRequest) {
   if (!Number.isFinite(body?.bookingRef)) {
     return NextResponse.json(
       { error: "Which booking is arriving?" },
+      { status: 422 },
+    );
+  }
+
+  if (body!.mark !== undefined && !MARKS.has(body!.mark)) {
+    return NextResponse.json(
+      { error: "A mark is late, absent or excused." },
       { status: 422 },
     );
   }
@@ -161,13 +172,19 @@ export async function POST(request: NextRequest) {
     .eq("booking_id", bookingId)
     .maybeSingle();
 
+  // An absence has no times. An arrival keeps the time it first had and says
+  // whether it was late — and clears an absence recorded by mistake.
+  const absent = body!.mark === "absent" || body!.mark === "excused";
   const { error } = await supabase.from("training_attendance").upsert(
     {
       booking_id: bookingId,
       facility_id: context.facilityId,
-      checked_in_at:
-        (existing as { checked_in_at: string | null } | null)?.checked_in_at ??
-        new Date().toISOString(),
+      checked_in_at: absent
+        ? null
+        : ((existing as { checked_in_at: string | null } | null)
+            ?.checked_in_at ?? new Date().toISOString()),
+      ...(absent ? { checked_out_at: null } : {}),
+      mark: body!.mark ?? null,
       ...(body!.notes !== undefined ? { session_notes: body!.notes } : {}),
     } as never,
     { onConflict: "booking_id" },

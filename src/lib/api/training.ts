@@ -5,6 +5,7 @@ import {
   fetchFacilityVaccinations,
   fetchTrainerNotes,
   fetchTrainers,
+  fetchTrainingAttendanceHistory,
   fetchTrainingBook,
   fetchTrainingCatalog,
   fetchTrainingHomework,
@@ -23,10 +24,6 @@ import {
 } from "@/lib/training-config";
 import { defaultHomeworkTemplates } from "@/data/training-homework-templates";
 import { trainingExercises } from "@/data/training-exercises";
-import {
-  getAttendanceForPet,
-  sessionAttendances,
-} from "@/data/training-history";
 import {
   defaultTrainingModuleSettings,
   type TrainingModuleSettings,
@@ -250,12 +247,12 @@ export const trainingQueries = {
    *  History tab. */
   attendancesForPet: (petId: number) => ({
     queryKey: ["training", "attendances", "pet", petId] as const,
-    queryFn: async () => getAttendanceForPet(petId),
+    queryFn: () => fetchTrainingAttendanceHistory(petId),
   }),
   /** All attendance records — used when an admin needs facility-wide rollups. */
   allAttendances: () => ({
     queryKey: ["training", "attendances", "all"] as const,
-    queryFn: async () => sessionAttendances,
+    queryFn: () => fetchTrainingAttendanceHistory(),
   }),
   /** Homework on these enrollments, from `training_homework` — keyed by
    *  enrollment because homework belongs to one. It was the

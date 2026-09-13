@@ -13943,3 +13943,35 @@ guest dog. There is no make-up window or price setting.
 SQL `training-makeups.sql` (T1–T10). e2e `training-makeups.spec.ts` (full
 suite) gives Buddy two MARKER series and a missed booking through the service
 role, and deletes every booking on their sessions and then the series.
+
+## 2026-09-13 — a training absence is recorded, and attendance is read from the bookings
+
+Every attendance screen in training read `sessionAttendances`, a fixture: a
+student's History and Overview tabs, the no-show risk on the profile, the
+calendar sidebar's attendance rate, the pre-session briefing, the session
+view's roster and exercises, the progress charts and the owner's My Pets tab. A
+session view's "Complete session" checked in the dogs marked present or late
+and wrote nothing for a dog marked absent, nor that a dog was late.
+
+20260913100835 adds `training_attendance.mark` — `late`, `absent` or
+`excused` — which must agree with the times: an absence has none, a late
+arrival has a check-in. `POST /api/training/attendance` takes `mark`: an
+absence clears the times, and a plain check-in clears a mistaken absence. The
+session view records every dog it marked. `training_attendance_history()`
+returns every ended or recorded session booking of an enrolled dog, and
+`/api/training/attendance/history` maps it onto `SessionAttendance`, so
+`trainingQueries.allAttendances` and `attendancesForPet` read Postgres and
+none of their screens changed. A session that ended with nothing recorded
+reads as absent — what make-ups already count as missed.
+
+**Still open:** exercise ratings and session conditions are still not written,
+so the History tab shows none; `excused` is taken by the API but the session
+view offers only present, late and absent; a make-up seat's dog is not on the
+host session's roster; an owner sees the history of series that are still
+active only (the sessions policy); `src/data/training-history.ts` still feeds
+the training report-card fixture.
+
+SQL `training-attendance-marks.sql` (T1–T6). e2e
+`training-attendance-marks.spec.ts` (full suite) gives Buddy a MARKER series
+with two ended sessions and one ahead through the service role, and deletes
+their bookings and the series afterwards.
