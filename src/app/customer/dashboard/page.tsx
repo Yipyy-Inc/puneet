@@ -44,9 +44,6 @@ import { businessProfile } from "@/data/settings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
-import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
-import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
-import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { useQuery } from "@tanstack/react-query";
 import { reportCardQueries } from "@/lib/api/report-cards";
@@ -102,8 +99,6 @@ const MOOD_TONE: Record<string, string> = {
 export default function CustomerDashboardPage() {
   const { t, fill, locale } = useCustomerText("dashboard");
   const { selectedFacility } = useCustomerFacility();
-  const { config: yipyyGoConfig, isPending: yipyyGoPending } =
-    useCustomerYipyyGo();
   const isMounted = useHydrated();
   const [unfinishedOpen, setUnfinishedOpen] = useState(false);
   const [nowMs] = useState(() => Date.now());
@@ -340,30 +335,30 @@ export default function CustomerDashboardPage() {
     // `getYipyyGoConfig(selectedFacility.id)`, which read a fixture array in
     // the bundle and so raised this prompt off a seed file.
     //
-    // Nothing is prompted while it loads: the fallback is switched off, and
-    // telling somebody there is nothing to do is worse than telling them a
-    // moment late.
-    if (!yipyyGoPending && yipyyGoConfig.enabled) {
-      const upcomingNeedingForm = upcomingBookings.filter((b) => {
-        if (
-          !yipyyGoRequirementFor(yipyyGoConfig, b.service?.toLowerCase() ?? "")
-        ) {
-          return false;
-        }
-        const status = getYipyyGoDisplayStatus(b.id);
-        return status !== "approved" && status !== "submitted";
-      });
+    // Where each booking's form stands now comes WITH the booking
+    // (booking_yipyy_go, 20260913133630): a form is wanted while the facility
+    // asks for one and not every dog's form counts yet, so this clears the
+    // moment it is sent.
+    {
+      const upcomingNeedingForm = upcomingBookings.filter(
+        (b) => Boolean(b.yipyyGo?.requirement) && !b.yipyyGo?.satisfied,
+      );
       upcomingNeedingForm.forEach((b) => {
         const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
         const pet = customer.pets?.find((p) => p.id === petId);
         const petName = pet?.name ?? t("yourPet");
         actions.push({
           type: "yipyygo_needed",
-          priority: "high",
-          title: fill("expressRequiredTitle", {
-            pet: petName,
-            service: serviceTypeLabel(locale, b.service ?? ""),
-          }),
+          priority: b.yipyyGo?.requirement === "mandatory" ? "high" : "medium",
+          title: fill(
+            b.yipyyGo?.requirement === "mandatory"
+              ? "expressRequiredTitle"
+              : "expressOptionalTitle",
+            {
+              pet: petName,
+              service: serviceTypeLabel(locale, b.service ?? ""),
+            },
+          ),
           message: fill("expressRequiredMessage", {
             date: intlDateShort(b.startDate, locale),
           }),
@@ -517,8 +512,6 @@ export default function CustomerDashboardPage() {
     customerBookings,
     upcomingBookings,
     selectedFacility,
-    yipyyGoConfig,
-    yipyyGoPending,
     t,
     fill,
     locale,
@@ -1075,46 +1068,34 @@ export default function CustomerDashboardPage() {
                   <Alert
                     key={index}
                     variant={
-                      action.priority === "high" ? "destructive" : "default"
+                      action.priority === "high" && !isExpressCheckin
+                        ? "destructive"
+                        : "default"
                     }
                     data-express-checkin={isExpressCheckin || undefined}
-                    className="bg-white/75 shadow-sm data-[express-checkin=true]:animate-pulse data-[express-checkin=true]:bg-red-50 data-[express-checkin=true]:text-red-900 data-[express-checkin=true]:ring-2 data-[express-checkin=true]:ring-red-500"
+                    className="bg-white/75 shadow-sm"
                   >
-                    <AlertCircle
-                      className={
-                        isExpressCheckin ? "size-4 text-red-600" : "size-4"
-                      }
-                    />
+                    <AlertCircle className="size-4" />
                     <AlertDescription>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <p className="text-sm font-semibold">
-                            {isExpressCheckin && (
-                              <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
-                                <span className="size-1.5 animate-ping rounded-full bg-white" />
+                            {isExpressCheckin && action.priority === "high" && (
+                              <Badge variant="pending" className="mr-2">
+                                <AlertCircle aria-hidden />
                                 {t("required")}
-                              </span>
+                              </Badge>
                             )}
                             {action.title}
                           </p>
-                          <p
-                            className={
-                              isExpressCheckin
-                                ? "mt-1 text-xs text-red-800"
-                                : "text-muted-foreground mt-1 text-xs"
-                            }
-                          >
+                          <p className="text-muted-foreground mt-1 text-xs">
                             {action.message}
                           </p>
                         </div>
                         <Button
-                          variant={isExpressCheckin ? "destructive" : "outline"}
+                          variant="outline"
                           size="sm"
-                          className={
-                            isExpressCheckin
-                              ? "h-7 text-xs"
-                              : "h-7 bg-white/90 text-xs"
-                          }
+                          className="bg-white/90 text-xs"
                           asChild
                         >
                           <Link href={action.actionLink}>

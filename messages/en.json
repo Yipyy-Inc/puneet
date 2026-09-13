@@ -8215,7 +8215,7 @@
       "dashboard": {
         "yourPet": "your pet",
         "expressRequiredTitle": "Express check-in needed for {pet}’s {service}",
-        "expressRequiredMessage": "Complete the express check-in form before drop-off on {date} — you can’t leave your pet until it’s done.",
+        "expressRequiredMessage": "Complete the pre-arrival form before drop-off on {date}.",
         "completeForm": "Complete the form",
         "vaccineMissingTitle": "Vaccination missing for {pet}",
         "vaccineMissingMessage": "The {vaccine} vaccination is required — upload it now",
@@ -8314,7 +8314,8 @@
         "needRenewalOne": "{count} needs renewal",
         "needRenewalMany": "{count} need renewal",
         "allSet": "All set",
-        "viewPackages": "View packages"
+        "viewPackages": "View packages",
+        "expressOptionalTitle": "Pre-arrival form for {pet}’s {service}"
       },
       "bookings": {
         "paymentPaid": "Paid",
@@ -8463,7 +8464,28 @@
         "checkInFailedHelp": "Something went wrong. Let the front desk know you’re here.",
         "checkedIn": "Checked in",
         "checkingIn": "Checking in…",
-        "imHere": "I’m here — check in"
+        "imHere": "I’m here — check in",
+        "ygTitle": "Pre-arrival form",
+        "ygRequired": "Required before drop-off",
+        "ygOptional": "Optional",
+        "ygOpenUntil": "You can change it until {date}, {time}",
+        "ygClosed": "The form is closed",
+        "ygStatusNotStarted": "Not started",
+        "ygStatusDraft": "Draft saved",
+        "ygStatusSubmitted": "Sent",
+        "ygStatusChangesRequested": "Changes requested",
+        "ygStatusApproved": "Reviewed",
+        "ygStatusCompletedByStaff": "Completed by the facility",
+        "ygChangesAsked": "The facility asked: {message}",
+        "ygStart": "Complete {pet}’s form",
+        "ygContinue": "Continue {pet}’s form",
+        "ygEdit": "Edit {pet}’s form",
+        "ygOnBill": "Added to your bill",
+        "ygTipPledged": "Tip you pledged: {amount}",
+        "ygShowCode": "Show my check-in code",
+        "ygLoading": "Loading the pre-arrival form…",
+        "ygLoadFailedTitle": "The pre-arrival form could not be loaded",
+        "ygLoadFailed": "Reload the page to try again."
       },
       "pets": {
         "pageTitle": "My pets",

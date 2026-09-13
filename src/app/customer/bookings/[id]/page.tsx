@@ -1,18 +1,18 @@
 "use client";
 
 import { use, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { bookings } from "@/data/bookings";
+import { bookingQueries } from "@/lib/api/booking";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
-  FileText,
   CheckCircle2,
-  QrCode,
   ShoppingBag,
   Sparkles,
   Tag,
@@ -26,10 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
-import { useCustomerYipyyGo } from "@/lib/api/customer-yipyy-go";
-import { yipyyGoRequirementFor } from "@/lib/settings/yipyy-go";
-import { getYipyyGoForm } from "@/data/yipyygo-forms";
-import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
+import { YipyyGoOwnerCard } from "./_components/yipyy-go-owner-card";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatBookingRef } from "@/lib/booking-id";
@@ -110,10 +107,15 @@ export default function BookingDetailPage({
   const { id } = use(params);
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
 
+  // The owner's own bookings (RLS: bookings_read admits their client rows).
+  // This read src/data/bookings, so every real booking said "not found".
+  const { data: ownBookings, isPending: bookingsPending } = useQuery({
+    ...bookingQueries.byClient(customerId ?? -1),
+    enabled: customerId != null,
+  });
   const booking = useMemo(
-    () =>
-      bookings.find((b) => String(b.id) === id && b.clientId === customerId),
-    [customerId, id],
+    () => ownBookings?.find((b) => String(b.id) === id),
+    [ownBookings, id],
   );
 
   const pet = useMemo(() => {
@@ -122,26 +124,14 @@ export default function BookingDetailPage({
     return customer.pets.find((p) => p.id === pid) ?? null;
   }, [booking, customer]);
 
-  // Their facility's Yipyy Go setup, read through their client row. It used to
-  // be `getYipyyGoConfig(booking.facilityId)` — a fixture array in the bundle,
-  // so this page told a customer about a form a seed file had written.
-  const { config: yipyyGoConfig, isPending: yipyyGoPending } =
-    useCustomerYipyyGo();
-
-  const isYipyyGoEnabled = useMemo(() => {
-    // Not while it is loading. The fallback is switched off, so rendering
-    // through the pending state hides a form the customer is actually expected
-    // to complete before they arrive.
-    if (yipyyGoPending || !booking) return false;
-    return Boolean(
-      yipyyGoRequirementFor(yipyyGoConfig, booking.service.toLowerCase()),
+  if (!booking && (customerId == null || bookingsPending)) {
+    return (
+      <div className="container mx-auto max-w-2xl space-y-3 px-4 py-6">
+        <Skeleton className="h-10 w-48 rounded-md" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+      </div>
     );
-  }, [yipyyGoConfig, yipyyGoPending, booking]);
-
-  const yipyyGoForm = useMemo(
-    () => (booking ? getYipyyGoForm(booking.id) : null),
-    [booking],
-  );
+  }
 
   if (!booking) {
     return (
@@ -164,10 +154,6 @@ export default function BookingDetailPage({
   const isUpcoming = bookingDate >= new Date();
   const isGrooming = booking.service.toLowerCase() === "grooming";
   const isSalon = booking.serviceType === "salon" || !booking.serviceType;
-  const hasCheckInQR = Boolean(
-    yipyyGoForm?.qrCheckInToken &&
-    (yipyyGoForm.submittedAt || yipyyGoForm.staffStatus === "approved"),
-  );
 
   const inv = booking.invoice;
   const isPaid = inv ? inv.remainingDue <= 0 : false;
@@ -558,25 +544,12 @@ export default function BookingDetailPage({
           </Card>
         )}
 
-        {/* ── YipyyGo QR ── */}
-        {hasCheckInQR && isUpcoming && (
-          <Card className="animate-in fade-in slide-in-from-bottom-4 border-primary/30 bg-primary/5 duration-500">
-            <CardContent className="flex flex-col items-center p-5">
-              <QrCode className="text-primary mb-1 size-5" />
-              <p className="mb-3 text-sm font-medium">{t("qrHelp")}</p>
-              <div className="rounded-xl bg-white p-3 shadow-sm">
-                <CheckInQRCode
-                  token={yipyyGoForm!.qrCheckInToken!}
-                  size={160}
-                />
-              </div>
-              <Button variant="outline" size="sm" className="mt-3" asChild>
-                <Link href={`/customer/bookings/${booking.id}/check-in-qr`}>
-                  {t("qrFullScreen")}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+        {/* ── Pre-arrival form ── */}
+        {booking.yipyyGo?.requirement && isUpcoming && (
+          <YipyyGoOwnerCard
+            bookingRef={booking.id}
+            requirement={booking.yipyyGo.requirement}
+          />
         )}
 
         {/* ── Grooming check-in ── */}
@@ -604,14 +577,6 @@ export default function BookingDetailPage({
               {t("allBookings")}
             </Link>
           </Button>
-          {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
-            <Button className="flex-1" asChild>
-              <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
-                <FileText className="mr-1.5 size-4" />
-                {t("completeExpressForm")}
-              </Link>
-            </Button>
-          )}
           {!isCancelled && isUpcoming && (
             <Button variant="outline" className="flex-1" asChild>
               <Link href="/customer/messages">
