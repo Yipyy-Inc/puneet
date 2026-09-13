@@ -1,7 +1,18 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFormTemplateForService } from "@/data/yipyygo-config";
+import { formatDateLong } from "@/lib/i18n/format";
+import {
+  facilityCustomerLinkOrigin,
+  facilityStaffLinkOrigin,
+} from "@/lib/public-origin";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
+import {
+  STAFF_EMAIL_LOCALE,
+  notifyStaffOfSubmission,
+  sendOwnerConfirmation,
+} from "@/lib/yipyy-go/notify";
 import { yipyyGoOff, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
 import {
   rowToYipyyGoSubmission,
@@ -28,8 +39,9 @@ import type { Json } from "@/types/database";
 //       medication fee from the catalogue onto the bill, and records a pledged
 //       tip. The answer carries exactly what reached the bill.
 //
-// The facility's email and the owner's confirmation are sent by the next
-// change; this one says nothing was sent.
+// When the facility asks for it, its owners and admins are emailed (after the
+// response) and the owner gets the facility's confirmation, whose delivery the
+// answer reports.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -104,6 +116,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       onBill: boolean;
     }[];
     tipAmount?: number | null;
+    notifyStaff?: boolean;
+    sendConfirmation?: boolean;
   };
   if (!result.submission?.id) {
     return NextResponse.json(
@@ -121,6 +135,70 @@ export async function POST(request: NextRequest, { params }: Params) {
     onBill: charge.onBill,
   }));
 
+  // ── Who hears about it ─────────────────────────────────────────────────
+  //
+  // The facility's notice goes out after the response, with the service role
+  // (an owner may not read staff addresses). The owner's confirmation is
+  // awaited, so the answer says whether it was actually sent.
+  const [{ data: client }, { data: facility }] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("name, email, preferred_language")
+      .eq("id", booking.clientId)
+      .maybeSingle(),
+    supabase
+      .from("facilities")
+      .select("name, slug, timezone")
+      .eq("id", booking.facilityId)
+      .maybeSingle(),
+  ]);
+  const facilityName = facility?.name ?? "";
+  // The arrival's date on the facility's calendar, read at noon UTC so no
+  // server clock moves it to the day before.
+  const arrival = new Date(
+    `${wallClockParts(booking.startAt, facility?.timezone ?? DEFAULT_TIMEZONE).date}T12:00:00Z`,
+  );
+
+  if (result.notifyStaff) {
+    const staffOrigin = facilityStaffLinkOrigin(facility?.slug, request);
+    const submissionId = result.submission.id;
+    const staffLocale = STAFF_EMAIL_LOCALE;
+    after(() =>
+      notifyStaffOfSubmission({
+        submissionId,
+        facilityName,
+        clientName: client?.name ?? "",
+        petName: pet.name,
+        serviceLabel: booking.service,
+        arrivalLabel: formatDateLong(arrival, staffLocale),
+        bookingUrl: `${staffOrigin}/facility/dashboard/bookings/${booking.ref}#yipyy-go`,
+        origin: staffOrigin,
+      }),
+    );
+  }
+
+  let confirmationSent = false;
+  const confirmation = settings.success
+    ? settings.data.confirmationEmail
+    : undefined;
+  if (result.sendConfirmation && confirmation && client?.email) {
+    const customerOrigin = facilityCustomerLinkOrigin(facility?.slug, request);
+    const ownerLocale = client.preferred_language === "fr" ? "fr" : "en";
+    const delivery = await sendOwnerConfirmation({
+      facilityId: booking.facilityId,
+      to: client.email,
+      subject: confirmation.subject,
+      message: confirmation.message,
+      petName: pet.name,
+      dateLabel: formatDateLong(arrival, ownerLocale),
+      facilityName,
+      bookingUrl: `${customerOrigin}/customer/bookings/${booking.ref}`,
+      origin: customerOrigin,
+      locale: ownerLocale,
+    });
+    confirmationSent = delivery.sent;
+  }
+
   return NextResponse.json({
     submission: rowToYipyyGoSubmission(result.submission, pet),
     charges,
@@ -128,6 +206,6 @@ export async function POST(request: NextRequest, { params }: Params) {
       result.tipAmount === null || result.tipAmount === undefined
         ? null
         : Number(result.tipAmount),
-    confirmationSent: false,
+    confirmationSent,
   });
 }
