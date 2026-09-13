@@ -12454,6 +12454,7 @@ export type Database = {
           enrollment_id: string;
           exercises: Json;
           facility_id: string;
+          makeup: boolean;
           mark: string | null;
           pet_name: string;
           pet_ref: number;

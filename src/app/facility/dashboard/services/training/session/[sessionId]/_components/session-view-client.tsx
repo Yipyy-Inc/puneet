@@ -265,6 +265,13 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
     [dropInsForSession],
   );
 
+  // Dogs here for a make-up — enrolled in another series, booked into this
+  // session when the facility offered the seat. Drives the Make-up badge.
+  const makeupEnrollmentIds = useMemo(
+    () => new Set(session?.makeupAttendees ?? []),
+    [session],
+  );
+
   // Enrich each row with the live owner phone from the class enrollment record.
   const enrollmentById = useMemo(
     () => new Map(enrollments.map((e) => [e.id, e])),
@@ -558,6 +565,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
             rows={rows}
             enrollmentById={enrollmentById}
             dropInEnrollmentIds={dropInEnrollmentIds}
+            makeupEnrollmentIds={makeupEnrollmentIds}
             attendance={attendance}
             onMark={markAttendance}
             onDone={() => setSection("exercises")}

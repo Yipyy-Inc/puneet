@@ -444,6 +444,7 @@ export function TrainingProfileHistory({
                       {fill("sessionNumber", {
                         number: attendance.sessionNumber,
                       })}
+                      {attendance.isMakeup ? ` · ${t("makeupSession")}` : ""}
                       {enrollment ? ` · ${enrollment.seriesName}` : ""}
                       {enrollment?.courseTypeName && (
                         <>

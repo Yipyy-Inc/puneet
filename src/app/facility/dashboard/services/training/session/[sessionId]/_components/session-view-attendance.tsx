@@ -15,6 +15,8 @@ interface Props {
   /** Synthetic enrollment IDs (prefixed `drop-`) for guest dogs joining
    *  this session via the drop-in flow. Drives the Drop-in badge. */
   dropInEnrollmentIds?: Set<string>;
+  /** Enrollments here for a make-up, from another series. Make-up badge. */
+  makeupEnrollmentIds?: Set<string>;
   attendance: Record<string, AttendanceMark>;
   onMark: (enrollmentId: string, mark: AttendanceMark) => void;
   onDone: () => void;
@@ -24,6 +26,7 @@ export function SessionAttendanceSection({
   rows,
   enrollmentById,
   dropInEnrollmentIds,
+  makeupEnrollmentIds,
   attendance,
   onMark,
   onDone,
@@ -68,6 +71,7 @@ export function SessionAttendanceSection({
             row={row}
             enrollment={enrollmentById.get(row.enrollmentId)}
             isDropIn={dropInEnrollmentIds?.has(row.enrollmentId) ?? false}
+            isMakeup={makeupEnrollmentIds?.has(row.enrollmentId) ?? false}
             mark={attendance[row.enrollmentId]}
             onMark={(status) =>
               onMark(row.enrollmentId, {

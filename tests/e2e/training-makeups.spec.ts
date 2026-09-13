@@ -22,7 +22,8 @@ import { ACCOUNTS, signIn } from "./_auth";
 // ── ONE POSTGRES, SHARED WITH CI ────────────────────────────────────────────
 // beforeAll gives Buddy, through the service role, two MARKER series of one
 // MARKER course — one with a session that has ended, one with a session
-// ahead — and a booking for the ended one that never checked in. afterAll
+// ahead — and a booking for the ended one that never checked in. The offer
+// test also reads the host session's roster and its Make-up badge. afterAll
 // deletes every booking on those sessions (the make-ups go with the missed
 // one) and then the series.
 // ============================================================================
@@ -262,6 +263,29 @@ test.describe("a missed training session can be made up", () => {
     expect(missed?.makeup?.status).toBe("offered");
     expect(missed?.makeup?.seat?.sessionId).toBe(hostSessionId);
     expect(missed?.makeup?.seat?.bookingStatus).toBe("confirmed");
+
+    // Buddy is on the host session's roster, as a make-up
+    // (20260913122341), and the session view says so.
+    const book = await page.request.get("/api/training/book");
+    expect(book.ok(), await book.text()).toBe(true);
+    const host = (
+      (await book.json()) as {
+        sessions: {
+          id: string;
+          attendees: string[];
+          makeupAttendees?: string[];
+        }[];
+      }
+    ).sessions.find((s) => s.id === hostSessionId);
+    expect(host?.makeupAttendees).toHaveLength(1);
+    expect(host?.attendees).toContain(host?.makeupAttendees?.[0]);
+
+    await page.goto(
+      `/facility/dashboard/services/training/session/${hostSessionId}`,
+    );
+    await expect(
+      page.getByText("Make-up", { exact: true }).first(),
+    ).toBeVisible({ timeout: 60_000 });
   });
 
   test("the owner declines, and staff close it with a reason", async ({

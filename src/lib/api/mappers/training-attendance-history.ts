@@ -38,6 +38,8 @@ export interface TrainingAttendanceHistoryRow {
   exercises: unknown;
   /** {weather, distractionLevel} or null — 20260913112156. */
   conditions: unknown;
+  /** A make-up seat, read under the missed series' enrollment. */
+  makeup?: boolean | null;
   recorded_at: string | null;
   updated_at: string | null;
 }
@@ -158,6 +160,7 @@ export function rowToSessionAttendance(
       row.conditions == null
         ? undefined
         : (parseSessionConditions(row.conditions) ?? undefined),
+    ...(row.makeup ? { isMakeup: true } : {}),
     homeworkUnlocked: status === "present" || status === "late",
     certificateGenerated: false,
     createdAt: row.recorded_at ?? row.session_end_at,

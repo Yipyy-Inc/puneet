@@ -8,6 +8,7 @@ import {
   Clock3,
   Hourglass,
   PawPrint,
+  RotateCcw,
   Phone,
   ShieldAlert,
   Ticket,
@@ -38,6 +39,9 @@ interface Props {
    *  booked this single session via the drop-in flow. Adds a "Drop-in"
    *  badge so the trainer knows they're not a full-series enrollee. */
   isDropIn?: boolean;
+  /** Enrolled in another series and booked into this session to make up a
+   *  class it missed. */
+  isMakeup?: boolean;
 }
 
 const STATUS_BTN_STYLES: Record<
@@ -87,6 +91,7 @@ export function StudentAttendanceCard({
   mark,
   onMark,
   isDropIn,
+  isMakeup,
 }: Props) {
   const ownerPhone = enrollment?.ownerPhone;
   const alerts = collectAlerts(row);
@@ -217,6 +222,15 @@ export function StudentAttendanceCard({
                 >
                   <Ticket className="size-2.5" />
                   Drop-in
+                </span>
+              )}
+              {isMakeup && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-violet-700 uppercase"
+                  title={tSession("makeUpBadgeTitle")}
+                >
+                  <RotateCcw className="size-2.5" />
+                  {tSession("makeUpBadge")}
                 </span>
               )}
             </div>

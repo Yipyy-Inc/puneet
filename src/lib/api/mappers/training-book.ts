@@ -166,6 +166,8 @@ export function buildTrainingBook(input: {
   paid?: Map<string, Map<number, SeriesPaymentStatus>>;
   /** session id → pet ref → the booking that is that dog's place in it. */
   bookingRefs?: Map<string, Map<number, number>>;
+  /** Offered make-up seats: a dog of another series booked into a session. */
+  makeupGuests?: { hostSessionId: string; seriesId: string; petRef: number }[];
   timeZone: string;
   /** Today on the facility's clock — decides "upcoming" versus "active". */
   today?: string;
@@ -193,6 +195,24 @@ export function buildTrainingBook(input: {
     if (e.status === "enrolled") {
       enrolledCount.set(e.series_id, (enrolledCount.get(e.series_id) ?? 0) + 1);
     }
+  }
+
+  // Make-up guests: a dog enrolled in one series, booked into a session of
+  // another to make up a class it missed. It joins that session's roster
+  // under its own enrollment, and the session says which ones they are.
+  const enrollmentBySeriesPet = new Map<string, string>();
+  for (const e of enrollments) {
+    if (!e.pets) continue;
+    if (e.status !== "enrolled" && e.status !== "completed") continue;
+    enrollmentBySeriesPet.set(`${e.series_id}:${e.pets.ref}`, e.id);
+  }
+  const makeupAttendeesBySession = new Map<string, string[]>();
+  for (const guest of input.makeupGuests ?? []) {
+    const id = enrollmentBySeriesPet.get(`${guest.seriesId}:${guest.petRef}`);
+    if (!id) continue;
+    const list = makeupAttendeesBySession.get(guest.hostSessionId) ?? [];
+    if (!list.includes(id)) list.push(id);
+    makeupAttendeesBySession.set(guest.hostSessionId, list);
   }
 
   const classes: TrainingClass[] = series.map((row) => {
@@ -241,7 +261,13 @@ export function buildTrainingBook(input: {
       startTime: start.time,
       endTime: end.time,
       status,
-      attendees: rosterBySeries.get(s.series_id) ?? [],
+      attendees: [
+        ...(rosterBySeries.get(s.series_id) ?? []),
+        ...(makeupAttendeesBySession.get(s.id) ?? []),
+      ],
+      ...(makeupAttendeesBySession.has(s.id)
+        ? { makeupAttendees: makeupAttendeesBySession.get(s.id) }
+        : {}),
       notes: "",
       sessionNumber: s.session_number,
       ...(s.briefed_at ? { briefedAt: s.briefed_at } : {}),

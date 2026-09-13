@@ -14054,3 +14054,29 @@ enrolled in, whatever its status. Browsing is unchanged — the training booking
 step already drops completed and cancelled series. SQL
 `training-attendance-marks.sql` T11 completes the series and reads its history
 as the owner.
+
+## 2026-09-13 — a make-up dog is on the session it makes up in
+
+A make-up seat (`offer_training_makeup`) is a $0 booking in a session of
+another series. The session view's roster is built from the series'
+enrollments, so the dog was not on it: the trainer could not mark it, and its
+attendance was taken from the check-in board or not at all. And
+`training_attendance_history()` found a booking's enrollment by the booking's
+own series, so an attendance recorded there never reached the dog's history.
+
+`/api/training/book` reads the offered make-ups and the book puts each guest
+on its host session's roster under the enrollment of the series it missed
+(`makeupAttendees` names them); the attendance card says "Make-up". The
+host booking is already that dog's `bookingRefByPet` entry, so "Complete
+session" writes against it. 20260913122341 reads a make-up seat under the
+missed series' enrollment and returns `makeup`; the History tab says
+"Make-up session".
+
+**Still open:** an owner whose make-up was hosted by a series that has since
+ended cannot read that host session — the series policy admits them only to
+series their dog is enrolled in, and widening it through `training_makeups`
+would make the series and sessions policies read each other.
+
+SQL `training-attendance-marks.sql` T12; unit `training-book.test.ts`
+("a make-up seat") and `training-attendance-history.test.ts`; e2e
+`training-makeups.spec.ts` reads the host session's roster after an offer.

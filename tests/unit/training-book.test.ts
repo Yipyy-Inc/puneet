@@ -191,3 +191,33 @@ describe("the training book", () => {
     expect(book.sessions[0].bookingRefByPet).toEqual({ 7: 5012 });
   });
 });
+
+describe("a make-up seat", () => {
+  test("puts the guest on the host session's roster, under the enrollment of the series it missed", () => {
+    const book = buildTrainingBook({
+      series: [series({}), series({ id: "s2", name: "Tuesday recall" })],
+      sessions: [session({}), session({ id: "x2", series_id: "s2" })],
+      enrollments: [
+        enrollment({}),
+        enrollment({
+          id: "e2",
+          series_id: "s2",
+          pets: { ref: 9, name: "Miso", breed: null },
+        }),
+      ],
+      attended: new Map(),
+      makeupGuests: [
+        { hostSessionId: "x1", seriesId: "s2", petRef: 9 },
+        // No enrollment behind it — nothing to put on the roster.
+        { hostSessionId: "x1", seriesId: "s2", petRef: 404 },
+      ],
+      timeZone: "America/Toronto",
+    });
+    const host = book.sessions.find((s) => s.id === "x1")!;
+    expect(host.attendees).toEqual(["e1", "e2"]);
+    expect(host.makeupAttendees).toEqual(["e2"]);
+    const own = book.sessions.find((s) => s.id === "x2")!;
+    expect(own.attendees).toEqual(["e2"]);
+    expect(own.makeupAttendees).toBeUndefined();
+  });
+});
