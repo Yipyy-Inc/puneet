@@ -156,6 +156,9 @@ export const trainingSessionSchema = z
     /** Exercises planned in the briefing, in order; the session view
      *  pre-loads them. */
     plannedExerciseIds: z.array(z.string()).optional(),
+    /** Enrollments on the roster for a make-up — enrolled in another series,
+     *  booked into this session (training_makeups). */
+    makeupAttendees: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 

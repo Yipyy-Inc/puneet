@@ -2121,6 +2121,7 @@
         "homeworkCompletedOn": "Terminé le {date}",
         "homeworkOpen": "En cours",
         "nothingLogged": "Aucun exercice, note ni devoir consigné pour cette séance.",
+        "makeupSession": "Séance de rattrapage",
         "recordsFooter": "Le dossier s’écrit quand l’équipe termine une séance — les séances plus anciennes sans exercices précèdent les évaluations par séance."
       },
       "trainingSession": {
@@ -2128,6 +2129,8 @@
         "notAllSaved": "La séance n’a pas été entièrement enregistrée",
         "noBooking": "{pet} n’a pas de réservation pour cette séance.",
         "markExcused": "Excusé",
+        "makeUpBadge": "Rattrapage",
+        "makeUpBadgeTitle": "Inscrit dans une autre série — ici pour rattraper une séance manquée",
         "conditionsTitle": "Conditions de la séance",
         "conditionsHelp": "Enregistrées avec chaque chien présent",
         "weatherLabel": "Météo",

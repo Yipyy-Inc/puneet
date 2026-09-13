@@ -145,6 +145,8 @@ export interface SessionAttendance {
   /** Environment context for the session — surfaced on the History tab so
    *  the rating record carries its conditions next to it. */
   conditions?: SessionConditions;
+  /** Attended as a make-up, in a session of another series. */
+  isMakeup?: boolean;
   homeworkUnlocked: boolean;
   certificateGenerated: boolean;
   createdAt: string;

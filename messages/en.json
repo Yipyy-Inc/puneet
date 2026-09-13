@@ -2121,6 +2121,7 @@
         "homeworkCompletedOn": "Completed {date}",
         "homeworkOpen": "Open",
         "nothingLogged": "No exercises, notes, or homework logged for this session.",
+        "makeupSession": "Make-up session",
         "recordsFooter": "Records are written when staff complete a session — older sessions without exercises predate per-session ratings."
       },
       "trainingSession": {
@@ -2128,6 +2129,8 @@
         "notAllSaved": "The session was not fully saved",
         "noBooking": "{pet} has no booking for this session.",
         "markExcused": "Excused",
+        "makeUpBadge": "Make-up",
+        "makeUpBadgeTitle": "Enrolled in another series — here to make up a missed class",
         "conditionsTitle": "Conditions",
         "conditionsHelp": "Saved with each dog who came",
         "weatherLabel": "Weather",

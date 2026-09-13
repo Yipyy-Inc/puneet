@@ -25,6 +25,8 @@
 --     dog has none (20260913112156).
 -- T11 A series that has ended is still the owner's: they read it, and their
 --     dog's history from it (an_owner_reads_the_series_their_dog_was_in).
+-- T12 A make-up seat in another series reads under the enrollment of the
+--     series the dog missed, and says it is a make-up.
 -- ============================================================================
 
 begin;
@@ -365,6 +367,54 @@ begin
     format('series=%s history rows=%s', v_series, v_rows));
 exception when others then
   reset role; perform pg_temp.t('T11 ended series', false, sqlerrm);
+end $$;
+
+-- ── T12  a make-up seat reads under the dog's own enrollment ──────────────
+do $$
+declare v_ref bigint; v_enrollment uuid; v_makeup boolean;
+begin
+  insert into public.training_series
+    (id, facility_id, name, course_type_name, day_of_week, start_time, duration_minutes,
+     start_date, number_of_sessions, capacity, status)
+  values
+    ('00000000-0000-0000-0000-0000001f9061', '00000000-0000-0000-0000-0000001f9020',
+     'Recall Thursday', 'Recall', 4, '18:00', 60, current_date - 14, 4, 6, 'active');
+  insert into public.training_series_sessions
+    (id, series_id, facility_id, session_number, start_at, end_at, status)
+  values
+    ('00000000-0000-0000-0000-0000001f9073', '00000000-0000-0000-0000-0000001f9061',
+     '00000000-0000-0000-0000-0000001f9020', 2, now() - interval '1 day', now() - interval '1 day' + interval '1 hour', 'completed');
+  insert into public.bookings
+    (id, facility_id, client_id, service, service_type, status, start_at, end_at,
+     base_price, total_cost, training_series_session_id)
+  values
+    ('00000000-0000-0000-0000-0000001f9093', '00000000-0000-0000-0000-0000001f9020',
+     '00000000-0000-0000-0000-0000001f9040', 'training', 'Recall', 'confirmed',
+     now() - interval '1 day', now() - interval '1 day' + interval '1 hour', 0, 0,
+     '00000000-0000-0000-0000-0000001f9073');
+  insert into public.booking_pets (booking_id, pet_id) values
+    ('00000000-0000-0000-0000-0000001f9093', '00000000-0000-0000-0000-0000001f9050');
+  insert into public.training_makeups
+    (facility_id, missed_booking_id, missed_session_id, pet_id, client_id, status,
+     host_session_id, host_booking_id, offered_at)
+  values
+    ('00000000-0000-0000-0000-0000001f9020', '00000000-0000-0000-0000-0000001f9091',
+     '00000000-0000-0000-0000-0000001f9071', '00000000-0000-0000-0000-0000001f9050',
+     '00000000-0000-0000-0000-0000001f9040', 'offered',
+     '00000000-0000-0000-0000-0000001f9073', '00000000-0000-0000-0000-0000001f9093', now());
+
+  select ref into v_ref from public.pets where id = '00000000-0000-0000-0000-0000001f9050';
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9001');
+  set local role authenticated;
+  select enrollment_id, makeup into v_enrollment, v_makeup
+    from public.training_attendance_history('00000000-0000-0000-0000-0000001f9020', v_ref)
+   where booking_id = '00000000-0000-0000-0000-0000001f9093';
+  reset role;
+  perform pg_temp.t('T12 a make-up seat reads under the enrollment of the series the dog missed',
+    v_enrollment = '00000000-0000-0000-0000-0000001f9080' and v_makeup,
+    format('enrollment=%s makeup=%s', coalesce(v_enrollment::text, '<none>'), v_makeup));
+exception when others then
+  reset role; perform pg_temp.t('T12 make-up history', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

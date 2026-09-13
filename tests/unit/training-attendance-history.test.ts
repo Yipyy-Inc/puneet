@@ -33,6 +33,7 @@ const row = (
   session_notes: null,
   exercises: [],
   conditions: null,
+  makeup: false,
   recorded_at: null,
   updated_at: null,
   ...over,

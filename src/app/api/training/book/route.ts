@@ -110,6 +110,38 @@ export async function GET() {
   const enrollments = (enrollmentsResult.data ??
     []) as unknown as BookEnrollmentRow[];
 
+  // A dog booked into one of these sessions to make up a class it missed in
+  // another series (training_makeups, 20260913090803) is on that session's
+  // roster too — under the enrollment it has in the series it missed. Only an
+  // offered make-up has a seat; the few there are at a time are read whole,
+  // rather than naming every session id in the URL.
+  const { data: makeupData } = await supabase
+    .from("training_makeups")
+    .select(
+      `host_session_id, pets(ref),
+       missed:training_series_sessions!training_makeups_missed_session_id_fkey(series_id)`,
+    )
+    .match(inFacility(scope))
+    .eq("status", "offered")
+    .not("host_session_id", "is", null);
+  const makeupGuests = (
+    (makeupData ?? []) as unknown as {
+      host_session_id: string | null;
+      pets: { ref: number } | null;
+      missed: { series_id: string } | null;
+    }[]
+  ).flatMap((row) =>
+    row.host_session_id && row.pets && row.missed
+      ? [
+          {
+            hostSessionId: row.host_session_id,
+            seriesId: row.missed.series_id,
+            petRef: row.pets.ref,
+          },
+        ]
+      : [],
+  );
+
   const seriesOfSession = new Map(sessions.map((s) => [s.id, s.series_id]));
   const attended = new Map<string, Map<number, number>>();
   // How a dog's session bookings stand on payment: all paid, some, or none.
@@ -187,6 +219,7 @@ export async function GET() {
       attended,
       paid,
       bookingRefs,
+      makeupGuests,
       timeZone,
       today,
     }),
