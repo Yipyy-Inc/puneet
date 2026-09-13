@@ -292,4 +292,47 @@ test.describe("the booking checkout tells the truth", () => {
       )
       .toBe("cancelled/0");
   });
+
+  test("a tip the booking carries starts a tender that takes tips, and cash only reminds", async ({
+    page,
+  }) => {
+    test.slow();
+    await signIn(page, ACCOUNTS.owner);
+    // A booking carrying a $10 tip: the owner's pledge from the pre-arrival
+    // form lands in the same column (yipyy_go_pledge_tip).
+    const created = (await (
+      await page.request.post("/api/bookings", {
+        data: { ...bookingBody(274), tipAmount: 10 },
+      })
+    ).json()) as BookingPayload;
+
+    const dialog = await openCheckout(page, created);
+    // Cash is the default tender. It never adds the tip; it says the booking
+    // carries one.
+    await expect(dialog.getByText(/carries a \$10\.00 tip/)).toBeVisible();
+    const cashLabel = await dialog
+      .getByRole("button", { name: /^charge \$/i })
+      .first()
+      .textContent();
+    const cash = Number(
+      /\$([\d,]+\.\d\d)/.exec(cashLabel ?? "")?.[1]?.replace(/,/g, ""),
+    );
+    expect(cash).toBeGreaterThan(0);
+
+    // A tender that takes a tip here starts at the booking's tip.
+    await dialog.getByRole("button", { name: /e-transfer/i }).click();
+    await expect(dialog.getByText(/already added below/)).toBeVisible();
+    await expect(
+      dialog
+        .getByRole("button", {
+          name: new RegExp(`charge \\$${(cash + 10).toFixed(2)}`, "i"),
+        })
+        .first(),
+    ).toBeVisible();
+
+    // Nothing was taken by looking: the booking is still unpaid.
+    await page.keyboard.press("Escape");
+    const after = await findBooking(page, created.id);
+    expect(Number(after?.amountPaid ?? -1)).toBe(0);
+  });
 });

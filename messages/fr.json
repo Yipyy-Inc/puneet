@@ -2383,7 +2383,10 @@
         "paymentTaken": "Paiement de {amount} encaissé",
         "storeCreditShort": "Seulement {amount} de crédit en magasin disponible.",
         "stillOwed": "Reste à payer",
-        "paymentRecordedBadge": "PAIEMENT ENREGISTRÉ"
+        "paymentRecordedBadge": "PAIEMENT ENREGISTRÉ",
+        "pledgedTipAdded": "Cette réservation comporte un pourboire de {amount}, déjà ajouté ci-dessous. Modifiez-le si le client le souhaite.",
+        "pledgedTipCash": "Cette réservation comporte un pourboire de {amount}. Un paiement comptant ne l’ajoute pas : percevez-le en argent si le client souhaite toujours le laisser.",
+        "pledgedTipTerminal": "Cette réservation comporte un pourboire de {amount}. Le terminal demande lui-même le pourboire au client."
       },
       "cancelBooking": {
         "title": "Annuler la réservation n° {ref}",

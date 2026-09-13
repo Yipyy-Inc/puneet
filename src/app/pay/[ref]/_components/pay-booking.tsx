@@ -53,6 +53,12 @@ export interface PayBookingProps {
    * RLS, so this cannot be fetched from here.
    */
   tipConfig: TipConfig | null;
+  /**
+   * The tip the booking carries that no payment has collected — the owner's
+   * pledge from the pre-arrival form. The tip starts at it; zero when there is
+   * none or the facility offers no tips.
+   */
+  pledgedTipCents?: number;
 }
 
 interface Paid {
@@ -91,8 +97,9 @@ export function PayBooking({
   publicApiKey,
   sdkUrl,
   tipConfig,
+  pledgedTipCents = 0,
 }: PayBookingProps) {
-  const [tipCents, setTipCents] = useState(0);
+  const [tipCents, setTipCents] = useState(pledgedTipCents);
   const [paid, setPaid] = useState<Paid | null>(null);
 
   const onPaid = useCallback((result: Paid) => setPaid(result), []);
@@ -172,6 +179,12 @@ export function PayBooking({
               <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
                 Add a tip (optional)
               </p>
+              {pledgedTipCents > 0 && tipCents === pledgedTipCents && (
+                <p className="text-ink-secondary mb-2 text-xs">
+                  Includes the {money(pledgedTipCents, currency)} tip on this
+                  booking. Change it, or choose No tip.
+                </p>
+              )}
               <TipSelector
                 tipConfig={tipConfig}
                 // Pre-tax: a gratuity on top of sales tax is not what "20%"

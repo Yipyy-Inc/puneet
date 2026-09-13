@@ -21,6 +21,8 @@ export interface TipAllocation {
 export interface BookingTips {
   /** Signed sum of `payments.tip`: a refund takes its tip back with it. */
   tipCollected: number;
+  /** The tip the booking carries: the owner pledge from the pre-arrival form, or one added when booking. */
+  tipOnBooking: number;
   /**
    * The same total, split by where it was taken.
    *

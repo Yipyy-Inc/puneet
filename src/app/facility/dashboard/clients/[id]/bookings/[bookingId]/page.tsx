@@ -125,6 +125,7 @@ import {
 import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { useBookingTips, useSetTipSplit } from "@/lib/api/booking-tips";
+import { tipStillToCollect } from "@/lib/payments/pledged-tip";
 import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
@@ -1395,9 +1396,18 @@ export default function ClientBookingDetailPage({
                 tipTotal: tipTotal || undefined,
                 total: printedTotal,
                 depositCollected: inv?.depositCollected,
-                remainingDue: Math.max(0, printedTotal - paid),
+                // The total counts the booking's tip, and `amountPaid` never
+                // includes a tip, so a tip the ledger collected is taken off
+                // here too or the document asks for it again.
+                remainingDue: Math.max(
+                  0,
+                  printedTotal - paid - (tips?.tipCollected ?? 0),
+                ),
                 payments: inv?.payments,
-                variant: paid >= printedTotal ? "receipt" : "invoice",
+                variant:
+                  paid + (tips?.tipCollected ?? 0) >= printedTotal
+                    ? "receipt"
+                    : "invoice",
               });
               w.document.write(html);
               w.document.close();
@@ -2217,6 +2227,8 @@ export default function ClientBookingDetailPage({
           loyaltyDiscount={loyaltyDiscount ?? undefined}
           membershipDiscount={membershipDiscount ?? undefined}
           promoBookingRef={booking.id}
+          // The tip the booking carries that the ledger has not taken yet.
+          pledgedTip={tipStillToCollect(booking.tipAmount, tips?.tipCollected)}
           onConfirm={checkout}
         />
         <TipSplitModal

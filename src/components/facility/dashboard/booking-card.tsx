@@ -42,6 +42,8 @@ import {
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { balanceOf } from "@/lib/api/booking-money";
+import { useBookingTips } from "@/lib/api/booking-tips";
+import { tipStillToCollect } from "@/lib/payments/pledged-tip";
 import type {
   CheckoutPayment,
   CheckoutResult,
@@ -163,6 +165,12 @@ export function BookingCard({
     booking.source !== "training" &&
     booking.source !== "custom" &&
     Number.isFinite(bookingRef);
+  // Read only while the checkout is open, so a board of cards does not ask for
+  // the tips of every booking on it. The same read carries the tip the booking
+  // carries, which the board does not.
+  const { data: bookingTips } = useBookingTips(
+    paymentOpen && hasRow ? bookingRef : null,
+  );
   // The same checkout the booking page uses (hooks/use-booking-checkout):
   // awaited, every failure thrown so the dialog stays open, the late fee and
   // reward on the bill before any tender, the terminal really charged.
@@ -533,6 +541,10 @@ export function BookingCard({
                     (pendingLateFee?.amount ?? 0)
                   }
                   loyaltyDiscount={loyaltyDiscount ?? undefined}
+                  pledgedTip={tipStillToCollect(
+                    bookingTips?.tipOnBooking,
+                    bookingTips?.tipCollected,
+                  )}
                   onConfirm={handlePaymentConfirm}
                 />
               </div>

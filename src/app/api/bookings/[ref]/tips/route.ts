@@ -56,10 +56,11 @@ async function resolveBooking(
 ) {
   const { data } = await supabase
     .from("bookings")
-    .select("id")
+    .select("id, tip_amount")
     .eq("ref", ref)
     .maybeSingle();
-  return (data as { id: string } | null)?.id ?? null;
+  const row = data as { id: string; tip_amount: number | string | null } | null;
+  return row ? { id: row.id, tipOnBooking: Number(row.tip_amount ?? 0) } : null;
 }
 
 export async function GET(
@@ -80,7 +81,8 @@ export async function GET(
   }
 
   const supabase = await createServerClient();
-  const bookingId = await resolveBooking(supabase, bookingRef);
+  const booking = await resolveBooking(supabase, bookingRef);
+  const bookingId = booking?.id ?? null;
   if (!bookingId) {
     return NextResponse.json(
       { error: "That booking does not exist, or is not yours." },
@@ -147,6 +149,9 @@ export async function GET(
     // Signed sum: a refunded payment carries a negative tip, and the tip goes
     // back with it.
     tipCollected: paymentRows.reduce((sum, p) => sum + Number(p.tip ?? 0), 0),
+    // The tip the booking carries (the owner pledge from the pre-arrival form,
+    // or one added when booking), so a checkout can start at what is left of it.
+    tipOnBooking: booking?.tipOnBooking ?? 0,
     bySource,
     method: allocations[0]?.method ?? null,
     allocations: allocations.map((a) => ({
