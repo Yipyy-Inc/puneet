@@ -46,7 +46,7 @@ import type {
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatTimeOfDay } from "@/lib/i18n/format";
 
-type FeedingSectionProps = Omit<YipyyGoFormSectionProps, "isSubmitting">;
+type FeedingSectionProps = YipyyGoFormSectionProps;
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -156,9 +156,6 @@ function makeComponentId() {
 export function FeedingSection({
   formData,
   updateFormData,
-  onNext,
-  onBack,
-  isLastSection,
 }: FeedingSectionProps) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
@@ -801,14 +798,6 @@ export function FeedingSection({
         )}
 
         {/* ── Navigation ── */}
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            {t("back")}
-          </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? t("review") : t("next")}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

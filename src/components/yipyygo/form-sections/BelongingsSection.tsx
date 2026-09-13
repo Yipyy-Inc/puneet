@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BelongingItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
-import { getFormTemplateForService } from "@/data/yipyygo-config";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
 type BelongingsSectionProps = YipyyGoFormSectionProps;
@@ -35,18 +34,11 @@ const BELONGING_TYPES: { value: BelongingItem["type"]; labelKey: string }[] = [
 export function BelongingsSection({
   formData,
   updateFormData,
-  config,
-  booking,
-  onNext,
-  onBack,
-  isLastSection,
+  template,
 }: BelongingsSectionProps) {
   const t = useShellText("yipyygo");
   const [otherNote, setOtherNote] = useState("");
   const [showOtherInput, setShowOtherInput] = useState(false);
-  const effectiveTemplate = config
-    ? getFormTemplateForService(config, booking.service ?? "")
-    : null;
 
   const _selectedTypes = new Set(formData.belongings.map((b) => b.type));
 
@@ -232,7 +224,7 @@ export function BelongingsSection({
           </div>
         )}
 
-        {effectiveTemplate?.features.photoUploads && (
+        {template.features.photoUploads && (
           <div className="space-y-2">
             <Label className="text-muted-foreground">
               {t("photoOfLabeledBagsOptional")}
@@ -272,15 +264,6 @@ export function BelongingsSection({
             )}
           </div>
         )}
-
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            {t("back")}
-          </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? t("review") : t("next")}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

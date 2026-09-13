@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { createServerClient } from "@/lib/supabase/server";
 import type { YipyyGoPhoto } from "@/lib/api/mappers/yipyy-go";
+import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 
 // ============================================================================
 // What every pre-arrival form route does the same way.
@@ -53,6 +54,8 @@ export interface ResolvedYipyyGoBooking {
   endAt: string;
   totalCost: number;
   tipAmount: number | null;
+  /** The facility's time zone, which a booking's day and times are read in. */
+  timezone: string;
   pets: { id: string; ref: number; name: string }[];
 }
 
@@ -66,7 +69,7 @@ export async function resolveYipyyGoBooking(
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, status, start_at, end_at, total_cost, tip_amount, booking_pets(pets(id, ref, name))",
+      "id, ref, facility_id, client_id, service, status, start_at, end_at, total_cost, tip_amount, facilities(timezone), booking_pets(pets(id, ref, name))",
     )
     .eq("ref", ref)
     .maybeSingle();
@@ -83,6 +86,7 @@ export async function resolveYipyyGoBooking(
     end_at: string;
     total_cost: number | string | null;
     tip_amount: number | string | null;
+    facilities: { timezone: string | null } | null;
     booking_pets:
       | { pets: { id: string; ref: number; name: string } | null }[]
       | null;
@@ -99,6 +103,7 @@ export async function resolveYipyyGoBooking(
     endAt: row.end_at,
     totalCost: Number(row.total_cost ?? 0),
     tipAmount: row.tip_amount === null ? null : Number(row.tip_amount),
+    timezone: row.facilities?.timezone ?? DEFAULT_TIMEZONE,
     pets: (row.booking_pets ?? [])
       .flatMap((bp) => (bp.pets ? [bp.pets] : []))
       .map((pet) => ({ id: pet.id, ref: Number(pet.ref), name: pet.name }))

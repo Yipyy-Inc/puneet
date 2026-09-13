@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { DollarSign } from "lucide-react";
@@ -60,9 +59,6 @@ const AVAILABLE_ADD_ONS: YipyyGoAddOn[] = [
 export function AddOnsSection({
   formData,
   updateFormData,
-  onNext,
-  onBack,
-  isLastSection,
 }: AddOnsSectionProps) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
@@ -175,15 +171,6 @@ export function AddOnsSection({
             </p>
           </div>
         )}
-
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            {t("back")}
-          </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? t("review") : t("next")}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

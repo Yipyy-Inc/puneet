@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
+import { CircleAlert, Mail, Phone, User } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,154 +12,87 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, User, Phone, Mail } from "lucide-react";
-import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
-import type { AdditionalContact } from "@/types/client";
-import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
-import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatList } from "@/lib/i18n/format";
-import { rich } from "@/lib/i18n/rich";
+import { formatList, formatPhone } from "@/lib/i18n/format";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
+import type { Client } from "@/types/client";
 
-type ContactForm = {
-  name: string;
-  email: string;
-  phone: string;
-  additionalContacts: AdditionalContact[];
-};
+import { OnFileRow } from "./OnFileRow";
 
-type ContactInfoSectionProps = YipyyGoFormSectionProps;
+// ============================================================================
+// How the facility reaches the owner, as it has it on file.
+//
+// Read-only. The old step offered name, phone and email fields that saved
+// nowhere: a changed number was gone the moment the owner pressed Next, while
+// the facility kept calling the old one. Contact details change in the account
+// settings, which write the client record the facility reads.
+// ============================================================================
 
-export function ContactInfoSection({
-  customer,
-  onNext,
-  onBack,
-}: ContactInfoSectionProps) {
+export function ContactInfoSection({ customer }: { customer: Client }) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
-  const [values, setValues] = useState<ContactForm>(() => ({
-    name: customer.name ?? "",
-    email: customer.email ?? "",
-    phone: customer.phone ?? "",
-    additionalContacts: (customer.additionalContacts ??
-      []) as AdditionalContact[],
-  }));
-
-  const missing = useMemo(() => {
-    const list: string[] = [];
-    if (!values.name.trim()) list.push(t("fullName"));
-    if (!values.email.trim()) list.push(t("email"));
-    if (!values.phone.trim()) list.push(t("phoneNumber"));
-    values.additionalContacts.forEach((contact, idx) => {
-      if (!contact.name.trim()) {
-        list.push(t("additionalContactName").replace("{n}", String(idx + 1)));
-      }
-      if (!contact.phone.trim()) {
-        list.push(t("additionalContactPhone").replace("{n}", String(idx + 1)));
-      }
-    });
-    return list;
-  }, [values, t]);
-
-  const update = (updates: Partial<ContactForm>) =>
-    setValues((v) => ({ ...v, ...updates }));
-
-  const canContinue = missing.length === 0;
+  const missing = [
+    customer.email?.trim() ? null : t("email"),
+    customer.phone?.trim() ? null : t("phoneNumber"),
+  ].filter((label): label is string => label !== null);
+  const contacts = customer.additionalContacts ?? [];
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="text-primary size-5" />
+          <User className="size-5" aria-hidden />
           {t("verifyYourContactInfo")}
         </CardTitle>
-        <CardDescription>{t("prefilledFromAccount")}</CardDescription>
+        <CardDescription>{t("contactOnFileHint")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {missing.length > 0 && (
           <Alert variant="destructive">
-            <AlertCircle className="size-4" />
+            <CircleAlert aria-hidden />
             <AlertDescription>
-              {rich(t("fillInToContinue"), {
-                fields: <strong>{formatList(missing, locale)}</strong>,
-              })}
-            </AlertDescription>
-          </Alert>
-        )}
-        {missing.length === 0 && (
-          <Alert>
-            <CheckCircle2 className="size-4 text-green-600" />
-            <AlertDescription>
-              {t("allContactInfoOnFile")}{" "}
-              <Link
-                href="/customer/settings"
-                className="text-primary underline"
-              >
-                {t("editInAccountSettings")}
-              </Link>{" "}
-              {t("ifNeeded")}
+              {t("contactMissing").replace("{fields}", () =>
+                formatList(missing, locale),
+              )}
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold">{t("primaryContact")}</h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="contact-name">{t("fullName")}</Label>
-              <Input
-                id="contact-name"
-                value={values.name}
-                onChange={(e) => update({ name: e.target.value })}
-                placeholder={t("fullName")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="contact-phone">
-                <Phone className="mr-1 inline size-3" />
-                {t("phone")}
-              </Label>
-              <Input
-                id="contact-phone"
-                value={values.phone}
-                onChange={(e) => update({ phone: e.target.value })}
-                placeholder="(514) 555-0123"
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="contact-email">
-                <Mail className="mr-1 inline size-3" />
-                {t("email")}
-              </Label>
-              <Input
-                id="contact-email"
-                type="email"
-                value={values.email}
-                onChange={(e) => update({ email: e.target.value })}
-                placeholder={t("youExampleCom")}
-              />
-            </div>
+        <dl className="divide-line divide-y">
+          <OnFileRow label={t("fullName")} value={customer.name} icon={User} />
+          <OnFileRow label={t("email")} value={customer.email} icon={Mail} />
+          <OnFileRow
+            label={t("phone")}
+            value={customer.phone ? formatPhone(customer.phone, locale) : ""}
+            icon={Phone}
+          />
+        </dl>
+
+        {contacts.length > 0 && (
+          <div className="space-y-1">
+            <h3 className="text-ink-tertiary text-[12px] font-bold tracking-[.06em] uppercase">
+              {t("otherContacts")}
+            </h3>
+            <dl className="divide-line divide-y">
+              {contacts.map((contact) => (
+                <OnFileRow
+                  key={contact.id}
+                  label={
+                    contact.relationship
+                      ? `${contact.name} · ${contact.relationship}`
+                      : contact.name
+                  }
+                  value={
+                    contact.phone ? formatPhone(contact.phone, locale) : ""
+                  }
+                />
+              ))}
+            </dl>
           </div>
-        </div>
+        )}
 
-        <AdditionalContactsManager
-          value={values.additionalContacts}
-          onChange={(contacts) => update({ additionalContacts: contacts })}
-          // The component's own defaults now come from the catalogue, so a
-          // caller that wants the standard wording passes nothing.
-        />
-
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack} disabled>
-            {t("back")}
-          </Button>
-          <Button onClick={onNext} disabled={!canContinue}>
-            {t("nextPetDetails")}
-          </Button>
-        </div>
+        <Button variant="outline" asChild>
+          <Link href="/customer/settings">{t("changeContactDetails")}</Link>
+        </Button>
       </CardContent>
     </Card>
   );

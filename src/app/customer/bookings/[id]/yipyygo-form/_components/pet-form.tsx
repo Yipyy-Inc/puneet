@@ -1,0 +1,306 @@
+"use client";
+
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleAlert,
+  CircleCheck,
+  RotateCcw,
+  Send,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { AnswersSummary } from "@/components/yipyygo/form-sections/AnswersSummary";
+import { BehaviorSection } from "@/components/yipyygo/form-sections/BehaviorSection";
+import { BelongingsSection } from "@/components/yipyygo/form-sections/BelongingsSection";
+import { BookingDetailsSection } from "@/components/yipyygo/form-sections/BookingDetailsSection";
+import { ContactInfoSection } from "@/components/yipyygo/form-sections/ContactInfoSection";
+import { FeedingSection } from "@/components/yipyygo/form-sections/FeedingSection";
+import { MedicationSection } from "@/components/yipyygo/form-sections/MedicationSection";
+import { PetDetailsSection } from "@/components/yipyygo/form-sections/PetDetailsSection";
+import type {
+  CustomerYipyyGoBooking,
+  CustomerYipyyGoPet,
+} from "@/lib/api/customer-yipyy-go";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatDateLong } from "@/lib/i18n/format";
+import {
+  answerableQuestions,
+  yipyyGoFormSteps,
+  type YipyyGoFormStep,
+} from "@/lib/yipyy-go/owner-form";
+import { customQuestionsOf } from "@/lib/yipyy-go/validate";
+import type { Client } from "@/types/client";
+import type { FormTemplateConfig } from "@/types/yipyygo";
+
+import { CustomQuestionsSection } from "./custom-questions-section";
+import { FormSentPanel } from "./form-sent-panel";
+import { FormStepRail } from "./form-step-rail";
+import { MissingAnswers } from "./missing-answers";
+import { PetTabs } from "./pet-tabs";
+import { useYipyyGoPetForm } from "./use-yipyy-go-pet-form";
+
+const STEP_LABEL_KEYS: Record<YipyyGoFormStep, string> = {
+  contact: "contactInfo",
+  pet: "petDetails",
+  booking: "booking",
+  feeding: "feeding",
+  medications: "medications",
+  behavior: "behavior",
+  belongings: "belongings",
+  questions: "questions",
+  review: "review",
+};
+
+// Photos reach the server once the form uploads them. Until then a picked file
+// would be a preview in this tab that the facility never receives, so the
+// sections are not offered one.
+function withoutPhotoUploads(template: FormTemplateConfig): FormTemplateConfig {
+  return {
+    ...template,
+    features: { ...template.features, photoUploads: false },
+  };
+}
+
+interface PetFormProps {
+  data: CustomerYipyyGoBooking;
+  pet: CustomerYipyyGoPet;
+  customer: Client | undefined;
+  onSelectPet: (ref: number) => void;
+}
+
+export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
+  const { t, fill, locale } = useCustomerText("yipyygo");
+  const customerPet = customer?.pets?.find(
+    (candidate) => candidate.id === pet.ref,
+  );
+  const steps = yipyyGoFormSteps(data.template, {
+    contact: Boolean(customer),
+    pet: Boolean(customerPet),
+  });
+  const form = useYipyyGoPetForm({ data, pet, steps });
+
+  if (form.sent) {
+    return (
+      <div className="space-y-6">
+        <PetTabs pets={data.pets} currentRef={pet.ref} onSelect={onSelectPet} />
+        <FormSentPanel
+          data={data}
+          pet={pet}
+          result={form.sent}
+          email={customer?.email}
+          onSelectPet={onSelectPet}
+        />
+      </div>
+    );
+  }
+
+  const questions = answerableQuestions(data.template);
+  const template = withoutPhotoUploads(data.template);
+  const labelled = steps.map((id) => ({ id, label: t(STEP_LABEL_KEYS[id]) }));
+  const index = form.stepIndex;
+  const nextStep = labelled[index + 1];
+  const sectionProps = {
+    formData: form.form,
+    updateFormData: form.updateForm,
+    template,
+    medicationFee: data.medicationFee,
+  };
+
+  const renderStep = () => {
+    switch (form.step) {
+      case "contact":
+        return customer ? <ContactInfoSection customer={customer} /> : null;
+      case "pet":
+        return customerPet ? <PetDetailsSection pet={customerPet} /> : null;
+      case "booking":
+        return (
+          <BookingDetailsSection
+            booking={{
+              id: data.booking.ref,
+              service: data.booking.service,
+              startDate: data.booking.startDate,
+              endDate: data.booking.endDate,
+              checkInTime: data.booking.checkInTime,
+              checkOutTime: data.booking.checkOutTime,
+            }}
+            pet={customerPet ?? { name: pet.name }}
+          />
+        );
+      case "feeding":
+        return <FeedingSection {...sectionProps} />;
+      case "medications":
+        return <MedicationSection {...sectionProps} />;
+      case "behavior":
+        return <BehaviorSection {...sectionProps} />;
+      case "belongings":
+        return <BelongingsSection {...sectionProps} />;
+      case "questions":
+        return (
+          <CustomQuestionsSection
+            petName={pet.name}
+            questions={questions}
+            answers={form.customAnswers}
+            missing={form.missing}
+            onChange={form.setCustomAnswer}
+          />
+        );
+      case "review":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>{fill("reviewTitle", { pet: pet.name })}</CardTitle>
+              <CardDescription>{t("reviewIntro")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <MissingAnswers
+                missing={form.missing}
+                petName={pet.name}
+                questions={customQuestionsOf(data.template)}
+                steps={steps}
+                onGoTo={(target) =>
+                  void form.goToStep(steps.indexOf(target), true)
+                }
+              />
+              <AnswersSummary
+                formData={form.form}
+                questions={questions}
+                customAnswers={form.customAnswers}
+                show={{
+                  feeding: steps.includes("feeding"),
+                  medications: steps.includes("medications"),
+                  behavior: steps.includes("behavior"),
+                }}
+              />
+              <p className="text-ink-secondary text-[13.5px]">
+                {t("sendConfirmNote")}
+              </p>
+            </CardContent>
+          </Card>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PetTabs
+        pets={data.pets}
+        currentRef={pet.ref}
+        disabled={form.busy}
+        onSelect={(ref) => void form.switchPet(() => onSelectPet(ref))}
+      />
+
+      {form.status === "changes_requested" && (
+        <Alert>
+          <CircleAlert aria-hidden />
+          <AlertTitle>{t("changesRequestedTitle")}</AlertTitle>
+          {pet.submission?.changesMessage && (
+            <AlertDescription className="whitespace-pre-line">
+              {pet.submission.changesMessage}
+            </AlertDescription>
+          )}
+        </Alert>
+      )}
+      {form.status === "submitted" && pet.submission?.submittedAt && (
+        <Alert>
+          <CircleCheck aria-hidden />
+          <AlertDescription>
+            {fill("sentBefore", {
+              date: formatDateLong(pet.submission.submittedAt, locale),
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {form.canUseLastStay && index === 0 && (
+        <section
+          aria-labelledby="yipyy-go-last-stay"
+          className="border-line bg-card flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <RotateCcw
+              className="text-ink-secondary mt-0.5 size-5 shrink-0"
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <h2
+                id="yipyy-go-last-stay"
+                className="text-body-ink text-[15px] font-semibold"
+              >
+                {t("useSameAsLastTime")}
+              </h2>
+              <p className="text-ink-secondary text-[13.5px]">
+                {t("copyFromLastStay")}
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={form.applyLastStay}>
+            {fill("copyLastAnswers", { pet: pet.name })}
+          </Button>
+        </section>
+      )}
+
+      <FormStepRail
+        steps={labelled}
+        current={index}
+        disabled={form.busy}
+        onSelect={(target) => void form.goToStep(target)}
+      />
+
+      {renderStep()}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          variant="outline"
+          onClick={() => void form.goToStep(index - 1)}
+          disabled={index === 0 || form.busy}
+        >
+          <ArrowLeft aria-hidden />
+          {t("back")}
+        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {form.draftable && (
+            <Button
+              variant="ghost"
+              onClick={() => void form.saveAndLeave()}
+              loading={form.pending === "later"}
+              disabled={form.busy}
+            >
+              {t("saveForLater")}
+            </Button>
+          )}
+          {form.step === "review" ? (
+            <Button
+              onClick={() => void form.send()}
+              loading={form.sending}
+              disabled={form.busy}
+            >
+              <Send aria-hidden />
+              {fill(
+                form.status === "submitted" ? "sendFormAgain" : "sendForm",
+                { pet: pet.name },
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => void form.goToStep(index + 1)}
+              loading={form.pending === "next"}
+              disabled={form.busy}
+            >
+              {fill("continueTo", { step: nextStep?.label ?? "" })}
+              <ArrowRight aria-hidden />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

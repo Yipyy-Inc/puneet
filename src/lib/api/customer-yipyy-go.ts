@@ -86,17 +86,22 @@ export function useCustomerYipyyGo(): {
 // write /api/customer/yipyy-go/bookings/[ref], which resolves the booking
 // through the owner's own client row.
 
+/** A refused request: its status, and what was missing when that was why. */
+export type YipyyGoRequestError = Error & {
+  status?: number;
+  missing?: string[];
+};
+
 async function readYipyyGoError(
   response: Response,
   fallback: string,
-): Promise<Error> {
+): Promise<YipyyGoRequestError> {
   const body = (await response.json().catch(() => null)) as {
     error?: string;
     missing?: string[];
   } | null;
-  const error = new Error(body?.error ?? fallback) as Error & {
-    missing?: string[];
-  };
+  const error: YipyyGoRequestError = new Error(body?.error ?? fallback);
+  error.status = response.status;
   if (body?.missing) error.missing = body.missing;
   return error;
 }
@@ -116,6 +121,11 @@ export interface CustomerYipyyGoBooking {
     status: string;
     startAt: string;
     endAt: string;
+    /** On the facility's calendar: `YYYY-MM-DD` and `HH:mm`. */
+    startDate: string;
+    endDate: string;
+    checkInTime: string;
+    checkOutTime: string;
     totalCost: number;
     tipAmount: number | null;
   };
