@@ -20,6 +20,8 @@
 -- K6  Today's arrivals are today on the facility's calendar, found by a dog's
 --     name or the booking number, and only at the facility asked about.
 -- K7  anon holds nothing; nobody reads a code's hash or computes one.
+-- K8  Where the facility asks no form for the service, a desk check needs no
+--     reason and records nothing missing — it used to fail on form_missing.
 -- ============================================================================
 
 begin;
@@ -318,6 +320,41 @@ select pg_temp.t('K7  anon holds nothing; nobody reads a code hash or computes o
     and not has_function_privilege('anon', 'public.record_yipyy_go_desk_check(uuid, jsonb, text, text)', 'execute')
     and not has_function_privilege('anon', 'public.yipyy_go_arrivals(uuid, text)', 'execute')
     and not has_table_privilege('authenticated', 'public.yipyy_go_desk_checks', 'insert'));
+
+
+-- ── K8  a desk check where no form is asked ─────────────────────────────────
+do $$
+declare
+  v_rows int; v_missing int; v_requirement text; v_status text; v_reason text;
+begin
+  -- Boarding: this facility's forms cover daycare only.
+  insert into public.bookings
+    (id, facility_id, client_id, service, status, start_at, end_at, base_price, total_cost)
+  values
+    ('00000000-0000-0000-0000-0000001f4092', '00000000-0000-0000-0000-0000001f4020',
+     '00000000-0000-0000-0000-0000001f4040', 'boarding', 'confirmed',
+     now(), now() + interval '1 day', 60, 60);
+  insert into public.booking_pets (booking_id, pet_id) values
+    ('00000000-0000-0000-0000-0000001f4092', '00000000-0000-0000-0000-0000001f4051');
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f4001');
+  set local role authenticated;
+  select count(*), count(*) filter (where form_missing), max(requirement),
+         max(form_status), max(override_reason)
+    into v_rows, v_missing, v_requirement, v_status, v_reason
+    from public.record_yipyy_go_desk_check('00000000-0000-0000-0000-0000001f4092',
+      '[{"petId": "00000000-0000-0000-0000-0000001f4051"}]'::jsonb,
+      'search', 'Owner');
+  reset role;
+
+  perform pg_temp.t('K8  where no form is asked, the desk check needs no reason and records nothing missing',
+    v_rows = 1 and v_missing = 0 and v_requirement is null
+      and v_status = 'not_started' and v_reason is null,
+    format('rows=%s missing=%s requirement=%s status=%s reason=%s',
+      v_rows, v_missing, v_requirement, v_status, v_reason));
+exception when others then
+  reset role; perform pg_temp.t('K8  desk check without a form', false, sqlerrm);
+end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
