@@ -56,7 +56,10 @@ export function useSetGroomingAppointmentStatus() {
         const parsed = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(parsed?.error ?? "Could not update that appointment.");
+        throw Object.assign(
+          new Error(parsed?.error ?? "Could not update that appointment."),
+          { status: response.status },
+        );
       }
     },
     onSuccess: () => {

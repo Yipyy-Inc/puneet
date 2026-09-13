@@ -113,7 +113,10 @@ export function useDaycareCheckIn() {
         error?: string;
       } | null;
       if (!response.ok) {
-        throw new Error(parsed?.error ?? "Could not check that dog in.");
+        throw Object.assign(
+          new Error(parsed?.error ?? "Could not check that dog in."),
+          { status: response.status },
+        );
       }
       return input.bookingRef;
     },

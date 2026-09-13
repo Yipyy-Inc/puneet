@@ -6422,7 +6422,7 @@
                         "
                         >60px collapsed · 266px expanded · width transition
                         220ms ease · icons never move, labels fade · matters
-                        more at 36 nav areas than at 20</span
+                        more at 37 nav areas than at 20</span
                       >
                     </div>
                   </div>
@@ -7938,7 +7938,7 @@
                         product, and an unassigned pose is a pose nobody uses.
                         So this section is an inventory rather than a
                         permission: every status ink, every state a screen can
-                        be in, and all 36 nav areas, each with the pose that
+                        be in, and all 37 nav areas, each with the pose that
                         belongs there and the sentence that goes with it. The
                         restraint that is left is physical — he needs room, and
                         he never sits on top of data.</span
@@ -8216,7 +8216,7 @@
                           color: var(--ink-head);
                           letter-spacing: -0.01em;
                         "
-                        >All 36 nav areas, each with its empty-state pose</span
+                        >All 37 nav areas, each with its empty-state pose</span
                       >
                       <span
                         style="
@@ -12776,7 +12776,7 @@
                         color: var(--ink-3);
                         line-height: 1.65;
                       "
-                      >the real fast path across 36 nav areas · results grouped
+                      >the real fast path across 37 nav areas · results grouped
                       by type, actions last · selected row is a solid --pri fill
                       with white text, never a tint and never an outline</span
                     >
@@ -17448,7 +17448,7 @@
             { title: "Patterns", note: "the four compositions that carry the product", isPatterns: true },
             { title: "Surfacing patterns", note: "six additions — every one renders data the product already holds, closer to where the work happens", isNew: true },
             { title: "Yipyy — twenty-three poses", note: "the mascot shares the product's name: he is Yipyy. The whole cast, the surface each one serves, three slot shapes, two families, and the register rule that replaced “never on an error”", isMascot: true },
-            { title: "Yipyy — where he appears", note: "the placement map: every status ink, every state on the ladder, and all 36 nav areas given a named pose — so the answer is never “nobody assigned one”", isMascotMap: true },
+            { title: "Yipyy — where he appears", note: "the placement map: every status ink, every state on the ladder, and all 37 nav areas given a named pose — so the answer is never “nobody assigned one”", isMascotMap: true },
             { title: "Icons — two tiers", note: "monochrome line glyphs do the work; the 3D render is brand-only — and the boundary between them is the whole system", isIcons: true },
             { title: "Bigger, and more obvious", note: "six patterns worth taking from best-in-class pet software — and the one thing not to take", isBig: true },
             { title: "Forms", note: "the largest surface in the codebase — and the one with no spec until now", isForms: true },
@@ -17901,7 +17901,7 @@
           const focusRules = [
             { t: "Focus ring", v: "2px solid #1668E3 + box-shadow 0 0 0 3px rgba(22,104,227,.12)" },
             { t: "Never", v: "outline: none without an equivalent replacement" },
-            { t: "Command palette", v: "⌘K / Ctrl+K — the real fast path across 36 nav areas" },
+            { t: "Command palette", v: "⌘K / Ctrl+K — the real fast path across 37 nav areas" },
             { t: "Escape", v: "closes the topmost overlay only, never the whole stack" },
             { t: "Nested interactive", v: "a row containing a checkbox or menu must NOT also be role=\"button\" — that is a WCAG failure your DataTable source already calls out" },
             { t: "Tab order", v: "follows the DOM; never tabindex above 0" },
@@ -18162,7 +18162,7 @@
             { t: "Tooltip", d: "The one other light-on-dark surface besides the code panel. 400ms in, 0ms out, keyboard-reachable on focus, and never the only source of a fact. Below 1024px there is no hover, so it becomes a help button opening a popover." },
             { t: "Pagination", d: "412 bookings do not fit on a screen and infinite scroll loses your place. Current page solid, siblings hairlined, ellipsis non-interactive. The range and the rows-per-page pill flank it; on a phone it collapses to prev, next and a position." },
             { t: "Search with results", d: "Staff know the pet's name and nothing else. The matched substring is a weight change to 700 in --primary-hover, never a highlight fill. Arrow keys move, Enter opens, Esc clears, and the input never loses focus." },
-            { t: "Command palette", d: "36 nav areas is more than anyone clicks through twice. Palette verbs are the button verbs — if the button says “Check in Kofi”, so does this. A destructive row may appear but it opens the confirmation; it never fires from here." },
+            { t: "Command palette", d: "37 nav areas is more than anyone clicks through twice. Palette verbs are the button verbs — if the button says “Check in Kofi”, so does this. A destructive row may appear but it opens the confirmation; it never fires from here." },
           ];
 
           const charSheet = [
@@ -18265,7 +18265,7 @@
             { m: "Pets", p: "presenting" }, { m: "Clients", p: "presenting" }, { m: "Memberships", p: "presenting" },
             { m: "Inventory", p: "presenting" }, { m: "Retail", p: "presenting" },
             { m: "Bookings", p: "waiting" }, { m: "Scheduling", p: "waiting" }, { m: "Boarding", p: "waiting" },
-            { m: "Daycare", p: "waiting" }, { m: "Grooming", p: "waiting" },
+            { m: "Daycare", p: "waiting" }, { m: "Grooming", p: "waiting" }, { m: "Check-in", p: "waiting" },
             { m: "Booking requests", p: "question" }, { m: "Occupancy board", p: "searching" }, { m: "Kennel runs", p: "searching" },
             { m: "Daily care", p: "notification" }, { m: "Incidents", p: "notification" }, { m: "Notifications", p: "notification" },
             { m: "Inbox", p: "speaking" }, { m: "Marketing", p: "speaking" }, { m: "Calls", p: "listening" },
@@ -18500,7 +18500,7 @@
             { icon: "info", name: "Tooltip", now: "Icon-only buttons are already shipping without labels.", spec: ["--body fill with white text — 17.25:1 inverted, and the only other light-on-dark surface besides the code panel", "12.5/500, radius 10px, pad 7px 10px, max-width 260px, 6px offset", "400ms open delay, 0ms close. Keyboard-reachable on focus", "Never the only source of a piece of information", "There is no hover on touch: below 1024px the same content becomes a help button opening a popover"] },
             { icon: "more_horiz", name: "Pagination", now: "412 bookings do not fit on one screen and infinite scroll loses your place.", spec: ["36px full pills. Current page solid --primary with white text, siblings white with a --line-strong hairline", "Ellipsis is non-interactive --ink-tertiary", "Left: “1–25 of 412” in 13px tabular --ink-tertiary", "Right: a rows-per-page pill — 25 · 50 · 100", "On a phone: prev and next only, plus “Page 3 of 17”"] },
             { icon: "search", name: "Search with results", now: "Staff know the pet's name and nothing else about where the record lives.", spec: ["40px pill, leading search glyph, a clear button once filled, 220ms debounce", "Results popover grouped by type, each group under a 12/700/.07em uppercase --ink-tertiary label", "The matched substring is --primary-hover at weight 700 — a weight change, never a highlight fill", "↑ ↓ to move, Enter to open, Esc to close, and the input keeps focus throughout", "Empty: “No matches for kofi” and the one broadest thing to try next"] },
-            { icon: "keyboard_command_key", name: "Command palette", now: "36 nav areas is more than anyone will click through twice.", spec: ["⌘K and Ctrl+K. 620px wide, radius 24px, --sh-3, pinned 15vh from the top", "A 44px borderless input at 17px, then 44px rows: glyph, label, and a right-aligned --ink-tertiary breadcrumb of where it lives", "Sections in order: Actions, Recent, Go to", "Palette verbs are the button verbs. If the button says “Check in Kofi”, so does the palette", "A destructive action may appear, but it opens the confirmation — it never fires from the palette"] },
+            { icon: "keyboard_command_key", name: "Command palette", now: "37 nav areas is more than anyone will click through twice.", spec: ["⌘K and Ctrl+K. 620px wide, radius 24px, --sh-3, pinned 15vh from the top", "A 44px borderless input at 17px, then 44px rows: glyph, label, and a right-aligned --ink-tertiary breadcrumb of where it lives", "Sections in order: Actions, Recent, Go to", "Palette verbs are the button verbs. If the button says “Check in Kofi”, so does the palette", "A destructive action may appear, but it opens the confirmation — it never fires from the palette"] },
           ];
 
           const printDocs = [

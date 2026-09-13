@@ -37,6 +37,7 @@ export const EMPLOYEE_ROUTE_BY_FACILITY_URL: Record<string, string> = {
   // Operations
   "/facility/dashboard/daily-care": "/employee/daily-care",
   "/facility/dashboard/bookings": "/employee/bookings",
+  "/facility/dashboard/check-in": "/employee/check-in",
   "/facility/dashboard/estimates": "/employee/estimates",
   "/facility/dashboard/tasks": "/employee/tasks",
   "/facility/dashboard/online-booking": "/employee/online-booking",

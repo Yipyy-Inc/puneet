@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
 import type { FacilityStaffRole } from "@/types/facility-staff";
-import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
+import { NAV_SECTIONS, navItemAllowed } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 
 // ============================================================================
@@ -41,7 +41,7 @@ import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 // the avatar dropdown's My Schedule / My Tasks / Availability / Documents /
 // Performance / Write-ups / Settings). The sidebar renders ONLY the shared nav
 // model (@/lib/nav/facility-nav NAV_SECTIONS), filtered to the viewer's
-// permissions: an item shows iff its permKey is granted (`perms[key] !== false`),
+// permissions: an item shows iff its permKey, or one of its anyPermKeys, is granted,
 // a section iff at least one of its items is granted.
 // ============================================================================
 
@@ -129,7 +129,7 @@ export function EmployeeSidebar({ staffId }: { staffId: string }) {
   const navSections = NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items
-      .filter((item) => perms[item.permKey] !== false)
+      .filter((item) => navItemAllowed(item, perms))
       // Employees stay in the /employee shell — each item points at its
       // employee-shell route, which re-renders the same facility page behind
       // RequirePermission (the same permKey that gated the nav item).

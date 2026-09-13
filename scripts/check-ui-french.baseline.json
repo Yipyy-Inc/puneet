@@ -669,7 +669,6 @@
     "src/app/facility/account/subscription/change-plan/_components/change-plan-view.tsx": 10,
     "src/app/facility/account/subscription/change-plan/page.tsx": 1,
     "src/app/facility/account/subscription/page.tsx": 1,
-    "src/app/facility/checkin/page.tsx": 50,
     "src/app/facility/dashboard/automations/_components/automation-rule-editor.tsx": 21,
     "src/app/facility/dashboard/automations/_components/automations-client.tsx": 22,
     "src/app/facility/dashboard/automations/_components/location-scope-field.tsx": 4,

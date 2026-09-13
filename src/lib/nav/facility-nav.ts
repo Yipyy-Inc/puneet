@@ -38,6 +38,8 @@ import {
   Settings,
 } from "lucide-react";
 
+import { CheckedIn } from "@/components/icons/yipyy-icons";
+
 import {
   PERMISSION_GROUPS,
   type PermissionGroup,
@@ -113,11 +115,27 @@ export interface NavItem {
    */
   permKey: PermissionKey;
   /**
+   * More permissions that open the same item: it shows when the viewer holds
+   * `permKey` or any of these. The check-in desk is one screen for services
+   * each gated by a permission of its own.
+   */
+  anyPermKeys?: PermissionKey[];
+  /**
    * Match the current pathname exactly for the active state (the default), or as
    * a route prefix when `false`. Reserved for consumers that highlight a parent
    * entry across its sub-routes; the shared sidebar matches exactly.
    */
   exact?: boolean;
+}
+
+/** Whether the viewer may see a nav item: its permission, or any of its others. */
+export function navItemAllowed(
+  item: NavItem,
+  permissions: Partial<Record<PermissionKey, unknown>>,
+): boolean {
+  return [item.permKey, ...(item.anyPermKeys ?? [])].some(
+    (key) => permissions[key] !== false,
+  );
 }
 
 export interface NavSection {
@@ -260,6 +278,13 @@ export const NAV_SECTIONS: NavSection[] = [
         url: "/facility/dashboard/bookings",
         icon: CalendarCheck,
         permKey: "view_bookings",
+      },
+      {
+        title: "Check-in",
+        url: "/facility/dashboard/check-in",
+        icon: CheckedIn,
+        permKey: "check_in_out",
+        anyPermKeys: ["daycare_check_in_out", "edit_bookings"],
       },
       {
         title: "Estimates",

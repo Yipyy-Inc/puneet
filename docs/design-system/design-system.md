@@ -363,7 +363,7 @@ it is the number an owner checks hourly.
 only show and hide, they never reorder. Footer states the scope (pets · staff · date).
 
 **Collapsible rail.** 60px collapsed, 266px expanded, width transition 220ms ease. Icons never
-move, labels fade. This matters at Yipyy's scale — 36 nav areas.
+move, labels fade. This matters at Yipyy's scale — 37 nav areas.
 
 ## 5b1. Icons — two tiers
 
@@ -425,10 +425,10 @@ one icon is two screens nobody can find by eye.
 
 Four groups, ≈68 glyphs, one name each — the point is that nobody picks a synonym.
 
-**Navigation (32 areas):** `house` Dashboard · `calendar-days` Facility Calendar · `layout-grid`
+**Navigation (38 areas):** `house` Dashboard · `calendar-days` Facility Calendar · `layout-grid`
 Occupancy · `phone` Calling · `message-square` Inbox · `scissors` Grooming · `graduation-cap`
 Training · `shopping-cart` Retail · `zap` Automations · `lightbulb` Insights · `users` Customer ·
-`clock` Scheduling · `heart-handshake` Daily Care · `calendar-check` Bookings · `file-text`
+`clock` Scheduling · `heart-handshake` Daily Care · `calendar-check` Bookings · `checked-in` Check-in · `file-text`
 Estimates · `clipboard-list` Tasks · `calendar-clock` Booking Requests · `clipboard-check`
 Evaluations · `user-check` Staff · `package` Inventory · `tags` Memberships · `camera` Pet Cams ·
 `credit-card` Payments · `wallet` Billing · `vault` Register · `receipt` Payroll · `repeat`
@@ -696,7 +696,7 @@ The pose dictates the slot, not the reverse.
 
 Twenty-three poses is a cast wide enough to cover the product, and an unassigned pose is a pose
 nobody uses. This section is an inventory rather than a permission: every status ink, every state a
-screen can be in, and all 36 nav areas, each with the pose that belongs there. The restraint that is
+screen can be in, and all 37 nav areas, each with the pose that belongs there. The restraint that is
 left is physical — §5d1's 96px floor, and never on top of data.
 
 ### Status ink → pose
@@ -742,13 +742,13 @@ Read top to bottom it is the life of a screen. The four **— none** rungs are t
 | Field-level error             | **— none**      | 48px of room: ink, glyph, hairline, sentence  | he does not fit and would not help           |
 | Toast                         | **— none**      | A 48px strip that leaves in four seconds      | the glyph and the sentence                   |
 
-### All 36 nav areas → pose
+### All 37 nav areas → pose
 
 Modules that share a pose share a shape of emptiness. That is deliberate: staff learn the pose once
 and read the next one instantly.
 
 - `presenting` — Pets · Clients · Memberships · Inventory · Retail
-- `waiting` — Bookings · Scheduling · Boarding · Daycare · Grooming
+- `waiting` — Bookings · Scheduling · Boarding · Daycare · Grooming · Check-in
 - `searching` — Occupancy board · Kennel runs · every filtered empty
 - `notification` — Daily care · Incidents · Notifications
 - `speaking` — Inbox · Marketing
@@ -868,7 +868,7 @@ trains people to type without reading.
 | ------------------ | ------------------------------------------------------------------ |
 | Focus ring         | `2px solid #1668E3` + `box-shadow: 0 0 0 3px rgba(22,104,227,.12)` |
 | Never              | `outline: none` without an equivalent replacement                  |
-| Command palette    | ⌘K / Ctrl+K — the real fast path across 36 nav areas               |
+| Command palette    | ⌘K / Ctrl+K — the real fast path across 37 nav areas               |
 | Escape             | closes the topmost overlay only, never the whole stack             |
 | Nested interactive | a row with a checkbox or menu must not also be `role="button"`     |
 | Tab order          | follows the DOM; never `tabindex` above 0                          |
@@ -1180,7 +1180,7 @@ by type, each group under a 12/700/.07em uppercase `--ink-tertiary` label. The m
 open, Esc to close, and the input keeps focus throughout. Empty: "No matches for kofi" and the one
 broadest thing to try next.
 
-**Command palette** — 36 nav areas is more than anyone will click through twice. ⌘K and Ctrl+K.
+**Command palette** — 37 nav areas is more than anyone will click through twice. ⌘K and Ctrl+K.
 620px wide, radius 24px, `--sh-3`, pinned 15vh from the top. A 44px borderless input at 17px, then
 44px rows: glyph, label, and a right-aligned `--ink-tertiary` breadcrumb of where it lives. Sections
 in order: Actions, Recent, Go to. Palette verbs are the button verbs — if the button says "Check in

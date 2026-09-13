@@ -23,7 +23,11 @@ async function readError(response: Response, fallback: string): Promise<Error> {
     error?: string;
     code?: string;
   } | null;
-  const error = new Error(body?.error ?? fallback) as Error & { code?: string };
+  const error = new Error(body?.error ?? fallback) as Error & {
+    code?: string;
+    status?: number;
+  };
+  error.status = response.status;
   if (body?.code) error.code = body.code;
   return error;
 }
