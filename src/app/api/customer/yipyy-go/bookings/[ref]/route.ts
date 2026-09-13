@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFormTemplateForService } from "@/data/yipyygo-config";
 import { yipyyGoOff, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
+import { wallClockParts } from "@/lib/time/facility-time";
 import {
   parseOfferedAddOns,
   parseStoredAnswers,
@@ -107,6 +108,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
     pets?: { petId: string; status: string; editable: boolean }[];
   };
   const stateByPet = new Map((state.pets ?? []).map((p) => [p.petId, p]));
+  // The booking's day and times on the facility's own calendar.
+  const start = wallClockParts(booking.startAt, booking.timezone);
+  const end = wallClockParts(booking.endAt, booking.timezone);
 
   return NextResponse.json({
     booking: {
@@ -115,6 +119,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
       status: booking.status,
       startAt: booking.startAt,
       endAt: booking.endAt,
+      startDate: start.date,
+      endDate: end.date,
+      checkInTime: start.time,
+      checkOutTime: end.time,
       totalCost: booking.totalCost,
       tipAmount: booking.tipAmount,
     },

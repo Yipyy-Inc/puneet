@@ -444,24 +444,28 @@ export interface YipyyGoFormSectionBooking {
   facilityId?: number;
 }
 
+/**
+ * What a form section reads and writes: one pet's answers, as the sections
+ * hold them. The server takes YipyyGoAnswers; src/lib/yipyy-go/owner-form.ts
+ * converts between the two.
+ */
+export type YipyyGoSectionFormData = Pick<
+  YipyyGoFormData,
+  | "petName"
+  | "belongings"
+  | "belongingsPhotoUrl"
+  | "feedingInstructions"
+  | "medications"
+  | "noMedications"
+  | "behaviorNotes"
+  | "addOns"
+  | "tip"
+>;
+
 export interface YipyyGoFormSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: YipyyGoFormSectionBooking;
-  pet: import("@/types/pet").Pet;
-  customer: import("@/types/client").Client;
-  /**
-   * The facility's Yipyy Go setup as STORED — no facilityId, no row timestamps.
-   * A form section reads the template, the fees and the tip prompt out of it
-   * and has never wanted the row metadata. Null means "not known yet".
-   */
-  config: Omit<
-    YipyyGoConfig,
-    "facilityId" | "createdAt" | "updatedAt" | "updatedBy"
-  > | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
+  formData: YipyyGoSectionFormData;
+  updateFormData: (updates: Partial<YipyyGoSectionFormData>) => void;
+  /** The facility's form for this booking's service, already resolved. */
+  template: FormTemplateConfig;
+  medicationFee: MedicationFeeConfig | null;
 }

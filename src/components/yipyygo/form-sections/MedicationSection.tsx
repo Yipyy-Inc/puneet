@@ -35,7 +35,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MedicationItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
-import { getFormTemplateForService } from "@/data/yipyygo-config";
 import type {
   MedForm,
   MedFrequency,
@@ -111,20 +110,14 @@ function isLikelyHighRisk(name: string): boolean {
 export function MedicationSection({
   formData,
   updateFormData,
-  config,
-  booking,
-  onNext,
-  onBack,
-  isLastSection,
+  template,
+  medicationFee,
 }: MedicationSectionProps) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
   const [expandedMed, setExpandedMed] = useState<string | null>(
     formData.medications.length > 0 ? formData.medications[0].id : null,
   );
-  const effectiveTemplate = config
-    ? getFormTemplateForService(config, booking.service ?? "")
-    : null;
 
   const handleNoMedicationsToggle = (checked: boolean) => {
     updateFormData({
@@ -220,7 +213,7 @@ export function MedicationSection({
         </div>
 
         {/* ── Facility medication fee ── */}
-        {!formData.noMedications && config?.medicationFee?.enabled && (
+        {!formData.noMedications && medicationFee?.enabled && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950/20">
             <div className="flex items-start gap-2">
               <DollarSign className="mt-0.5 size-4 shrink-0 text-amber-600" />
@@ -229,24 +222,21 @@ export function MedicationSection({
                   {t("feeLabelAmount")
                     .replace(
                       "{label}",
-                      config.medicationFee.label ?? t("medicationAdminFee"),
+                      medicationFee.label ?? t("medicationAdminFee"),
                     )
                     .replace(
                       "{amount}",
-                      formatMoney(config.medicationFee.amount, locale),
+                      formatMoney(medicationFee.amount, locale),
                     )}{" "}
                   <span className="font-normal">
-                    {config.medicationFee.billing === "per_dose" &&
-                      t("feePerDose")}
-                    {config.medicationFee.billing === "per_day" &&
-                      t("feePerDay")}
-                    {config.medicationFee.billing === "per_stay" &&
-                      t("feePerStay")}
+                    {medicationFee.billing === "per_dose" && t("feePerDose")}
+                    {medicationFee.billing === "per_day" && t("feePerDay")}
+                    {medicationFee.billing === "per_stay" && t("feePerStay")}
                   </span>
                 </p>
-                {config.medicationFee.description && (
+                {medicationFee.description && (
                   <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
-                    {config.medicationFee.description}
+                    {medicationFee.description}
                   </p>
                 )}
               </div>
@@ -652,7 +642,7 @@ export function MedicationSection({
                       </div>
 
                       {/* Photo upload */}
-                      {effectiveTemplate?.features.photoUploads && (
+                      {template.features.photoUploads && (
                         <div className="space-y-1">
                           <Label className="text-xs">
                             {t("photoOfMedicationLabelOptional")}
@@ -741,14 +731,6 @@ export function MedicationSection({
         )}
 
         {/* ── Navigation ── */}
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            {t("back")}
-          </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? t("review") : t("next")}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

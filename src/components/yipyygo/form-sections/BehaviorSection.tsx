@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Plus, X } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,249 +11,184 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import {
+  ANXIETY_TRIGGER_KEYS,
+  ENERGY_LEVEL_KEYS,
+  WITH_DOGS_KEYS,
+  WITH_PEOPLE_KEYS,
+} from "@/lib/yipyy-go/answer-labels";
+import { DEFAULT_BEHAVIOR_NOTES } from "@/lib/yipyy-go/owner-form";
 import type { BehaviorNotes, YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-type BehaviorSectionProps = YipyyGoFormSectionProps;
+import { ChoicePills, TogglePills } from "./ChoicePills";
 
-const ENERGY_LEVELS = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "very_high", label: "Very High" },
-] as const;
+// ============================================================================
+// How the pet gets on, for the team looking after them.
+//
+// Shown when the facility's template has its care-instructions section on.
+// This step existed and was never rendered, because the old form did not read
+// the template. Its words were English literals, and a trigger tapped from the
+// list was stored as its English label — when it was stored at all, since the
+// tap added whatever the text box held before it.
+// ============================================================================
 
-const SOCIALIZATION_OPTIONS: {
-  withDogs: {
-    value: BehaviorNotes["socialization"]["withDogs"];
-    label: string;
-  }[];
-  withHumans: {
-    value: BehaviorNotes["socialization"]["withHumans"];
-    label: string;
-  }[];
-} = {
-  withDogs: [
-    { value: "friendly", label: "Friendly" },
-    { value: "selective", label: "Selective" },
-    { value: "not_friendly", label: "Not Friendly" },
-    { value: "unknown", label: "Unknown" },
-  ],
-  withHumans: [
-    { value: "friendly", label: "Friendly" },
-    { value: "shy", label: "Shy" },
-    { value: "fearful", label: "Fearful" },
-    { value: "unknown", label: "Unknown" },
-  ],
-};
+function choices<T extends string>(
+  keys: Record<T, string>,
+  t: (key: string) => string,
+) {
+  return (Object.keys(keys) as T[]).map((value) => ({
+    value,
+    label: t(keys[value]),
+  }));
+}
 
-const COMMON_ANXIETY_TRIGGERS = [
-  "Thunderstorms",
-  "Loud noises",
-  "Strangers",
-  "Other dogs",
-  "Separation",
-  "Vet visits",
-  "Grooming",
-  "Car rides",
-];
+const isOffered = (value: string) =>
+  Object.prototype.hasOwnProperty.call(ANXIETY_TRIGGER_KEYS, value);
 
 export function BehaviorSection({
   formData,
   updateFormData,
-  onNext,
-  onBack,
-  isLastSection,
-}: BehaviorSectionProps) {
-  const behavior = formData.behaviorNotes || {
-    energyLevel: "medium",
-    socialization: {
-      withDogs: "unknown",
-      withHumans: "friendly",
-    },
-    anxietyTriggers: [],
-    specialNotes: "",
-  };
+}: YipyyGoFormSectionProps) {
+  const t = useShellText("yipyygo");
+  const [typed, setTyped] = useState("");
+  const behavior = formData.behaviorNotes ?? DEFAULT_BEHAVIOR_NOTES;
+  const triggers = behavior.anxietyTriggers ?? [];
+  const ownTriggers = triggers.filter((value) => !isOffered(value));
 
-  const [newTrigger, setNewTrigger] = useState("");
+  const update = (updates: Partial<BehaviorNotes>) =>
+    updateFormData({ behaviorNotes: { ...behavior, ...updates } });
 
-  const handleUpdate = (updates: Partial<BehaviorNotes>) => {
-    updateFormData({
-      behaviorNotes: { ...behavior, ...updates },
+  const toggleTrigger = (value: string) =>
+    update({
+      anxietyTriggers: triggers.includes(value)
+        ? triggers.filter((trigger) => trigger !== value)
+        : [...triggers, value],
     });
-  };
 
-  const handleAddTrigger = () => {
-    if (!newTrigger.trim()) return;
-    handleUpdate({
-      anxietyTriggers: [...(behavior.anxietyTriggers || []), newTrigger.trim()],
-    });
-    setNewTrigger("");
-  };
-
-  const handleRemoveTrigger = (trigger: string) => {
-    handleUpdate({
-      anxietyTriggers: (behavior.anxietyTriggers || []).filter(
-        (t) => t !== trigger,
-      ),
-    });
+  const addTyped = () => {
+    const value = typed.trim();
+    if (!value) return;
+    if (!triggers.includes(value)) {
+      update({ anxietyTriggers: [...triggers, value] });
+    }
+    setTyped("");
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Behavior & Special Notes</CardTitle>
+        <CardTitle>{t("behaviorTitle")}</CardTitle>
         <CardDescription>
-          Help us understand {formData.petName}&apos;s behavior and preferences
+          {t("behaviorIntro").replace("{pet}", () => formData.petName)}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Energy Level</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {ENERGY_LEVELS.map((level) => (
-              <Button
-                key={level.value}
-                variant={
-                  behavior.energyLevel === level.value ? "default" : "outline"
-                }
-                onClick={() => handleUpdate({ energyLevel: level.value })}
-                className="w-full"
-              >
-                {level.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+      <CardContent className="space-y-7">
+        <ChoicePills
+          name="behavior-energy"
+          legend={t("energyLevel")}
+          value={behavior.energyLevel}
+          options={choices(ENERGY_LEVEL_KEYS, t)}
+          onChange={(energyLevel) => update({ energyLevel })}
+        />
+        <ChoicePills
+          name="behavior-with-dogs"
+          legend={t("withOtherDogs")}
+          value={behavior.socialization.withDogs}
+          options={choices(WITH_DOGS_KEYS, t)}
+          onChange={(withDogs) =>
+            update({ socialization: { ...behavior.socialization, withDogs } })
+          }
+        />
+        <ChoicePills
+          name="behavior-with-people"
+          legend={t("withPeople")}
+          value={behavior.socialization.withHumans}
+          options={choices(WITH_PEOPLE_KEYS, t)}
+          onChange={(withHumans) =>
+            update({
+              socialization: { ...behavior.socialization, withHumans },
+            })
+          }
+        />
 
         <div className="space-y-3">
-          <Label>With other dogs</Label>
+          <TogglePills
+            legend={t("anxietyTriggers")}
+            hint={t("optional")}
+            values={triggers}
+            options={Object.entries(ANXIETY_TRIGGER_KEYS).map(
+              ([value, key]) => ({ value, label: t(key) }),
+            )}
+            onToggle={toggleTrigger}
+          />
+          {ownTriggers.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {ownTriggers.map((value) => (
+                <li key={value}>
+                  <Button
+                    variant="outline"
+                    onClick={() => toggleTrigger(value)}
+                    aria-label={t("removeTrigger").replace(
+                      "{trigger}",
+                      () => value,
+                    )}
+                  >
+                    {value}
+                    <X aria-hidden />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="flex flex-wrap gap-2">
-            {SOCIALIZATION_OPTIONS.withDogs.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() =>
-                  handleUpdate({
-                    socialization: {
-                      ...behavior.socialization,
-                      withDogs: option.value,
-                    },
-                  })
-                }
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  behavior.socialization.withDogs === option.value
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : `border-input hover:bg-accent`
-                } `}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <Label>With humans</Label>
-          <div className="flex flex-wrap gap-2">
-            {SOCIALIZATION_OPTIONS.withHumans.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() =>
-                  handleUpdate({
-                    socialization: {
-                      ...behavior.socialization,
-                      withHumans: option.value,
-                    },
-                  })
-                }
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  behavior.socialization.withHumans === option.value
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : `border-input hover:bg-accent`
-                } `}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Anxiety Triggers (optional)</Label>
-          <div className="mb-2 flex flex-wrap gap-2">
-            {behavior.anxietyTriggers?.map((trigger) => (
-              <Badge
-                key={trigger}
-                variant="secondary"
-                className="flex items-center gap-1"
-              >
-                {trigger}
-                <button
-                  onClick={() => handleRemoveTrigger(trigger)}
-                  className="hover:bg-muted ml-1 rounded-sm"
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
             <Input
-              value={newTrigger}
-              onChange={(e) => setNewTrigger(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddTrigger();
+              id="behavior-own-trigger"
+              aria-label={t("ownTriggerLabel")}
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addTyped();
                 }
               }}
-              placeholder="Add trigger (e.g., Thunderstorms)"
+              placeholder={t("ownTriggerPlaceholder")}
+              maxLength={200}
+              className="min-w-0 flex-1 basis-56"
             />
-            <Button onClick={handleAddTrigger} variant="outline">
-              Add
+            <Button
+              variant="outline"
+              onClick={addTyped}
+              disabled={!typed.trim()}
+            >
+              <Plus aria-hidden />
+              {t("addTrigger")}
             </Button>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {COMMON_ANXIETY_TRIGGERS.map((trigger) => (
-              <Button
-                key={trigger}
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!behavior.anxietyTriggers?.includes(trigger)) {
-                    setNewTrigger(trigger);
-                    handleAddTrigger();
-                  }
-                }}
-                disabled={behavior.anxietyTriggers?.includes(trigger)}
-              >
-                {trigger}
-              </Button>
-            ))}
-          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-muted-foreground">
-            Anything else? (optional)
+        <div className="space-y-1.5">
+          <Label
+            htmlFor="behavior-notes"
+            className="flex flex-wrap items-baseline gap-2"
+          >
+            {t("anythingElse")}
+            <span className="text-ink-tertiary text-[13px] font-normal">
+              {t("optional")}
+            </span>
           </Label>
           <Textarea
-            value={behavior.specialNotes || ""}
-            onChange={(e) => handleUpdate({ specialNotes: e.target.value })}
-            placeholder="e.g., Prefers quiet corner, loves belly rubs"
-            rows={2}
+            id="behavior-notes"
+            value={behavior.specialNotes ?? ""}
+            onChange={(event) => update({ specialNotes: event.target.value })}
+            placeholder={t("anythingElsePlaceholder")}
+            rows={3}
+            maxLength={2000}
           />
-        </div>
-
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            Back
-          </Button>
-          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
         </div>
       </CardContent>
     </Card>
