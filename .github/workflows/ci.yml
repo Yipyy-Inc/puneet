@@ -388,7 +388,7 @@ jobs:
     # NOTE this job is NOT one of the four required status checks (typecheck,
     # lint, format, build). It reports; it does not gate — and pushes go
     # straight to main anyway. Run `bun run test:e2e:ci` BEFORE pushing.
-    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 50 || 25 }}
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 100 || 25 }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

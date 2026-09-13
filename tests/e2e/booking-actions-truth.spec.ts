@@ -229,11 +229,15 @@ test.describe("the booking page's actions do what they say", () => {
     await expect
       .poll(
         async () => {
-          const res = await page.request.get("/api/bookings");
+          // This client alone: the whole facility list is ~1,000 rows and a read of
+          // it can outlast the poll, returning the status from before the write.
+          const res = await page.request.get(
+            `/api/bookings?clientRef=${BOB.client}`,
+          );
           const all = (await res.json()) as BookingPayload[];
           return all.find((b) => b.id === created.id)?.status;
         },
-        { timeout: 20_000 },
+        { timeout: 30_000 },
       )
       .toBe("ready");
   });

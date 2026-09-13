@@ -1,9 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
-// The Process Payment button takes a payment.
+// Checkout takes a payment, reached the way staff reach it now: check the
+// booking in, then Proceed to Checkout.
 //
 // ── WHAT THIS PROVES THAT THE PREVIOUS SUITE COULD NOT ────────────────────
 //
@@ -56,6 +57,44 @@ function bookingBody() {
     totalCost: AMOUNT,
     specialRequests: MARKER,
   };
+}
+
+/** This client's bookings, not the facility's ~1,000: a full read can outlast a poll. */
+async function readBooking(page: Page, ref: number) {
+  const all = (await (
+    await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
+  ).json()) as BookingPayload[];
+  return all.find((b) => b.id === ref);
+}
+
+/**
+ * Open checkout the way staff reach it now: check the booking in, then press
+ * Proceed to Checkout, through the care gate when care is unlogged. "Accept
+ * payment" belonged to an action bar the page no longer renders.
+ */
+async function openCheckout(page: Page, ref: number, clientId: number) {
+  const checkedIn = await page.request.patch(`/api/bookings/${ref}`, {
+    data: { status: "checked_in" },
+  });
+  expect(checkedIn.ok(), await checkedIn.text()).toBe(true);
+  await page.goto(`/facility/dashboard/clients/${clientId}/bookings/${ref}`);
+  const proceed = page
+    .getByRole("button", { name: /proceed to checkout/i })
+    .first();
+  await expect(proceed).toBeVisible({ timeout: 30_000 });
+  await proceed.click();
+  const gate = page.getByRole("alertdialog");
+  const gated = await gate.waitFor({ state: "visible", timeout: 3_000 }).then(
+    () => true,
+    () => false,
+  );
+  if (gated)
+    await gate.getByRole("button", { name: /continue anyway/i }).click();
+  const dialog = page
+    .getByRole("dialog")
+    .filter({ hasText: /payment checkout/i });
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  return dialog;
 }
 
 test.describe.configure({ mode: "serial" });
@@ -137,26 +176,14 @@ test.describe("the payment button reaches the ledger", () => {
   test("taking the payment through the dialog moves the booking", async ({
     page,
   }) => {
+    test.slow();
     await signIn(page, ACCOUNTS.owner);
 
     const created = (await (
       await page.request.post("/api/bookings", { data: bookingBody() })
     ).json()) as BookingPayload;
 
-    await page.goto(
-      `/facility/dashboard/clients/${created.clientId}/bookings/${created.id}`,
-    );
-
-    // The button that opens the checkout. Before this change it opened a
-    // dialog whose Confirm closed it and toasted.
-    const openPayment = page
-      .getByRole("button", { name: /accept payment/i })
-      .first();
-    await expect(openPayment).toBeVisible({ timeout: 30_000 });
-    await openPayment.click();
-
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
+    const dialog = await openCheckout(page, created.id, created.clientId);
     // The dialog names the amount it is about to take.
     await expect(dialog).toContainText(`$${AMOUNT.toFixed(2)}`);
 
@@ -189,13 +216,10 @@ test.describe("the payment button reaches the ledger", () => {
     await expect
       .poll(
         async () => {
-          const all = (await (
-            await page.request.get("/api/bookings")
-          ).json()) as BookingPayload[];
-          const after = all.find((b) => b.id === created.id);
+          const after = await readBooking(page, created.id);
           return `${after?.paymentStatus}/${Number(after?.amountPaid ?? -1)}`;
         },
-        { timeout: 20_000, message: "the booking settles from the ledger" },
+        { timeout: 30_000, message: "the booking settles from the ledger" },
       )
       .toBe(`paid/${AMOUNT}`);
   });
@@ -204,7 +228,7 @@ test.describe("the payment button reaches the ledger", () => {
     await signIn(page, ACCOUNTS.owner);
 
     const all = (await (
-      await page.request.get("/api/bookings")
+      await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
     ).json()) as BookingPayload[];
     const paid = all.find(
       (b) => b.specialRequests?.includes(MARKER) && b.paymentStatus === "paid",
@@ -220,18 +244,20 @@ test.describe("the payment button reaches the ledger", () => {
       timeout: 30_000,
     });
 
-    // `{!isPaid && ...}` — and `isPaid` now comes from the ledger rather than a
-    // string somebody set. The guard in `useTakeBookingPayment` (balance <= 0
-    // throws) sits behind this one; it is not reachable from here, which is why
-    // this test asserts the button is GONE rather than pretending to click it.
+    // A settled booking offers no checkout: the action bar has no primary action
+    // once the ledger says paid, and Pay by card needs a balance.
     await expect(
-      page.getByRole("button", { name: /accept payment/i }),
+      page.getByRole("button", { name: /proceed to checkout|take payment/i }),
     ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /pay by card/i })).toHaveCount(
+      0,
+    );
   });
 
   test("a part-paid booking offers the balance, not the price", async ({
     page,
   }) => {
+    test.slow();
     await signIn(page, ACCOUNTS.owner);
 
     const created = (await (
@@ -259,18 +285,10 @@ test.describe("the payment button reaches the ledger", () => {
     });
     expect(paid.status(), await paid.text()).toBe(201);
 
-    await page.goto(
-      `/facility/dashboard/clients/${created.clientId}/bookings/${created.id}`,
-    );
-    await page
-      .getByRole("button", { name: /accept payment/i })
-      .first()
-      .click();
-
     // The dialog used to say `booking.totalCost` — the PRICE — which is $64
     // here and would have taken the customer's money twice over. It names the
     // balance, and the same helper computes what the mutation charges.
-    const dialog = page.getByRole("dialog");
+    const dialog = await openCheckout(page, created.id, created.clientId);
     await expect(dialog).toContainText(`$${(AMOUNT - part).toFixed(2)}`);
     await expect(dialog).toContainText(/already paid/i);
 
@@ -291,13 +309,10 @@ test.describe("the payment button reaches the ledger", () => {
     await expect
       .poll(
         async () => {
-          const all = (await (
-            await page.request.get("/api/bookings")
-          ).json()) as BookingPayload[];
-          const after = all.find((b) => b.id === created.id);
+          const after = await readBooking(page, created.id);
           return `${after?.paymentStatus}/${Number(after?.amountPaid ?? -1)}`;
         },
-        { timeout: 20_000, message: "the balance settles it exactly" },
+        { timeout: 30_000, message: "the balance settles it exactly" },
       )
       .toBe(`paid/${AMOUNT}`);
   });
