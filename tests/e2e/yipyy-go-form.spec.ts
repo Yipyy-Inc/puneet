@@ -110,13 +110,11 @@ test.beforeAll(async () => {
         .update({ value: config })
         .eq("facility_id", facilityId)
         .eq("domain", "yipyy_go_config")
-    : db
-        .from("facility_settings")
-        .insert({
-          facility_id: facilityId,
-          domain: "yipyy_go_config",
-          value: config,
-        });
+    : db.from("facility_settings").insert({
+        facility_id: facilityId,
+        domain: "yipyy_go_config",
+        value: config,
+      });
   expect((await write).error?.message ?? null).toBeNull();
 
   const start = new Date(Date.now() + 7 * 86_400_000);
