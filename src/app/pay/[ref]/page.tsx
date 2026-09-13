@@ -6,6 +6,7 @@ import { cloverConfig } from "@/lib/clover/config";
 import { chargeableConnection } from "@/lib/clover/connection";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
+import { tipStillToCollect } from "@/lib/payments/pledged-tip";
 import { tipConfigSchema, type TipConfig } from "@/types/facility";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 
@@ -61,6 +62,8 @@ interface BookingRow {
   status: string;
   amount_due: number | null;
   amount_paid: number | null;
+  /** The tip the booking carries: the owner's pledge, or one added when booking. */
+  tip_amount: number | string | null;
   facilities: { name: string } | null;
 }
 
@@ -84,7 +87,7 @@ export default async function PayBookingPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, facilities ( name )",
+      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, tip_amount, facilities ( name )",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
@@ -131,6 +134,17 @@ export default async function PayBookingPage({
   // caller has proved they may see it — and because tip suggestions are shown
   // to this person anyway. Nothing else from the row is used.
   const tipConfig = await tipsFor(booking.facility_id);
+  // A tip the booking carries that no payment has collected starts the tip
+  // control — only where the facility offers tips, because a tip the payer
+  // cannot see must never ride along into the charge.
+  const pledgedTipCents = tipConfig
+    ? Math.round(
+        tipStillToCollect(
+          booking.tip_amount === null ? 0 : Number(booking.tip_amount),
+          await tipsCollected(booking.id),
+        ) * 100,
+      )
+    : 0;
   // The tax the card route will ADD, shown before the card is asked for — the
   // same helper, so what is shown here is what is charged
   // (lib/payments/booking-tax). Admin client for the reason tips use one.
@@ -193,6 +207,7 @@ export default async function PayBookingPage({
       publicApiKey={connection.publicApiKey}
       sdkUrl={config.checkoutSdkUrl}
       tipConfig={tipConfig}
+      pledgedTipCents={pledgedTipCents}
     />
   );
 }
@@ -228,5 +243,26 @@ async function tipsFor(facilityId: string): Promise<TipConfig | null> {
   } catch {
     // A tip is optional; a payment is not. Never let this stop the page.
     return null;
+  }
+}
+
+/**
+ * The tips this booking's payments collected, net of refunds.
+ *
+ * Admin client, for the reason the tip settings use one: the booking above
+ * already came back, so the caller may see it. A failed read counts as
+ * everything collected — offering no tip is recoverable, and asking again for
+ * a tip that was paid is not.
+ */
+async function tipsCollected(bookingId: string): Promise<number> {
+  try {
+    const { data, error } = await createAdminClient()
+      .from("payments")
+      .select("tip")
+      .eq("booking_id", bookingId);
+    if (error) return Number.POSITIVE_INFINITY;
+    return (data ?? []).reduce((sum, row) => sum + Number(row.tip ?? 0), 0);
+  } catch {
+    return Number.POSITIVE_INFINITY;
   }
 }

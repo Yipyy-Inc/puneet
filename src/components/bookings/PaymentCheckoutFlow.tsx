@@ -134,6 +134,13 @@ interface PaymentCheckoutFlowProps {
   /** The booking's ref — when given, a promo code can be put on its bill. */
   promoBookingRef?: number;
   /**
+   * The tip the booking carries that no payment has collected yet — the
+   * owner's pledge from the pre-arrival form, or a tip added when booking
+   * (`tipStillToCollect`). A tender that takes a tip here starts at it; cash
+   * and the terminal only mention it.
+   */
+  pledgedTip?: number;
+  /**
    * The dialog WAITS for this, and a throw keeps it open with the reason on
    * screen. Resolve only once the money has been recorded — the receipt and
    * "Payment complete" are claims about money that has moved.
@@ -168,6 +175,7 @@ export function PaymentCheckoutFlow({
   loyaltyDiscount,
   membershipDiscount,
   promoBookingRef,
+  pledgedTip = 0,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   // Cash first: "Card on File" is offered only when the client has a card
@@ -179,7 +187,11 @@ export function PaymentCheckoutFlow({
   const coMoney = (n: number) => formatMoney(n, gcLocale);
   const isGiftCard = method === "gift_card";
   const [cashCollected, setCashCollected] = useState("");
-  const [tipAmount, setTipAmount] = useState(0);
+  // The tip starts at the pledge until staff choose otherwise. Derived rather
+  // than copied into state, because the pledge can arrive after the dialog
+  // has mounted.
+  const [chosenTip, setChosenTip] = useState<number | null>(null);
+  const tipAmount = chosenTip ?? pledgedTip;
   const [changeAsCredit, setChangeAsCredit] = useState(true);
   const [splitMode, setSplitMode] = useState(false);
   const [splitPayments, setSplitPayments] = useState<
@@ -656,6 +668,13 @@ export function PaymentCheckoutFlow({
           {/* Cash payment */}
           {isCash && (
             <div className="animate-in fade-in space-y-3 rounded-lg border p-3 duration-150">
+              {/* Cash never adds the pledge: the change is the client's to
+                  leave, so it is a reminder, not a charge. */}
+              {pledgedTip > 0 && (
+                <p className="text-ink-secondary text-xs">
+                  {coFill("pledgedTipCash", { amount: coMoney(pledgedTip) })}
+                </p>
+              )}
               <div className="grid gap-1.5">
                 <label className="text-xs font-medium">Amount Collected</label>
                 <Input
@@ -710,6 +729,13 @@ export function PaymentCheckoutFlow({
           {isTerminal && (
             <div className="text-muted-foreground space-y-2 rounded-md border border-dashed p-3 text-xs">
               <p>The customer is asked for a tip on the terminal.</p>
+              {pledgedTip > 0 && (
+                <p>
+                  {coFill("pledgedTipTerminal", {
+                    amount: coMoney(pledgedTip),
+                  })}
+                </p>
+              )}
 
               {/* ── STOPPING THE PROMPT ────────────────────────────────────
                   Our request gives up after 150 seconds; THE DEVICE DOES NOT.
@@ -758,11 +784,18 @@ export function PaymentCheckoutFlow({
                 <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
                   Add Tip (optional)
                 </p>
+                {pledgedTip > 0 && chosenTip === null && (
+                  <p className="text-ink-secondary mb-2 text-xs">
+                    {coFill("pledgedTipAdded", {
+                      amount: coMoney(pledgedTip),
+                    })}
+                  </p>
+                )}
                 <TipSelector
                   tipConfig={tipConfig}
                   subtotal={netAmountDue}
                   tipAmount={tipAmount}
-                  onTipChange={setTipAmount}
+                  onTipChange={setChosenTip}
                 />
               </div>
             )}

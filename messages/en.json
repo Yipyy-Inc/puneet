@@ -2383,7 +2383,10 @@
         "paymentTaken": "Payment of {amount} taken",
         "storeCreditShort": "Only {amount} of store credit is available.",
         "stillOwed": "Still owed",
-        "paymentRecordedBadge": "PAYMENT RECORDED"
+        "paymentRecordedBadge": "PAYMENT RECORDED",
+        "pledgedTipAdded": "This booking carries a {amount} tip, already added below. Change it if the client wants to.",
+        "pledgedTipCash": "This booking carries a {amount} tip. Cash does not add it: collect it in cash if the client still wants to leave it.",
+        "pledgedTipTerminal": "This booking carries a {amount} tip. The terminal asks the client for the tip itself."
       },
       "cancelBooking": {
         "title": "Cancel booking #{ref}",
