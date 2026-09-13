@@ -25,6 +25,7 @@
       "Scheduling": "clock",
       "Daily Care": "heart-handshake",
       "Bookings": "calendar-check",
+      "Check-in": "checked-in",
       "Estimates": "file-text",
       "Tasks": "clipboard-list",
       "Booking Requests": "calendar-clock",

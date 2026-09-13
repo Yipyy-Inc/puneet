@@ -25,7 +25,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { useFacilityRbac, useFacilityViewer } from "@/hooks/use-facility-rbac";
-import { NAV_SECTIONS } from "@/lib/nav/facility-nav";
+import { NAV_SECTIONS, navItemAllowed } from "@/lib/nav/facility-nav";
 import { toEmployeeRoute } from "@/lib/nav/employee-nav";
 import { useShellText } from "@/lib/shell/use-shell-text";
 import { useNavText } from "@/lib/nav/use-nav-text";
@@ -77,7 +77,7 @@ export function EmployeeBottomNav({ staffId }: { staffId: string }) {
   const perms = resolvePermissions(staffId);
   const navSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => perms[item.permKey] !== false),
+    items: section.items.filter((item) => navItemAllowed(item, perms)),
   })).filter((section) => section.items.length > 0);
   const primarySection =
     navSections.find((s) => s.id !== "dashboard") ?? navSections[0];

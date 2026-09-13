@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
+import {
   activeFacilityIdForStaff,
   getFacilityContext,
   inFacility,
@@ -206,6 +210,23 @@ export async function POST(request: NextRequest) {
     return writeFailure(error, {
       denied: "Not allowed to check dogs in at this facility.",
       duplicate: "That dog is already checked in.",
+    });
+  }
+
+  // ── The dog arrived ─────────────────────────────────────────────────────
+  //
+  // For a facility with a check-in automation. Keyed by the booking, so a
+  // second press — or the desk and the floor both checking the same dog in —
+  // is one arrival to the owner. Best effort, after the write above.
+  const event = await bookingEventContext(supabase, bookingId);
+  if (event) {
+    await emitAutomationEvent(supabase, {
+      facilityId: event.facilityId,
+      kind: "check_in",
+      dedupeKey: `check_in:${bookingId}`,
+      clientId: event.clientId,
+      bookingId,
+      locationId: event.locationId,
     });
   }
 

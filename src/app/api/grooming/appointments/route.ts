@@ -354,6 +354,25 @@ export async function PATCH(request: NextRequest) {
         });
       }
     }
+
+    // ── The dog arrived ───────────────────────────────────────────────────
+    //
+    // A groom has no attendance table, so `checked_in` is the arrival — from
+    // the kiosk as much as the board. Keyed by the booking, like the check-out
+    // above, and best effort.
+    if (bookingStatus === "checked_in") {
+      const context = await bookingEventContext(supabase, booking.id);
+      if (context) {
+        await emitAutomationEvent(supabase, {
+          facilityId: context.facilityId,
+          kind: "check_in",
+          dedupeKey: `check_in:${booking.id}`,
+          clientId: context.clientId,
+          bookingId: booking.id,
+          locationId: context.locationId,
+        });
+      }
+    }
   }
 
   // ── The groomer's ready estimate, after any status above ────────────────

@@ -27,7 +27,11 @@ async function readError(response: Response, fallback: string) {
   const parsed = (await response.json().catch(() => null)) as {
     error?: string;
   } | null;
-  return new Error(parsed?.error ?? fallback);
+  // The status rides along, so the desk can name the reason in the reader’s
+  // language rather than show the database’s sentence.
+  return Object.assign(new Error(parsed?.error ?? fallback), {
+    status: response.status,
+  });
 }
 
 export function useTrainingDay(date?: string) {

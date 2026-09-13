@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { recordArrival } from "@/lib/api/boarding-arrival-write";
 import {
+  bookingEventContext,
+  emitAutomationEvent,
+} from "@/lib/automations/emit";
+import {
   BOARDING_ARRIVAL_SELECT,
   BOARDING_ON_SITE_SELECT,
   rowToBoardingArrival,
@@ -141,6 +145,32 @@ export async function POST(request: NextRequest) {
 
   const response = await recordArrival(body!.bookingRef!, "check_in");
   if (!response.ok) return response;
+
+  // ── The guest arrived ───────────────────────────────────────────────────
+  //
+  // For a facility with a check-in automation. Keyed by the booking, so a
+  // second press — or the desk and the kennel board both checking the same
+  // guest in — is one arrival to the owner. Best effort, after the arrival.
+  const supabase = await createServerClient();
+  const { data: arrived } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("ref", body!.bookingRef!)
+    .maybeSingle();
+  const bookingId = (arrived as { id: string } | null)?.id;
+  const event = bookingId
+    ? await bookingEventContext(supabase, bookingId)
+    : null;
+  if (bookingId && event) {
+    await emitAutomationEvent(supabase, {
+      facilityId: event.facilityId,
+      kind: "check_in",
+      dedupeKey: `check_in:${bookingId}`,
+      clientId: event.clientId,
+      bookingId,
+      locationId: event.locationId,
+    });
+  }
 
   return NextResponse.json({ bookingRef: body!.bookingRef }, { status: 201 });
 }

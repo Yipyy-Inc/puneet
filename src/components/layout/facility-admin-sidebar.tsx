@@ -13,7 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
 import { FacilitySwitcher } from "@/components/layout/FacilitySwitcher";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
-import { NAV_SECTIONS, type NavItem } from "@/lib/nav/facility-nav";
+import {
+  NAV_SECTIONS,
+  navItemAllowed,
+  type NavItem,
+} from "@/lib/nav/facility-nav";
 import { useNavText } from "@/lib/nav/use-nav-text";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
@@ -86,7 +90,7 @@ export function FacilitySidebar() {
         highPriorityCount > 0 ? highPriorityCount : undefined,
     };
 
-    const isAllowed = (item: NavItem) => permissions[item.permKey] !== false;
+    const isAllowed = (item: NavItem) => navItemAllowed(item, permissions);
 
     return NAV_SECTIONS.map((section) => ({
       // Translated here rather than in facility-nav.ts, which is a data file

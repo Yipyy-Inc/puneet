@@ -193,7 +193,7 @@ error, sad) at 132 compact, in a dialog, a panel or a whole failed view.
   slot — never a broken-image frame. `yy-float` runs on the empty-state poses only, never `loading`,
   `error`, `warning` or `sad`.
 - **Do not decide a pose at a call site.** §5d2 already assigns one to every status ink, all 25 rungs
-  of the state ladder and all 36 nav areas. Look it up.
+  of the state ladder and all 37 nav areas. Look it up.
 
 ### The hard rules (§6 — read the section; these are the ones broken most)
 
@@ -370,7 +370,7 @@ still absolute for **new** code: white, or a solid.
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:ci` locally too — the whole suite, by hand, before you
     push. CI itself runs only the 33-spec gate on a push (the authorisation
-    boundary and money) and the full suite nightly, because 111 specs is ~45
+    boundary and money) and the full suite nightly, because 112 specs is ~45
     minutes and GitHub holds one pending run per branch: with two people
     pushing, every queued run was cancelled by the next push and nothing
     finished. `bun run check:doc-counts` derives both numbers from package.json

@@ -24,7 +24,7 @@ import { createHash, randomBytes } from "node:crypto";
 // ============================================================================
 
 /** How many characters resolve_yipyy_go_check_in_pass() requires. */
-export const MIN_CHECK_IN_CODE_LENGTH = 16;
+export { MIN_CHECK_IN_CODE_LENGTH } from "@/lib/yipyy-go/parse-check-in-code";
 
 export interface MintedCheckInToken {
   /** Goes in the QR code. Never write this to the database. */
