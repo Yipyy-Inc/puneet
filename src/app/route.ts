@@ -8,7 +8,6 @@ import {
 import { createServerClient } from "@/lib/supabase/server";
 import { facilitySlugFromHost } from "@/lib/facility-host";
 import { facilityParentHost, platformOriginFor } from "@/lib/app-host";
-import { isStaging } from "@/lib/deployment";
 import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
@@ -153,19 +152,7 @@ export async function GET(request: NextRequest) {
       // would reach the same place in two hops instead of one.
       const platform = platformOriginFor(process.env.NEXT_PUBLIC_APP_DOMAIN);
 
-      // ── AND NEVER OFF THE STAGING DEPLOYMENT ────────────────────────────
-      //
-      // `platformOriginFor` answers `https://hq.yipyy.com` whoever asks,
-      // because the apex is shared — so on staging this redirect would land
-      // the reviewer on PRODUCTION, still signed in, writing to the shared
-      // database. That is exactly the bug found in the proxy on 2026-09-03
-      // (see the long note beside the portal↔host redirect in src/proxy.ts).
-      //
-      // This branch cannot reach it today: it needs a slug, and the slug comes
-      // from `<slug>.app.<apex>`, which `staging.yipyy.com` is not. Guarded
-      // anyway — it is the identical mistake waiting on a different host
-      // shape, and one condition is cheaper than finding it twice.
-      if (cookieDomain.startsWith(".") && platform && !isStaging()) {
+      if (cookieDomain.startsWith(".") && platform) {
         const away = new URL(`${platform}/dashboard`);
         return NextResponse.redirect(away, 307);
       }

@@ -344,7 +344,7 @@ function SendMessageDialog({
     }
     setBusy(true);
     // It waited 500 ms and toasted "Email sent to …" — nothing was sent. The
-    // route sends, or says why it did not (no address, opted out, staging).
+    // route sends, or says why it did not (no address, opted out).
     try {
       const result = await sendMessage({
         clientRef: ownerRef,

@@ -59,7 +59,6 @@
     "shoot": "bun scripts/shoot.ts",
     "check:inert-permissions": "bun scripts/check-inert-permissions.ts",
     "check:settings-seeding": "bun scripts/check-settings-seeding.ts",
-    "check:staging-sends": "bun scripts/check-staging-sends.ts",
     "check:no-dark-mode": "bun scripts/check-no-dark-mode.ts",
     "check:badge-glyph": "bun scripts/check-badge-glyph.ts",
     "check:nav-icons": "bun scripts/check-nav-icons.ts",

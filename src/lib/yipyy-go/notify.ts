@@ -9,9 +9,7 @@ import {
 // ============================================================================
 // Sending what a submitted pre-arrival form sends.
 //
-// Both go through sendEmail(), which answers "not sent" on staging before it
-// reads a key (outboundSendsSuppressed) — staging shares the production
-// database, and a click there must not email a real owner.
+// Both go through sendEmail(), which answers whether it sent and, if not, why.
 //
 // ── THE FACILITY'S NOTICE USES THE SERVICE ROLE ───────────────────────────
 //

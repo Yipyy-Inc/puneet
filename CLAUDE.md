@@ -344,9 +344,7 @@ still absolute for **new** code: white, or a solid.
   deploys to **staging.yipyy.com** for the client to review. `main` still
   deploys to production on every push, so hotfixes are never blocked by
   unreviewed design work, and the cutover is one merge at the end. Merge `main`
-  into `redesign` often. Staging shares the **production** database — every
-  click on it is a real write — so any new outbound sender must consult
-  `outboundSendsSuppressed()`; `bun run check:staging-sends` enforces it.
+  into `redesign` often.
 - **Commit and push straight to `main`. Do not open a pull request** unless
   explicitly asked. `main` is protected but `enforce_admins` is false, so the
   push is accepted. Decided 2026-08-19: the review round trip was costing more

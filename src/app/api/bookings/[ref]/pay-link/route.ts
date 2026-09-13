@@ -20,10 +20,9 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 //
 // ── IT SENDS THROUGH THE ONE SENDER ───────────────────────────────────────
 //
-// `lib/messaging/send`, which refuses on staging (it shares the production
-// database, so a send there reaches a real person) and says so. The answer is
-// `{ sent, detail }` either way, and the screen reports exactly that: "not
-// sent — outbound messages are off here" is a fact staff can act on.
+// `lib/messaging/send`, which says whether it sent and, if not, why. The answer
+// is `{ sent, detail }` either way, and the screen reports exactly that — "not
+// sent, and why" is a fact staff can act on.
 //
 // ── AND IT ASKS THE OPT-OUT LIST FIRST ────────────────────────────────────
 //

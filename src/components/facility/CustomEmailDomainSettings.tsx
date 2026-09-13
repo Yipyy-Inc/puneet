@@ -48,9 +48,7 @@ import {
 // records, poll for verification), a `facility_settings` domain holding the
 // sender identity — a registry entry in src/lib/settings/domains.ts, not a
 // migration — and the records rendered from the API response rather than from a
-// template. It is also an OUTBOUND sender, so it has to consult
-// `outboundSendsSuppressed()`; `bun run check:staging-sends` enforces that, and
-// staging shares the production database.
+// template.
 // ============================================================================
 
 export function CustomEmailDomainSettings() {
