@@ -14,6 +14,240 @@ export type Database = {
   };
   public: {
     Tables: {
+      yipyy_go_charges: {
+        Row: {
+          add_on_id: string | null;
+          booking_id: string;
+          charge_key: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          line_item_id: string | null;
+          name: string;
+          quantity: number;
+          submission_id: string | null;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          add_on_id?: string | null;
+          booking_id: string;
+          charge_key: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          line_item_id?: string | null;
+          name: string;
+          quantity: number;
+          submission_id?: string | null;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: {
+          add_on_id?: string | null;
+          booking_id?: string;
+          charge_key?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          line_item_id?: string | null;
+          name?: string;
+          quantity?: number;
+          submission_id?: string | null;
+          unit_price?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      yipyy_go_check_in_passes: {
+        Row: {
+          booking_id: string;
+          facility_id: string;
+          issued_at: string;
+          issued_by: string | null;
+          rotations: number;
+          token_expires_at: string;
+          token_hash: string;
+        };
+        Insert: {
+          booking_id: string;
+          facility_id: string;
+          issued_at?: string;
+          issued_by?: string | null;
+          rotations?: number;
+          token_expires_at: string;
+          token_hash: string;
+        };
+        Update: {
+          booking_id?: string;
+          facility_id?: string;
+          issued_at?: string;
+          issued_by?: string | null;
+          rotations?: number;
+          token_expires_at?: string;
+          token_hash?: string;
+        };
+        Relationships: [];
+      };
+      yipyy_go_desk_checks: {
+        Row: {
+          belongings_confirmed: boolean;
+          booking_id: string;
+          created_at: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id: string;
+          medications_confirmed: boolean;
+          override_reason: string | null;
+          pet_id: string;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          requirement: string | null;
+          source: string;
+        };
+        Insert: {
+          belongings_confirmed?: boolean;
+          booking_id: string;
+          created_at?: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id?: string;
+          medications_confirmed?: boolean;
+          override_reason?: string | null;
+          pet_id: string;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          requirement?: string | null;
+          source: string;
+        };
+        Update: {
+          belongings_confirmed?: boolean;
+          booking_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          form_missing?: boolean;
+          form_status?: string;
+          id?: string;
+          medications_confirmed?: boolean;
+          override_reason?: string | null;
+          pet_id?: string;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          requirement?: string | null;
+          source?: string;
+        };
+        Relationships: [];
+      };
+      yipyy_go_photos: {
+        Row: {
+          content_type: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          item_ref: string | null;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+          submission_id: string;
+        };
+        Insert: {
+          content_type: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          item_ref?: string | null;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+          submission_id: string;
+        };
+        Update: {
+          content_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          item_ref?: string | null;
+          kind?: string;
+          size_bytes?: number;
+          storage_path?: string;
+          submission_id?: string;
+        };
+        Relationships: [];
+      };
+      yipyy_go_submissions: {
+        Row: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+        Insert: {
+          add_on_requests?: Json;
+          answers?: Json;
+          booking_id: string;
+          changes_message?: string | null;
+          client_id?: string;
+          completed_at?: string | null;
+          completed_by_name?: string | null;
+          completed_reason?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          pet_id: string;
+          reviewed_at?: string | null;
+          reviewed_by_name?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          submitted_by_name?: string | null;
+          tip_choice?: Json | null;
+          updated_at?: string;
+        };
+        Update: {
+          add_on_requests?: Json;
+          answers?: Json;
+          booking_id?: string;
+          changes_message?: string | null;
+          client_id?: string;
+          completed_at?: string | null;
+          completed_by_name?: string | null;
+          completed_reason?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          pet_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by_name?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          submitted_by_name?: string | null;
+          tip_choice?: Json | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -11548,6 +11782,17 @@ export type Database = {
       };
     };
     Views: {
+      booking_yipyy_go: {
+        Row: {
+          booking_id: string | null;
+          pets_satisfied: number | null;
+          pets_total: number | null;
+          requirement: string | null;
+          satisfied: boolean | null;
+          status: string | null;
+        };
+        Relationships: [];
+      };
       booking_presence: {
         Row: {
           arrived_at: string | null;
@@ -11767,6 +12012,164 @@ export type Database = {
       };
     };
     Functions: {
+      complete_yipyy_go_by_staff: {
+        Args: {
+          p_booking_id: string;
+          p_by_name?: string;
+          p_pet_id: string;
+          p_reason: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+      };
+      issue_yipyy_go_check_in_pass: {
+        Args: { p_booking_id: string; p_token_hash: string };
+        Returns: string;
+      };
+      record_yipyy_go_desk_check: {
+        Args: {
+          p_booking_id: string;
+          p_by_name?: string;
+          p_pets: Json;
+          p_source: string;
+        };
+        Returns: {
+          belongings_confirmed: boolean;
+          booking_id: string;
+          created_at: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id: string;
+          medications_confirmed: boolean;
+          override_reason: string | null;
+          pet_id: string;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          requirement: string | null;
+          source: string;
+        }[];
+      };
+      resolve_yipyy_go_check_in_pass: {
+        Args: { p_token: string };
+        Returns: { booking_id: string; booking_ref: number }[];
+      };
+      review_yipyy_go_submission: {
+        Args: {
+          p_action: string;
+          p_by_name?: string;
+          p_message?: string;
+          p_submission_id: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+      };
+      save_yipyy_go_draft: {
+        Args: {
+          p_add_on_requests?: Json;
+          p_answers: Json;
+          p_booking_id: string;
+          p_pet_id: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+      };
+      submit_yipyy_go_form: {
+        Args: {
+          p_add_on_requests?: Json;
+          p_answers: Json;
+          p_booking_id: string;
+          p_pet_id: string;
+          p_tip?: Json;
+        };
+        Returns: Json;
+      };
+      yipyy_go_arrivals: {
+        Args: { p_facility_id: string; p_query?: string };
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+          client_name: string;
+          end_at: string;
+          form_status: string;
+          pets: Json;
+          presence: string;
+          requirement: string;
+          satisfied: boolean;
+          service: string;
+          start_at: string;
+          status: string;
+        }[];
+      };
+      yipyy_go_form_state: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      yipyy_go_offered_add_ons: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      yipyy_go_staff_recipients: {
+        Args: { p_submission_id: string };
+        Returns: { email: string; full_name: string }[];
+      };
       accept_platform_invitation: {
         Args: { p_profile_id: string; p_token_hash: string };
         Returns: Json;

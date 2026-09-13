@@ -14080,3 +14080,56 @@ would make the series and sessions policies read each other.
 SQL `training-attendance-marks.sql` T12; unit `training-book.test.ts`
 ("a make-up seat") and `training-attendance-history.test.ts`; e2e
 `training-makeups.spec.ts` reads the host session's roster after an offer.
+
+## 2026-09-13 — the pre-arrival form (Yipyy Go) has a server: rows, charges, photos, a check-in code
+
+Yipyy Go's SETTINGS were real (`yipyy_go_config`); everything a customer or the
+desk did with it was not. Submissions lived in `src/data/yipyygo-forms.ts`
+(keyed by booking alone, so a second dog overwrote the first), add-ons came
+from a hardcoded list with invented prices, the medication fee and the tip
+were shown and never charged, photos were `blob:` URLs, the check-in code was
+a `Map` in one browser, and the kiosk searched a fixture pinned to facility 11.
+The owner could not reach the form at all — the booking pages read
+`src/data/bookings`.
+
+**Four migrations** (decisions 2026-09-13: the form charges; a submitted form
+satisfies a mandatory one; staff emails go to owners and admins; the kiosk is
+for any staff with check-in):
+
+- 20260913133630 `yipyy_go_submissions` — one per booking and pet, written only
+  through `save_yipyy_go_draft`, `submit_yipyy_go_form`,
+  `review_yipyy_go_submission`, `complete_yipyy_go_by_staff`; whether a form
+  can still change is `private.yipyy_go_editable` (booking still ahead, dog not
+  arrived, deadline not passed — or changes requested). `booking_yipyy_go`
+  says where each booking stands.
+- 20260913135000 `yipyy_go_charges` — add-ons priced from grooming's own list
+  or `service_addons`, the medication fee by doses/days/stay, written as
+  ordinary unpaid `booking_line_items`; a line staff remove is never re-added.
+  **`enforce_booking_integrity()` was replaced from its live body** with one
+  branch that lets a transaction-local flag carry a pledged tip past the
+  owner reset; booking-write-integrity and booking-payment-ledger e2e and six
+  booking SQL files re-ran green against it.
+- 20260913135943 the private `yipyy-go-photos` bucket and `yipyy_go_photos`.
+- 20260913140335 `yipyy_go_check_in_passes` (sha256 only, one per booking,
+  replaced on every issue), `record_yipyy_go_desk_check`, `yipyy_go_arrivals`.
+
+**The API** (`/api/customer/yipyy-go/bookings/[ref]…`, `/api/yipyy-go/…`) and
+`Booking.yipyyGo` on `/api/bookings` landed with them. The screens do not use
+any of it yet — they still read the fixture; that is the next commits.
+
+**Defaults taken:** boarding `per_day` counts nights; as-needed (`prn`)
+medication adds no dose; a percentage tip is a share of `amount_due`; add-ons
+with size pricing or scheduling are not offered in the form; the verification
+code flow is removed (the customer portal already needs a session).
+
+**Still open:** form-link and reminder SENDING (`yipyygo-trigger.ts`,
+`express-checkin-reminder.tsx` still `console.log`); an owner whose booking is
+`request_submitted` has `total_cost` 0 until quoted, so a percentage add-on or
+tip is $0 until then; Boarding Ops keeps its own fixture pre-check model; the
+unified check-in hook sends grooming `checked-in` as `in-progress`, which the
+grooming trigger refuses for a dog not yet checked in; the booking detail
+page's Check In writes `bookings.status` instead of an arrival.
+
+SQL `yipyy-go-submissions.sql` (T1–T11), `yipyy-go-charges.sql` (C1–C13),
+`yipyy-go-photos-rls.sql` (S0–S5, R1), `yipyy-go-check-in.sql` (K1–K7); unit
+`yipyy-go.test.ts`.
