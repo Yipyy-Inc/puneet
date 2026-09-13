@@ -2085,7 +2085,20 @@
         "completed": "Session marked held — attendance saved for {count} dog(s)",
         "notAllSaved": "The session was not fully saved",
         "noBooking": "{pet} has no booking for this session.",
-        "markExcused": "Excused"
+        "markExcused": "Excused",
+        "conditionsTitle": "Conditions",
+        "conditionsHelp": "Saved with each dog who came",
+        "weatherLabel": "Weather",
+        "weatherSunny": "Sunny",
+        "weatherCloudy": "Cloudy",
+        "weatherRain": "Rain",
+        "weatherHot": "Hot",
+        "weatherCold": "Cold",
+        "weatherWindy": "Windy",
+        "distractionLabel": "Distraction",
+        "distractionLow": "Low",
+        "distractionMedium": "Medium",
+        "distractionHigh": "High"
       },
       "modulePackages": {
         "title_boarding": "Prepaid boarding packages",

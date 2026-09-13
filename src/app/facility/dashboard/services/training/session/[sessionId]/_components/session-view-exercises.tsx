@@ -32,7 +32,11 @@ import { trainingQueries } from "@/lib/api/training";
 import { useQuery } from "@tanstack/react-query";
 import type { TrainingClass, TrainingSession } from "@/types/training";
 import type { StudentBriefingRow } from "@/lib/training-pre-session";
-import type { SessionAttendance } from "@/lib/training-enrollment";
+import type {
+  SessionAttendance,
+  SessionConditions,
+} from "@/lib/training-enrollment";
+import { SessionConditionsCard } from "./session-conditions-card";
 import {
   DIFFICULTY_LABELS,
   getCurriculumExercisesForClass,
@@ -60,6 +64,9 @@ interface Props {
   setEntries: React.Dispatch<React.SetStateAction<SessionExerciseEntry[]>>;
   sessionNotes: string;
   setSessionNotes: (value: string) => void;
+  /** Weather and distraction, saved with each dog who came. */
+  conditions: SessionConditions;
+  setConditions: (next: SessionConditions) => void;
   studentNotes: Record<string, string>;
   setStudentNote: (enrollmentId: string, value: string) => void;
   photos: SessionPhoto[];
@@ -82,6 +89,8 @@ export function SessionExercisesSection({
   setEntries,
   sessionNotes,
   setSessionNotes,
+  conditions,
+  setConditions,
   studentNotes,
   setStudentNote,
   photos,
@@ -475,6 +484,8 @@ export function SessionExercisesSection({
         onSetPhotoCaption={onSetPhotoCaption}
         onRemovePhoto={onRemovePhoto}
       />
+
+      <SessionConditionsCard conditions={conditions} onChange={setConditions} />
 
       <Card className="overflow-hidden">
         <div className="flex items-center gap-2 border-b bg-slate-50/60 px-4 py-2.5 dark:bg-slate-900/40">

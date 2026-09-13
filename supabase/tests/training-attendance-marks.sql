@@ -20,6 +20,9 @@
 -- T7  Staff save a dog's exercise ratings, and the history returns them.
 -- T8  A rating is a whole 1-5 on a named exercise, and an absent or excused
 --     dog has none (20260913104649).
+-- T9  Staff save a session's conditions, and the history returns them.
+-- T10 A condition is a known weather flag or distraction level, and an absent
+--     dog has none (20260913112156).
 -- ============================================================================
 
 begin;
@@ -288,6 +291,58 @@ begin
     format('six=%s nameless=%s absent=%s', v_six, v_nameless, v_absent));
 exception when others then
   reset role; perform pg_temp.t('T8  rating constraints', false, sqlerrm);
+end $$;
+
+-- ── T9  session conditions are kept and read back ───────────────────────────
+do $$
+declare v_ref bigint; v_weather text; v_level text;
+begin
+  select ref into v_ref from public.pets where id = '00000000-0000-0000-0000-0000001f9050';
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9001');
+  set local role authenticated;
+  update public.training_attendance
+     set conditions = '{"weather": ["rain", "windy"], "distractionLevel": "high"}'
+   where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  select conditions -> 'weather' ->> 1, conditions ->> 'distractionLevel'
+    into v_weather, v_level
+    from public.training_attendance_history('00000000-0000-0000-0000-0000001f9020', v_ref)
+   where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  reset role;
+  perform pg_temp.t('T9  staff save a session''s conditions and the history returns them',
+    v_weather = 'windy' and v_level = 'high',
+    format('weather[1]=%s distraction=%s', v_weather, v_level));
+exception when others then
+  reset role; perform pg_temp.t('T9  conditions', false, sqlerrm);
+end $$;
+
+-- ── T10  a condition is a known one, and an absent dog has none ─────────────
+do $$
+declare v_snow boolean := false; v_word boolean := false; v_absent boolean := false;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9001');
+  set local role authenticated;
+  begin
+    update public.training_attendance set conditions = '{"weather": ["snow"]}'
+     where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  exception when check_violation then v_snow := true;
+  end;
+  begin
+    update public.training_attendance set conditions = '{"mood": "grumpy"}'
+     where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  exception when check_violation then v_word := true;
+  end;
+  begin
+    insert into public.training_attendance (booking_id, facility_id, mark, conditions)
+    values ('00000000-0000-0000-0000-0000001f9092', '00000000-0000-0000-0000-0000001f9020',
+            'absent', '{"weather": ["rain"]}');
+  exception when check_violation then v_absent := true;
+  end;
+  reset role;
+  perform pg_temp.t('T10 no unknown weather, no unknown key, no conditions for an absent dog',
+    v_snow and v_word and v_absent,
+    format('snow=%s unknown=%s absent=%s', v_snow, v_word, v_absent));
+exception when others then
+  reset role; perform pg_temp.t('T10 condition constraints', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
