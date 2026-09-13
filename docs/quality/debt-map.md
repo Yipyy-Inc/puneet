@@ -14021,7 +14021,7 @@ with each present or late dog's check-in. 20260913112156 adds
 for the reason in the entry above) and null for an absent or excused dog.
 `training_attendance_history()` returns it.
 
-**Still open:** `session-completion-dialog.tsx` is dead and can go; the
+**Still open:** `session-completion-dialog.tsx` and its two step files were deleted the same day; the
 History tab's weather, distraction and rating labels are English-only.
 
 SQL `training-attendance-marks.sql` T9–T10; unit
