@@ -156,6 +156,7 @@ const SAME_IN_BOTH = new Set([
   "customerPages.notifications.notifications", // Notifications / Notifications
   "customerPages.cameras.audio", // Audio / Audio
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
+  "staff.trainingProfile.historyStatusAbsent", // Absent / Absent
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

@@ -40,6 +40,9 @@ import {
   Zap,
 } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
+import { formatDateLong, formatDateShort, formatTime } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   DistractionLevel,
   WeatherCondition,
@@ -53,25 +56,25 @@ import type { TrainingSeries } from "@/lib/training-series";
 
 const ATTENDANCE_META: Record<
   SessionAttendance["status"],
-  { label: string; cls: string; Icon: typeof CheckCircle2 }
+  { labelKey: string; cls: string; Icon: typeof CheckCircle2 }
 > = {
   present: {
-    label: "Present",
+    labelKey: "historyStatusPresent",
     cls: "bg-emerald-100 text-emerald-700 border-emerald-200",
     Icon: CheckCircle2,
   },
   late: {
-    label: "Late",
+    labelKey: "historyStatusLate",
     cls: "bg-amber-100 text-amber-700 border-amber-200",
     Icon: Timer,
   },
   absent: {
-    label: "Absent",
+    labelKey: "historyStatusAbsent",
     cls: "bg-rose-100 text-rose-700 border-rose-200",
     Icon: CircleSlash,
   },
   excused: {
-    label: "Excused",
+    labelKey: "historyStatusExcused",
     cls: "bg-sky-100 text-sky-700 border-sky-200",
     Icon: Hourglass,
   },
@@ -79,30 +82,30 @@ const ATTENDANCE_META: Record<
 
 const RATING_META: Record<
   1 | 2 | 3 | 4 | 5,
-  { label: string; cls: string; dotCls: string }
+  { labelKey: string; cls: string; dotCls: string }
 > = {
   1: {
-    label: "Needs work",
+    labelKey: "ratingNeedsWork",
     cls: "text-rose-700",
     dotCls: "bg-rose-500",
   },
   2: {
-    label: "Developing",
+    labelKey: "ratingDeveloping",
     cls: "text-amber-700",
     dotCls: "bg-amber-500",
   },
   3: {
-    label: "Good",
+    labelKey: "ratingGood",
     cls: "text-sky-700",
     dotCls: "bg-sky-500",
   },
   4: {
-    label: "Great",
+    labelKey: "ratingGreat",
     cls: "text-emerald-700",
     dotCls: "bg-emerald-500",
   },
   5: {
-    label: "Mastered",
+    labelKey: "ratingMastered",
     cls: "text-violet-700",
     dotCls: "bg-violet-500",
   },
@@ -112,46 +115,48 @@ const ANY_COURSE = "__all__";
 
 const WEATHER_META: Record<
   WeatherCondition,
-  { label: string; Icon: typeof Cloud }
+  { labelKey: string; Icon: typeof Cloud }
 > = {
-  sunny: { label: "Sunny", Icon: Sun },
-  cloudy: { label: "Cloudy", Icon: Cloud },
-  rain: { label: "Rain", Icon: CloudRain },
-  hot: { label: "Hot", Icon: Flame },
-  cold: { label: "Cold", Icon: Snowflake },
-  windy: { label: "Windy", Icon: Wind },
+  sunny: { labelKey: "weatherSunny", Icon: Sun },
+  cloudy: { labelKey: "weatherCloudy", Icon: Cloud },
+  rain: { labelKey: "weatherRain", Icon: CloudRain },
+  hot: { labelKey: "weatherHot", Icon: Flame },
+  cold: { labelKey: "weatherCold", Icon: Snowflake },
+  windy: { labelKey: "weatherWindy", Icon: Wind },
 };
 
 const DISTRACTION_META: Record<
   DistractionLevel,
-  { label: string; cls: string }
+  { labelKey: string; cls: string }
 > = {
   low: {
-    label: "Low",
+    labelKey: "distractionLow",
     cls: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   medium: {
-    label: "Medium",
+    labelKey: "distractionMedium",
     cls: "border-amber-200 bg-amber-50 text-amber-700",
   },
   high: {
-    label: "High",
+    labelKey: "distractionHigh",
     cls: "border-rose-200 bg-rose-50 text-rose-700",
   },
 };
 
 function WeatherChip({ value }: { value: WeatherCondition }) {
+  const { t } = useStaffText("trainingProfile");
   const meta = WEATHER_META[value];
   const Icon = meta.Icon;
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
       <Icon className="size-3" />
-      {meta.label}
+      {t(meta.labelKey)}
     </span>
   );
 }
 
 function DistractionChip({ value }: { value: DistractionLevel }) {
+  const { t } = useStaffText("trainingProfile");
   const meta = DISTRACTION_META[value];
   return (
     <span
@@ -159,31 +164,25 @@ function DistractionChip({ value }: { value: DistractionLevel }) {
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
         meta.cls,
       )}
-      title="Distraction level"
+      title={t("distractionLevelTitle")}
     >
       <Zap className="size-3" />
-      {meta.label} distractions
+      {t(meta.labelKey)}
     </span>
   );
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+// A session date is the facility's calendar day, read at local midnight.
+function formatDate(iso: string, locale: AppLocale): string {
+  return formatDateLong(new Date(iso + "T00:00:00"), locale);
 }
 
-function formatShortDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+function formatShortDate(iso: string, locale: AppLocale): string {
+  return formatDateShort(new Date(iso + "T00:00:00"), locale);
 }
 
 function RatingDots({ rating }: { rating: 1 | 2 | 3 | 4 | 5 }) {
+  const { t } = useStaffText("trainingProfile");
   const meta = RATING_META[rating];
   return (
     <div className="flex items-center gap-1.5">
@@ -199,7 +198,7 @@ function RatingDots({ rating }: { rating: 1 | 2 | 3 | 4 | 5 }) {
         ))}
       </div>
       <span className={cn("text-[10px] font-semibold", meta.cls)}>
-        {meta.label}
+        {t(meta.labelKey)}
       </span>
     </div>
   );
@@ -223,6 +222,7 @@ export function TrainingProfileHistory({
   enrollments,
   seriesById,
 }: Props) {
+  const { t, fill, locale } = useStaffText("trainingProfile");
   const enrollmentIds = useMemo(
     () => enrollments.map((e) => e.id),
     [enrollments],
@@ -319,19 +319,14 @@ export function TrainingProfileHistory({
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <History className="size-4" />
           <span className="tabular-nums">
-            <span className="text-foreground font-semibold">
-              {totalSessions}
-            </span>{" "}
-            session{totalSessions === 1 ? "" : "s"} on record
-            {totalSessions > 0 && (
-              <>
-                {" · "}
-                <span className="text-foreground font-semibold">
-                  {presentCount}
-                </span>{" "}
-                attended
-              </>
+            {fill(
+              totalSessions === 1
+                ? "sessionsOnRecordOne"
+                : "sessionsOnRecordMany",
+              { count: totalSessions },
             )}
+            {totalSessions > 0 &&
+              ` · ${fill("sessionsAttended", { count: presentCount })}`}
           </span>
         </div>
         {visibleRows.length !== allRows.length && (
@@ -340,7 +335,10 @@ export function TrainingProfileHistory({
             className="gap-1 border-indigo-200 bg-indigo-50 text-indigo-700"
           >
             <Filter className="size-3" />
-            Showing {visibleRows.length} of {totalSessions}
+            {fill("showingOf", {
+              shown: visibleRows.length,
+              total: totalSessions,
+            })}
           </Badge>
         )}
       </div>
@@ -351,12 +349,12 @@ export function TrainingProfileHistory({
           <div className="space-y-1">
             <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <CalendarRange className="mr-1 inline size-3 align-text-bottom" />
-              From
+              {t("filterFrom")}
             </Label>
             <DatePicker
               value={fromDate}
               onValueChange={(v) => setFromDate(v ?? "")}
-              placeholder="Any date"
+              placeholder={t("anyDate")}
               displayMode="dialog"
               popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
               calendarClassName="p-1"
@@ -366,12 +364,12 @@ export function TrainingProfileHistory({
           <div className="space-y-1">
             <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <CalendarRange className="mr-1 inline size-3 align-text-bottom" />
-              To
+              {t("filterTo")}
             </Label>
             <DatePicker
               value={toDate}
               onValueChange={(v) => setToDate(v ?? "")}
-              placeholder="Any date"
+              placeholder={t("anyDate")}
               displayMode="dialog"
               popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
               calendarClassName="p-1"
@@ -381,14 +379,14 @@ export function TrainingProfileHistory({
           <div className="min-w-[200px] flex-1 space-y-1">
             <Label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
               <BookOpen className="mr-1 inline size-3 align-text-bottom" />
-              Course
+              {t("filterCourse")}
             </Label>
             <Select value={courseFilter} onValueChange={setCourseFilter}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ANY_COURSE}>All courses</SelectItem>
+                <SelectItem value={ANY_COURSE}>{t("allCourses")}</SelectItem>
                 {courseOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -407,7 +405,7 @@ export function TrainingProfileHistory({
             className="text-muted-foreground"
           >
             <X className="mr-1 size-3" />
-            Clear
+            {t("clearFilters")}
           </Button>
         )}
       </div>
@@ -415,11 +413,11 @@ export function TrainingProfileHistory({
       {/* List ─────────────────────────────────────────────────────────── */}
       {totalSessions === 0 ? (
         <div className="text-muted-foreground rounded-xl border border-dashed py-12 text-center text-sm">
-          No training sessions on record yet for this pet.
+          {t("noSessionsYet")}
         </div>
       ) : visibleRows.length === 0 ? (
         <div className="text-muted-foreground rounded-xl border border-dashed py-12 text-center text-sm">
-          No sessions match the current filters.
+          {t("noSessionsMatch")}
         </div>
       ) : (
         <ul className="space-y-3">
@@ -440,10 +438,12 @@ export function TrainingProfileHistory({
                 <div className="flex flex-wrap items-start justify-between gap-2 border-b px-4 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-slate-900">
-                      {formatDate(attendance.sessionDate)}
+                      {formatDate(attendance.sessionDate, locale)}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      Session {attendance.sessionNumber}
+                      {fill("sessionNumber", {
+                        number: attendance.sessionNumber,
+                      })}
                       {enrollment ? ` · ${enrollment.seriesName}` : ""}
                       {enrollment?.courseTypeName && (
                         <>
@@ -460,7 +460,7 @@ export function TrainingProfileHistory({
                     className={cn("gap-1 border", statusMeta.cls)}
                   >
                     <StatusIcon className="size-3" />
-                    {statusMeta.label}
+                    {t(statusMeta.labelKey)}
                   </Badge>
                 </div>
 
@@ -482,9 +482,13 @@ export function TrainingProfileHistory({
                     {attendance.checkInTime && (
                       <span className="inline-flex items-center gap-1">
                         <Clock className="size-3" />
-                        In {attendance.checkInTime}
+                        {fill("checkedInAt", {
+                          time: formatTime(attendance.checkInTime, locale),
+                        })}
                         {attendance.checkOutTime
-                          ? ` · Out ${attendance.checkOutTime}`
+                          ? ` · ${fill("checkedOutAt", {
+                              time: formatTime(attendance.checkOutTime, locale),
+                            })}`
                           : ""}
                       </span>
                     )}
@@ -499,7 +503,7 @@ export function TrainingProfileHistory({
                       <div>
                         <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                           <Cloud className="size-3" />
-                          Conditions
+                          {t("conditionsLabel")}
                         </p>
                         <div className="flex flex-wrap items-center gap-1.5">
                           {attendance.conditions.weather.map((w) => (
@@ -519,7 +523,7 @@ export function TrainingProfileHistory({
                     <div>
                       <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                         <Target className="size-3" />
-                        Exercises covered
+                        {t("exercisesCovered")}
                       </p>
                       <ul className="divide-y divide-slate-100 rounded-lg border border-slate-100">
                         {attendance.exercises.map((ex, idx) => (
@@ -549,7 +553,7 @@ export function TrainingProfileHistory({
                     <div>
                       <p className="text-muted-foreground mb-1 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                         <StickyNote className="size-3" />
-                        Session summary
+                        {t("sessionSummary")}
                       </p>
                       <p className="bg-muted/40 text-micro/relaxed rounded-md px-3 py-2 text-slate-700">
                         {attendance.trainerNotes}
@@ -562,7 +566,7 @@ export function TrainingProfileHistory({
                     <div>
                       <p className="text-muted-foreground mb-1.5 flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase">
                         <Sparkles className="size-3" />
-                        Homework assigned
+                        {t("homeworkAssigned")}
                       </p>
                       <ul className="space-y-2">
                         {homework.map((h) => (
@@ -584,8 +588,13 @@ export function TrainingProfileHistory({
                                 )}
                               >
                                 {h.completed
-                                  ? `Completed ${formatShortDate(h.completedDate ?? h.sessionDate)}`
-                                  : "Open"}
+                                  ? fill("homeworkCompletedOn", {
+                                      date: formatShortDate(
+                                        h.completedDate ?? h.sessionDate,
+                                        locale,
+                                      ),
+                                    })
+                                  : t("homeworkOpen")}
                               </Badge>
                             </div>
                             {h.description && (
@@ -615,8 +624,7 @@ export function TrainingProfileHistory({
                     !attendance.trainerNotes &&
                     homework.length === 0 && (
                       <p className="text-muted-foreground text-xs italic">
-                        No exercises, notes, or homework logged for this
-                        session.
+                        {t("nothingLogged")}
                       </p>
                     )}
                 </div>
@@ -629,8 +637,7 @@ export function TrainingProfileHistory({
       {/* Footer hint — clarifies what's logged */}
       <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
         <CalendarDays className="size-3" />
-        Records are written when staff Complete a session — older sessions
-        without exercises predate per-session ratings being captured.
+        {t("recordsFooter")}
       </p>
     </div>
   );

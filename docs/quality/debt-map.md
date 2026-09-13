@@ -14027,3 +14027,17 @@ History tab's weather, distraction and rating labels are English-only.
 SQL `training-attendance-marks.sql` T9–T10; unit
 `training-attendance-history.test.ts`; e2e `training-attendance-marks.spec.ts`
 saves conditions with a late arrival and reads them on the History tab.
+
+## 2026-09-13 — a student's History tab reads in French
+
+The History tab was the last English surface in a student's profile: every
+status, rating, weather flag and distraction level, the filters, the empty
+states and the footer, with dates fixed to `en-US`. Its check-in times had
+also started printing raw ISO timestamps once attendance became real.
+
+Every label goes through `staff.areas.trainingProfile`; dates and times go
+through `formatDateLong`, `formatDateShort` and `formatTime` in the viewer's
+locale. "Absent" is the same word in French and joins the catalogue test's
+`SAME_IN_BOTH` list; the conditions label reads "Conditions de la séance" in
+French, as the session view's card does. The file left the `pages:facility`
+French baseline, where it had 41 strings.

@@ -828,7 +828,6 @@
     "src/app/facility/dashboard/services/training/students/_components/students-list.tsx": 53,
     "src/app/facility/dashboard/services/training/students/_components/students-page-shell.tsx": 4,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-alert-banner.tsx": 7,
-    "src/app/facility/dashboard/services/training/students/_components/training-profile-history.tsx": 41,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-homework.tsx": 42,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-notes.tsx": 77,
     "src/app/facility/dashboard/services/training/students/_components/training-profile-overview.tsx": 56,
