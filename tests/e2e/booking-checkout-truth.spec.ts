@@ -311,7 +311,7 @@ test.describe("the booking checkout tells the truth", () => {
     // carries one.
     await expect(dialog.getByText(/carries a \$10\.00 tip/)).toBeVisible();
     const cashLabel = await dialog
-      .getByRole("button", { name: /^charge \$/i })
+      .getByRole("button", { name: /checkout & charge \$/i })
       .first()
       .textContent();
     const cash = Number(
@@ -325,7 +325,10 @@ test.describe("the booking checkout tells the truth", () => {
     await expect(
       dialog
         .getByRole("button", {
-          name: new RegExp(`charge \\$${(cash + 10).toFixed(2)}`, "i"),
+          name: new RegExp(
+            `checkout & charge \\$${(cash + 10).toFixed(2)}`,
+            "i",
+          ),
         })
         .first(),
     ).toBeVisible();
