@@ -23,6 +23,8 @@
 -- T9  Staff save a session's conditions, and the history returns them.
 -- T10 A condition is a known weather flag or distraction level, and an absent
 --     dog has none (20260913112156).
+-- T11 A series that has ended is still the owner's: they read it, and their
+--     dog's history from it (an_owner_reads_the_series_their_dog_was_in).
 -- ============================================================================
 
 begin;
@@ -343,6 +345,26 @@ begin
     format('snow=%s unknown=%s absent=%s', v_snow, v_word, v_absent));
 exception when others then
   reset role; perform pg_temp.t('T10 condition constraints', false, sqlerrm);
+end $$;
+
+-- ── T11  an ended series is still the owner's ─────────────────────────────
+do $$
+declare v_series integer; v_rows integer;
+begin
+  update public.training_series set status = 'completed'
+   where id = '00000000-0000-0000-0000-0000001f9060';
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9003');
+  set local role authenticated;
+  select count(*) into v_series from public.training_series
+   where id = '00000000-0000-0000-0000-0000001f9060';
+  select count(*) into v_rows from public.training_attendance_history()
+   where booking_id in ('00000000-0000-0000-0000-0000001f9090', '00000000-0000-0000-0000-0000001f9091');
+  reset role;
+  perform pg_temp.t('T11 the owner reads a completed series and their dog''s history from it',
+    v_series = 1 and v_rows = 2,
+    format('series=%s history rows=%s', v_series, v_rows));
+exception when others then
+  reset role; perform pg_temp.t('T11 ended series', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

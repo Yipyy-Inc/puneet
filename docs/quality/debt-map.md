@@ -14041,3 +14041,16 @@ locale. "Absent" is the same word in French and joins the catalogue test's
 `SAME_IN_BOTH` list; the conditions label reads "Conditions de la séance" in
 French, as the session view's card does. The file left the `pages:facility`
 French baseline, where it had 41 strings.
+
+## 2026-09-13 — an owner still reads a series after it ends
+
+`training_series_read` admitted a client to a series only while it was
+`active`. Sessions read through their series, and the attendance history reads
+the sessions, so marking a series completed erased it from the owner's My Pets
+tab — every session, rating and absence.
+
+20260913121336 adds one clause: a client reads any series their own dog is
+enrolled in, whatever its status. Browsing is unchanged — the training booking
+step already drops completed and cancelled series. SQL
+`training-attendance-marks.sql` T11 completes the series and reads its history
+as the owner.
