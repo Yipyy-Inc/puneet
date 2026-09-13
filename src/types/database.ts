@@ -10333,6 +10333,7 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           facility_id: string;
+          mark: string | null;
           session_notes: string;
           status: string | null;
           updated_at: string;
@@ -10345,6 +10346,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           facility_id: string;
+          mark?: string | null;
           session_notes?: string;
           status?: string | null;
           updated_at?: string;
@@ -10357,6 +10359,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           facility_id?: string;
+          mark?: string | null;
           session_notes?: string;
           status?: string | null;
           updated_at?: string;
@@ -12433,6 +12436,29 @@ export type Database = {
           status: string;
           updated_at: string;
         };
+      };
+      training_attendance_history: {
+        Args: { p_facility_id?: string; p_pet_ref?: number };
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+          checked_in_at: string | null;
+          checked_out_at: string | null;
+          enrollment_id: string;
+          facility_id: string;
+          mark: string | null;
+          pet_name: string;
+          pet_ref: number;
+          recorded_at: string | null;
+          series_id: string;
+          session_end_at: string;
+          session_id: string;
+          session_notes: string | null;
+          session_number: number;
+          session_start_at: string;
+          timezone: string | null;
+          updated_at: string | null;
+        }[];
       };
       training_makeup_host_sessions: {
         Args: { p_missed_booking_id: string };

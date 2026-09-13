@@ -1,5 +1,8 @@
 import type { Trainer, TrainerNote, TrainingPackage } from "@/types/training";
-import type { TrainingHomework } from "@/lib/training-enrollment";
+import type {
+  SessionAttendance,
+  TrainingHomework,
+} from "@/lib/training-enrollment";
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
@@ -147,6 +150,23 @@ export async function fetchTrainingHomework(
     throw new Error(`Could not load the homework (${response.status})`);
   }
   return (await response.json()) as TrainingHomework[];
+}
+
+/**
+ * A dog's training attendance — every session booked that has ended or been
+ * recorded, from training_attendance_history(). It was the
+ * `sessionAttendances` fixture. `petRef` narrows to one dog.
+ */
+export async function fetchTrainingAttendanceHistory(
+  petRef?: number,
+): Promise<SessionAttendance[]> {
+  const query = petRef === undefined ? "" : `?petRef=${petRef}`;
+  const response = await fetch(`/api/training/attendance/history${query}`);
+  if (response.status === 401) return [];
+  if (!response.ok) {
+    throw new Error(`Could not load the attendance (${response.status})`);
+  }
+  return (await response.json()) as SessionAttendance[];
 }
 
 /**

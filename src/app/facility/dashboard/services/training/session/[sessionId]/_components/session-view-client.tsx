@@ -330,18 +330,17 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   // Completing a session patched the query cache — attendance, the session's
   // status, draft report cards — and toasted "Session marked complete. N
   // draft report cards created." None of it survived a reload. Each dog
-  // marked present or late is now checked in and out against its booking for
-  // this session (training_attendance, with the session notes), and the
-  // session itself is marked held. Drop-ins have no series booking and are
+  // marked present or late is checked in and out against its booking for this
+  // session — a late one marked late — an absent one is recorded absent
+  // (training_attendance, with the session notes), and the session itself is
+  // marked held. A dog nobody marked is left as it was. Drop-ins have no series booking and are
   // left as they were; report cards, exercise ratings and homework are still
   // local (see the debt map).
   async function persistSession() {
     if (!session) return;
     const refs = (session.bookingRefByPet ?? {}) as Record<string, number>;
-    const present = rows.filter(
-      (r) =>
-        !r.enrollmentId.startsWith("drop-") &&
-        ["present", "late"].includes(attendance[r.enrollmentId]?.status ?? ""),
+    const marked = rows.filter(
+      (r) => !r.enrollmentId.startsWith("drop-") && attendance[r.enrollmentId],
     );
     // Each dog's own note is a training note on its profile — written here,
     // with the visit, instead of into the query cache.
@@ -366,7 +365,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
       );
     const results = await Promise.allSettled([
       ...noteWrites,
-      ...present.map(async (r) => {
+      ...marked.map(async (r) => {
         const bookingRef = refs[String(r.petId)];
         if (!bookingRef)
           throw new Error(fillSession("noBooking", { pet: r.petName }));
@@ -374,7 +373,15 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
           [sessionNotes.trim(), (studentNotes[r.enrollmentId] ?? "").trim()]
             .filter(Boolean)
             .join("\n\n") || undefined;
-        await checkIn({ bookingRef });
+        const status = attendance[r.enrollmentId]?.status;
+        if (status === "absent") {
+          await checkIn({ bookingRef, mark: "absent", notes });
+          return;
+        }
+        await checkIn({
+          bookingRef,
+          mark: status === "late" ? "late" : undefined,
+        });
         await updateVisit({ bookingRef, checkOut: true, notes });
       }),
     ]);
@@ -396,7 +403,7 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
       });
       return;
     }
-    toast.success(fillSession("completed", { count: present.length }));
+    toast.success(fillSession("completed", { count: marked.length }));
   }
 
   function handleHomeworkDone() {
