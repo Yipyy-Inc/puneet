@@ -6788,8 +6788,6 @@
       "dismissLocked": "Complete at least {count} steps to dismiss",
       "copyright": "© 2026 Yipyy. All rights reserved.",
       "poweredBy": "Powered by Yipyy",
-      "stagingLabel": "Staging environment",
-      "stagingNotice": "Staging · writes to the live database",
       "impersonationViewing": "You are viewing {facility} as {admin}."
     },
     "search": {

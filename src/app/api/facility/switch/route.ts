@@ -12,8 +12,7 @@ import {
 //
 // GET lists the caller's own facilities and which one this request resolved
 // to; POST chooses one. The choice is a cookie holding the facility's SLUG,
-// read by `getFacilityContext()` when the hostname names no facility — which
-// is every request on staging.yipyy.com.
+// read by `getFacilityContext()` when the hostname names no facility.
 //
 // Choosing grants nothing. POST refuses a facility the caller is not a member
 // of, and even a hand-written cookie can only pick among the caller's own

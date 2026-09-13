@@ -20,8 +20,7 @@ import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 //
 // ── IT SENDS THROUGH THE ONE SENDER ───────────────────────────────────────
 //
-// `lib/messaging/send`: staging refuses (it shares production's database),
-// an unconfigured provider refuses, and each says so. The answer is
+// `lib/messaging/send`: an unconfigured provider refuses, and says so. The answer is
 // `{ sent, detail }` either way — "not sent, and why" is a normal outcome the
 // screen reports, never an error it hides.
 //

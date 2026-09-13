@@ -37,7 +37,7 @@ set -a
 set +a
 
 : "${CRON_SECRET:?CRON_SECRET is unset; the route answers 503 and the sweep never runs}"
-: "${SWEEP_HOST:?SWEEP_HOST is unset (e.g. yipyy.com, or staging.yipyy.com during the parallel run)}"
+: "${SWEEP_HOST:?SWEEP_HOST is unset (e.g. yipyy.com)}"
 
 out=$(curl --silent --show-error --fail-with-body \
 	--connect-timeout 10 --max-time 840 \

@@ -6788,8 +6788,6 @@
       "dismissLocked": "Complétez au moins {count} étapes pour masquer",
       "copyright": "© 2026 Yipyy. Tous droits réservés.",
       "poweredBy": "Propulsé par Yipyy",
-      "stagingLabel": "Environnement de préproduction",
-      "stagingNotice": "Préproduction · écrit dans la base de données de production",
       "impersonationViewing": "Vous consultez {facility} en tant que {admin}."
     },
     "search": {

@@ -108,13 +108,11 @@ import /etc/caddy/upstream.caddy
 # ── EXTRA SITES, IF THIS BOX HAS ANY ───────────────────────────────────────
 #
 # A glob that matches nothing is not an error in Caddy, so a box with no extra
-# sites needs neither this directory nor a placeholder in it. One box has one:
-# `sites/staging.caddy`, where the redesign is reviewed before production sees
-# it (ADR 0007).
+# sites needs neither this directory nor a placeholder in it.
 #
 # It must be imported BEFORE the catch-all below to be legible, though Caddy
 # does not actually care: it matches the most specific site address rather than
-# the first, so a named `staging.yipyy.com` beats `https://` wherever it sits.
+# the first, so a named host beats `https://` wherever it sits.
 # Written here anyway, because the next person reading top to bottom should not
 # have to know that rule to believe the file.
 #
