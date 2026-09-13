@@ -137,6 +137,19 @@ describe("the steps", () => {
     ).toEqual(["booking", "belongings", "review"]);
   });
 
+  test("add-ons are a step only where the form offers them and the booking has some", () => {
+    const offering = template({ features: { addOnsSection: true } });
+    expect(yipyyGoFormSteps(offering, { ...everything, addOns: true })).toEqual(
+      ["contact", "pet", "booking", "addons", "belongings", "review"],
+    );
+    expect(
+      yipyyGoFormSteps(offering, { ...everything, addOns: false }),
+    ).not.toContain("addons");
+    expect(
+      yipyyGoFormSteps(template(), { ...everything, addOns: true }),
+    ).not.toContain("addons");
+  });
+
   test("a file question waits for uploads, and asks for no step of its own", () => {
     const withFileOnly = template({
       globalCustomQuestions: [question("file", { type: "file_upload" })],

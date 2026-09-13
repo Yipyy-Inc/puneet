@@ -7,170 +7,168 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { DollarSign } from "lucide-react";
-import type { YipyyGoAddOn, YipyyGoFormSectionProps } from "@/types/yipyygo";
-import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { Label } from "@/components/ui/label";
+import type {
+  YipyyGoAddOnRequest,
+  YipyyGoOfferedAddOn,
+} from "@/lib/api/mappers/yipyy-go";
 import { formatMoney } from "@/lib/i18n/format";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
+import { addOnLine, takesQuantity } from "@/lib/yipyy-go/charges-preview";
 
-type AddOnsSectionProps = YipyyGoFormSectionProps;
+// ============================================================================
+// The add-ons this booking can take, as the facility sells them.
+//
+// The offer and every price come from the server (yipyy_go_offered_add_ons):
+// grooming's own list for a grooming booking, the facility's service add-ons
+// for the rest. What the owner hands back is a choice — which add-on, and how
+// many — never a price. The step this replaces showed five invented add-ons
+// at invented prices that "will be added to your booking", and never were.
+// ============================================================================
 
-// Mock add-ons - in production, these would come from facility config
-const AVAILABLE_ADD_ONS: YipyyGoAddOn[] = [
-  {
-    id: "extra-playtime",
-    name: "Extra Playtime",
-    description: "Additional 30 minutes of play", // french-ok: stand-in for facility-configured service text (debt map)
-    price: 15,
-    selected: false,
-  },
-  {
-    id: "enrichment",
-    name: "Enrichment Activities",
-    description: "Puzzle toys and mental stimulation", // french-ok: stand-in for facility-configured service text
-    price: 20,
-    selected: false,
-  },
-  {
-    id: "grooming-addon",
-    name: "Grooming Add-on",
-    description: "Bath and brush during stay", // french-ok: stand-in for facility-configured service text
-    price: 35,
-    selected: false,
-  },
-  {
-    id: "massage",
-    name: "Massage Therapy",
-    description: "15-minute relaxation massage",
-    price: 25,
-    selected: false,
-  },
-  {
-    id: "video-call",
-    name: "Video Call",
-    description: "15-minute video call with your pet",
-    price: 10,
-    selected: false,
-  },
-];
+const UNIT_KEYS: Record<string, string> = {
+  per_day: "feePerDay",
+  per_session: "unitPerSession",
+  per_hour: "unitPerHour",
+  per_item: "unitEach",
+};
+
+interface AddOnsSectionProps {
+  petName: string;
+  offered: YipyyGoOfferedAddOn[];
+  requests: YipyyGoAddOnRequest[];
+  /** The days a per-day add-on counts (stayDaysFor). */
+  stayDays: number;
+  approval: "auto" | "staff_approval";
+  onChange: (requests: YipyyGoAddOnRequest[]) => void;
+}
 
 export function AddOnsSection({
-  formData,
-  updateFormData,
+  petName,
+  offered,
+  requests,
+  stayDays,
+  approval,
+  onChange,
 }: AddOnsSectionProps) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
-  // Initialize add-ons if not set
-  const addOns =
-    formData.addOns.length > 0
-      ? formData.addOns
-      : AVAILABLE_ADD_ONS.map((ao) => ({ ...ao, selected: false }));
+  const chosen = new Map(requests.map((request) => [request.addOnId, request]));
 
-  const handleToggleAddOn = (id: string) => {
-    const updated = addOns.map((ao) =>
-      ao.id === id
-        ? {
-            ...ao,
-            selected: !ao.selected,
-            quantity: ao.selected ? undefined : 1,
-          }
-        : ao,
-    );
-    updateFormData({ addOns: updated });
+  const toggle = (offer: YipyyGoOfferedAddOn, on: boolean) => {
+    const others = requests.filter((request) => request.addOnId !== offer.id);
+    onChange(on ? [...others, { addOnId: offer.id, quantity: 1 }] : others);
   };
 
-  const handleQuantityChange = (id: string, quantity: number) => {
-    const updated = addOns.map((ao) =>
-      ao.id === id
-        ? { ...ao, quantity: quantity > 0 ? quantity : undefined }
-        : ao,
+  const setQuantity = (offer: YipyyGoOfferedAddOn, value: number) => {
+    const quantity = Math.min(
+      Math.max(Math.floor(value) || 1, 1),
+      Math.max(1, offer.maxQuantity),
     );
-    updateFormData({ addOns: updated });
+    onChange(
+      requests.map((request) =>
+        request.addOnId === offer.id ? { ...request, quantity } : request,
+      ),
+    );
   };
-
-  const totalAddOnsPrice = addOns
-    .filter((ao) => ao.selected)
-    .reduce((sum, ao) => sum + ao.price * (ao.quantity || 1), 0);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t("addOnsTitle")}</CardTitle>
         <CardDescription>
-          {t("enhanceStay").replace("{pet}", formData.petName)}
+          {t("enhanceStay").replaceAll("{pet}", () => petName)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {addOns.map((addOn) => (
-          <div
-            key={addOn.id}
-            className={`flex items-start gap-3 rounded-lg border p-4 ${addOn.selected ? "border-primary bg-primary/5" : ""} `}
-          >
-            <Checkbox
-              checked={addOn.selected}
-              onCheckedChange={() => handleToggleAddOn(addOn.id)}
-            />
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Label
-                    className="cursor-pointer text-base font-medium"
-                    onClick={() => handleToggleAddOn(addOn.id)}
-                  >
-                    {addOn.name}
-                  </Label>
-                  {addOn.description && (
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {addOn.description}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold tabular-nums">
-                    {formatMoney(addOn.price, locale)}
-                  </p>
-                </div>
-              </div>
-              {addOn.selected && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Label className="text-sm">{t("quantity")}</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={addOn.quantity || 1}
-                    onChange={(e) =>
-                      handleQuantityChange(
-                        addOn.id,
-                        parseInt(e.target.value) || 1,
-                      )
+        <ul className="space-y-3">
+          {offered.map((offer) => {
+            const request = chosen.get(offer.id);
+            const id = `add-on-${offer.id}`;
+            const unit = UNIT_KEYS[offer.pricingType];
+            const line = addOnLine(offer, request?.quantity ?? 1, stayDays);
+            return (
+              <li
+                key={offer.id}
+                data-selected={Boolean(request)}
+                className="border-line rounded-xl border p-4 data-[selected=true]:shadow-[inset_0_0_0_2px_var(--primary)]"
+              >
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id={id}
+                    checked={Boolean(request)}
+                    onCheckedChange={(checked) =>
+                      toggle(offer, checked === true)
                     }
-                    className="w-20"
+                    className="mt-1"
                   />
-                  <span className="text-muted-foreground text-sm">
-                    = {formatMoney((addOn.quantity || 1) * addOn.price, locale)}
-                  </span>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <Label
+                        htmlFor={id}
+                        className="text-body-ink text-[15px] font-semibold"
+                      >
+                        {offer.name}
+                      </Label>
+                      <span className="text-body-ink text-[14.5px] font-semibold tabular-nums">
+                        {formatMoney(offer.unitPrice, locale)}
+                        {unit && (
+                          <span className="text-ink-secondary font-normal">
+                            {" "}
+                            {t(unit)}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {offer.description && (
+                      <p className="text-ink-secondary text-[13.5px]">
+                        {offer.description}
+                      </p>
+                    )}
+                    {request && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
+                        {takesQuantity(offer) && (
+                          <div className="flex items-center gap-2">
+                            <Label
+                              htmlFor={`${id}-count`}
+                              className="text-[13.5px]"
+                            >
+                              {t("howMany")}
+                            </Label>
+                            <Input
+                              id={`${id}-count`}
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={offer.maxQuantity}
+                              value={String(request.quantity ?? 1)}
+                              onChange={(event) =>
+                                setQuantity(offer, Number(event.target.value))
+                              }
+                              className="w-24 tabular-nums"
+                            />
+                          </div>
+                        )}
+                        <span className="text-ink-secondary text-[13.5px] tabular-nums">
+                          {t("aboutInAll").replace("{amount}", () =>
+                            formatMoney(line.total, locale),
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {totalAddOnsPrice > 0 && (
-          <div className="bg-muted rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{t("totalAddOns")}</span>
-              <span className="text-lg font-bold">
-                <DollarSign className="inline size-4" />
-                {totalAddOnsPrice.toFixed(2)}
-              </span>
-            </div>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {t("theseWillBeAddedTo")}
-            </p>
-          </div>
-        )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="text-ink-secondary text-[13.5px]">
+          {approval === "staff_approval"
+            ? t("addOnsBilledOnApproval")
+            : t("addOnsBilledOnSend")}
+        </p>
       </CardContent>
     </Card>
   );

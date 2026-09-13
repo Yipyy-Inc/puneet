@@ -124,6 +124,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       checkInTime: start.time,
       checkOutTime: end.time,
       totalCost: booking.totalCost,
+      amountDue: booking.amountDue,
       tipAmount: booking.tipAmount,
     },
     requirement:

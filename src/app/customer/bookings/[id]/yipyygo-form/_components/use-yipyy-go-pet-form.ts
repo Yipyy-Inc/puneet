@@ -12,6 +12,10 @@ import {
   type YipyyGoRequestError,
   type YipyyGoSubmitResult,
 } from "@/lib/api/customer-yipyy-go";
+import type {
+  YipyyGoAddOnRequest,
+  YipyyGoTipChoice,
+} from "@/lib/api/mappers/yipyy-go";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import {
   DEFAULT_BEHAVIOR_NOTES,
@@ -28,7 +32,7 @@ import {
   validateYipyyGoAnswers,
   type YipyyGoMissing,
 } from "@/lib/yipyy-go/validate";
-import type { YipyyGoSectionFormData } from "@/types/yipyygo";
+import type { TipPopupConfig, YipyyGoSectionFormData } from "@/types/yipyygo";
 
 // ============================================================================
 // One pet's pre-arrival form: its answers, the step it is on, and saving and
@@ -47,9 +51,23 @@ import type { YipyyGoSectionFormData } from "@/types/yipyygo";
 // Checked here with validateYipyyGoAnswers before sending, and again by the
 // submit route with the same function, so the screen and the server never
 // disagree about what a form still needs.
+//
+// ── THE ADD-ONS AND THE TIP ───────────────────────────────────────────────
+//
+// The add-ons chosen are saved with the draft and sent with the form; the
+// server prices them. Where the facility asks for a tip, sending opens its
+// prompt first and resumes with the owner's choice.
 // ============================================================================
 
 type Pending = "next" | "later" | "pet" | null;
+
+/** The facility's tip prompt, where the form asks for a tip and offers one. */
+function tipPromptOf(data: CustomerYipyyGoBooking): TipPopupConfig | null {
+  const popup = data.tipPopup;
+  if (!popup?.enabled || !data.template.features.tipSection) return null;
+  // A prompt with nothing to choose would stop the form from being sent.
+  return popup.presets.length > 0 || popup.allowCustomAmount ? popup : null;
+}
 
 export function useYipyyGoPetForm({
   data,
@@ -75,16 +93,20 @@ export function useYipyyGoPetForm({
   const [customAnswers, setCustomAnswers] = useState<YipyyGoCustomAnswers>(
     () => pet.submission?.answers.customAnswers ?? {},
   );
+  const [addOnRequests, setAddOnRequests] = useState<YipyyGoAddOnRequest[]>(
+    () => pet.submission?.addOnRequests ?? [],
+  );
   const [stepIndex, setStepIndex] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [missing, setMissing] = useState<YipyyGoMissing[]>([]);
   const [sent, setSent] = useState<YipyyGoSubmitResult | null>(null);
   const [lastStayUsed, setLastStayUsed] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
+  const [tipOpen, setTipOpen] = useState(false);
 
   const status = pet.submission?.status ?? null;
   const draftable = status !== "submitted";
-  const addOnRequests = pet.submission?.addOnRequests ?? [];
+  const tipPrompt = tipPromptOf(data);
   const step = steps[Math.min(stepIndex, steps.length - 1)];
 
   const updateForm = (updates: Partial<YipyyGoSectionFormData>) => {
@@ -97,6 +119,11 @@ export function useYipyyGoPetForm({
     value: YipyyGoCustomAnswer | undefined,
   ) => {
     setCustomAnswers((current) => withCustomAnswer(current, questionId, value));
+    setDirty(true);
+  };
+
+  const updateAddOns = (next: YipyyGoAddOnRequest[]) => {
+    setAddOnRequests(next);
     setDirty(true);
   };
 
@@ -161,11 +188,17 @@ export function useYipyyGoPetForm({
     if (saved) open();
   };
 
-  const send = async () => {
+  const send = async (tip?: YipyyGoTipChoice) => {
     const answers = answersFromSectionForm(settle(), customAnswers);
     const needed = validateYipyyGoAnswers(data.template, answers);
     if (needed.length > 0) {
+      setTipOpen(false);
       setMissing(needed);
+      return;
+    }
+    // The facility's tip prompt comes first; sending resumes from its choice.
+    if (tipPrompt && tip === undefined) {
+      setTipOpen(true);
       return;
     }
     try {
@@ -173,14 +206,17 @@ export function useYipyyGoPetForm({
         petRef: pet.ref,
         answers,
         addOnRequests,
+        ...(tip ? { tip } : {}),
       });
       setDirty(false);
       setMissing([]);
+      setTipOpen(false);
       setSent(result);
       window.scrollTo({ top: 0 });
     } catch (error) {
       const serverMissing = (error as YipyyGoRequestError).missing;
       if (serverMissing?.length) {
+        setTipOpen(false);
         setMissing(serverMissing as YipyyGoMissing[]);
       } else {
         toast.error(fill("formNotSent", { pet: pet.name }));
@@ -201,6 +237,8 @@ export function useYipyyGoPetForm({
     updateForm,
     customAnswers,
     setCustomAnswer,
+    addOnRequests,
+    updateAddOns,
     step,
     stepIndex,
     goToStep,
@@ -212,6 +250,9 @@ export function useYipyyGoPetForm({
     draftable,
     missing,
     sent,
+    tipPrompt,
+    tipOpen,
+    setTipOpen,
     canUseLastStay:
       Boolean(pet.lastAnswers) &&
       !lastStayUsed &&
