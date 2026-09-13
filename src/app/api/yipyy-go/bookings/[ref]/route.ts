@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { getFormTemplateForService } from "@/data/yipyygo-config";
+import { yipyyGoOff, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
 import {
   rowToYipyyGoCharge,
   rowToYipyyGoSubmission,
@@ -38,25 +40,40 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const booking = await resolveYipyyGoBooking(supabase, (await params).ref);
   if (!booking) return bookingNotFound();
 
-  const [stateRes, submissionsRes, chargesRes, deskRes] = await Promise.all([
-    supabase.rpc("yipyy_go_form_state", { p_booking_id: booking.id }),
-    supabase
-      .from("yipyy_go_submissions")
-      .select("*")
-      .eq("booking_id", booking.id),
-    supabase
-      .from("yipyy_go_charges")
-      .select("charge_key, kind, name, unit_price, quantity, line_item_id")
-      .eq("booking_id", booking.id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("yipyy_go_desk_checks")
-      .select("*")
-      .eq("booking_id", booking.id)
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  const [stateRes, submissionsRes, chargesRes, deskRes, settingsRes] =
+    await Promise.all([
+      supabase.rpc("yipyy_go_form_state", { p_booking_id: booking.id }),
+      supabase
+        .from("yipyy_go_submissions")
+        .select("*")
+        .eq("booking_id", booking.id),
+      supabase
+        .from("yipyy_go_charges")
+        .select("charge_key, kind, name, unit_price, quantity, line_item_id")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("yipyy_go_desk_checks")
+        .select("*")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("facility_settings")
+        .select("value")
+        .eq("facility_id", booking.facilityId)
+        .eq("domain", "yipyy_go_config")
+        .maybeSingle(),
+    ]);
   if (stateRes.error) return yipyyGoFailure(stateRes.error);
+
+  // The form this booking’s service asks for, which is what names each of the
+  // facility’s own questions when staff read the answers.
+  const settings = yipyyGoSettingsSchema.safeParse(settingsRes.data?.value);
+  const template = getFormTemplateForService(
+    settings.success ? settings.data : yipyyGoOff(),
+    booking.service,
+  );
 
   const submissions = (submissionsRes.data ?? []) as YipyyGoSubmissionRow[];
   const photos = await signYipyyGoPhotos(
@@ -84,6 +101,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         ? state.requirement
         : null,
     deadline: state.deadline ?? null,
+    template,
     pets: booking.pets.map((pet) => {
       const row = submissions.find((s) => s.pet_id === pet.id);
       return {

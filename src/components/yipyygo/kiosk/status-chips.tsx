@@ -1,84 +1,21 @@
 "use client";
 
-import {
-  CircleCheck,
-  CircleDashed,
-  CircleMinus,
-  Clock3,
-  DoorOpen,
-  Send,
-  TriangleAlert,
-  type LucideIcon,
-} from "lucide-react";
+import { Clock3, DoorOpen } from "lucide-react";
 
 import { CheckedIn } from "@/components/icons/yipyy-icons";
 import { Badge } from "@/components/ui/badge";
-import type {
-  YipyyGoArrival,
-  YipyyGoBookingStatus,
-} from "@/lib/api/mappers/yipyy-go";
+import type { YipyyGoArrival } from "@/lib/api/mappers/yipyy-go";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
-// What the desk reads about an arrival at a glance (§3): where its pre-arrival
-// form stands, and whether the dog is here. Each is a glyph, a word and an
-// ink, never the colour alone.
+// Whether the dog is here, as the desk reads it at a glance (§3): a glyph, a
+// word and an ink, never the colour alone. Being on site is orange’s own
+// territory (§2b): a solid fill under body ink.
 //
-// A form nobody has started is a problem only where the facility requires
-// it. Being on site is orange’s own territory (§2b): a solid fill under body
-// ink.
+// Where a pre-arrival form stands is the shared chip in
+// components/yipyygo/form-status-chip — the one the bookings list and the
+// booking page read too.
 // ============================================================================
-
-type ChipVariant =
-  | "confirmed"
-  | "checkedIn"
-  | "pending"
-  | "overdue"
-  | "cancelled";
-
-const FORM: Record<
-  YipyyGoBookingStatus,
-  { variant: ChipVariant; icon: LucideIcon; key: string }
-> = {
-  not_required: {
-    variant: "cancelled",
-    icon: CircleMinus,
-    key: "formNotRequired",
-  },
-  not_started: {
-    variant: "overdue",
-    icon: CircleDashed,
-    key: "formNotStarted",
-  },
-  in_progress: { variant: "pending", icon: Clock3, key: "formInProgress" },
-  changes_requested: {
-    variant: "pending",
-    icon: TriangleAlert,
-    key: "formChangesRequested",
-  },
-  submitted: { variant: "checkedIn", icon: Send, key: "formSubmitted" },
-  approved: { variant: "confirmed", icon: CircleCheck, key: "formApproved" },
-};
-
-export function FormStatusChip({
-  status,
-  mandatory,
-}: {
-  status: YipyyGoBookingStatus;
-  mandatory: boolean;
-}) {
-  const { t } = useStaffText("kiosk");
-  const chip = FORM[status];
-  const Icon = chip.icon;
-  const variant =
-    !mandatory && chip.variant === "overdue" ? "cancelled" : chip.variant;
-  return (
-    <Badge variant={variant}>
-      <Icon aria-hidden />
-      {t(chip.key)}
-    </Badge>
-  );
-}
 
 export function PresenceChip({
   presence,

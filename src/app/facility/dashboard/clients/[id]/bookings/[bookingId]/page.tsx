@@ -140,6 +140,7 @@ import { BookingJournal } from "@/components/guest-journal/BookingJournal";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { ExtraService } from "@/types/booking";
 import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
+import { YipyyGoBookingCard } from "@/components/yipyygo/staff/yipyy-go-booking-card";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -1785,6 +1786,13 @@ export default function ClientBookingDetailPage({
               templates={allTaskTemplates}
               petName={pet?.name ?? ""}
             />
+
+            {/* The booking’s pre-arrival forms, where the staff email links
+                (#yipyy-go): each dog’s form to review or complete, and what
+                the desk recorded at check-in. */}
+            {booking.yipyyGo?.requirement && (
+              <YipyyGoBookingCard bookingRef={booking.id} />
+            )}
 
             {/* Tips Section — omitted without view_booking_financials (3C) */}
             {isPaid && canSeeBookingAmounts && (

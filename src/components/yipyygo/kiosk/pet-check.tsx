@@ -6,6 +6,10 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  FormStatusChip,
+  formChipStatusOf,
+} from "@/components/yipyygo/form-status-chip";
 import type { YipyyGoSubmission } from "@/lib/api/mappers/yipyy-go";
 import { formatNumber } from "@/lib/i18n/format";
 import { useShellText } from "@/lib/shell/use-shell-text";
@@ -15,8 +19,6 @@ import {
   MED_FREQUENCY_KEYS,
   answerLabel,
 } from "@/lib/yipyy-go/answer-labels";
-
-import { FormStatusChip } from "./status-chips";
 
 export const SATISFIED = new Set([
   "submitted",
@@ -28,25 +30,6 @@ export interface PetCheck {
   medicationsConfirmed: boolean;
   belongingsConfirmed: boolean;
   overrideReason: string;
-}
-
-function formStatusOf(
-  submission: YipyyGoSubmission | null,
-  required: boolean | null,
-) {
-  switch (submission?.status) {
-    case "draft":
-      return "in_progress";
-    case "submitted":
-    case "changes_requested":
-      return submission.status;
-    case "approved":
-    case "completed_by_staff":
-      return "approved";
-    // An asked form nobody has sent is not started, optional or mandatory.
-    default:
-      return required === null ? "not_required" : "not_started";
-  }
 }
 
 // One dog at the desk: where its form stands, the medications and belongings
@@ -92,7 +75,7 @@ export function PetCheckSection({
         </h3>
         {required !== null && (
           <FormStatusChip
-            status={formStatusOf(pet.submission, required)}
+            status={formChipStatusOf(pet.submission, required)}
             mandatory={required}
           />
         )}
