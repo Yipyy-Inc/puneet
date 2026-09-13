@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import type { AttachedPhoto } from "@/components/yipyygo/form-sections/PhotoField";
 import {
   useSaveYipyyGoDraft,
   useSubmitYipyyGoForm,
@@ -17,6 +18,7 @@ import type {
   YipyyGoTipChoice,
 } from "@/lib/api/mappers/yipyy-go";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { withKnownPhotos } from "@/lib/yipyy-go/answer-photos";
 import {
   DEFAULT_BEHAVIOR_NOTES,
   answersFromSectionForm,
@@ -29,6 +31,7 @@ import {
   type YipyyGoFormStep,
 } from "@/lib/yipyy-go/owner-form";
 import {
+  customQuestionsOf,
   validateYipyyGoAnswers,
   type YipyyGoMissing,
 } from "@/lib/yipyy-go/validate";
@@ -57,6 +60,12 @@ import type { TipPopupConfig, YipyyGoSectionFormData } from "@/types/yipyygo";
 // The add-ons chosen are saved with the draft and sent with the form; the
 // server prices them. Where the facility asks for a tip, sending opens its
 // prompt first and resumes with the owner's choice.
+//
+// ── THE PHOTOS ────────────────────────────────────────────────────────────
+//
+// A photo is uploaded the moment it is picked, and the answers keep its id.
+// An id whose photo is gone is dropped when the form opens, and again by the
+// submit route, so a required photo is always one the facility can open.
 // ============================================================================
 
 type Pending = "next" | "later" | "pet" | null;
@@ -84,14 +93,19 @@ export function useYipyyGoPetForm({
   const saveDraft = useSaveYipyyGoDraft(bookingRef);
   const submit = useSubmitYipyyGoForm(bookingRef);
 
-  const [form, setForm] = useState<YipyyGoSectionFormData>(() =>
-    sectionFormFromAnswers(
+  // What the form was left with, pointing only at photos it still has.
+  const [saved] = useState(() =>
+    withKnownPhotos(
       pet.submission?.answers ?? emptyYipyyGoAnswers(),
-      pet.name,
+      new Set(pet.submission?.photos.map((photo) => photo.id)),
+      customQuestionsOf(data.template),
     ),
   );
+  const [form, setForm] = useState<YipyyGoSectionFormData>(() =>
+    sectionFormFromAnswers(saved, pet.name),
+  );
   const [customAnswers, setCustomAnswers] = useState<YipyyGoCustomAnswers>(
-    () => pet.submission?.answers.customAnswers ?? {},
+    () => saved.customAnswers ?? {},
   );
   const [addOnRequests, setAddOnRequests] = useState<YipyyGoAddOnRequest[]>(
     () => pet.submission?.addOnRequests ?? [],
@@ -103,6 +117,9 @@ export function useYipyyGoPetForm({
   const [lastStayUsed, setLastStayUsed] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
   const [tipOpen, setTipOpen] = useState(false);
+  // Photos picked in this tab, with the preview they were picked with. The
+  // rest come from the server, signed for a minute.
+  const [picked, setPicked] = useState<Record<string, AttachedPhoto>>({});
 
   const status = pet.submission?.status ?? null;
   const draftable = status !== "submitted";
@@ -126,6 +143,23 @@ export function useYipyyGoPetForm({
     setAddOnRequests(next);
     setDirty(true);
   };
+
+  const photoFor = (id: string | undefined): AttachedPhoto | null => {
+    if (!id) return null;
+    if (picked[id]) return picked[id];
+    const stored = pet.submission?.photos.find((photo) => photo.id === id);
+    return stored
+      ? {
+          id,
+          url: stored.url || null,
+          name: stored.name,
+          sizeBytes: stored.sizeBytes,
+        }
+      : null;
+  };
+
+  const rememberPhoto = (photo: AttachedPhoto) =>
+    setPicked((current) => ({ ...current, [photo.id]: photo }));
 
   // The behavior step shows an energy level and "Not sure" before anything is
   // picked. Moving on from it keeps what it showed, so the review and the
@@ -239,6 +273,8 @@ export function useYipyyGoPetForm({
     setCustomAnswer,
     addOnRequests,
     updateAddOns,
+    photoFor,
+    rememberPhoto,
     step,
     stepIndex,
     goToStep,

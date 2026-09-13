@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { createServerClient } from "@/lib/supabase/server";
 import type { YipyyGoPhoto } from "@/lib/api/mappers/yipyy-go";
+import { uploadedFileName } from "@/lib/files/file-name";
 import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 
 // ============================================================================
@@ -125,7 +126,7 @@ export async function signYipyyGoPhotos(
 
   const { data: rows } = await supabase
     .from("yipyy_go_photos")
-    .select("id, submission_id, kind, item_ref, storage_path")
+    .select("id, submission_id, kind, item_ref, storage_path, size_bytes")
     .in("submission_id", submissionIds)
     .order("created_at", { ascending: true });
   const photos = (rows ?? []) as {
@@ -134,6 +135,7 @@ export async function signYipyyGoPhotos(
     kind: string;
     item_ref: string | null;
     storage_path: string;
+    size_bytes: number;
   }[];
   if (photos.length === 0) return bySubmission;
 
@@ -157,8 +159,33 @@ export async function signYipyyGoPhotos(
           : "belongings",
       itemRef: photo.item_ref,
       url: urlByPath.get(photo.storage_path) ?? "",
+      name: uploadedFileName(photo.storage_path),
+      sizeBytes: photo.size_bytes,
     });
     bySubmission.set(photo.submission_id, list);
   }
   return bySubmission;
+}
+
+/**
+ * The photos on one dog’s form for a booking, by id — none before it has a
+ * form. What an answer may point at.
+ */
+export async function yipyyGoPhotoIds(
+  supabase: Supabase,
+  bookingId: string,
+  petId: string,
+): Promise<Set<string>> {
+  const { data: submission } = await supabase
+    .from("yipyy_go_submissions")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .eq("pet_id", petId)
+    .maybeSingle();
+  if (!submission) return new Set();
+  const { data: rows } = await supabase
+    .from("yipyy_go_photos")
+    .select("id")
+    .eq("submission_id", submission.id);
+  return new Set((rows ?? []).map((row) => String(row.id)));
 }

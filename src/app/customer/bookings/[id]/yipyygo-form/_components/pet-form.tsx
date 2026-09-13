@@ -28,6 +28,7 @@ import { ContactInfoSection } from "@/components/yipyygo/form-sections/ContactIn
 import { FeedingSection } from "@/components/yipyygo/form-sections/FeedingSection";
 import { MedicationSection } from "@/components/yipyygo/form-sections/MedicationSection";
 import { PetDetailsSection } from "@/components/yipyygo/form-sections/PetDetailsSection";
+import { PhotoField } from "@/components/yipyygo/form-sections/PhotoField";
 import type {
   CustomerYipyyGoBooking,
   CustomerYipyyGoPet,
@@ -36,13 +37,12 @@ import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatDateLong } from "@/lib/i18n/format";
 import { addOnLine, stayDaysFor } from "@/lib/yipyy-go/charges-preview";
 import {
-  answerableQuestions,
   yipyyGoFormSteps,
   type YipyyGoFormStep,
 } from "@/lib/yipyy-go/owner-form";
 import { customQuestionsOf } from "@/lib/yipyy-go/validate";
 import type { Client } from "@/types/client";
-import type { FormTemplateConfig } from "@/types/yipyygo";
+import type { YipyyGoPhotoSlot } from "@/types/yipyygo";
 
 import { BillEstimate } from "./bill-estimate";
 import { CustomQuestionsSection } from "./custom-questions-section";
@@ -64,16 +64,6 @@ const STEP_LABEL_KEYS: Record<YipyyGoFormStep, string> = {
   questions: "questions",
   review: "review",
 };
-
-// Photos reach the server once the form uploads them. Until then a picked file
-// would be a preview in this tab that the facility never receives, so the
-// sections are not offered one.
-function withoutPhotoUploads(template: FormTemplateConfig): FormTemplateConfig {
-  return {
-    ...template,
-    features: { ...template.features, photoUploads: false },
-  };
-}
 
 interface PetFormProps {
   data: CustomerYipyyGoBooking;
@@ -109,8 +99,7 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
     );
   }
 
-  const questions = answerableQuestions(data.template);
-  const template = withoutPhotoUploads(data.template);
+  const questions = customQuestionsOf(data.template);
   const labelled = steps.map((id) => ({ id, label: t(STEP_LABEL_KEYS[id]) }));
   const index = form.stepIndex;
   const nextStep = labelled[index + 1];
@@ -121,11 +110,34 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
   );
   const hasMedications =
     !form.form.noMedications && form.form.medications.length > 0;
+  // Every photo on the form goes through one field, which uploads it to this
+  // booking and dog as soon as it is picked; the answers keep its id.
+  const photoField = (slot: YipyyGoPhotoSlot) => (
+    <PhotoField
+      key={slot.id}
+      id={slot.id}
+      label={slot.label}
+      bookingRef={data.booking.ref}
+      petRef={pet.ref}
+      kind={slot.kind}
+      itemRef={slot.itemRef}
+      photo={form.photoFor(slot.photoId)}
+      invalid={
+        slot.invalid ??
+        (slot.kind === "belongings" && form.missing.includes("belongingsPhoto"))
+      }
+      onChange={(photo) => {
+        if (photo) form.rememberPhoto(photo);
+        slot.onChange(photo?.id);
+      }}
+    />
+  );
   const sectionProps = {
     formData: form.form,
     updateFormData: form.updateForm,
-    template,
+    template: data.template,
     medicationFee: data.medicationFee,
+    photoField,
   };
 
   // What a percentage tip is taken of. A form already on the bill has its
@@ -188,6 +200,7 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
             answers={form.customAnswers}
             missing={form.missing}
             onChange={form.setCustomAnswer}
+            photoField={photoField}
           />
         );
       case "review":

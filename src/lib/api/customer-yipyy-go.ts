@@ -14,7 +14,6 @@ import type {
   YipyyGoAnswers,
   YipyyGoCharge,
   YipyyGoOfferedAddOn,
-  YipyyGoPhoto,
   YipyyGoSubmission,
   YipyyGoTipChoice,
 } from "@/lib/api/mappers/yipyy-go";
@@ -245,33 +244,8 @@ export function useIssueCheckInPass(bookingRef: number) {
   });
 }
 
-export function useUploadYipyyGoPhoto(bookingRef: number) {
-  const invalidate = useInvalidateYipyyGoBooking(bookingRef);
-  return useMutation({
-    mutationFn: async (input: {
-      petRef: number;
-      file: File;
-      kind: YipyyGoPhoto["kind"];
-      itemRef?: string;
-    }): Promise<YipyyGoPhoto> => {
-      const form = new FormData();
-      form.set("file", input.file);
-      form.set("bookingRef", String(bookingRef));
-      form.set("petRef", String(input.petRef));
-      form.set("kind", input.kind);
-      if (input.itemRef) form.set("itemRef", input.itemRef);
-      const response = await fetch("/api/customer/yipyy-go/photos", {
-        method: "POST",
-        body: form,
-      });
-      if (!response.ok)
-        throw await readYipyyGoError(response, "Could not add the photo.");
-      return (await response.json()) as YipyyGoPhoto;
-    },
-    onSuccess: invalidate,
-  });
-}
-
+// A photo is uploaded by the field that shows its progress
+// (components/yipyygo/form-sections/PhotoField.tsx), which fetch cannot report.
 export function useDeleteYipyyGoPhoto(bookingRef: number) {
   const invalidate = useInvalidateYipyyGoBooking(bookingRef);
   return useMutation({

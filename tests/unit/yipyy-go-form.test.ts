@@ -5,7 +5,6 @@ import {
   type YipyyGoAnswers,
 } from "@/lib/api/mappers/yipyy-go";
 import {
-  answerableQuestions,
   answersFromSectionForm,
   calendarDay,
   emptyYipyyGoAnswers,
@@ -150,14 +149,11 @@ describe("the steps", () => {
     ).not.toContain("addons");
   });
 
-  test("a file question waits for uploads, and asks for no step of its own", () => {
+  test("a photo question is asked on the questions step", () => {
     const withFileOnly = template({
       globalCustomQuestions: [question("file", { type: "file_upload" })],
     });
-    expect(answerableQuestions(withFileOnly)).toEqual([]);
-    expect(yipyyGoFormSteps(withFileOnly, everything)).not.toContain(
-      "questions",
-    );
+    expect(yipyyGoFormSteps(withFileOnly, everything)).toContain("questions");
   });
 
   test("everything the form can still need names a step the form has", () => {
