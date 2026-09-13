@@ -699,6 +699,29 @@ export const bookingSchema = newBookingSchema.extend({
   arrivedAt: z.string().nullable().optional(),
   departedAt: z.string().nullable().optional(),
   /**
+   * Where the booking stands on its pre-arrival form (Yipyy Go). DERIVED, from
+   * `booking_yipyy_go` (20260913133630): whether the facility asks for one,
+   * and how many of the booking's pets have one that counts — submitted,
+   * approved or completed by staff. Optional because the fixtures cannot
+   * supply it.
+   */
+  yipyyGo: z
+    .object({
+      requirement: z.enum(["mandatory", "optional"]).nullable(),
+      status: z.enum([
+        "not_required",
+        "not_started",
+        "in_progress",
+        "changes_requested",
+        "submitted",
+        "approved",
+      ]),
+      satisfied: z.boolean(),
+      petsTotal: z.number(),
+      petsSatisfied: z.number(),
+    })
+    .optional(),
+  /**
    * What the payments ledger says has been paid toward this booking:
    * `sum(grand_total - tip)`. DERIVED — see 20260806680000. Writing it does
    * nothing; `paymentStatus` is computed from it and `total_cost`.

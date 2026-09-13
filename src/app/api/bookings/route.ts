@@ -1,4 +1,8 @@
 import { NextResponse, after, type NextRequest } from "next/server";
+import {
+  rowToBookingYipyyGo,
+  type BookingYipyyGoRow,
+} from "@/lib/api/mappers/yipyy-go";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
@@ -107,6 +111,35 @@ export async function GET(request: NextRequest) {
     presenceRows.push(...(batch ?? []));
   }
 
+  // ── Where the pre-arrival form stands ──────────────────────────────────
+  //
+  // `booking_yipyy_go` (20260913133630): whether the facility asks for a form
+  // on this booking and how many of its dogs have one that counts. Merged the
+  // same way, and for the same reasons, as presence above — a view PostgREST
+  // cannot embed, read in batches so the URL stays short.
+  const yipyyGoRows: unknown[] = [];
+  for (let i = 0; i < ids.length; i += 150) {
+    const { data: batch, error: yipyyGoError } = await supabase
+      .from("booking_yipyy_go")
+      .select(
+        "booking_id, requirement, status, satisfied, pets_total, pets_satisfied",
+      )
+      .in("booking_id", ids.slice(i, i + 150));
+    if (yipyyGoError) {
+      return NextResponse.json(
+        { error: yipyyGoError.message },
+        { status: 500 },
+      );
+    }
+    yipyyGoRows.push(...(batch ?? []));
+  }
+  const yipyyGoById = new Map(
+    (yipyyGoRows as BookingYipyyGoRow[]).map((row) => [
+      row.booking_id,
+      rowToBookingYipyyGo(row),
+    ]),
+  );
+
   const presenceById = new Map(
     (
       presenceRows as {
@@ -128,6 +161,7 @@ export async function GET(request: NextRequest) {
         presence: row?.presence ?? "unknown",
         arrivedAt: row?.arrived_at ?? null,
         departedAt: row?.departed_at ?? null,
+        yipyyGo: yipyyGoById.get((data[index] as unknown as { id: string }).id),
       };
     }),
   );
