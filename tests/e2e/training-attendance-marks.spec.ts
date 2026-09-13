@@ -16,7 +16,10 @@ import { ACCOUNTS, signIn } from "./_auth";
 //      an absence recorded by mistake.
 //   3. The owner reads their dog's history and cannot record it.
 //   4. Through the student's History tab: the late arrival reads "Late" after
-//      a reload.
+//      a reload, with the exercise it was rated on.
+//
+// And (20260913104649) a late arrival keeps its exercise ratings, a malformed
+// rating is refused, and a dog can be excused.
 //
 // ── ONE POSTGRES, SHARED WITH CI ────────────────────────────────────────────
 // beforeAll gives Buddy, through the service role, a MARKER series with two
@@ -29,11 +32,13 @@ const MARKER = "[e2e training-attendance-marks]";
 const API = "/api/training/attendance";
 const BUDDY = 1; // Alice's dog — Alice is ACCOUNTS.customer.
 const HISTORY = `${API}/history?petRef=${BUDDY}`;
+const SIT = `${MARKER} Sit`;
 
 interface Attendance {
   sessionId: string;
   status: string;
   checkInTime: string | null;
+  exercises?: { exerciseName: string; rating: number }[];
 }
 
 function admin() {
@@ -189,7 +194,11 @@ test.describe("a training absence is recorded", () => {
     expect(session(2)?.checkInTime).toBeNull();
 
     const late = await page.request.post(API, {
-      data: { bookingRef: bookingRefs[0], mark: "late" },
+      data: {
+        bookingRef: bookingRefs[0],
+        mark: "late",
+        exercises: [{ exerciseName: SIT, rating: 4 }],
+      },
     });
     expect(late.status(), await late.text()).toBe(201);
 
@@ -202,6 +211,21 @@ test.describe("a training absence is recorded", () => {
     expect(session(1)?.status).toBe("late");
     expect(session(1)?.checkInTime).toBeTruthy();
     expect(session(2)?.status).toBe("present");
+    expect(session(1)?.exercises).toEqual([{ exerciseName: SIT, rating: 4 }]);
+
+    const excused = await page.request.post(API, {
+      data: { bookingRef: bookingRefs[2], mark: "excused" },
+    });
+    expect(excused.status(), await excused.text()).toBe(201);
+    expect((await history(page.request))(3)?.status).toBe("excused");
+
+    const unrated = await page.request.post(API, {
+      data: {
+        bookingRef: bookingRefs[0],
+        exercises: [{ exerciseName: SIT, rating: 9 }],
+      },
+    });
+    expect(unrated.status()).toBe(422);
 
     const unknown = await page.request.post(API, {
       data: { bookingRef: bookingRefs[1], mark: "sick" },
@@ -239,5 +263,6 @@ test.describe("a training absence is recorded", () => {
     await expect(page.getByText("Late", { exact: true }).first()).toBeVisible({
       timeout: 30_000,
     });
+    await expect(page.getByText(SIT).first()).toBeVisible();
   });
 });

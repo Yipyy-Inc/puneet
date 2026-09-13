@@ -38,6 +38,30 @@ export interface PresentStudentSummary {
   status: "present" | "late";
 }
 
+/** The exercises one dog did and how it did: those covered this session,
+ *  included for the dog, and rated. Saved on its attendance by the session
+ *  screen (persistSession), and drawn on its History tab. */
+export function exerciseRatingsFor(
+  entries: SessionExerciseEntry[],
+  enrollmentId: string,
+): SessionExerciseRating[] {
+  const exercises: SessionExerciseRating[] = [];
+  for (const entry of entries) {
+    // Curriculum exercises the trainer marked "not covered" stay on screen as
+    // a record but aren't part of what was actually taught — skip them.
+    if (entry.notCovered) continue;
+    const studentEntry = entry.students[enrollmentId];
+    if (!studentEntry) continue;
+    if (studentEntry.included === false) continue;
+    if (studentEntry.rating === null) continue;
+    exercises.push({
+      exerciseName: entry.exerciseName,
+      rating: studentEntry.rating,
+    });
+  }
+  return exercises;
+}
+
 /** Walk every present student → build & fan out attendance, status flip,
  *  report card, and per-student trainer notes. Returns the list of present
  *  students with their resolved series enrollment so the caller can drive a
@@ -83,22 +107,7 @@ export function saveSession(input: SaveSessionInput): PresentStudentSummary[] {
       .filter((e) => e.petId === row.petId && e.status === "enrolled")
       .sort((a, b) => b.enrollmentDate.localeCompare(a.enrollmentDate))[0];
 
-    // Exercises rated for this student (only ones marked included AND with a
-    // rating actually set).
-    const exercises: SessionExerciseRating[] = [];
-    for (const entry of exerciseEntries) {
-      // Curriculum exercises the trainer marked "not covered" stay on screen as
-      // a record but aren't part of what was actually taught — skip them.
-      if (entry.notCovered) continue;
-      const studentEntry = entry.students[row.enrollmentId];
-      if (!studentEntry) continue;
-      if (studentEntry.included === false) continue;
-      if (studentEntry.rating === null) continue;
-      exercises.push({
-        exerciseName: entry.exerciseName,
-        rating: studentEntry.rating,
-      });
-    }
+    const exercises = exerciseRatingsFor(exerciseEntries, row.enrollmentId);
 
     // Combined trainer notes — session-wide summary then per-student
     // addendum. Persisted on the attendance record (read by Training History

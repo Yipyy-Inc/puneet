@@ -10332,6 +10332,7 @@ export type Database = {
           checked_out_at: string | null;
           created_at: string;
           created_by: string | null;
+          exercises: Json;
           facility_id: string;
           mark: string | null;
           session_notes: string;
@@ -10345,6 +10346,7 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           created_by?: string | null;
+          exercises?: Json;
           facility_id: string;
           mark?: string | null;
           session_notes?: string;
@@ -10358,6 +10360,7 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           created_by?: string | null;
+          exercises?: Json;
           facility_id?: string;
           mark?: string | null;
           session_notes?: string;
@@ -12445,6 +12448,7 @@ export type Database = {
           checked_in_at: string | null;
           checked_out_at: string | null;
           enrollment_id: string;
+          exercises: Json;
           facility_id: string;
           mark: string | null;
           pet_name: string;

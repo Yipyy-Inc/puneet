@@ -1,5 +1,5 @@
 export type AttendanceMark = {
-  status: "present" | "absent" | "late";
+  status: "present" | "absent" | "late" | "excused";
   markedAtISO: string;
 };
 

@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Check,
   Clock3,
+  Hourglass,
   PawPrint,
   Phone,
   ShieldAlert,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { Enrollment } from "@/types/training";
 import type { StudentBriefingRow } from "@/lib/training-pre-session";
 import type { AttendanceMark } from "./session-view-types";
@@ -57,12 +59,18 @@ const STATUS_BTN_STYLES: Record<
     idle: "border border-amber-200 bg-white text-amber-700 hover:bg-amber-50",
     ringColor: "ring-amber-500",
   },
+  excused: {
+    active: "bg-sky-600 text-white shadow-sm hover:bg-sky-700",
+    idle: "border border-sky-200 bg-white text-sky-700 hover:bg-sky-50",
+    ringColor: "ring-sky-500",
+  },
 };
 
 const STATUS_BORDER: Record<AttendanceMark["status"], string> = {
   present: "border-emerald-300 dark:border-emerald-700",
   absent: "border-red-300 dark:border-red-700",
   late: "border-amber-300 dark:border-amber-700",
+  excused: "border-sky-300 dark:border-sky-700",
 };
 
 function formatTimestamp(iso: string): string {
@@ -82,6 +90,7 @@ export function StudentAttendanceCard({
 }: Props) {
   const ownerPhone = enrollment?.ownerPhone;
   const alerts = collectAlerts(row);
+  const { t: tSession } = useStaffText("trainingSession");
 
   // Pointer-based swipe state — works for touch + mouse + pen. Positive dx
   // = swiping right (commits Present); negative dx = swiping left (commits
@@ -238,6 +247,7 @@ export function StudentAttendanceCard({
                 mark.status === "present" && "bg-emerald-100 text-emerald-700",
                 mark.status === "absent" && "bg-red-100 text-red-700",
                 mark.status === "late" && "bg-amber-100 text-amber-700",
+                mark.status === "excused" && "bg-sky-100 text-sky-700",
               )}
               title={`Marked at ${new Date(mark.markedAtISO).toLocaleString()}`}
             >
@@ -247,7 +257,7 @@ export function StudentAttendanceCard({
         </div>
 
         {/* Attendance buttons */}
-        <div data-no-swipe className="grid grid-cols-3 gap-2">
+        <div data-no-swipe className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <AttendanceButton
             status="present"
             active={mark?.status === "present"}
@@ -268,6 +278,13 @@ export function StudentAttendanceCard({
             onClick={() => onMark("late")}
             icon={Clock3}
             label="Late"
+          />
+          <AttendanceButton
+            status="excused"
+            active={mark?.status === "excused"}
+            onClick={() => onMark("excused")}
+            icon={Hourglass}
+            label={tSession("markExcused")}
           />
         </div>
 

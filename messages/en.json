@@ -2084,7 +2084,8 @@
       "trainingSession": {
         "completed": "Session marked held — attendance saved for {count} dog(s)",
         "notAllSaved": "The session was not fully saved",
-        "noBooking": "{pet} has no booking for this session."
+        "noBooking": "{pet} has no booking for this session.",
+        "markExcused": "Excused"
       },
       "modulePackages": {
         "title_boarding": "Prepaid boarding packages",

@@ -1,5 +1,8 @@
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
-import type { SessionAttendance } from "@/lib/training-enrollment";
+import type {
+  SessionAttendance,
+  SessionExerciseRating,
+} from "@/lib/training-enrollment";
 
 // ============================================================================
 // A dog's training attendance (20260913100835 a_training_absence_is_recorded).
@@ -28,6 +31,8 @@ export interface TrainingAttendanceHistoryRow {
   checked_out_at: string | null;
   mark: string | null;
   session_notes: string | null;
+  /** [{exerciseName, rating}] — 20260913104649. */
+  exercises: unknown;
   recorded_at: string | null;
   updated_at: string | null;
 }
@@ -41,6 +46,37 @@ export function attendanceStatusOf(
   if (row.mark === "absent" || row.mark === "excused") return row.mark;
   if (row.checked_in_at) return row.mark === "late" ? "late" : "present";
   return "absent";
+}
+
+/** Exercise ratings as the database keeps them — at most 50, each a name of 1
+ *  to 200 characters and a whole rating from 1 to 5
+ *  (training_exercise_ratings_are_valid, 20260913104649). Null when the value
+ *  is not that, so a route can refuse it before the constraint does. */
+export function parseExerciseRatings(
+  value: unknown,
+): SessionExerciseRating[] | null {
+  if (!Array.isArray(value) || value.length > 50) return null;
+  const ratings: SessionExerciseRating[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") return null;
+    const { exerciseName, rating } = item as Record<string, unknown>;
+    if (typeof exerciseName !== "string") return null;
+    const name = exerciseName.trim();
+    if (name.length < 1 || name.length > 200) return null;
+    if (
+      typeof rating !== "number" ||
+      !Number.isInteger(rating) ||
+      rating < 1 ||
+      rating > 5
+    ) {
+      return null;
+    }
+    ratings.push({
+      exerciseName: name,
+      rating: rating as SessionExerciseRating["rating"],
+    });
+  }
+  return ratings;
 }
 
 export function rowToSessionAttendance(
@@ -63,6 +99,7 @@ export function rowToSessionAttendance(
     checkInTime: row.checked_in_at,
     checkOutTime: row.checked_out_at,
     trainerNotes: row.session_notes ?? "",
+    exercises: parseExerciseRatings(row.exercises) ?? [],
     homeworkUnlocked: status === "present" || status === "late",
     certificateGenerated: false,
     createdAt: row.recorded_at ?? row.session_end_at,

@@ -68,6 +68,8 @@ export function useTrainingCheckIn() {
       notes?: string;
       /** late, or absent / excused: an absence has no times. */
       mark?: "late" | "absent" | "excused";
+      /** The exercises the dog did and how it did, 1 to 5. */
+      exercises?: { exerciseName: string; rating: 1 | 2 | 3 | 4 | 5 }[];
     }) => {
       const response = await fetch("/api/training/attendance", {
         method: "POST",
