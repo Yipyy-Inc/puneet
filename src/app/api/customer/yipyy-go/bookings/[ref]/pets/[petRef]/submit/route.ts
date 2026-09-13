@@ -20,11 +20,16 @@ import {
   type YipyyGoCharge,
   type YipyyGoSubmissionRow,
 } from "@/lib/api/mappers/yipyy-go";
-import { validateYipyyGoAnswers } from "@/lib/yipyy-go/validate";
+import { withKnownPhotos } from "@/lib/yipyy-go/answer-photos";
+import {
+  customQuestionsOf,
+  validateYipyyGoAnswers,
+} from "@/lib/yipyy-go/validate";
 import {
   bookingNotFound,
   resolveYipyyGoBooking,
   yipyyGoFailure,
+  yipyyGoPhotoIds,
 } from "@/lib/yipyy-go/route-helpers";
 import type { Json } from "@/types/database";
 
@@ -88,7 +93,15 @@ export async function POST(request: NextRequest, { params }: Params) {
     booking.service,
   );
 
-  const missing = validateYipyyGoAnswers(template, parsed.data.answers);
+  // Only this form’s photos count. An id the request names that is not one of
+  // them — deleted since, or never this form’s — is dropped before anything
+  // reads it, so a required photo is a photo that exists.
+  const answers = withKnownPhotos(
+    parsed.data.answers,
+    await yipyyGoPhotoIds(supabase, booking.id, pet.id),
+    customQuestionsOf(template),
+  );
+  const missing = validateYipyyGoAnswers(template, answers);
   if (missing.length > 0) {
     return NextResponse.json(
       { error: "Some answers are still needed.", missing },
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   const { data, error } = await supabase.rpc("submit_yipyy_go_form", {
     p_booking_id: booking.id,
     p_pet_id: pet.id,
-    p_answers: parsed.data.answers as unknown as Json,
+    p_answers: answers as unknown as Json,
     p_add_on_requests: parsed.data.addOnRequests as unknown as Json,
     ...(parsed.data.tip ? { p_tip: parsed.data.tip as unknown as Json } : {}),
   });

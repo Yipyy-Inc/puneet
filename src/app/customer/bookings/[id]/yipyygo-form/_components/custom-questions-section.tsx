@@ -29,7 +29,7 @@ import type {
   YipyyGoCustomAnswers,
 } from "@/lib/yipyy-go/owner-form";
 import type { YipyyGoMissing } from "@/lib/yipyy-go/validate";
-import type { CustomQuestion } from "@/types/yipyygo";
+import type { CustomQuestion, YipyyGoPhotoSlot } from "@/types/yipyygo";
 
 // ============================================================================
 // The questions the facility wrote for this form (§5c).
@@ -49,6 +49,8 @@ interface CustomQuestionsSectionProps {
     questionId: string,
     value: YipyyGoCustomAnswer | undefined,
   ) => void;
+  /** Draws a photo question’s field; without it, the question is not asked. */
+  photoField?: (slot: YipyyGoPhotoSlot) => ReactNode;
 }
 
 export function CustomQuestionsSection({
@@ -57,6 +59,7 @@ export function CustomQuestionsSection({
   answers,
   missing,
   onChange,
+  photoField,
 }: CustomQuestionsSectionProps) {
   const { t, fill } = useCustomerText("yipyygo");
   return (
@@ -75,6 +78,7 @@ export function CustomQuestionsSection({
             value={answers[question.id]}
             invalid={missing.includes(`question:${question.id}`)}
             onChange={(value) => onChange(question.id, value)}
+            photoField={photoField}
           />
         ))}
       </CardContent>
@@ -87,11 +91,13 @@ function QuestionField({
   value,
   invalid,
   onChange,
+  photoField,
 }: {
   question: CustomQuestion;
   value: YipyyGoCustomAnswer | undefined;
   invalid: boolean;
   onChange: (value: YipyyGoCustomAnswer | undefined) => void;
+  photoField?: (slot: YipyyGoPhotoSlot) => ReactNode;
 }) {
   const { t } = useCustomerText("yipyygo");
   const id = `question-${question.id}`;
@@ -128,8 +134,21 @@ function QuestionField({
 
   switch (question.type) {
     case "file_upload":
-      // Asked once the form can upload a file.
-      return null;
+      // The answer is the photo, kept by its id.
+      return photoField ? (
+        <div className="space-y-1.5">
+          {photoField({
+            id,
+            label: heading,
+            kind: "question",
+            itemRef: question.id,
+            photoId: text || undefined,
+            invalid,
+            onChange: (photoId) => onChange(photoId),
+          })}
+          {note}
+        </div>
+      ) : null;
 
     case "long_text":
       return (

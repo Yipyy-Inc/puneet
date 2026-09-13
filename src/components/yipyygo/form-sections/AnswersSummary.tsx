@@ -82,6 +82,7 @@ export function AnswersSummary({
         ) : (
           <p className="text-ink-tertiary">{t("noBelongingsListed")}</p>
         )}
+        {formData.belongingsPhotoId && <p>{t("photoAttached")}</p>}
       </Group>
 
       {show.feeding && feeding && (
@@ -104,6 +105,7 @@ export function AnswersSummary({
                     med.frequency
                       ? answerLabel(MED_FREQUENCY_KEYS, med.frequency, t)
                       : "",
+                    med.photoId ? t("photoAttached") : "",
                   ]
                     .filter(Boolean)
                     .join(" · ")}
@@ -248,6 +250,8 @@ function customAnswerText(
     return formatNumber(value, locale, Number.isInteger(value) ? 0 : 2);
   if (Array.isArray(value)) return formatList(value.map(optionLabel), locale);
   if (typeof value !== "string") return "";
+  // A photo question keeps the photo’s id, which means nothing to read.
+  if (question.type === "file_upload") return t("photoAttached");
   if (question.type === "date")
     return formatDateLong(calendarDay(value), locale);
   if (question.type === "dropdown") return optionLabel(value);

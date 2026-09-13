@@ -341,6 +341,29 @@ export function formatNumber(
  * caller in this repo holds, and divides internally — `Intl`'s percent style
  * is what puts the NBSP in for French.
  */
+/**
+ * A file's size in the reader's units — "240 kB" and "1.1 MB" in English,
+ * "240 ko" and "1,1 Mo" in French. Steps of 1024, because the upload limits
+ * are written that way (10 MB is 10 × 1024 × 1024 bytes), with one decimal
+ * below ten and none above.
+ */
+export function formatFileSize(bytes: number, locale: AppLocale): string {
+  const units = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
+  let value = Number.isFinite(bytes) ? Math.max(0, bytes) : 0;
+  let step = 0;
+  while (value >= 1024 && step < units.length - 1) {
+    value /= 1024;
+    step += 1;
+  }
+  const digits = step > 0 && value < 10 ? 1 : 0;
+  return numFmt(locale, `size:${units[step]}:${digits}`, {
+    style: "unit",
+    unit: units[step],
+    unitDisplay: "short",
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 export function formatPercent(
   value: number | null | undefined,
   locale: AppLocale,

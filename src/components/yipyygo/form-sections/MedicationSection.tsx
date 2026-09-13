@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import {
   Card,
@@ -112,6 +111,7 @@ export function MedicationSection({
   updateFormData,
   template,
   medicationFee,
+  photoField,
 }: MedicationSectionProps) {
   const t = useShellText("yipyygo");
   const locale = useShellLocale();
@@ -641,37 +641,16 @@ export function MedicationSection({
                         />
                       </div>
 
-                      {/* Photo upload */}
-                      {template.features.photoUploads && (
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {t("photoOfMedicationLabelOptional")}
-                          </Label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            className="h-9 text-xs"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                updateMed(med.id, {
-                                  photoUrl: URL.createObjectURL(file),
-                                });
-                              }
-                            }}
-                          />
-                          {med.photoUrl && (
-                            <Image
-                              src={med.photoUrl}
-                              alt={t("medicationLabelPhoto")}
-                              width={112}
-                              height={112}
-                              className="mt-2 h-28 w-28 rounded-sm border object-cover"
-                              unoptimized
-                            />
-                          )}
-                        </div>
-                      )}
+                      {/* A photo of the label */}
+                      {template.features.photoUploads &&
+                        photoField?.({
+                          id: `med-photo-${med.id}`,
+                          label: t("photoOfMedicationLabelOptional"),
+                          kind: "medication",
+                          itemRef: med.id,
+                          photoId: med.photoId,
+                          onChange: (photoId) => updateMed(med.id, { photoId }),
+                        })}
 
                       {/* Notes */}
                       <Input

@@ -60,7 +60,8 @@ export function sniffContentType(bytes: Uint8Array): AllowedContentType | null {
   return null;
 }
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+// The limit lives beside what a screen may read: lib/files/upload-limits.ts.
+export { MAX_UPLOAD_BYTES } from "@/lib/files/upload-limits";
 
 /**
  * The image subset, for callers that accept photos and not documents.

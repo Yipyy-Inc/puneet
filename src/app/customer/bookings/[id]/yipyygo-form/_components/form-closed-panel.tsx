@@ -15,10 +15,10 @@ import type { YipyyGoSubmissionStatus } from "@/lib/api/mappers/yipyy-go";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatDateLong, formatTime } from "@/lib/i18n/format";
 import {
-  answerableQuestions,
   sectionFormFromAnswers,
   yipyyGoFormSteps,
 } from "@/lib/yipyy-go/owner-form";
+import { customQuestionsOf } from "@/lib/yipyy-go/validate";
 
 import { PetTabs } from "./pet-tabs";
 
@@ -120,7 +120,7 @@ export function FormClosedPanel({
         <p className="text-body-ink text-[14.5px]">{reason}</p>
         <AnswersSummary
           formData={sectionFormFromAnswers(submission.answers, pet.name)}
-          questions={answerableQuestions(data.template)}
+          questions={customQuestionsOf(data.template)}
           customAnswers={submission.answers.customAnswers ?? {}}
           show={{
             feeding: steps.includes("feeding"),

@@ -176,6 +176,9 @@ export interface YipyyGoPhoto {
   itemRef: string | null;
   /** Signed for a minute; never stored. */
   url: string;
+  /** The name it was uploaded with, without the folders the bucket keeps. */
+  name: string;
+  sizeBytes: number;
 }
 
 export interface YipyyGoSubmission {

@@ -1,6 +1,5 @@
 import type {
   BehaviorNotes,
-  CustomQuestion,
   FormTemplateConfig,
   YipyyGoSectionFormData,
 } from "@/types/yipyygo";
@@ -22,11 +21,12 @@ import {
 //
 // ── THE ANSWERS ───────────────────────────────────────────────────────────
 //
-// The sections were written against the fixture store's form shape, and the
-// server takes YipyyGoAnswers. The two differ in photos — a section holds a
-// `photoUrl`, the server a `photoId` — and in the facility's own questions,
-// which no section holds. These functions are the whole difference, so the
-// page never builds a request body by hand.
+// The sections were written against the fixture store’s form shape, and the
+// server takes YipyyGoAnswers. The two differ in the facility’s own questions,
+// which no section holds, and in the fixture’s `photoUrl`, which an item may
+// still carry and the server never takes: a photo is kept by its id. These
+// functions are the whole difference, so the page never builds a request body
+// by hand.
 // ============================================================================
 
 export type YipyyGoFormStep =
@@ -43,18 +43,6 @@ export type YipyyGoFormStep =
 
 export type YipyyGoCustomAnswers = NonNullable<YipyyGoAnswers["customAnswers"]>;
 export type YipyyGoCustomAnswer = YipyyGoCustomAnswers[string];
-
-/**
- * The facility's questions this form can take an answer to, in its order. A
- * file question waits for photo uploads, which the form cannot send yet.
- */
-export function answerableQuestions(
-  template: FormTemplateConfig,
-): CustomQuestion[] {
-  return customQuestionsOf(template).filter(
-    (question) => question.type !== "file_upload",
-  );
-}
 
 export function yipyyGoFormSteps(
   template: FormTemplateConfig,
@@ -85,7 +73,7 @@ export function yipyyGoFormSteps(
   // The add-ons the booking can take, where the facility's form offers them.
   if (have.addOns && features.addOnsSection) steps.push("addons");
   steps.push("belongings");
-  if (answerableQuestions(template).length > 0) steps.push("questions");
+  if (customQuestionsOf(template).length > 0) steps.push("questions");
   steps.push("review");
   return steps;
 }
@@ -131,6 +119,9 @@ export function sectionFormFromAnswers(
     noMedications: answers.noMedications,
     behaviorNotes: answers.behaviorNotes,
     addOns: [],
+    ...(answers.belongingsPhotoId
+      ? { belongingsPhotoId: answers.belongingsPhotoId }
+      : {}),
   };
 }
 
@@ -139,12 +130,15 @@ export function answersFromSectionForm(
   customAnswers: YipyyGoCustomAnswers,
 ): YipyyGoAnswers {
   return {
-    // A section's photoUrl is a preview in this tab; the server keeps a photo
-    // by its id.
+    // An item may still carry the fixture’s photoUrl, a preview that lived in
+    // one tab; the server keeps a photo by its id.
     belongings: form.belongings.map(({ photoUrl: _photoUrl, ...item }) => item),
     medications: form.medications.map(
       ({ photoUrl: _photoUrl, ...item }) => item,
     ),
+    ...(form.belongingsPhotoId
+      ? { belongingsPhotoId: form.belongingsPhotoId }
+      : {}),
     noMedications: form.noMedications,
     ...(form.feedingInstructions
       ? { feedingInstructions: form.feedingInstructions }

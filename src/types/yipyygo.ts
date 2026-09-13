@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { z } from "zod";
 
 // ============================================================================
@@ -213,6 +214,8 @@ export const belongingItemSchema = z.object({
   quantity: z.number().optional(),
   notes: z.string().optional(),
   photoUrl: z.string().optional(),
+  /** A photo on a pre-arrival form, by its yipyy_go_photos id. */
+  photoId: z.string().optional(),
 });
 export type BelongingItem = z.infer<typeof belongingItemSchema>;
 
@@ -250,6 +253,8 @@ export const medicationItemSchema = z.object({
   method: z.enum(["pill_pocket", "with_food", "syringe", "topical", "other"]),
   methodNotes: z.string().optional(),
   photoUrl: z.string().optional(),
+  /** A photo of the label on a pre-arrival form, by its yipyy_go_photos id. */
+  photoId: z.string().optional(),
   purpose: z.string().optional(),
   strength: z.string().optional(),
   form: z.custom<import("@/types/booking").MedForm>().optional(),
@@ -453,14 +458,32 @@ export type YipyyGoSectionFormData = Pick<
   YipyyGoFormData,
   | "petName"
   | "belongings"
-  | "belongingsPhotoUrl"
   | "feedingInstructions"
   | "medications"
   | "noMedications"
   | "behaviorNotes"
   | "addOns"
   | "tip"
->;
+> & {
+  /** The belongings photo, by its yipyy_go_photos id. */
+  belongingsPhotoId?: string;
+};
+
+/**
+ * A photo a section asks for. The form page draws the field: it uploads the
+ * file to the booking as soon as it is picked, and hands back the photo’s id.
+ */
+export interface YipyyGoPhotoSlot {
+  /** The field’s id. */
+  id: string;
+  label: ReactNode;
+  kind: "belongings" | "medication" | "question";
+  /** Which medication or question the photo belongs to. */
+  itemRef?: string;
+  photoId: string | undefined;
+  invalid?: boolean;
+  onChange: (photoId: string | undefined) => void;
+}
 
 export interface YipyyGoFormSectionProps {
   formData: YipyyGoSectionFormData;
@@ -468,4 +491,6 @@ export interface YipyyGoFormSectionProps {
   /** The facility's form for this booking's service, already resolved. */
   template: FormTemplateConfig;
   medicationFee: MedicationFeeConfig | null;
+  /** Draws a photo field; absent where the form cannot upload one. */
+  photoField?: (slot: YipyyGoPhotoSlot) => ReactNode;
 }

@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
       kind: row.kind,
       itemRef: row.item_ref,
       url: signed?.signedUrl ?? "",
+      name: safeName,
+      sizeBytes: file.size,
     },
     { status: 201 },
   );

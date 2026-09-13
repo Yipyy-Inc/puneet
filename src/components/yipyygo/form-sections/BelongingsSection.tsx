@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import {
   Card,
@@ -35,6 +34,7 @@ export function BelongingsSection({
   formData,
   updateFormData,
   template,
+  photoField,
 }: BelongingsSectionProps) {
   const t = useShellText("yipyygo");
   const [otherNote, setOtherNote] = useState("");
@@ -147,7 +147,9 @@ export function BelongingsSection({
         {(showOtherInput ||
           formData.belongings.some((b) => b.type === "other")) && (
           <div className="space-y-2">
-            <Label className="text-muted-foreground">Other (describe)</Label>
+            <Label className="text-muted-foreground">
+              {t("otherDescribe")}
+            </Label>
             <div className="flex gap-2">
               <Input
                 value={otherNote}
@@ -224,46 +226,21 @@ export function BelongingsSection({
           </div>
         )}
 
-        {template.features.photoUploads && (
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">
-              {t("photoOfLabeledBagsOptional")}
-            </Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file)
-                  updateFormData({
-                    belongingsPhotoUrl: URL.createObjectURL(file),
-                  });
-              }}
-            />
-            {formData.belongingsPhotoUrl && (
-              <div className="relative size-32 overflow-hidden rounded-lg border">
-                <Image
-                  src={formData.belongingsPhotoUrl}
-                  alt={t("belongings")}
-                  width={128}
-                  height={128}
-                  className="size-full object-cover"
-                  unoptimized
-                />
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="absolute top-1 right-1 size-6"
-                  onClick={() =>
-                    updateFormData({ belongingsPhotoUrl: undefined })
-                  }
-                >
-                  <X className="size-3" />
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Where the facility requires the photo, the field is there even if
+            it switched photo uploads off — or the form could never be sent. */}
+        {photoField &&
+          (template.features.photoUploads ||
+            template.features.belongingsPhotoRequired) &&
+          photoField({
+            id: "belongings-photo",
+            label: template.features.belongingsPhotoRequired
+              ? t("photoOfLabeledBags")
+              : t("photoOfLabeledBagsOptional"),
+            kind: "belongings",
+            photoId: formData.belongingsPhotoId,
+            onChange: (photoId) =>
+              updateFormData({ belongingsPhotoId: photoId }),
+          })}
       </CardContent>
     </Card>
   );
