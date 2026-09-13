@@ -124,12 +124,12 @@ export default function CustomerDashboardPage() {
     enabled: customerId != null,
   });
 
-  const customerBookings = useMemo(() => {
-    if (!selectedFacility) return [];
-    return allCustomerBookings.filter(
-      (b) => b.facilityId === selectedFacility.id,
-    );
-  }, [allCustomerBookings, selectedFacility]);
+  // Already this client's own bookings: the query names their client row, and
+  // RLS admits nobody else's. Not filtered by `selectedFacility.id`, which is
+  // still the fixture facility's (use-customer-facility.tsx) — a fresh session
+  // selects fixture 1 while the mapper stamps every real booking 11, so that
+  // filter hid every booking, and the pre-arrival form reminder with them.
+  const customerBookings = allCustomerBookings;
 
   // Get upcoming bookings (sorted by date)
   const upcomingBookings = useMemo(() => {
