@@ -18,6 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TipPromptDialog } from "@/components/yipyygo/TipPromptDialog";
+import { AddOnsSection } from "@/components/yipyygo/form-sections/AddOnsSection";
 import { AnswersSummary } from "@/components/yipyygo/form-sections/AnswersSummary";
 import { BehaviorSection } from "@/components/yipyygo/form-sections/BehaviorSection";
 import { BelongingsSection } from "@/components/yipyygo/form-sections/BelongingsSection";
@@ -32,6 +34,7 @@ import type {
 } from "@/lib/api/customer-yipyy-go";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatDateLong } from "@/lib/i18n/format";
+import { addOnLine, stayDaysFor } from "@/lib/yipyy-go/charges-preview";
 import {
   answerableQuestions,
   yipyyGoFormSteps,
@@ -41,6 +44,7 @@ import { customQuestionsOf } from "@/lib/yipyy-go/validate";
 import type { Client } from "@/types/client";
 import type { FormTemplateConfig } from "@/types/yipyygo";
 
+import { BillEstimate } from "./bill-estimate";
 import { CustomQuestionsSection } from "./custom-questions-section";
 import { FormSentPanel } from "./form-sent-panel";
 import { FormStepRail } from "./form-step-rail";
@@ -55,6 +59,7 @@ const STEP_LABEL_KEYS: Record<YipyyGoFormStep, string> = {
   feeding: "feeding",
   medications: "medications",
   behavior: "behavior",
+  addons: "addOns",
   belongings: "belongings",
   questions: "questions",
   review: "review",
@@ -85,6 +90,7 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
   const steps = yipyyGoFormSteps(data.template, {
     contact: Boolean(customer),
     pet: Boolean(customerPet),
+    addOns: data.offeredAddOns.length > 0,
   });
   const form = useYipyyGoPetForm({ data, pet, steps });
 
@@ -108,12 +114,32 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
   const labelled = steps.map((id) => ({ id, label: t(STEP_LABEL_KEYS[id]) }));
   const index = form.stepIndex;
   const nextStep = labelled[index + 1];
+  const stayDays = stayDaysFor(
+    data.booking.service,
+    data.booking.startDate,
+    data.booking.endDate,
+  );
+  const hasMedications =
+    !form.form.noMedications && form.form.medications.length > 0;
   const sectionProps = {
     formData: form.form,
     updateFormData: form.updateForm,
     template,
     medicationFee: data.medicationFee,
   };
+
+  // What a percentage tip is taken of. A form already on the bill has its
+  // add-ons inside `amountDue`; otherwise they join it when the form is sent.
+  const billed = form.status === "submitted" || form.status === "approved";
+  const chosenAddOns = form.addOnRequests.reduce((sum, request) => {
+    const offer = data.offeredAddOns.find(
+      (candidate) => candidate.id === request.addOnId,
+    );
+    return offer
+      ? sum + addOnLine(offer, request.quantity ?? 1, stayDays).total
+      : sum;
+  }, 0);
+  const tipBase = data.booking.amountDue + (billed ? 0 : chosenAddOns);
 
   const renderStep = () => {
     switch (form.step) {
@@ -141,6 +167,17 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
         return <MedicationSection {...sectionProps} />;
       case "behavior":
         return <BehaviorSection {...sectionProps} />;
+      case "addons":
+        return (
+          <AddOnsSection
+            petName={pet.name}
+            offered={data.offeredAddOns}
+            requests={form.addOnRequests}
+            stayDays={stayDays}
+            approval={data.addOnsApproval}
+            onChange={form.updateAddOns}
+          />
+        );
       case "belongings":
         return <BelongingsSection {...sectionProps} />;
       case "questions":
@@ -179,6 +216,12 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
                   medications: steps.includes("medications"),
                   behavior: steps.includes("behavior"),
                 }}
+              />
+              <BillEstimate
+                data={data}
+                requests={steps.includes("addons") ? form.addOnRequests : []}
+                stayDays={stayDays}
+                hasMedications={hasMedications}
               />
               <p className="text-ink-secondary text-[13.5px]">
                 {t("sendConfirmNote")}
@@ -280,7 +323,7 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
           {form.step === "review" ? (
             <Button
               onClick={() => void form.send()}
-              loading={form.sending}
+              loading={form.sending && !form.tipOpen}
               disabled={form.busy}
             >
               <Send aria-hidden />
@@ -301,6 +344,19 @@ export function PetForm({ data, pet, customer, onSelectPet }: PetFormProps) {
           )}
         </div>
       </div>
+
+      {form.tipPrompt && (
+        <TipPromptDialog
+          open={form.tipOpen}
+          onOpenChange={form.setTipOpen}
+          config={form.tipPrompt}
+          base={tipBase}
+          petName={pet.name}
+          initial={pet.submission?.tipChoice ?? null}
+          sending={form.sending}
+          onSend={(tip) => void form.send(tip)}
+        />
+      )}
     </div>
   );
 }

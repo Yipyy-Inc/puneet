@@ -127,6 +127,8 @@ export interface CustomerYipyyGoBooking {
     checkInTime: string;
     checkOutTime: string;
     totalCost: number;
+    /** The price with everything added: what a percentage tip is taken of. */
+    amountDue: number;
     tipAmount: number | null;
   };
   requirement: "mandatory" | "optional" | null;

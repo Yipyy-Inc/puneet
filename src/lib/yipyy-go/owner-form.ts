@@ -36,6 +36,7 @@ export type YipyyGoFormStep =
   | "feeding"
   | "medications"
   | "behavior"
+  | "addons"
   | "belongings"
   | "questions"
   | "review";
@@ -57,7 +58,7 @@ export function answerableQuestions(
 
 export function yipyyGoFormSteps(
   template: FormTemplateConfig,
-  have: { contact: boolean; pet: boolean },
+  have: { contact: boolean; pet: boolean; addOns?: boolean },
 ): YipyyGoFormStep[] {
   const { features, sections } = template;
   const steps: YipyyGoFormStep[] = [];
@@ -81,6 +82,8 @@ export function yipyyGoFormSteps(
       .map(({ step }) => step),
   );
 
+  // The add-ons the booking can take, where the facility's form offers them.
+  if (have.addOns && features.addOnsSection) steps.push("addons");
   steps.push("belongings");
   if (answerableQuestions(template).length > 0) steps.push("questions");
   steps.push("review");

@@ -53,6 +53,8 @@ export interface ResolvedYipyyGoBooking {
   startAt: string;
   endAt: string;
   totalCost: number;
+  /** What the booking comes to with everything added, before payments. */
+  amountDue: number;
   tipAmount: number | null;
   /** The facility's time zone, which a booking's day and times are read in. */
   timezone: string;
@@ -69,7 +71,7 @@ export async function resolveYipyyGoBooking(
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, status, start_at, end_at, total_cost, tip_amount, facilities(timezone), booking_pets(pets(id, ref, name))",
+      "id, ref, facility_id, client_id, service, status, start_at, end_at, total_cost, amount_due, tip_amount, facilities(timezone), booking_pets(pets(id, ref, name))",
     )
     .eq("ref", ref)
     .maybeSingle();
@@ -85,6 +87,7 @@ export async function resolveYipyyGoBooking(
     start_at: string;
     end_at: string;
     total_cost: number | string | null;
+    amount_due: number | string | null;
     tip_amount: number | string | null;
     facilities: { timezone: string | null } | null;
     booking_pets:
@@ -102,6 +105,7 @@ export async function resolveYipyyGoBooking(
     startAt: row.start_at,
     endAt: row.end_at,
     totalCost: Number(row.total_cost ?? 0),
+    amountDue: Number(row.amount_due ?? row.total_cost ?? 0),
     tipAmount: row.tip_amount === null ? null : Number(row.tip_amount),
     timezone: row.facilities?.timezone ?? DEFAULT_TIMEZONE,
     pets: (row.booking_pets ?? [])
