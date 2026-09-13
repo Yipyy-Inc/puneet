@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   attendanceStatusOf,
   parseExerciseRatings,
+  parseSessionConditions,
   rowToSessionAttendance,
   type TrainingAttendanceHistoryRow,
 } from "@/lib/api/mappers/training-attendance-history";
@@ -31,6 +32,7 @@ const row = (
   mark: null,
   session_notes: null,
   exercises: [],
+  conditions: null,
   recorded_at: null,
   updated_at: null,
   ...over,
@@ -104,5 +106,38 @@ describe("rowToSessionAttendance", () => {
     expect(
       rowToSessionAttendance(row({ exercises: { nope: true } })).exercises,
     ).toEqual([]);
+  });
+});
+
+describe("parseSessionConditions", () => {
+  test("takes known weather once each and a distraction level", () => {
+    expect(
+      parseSessionConditions({
+        weather: ["rain", "windy", "rain"],
+        distractionLevel: "high",
+      }),
+    ).toEqual({ weather: ["rain", "windy"], distractionLevel: "high" });
+    expect(parseSessionConditions({ distractionLevel: "low" })).toEqual({
+      weather: [],
+      distractionLevel: "low",
+    });
+  });
+
+  test("refuses what the database would refuse", () => {
+    expect(parseSessionConditions(null)).toBeNull();
+    expect(parseSessionConditions(["rain"])).toBeNull();
+    expect(parseSessionConditions({ weather: ["snow"] })).toBeNull();
+    expect(parseSessionConditions({ weather: "rain" })).toBeNull();
+    expect(parseSessionConditions({ distractionLevel: "extreme" })).toBeNull();
+    expect(parseSessionConditions({ mood: "grumpy" })).toBeNull();
+  });
+
+  test("a row reads its conditions, and a row with none has none", () => {
+    expect(
+      rowToSessionAttendance(
+        row({ conditions: { weather: ["hot"], distractionLevel: "medium" } }),
+      ).conditions,
+    ).toEqual({ weather: ["hot"], distractionLevel: "medium" });
+    expect(rowToSessionAttendance(row({})).conditions).toBeUndefined();
   });
 });

@@ -1,7 +1,10 @@
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import type {
+  DistractionLevel,
   SessionAttendance,
+  SessionConditions,
   SessionExerciseRating,
+  WeatherCondition,
 } from "@/lib/training-enrollment";
 
 // ============================================================================
@@ -33,6 +36,8 @@ export interface TrainingAttendanceHistoryRow {
   session_notes: string | null;
   /** [{exerciseName, rating}] — 20260913104649. */
   exercises: unknown;
+  /** {weather, distractionLevel} or null — 20260913112156. */
+  conditions: unknown;
   recorded_at: string | null;
   updated_at: string | null;
 }
@@ -79,6 +84,55 @@ export function parseExerciseRatings(
   return ratings;
 }
 
+const WEATHER_CONDITIONS: readonly WeatherCondition[] = [
+  "sunny",
+  "cloudy",
+  "rain",
+  "hot",
+  "cold",
+  "windy",
+];
+const DISTRACTION_LEVELS: readonly DistractionLevel[] = [
+  "low",
+  "medium",
+  "high",
+];
+
+/** Session conditions as the database keeps them — only `weather` (known
+ *  flags, each once) and `distractionLevel` (low, medium or high)
+ *  (training_session_conditions_are_valid). Null when the value is not that,
+ *  so a route can refuse it before the constraint does. */
+export function parseSessionConditions(
+  value: unknown,
+): SessionConditions | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((k) => k !== "weather" && k !== "distractionLevel")
+  ) {
+    return null;
+  }
+  const weather = record.weather ?? [];
+  if (!Array.isArray(weather)) return null;
+  const flags: WeatherCondition[] = [];
+  for (const flag of weather) {
+    if (!WEATHER_CONDITIONS.includes(flag as WeatherCondition)) return null;
+    if (!flags.includes(flag as WeatherCondition)) {
+      flags.push(flag as WeatherCondition);
+    }
+  }
+  const level = record.distractionLevel;
+  if (
+    level !== undefined &&
+    !DISTRACTION_LEVELS.includes(level as DistractionLevel)
+  ) {
+    return null;
+  }
+  return level === undefined
+    ? { weather: flags }
+    : { weather: flags, distractionLevel: level as DistractionLevel };
+}
+
 export function rowToSessionAttendance(
   row: TrainingAttendanceHistoryRow,
 ): SessionAttendance {
@@ -100,6 +154,10 @@ export function rowToSessionAttendance(
     checkOutTime: row.checked_out_at,
     trainerNotes: row.session_notes ?? "",
     exercises: parseExerciseRatings(row.exercises) ?? [],
+    conditions:
+      row.conditions == null
+        ? undefined
+        : (parseSessionConditions(row.conditions) ?? undefined),
     homeworkUnlocked: status === "present" || status === "late",
     certificateGenerated: false,
     createdAt: row.recorded_at ?? row.session_end_at,

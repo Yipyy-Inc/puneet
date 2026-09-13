@@ -19,7 +19,8 @@ import { ACCOUNTS, signIn } from "./_auth";
 //      a reload, with the exercise it was rated on.
 //
 // And (20260913104649) a late arrival keeps its exercise ratings, a malformed
-// rating is refused, and a dog can be excused.
+// rating is refused, and a dog can be excused; and (20260913112156) the
+// session's conditions are saved with the arrival and read on the History tab.
 //
 // ── ONE POSTGRES, SHARED WITH CI ────────────────────────────────────────────
 // beforeAll gives Buddy, through the service role, a MARKER series with two
@@ -39,6 +40,7 @@ interface Attendance {
   status: string;
   checkInTime: string | null;
   exercises?: { exerciseName: string; rating: number }[];
+  conditions?: unknown;
 }
 
 function admin() {
@@ -198,6 +200,7 @@ test.describe("a training absence is recorded", () => {
         bookingRef: bookingRefs[0],
         mark: "late",
         exercises: [{ exerciseName: SIT, rating: 4 }],
+        conditions: { weather: ["rain"], distractionLevel: "high" },
       },
     });
     expect(late.status(), await late.text()).toBe(201);
@@ -212,6 +215,10 @@ test.describe("a training absence is recorded", () => {
     expect(session(1)?.checkInTime).toBeTruthy();
     expect(session(2)?.status).toBe("present");
     expect(session(1)?.exercises).toEqual([{ exerciseName: SIT, rating: 4 }]);
+    expect(session(1)?.conditions).toEqual({
+      weather: ["rain"],
+      distractionLevel: "high",
+    });
 
     const excused = await page.request.post(API, {
       data: { bookingRef: bookingRefs[2], mark: "excused" },
@@ -226,6 +233,11 @@ test.describe("a training absence is recorded", () => {
       },
     });
     expect(unrated.status()).toBe(422);
+
+    const snowed = await page.request.post(API, {
+      data: { bookingRef: bookingRefs[0], conditions: { weather: ["snow"] } },
+    });
+    expect(snowed.status()).toBe(422);
 
     const unknown = await page.request.post(API, {
       data: { bookingRef: bookingRefs[1], mark: "sick" },
@@ -264,5 +276,6 @@ test.describe("a training absence is recorded", () => {
       timeout: 30_000,
     });
     await expect(page.getByText(SIT).first()).toBeVisible();
+    await expect(page.getByText("Rain", { exact: true }).first()).toBeVisible();
   });
 });

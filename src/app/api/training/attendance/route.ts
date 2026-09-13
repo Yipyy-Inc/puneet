@@ -7,7 +7,10 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
-import { parseExerciseRatings } from "@/lib/api/mappers/training-attendance-history";
+import {
+  parseExerciseRatings,
+  parseSessionConditions,
+} from "@/lib/api/mappers/training-attendance-history";
 import {
   DEFAULT_TIMEZONE,
   instantFromWallClock,
@@ -101,6 +104,8 @@ interface CheckInInput {
   mark?: string;
   /** What the dog did and how it did — [{exerciseName, rating}]. See 20260913104649. */
   exercises?: unknown;
+  /** Weather and distraction — {weather, distractionLevel}. See 20260913112156. */
+  conditions?: unknown;
 }
 
 const MARKS = new Set(["late", "absent", "excused"]);
@@ -149,6 +154,27 @@ export async function POST(request: NextRequest) {
       { status: 422 },
     );
   }
+
+  const parsedConditions =
+    body!.conditions === undefined
+      ? undefined
+      : parseSessionConditions(body!.conditions);
+  if (parsedConditions === null) {
+    return NextResponse.json(
+      {
+        error:
+          "Weather is sunny, cloudy, rain, hot, cold or windy, and distraction low, medium or high.",
+      },
+      { status: 422 },
+    );
+  }
+  // Nothing said is no conditions, not an empty record.
+  const conditions =
+    parsedConditions &&
+    parsedConditions.weather.length === 0 &&
+    !parsedConditions.distractionLevel
+      ? null
+      : parsedConditions;
 
   const context = await getFacilityContext();
   if (!context) {
@@ -199,10 +225,11 @@ export async function POST(request: NextRequest) {
             ?.checked_in_at ?? new Date().toISOString()),
       // A dog that did not come did no exercises.
       ...(absent
-        ? { checked_out_at: null, exercises: [] }
-        : exercises !== undefined
-          ? { exercises }
-          : {}),
+        ? { checked_out_at: null, exercises: [], conditions: null }
+        : {
+            ...(exercises !== undefined ? { exercises } : {}),
+            ...(conditions !== undefined ? { conditions } : {}),
+          }),
       mark: body!.mark ?? null,
       ...(body!.notes !== undefined ? { session_notes: body!.notes } : {}),
     } as never,

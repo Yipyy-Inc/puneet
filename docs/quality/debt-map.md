@@ -14003,3 +14003,27 @@ per-exercise note is not captured either.
 SQL `training-attendance-marks.sql` T7–T8; unit
 `training-attendance-history.test.ts`; e2e `training-attendance-marks.spec.ts`
 now saves and reads back a rating and an excused dog.
+
+## 2026-09-13 — a session's conditions are captured
+
+The student's History tab draws a session's weather and distraction level next
+to its ratings — for fixture rows only, because nothing in the session view
+captured them. The one control that did,
+`src/components/facility/training/session-completion-dialog.tsx`, is imported
+by nothing: dead since the session view replaced the board's completion
+dialog.
+
+The session view's Exercises step now carries a Conditions card — weather as
+any number of flags, distraction as one level — and "Complete session" saves it
+with each present or late dog's check-in. 20260913112156 adds
+`training_attendance.conditions`, held to the known flags and levels by
+`private.training_session_conditions_are_valid` (granted to `authenticated`,
+for the reason in the entry above) and null for an absent or excused dog.
+`training_attendance_history()` returns it.
+
+**Still open:** `session-completion-dialog.tsx` is dead and can go; the
+History tab's weather, distraction and rating labels are English-only.
+
+SQL `training-attendance-marks.sql` T9–T10; unit
+`training-attendance-history.test.ts`; e2e `training-attendance-marks.spec.ts`
+saves conditions with a late arrival and reads them on the History tab.

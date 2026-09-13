@@ -44,6 +44,7 @@ import type {
   SessionExerciseEntry,
   SessionPhoto,
 } from "./session-view-types";
+import type { SessionConditions } from "@/lib/training-enrollment";
 import { toast } from "sonner";
 
 type Section = "attendance" | "exercises";
@@ -71,6 +72,9 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   const [sessionNotes, setSessionNotes] = useState("");
   const [studentNotes, setStudentNotes] = useState<Record<string, string>>({});
   const [sessionPhotos, setSessionPhotos] = useState<SessionPhoto[]>([]);
+  const [conditions, setConditions] = useState<SessionConditions>({
+    weather: [],
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
@@ -386,6 +390,10 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
           bookingRef,
           mark: status === "late" ? "late" : undefined,
           exercises: exerciseRatingsFor(exerciseEntries, r.enrollmentId),
+          conditions:
+            conditions.weather.length > 0 || conditions.distractionLevel
+              ? conditions
+              : undefined,
         });
         await updateVisit({ bookingRef, checkOut: true, notes });
       }),
@@ -566,6 +574,8 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
             setEntries={setExerciseEntries}
             sessionNotes={sessionNotes}
             setSessionNotes={setSessionNotes}
+            conditions={conditions}
+            setConditions={setConditions}
             studentNotes={studentNotes}
             setStudentNote={(enrollmentId, value) =>
               setStudentNotes((curr) => ({ ...curr, [enrollmentId]: value }))
