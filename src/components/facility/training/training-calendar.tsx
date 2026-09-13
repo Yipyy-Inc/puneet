@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import type { TrainingSession } from "@/types/training";
 import { trainingQueries } from "@/lib/api/training";
+import { trainingMakeupQueries } from "@/lib/api/training-makeups";
 import { TrainingCalendarSidebar } from "./training-calendar-sidebar";
 import { TrainingCalendarDayView } from "./training-calendar-day-view";
 import { TrainingCalendarWeekView } from "./training-calendar-week-view";
@@ -70,9 +71,7 @@ export function TrainingCalendar() {
   const { data: trainerNoteList = [] } = useQuery(
     trainingQueries.trainerNotes(),
   );
-  const { data: makeupSessions = [] } = useQuery(
-    trainingQueries.allMakeupSessions(),
-  );
+  const { data: missedSessions } = useQuery(trainingMakeupQueries.all());
   const { data: dropInBookings = [] } = useQuery(
     trainingQueries.dropInBookings(),
   );
@@ -113,28 +112,19 @@ export function TrainingCalendar() {
     return map;
   }, [enrollmentList]);
 
-  // Make-up records key their host session by `targetSessionId`, which is a
-  // `TrainingSeriesSession.id` from the series system. The calendar runs on
-  // the older `TrainingSession` model, so bridge the two by matching on
-  // date + start time + trainer — enough to flag the host block correctly
-  // in the mock dataset without a hard schema link.
+  // Make-up seats booked into a session. The calendar's sessions are the
+  // series sessions themselves, so a seat names its block by id; this matched
+  // a cache-only list by date, time and trainer.
   const makeupCountByCalendarSessionId = useMemo(() => {
-    const live = makeupSessions.filter(
-      (m) => m.status === "offered" || m.status === "scheduled",
-    );
-    if (live.length === 0) return new Map<string, number>();
     const map = new Map<string, number>();
-    for (const tSess of trainingSessions) {
-      const count = live.filter(
-        (m) =>
-          m.scheduledDate === tSess.date &&
-          m.scheduledTime === tSess.startTime &&
-          (!m.trainerId || m.trainerId === tSess.trainerId),
-      ).length;
-      if (count > 0) map.set(tSess.id, count);
+    for (const missed of missedSessions ?? []) {
+      const seat =
+        missed.makeup?.status === "offered" ? missed.makeup.seat : null;
+      if (!seat || seat.bookingStatus === "cancelled") continue;
+      map.set(seat.sessionId, (map.get(seat.sessionId) ?? 0) + 1);
     }
     return map;
-  }, [makeupSessions, trainingSessions]);
+  }, [missedSessions]);
 
   // Sessions whose roster includes at least one pet with an active alert.
   // Drives the red exclamation badge on the appointment block.

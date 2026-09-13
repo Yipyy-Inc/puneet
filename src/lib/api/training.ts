@@ -31,7 +31,6 @@ import {
   defaultTrainingModuleSettings,
   type TrainingModuleSettings,
 } from "@/lib/training-module-settings";
-import type { MakeupSession } from "@/lib/training-makeup";
 import type { TrainingDropInBooking } from "@/lib/training-drop-ins";
 
 /** Seeded dog-specific private session plans (mock), keyed by petId. Charlie
@@ -305,15 +304,6 @@ export const trainingQueries = {
         ...w,
         exerciseIds: [...w.exerciseIds],
       })) ?? [],
-    staleTime: Infinity,
-  }),
-  /** Catalog of make-up session records — populated when staff issue a
-   *  make-up from the Students tab or offer a slot from the facility-side
-   *  Make-up Sessions view. The customer portal + the per-pet History view
-   *  both read from this so issuance surfaces everywhere. */
-  allMakeupSessions: () => ({
-    queryKey: ["training", "makeup-sessions", "all"] as const,
-    queryFn: async (): Promise<MakeupSession[]> => [],
     staleTime: Infinity,
   }),
   /** Drop-in bookings — single-session attendance for series with
