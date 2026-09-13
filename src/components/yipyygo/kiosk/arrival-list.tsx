@@ -5,13 +5,14 @@ import { CircleAlert, Clock, LoaderCircle, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { RouteState } from "@/components/ui/route-state";
+import { FormStatusChip } from "@/components/yipyygo/form-status-chip";
 import type { YipyyGoArrival } from "@/lib/api/mappers/yipyy-go";
 import { yipyyGoQueries } from "@/lib/api/yipyy-go";
 import { formatList, formatTime } from "@/lib/i18n/format";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
-import { FormStatusChip, PresenceChip } from "./status-chips";
+import { PresenceChip } from "./status-chips";
 
 // Today’s arrivals at this facility (yipyy_go_arrivals), or those matching
 // what the desk typed: a client’s or a pet’s name, or a booking number. The

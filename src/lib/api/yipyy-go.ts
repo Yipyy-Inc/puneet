@@ -9,6 +9,7 @@ import type {
   YipyyGoDeskCheckBody,
   YipyyGoSubmission,
 } from "@/lib/api/mappers/yipyy-go";
+import type { FormTemplateConfig } from "@/types/yipyygo";
 
 // ============================================================================
 // The pre-arrival form, as the FACILITY reads and acts on it: a booking's
@@ -43,6 +44,8 @@ export interface StaffYipyyGoBooking {
   };
   requirement: "mandatory" | "optional" | null;
   deadline: string | null;
+  /** The facility’s form for the booking’s service: what names each answer. */
+  template: FormTemplateConfig;
   pets: {
     ref: number;
     name: string;
