@@ -61,6 +61,7 @@ const FACILITY = "yipyy-demo-facility";
 const GROOMER_EMAIL = ACCOUNTS.groomer;
 
 interface Seed {
+  facilityId: string;
   bookingId: string;
   previousStaffId: string | null;
   bookingRef: number;
@@ -173,6 +174,7 @@ test.describe("assigned scope", () => {
     expect(other?.name, "a second client to contrast with").toBeTruthy();
 
     seed = {
+      facilityId,
       bookingId: row.id,
       previousStaffId: row.assigned_staff_id,
       bookingRef: row.ref,
@@ -296,9 +298,23 @@ test.describe("assigned scope", () => {
       "the assigned client is theirs to open",
     ).toHaveCount(0);
 
-    // Some other real client of this facility — 15, unless the seed picked it.
-    // Both exist and neither is assigned to the groomer.
-    const other = seed.clientRef === 15 ? 16 : 15;
+    // Another real client of this facility, and one the groomer has nothing
+    // assigned for, asked of the same endpoint the page trusts. It used to be
+    // 15 or 16, which held only while no other booking carried the groomer:
+    // a leftover assignment on one of client 15’s cancelled test bookings made
+    // that client the groomer’s, and whichever booking the seed happened to
+    // pick decided whether the record opened instead of the refusal.
+    const { refs: theirs } = await assignedClients(page);
+    const { data: roster } = await admin()
+      .from("clients")
+      .select("ref")
+      .eq("facility_id", seed.facilityId)
+      .order("ref", { ascending: true })
+      .limit(200);
+    const other = (roster ?? [])
+      .map((client) => (client as { ref: number }).ref)
+      .find((ref) => !theirs.includes(ref));
+    expect(other, "a client nothing assigns to the groomer").toBeTruthy();
     await page.goto(`/employee/clients/${other}`);
     await expect(
       page.getByText("You don't have access to this section."),
