@@ -6,7 +6,7 @@
 --
 -- One transaction, rolled back. Fixture emails are @example.invalid.
 --
--- THREE CLAIMS THIS FILE EXISTS TO PROVE:
+-- FOUR CLAIMS THIS FILE EXISTS TO PROVE:
 --
 --   1. THE CLOCK IS THE SERVER'S. check_in_at / check_out_at are stamped when
 --      the booking's status moves, and the ready-ETA is derived from the
@@ -22,6 +22,11 @@
 --      a service does not rewrite what was sold (T7). This is the rule
 --      staff_signatures already set: store the text as at signing, never a FK
 --      to a mutable row.
+--
+--   4. THE TICKET IS THE FACILITY'S (20260912220846). A customer changes no
+--      appointment (T14, armed by T15), and a row their own request inserts
+--      carries no price (T16) — while that request still reaches the board
+--      through create_booking() (T17).
 --
 -- NEGATIVE CONTROLS, run before this file was written:
 --
@@ -381,6 +386,141 @@ begin
     refused and allowed, format('refused=%s allowed=%s', refused, allowed));
 exception when others then
   reset role; perform pg_temp.t('T13 unexplained charge', false, sqlerrm);
+end $$;
+
+-- ── T14: a customer cannot change their own pending appointment ────────────
+-- a_customer_changes_no_grooming_appointment. can_write_booking() let the
+-- pet's owner update the appointment while the booking was still a request,
+-- and UPDATE is granted on every column: an owner could set their own price,
+-- or a check-in, through the API.
+do $$
+declare v_updated integer; v_price numeric; v_in timestamptz;
+begin
+  insert into public.bookings
+    (id, facility_id, client_id, service, service_type, status, start_at, end_at, base_price, total_cost)
+  values ('00000000-0000-0000-0000-00000000a071', '00000000-0000-0000-0000-00000000a020',
+          '00000000-0000-0000-0000-00000000a040', 'Full Groom', 'grooming', 'request_submitted',
+          '2026-08-07T10:00:00Z', '2026-08-07T11:30:00Z', 0, 0);
+  insert into public.grooming_appointments
+    (booking_id, facility_id, service_name, service_price, service_duration_min)
+  values ('00000000-0000-0000-0000-00000000a071', '00000000-0000-0000-0000-00000000a020',
+          'Full Groom', 0, 90);
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a003', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.grooming_appointments
+     set service_price = 1, check_in_at = now(), groomer_notes = 'Owner note'
+   where booking_id = '00000000-0000-0000-0000-00000000a071';
+  get diagnostics v_updated = row_count;
+  reset role;
+  select service_price, check_in_at into v_price, v_in
+    from public.grooming_appointments
+   where booking_id = '00000000-0000-0000-0000-00000000a071';
+  perform pg_temp.t('T14 a customer cannot change their own pending appointment',
+    v_updated = 0 and v_price = 0 and v_in is null,
+    format('updated=%s price=%s check_in=%s', v_updated, v_price, coalesce(v_in::text, '<null>')));
+exception when others then
+  reset role; perform pg_temp.t('T14 customer update', false, sqlerrm);
+end $$;
+
+-- ── T15: …and staff still can ───────────────────────────────────────────────
+-- Arms T14: without it, T14's zero could mean nobody can update the table.
+do $$
+declare v_updated integer;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a001', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.grooming_appointments
+     set groomer_notes = 'Nervous with the clippers'
+   where booking_id = '00000000-0000-0000-0000-00000000a071';
+  get diagnostics v_updated = row_count;
+  reset role;
+  perform pg_temp.t('T15 staff still change the appointment (T14 not vacuous)',
+    v_updated = 1, format('updated=%s', v_updated));
+exception when others then
+  reset role; perform pg_temp.t('T15 staff update', false, sqlerrm);
+end $$;
+
+-- ── T16: a customer's own row carries no price ─────────────────────────────
+-- The owner keeps INSERT, because create_booking() writes their row as them,
+-- so a priced row is refused and one shaped like create_booking's is not.
+do $$
+declare v_refused boolean := false; v_allowed boolean := false;
+begin
+  insert into public.bookings
+    (id, facility_id, client_id, service, service_type, status, start_at, end_at, base_price, total_cost)
+  values ('00000000-0000-0000-0000-00000000a072', '00000000-0000-0000-0000-00000000a020',
+          '00000000-0000-0000-0000-00000000a040', 'Full Groom', 'grooming', 'request_submitted',
+          '2026-08-08T10:00:00Z', '2026-08-08T11:30:00Z', 0, 0);
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a003', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  begin
+    insert into public.grooming_appointments
+      (booking_id, facility_id, service_name, service_price, service_duration_min)
+    values ('00000000-0000-0000-0000-00000000a072', '00000000-0000-0000-0000-00000000a020',
+            'Full Groom', 50, 90);
+  exception when insufficient_privilege then v_refused := true;
+  end;
+  begin
+    insert into public.grooming_appointments
+      (booking_id, facility_id, service_name, service_price, service_duration_min)
+    values ('00000000-0000-0000-0000-00000000a072', '00000000-0000-0000-0000-00000000a020',
+            'Full Groom', 0, 90);
+    v_allowed := true;
+  exception when insufficient_privilege then v_allowed := false;
+  end;
+  reset role;
+  perform pg_temp.t('T16 a customer''s own row is refused with a price, allowed without one',
+    v_refused and v_allowed,
+    format('priced refused=%s unpriced allowed=%s', v_refused, v_allowed));
+exception when others then
+  reset role; perform pg_temp.t('T16 customer insert', false, sqlerrm);
+end $$;
+
+-- ── T17: a customer's request still reaches the grooming board ─────────────
+-- The flow the insert rule has to keep: create_booking() as the customer,
+-- writing the booking and its appointment, at $0 until the facility prices it.
+do $$
+declare v_created record; v_name text; v_price numeric; v_status text;
+begin
+  insert into public.grooming_services (id, facility_id, legacy_id, name, base_price, duration_min)
+  values ('00000000-0000-0000-0000-00000000a051', '00000000-0000-0000-0000-00000000a020',
+          'p2', 'Bath', 45, 45);
+  insert into public.pets (id, client_id, name, species)
+  values ('00000000-0000-0000-0000-00000000a045', '00000000-0000-0000-0000-00000000a040',
+          'Biscuit', 'dog');
+
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-00000000a003', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select * into v_created
+    from public.create_booking(
+      jsonb_build_object(
+        'facility_id',  '00000000-0000-0000-0000-00000000a020',
+        'client_id',    '00000000-0000-0000-0000-00000000a040',
+        'service',      'grooming',
+        'service_type', 'p2',
+        'status',       'pending',
+        'start_at',     '2026-08-09T10:00:00Z',
+        'end_at',       '2026-08-09T10:45:00Z',
+        'base_price',   45,
+        'total_cost',   45
+      ),
+      array['00000000-0000-0000-0000-00000000a045']::uuid[],
+      jsonb_build_object('serviceId', 'p2'),
+      null
+    );
+  reset role;
+  select ga.service_name, ga.service_price, b.status::text
+    into v_name, v_price, v_status
+    from public.grooming_appointments ga
+    join public.bookings b on b.id = ga.booking_id
+   where ga.booking_id = v_created.booking_id;
+  perform pg_temp.t('T17 a customer''s request through create_booking still writes its appointment, at $0',
+    v_name = 'Bath' and v_price = 0 and v_status = 'request_submitted',
+    format('name=%s price=%s status=%s', v_name, v_price, v_status));
+exception when others then
+  reset role; perform pg_temp.t('T17 customer request', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
