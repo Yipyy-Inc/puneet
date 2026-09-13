@@ -187,14 +187,6 @@ const BASELINE = new Map<string, number>([
     "src/app/facility/dashboard/services/training/students/_components/training-profile-notes.tsx",
     3,
   ],
-  [
-    "src/app/facility/dashboard/services/training/students/_components/training-profile-package-chips.tsx",
-    1,
-  ],
-  [
-    "src/app/facility/dashboard/services/training/students/_components/training-profile-packages-panel.tsx",
-    2,
-  ],
   ["src/app/facility/dashboard/staff/_components/access-tab.tsx", 4],
   ["src/app/facility/dashboard/staff/_components/offboarding-tab.tsx", 2],
   [
@@ -350,8 +342,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/facility/tips/TipTierEditor.tsx", 2],
   ["src/components/facility/TipSettings.tsx", 1],
   ["src/components/facility/training/pre-session-briefing-panel.tsx", 1],
-  ["src/components/facility/training/session-completion-homework.tsx", 1],
-  ["src/components/facility/training/session-completion-step-two.tsx", 3],
   ["src/components/facility/training/smart-scheduling-dialog.tsx", 2],
   ["src/components/facility/training/training-calendar-sidebar.tsx", 1],
   ["src/components/facility/training/training-today-tasks.tsx", 1],
