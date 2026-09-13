@@ -1,29 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  ClipboardList,
-  Clock,
-  History,
-  Camera,
-  Sparkle,
-  ShieldAlert,
-} from "lucide-react";
+import { History, Camera, Sparkle, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   groomingQueries,
@@ -34,10 +14,7 @@ import type {
   BehaviorTag,
   SessionIssueKind,
 } from "@/types/grooming";
-import { getFormTemplateForService } from "@/data/yipyygo-config";
-import { useYipyyGoConfig } from "@/lib/api/facility-settings";
-import type { YipyyGoSettings } from "@/lib/settings/yipyy-go";
-import type { CustomQuestion } from "@/types/yipyygo";
+import { PreVisitForm } from "./pre-visit-form";
 
 const ISSUE_LABELS: Record<SessionIssueKind, string> = {
   "matting-found": "Matting found",
@@ -66,27 +43,6 @@ function formatDateLong(iso?: string): string {
   });
 }
 
-function formatAnswer(_q: CustomQuestion | undefined, value: unknown): string {
-  if (value === undefined || value === null) return "—";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
-  return String(value);
-}
-
-/**
- * Grooming pre-visit questions live in the unified Yipyy per-service form
- * (formTemplates.grooming.globalCustomQuestions) so they can be edited in one
- * place alongside daycare/boarding/training. Falls back to the global default
- * template if no grooming override is configured yet.
- */
-// Takes the facility's settings rather than looking them up. It used to call
-// `getYipyyGoConfig(FACILITY_ID)` with a module constant of 11, so every
-// facility read the demo's grooming questions — and no facility read its own,
-// because nothing had ever been saved to that array.
-function readQuestions(config: YipyyGoSettings): CustomQuestion[] {
-  return getFormTemplateForService(config, "grooming").globalCustomQuestions;
-}
-
 export function PreVisitBriefing({
   appointment,
   layout = "wide",
@@ -108,14 +64,7 @@ export function PreVisitBriefing({
     [allAppointments, appointment.petId, appointment.id],
   );
 
-  const { config: yipyyGoConfig } = useYipyyGoConfig();
-  const questions = readQuestions(yipyyGoConfig);
-  const submission = appointment.expressCheckinSubmission;
   const isNarrow = layout === "narrow";
-
-  // Photo lightbox (expandable thumbnails) + full-form drawer.
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [fullFormOpen, setFullFormOpen] = useState(false);
 
   // Client price pre-approvals (Table 103) are gone from here. "Add fee"
   // set a price adjustment on the appointment object in memory — never
@@ -126,98 +75,10 @@ export function PreVisitBriefing({
 
   return (
     <div className={cn("space-y-3", isNarrow ? "" : "space-y-4")}>
-      {/* Pre-visit form responses */}
-      <div className="bg-card rounded-xl border shadow-sm">
-        <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <ClipboardList className="text-muted-foreground size-4" />
-            Pre-visit Form Responses
-          </div>
-          <div className="flex items-center gap-2">
-            {submission && (
-              <button
-                type="button"
-                onClick={() => setFullFormOpen(true)}
-                className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
-              >
-                View Full Form
-              </button>
-            )}
-            {submission ? (
-              <Badge
-                className="border-0 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                title={`Submitted ${new Date(submission.submittedAt).toLocaleString("en-CA")}`}
-              >
-                <CheckCircle2 className="mr-1 size-3" />
-                Checked in by client
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-muted-foreground">
-                <Clock className="mr-1 size-3" />
-                Form pending
-              </Badge>
-            )}
-          </div>
-        </div>
-        <div className="px-4 py-3">
-          {submission ? (
-            <dl
-              className={cn(
-                "grid gap-x-4 gap-y-3",
-                isNarrow ? "grid-cols-1" : "sm:grid-cols-2",
-              )}
-            >
-              {/* Photo thumbnails render in a row ABOVE the Q&A (Table 104).
-                  Tap any thumbnail to expand. */}
-              {submission.photosFromClient &&
-                submission.photosFromClient.length > 0 && (
-                  <div className="col-span-full">
-                    <dt className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
-                      Photos from the client
-                    </dt>
-                    <dd className="flex flex-wrap gap-2">
-                      {submission.photosFromClient.map((url, i) => (
-                        <button
-                          key={`${url}-${i}`}
-                          type="button"
-                          onClick={() => setLightboxUrl(url)}
-                          title="Tap to expand"
-                          className="group focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`Client photo ${i + 1}`}
-                            className="ring-border size-16 rounded-md object-cover ring-1 transition-transform group-hover:scale-105"
-                          />
-                        </button>
-                      ))}
-                    </dd>
-                  </div>
-                )}
-              {questions.map((q) => {
-                const value = submission.answers[q.id];
-                if (q.type === "file_upload") return null;
-                return (
-                  <div key={q.id} className="min-w-0">
-                    <dt className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                      {q.label}
-                    </dt>
-                    <dd className="text-sm wrap-break-word">
-                      {formatAnswer(q, value)}
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-          ) : (
-            <p className="text-muted-foreground text-xs italic">
-              The client hasn&apos;t submitted the Express Check-In form yet.
-              Staff will collect drop-off details on arrival.
-            </p>
-          )}
-        </div>
-      </div>
+      <PreVisitForm
+        bookingRef={Number(appointment.id)}
+        petRef={appointment.petId}
+      />
 
       {/* Coat + size + service quick facts */}
       <div className="bg-card rounded-xl border shadow-sm">
@@ -371,94 +232,6 @@ export function PreVisitBriefing({
           )}
         </div>
       </div>
-
-      {/* Expandable photo lightbox — click any client thumbnail to enlarge. */}
-      <Dialog
-        open={!!lightboxUrl}
-        onOpenChange={(o) => !o && setLightboxUrl(null)}
-      >
-        <DialogContent className="max-w-2xl p-2">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Client photo</DialogTitle>
-          </DialogHeader>
-          {lightboxUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={lightboxUrl}
-              alt="Client photo (enlarged)"
-              className="max-h-[80vh] w-full rounded-md object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Full Express Check-In form in a side drawer. */}
-      <Sheet open={fullFormOpen} onOpenChange={setFullFormOpen}>
-        <SheetContent
-          side="right"
-          className="w-full overflow-y-auto sm:max-w-md"
-        >
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <ClipboardList className="size-4" />
-              Express Check-In Form
-            </SheetTitle>
-          </SheetHeader>
-          {submission ? (
-            <div className="space-y-4 px-4 pb-6">
-              <p className="text-muted-foreground text-xs">
-                Submitted{" "}
-                {new Date(submission.submittedAt).toLocaleString("en-CA")}
-              </p>
-              <dl className="space-y-3">
-                {questions.map((q) => {
-                  if (q.type === "file_upload") return null;
-                  return (
-                    <div key={q.id}>
-                      <dt className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                        {q.label}
-                      </dt>
-                      <dd className="text-sm wrap-break-word">
-                        {formatAnswer(q, submission.answers[q.id])}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-              {submission.photosFromClient &&
-                submission.photosFromClient.length > 0 && (
-                  <div>
-                    <p className="text-muted-foreground mb-1.5 text-[10px] tracking-wide uppercase">
-                      Photos from the client
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {submission.photosFromClient.map((url, i) => (
-                        <button
-                          key={`full-${url}-${i}`}
-                          type="button"
-                          onClick={() => setLightboxUrl(url)}
-                          title="Click to enlarge"
-                          className="focus-visible:ring-ring rounded-md focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`Client photo ${i + 1}`}
-                            className="ring-border aspect-square w-full rounded-md object-cover ring-1"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-          ) : (
-            <p className="text-muted-foreground px-4 text-xs italic">
-              The client hasn&apos;t submitted the Express Check-In form yet.
-            </p>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
