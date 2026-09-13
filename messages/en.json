@@ -2424,7 +2424,7 @@
         "formCompletedByStaff": "Completed by staff",
         "columnLabel": "Pre-arrival form",
         "cardTitle": "Pre-arrival forms",
-        "cardProgress": "{done} of {total} in",
+        "cardProgress": "{done} of {total} sent",
         "loadingForms": "Loading the pre-arrival forms",
         "formsFailed": "The pre-arrival forms did not load.",
         "loadFormsAgain": "Load the forms again",

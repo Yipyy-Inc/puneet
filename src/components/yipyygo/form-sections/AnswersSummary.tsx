@@ -208,7 +208,16 @@ function FeedingLines({
       .filter(Boolean)
       .join(" ");
     return (
-      <p>{[feeding.foodType, portion].filter(Boolean).join(" · ") || "—"}</p>
+      <p>
+        {[
+          feeding.foodType
+            ? answerLabel(FOOD_TYPE_KEYS, feeding.foodType, t)
+            : "",
+          portion,
+        ]
+          .filter(Boolean)
+          .join(" · ") || "—"}
+      </p>
     );
   }
   return (
