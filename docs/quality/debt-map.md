@@ -13681,16 +13681,14 @@ no check-in time — so checking a pet in from that page failed with "This pet
 has not been checked in yet." It writes `checked-in` (with the estimate) and
 then `in-progress` now, each said once saved.
 
-**Found while checking the grants, not fixed here — it is production policy:**
-`grooming_appointments_update` admits `private.can_write_booking(booking_id)`,
-which is true for the booking's own CUSTOMER while the booking is `pending`,
-`request_submitted`, `estimate_sent` or `waitlisted`. With table-wide UPDATE
-granted to `authenticated`, such a customer can change `service_price`,
+**Found while checking the grants, and fixed the same day** (see "a customer
+changes no grooming appointment", below): `grooming_appointments_update`
+admitted `private.can_write_booking(booking_id)`, which is true for the
+booking's own CUSTOMER while the booking is `pending`, `request_submitted`,
+`estimate_sent` or `waitlisted`. With table-wide UPDATE granted to
+`authenticated`, such a customer could change `service_price`,
 `service_duration_min` or `check_in_at` on their own pending groom through the
-API directly. It needs a column grant or a stricter policy, decided with what
-the customer portal legitimately edits on a pending booking. `anon` also holds
-INSERT and UPDATE on the table; every policy names `authenticated`, so that
-grant is unreachable, but it should be revoked with the fix.
+API directly.
 
 ## 2026-09-12 — the operations calendar keeps a viewer's settings per facility
 
@@ -13870,3 +13868,31 @@ the training report-card fixture, which nothing reads.
 SQL `training-homework.sql`. e2e `training-homework.spec.ts` (full suite)
 gives Buddy a real enrollment on a MARKER series through the service role and
 deletes the series afterwards, which takes the homework with it.
+
+## 2026-09-12 — a customer changes no grooming appointment
+
+`grooming_appointments_update` and `_insert` admitted
+`private.can_write_booking()`, whose customer branch is the pet's owner while
+the booking is still a request. UPDATE is granted on every column, so an owner
+could set `service_price`, `check_in_at` or `groomer_notes` on their own
+pending groom through the API, and insert a priced appointment onto a booking
+of theirs that had none. No screen did either, on `redesign` or on `main`.
+
+20260912220846: UPDATE is staff with `create_bookings` or `edit_bookings` at
+the booking's facility (`private.staff_can_write_booking()`). The owner keeps
+INSERT — `create_booking()` writes their appointment as them, SECURITY INVOKER
+— but only a row shaped like the one it writes: no price, no check-in,
+check-out or ready time, no groomer's notes, an empty checklist. Nothing that
+used the old access changes: the board's writes are staff's;
+`sync_grooming_lifecycle()` stamps check-in and check-out as SECURITY DEFINER,
+so an owner cancelling their own groom still works; intake, notes, photos and
+history write their own tables.
+
+**Still open:** a customer's request may name a station — `create_booking()`
+takes `p_grooming->>'stationId'` from anyone, and the booking modal sends one
+in customer mode too. `anon` still holds the table's default grants; every
+policy names `authenticated`, so they reach nothing.
+
+SQL `grooming-appointments-rls.sql` T14–T17. e2e `booking-write-integrity`
+(gate) books a customer's groom through `/api/bookings`, and
+`grooming-ready-estimate` is the board's staff write.
