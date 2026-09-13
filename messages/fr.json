@@ -2084,7 +2084,8 @@
       "trainingSession": {
         "completed": "Séance marquée comme donnée — présence enregistrée pour {count} chien(s)",
         "notAllSaved": "La séance n’a pas été entièrement enregistrée",
-        "noBooking": "{pet} n’a pas de réservation pour cette séance."
+        "noBooking": "{pet} n’a pas de réservation pour cette séance.",
+        "markExcused": "Excusé"
       },
       "modulePackages": {
         "title_boarding": "Forfaits d’hébergement prépayés",

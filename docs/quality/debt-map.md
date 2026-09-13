@@ -13975,3 +13975,31 @@ SQL `training-attendance-marks.sql` (T1–T6). e2e
 `training-attendance-marks.spec.ts` (full suite) gives Buddy a MARKER series
 with two ended sessions and one ahead through the service role, and deletes
 their bookings and the series afterwards.
+
+## 2026-09-13 — a dog's exercise ratings are saved, and a dog can be excused
+
+The session view's Exercises step rates each dog 1 to 5 on every exercise
+covered. "Complete session" put those ratings in the query cache only, so a
+student's History tab showed no exercises after a reload. The attendance cards
+offered present, late and absent; the API took `excused`, but nothing offered
+it.
+
+20260913104649 adds `training_attendance.exercises` — `[{exerciseName,
+rating}]`, at most 50, each rating a whole 1–5
+(`private.training_exercise_ratings_are_valid`) — and empty for an absent or
+excused dog. `training_attendance_history()` returns it, so it was dropped and
+made again with the same grants. `POST /api/training/attendance` takes
+`exercises` (422 when it is not that shape); the session view sends each dog's
+ratings with its check-in, and records an excused dog as excused.
+
+**The constraint's helper is granted to `authenticated`.** A CHECK runs its
+function as the role writing the row, so revoking it from `public` alone
+would have refused every check-in with a permission error.
+
+**Still open:** session conditions (weather, distraction) have no control in
+the session view at all — the History tab draws them for fixture rows only; a
+per-exercise note is not captured either.
+
+SQL `training-attendance-marks.sql` T7–T8; unit
+`training-attendance-history.test.ts`; e2e `training-attendance-marks.spec.ts`
+now saves and reads back a rating and an excused dog.

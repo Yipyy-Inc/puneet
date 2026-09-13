@@ -27,7 +27,11 @@ import { SessionAttendanceSection } from "./session-view-attendance";
 import { SessionExercisesSection } from "./session-view-exercises";
 import { SessionCompleteConfirmDialog } from "./session-view-complete-dialog";
 import { SessionHomeworkPromptDialog } from "./session-view-homework-prompt";
-import { saveSession, type PresentStudentSummary } from "./session-view-save";
+import {
+  exerciseRatingsFor,
+  saveSession,
+  type PresentStudentSummary,
+} from "./session-view-save";
 import {
   useMarkTrainingSession,
   useTrainingCheckIn,
@@ -331,11 +335,11 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
   // status, draft report cards — and toasted "Session marked complete. N
   // draft report cards created." None of it survived a reload. Each dog
   // marked present or late is checked in and out against its booking for this
-  // session — a late one marked late — an absent one is recorded absent
-  // (training_attendance, with the session notes), and the session itself is
-  // marked held. A dog nobody marked is left as it was. Drop-ins have no series booking and are
-  // left as they were; report cards, exercise ratings and homework are still
-  // local (see the debt map).
+  // session — a late one marked late — with the exercises it was rated on; an
+  // absent or excused one is recorded so (training_attendance, with the
+  // session notes), and the session itself is marked held. A dog nobody
+  // marked is left as it was. Drop-ins have no series booking and are left as
+  // they were; report cards are still local (see the debt map).
   async function persistSession() {
     if (!session) return;
     const refs = (session.bookingRefByPet ?? {}) as Record<string, number>;
@@ -374,13 +378,14 @@ export function SessionViewClient({ sessionId }: { sessionId: string }) {
             .filter(Boolean)
             .join("\n\n") || undefined;
         const status = attendance[r.enrollmentId]?.status;
-        if (status === "absent") {
-          await checkIn({ bookingRef, mark: "absent", notes });
+        if (status === "absent" || status === "excused") {
+          await checkIn({ bookingRef, mark: status, notes });
           return;
         }
         await checkIn({
           bookingRef,
           mark: status === "late" ? "late" : undefined,
+          exercises: exerciseRatingsFor(exerciseEntries, r.enrollmentId),
         });
         await updateVisit({ bookingRef, checkOut: true, notes });
       }),

@@ -7,6 +7,7 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
+import { parseExerciseRatings } from "@/lib/api/mappers/training-attendance-history";
 import {
   DEFAULT_TIMEZONE,
   instantFromWallClock,
@@ -98,6 +99,8 @@ interface CheckInInput {
   notes?: string;
   /** late, or absent / excused — see 20260913100835. None is a plain arrival. */
   mark?: string;
+  /** What the dog did and how it did — [{exerciseName, rating}]. See 20260913104649. */
+  exercises?: unknown;
 }
 
 const MARKS = new Set(["late", "absent", "excused"]);
@@ -132,6 +135,17 @@ export async function POST(request: NextRequest) {
   if (body!.mark !== undefined && !MARKS.has(body!.mark)) {
     return NextResponse.json(
       { error: "A mark is late, absent or excused." },
+      { status: 422 },
+    );
+  }
+
+  const exercises =
+    body!.exercises === undefined
+      ? undefined
+      : parseExerciseRatings(body!.exercises);
+  if (exercises === null) {
+    return NextResponse.json(
+      { error: "Each exercise has a name and a whole rating from 1 to 5." },
       { status: 422 },
     );
   }
@@ -183,7 +197,12 @@ export async function POST(request: NextRequest) {
         ? null
         : ((existing as { checked_in_at: string | null } | null)
             ?.checked_in_at ?? new Date().toISOString()),
-      ...(absent ? { checked_out_at: null } : {}),
+      // A dog that did not come did no exercises.
+      ...(absent
+        ? { checked_out_at: null, exercises: [] }
+        : exercises !== undefined
+          ? { exercises }
+          : {}),
       mark: body!.mark ?? null,
       ...(body!.notes !== undefined ? { session_notes: body!.notes } : {}),
     } as never,

@@ -17,6 +17,9 @@
 -- T4  The owner reads their own dog's history.
 -- T5  Another facility reads none of it.
 -- T6  anon cannot read it.
+-- T7  Staff save a dog's exercise ratings, and the history returns them.
+-- T8  A rating is a whole 1-5 on a named exercise, and an absent or excused
+--     dog has none (20260913104649).
 -- ============================================================================
 
 begin;
@@ -234,6 +237,58 @@ end $$;
 select pg_temp.t('T6  anon cannot read the history',
   not has_function_privilege('anon', 'public.training_attendance_history(uuid, bigint)', 'execute')
     and has_function_privilege('authenticated', 'public.training_attendance_history(uuid, bigint)', 'execute'));
+
+-- ── T7  exercise ratings are kept and read back ─────────────────────────────
+do $$
+declare v_ref bigint; v_name text; v_rating text;
+begin
+  select ref into v_ref from public.pets where id = '00000000-0000-0000-0000-0000001f9050';
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9001');
+  set local role authenticated;
+  update public.training_attendance
+     set exercises = '[{"exerciseName": "Sit", "rating": 4}, {"exerciseName": "Recall", "rating": 2}]'
+   where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  select exercises -> 0 ->> 'exerciseName', exercises -> 0 ->> 'rating'
+    into v_name, v_rating
+    from public.training_attendance_history('00000000-0000-0000-0000-0000001f9020', v_ref)
+   where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  reset role;
+  perform pg_temp.t('T7  staff save a dog''s exercise ratings and the history returns them',
+    v_name = 'Sit' and v_rating = '4',
+    format('name=%s rating=%s', v_name, v_rating));
+exception when others then
+  reset role; perform pg_temp.t('T7  ratings', false, sqlerrm);
+end $$;
+
+-- ── T8  a rating is a rating, and an absent dog has none ────────────────────
+do $$
+declare v_six boolean := false; v_nameless boolean := false; v_absent boolean := false;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000001f9001');
+  set local role authenticated;
+  begin
+    update public.training_attendance set exercises = '[{"exerciseName": "Sit", "rating": 6}]'
+     where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  exception when check_violation then v_six := true;
+  end;
+  begin
+    update public.training_attendance set exercises = '[{"rating": 3}]'
+     where booking_id = '00000000-0000-0000-0000-0000001f9090';
+  exception when check_violation then v_nameless := true;
+  end;
+  begin
+    insert into public.training_attendance (booking_id, facility_id, mark, exercises)
+    values ('00000000-0000-0000-0000-0000001f9092', '00000000-0000-0000-0000-0000001f9020',
+            'excused', '[{"exerciseName": "Sit", "rating": 3}]');
+  exception when check_violation then v_absent := true;
+  end;
+  reset role;
+  perform pg_temp.t('T8  no rating outside 1-5, no nameless exercise, no exercises for an absent dog',
+    v_six and v_nameless and v_absent,
+    format('six=%s nameless=%s absent=%s', v_six, v_nameless, v_absent));
+exception when others then
+  reset role; perform pg_temp.t('T8  rating constraints', false, sqlerrm);
+end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
