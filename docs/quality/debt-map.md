@@ -11739,6 +11739,8 @@ list.
 
 ### Express check-in form (`/customer/bookings/[id]/yipyygo-form`) — **it cannot find a real booking**
 
+> **Resolved 2026-09-13.** The form reads the real booking, saves real rows, uploads real photos and charges from the catalogue — see “the screens use the pre-arrival form server”, at the end of this file. What follows is the record of what it replaced.
+
 - **The booking is looked up in the fixture list.** `bookings.find(...)` from
   `@/data/bookings`, and the owner in `@/data/clients` — so a booking that
   lives in Postgres, which is every booking the booking wizard makes, gets
@@ -12214,6 +12216,8 @@ src="https://api.qrserver.com/v1/create-qr-code/?…&data=<referral URL>">`
   here" above a form with no link in it.
 
 ### Check-in QR (`/customer/bookings/[id]/check-in-qr`) — **a real booking has no QR**
+
+> **Resolved 2026-09-13.** The page reads the real booking and issues a pass the desk resolves on the server — see “the screens use the pre-arrival form server”, at the end of this file. What follows is the record of what it replaced.
 
 - The booking is looked up in the `bookings` FIXTURE and the token in
   `getYipyyGoForm` (the in-memory express check-in forms — see "Express
@@ -14133,3 +14137,88 @@ page's Check In writes `bookings.status` instead of an arrival.
 SQL `yipyy-go-submissions.sql` (T1–T11), `yipyy-go-charges.sql` (C1–C13),
 `yipyy-go-photos-rls.sql` (S0–S5, R1), `yipyy-go-check-in.sql` (K1–K7); unit
 `yipyy-go.test.ts`.
+
+## 2026-09-13 — the screens use the pre-arrival form server
+
+The section above ends "the screens do not use any of it yet". They do now:
+
+- **The owner’s form** (`/customer/bookings/[id]/yipyygo-form`) saves a draft
+  at every step, one form per dog, against the facility’s own template and
+  questions, with the server’s deadline. Add-ons, the medication fee and a
+  pledged tip reach the bill from it (`yipyy-go-charges`, in the gate), and a
+  pledged tip starts the card checkout and the pay link.
+- **Photos** are files in the private bucket, kept on the answers by id. An id
+  whose photo is gone is dropped when the form opens and again at submit.
+- **The check-in code page** issues a real pass each time it opens.
+- **The desk** is in the staff portal (`/employee/check-in`, and the facility
+  dashboard), a nav area of its own. It resolves a code on the server, checks
+  every dog on the booking in through the service’s own write, and keeps an
+  override reason; those four writes now emit `check_in` (`yipyy-go-kiosk`,
+  full suite).
+- **Staff review** is on the booking page (`#yipyy-go`). The bookings list
+  column and the desk share one chip from `booking_yipyy_go`. The fixture
+  store, its badge, widget and modal, `checkin-audit.ts`,
+  `post-checkin-automation.ts` and `qr-checkin.ts` are gone (`yipyy-go-form`,
+  full suite).
+- **The grooming pre-visit briefing** reads the same form — its chip, and each
+  answer and photo. It read `expressCheckinSubmission`, which nothing filled, so every
+  real appointment said “Form pending”.
+
+**Still open:** form-link and reminder SENDING (above); the Feeding and
+Medication sections keep their pre-redesign styling; the grooming calendar’s
+check-in badge and the grooming check-in dialog read
+`expressCheckinSubmission`, which nothing fills; the owner’s “Leave a tip” on a
+past booking saves nothing; `/pay/[ref]` is English only; the card checkout
+keeps a chosen tip across openings; `FileDocumentDialog` does not use the §5t
+dropzone; a long facility name in the customer header overlaps the page; the customer
+sidebar's camera access still filters real bookings by the fixture facility
+id, so a real stay never opens its cameras item; a portion reads “1 Cup”, the
+unit selector’s label rather than a phrase with its own case and plural.
+
+**Found in passing:**
+
+- `booking-checkout-truth`’s `afterAll` refund answers 500 on its cancelled GST
+  bookings, so each run leaves $64 on a cancelled marker booking — 66 of them
+  by 2026-09-13.
+- `assigned-scope` refused client 15 (or 16), and an assignment a killed run
+  left on one of client 15’s cancelled test bookings (booking 271, since
+  2026-09-08) made client 15 the groomer’s. The test passed or failed by which
+  booking its unordered seed query returned — green at 15:57, red at 18:17 on
+  the same data. The spec now refuses a client the groomer has nothing
+  assigned for (8237aa9d), and the stale assignment was cleared.
+- **A spec that signs in as reception meets the drawer, not the page.**
+  Reception and managers hold `open_close_register`, and `RegisterOpenGate`
+  covers the whole staff portal until today’s drawer is counted, so the first
+  run of `yipyy-go-kiosk` waited two minutes for a desk that was never drawn.
+  It turns the facility’s `requireRegisterOpenOnLogin` off for the file and
+  back on in a `finally`, read back — the third spec carrying that code, after
+  `staff-portal-nav` and `assigned-scope`. The next one should share a helper.
+- **A real booking filtered by the fixture facility id is a hidden booking.**
+  The customer dashboard kept bookings whose `facilityId` matched
+  `selectedFacility.id` — fixture 1 for a fresh session, while the mapper
+  stamps every real booking 11 — so since 2026-08-19 it showed no upcoming
+  booking and no form reminder at all. The bookings list had papered over the
+  same filter with a fall-back to everything. `yipyy-go-form` found it: the
+  booking was in the response, and the page still said there was nothing.
+- **A NULL requirement compared with `=` is NULL, not false.** The desk check
+  computed `form_missing` as `v_requirement = 'mandatory' and …`, so wherever
+  the facility asks no form for the service the flag was NULL and the NOT NULL
+  column refused the desk check — boarding at a facility whose forms cover
+  daycare, every service at a facility with none. Only the screenshot
+  walkthrough reached that path, because K5 ran on a mandatory service. Fixed
+  in 20260913191921; K8 in `yipyy-go-check-in.sql` failed first.
+- **The pre-push typecheck reads the working tree, not the commits.** A push
+  made while another script was deleting files failed with TS6053 on the six
+  files `git rm` had just removed — tsc listed them from its include glob, then
+  could not open them — so nothing reached CI. Push from a tree nothing is
+  changing.
+- **The bookings list is one read of every booking, and a poll over it fits
+  one answer.** `/api/bookings` for the e2e tenant (~950 rows) merges presence
+  and each booking's pre-arrival form status in batches of 150, and took 12 to
+  24 seconds a read on a dev server that had been running for hours.
+  `dashboard-live-board`'s checkout recorded its $220 payment two seconds into
+  a 30-second poll, and the poll still failed: its first read had started
+  before the payment landed, and the second was cut off.
+- A local dev server that has been compiling for hours slows until a spec’s
+  `page.goto` exceeds its timeout; the retry passes. Restart it before a long
+  local run.
