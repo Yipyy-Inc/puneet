@@ -10538,6 +10538,72 @@ export type Database = {
           },
         ];
       };
+      training_makeups: {
+        Row: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          answered_at?: string | null;
+          client_id: string;
+          created_at?: string;
+          decided_at?: string | null;
+          decided_by_name?: string | null;
+          facility_id: string;
+          host_booking_id?: string | null;
+          host_session_id?: string | null;
+          id?: string;
+          ineligible_reason?: string | null;
+          missed_booking_id: string;
+          missed_session_id?: string | null;
+          offered_at?: string | null;
+          offered_by_name?: string | null;
+          owner_note?: string | null;
+          pet_id: string;
+          requested_at?: string | null;
+          status: string;
+          updated_at?: string;
+        };
+        Update: {
+          answered_at?: string | null;
+          client_id?: string;
+          created_at?: string;
+          decided_at?: string | null;
+          decided_by_name?: string | null;
+          facility_id?: string;
+          host_booking_id?: string | null;
+          host_session_id?: string | null;
+          id?: string;
+          ineligible_reason?: string | null;
+          missed_booking_id?: string;
+          missed_session_id?: string | null;
+          offered_at?: string | null;
+          offered_by_name?: string | null;
+          owner_note?: string | null;
+          pet_id?: string;
+          requested_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       training_notes: {
         Row: {
           author_name: string | null;
@@ -12239,6 +12305,188 @@ export type Database = {
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
+      };
+      decline_training_makeup: {
+        Args: { p_makeup_id: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+      };
+      mark_training_makeup_ineligible: {
+        Args: {
+          p_by_name?: string;
+          p_missed_booking_id: string;
+          p_reason: string;
+        };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+      };
+      offer_training_makeup: {
+        Args: {
+          p_by_name?: string;
+          p_host_session_id: string;
+          p_missed_booking_id: string;
+        };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+      };
+      request_training_makeup: {
+        Args: { p_missed_booking_id: string; p_note?: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+      };
+      skip_training_makeup: {
+        Args: { p_missed_booking_id: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+      };
+      training_makeup_host_sessions: {
+        Args: { p_missed_booking_id: string };
+        Returns: {
+          end_at: string;
+          location_name: string | null;
+          seats_left: number;
+          series_id: string;
+          series_name: string;
+          session_id: string;
+          session_number: number;
+          start_at: string;
+          trainer_name: string | null;
+        }[];
+      };
+      training_missed_sessions: {
+        Args: { p_facility_id?: string };
+        Returns: {
+          answered_at: string | null;
+          booking_id: string;
+          booking_ref: number;
+          booking_status: string;
+          client_email: string | null;
+          client_name: string;
+          client_phone: string | null;
+          client_ref: number;
+          course_name: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          enrollment_id: string | null;
+          enrollment_status: string | null;
+          facility_id: string;
+          host_booking_ref: number | null;
+          host_booking_status: string | null;
+          host_series_id: string | null;
+          host_series_name: string | null;
+          host_session_id: string | null;
+          host_session_number: number | null;
+          host_start_at: string | null;
+          ineligible_reason: string | null;
+          makeup_id: string | null;
+          makeup_status: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_name: string;
+          pet_ref: number;
+          requested_at: string | null;
+          series_id: string;
+          series_name: string;
+          session_id: string;
+          session_number: number;
+          session_start_at: string;
+        }[];
       };
       log_homework_practice: {
         Args: { p_homework_id: string; p_practice_date: string };

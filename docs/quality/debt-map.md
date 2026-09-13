@@ -13896,3 +13896,50 @@ policy names `authenticated`, so they reach nothing.
 SQL `grooming-appointments-rls.sql` T14–T17. e2e `booking-write-integrity`
 (gate) books a customer's groom through `/api/bookings`, and
 `grooming-ready-estimate` is the board's staff write.
+
+## 2026-09-13 — a missed training session can be made up
+
+The facility's Make-up sessions page (`/services/training/makeup`) read the
+`sessionAttendances` fixture for its absences and wrote offers and
+"ineligible" marks into the query cache — "Offer sent to {owner}" over nothing
+stored and nothing sent. The owner's Make-up sessions tab was mock data end to
+end: an invented dog's absence, a $40 price from `facilityConfig`, and a
+request and a skip that were `setTimeout`s. The calendar's make-up badge
+matched that cache-only list by date, time and trainer.
+
+A missed session is DERIVED (20260913090803): a session booking
+(`training_series_session_id`) whose session has ended, that was not
+cancelled or declined, and that never checked in — or is a no-show.
+`training_missed_sessions()` reads it. What happens next is a
+`training_makeups` row, one per missed booking, written only by five
+functions. Decided 2026-09-12:
+
+- a make-up is FREE — a seat in a future session of the same course, in
+  another series of the facility, because the series is already paid for;
+- the FACILITY's offer books it — `offer_training_makeup()` creates a
+  confirmed $0 booking through `create_booking()` (staff with
+  `create_bookings`), checking capacity, course and that the dog is not
+  already in that session; `training_makeup_host_sessions()` lists the
+  sessions it will accept;
+- the owner may ASK (`request_training_makeup`), SKIP
+  (`skip_training_makeup`) or DECLINE a booked seat
+  (`decline_training_makeup`, which cancels its booking); staff may mark the
+  absence INELIGIBLE with a reason.
+
+The facility page is `MakeupSessionsBoard` (needs action, seat booked,
+closed); the owner's tab asks, skips and declines; the calendar counts seats by
+session id. `src/lib/training-makeup.ts` and `training-makeup-candidates.ts`
+are deleted. Nothing is sent to the owner: they read it on their training page.
+
+**Still open:** the rest of the training module still reads the attendance
+fixture (`trainingQueries.allAttendances`, `attendancesForPet`) — the
+student's History and Overview tabs, the no-show risk, the calendar sidebar,
+the pre-session briefing and the owner's My Pets tab — and a session view's
+absent and excused marks are still not written anywhere, so an absence is known
+only as "never checked in". A make-up's attendance is the seat booking's own
+check-in on the check-in board; the host session's roster does not list the
+guest dog. There is no make-up window or price setting.
+
+SQL `training-makeups.sql` (T1–T10). e2e `training-makeups.spec.ts` (full
+suite) gives Buddy two MARKER series and a missed booking through the service
+role, and deletes every booking on their sessions and then the series.
