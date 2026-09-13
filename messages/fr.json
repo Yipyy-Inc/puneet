@@ -8215,7 +8215,7 @@
       "dashboard": {
         "yourPet": "votre animal",
         "expressRequiredTitle": "Arrivée express requise — {service} de {pet}",
-        "expressRequiredMessage": "Remplissez le formulaire d’arrivée express avant le dépôt du {date} — vous ne pourrez pas laisser votre animal avant.",
+        "expressRequiredMessage": "Remplissez le formulaire préalable avant le dépôt du {date}.",
         "completeForm": "Remplir le formulaire",
         "vaccineMissingTitle": "Vaccin manquant pour {pet}",
         "vaccineMissingMessage": "Le vaccin {vaccine} est exigé — téléversez-le maintenant",
@@ -8314,7 +8314,8 @@
         "needRenewalOne": "{count} à renouveler",
         "needRenewalMany": "{count} à renouveler",
         "allSet": "Tout est en ordre",
-        "viewPackages": "Voir les forfaits"
+        "viewPackages": "Voir les forfaits",
+        "expressOptionalTitle": "Formulaire préalable — {service} de {pet}"
       },
       "bookings": {
         "paymentPaid": "Payé",
@@ -8463,7 +8464,28 @@
         "checkInFailedHelp": "Une erreur s’est produite. Signalez votre arrivée à la réception.",
         "checkedIn": "Arrivé",
         "checkingIn": "Enregistrement…",
-        "imHere": "Je suis arrivé — signaler mon arrivée"
+        "imHere": "Je suis arrivé — signaler mon arrivée",
+        "ygTitle": "Formulaire préalable",
+        "ygRequired": "Requis avant le dépôt",
+        "ygOptional": "Facultatif",
+        "ygOpenUntil": "Vous pouvez le modifier jusqu’au {date}, {time}",
+        "ygClosed": "Le formulaire est fermé",
+        "ygStatusNotStarted": "Pas commencé",
+        "ygStatusDraft": "Brouillon enregistré",
+        "ygStatusSubmitted": "Envoyé",
+        "ygStatusChangesRequested": "Modifications demandées",
+        "ygStatusApproved": "Vérifié",
+        "ygStatusCompletedByStaff": "Complété par l’établissement",
+        "ygChangesAsked": "L’établissement demande : {message}",
+        "ygStart": "Remplir le formulaire de {pet}",
+        "ygContinue": "Continuer le formulaire de {pet}",
+        "ygEdit": "Modifier le formulaire de {pet}",
+        "ygOnBill": "Ajouté à votre facture",
+        "ygTipPledged": "Pourboire promis : {amount}",
+        "ygShowCode": "Afficher mon code d’arrivée",
+        "ygLoading": "Chargement du formulaire préalable…",
+        "ygLoadFailedTitle": "Le formulaire préalable n’a pas pu être chargé",
+        "ygLoadFailed": "Rechargez la page pour réessayer."
       },
       "pets": {
         "pageTitle": "Mes animaux",
