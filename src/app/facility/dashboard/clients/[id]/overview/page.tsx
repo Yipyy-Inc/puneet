@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useClientVaccinations } from "@/lib/api/vaccinations";
 import { NotesList } from "@/components/shared/NotesList";
 import { expiryState, localToday } from "@/lib/vaccinations";
-import { clientCommunications } from "@/data/communications";
+import { clientMessageQueries } from "@/lib/api/client-messages";
 import type { Membership, PauseDetails } from "@/data/services-pricing";
 import {
   describePause,
@@ -140,6 +140,9 @@ export default function ClientOverviewPage({
   // them to a real pet by its numeric ref.
   const { vaccinations } = useClientVaccinations(clientId);
   const [today] = useState(localToday);
+  const { data: clientMessages } = useQuery(
+    clientMessageQueries.forClient(clientId),
+  );
 
   if (!client) return null;
 
@@ -209,8 +212,7 @@ export default function ClientOverviewPage({
   });
 
   // Recent activity
-  const recentComms = clientCommunications
-    .filter((c) => c.clientId === clientId)
+  const recentComms = [...(clientMessages ?? [])]
     .sort(
       (a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),

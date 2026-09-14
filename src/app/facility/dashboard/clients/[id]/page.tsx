@@ -1,17 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
-import { buildResumePreselection } from "@/lib/resume-booking";
-import { clientCommunications, clientCallHistory } from "@/data/communications";
-import {
-  playdateAlertLogs,
-  getAlertStatusVariant,
-  formatAlertChannel,
-} from "@/data/marketing";
-import { petPhotos } from "@/data/pet-data";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useClientVaccinations } from "@/lib/api/vaccinations";
 import { expiryState, localToday } from "@/lib/vaccinations";
@@ -34,7 +25,6 @@ import { toast } from "sonner";
 import { useClientStoreCredit } from "@/lib/api/store-credit";
 import { giftCardQueries } from "@/lib/api/gift-cards";
 import { formatDateLong, formatMoney } from "@/lib/i18n/format";
-import { getClientRetailPurchases } from "@/data/retail";
 import { incidentQueries } from "@/lib/api/incidents";
 import { IncidentDetailsModal } from "@/components/incidents/IncidentDetailsModal";
 import { useFieldMask } from "@/lib/staff/mask";
@@ -83,7 +73,6 @@ import {
   MessageCircle,
   ExternalLink,
   AlertCircle,
-  Play,
   User,
   Dog,
   Cat,
@@ -109,6 +98,9 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { callingQueries } from "@/lib/api/calling";
+import { clientMessageQueries } from "@/lib/api/client-messages";
+import { useRetailSales } from "@/lib/api/retail-store";
 
 // Compact badge styling for the Overview → Incidents section.
 const INCIDENT_SEVERITY_STYLES: Record<string, string> = {
@@ -171,7 +163,6 @@ export default function ClientDetailPage({
   // them would change the order between renders.
   const { refs: assignedRefs, pending: assignedPending } =
     useAssignedClientRefs(assignedClientScope);
-  const resumedBookingRef = useRef<string | null>(null);
   const {
     t: profileT,
     fill: profileFill,
@@ -259,6 +250,19 @@ export default function ClientDetailPage({
     enabled: Boolean(client),
   });
 
+  // What this client was sent, their calls and what they bought at the till —
+  // message_sends, call_record and retail_sales. These were fixtures matched to
+  // real clients by numeric id.
+  const { data: clientMessages = [] } = useQuery({
+    ...clientMessageQueries.forClient(client?.id ?? 0),
+    enabled: Boolean(client),
+  });
+  const { data: clientCallPayload } = useQuery({
+    ...callingQueries.calls({ clientRef: client?.id ?? 0 }),
+    enabled: Boolean(client),
+  });
+  const { data: facilityRetailSales } = useRetailSales();
+
   /**
    * Actually create the booking.
    *
@@ -273,45 +277,6 @@ export default function ClientDetailPage({
   // and every booking a multi-day request made, and answers whether it saved
   // — the form waits for that answer and stays open on `false`.
   const persistBooking = useCreateBookingFromModal();
-
-  // Resume-from-unfinished-booking: when staff clicks Schedule on an
-  // unfinished booking, the URL gets `?resumeBooking=<ub-id>`. We look it up,
-  // open the wizard pre-filled, then strip the param so a reload doesn't
-  // re-open it.
-  useEffect(() => {
-    const resumeId = searchParams?.get("resumeBooking");
-    if (!resumeId || !client) return;
-    if (resumedBookingRef.current === resumeId) return;
-
-    const ub = unfinishedBookings.find((r) => r.id === resumeId);
-    if (!ub || ub.clientId !== client.id) return;
-
-    resumedBookingRef.current = resumeId;
-    const preselection = buildResumePreselection(ub);
-
-    const stepHint = ub.abandonmentStep.replace(/_/g, " ");
-    toast.success(
-      `Resumed ${ub.clientName}'s booking — last active at "${stepHint}".`,
-      { description: "All customer-entered details are pre-filled." },
-    );
-
-    openBookingModal({
-      clients: [client],
-      facilityId: facilityRef,
-      facilityName: profile.businessName,
-      ...preselection,
-      onCreateBooking: persistBooking,
-    });
-
-    // Strip the query param so refresh or back nav doesn't relaunch the modal.
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("resumeBooking");
-    const qs = params.toString();
-    router.replace(
-      `/facility/dashboard/clients/${client.id}${qs ? `?${qs}` : ""}`,
-      { scroll: false },
-    );
-  }, [searchParams, client, profile.businessName, openBookingModal, router]);
 
   const [editedClient, setEditedClient] = useState({
     name: client?.name || "",
@@ -380,13 +345,8 @@ export default function ClientDetailPage({
     (a, b) =>
       new Date(b.incidentDate).getTime() - new Date(a.incidentDate).getTime(),
   );
-  const clientComms = clientCommunications.filter(
-    (c) => c.clientId === client.id,
-  );
-  const clientCalls = clientCallHistory.filter((c) => c.clientId === client.id);
-  const clientPlaydateAlerts = playdateAlertLogs.filter(
-    (a) => a.recipientCustomerId === client.id,
-  );
+  const clientComms = clientMessages;
+  const clientCalls = clientCallPayload?.logs ?? [];
 
   // Client billing data. There is no standalone invoice table: an invoice
   // here is a booking's, and what is owed is the database's own figure.
@@ -401,7 +361,9 @@ export default function ClientDetailPage({
   );
 
   // Retail purchase history (linked to client file)
-  const clientRetailPurchases = getClientRetailPurchases(client.id);
+  const clientRetailPurchases = (facilityRetailSales ?? []).filter(
+    (sale) => sale.customerId === String(client.id),
+  );
   const totalRetailSpent = clientRetailPurchases.reduce(
     (sum, t) => sum + t.total,
     0,
@@ -469,7 +431,6 @@ export default function ClientDetailPage({
 
   // Pet modal helpers
   const getPetData = (pet: Pet) => {
-    const photos = petPhotos.filter((p) => p.petId === pet.id);
     const vaccinations = clientVaccinations.filter((v) => v.petId === pet.id);
     const petBookingsList = clientBookings.filter((b) => b.petId === pet.id);
     const reports = clientReportCards.filter((r) => r.petRef === pet.id);
@@ -491,7 +452,6 @@ export default function ClientDetailPage({
     const tags = tagsFor("pet", pet.id);
 
     return {
-      photos,
       vaccinations,
       petBookings: petBookingsList,
       reports,
@@ -2403,72 +2363,6 @@ export default function ClientDetailPage({
 
         {/* Communications Tab */}
         <TabsContent value="communications" className="space-y-4">
-          {/* Playdate Alerts for this client */}
-          {clientPlaydateAlerts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <Heart className="size-4" />
-                  Playdate Alert History
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {clientPlaydateAlerts
-                    .sort(
-                      (a, b) =>
-                        new Date(b.sentAt).getTime() -
-                        new Date(a.sentAt).getTime(),
-                    )
-                    .slice(0, 5)
-                    .map((alert) => (
-                      <div
-                        key={alert.id}
-                        className="bg-card space-y-2 rounded-lg border p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <Heart className="size-4 text-pink-500" />
-                            <div>
-                              <Badge
-                                variant="outline"
-                                className="text-xs capitalize"
-                              >
-                                {formatAlertChannel(alert.channel)}
-                              </Badge>
-                              <Badge
-                                variant={getAlertStatusVariant(alert.status)}
-                                className="ml-1 text-xs"
-                              >
-                                {alert.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <span className="text-muted-foreground text-xs">
-                            {formatDateTime(alert.sentAt)}
-                          </span>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">
-                            Playdate alert: {alert.triggerPetName} booked
-                          </h4>
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            {alert.triggerPetName} is coming — alert sent for{" "}
-                            {alert.recipientPetName}
-                          </p>
-                        </div>
-                        {alert.reasonSuppressed && (
-                          <div className="text-muted-foreground border-t pt-2 text-xs">
-                            Suppressed: {alert.reasonSuppressed}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <div className="grid grid-cols-2 gap-4">
             {/* Call History */}
             <Card>
@@ -2498,13 +2392,13 @@ export default function ClientDetailPage({
                               <div>
                                 <Badge
                                   variant={
-                                    call.direction === "inbound"
+                                    call.type === "inbound"
                                       ? "default"
                                       : "secondary"
                                   }
                                   className="text-xs capitalize"
                                 >
-                                  {call.direction}
+                                  {call.type}
                                 </Badge>
                                 <Badge
                                   variant={
@@ -2529,18 +2423,7 @@ export default function ClientDetailPage({
                               <div className="text-sm font-medium">
                                 Duration: {formatDuration(call.duration)}
                               </div>
-                              {call.staffName && (
-                                <div className="text-muted-foreground mt-1 text-xs">
-                                  Handled by: {call.staffName}
-                                </div>
-                              )}
                             </div>
-                            {call.recordingUrl && (
-                              <Button variant="outline" size="sm">
-                                <Play className="mr-1 size-3" />
-                                Play Recording
-                              </Button>
-                            )}
                           </div>
                           {call.notes && (
                             <div className="border-t pt-2">
@@ -2629,11 +2512,6 @@ export default function ClientDetailPage({
                               {comm.content}
                             </p>
                           </div>
-                          {comm.staffName && (
-                            <div className="text-muted-foreground border-t pt-2 text-xs">
-                              By: {comm.staffName}
-                            </div>
-                          )}
                         </div>
                       ))}
                   </div>
