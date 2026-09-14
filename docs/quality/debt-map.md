@@ -14595,8 +14595,18 @@ Six still read the whole history, because they need it: the bookings page
 filters (last visit, services), the loyalty banner, the client picker's
 booking counts, the calendar's first-booking badge, and the booking modal's
 new-customer check. Each wants a server-side count or latest date rather
-than the list. Found in passing: the capacity engine counts cancelled
-bookings as taking space.
+than the list.
+
+**Fixed 2026-09-14, found in passing: capacity counted bookings that hold no
+space, and invented the rest.** `lib/capacity-engine.ts` counted cancelled,
+declined, no-show, estimate and waitlisted bookings in daycare section,
+boarding unit and grooming station usage. On top of that, every daycare
+section's usage had `getMockUsage` added: a made-up 20–55% of capacity. No
+play area ever showed empty, and auto-assign could send a pet to the
+waitlist with room to spare. `holdsSpace` now excludes those statuses, the
+made-up usage is deleted, and a daycare booking that names no days occupies
+its start to its end. The daycare areas screen shows today's real bookings.
+Unit tests are in `tests/unit/capacity-engine.test.ts`.
 
 **Still debt: the e2e facility's booking list is large enough to fail under
 load.** It holds 1,007 cancelled bookings, 847 of them spec-marked, and
