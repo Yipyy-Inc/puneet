@@ -1548,6 +1548,207 @@ try {
       count("report cards");
     }
 
+    // ── Waivers, forms, tags and the floor's notes ───────────────────────
+    // What a walkthrough opens and found empty. Loaded here rather than at the
+    // top so this pass reads as one block; see records.ts for the data.
+    {
+      const { createHash } = await import("node:crypto");
+      const R = await import("./records");
+
+      for (const w of R.WAIVERS) {
+        let [waiver] = await tx`
+          select id, version from public.waivers
+           where facility_id = ${DEMO_FACILITY_ID} and name = ${w.name}`;
+        if (!waiver) {
+          [waiver] = await tx`
+            insert into public.waivers
+              (facility_id, name, services, body, category, expiry_days, created_by)
+            values
+              (${DEMO_FACILITY_ID}, ${w.name}, ${pgTextArray(w.services)}::text[],
+               ${w.body}, ${w.category}, ${w.expiryDays}, ${SEED_ACTOR_SUB})
+            returning id, version`;
+          count("waivers");
+        }
+        // The text copied and hashed exactly as the sign route does it.
+        const text = w.body.trim();
+        const hash = createHash("sha256").update(text, "utf8").digest("hex");
+        for (const [i, clientIndex] of w.signedBy.entries()) {
+          const seedClient = CLIENTS[clientIndex];
+          if (!seedClient) continue;
+          const clientRowId = clientIds.get(seedClient.key)!;
+          const [signed] = await tx`
+            select 1 from public.waiver_signatures
+             where waiver_id = ${waiver.id} and client_id = ${clientRowId}`;
+          if (signed) continue;
+          const signedAt = daysAgoIso(10 + i * 3, 14);
+          await tx`
+            insert into public.waiver_signatures
+              (facility_id, waiver_id, client_id, waiver_name, waiver_version,
+               waiver_text, waiver_hash, signature_name, signed_at, signed_by,
+               expires_at)
+            values
+              (${DEMO_FACILITY_ID}, ${waiver.id}, ${clientRowId}, ${w.name},
+               ${waiver.version}, ${text}, ${hash}, ${seedClient.client.name!},
+               ${signedAt}, ${SEED_ACTOR_SUB},
+               ${w.expiryDays === null ? null : plusDays(signedAt, w.expiryDays)})`;
+          count("waiver signatures");
+        }
+      }
+
+      const formIds = new Map<string, { id: string; name: string }>();
+      for (const f of R.FORMS) {
+        let [form] = await tx`
+          select id from public.forms
+           where facility_id = ${DEMO_FACILITY_ID} and slug = ${f.slug}`;
+        let versionId: string;
+        if (!form) {
+          [form] = await tx`
+            insert into public.forms
+              (facility_id, name, slug, type, status, audience, settings, created_by)
+            values
+              (${DEMO_FACILITY_ID}, ${f.name}, ${f.slug}, ${f.type}, 'published',
+               'customer', ${f.serviceType ? { serviceType: f.serviceType } : {}}::jsonb,
+               ${SEED_ACTOR_SUB})
+            returning id`;
+          const [version] = await tx`
+            insert into public.form_versions
+              (form_id, facility_id, version_number, schema, published_at, created_by)
+            values
+              (${form.id}, ${DEMO_FACILITY_ID}, 1,
+               ${{ questions: f.questions, sections: [], logicRules: [], fieldMapping: [] }}::jsonb,
+               ${daysAgoIso(40, 12)}, ${SEED_ACTOR_SUB})
+            returning id`;
+          versionId = version.id;
+          count("forms");
+        } else {
+          const [version] = await tx`
+            select id from public.form_versions
+             where form_id = ${form.id} order by version_number desc limit 1`;
+          versionId = version.id;
+        }
+        formIds.set(f.slug, { id: form.id, name: f.name });
+        for (const [i, a] of f.answers.entries()) {
+          const clientRowId = clientIds.get(CLIENTS[a.client].key)!;
+          const [answered] = await tx`
+            select 1 from public.form_submissions
+             where form_id = ${form.id} and client_id = ${clientRowId}`;
+          if (answered) continue;
+          await tx`
+            insert into public.form_submissions
+              (facility_id, form_version_id, form_id, client_id, status, answers,
+               submitted_by, submitted_at)
+            values
+              (${DEMO_FACILITY_ID}, ${versionId}, ${form.id}, ${clientRowId},
+               ${i === 0 ? "reviewed" : "submitted"}, ${a.values}::jsonb,
+               ${SEED_ACTOR_SUB}, ${daysAgoIso(20 - i * 4, 18)})`;
+          count("form submissions");
+        }
+      }
+
+      const [haveRequirements] = await tx`
+        select 1 from public.facility_settings
+         where facility_id = ${DEMO_FACILITY_ID} and domain = 'form_requirements'`;
+      if (!haveRequirements) {
+        const services = R.FORM_REQUIREMENTS.services.map((s) => ({
+          serviceType: s.serviceType,
+          serviceLabel: s.serviceLabel,
+          requirements: s.requirements.map((r) => ({
+            formId: formIds.get(r.formSlug)!.id,
+            formName: formIds.get(r.formSlug)!.name,
+            gates: r.gates,
+            enabled: true,
+          })),
+        }));
+        await tx`
+          insert into public.facility_settings (facility_id, domain, value)
+          values (${DEMO_FACILITY_ID}, 'form_requirements', ${{ services }}::jsonb)`;
+        count("form requirements");
+      }
+
+      for (const tag of R.TAGS) {
+        let [row] = await tx`
+          select id from public.facility_tags
+           where facility_id = ${DEMO_FACILITY_ID} and entity_type = ${tag.entity}
+             and name = ${tag.name}`;
+        if (!row) {
+          [row] = await tx`
+            insert into public.facility_tags
+              (facility_id, entity_type, name, color, priority, description, created_by)
+            values
+              (${DEMO_FACILITY_ID}, ${tag.entity}, ${tag.name}, ${tag.color},
+               ${tag.priority}, ${tag.description}, ${SEED_ACTOR_SUB})
+            returning id`;
+          count("tags");
+        }
+        for (const target of tag.on) {
+          const entityId =
+            tag.entity === "pet"
+              ? petIds.get(petByName(String(target))?.key ?? "")
+              : clientIds.get(CLIENTS[Number(target)]?.key ?? "");
+          if (!entityId) continue;
+          const [assigned] = await tx`
+            select 1 from public.facility_tag_assignments
+             where tag_id = ${row.id} and entity_id = ${entityId}`;
+          if (assigned) continue;
+          await tx`
+            insert into public.facility_tag_assignments
+              (tag_id, entity_type, entity_id, facility_id, assigned_by)
+            values (${row.id}, ${tag.entity}, ${entityId}, ${DEMO_FACILITY_ID}, ${SEED_ACTOR_SUB})`;
+          count("tag assignments");
+        }
+      }
+
+      // The floor: shift notes for yesterday and today, and on every stay
+      // that is on now, a care note on the booking and two journal notes.
+      for (const n of R.SHIFT_NOTES) {
+        const day = shiftDay(today, -n.daysAgo);
+        const [exists] = await tx`
+          select 1 from public.daily_care_records
+           where facility_id = ${DEMO_FACILITY_ID} and kind = 'shift_note'
+             and occurred_on = ${day} and payload->>'text' = ${n.text}`;
+        if (exists) continue;
+        await tx`
+          insert into public.daily_care_records
+            (facility_id, occurred_on, kind, subject, payload, created_by_name)
+          values
+            (${DEMO_FACILITY_ID}, ${day}, 'shift_note', '',
+             ${{ text: n.text, author: R.RECORD_AUTHOR, createdAt: `${day}T12:00:00.000Z` }}::jsonb,
+             ${R.RECORD_AUTHOR})`;
+        count("shift notes");
+      }
+      const staying = await tx`
+        select b.ref, b.id,
+               (b.start_at at time zone ${DEMO_TIMEZONE})::date::text as first_day
+          from public.bookings b
+          join public.boarding_stays s on s.booking_id = b.id
+         where b.facility_id = ${DEMO_FACILITY_ID}
+           and s.checked_in_at is not null and s.checked_out_at is null
+           and b.details ? 'demoSeedKey'`;
+      for (const stay of staying) {
+        const subject = String(stay.ref);
+        await tx`
+          update public.bookings
+             set details = details || ${{ careNote: R.CARE_NOTE }}::jsonb
+           where id = ${stay.id} and not (details ? 'careNote')`;
+        for (const j of R.JOURNAL_NOTES) {
+          const day = shiftDay(stay.first_day, j.dayOffset);
+          if (day > today) continue;
+          const [exists] = await tx`
+            select 1 from public.daily_care_records
+             where facility_id = ${DEMO_FACILITY_ID} and kind = 'journal_note'
+               and subject = ${subject} and payload->>'text' = ${j.text}`;
+          if (exists) continue;
+          await tx`
+            insert into public.daily_care_records
+              (facility_id, occurred_on, kind, subject, payload, created_by_name)
+            values
+              (${DEMO_FACILITY_ID}, ${day}, 'journal_note', ${subject},
+               ${{ text: j.text, time: j.time }}::jsonb, ${R.RECORD_AUTHOR})`;
+          count("journal notes");
+        }
+      }
+    }
+
     if (ROLLBACK) {
       // What actually landed, before it is undone: every jsonb column an
       // OBJECT (a driver that pre-stringifies stores a jsonb string, which
