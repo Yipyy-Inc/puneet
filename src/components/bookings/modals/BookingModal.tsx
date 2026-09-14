@@ -94,7 +94,6 @@ import { bookings as historicalBookings } from "@/data/bookings";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
-import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { facilityStaff } from "@/data/facility-staff";
 import {
   groomingCatalogueQueries,
@@ -131,6 +130,8 @@ import type {
   ExtraService,
 } from "@/types/booking";
 import type { Pet, Evaluation } from "@/types/pet";
+import { useCareFees } from "@/lib/api/facility-settings";
+import { careFeeLines } from "@/lib/settings/care-fees";
 
 // Types
 
@@ -307,6 +308,7 @@ export function BookingModal({
   // This modal is reached from THREE shells — customer, facility and employee —
   // so its words live in `shell.booking` rather than in any one portal group.
   const t = useShellText("booking");
+  const { fees: careFees } = useCareFees();
   const locale = useShellLocale();
   const {
     daycare,
@@ -701,15 +703,6 @@ export function BookingModal({
     [],
   );
   const accent = getServiceAccent(selectedService);
-  const approvalRequired = useMemo(() => {
-    if (!selectedService) return false;
-    // Built-in services: check facility config
-    if (isBuiltinService(selectedService))
-      return isApprovalRequired(selectedService);
-    // Custom services: check module's onlineBooking.approvalRequired
-    const mod = getModuleBySlug(selectedService);
-    return mod?.onlineBooking?.approvalRequired ?? false;
-  }, [selectedService, getModuleBySlug]);
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
@@ -1671,85 +1664,47 @@ export function BookingModal({
     });
 
     // ── Medication & feeding service fees ──────────────────────────
-    const sfConfig = facilityConfig.serviceFees;
-    let medicationFeeTotal = 0;
-    let feedingFeeTotal = 0;
+    // The facility's own fees, from Settings → Booking rules, and none until it
+    // sets them. A fixture charged every facility $5 a medication and $5 a pet
+    // fed at daycare until 2026-09-14.
+    const careFeeTotals = careFeeLines(careFees, {
+      service: selectedService,
+      medications: medications.map((m) => ({
+        petId: m.petId,
+        facilityMedAidItem: m.facilityProvidesMedAid
+          ? m.facilityMedAidItem
+          : null,
+      })),
+      feedingPetIds: feedingSchedule
+        .filter((f) => f.occasions.length > 0)
+        .map((f) => f.petId),
+      feedingMeals: feedingSchedule.reduce(
+        (sum, f) => sum + f.occasions.length,
+        0,
+      ),
+    });
     const serviceFeeItems: Array<{ label: string; amount: number }> = [];
-
-    // Medication admin fee
-    if (
-      sfConfig.medication.adminFee.enabled &&
-      medications.length > 0 &&
-      sfConfig.medication.adminFee.applicableServices.includes(selectedService)
-    ) {
-      const scope = sfConfig.medication.adminFee.scope;
-      const amt = sfConfig.medication.adminFee.amount;
-      if (scope === "per_medication") {
-        medicationFeeTotal = amt * medications.length;
-      } else if (scope === "per_pet") {
-        const petCount = new Set(medications.map((m) => m.petId)).size || 1;
-        medicationFeeTotal = amt * petCount;
-      } else {
-        medicationFeeTotal = amt;
-      }
-      if (medicationFeeTotal > 0) {
-        serviceFeeItems.push({
-          label: sfConfig.medication.adminFee.label,
-          amount: medicationFeeTotal,
-        });
-      }
+    if (careFeeTotals.medicationAdmin > 0) {
+      serviceFeeItems.push({
+        label: t("feeMedicationAdmin"),
+        amount: careFeeTotals.medicationAdmin,
+      });
     }
-
-    // Medication aid fee (facility-provided pill pockets, cheese, etc.)
-    if (sfConfig.medication.facilityProvides.enabled) {
-      for (const med of medications) {
-        if (med.facilityProvidesMedAid && med.facilityMedAidItem) {
-          const aidItem = sfConfig.medication.facilityProvides.items.find(
-            (i) => i.id === med.facilityMedAidItem,
-          );
-          if (aidItem && aidItem.fee > 0) {
-            medicationFeeTotal += aidItem.fee;
-            serviceFeeItems.push({
-              label: `${sfConfig.medication.facilityProvides.label}: ${aidItem.name}`,
-              amount: aidItem.fee,
-            });
-          }
-        }
-      }
+    for (const aid of careFeeTotals.aids) {
+      serviceFeeItems.push({
+        label: t("feeMedicationAid").replace("{item}", aid.item.name),
+        amount: aid.amount,
+      });
     }
-
-    // Feeding fee (daycare only — boarding is included)
-    if (
-      selectedService === "daycare" &&
-      sfConfig.feeding.daycare.enabled &&
-      feedingSchedule.length > 0 &&
-      feedingSchedule.some((f) => f.occasions.length > 0)
-    ) {
-      const scope = sfConfig.feeding.daycare.scope;
-      const amt = sfConfig.feeding.daycare.amount;
-      if (scope === "per_pet") {
-        const feedingPetCount =
-          new Set(
-            feedingSchedule
-              .filter((f) => f.occasions.length > 0)
-              .map((f) => f.petId),
-          ).size || 1;
-        feedingFeeTotal = amt * feedingPetCount;
-      } else if (scope === "per_meal") {
-        const totalMeals = feedingSchedule.reduce(
-          (sum, f) => sum + f.occasions.length,
-          0,
-        );
-        feedingFeeTotal = amt * totalMeals;
-      } else {
-        feedingFeeTotal = amt;
-      }
-      if (feedingFeeTotal > 0) {
-        serviceFeeItems.push({
-          label: sfConfig.feeding.daycare.label,
-          amount: feedingFeeTotal,
-        });
-      }
+    const medicationFeeTotal =
+      careFeeTotals.medicationAdmin +
+      careFeeTotals.aids.reduce((sum, aid) => sum + aid.amount, 0);
+    const feedingFeeTotal = careFeeTotals.feeding;
+    if (feedingFeeTotal > 0) {
+      serviceFeeItems.push({
+        label: t("feeDaycareFeeding"),
+        amount: feedingFeeTotal,
+      });
     }
 
     // Evaluation fee — charged per pet that still needs an evaluation
@@ -1920,6 +1875,8 @@ export function BookingModal({
     estimateTaxRate,
     medications,
     feedingSchedule,
+    careFees,
+    t,
     includesEvaluation,
     redeemedPackageId,
     selectedPets,
@@ -2494,12 +2451,11 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
-      // Approval is for REQUESTS: a customer's booking waits for the facility
-      // to accept it. Staff are the facility, so theirs is confirmed — it read
-      // the approval switch for everyone, and a booking staff made at the desk
-      // landed in the requests queue for staff to approve.
-      status:
-        isCustomerMode && approvalRequired ? "request_submitted" : "confirmed",
+      // A customer's booking is a REQUEST, always: the database makes every
+      // booking a customer inserts `request_submitted` with no price
+      // (private.enforce_booking_integrity), whatever a setting said. Staff
+      // are the facility, so theirs is confirmed.
+      status: isCustomerMode ? "request_submitted" : "confirmed",
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       totalCost: calculatePrice.total,

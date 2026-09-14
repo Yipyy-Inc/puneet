@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, FoodUnit } from "@/types/booking";
+import { useCareFees } from "@/lib/api/facility-settings";
+import { feedingFeeApplies } from "@/lib/settings/care-fees";
 
 interface PetOption {
   id: number;
@@ -38,8 +40,6 @@ interface SimpleFeedingFormProps {
   /** The booking service type — used to show feeding fee for daycare */
   serviceType?: string;
 }
-
-const FEEDING_FEES = facilityConfig.serviceFees.feeding;
 
 // Read from facility config (editable in Settings > Care Tasks)
 const opts = facilityConfig.feedingOptions;
@@ -129,8 +129,9 @@ export function SimpleFeedingForm({
   selectedPets,
   serviceType,
 }: SimpleFeedingFormProps) {
-  const showFeedingFee =
-    serviceType === "daycare" && FEEDING_FEES.daycare.enabled;
+  // The facility's own daycare feeding fee — none until it sets one.
+  const { fees } = useCareFees();
+  const showFeedingFee = feedingFeeApplies(fees, serviceType);
   const feedingIncluded = serviceType === "boarding";
   const [customAllergyInput, setCustomAllergyInput] = useState("");
   const [customInstructionInputs, setCustomInstructionInputs] = useState<
@@ -697,10 +698,10 @@ export function SimpleFeedingForm({
               Daycare feeding fee applies
             </p>
             <p className="text-[11px] text-amber-600">
-              ${FEEDING_FEES.daycare.amount.toFixed(2)}{" "}
-              {FEEDING_FEES.daycare.scope === "per_pet"
+              ${fees.daycareFeeding.amount.toFixed(2)}{" "}
+              {fees.daycareFeeding.scope === "per_pet"
                 ? "per pet"
-                : FEEDING_FEES.daycare.scope === "per_meal"
+                : fees.daycareFeeding.scope === "per_meal"
                   ? "per meal"
                   : "flat fee"}{" "}
               when feeding is requested during daycare
