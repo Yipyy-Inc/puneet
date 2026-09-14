@@ -51,10 +51,11 @@ import { groomingQueries } from "@/lib/api/grooming";
 import { bookingQueries } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
-import {
-  getUnfinishedBookingsForCustomer,
-  ABANDONMENT_STEP_LABELS,
-} from "@/data/unfinished-bookings";
+import { ABANDONMENT_STEP_LABELS } from "@/data/unfinished-bookings";
+import { unfinishedBookingQueries } from "@/lib/api/unfinished-bookings";
+import type { UnfinishedBooking } from "@/types/unfinished-booking";
+
+const NO_UNFINISHED: UnfinishedBooking[] = [];
 import { CustomerTrainingCreditsBanner } from "@/components/customer/training/customer-training-credits-banner";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { PageHeader } from "@/components/ui/page-header";
@@ -300,15 +301,15 @@ export default function CustomerDashboardPage() {
     };
   }, [customerPets, myReportCards, t]);
 
-  // Get unfinished bookings for this customer + facility
+  // This customer's own unfinished bookings at the selected facility: the
+  // client ref is per facility, so it picks the facility too.
+  const { data: myUnfinished } = useQuery(unfinishedBookingQueries.mine());
   const unfinishedBookings = useMemo(() => {
-    if (!selectedFacility) return [];
-    if (customerId == null) return [];
-    return getUnfinishedBookingsForCustomer(customerId).filter(
-      (ub) =>
-        ub.facilityId === selectedFacility.id && ub.status !== "recovered",
+    if (customerId == null) return NO_UNFINISHED;
+    return (myUnfinished ?? NO_UNFINISHED).filter(
+      (ub) => ub.clientId === customerId && ub.status !== "recovered",
     );
-  }, [customerId, selectedFacility]);
+  }, [customerId, myUnfinished]);
 
   // Check for urgent actions
   const urgentActions = useMemo(() => {

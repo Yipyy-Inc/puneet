@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
+  abandonmentRecoverySchema,
+  SHIPPED_ABANDONMENT_RECOVERY,
+} from "@/lib/settings/abandonment-recovery";
+import {
   DEFAULT_FORM_NOTIFICATIONS,
   formNotificationsSchema,
   formRedFlagsSchema,
@@ -507,6 +511,12 @@ export const SETTING_DOMAINS = {
     fallback: DEFAULT_FORM_NOTIFICATIONS,
   },
   form_red_flags: { schema: formRedFlagsSchema, fallback: NO_FORM_RED_FLAGS },
+  // How a facility follows up a booking left partway. Nothing sends from it
+  // yet — lib/settings/abandonment-recovery.ts.
+  abandonment_recovery: {
+    schema: abandonmentRecoverySchema,
+    fallback: SHIPPED_ABANDONMENT_RECOVERY,
+  },
   // ── DAYCARE RATES ──────────────────────────────────────────────────────
   //
   // Hourly, half day, full day… with size pricing, included add-ons and the

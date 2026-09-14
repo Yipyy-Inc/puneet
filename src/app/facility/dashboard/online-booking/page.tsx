@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import {
   Inbox,
   Hourglass,
@@ -17,7 +16,8 @@ import {
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
-import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
+import { unfinishedBookingQueries } from "@/lib/api/unfinished-bookings";
+const NO_UNFINISHED: UnfinishedBooking[] = [];
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { bookingQueries } from "@/lib/api/booking";
@@ -248,7 +248,6 @@ export default function OnlineBookingPage() {
   // Still the fixture's numeric id, for the unfinished-bookings tab below —
   // its own fixture, not yet converted (see the debt map).
   const facilityId = 11;
-  const router = useRouter();
   const { t, fill } = useStaffText("bookingRequests");
   const { openBookingModal } = useBookingModal();
   const { profile } = useFacilityProfile();
@@ -284,10 +283,11 @@ export default function OnlineBookingPage() {
     [facilityRequests],
   );
 
-  const unfinishedBookings = React.useMemo(
-    () => getUnfinishedBookingsForFacility(facilityId),
-    [facilityId],
+  // What customers started and left — the facility's own rows now.
+  const { data: unfinishedRows } = useQuery(
+    unfinishedBookingQueries.facility(),
   );
+  const unfinishedBookings = unfinishedRows ?? NO_UNFINISHED;
 
   const abandonedCount = React.useMemo(
     () => unfinishedBookings.filter((b) => b.status === "abandoned").length,
@@ -353,18 +353,9 @@ export default function OnlineBookingPage() {
   };
 
   const handleScheduleUnfinished = (ub: UnfinishedBooking) => {
-    if (ub.clientId) {
-      toast.info(`Opening ${ub.clientName}'s account — resuming their booking`);
-      router.push(
-        `/facility/dashboard/clients/${ub.clientId}?resumeBooking=${ub.id}`,
-      );
-      return;
-    }
-
+    // The booking form, opened on what the customer had entered. It went to
+    // the client page with ?resumeBooking=, which nothing there reads.
     const preselection = buildResumePreselection(ub);
-    toast.info(
-      `Resuming ${ub.clientName}'s abandoned session (guest — no account yet)`,
-    );
     openBookingModal({
       clients: facilityClients,
       facilityId,
