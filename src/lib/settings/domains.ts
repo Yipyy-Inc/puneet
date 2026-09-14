@@ -63,6 +63,10 @@ import {
 } from "@/lib/settings/booking-approval";
 import { careFeesSchema, NO_CARE_FEES } from "@/lib/settings/care-fees";
 import {
+  incidentProtocolsSchema,
+  SHIPPED_INCIDENT_PROTOCOLS,
+} from "@/lib/settings/incident-protocols";
+import {
   SHIPPED_VACCINATION_RULES,
   vaccinationRulesSchema,
 } from "@/lib/settings/vaccinations";
@@ -475,6 +479,13 @@ export const SETTING_DOMAINS = {
   daily_care_config: {
     schema: dailyCareConfigSchema,
     fallback: SHIPPED_DAILY_CARE_ROUTINE,
+  },
+  // The follow-up protocols an incident can start. A useState seeded from the
+  // fixture until 2026-09-14; the fallback is the shipped set — see the banner
+  // in lib/settings/incident-protocols.ts.
+  incident_follow_up_protocols: {
+    schema: incidentProtocolsSchema,
+    fallback: SHIPPED_INCIDENT_PROTOCOLS,
   },
   // ── DAYCARE RATES ──────────────────────────────────────────────────────
   //

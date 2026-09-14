@@ -26,7 +26,6 @@ import { Save, Edit, X } from "lucide-react";
 import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaffCard";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
-import { FeedingRoundSettings } from "@/components/facility/boarding/feeding-round-settings";
 import { DailyCareSettings } from "@/components/facility/boarding/daily-care-settings";
 import type {
   EarlyCheckoutPolicy,
@@ -418,9 +417,6 @@ export default function BoardingSettingsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Feeding Rounds */}
-        <FeedingRoundSettings />
 
         {/* Daily Care Schedule */}
         <DailyCareSettings />

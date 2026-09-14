@@ -32,10 +32,13 @@ import {
   Star,
   Clock,
 } from "lucide-react";
+import type { FollowUpProtocol } from "@/types/incidents";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
-  followUpProtocols as seedProtocols,
-  type FollowUpProtocol,
-} from "@/data/follow-up-protocols";
+  useFollowUpProtocols,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import { ProtocolEditorDialog } from "./ProtocolEditorDialog";
 
 const SEVERITY_VARIANTS: Record<string, string> = {
@@ -68,8 +71,37 @@ function stepBreakdownLabel(steps: FollowUpProtocol["steps"]): string {
   return parts.length > 0 ? `${base} — ${parts.join(" · ")}` : base;
 }
 
+// Nothing renders until the facility's protocols have arrived: the editor
+// seeds `useState` from them, and a first save against the shipped set would
+// write it over the facility's own.
 export function FollowUpProtocolsManager() {
-  const [protocols, setProtocols] = useState<FollowUpProtocol[]>(seedProtocols);
+  const { protocols, configured, isPending } = useFollowUpProtocols();
+  if (isPending) return <Skeleton className="h-64 w-full rounded-xl" />;
+  return (
+    <FollowUpProtocolsEditor
+      key={configured ? "stored" : "shipped"}
+      initial={protocols}
+    />
+  );
+}
+
+function FollowUpProtocolsEditor({ initial }: { initial: FollowUpProtocol[] }) {
+  const saveSetting = useSaveFacilitySetting();
+  const [protocols, setProtocols] = useState<FollowUpProtocol[]>(initial);
+  // Every change saves the whole list, and a refused save puts it back.
+  const persist = (next: FollowUpProtocol[]) => {
+    const previous = protocols;
+    setProtocols(next);
+    saveSetting.mutate(
+      { domain: "incident_follow_up_protocols", value: { protocols: next } },
+      {
+        onError: (error) => {
+          setProtocols(previous);
+          toast.error(error instanceof Error ? error.message : String(error));
+        },
+      },
+    );
+  };
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<FollowUpProtocol | null>(null);
@@ -98,18 +130,19 @@ export function FollowUpProtocolsManager() {
   };
 
   const handleSave = (next: FollowUpProtocol) => {
-    setProtocols((prev) => {
-      const exists = prev.find((p) => p.id === next.id);
-      if (exists) return prev.map((p) => (p.id === next.id ? next : p));
-      return [...prev, next];
-    });
+    const exists = protocols.some((p) => p.id === next.id);
+    persist(
+      exists
+        ? protocols.map((p) => (p.id === next.id ? next : p))
+        : [...protocols, next],
+    );
     setEditorOpen(false);
     setEditing(null);
   };
 
   const handleToggleActive = (protocol: FollowUpProtocol) => {
-    setProtocols((prev) =>
-      prev.map((p) =>
+    persist(
+      protocols.map((p) =>
         p.id === protocol.id
           ? {
               ...p,
@@ -122,7 +155,7 @@ export function FollowUpProtocolsManager() {
   };
 
   const handleDelete = (protocol: FollowUpProtocol) => {
-    setProtocols((prev) => prev.filter((p) => p.id !== protocol.id));
+    persist(protocols.filter((p) => p.id !== protocol.id));
     setConfirmDelete(null);
   };
 

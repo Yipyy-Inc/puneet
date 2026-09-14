@@ -9,7 +9,13 @@ import {
 } from "../_lib/calendar-helpers";
 import { colStart, colSpan, bgClassForHex } from "../_lib/grid-position";
 import type { OccupancyKennel } from "../_lib/calendar-types";
-import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
+
+/** A custom service a guest is booked into today, as a badge on their bar. */
+export interface CustomServiceBadge {
+  id: string;
+  moduleId: string;
+  moduleName: string;
+}
 
 interface BookingBarProps {
   booking: OccupancyKennel;
@@ -21,7 +27,7 @@ interface BookingBarProps {
   hideResizeHandles?: boolean;
   arrivalGlow?: boolean;
   departureGlow?: boolean;
-  customServices?: CustomServiceCheckIn[];
+  customServices?: CustomServiceBadge[];
   moduleColorMap?: Map<string, string>;
   showCustomServices?: boolean;
   onClick?: () => void;

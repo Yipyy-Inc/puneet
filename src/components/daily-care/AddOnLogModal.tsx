@@ -28,7 +28,7 @@ import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { staffMembers } from "@/data/staff";
+import { useStaffRoster } from "@/lib/api/staff-roster";
 import type {
   ScheduledTask,
   TaskExecution,
@@ -104,7 +104,8 @@ export function AddOnLogModal({
   onSubmit,
 }: Props) {
   const { user } = useCurrentUser();
-  const activeStaff = staffMembers.filter((s) => s.isActive);
+  const roster = useStaffRoster();
+  const activeStaff = roster.filter((s) => s.isActive);
 
   const [mode, setMode] = useState<"deliver" | "cannot">("deliver");
   const [actualMinutes, setActualMinutes] = useState("");

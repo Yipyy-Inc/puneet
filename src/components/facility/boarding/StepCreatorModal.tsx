@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { staffMembers } from "@/data/staff";
+import { useStaffRoster } from "@/lib/api/staff-roster";
+import { useStaffRoleLabel } from "@/lib/settings/use-staff-role-label";
 import { addonTypeEnum } from "@/types/boarding";
 import type {
   DailyCareStep,
@@ -143,7 +144,9 @@ export function StepCreatorModal({
   existingSteps,
   onSubmit,
 }: Props) {
-  const activeStaff = staffMembers.filter((s) => s.isActive);
+  const roster = useStaffRoster();
+  const roleLabel = useStaffRoleLabel();
+  const activeStaff = roster.filter((s) => s.isActive);
   const roles = [...new Set(activeStaff.map((s) => s.role))];
 
   const [name, setName] = useState(step?.name ?? "");
@@ -434,7 +437,7 @@ export function StepCreatorModal({
                   <SelectContent>
                     {roles.map((r) => (
                       <SelectItem key={r} value={r}>
-                        {r}
+                        {roleLabel(r)}
                       </SelectItem>
                     ))}
                   </SelectContent>

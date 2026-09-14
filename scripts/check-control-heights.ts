@@ -289,7 +289,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/evaluations/EvaluationFormBuilder.tsx", 2],
   ["src/components/evaluations/StaffEvaluationFormModal.tsx", 1],
   ["src/components/facility/announcement-banner.tsx", 1],
-  ["src/components/facility/boarding/feeding-round-settings.tsx", 2],
   ["src/components/facility/boarding/ScheduleTemplates.tsx", 1],
   ["src/components/facility/CareTaskSettings.tsx", 4],
   ["src/components/facility/CheckinRequirementsSettings.tsx", 4],
