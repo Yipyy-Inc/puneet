@@ -152,18 +152,13 @@ App Router with RSC enabled and the React Compiler on (babel plugin). Three+ por
 - **Cite the design-system section in the commit message** of any interface change — `fix(status-badge): a colour-blind reader can now tell overdue from confirmed (§3)`. The number is how the next person finds the rule that decided the value.
 - Follow the CLAUDE.md build-performance rules for all new code: Server Components by default for pages, types separated from mock data, components under ~500 lines, dynamic imports for heavy/conditional components, consume data via `src/lib/api/` factories (not direct `src/data/` imports).
 - **Conventional Commits** for every commit (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:` …).
-- **Design work goes to `redesign`, not to `main`** — the one named exception,
-  decided 2026-09-03 in
-  [ADR 0007](docs/architecture/decisions/0007-staging-precedes-production-for-the-redesign.md).
-  That branch deploys to **staging.yipyy.com**, where the client reviews the
-  redesign; `main` keeps deploying to production the same day, so a hotfix is
-  never stuck behind unreviewed design work. The cutover is one merge,
-  `redesign` → `main`, at the end.
-  **Merge `main` INTO `redesign` often.** A redesign branch that sits still
-  against a moving product is a merge nobody wants to do.
-  Everything else — every fix, every feature — still goes straight to `main`.
-  **staging shares the production Postgres**, so a click on it is a real write
-  and a queued message would be sent for real by production's own timer.
+- **Design work goes to `main`, like everything else.** The redesign was
+  reviewed on its own branch and on staging.yipyy.com
+  ([ADR 0007](docs/architecture/decisions/0007-staging-precedes-production-for-the-redesign.md)),
+  and reached production on 2026-09-14, when `main` was fast-forwarded to it —
+  `main` had nothing of its own, so production runs exactly what was reviewed.
+  Staging and its CI job were retired the day before, and the `redesign` branch
+  with the cutover.
 - **Push straight to `main`; do not open a PR** unless asked. Decided
   2026-08-19 — the review round trip cost more than it caught here. `main` is
   protected with five required status checks but `enforce_admins` is false, so

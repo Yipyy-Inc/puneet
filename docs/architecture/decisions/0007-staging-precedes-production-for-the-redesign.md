@@ -1,6 +1,9 @@
 # 0007 — Staging precedes production, and the redesign gets its own branch
 
-- **Status:** Accepted
+- **Status:** Superseded 2026-09-14. The redesign reached production when `main` was
+  fast-forwarded to `redesign`, and staging.yipyy.com was retired: its container, Caddy site,
+  compose overlay, deploy script, CI job and send guard are gone, and the `redesign` branch
+  with them. What follows is the record of how the redesign was staged.
 - **Date:** 2026-09-03
 - **Deciders:** Product owner (with the client), AI operating harness
 - **Supersedes nothing.** It adds a second deployment target to
