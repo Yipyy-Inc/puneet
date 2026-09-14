@@ -115,18 +115,21 @@ test.describe("the booking detail link", () => {
     // Asserted on the RENDERED 404 rather than the HTTP status: the dev server
     // serves the not-found page with a 200, so `response.status()` would be
     // testing Next's dev behaviour rather than this route's.
+    //
+    // The not-found page's heading since the route states landed (8b7b5344,
+    // §5d2) — it said "404" when this was written.
     await page.goto("/facility/dashboard/bookings/99999999");
-    await expect(page.getByRole("heading", { name: "404" })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(
+      page.getByRole("heading", { name: "That page has moved" }),
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page).toHaveURL(/\/facility\/dashboard\/bookings\/99999999$/);
   });
 
   test("a reference that is not a number is a 404 too", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
     await page.goto("/facility/dashboard/bookings/not-a-ref");
-    await expect(page.getByRole("heading", { name: "404" })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(
+      page.getByRole("heading", { name: "That page has moved" }),
+    ).toBeVisible({ timeout: 30_000 });
   });
 });
