@@ -56,7 +56,7 @@ export interface DailyCarePayload {
  */
 const SELECT = `
   ref, start_at, end_at, details,
-  clients ( name ),
+  clients ( name, phone ),
   booking_pets ( pets ( ref, name ) ),
   boarding_stays!inner ( checked_in_at, checked_out_at,
                          facility_rooms ( name ) )
@@ -67,7 +67,7 @@ interface Row {
   start_at: string;
   end_at: string;
   details: BookingCareDetails | null;
-  clients: { name: string } | null;
+  clients: { name: string; phone: string | null } | null;
   booking_pets: { pets: { ref: number; name: string } | null }[] | null;
   /**
    * ONE stay, embedded as an object rather than a list.
@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
           petId: pets[0]?.ref ?? 0,
           petNames: pets.map((pet) => pet.name),
           ownerName: row.clients?.name ?? "",
+          ownerPhone: row.clients?.phone ?? null,
           roomName: row.boarding_stays?.facility_rooms?.name ?? null,
           scheduledArrival: row.start_at,
           scheduledDeparture: row.end_at,

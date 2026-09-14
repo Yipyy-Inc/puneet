@@ -2,12 +2,11 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, AlertTriangle, Download, Plus, Phone } from "lucide-react";
-import { boardingGuests, type BoardingGuest } from "@/data/boarding";
+import { BookOpen, Download, Plus, Phone } from "lucide-react";
+import type { CareGuest } from "@/lib/daily-care/care-guest";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
 import { useGuestCareLog } from "@/hooks/use-care-log";
 import {
@@ -21,7 +20,6 @@ import { JournalDayCard } from "./JournalDayCard";
 import { JournalActivityLog } from "./JournalActivityLog";
 import { LogModalRouter } from "@/components/daily-care/log-modals/LogModalRouter";
 import { petFlagsStore } from "@/data/pet-flags-store";
-import { petCareNotesStore } from "@/data/pet-care-notes";
 import { journalNotesStore } from "@/data/journal-notes-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { PetCareNoteCard } from "./PetCareNoteCard";
@@ -37,10 +35,8 @@ import type {
 
 type Props = {
   /** The booking ID, e.g. "bk-001" or numeric — we resolve guests by either */
-  bookingId: number | string;
-  /** Optional list of pet IDs from the booking. If provided, we filter guests
-   *  to only those pets. Otherwise we match by bookingId. */
-  petIds?: number[];
+  /** The guest on the Daily Care board — a real booking, as the board reads it. */
+  guest: CareGuest;
 };
 
 // Single-facility mock — matches DailyCareView's facility naming.
@@ -79,7 +75,7 @@ function dateRange(checkIn: string, checkOut: string): string[] {
   return days;
 }
 
-function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
+function GuestJournalContent({ guest }: { guest: CareGuest }) {
   const { config } = useDailyCareConfig();
   const { executions, log } = useGuestCareLog(guest.id);
 
@@ -93,14 +89,6 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
     if (days.includes(today)) return today;
     return days[0] ?? today;
   });
-
-  // Stay-long per-pet care notes (A4.5) — stable map, flips reference on edit so
-  // the schedule re-derives careNote for the sticky-note indicator.
-  const careNotes = useSyncExternalStore(
-    petCareNotesStore.subscribe,
-    petCareNotesStore.getNotesMap,
-    petCareNotesStore.getNotesMap,
-  );
 
   // Manual journal notes for this guest (A8.4) — free-text, non-task entries
   // that show in the Activity Log timeline with author + time.
@@ -139,8 +127,8 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
 
   const tasksForDay = useMemo(() => {
     const dateObj = new Date(activeDay + "T00:00:00");
-    return generateScheduledTasks([guest], config, dateObj, careNotes);
-  }, [guest, config, activeDay, careNotes]);
+    return generateScheduledTasks([guest], config, dateObj);
+  }, [guest, config, activeDay]);
 
   const dayExecutions = useMemo(
     () => executions.filter((e) => e.date === activeDay),
@@ -312,7 +300,7 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
         10,
       )} (${guest.totalNights} ${guest.totalNights === 1 ? "night" : "nights"})`,
     );
-    const stayNote = petCareNotesStore.getSnapshot(guest.id) ?? guest.notes;
+    const stayNote = guest.careNote || guest.notes;
     if (stayNote) L.push(`Care note: ${stayNote}`);
     L.push("");
 
@@ -325,12 +313,7 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
       });
       L.push(`Day ${i + 1} of ${days.length} — ${dateLabel}`);
 
-      const dayTasks = generateScheduledTasks(
-        [guest],
-        config,
-        dateObj,
-        careNotes,
-      )
+      const dayTasks = generateScheduledTasks([guest], config, dateObj)
         .slice()
         .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));
       const dayExecs = executions.filter((e) => e.date === d);
@@ -388,7 +371,7 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
 
   return (
     <div className="space-y-3">
-      {/* Stay summary — sourced from the booking / BoardingGuest record. */}
+      {/* Stay summary — sourced from the booking. */}
       <div className="bg-muted/30 space-y-2 rounded-lg border p-3">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
           <div>
@@ -434,8 +417,9 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
       </div>
 
       <PetCareNoteCard
-        guestId={guest.id}
+        bookingRef={guest.id}
         petName={guest.petName}
+        careNote={guest.careNote}
         fallbackNote={guest.notes}
       />
 
@@ -540,127 +524,25 @@ function GuestJournalContent({ guest }: { guest: BoardingGuest }) {
   );
 }
 
-export function ReservationJournalPanel({ bookingId }: Props) {
-  // ── MATCHED BY BOOKING, AND ONLY BY BOOKING ─────────────────────────────
-  //
-  // There used to be a fallback: when no guest carried this booking's id, it
-  // matched `boardingGuests` BY PET instead. Every real booking misses the
-  // first lookup — the fixture's ids are `bk-001`..`bk-024` — so every real
-  // booking fell through to the second and rendered somebody else's stay.
-  //
-  // Seen on a live booking on 2026-08-19: a December stay for Alice Johnson
-  // displayed bg-001 — 22–29 April, owner John Smith, Kennel 12 — together
-  // with eight days of care entries. Meals marked "Ate all", "Medications
-  // Given 08:05 AM". None of it happened for that animal, on the page staff
-  // read to find out what did.
-  //
-  // A pet has many stays; a journal belongs to ONE. Matching by pet can only
-  // ever be a guess, and the panel already has the right answer for a miss —
-  // the "Journal not yet built for this reservation" card below, which the
-  // fallback was what prevented anyone from seeing.
-  //
-  // ── AND A NUMERIC REF IS NOT A FIXTURE ID ──────────────────────────────
-  //
-  // It also turned `1` into `"bk-001"` and looked that up. The fixture's ids
-  // run bk-001..bk-024 and the seeded bookings start at ref 1, so the two id
-  // spaces overlap — and the rows they name do not agree:
-  //
-  //   booking ref 1   2-6 July 2026      Alice Johnson
-  //   guest  bg-001   22-29 April 2026   "John Smith", Kennel 12, 7 nights
-  //
-  // The fixture guest was never kept in step with the booking it claims. So a
-  // numeric ref — which is a Postgres row, something this fixture cannot know
-  // about — resolves to no journal rather than to a coincidence.
-  //
-  // A STRING id still resolves, because that is what DailyCareView passes: a
-  // guest's own `bookingId`, read from this same fixture, where the match is
-  // correct by construction.
-  //
-  // `petIds` is kept on the props: both call sites pass it, and it is what a
-  // real per-booking journal will filter on once one exists.
-  const guests = useMemo(() => {
-    if (typeof bookingId !== "string" || bookingId === "") return [];
-    return boardingGuests.filter((g) => g.bookingId === bookingId);
-  }, [bookingId]);
-
-  if (guests.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <BookOpen className="size-4" />
-            Guest Journal
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            <AlertTriangle className="size-4 shrink-0" />
-            <div>
-              <p className="font-medium">
-                No journal for this reservation yet.
-              </p>
-              <p className="mt-0.5">
-                A guest journal records what happened each day of a stay —
-                meals, medications and rounds, as staff complete them. Nothing
-                records those yet, so this panel stays empty rather than showing
-                another stay&apos;s entries. The care instructions themselves
-                are above.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (guests.length === 1) {
-    const guest = guests[0]!;
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <BookOpen className="size-4" />
-              Guest Journal · {guest.petName}
-            </CardTitle>
-            <Badge variant="secondary" className="text-[10px]">
-              {guest.totalNights} {guest.totalNights === 1 ? "night" : "nights"}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <GuestJournalContent guest={guest} />
-        </CardContent>
-      </Card>
-    );
-  }
-
+export function ReservationJournalPanel({ guest }: Props) {
+  // One guest, handed over by the Daily Care board — a real booking. This
+  // matched `boardingGuests` in src/data by booking id, which no real booking
+  // carries, so every journal opened from the board said there was none.
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <BookOpen className="size-4" />
-          Guest Journals
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <BookOpen className="size-4" />
+            Guest Journal · {guest.petName}
+          </CardTitle>
           <Badge variant="secondary" className="text-[10px]">
-            {guests.length} pets
+            {guest.totalNights} {guest.totalNights === 1 ? "night" : "nights"}
           </Badge>
-        </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue={guests[0]!.id}>
-          <TabsList className="mb-3">
-            {guests.map((g) => (
-              <TabsTrigger key={g.id} value={g.id}>
-                {g.petName}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {guests.map((g) => (
-            <TabsContent key={g.id} value={g.id}>
-              <GuestJournalContent guest={g} />
-            </TabsContent>
-          ))}
-        </Tabs>
+        <GuestJournalContent guest={guest} />
       </CardContent>
     </Card>
   );

@@ -14409,3 +14409,22 @@ waivers in `src/data/training-waivers.ts`, and they enrol through a
 `setTimeout`, not the `enroll_in_training_series` RPC. Signing belongs through
 `useBookingWaivers({ service: "training", asCustomer: true })` and
 `useSignWaiver`, as the booking form's Confirm step does.
+
+## 2026-09-14 — a stay's care note and its guest journal are the booking's
+
+**Fixed.** The Daily Care journal matched `boardingGuests` in `src/data` by
+booking id. The board passes a real booking ref, which no fixture guest
+carries, so every journal opened from the board said there was none. The
+stay-long care note lived in a module-level `Map` (`src/data/pet-care-notes.ts`):
+set in one tab, gone on reload, never seen by the next shift. The journal now
+takes the board's own guest. The care note is `details.careNote` on the
+booking, saved through the booking PATCH and read back onto the guest by
+`/api/daily-care`, so the sticky note on every PetRow comes from the stay.
+Saving needs `edit_bookings`; a caretaker without it is refused with a message
+rather than seeing a note that did not save.
+
+**Still debt.** Free-text journal notes (`src/data/journal-notes-store.ts`)
+are still one tab's memory, and so is the journal's staff name. They belong
+in `daily_care_records`, whose `kind` check allows only `shift_note`,
+`pet_flag` and `head_count` today. The journal's dates are formatted `en-US`
+and its PDF title still says "Yipyy" rather than the facility's name.

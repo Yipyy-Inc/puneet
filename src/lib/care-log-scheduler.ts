@@ -304,9 +304,6 @@ export function generateScheduledTasks(
   guests: CareGuest[],
   dailyCareConfig: FacilityDailyCareConfig,
   today: Date = new Date(),
-  /** Per-pet stay-long care-note overrides (A4.5), keyed by guest id. When a
-   *  pet has an override it wins over its record's own notes. */
-  careNotes?: ReadonlyMap<string, string>,
 ): ScheduledTask[] {
   const tasks: ScheduledTask[] = [];
   // F1: honor step.activeDays (0–6, Sun–Sat). A step with activeDays runs only
@@ -344,9 +341,9 @@ export function generateScheduledTasks(
       // Allergens surfaced on every task (not just feeding) so the row can show
       // a consistent red "Avoid: …" line.
       avoidList: guest.allergies,
-      // Per-pet stay-long care note (A4.5) — the editable override wins, else
-      // the pet record's own notes. Surfaced as PetRow's sticky-note.
-      careNote: careNotes?.get(guest.id) ?? guest.notes ?? undefined,
+      // Stay-long care note (A4.5) — the one staff set on the booking wins,
+      // else the owner's own notes. Surfaced as PetRow's sticky-note.
+      careNote: guest.careNote || guest.notes || undefined,
     };
 
     // Potty rounds — one per configured potty step
