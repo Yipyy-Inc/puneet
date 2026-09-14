@@ -14431,3 +14431,19 @@ guest's notes across the whole stay (`?kind=journal_note&subject=`).
 
 **Still debt.** The journal's dates are formatted `en-US`, and its PDF title
 says "Yipyy" rather than the facility's name.
+
+## 2026-09-14 — refund rules were facility 11's, at every facility
+
+**Changed, not fixed.** The orders page read which refund methods are offered,
+the $100 approval threshold, and whether a reason or notes are required from
+`getFiservConfig(11)`, facility 11's fixture, whatever facility was signed
+in. The same values are now one stated `REFUND_POLICY` in
+`retail/orders/page.tsx`, with no fixture facility id behind them. Behaviour
+is unchanged.
+
+**Still debt.** A facility cannot set its own refund policy. The payment
+settings page (`billing/payment-settings`) shows refund switches seeded from
+the fixture and saves nothing. The till's payment grid still reads
+`getFiservConfig(11)` in about thirty places to decide which methods,
+terminals and devices it shows. That is the conversion recorded under "the
+till's Tap to Pay was a simulator".

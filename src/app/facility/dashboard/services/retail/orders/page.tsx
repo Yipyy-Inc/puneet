@@ -89,9 +89,26 @@ import {
 } from "@/data/retail";
 // `processFiservRefund` and the two transaction lookups that fed it are gone
 // with the simulated refund — see the note in `handleProcessReturn`.
-// `getFiservConfig` stays: the refund RULES it carries (enabled methods,
-// approval threshold, required reasons and notes) are real facility policy.
-import { getFiservConfig } from "@/data/fiserv-payments";
+// Refund rules. These were read from `getFiservConfig(11)` — facility 11's
+// fixture — at every facility. The values are unchanged and stated once here,
+// the same for every facility, until a refund policy setting exists (debt
+// map, 2026-09-14): every method offered, a refund over $100 needs someone
+// who may override, reasons and notes recommended rather than required.
+const REFUND_POLICY = {
+  refundMethods: {
+    originalPayment: true,
+    cash: true,
+    storeCredit: true,
+    giftCard: true,
+    custom: true,
+  },
+  refundRules: {
+    managerApprovalRequired: true,
+    managerApprovalThreshold: 100,
+    requireReason: false,
+    requireNotes: false,
+  },
+};
 // The counter sales that are REAL — rows in `payments`, not the module array in
 // `src/data/retail.ts` that empties on refresh — and the call that reverses one.
 import {
@@ -486,9 +503,8 @@ export default function OrdersPage() {
     if (!selectedTransaction || returnForm.items.length === 0) return;
 
     const facilityId = 11; // TODO: Get from context
-    const fiservConfig = getFiservConfig(facilityId);
-    const refundRules = fiservConfig?.refundRules;
-    const refundMethods = fiservConfig?.refundMethods;
+    const refundRules = REFUND_POLICY.refundRules;
+    const refundMethods = REFUND_POLICY.refundMethods;
 
     // Check if refund method is enabled
     if (refundMethods) {
@@ -3027,9 +3043,7 @@ ${outcome.message}`);
                   )}
 
                   {(() => {
-                    const facilityId = 11; // TODO: Get from context
-                    const fiservConfig = getFiservConfig(facilityId);
-                    const refundMethods = fiservConfig?.refundMethods;
+                    const refundMethods = REFUND_POLICY.refundMethods;
 
                     return (
                       <div className="grid grid-cols-2 gap-3">
