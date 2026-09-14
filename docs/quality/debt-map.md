@@ -14563,6 +14563,19 @@ Now:
   without one reads as the old constant's values. `/api/payments/retail/refund`
   enforces the threshold and the original-payment switch, not only the dialog.
   Reasons and notes are still checked on the screen only.
+
+## 2026-09-14 — two booking specs leave paid, cancelled bookings behind, and their cleanup outgrows its timeout
+
+`booking-checkout-truth` and `booking-form-saves` each end by walking every
+booking carrying their marker, refunding what was paid and cancelling. 88
+marked bookings are **cancelled with `amount_paid > 0`**: 44 per spec, the
+oldest from 2026-09-11, with more added on every run. The refund the cleanup
+posts does not clear them, so each run walks all of them again. A local run on
+2026-09-14 hit the 120 s `afterAll` limit in both specs, and one test read a
+non-list from `/api/bookings` while the server was busy. CI passed the same
+specs on acab04e8. Still to do: find why the refund on a cancelled booking
+leaves `amount_paid` unchanged, then fix the cleanup and purge the rows.
+
 - A draft is kept only when the customer chooses "discard". Closing the tab
   keeps nothing.
 - The draft holds the first pet only.
