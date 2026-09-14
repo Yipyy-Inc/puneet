@@ -10,7 +10,7 @@ import {
   getOutcomeOption,
 } from "@/components/daily-care/outcome-meta";
 import type { TaskExecution } from "@/types/care-log";
-import type { JournalNote } from "@/data/journal-notes-store";
+import type { JournalNote } from "@/lib/api/journal-notes";
 
 type Props = {
   executions: TaskExecution[];

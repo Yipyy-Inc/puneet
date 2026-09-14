@@ -26,7 +26,7 @@ import type { Json } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-const KINDS = ["shift_note", "pet_flag", "head_count"] as const;
+const KINDS = ["shift_note", "pet_flag", "head_count", "journal_note"] as const;
 type Kind = (typeof KINDS)[number];
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -35,17 +35,21 @@ export interface DailyCareRecord {
   id: string;
   kind: Kind;
   subject: string;
+  /** The day the record belongs to, `YYYY-MM-DD`. */
+  occurredOn: string;
   payload: Record<string, unknown>;
   createdByName: string | null;
   createdAt: string;
 }
 
-const SELECT = "id, kind, subject, payload, created_by_name, created_at";
+const SELECT =
+  "id, kind, subject, occurred_on, payload, created_by_name, created_at";
 
 type Row = {
   id: string;
   kind: Kind;
   subject: string;
+  occurred_on: string;
   payload: Record<string, unknown> | null;
   created_by_name: string | null;
   created_at: string;
@@ -55,6 +59,7 @@ const toRecord = (row: Row): DailyCareRecord => ({
   id: row.id,
   kind: row.kind,
   subject: row.subject,
+  occurredOn: row.occurred_on,
   payload: row.payload ?? {},
   createdByName: row.created_by_name,
   createdAt: row.created_at,
@@ -65,7 +70,33 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-  const date = request.nextUrl.searchParams.get("date") ?? "";
+  const params = request.nextUrl.searchParams;
+
+  // One guest's journal notes, every day of the stay. A journal is read by
+  // guest rather than by day, because its activity log spans the whole stay.
+  if (params.get("kind") === "journal_note") {
+    const subject = params.get("subject") ?? "";
+    if (!subject) {
+      return NextResponse.json({ error: "Name a guest." }, { status: 422 });
+    }
+    const journalScope = await activeFacilityIdForStaff();
+    if (!journalScope) return NextResponse.json([]);
+    const supabase = await createServerClient();
+    const { data, error } = await supabase
+      .from("daily_care_records")
+      .select(SELECT)
+      .match(inFacility(journalScope))
+      .eq("kind", "journal_note")
+      .eq("subject", subject)
+      .order("created_at", { ascending: true })
+      .limit(500);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(((data ?? []) as unknown as Row[]).map(toRecord));
+  }
+
+  const date = params.get("date") ?? "";
   if (!ISO_DAY.test(date)) {
     return NextResponse.json({ error: "Name a day." }, { status: 422 });
   }
@@ -125,7 +156,7 @@ export async function POST(request: NextRequest) {
   const subject = kind === "shift_note" ? "" : String(body.subject);
   const denied = "You do not have permission to write on this board.";
 
-  if (kind !== "shift_note") {
+  if (kind === "pet_flag" || kind === "head_count") {
     const { data: existing } = await supabase
       .from("daily_care_records")
       .select("id")

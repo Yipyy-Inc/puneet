@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,7 @@ import { JournalDayCard } from "./JournalDayCard";
 import { JournalActivityLog } from "./JournalActivityLog";
 import { LogModalRouter } from "@/components/daily-care/log-modals/LogModalRouter";
 import { petFlagsStore } from "@/data/pet-flags-store";
-import { journalNotesStore } from "@/data/journal-notes-store";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useAddJournalNote, useJournalNotes } from "@/lib/api/journal-notes";
 import { PetCareNoteCard } from "./PetCareNoteCard";
 import { toast } from "sonner";
 import type {
@@ -92,16 +91,10 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
 
   // Manual journal notes for this guest (A8.4) — free-text, non-task entries
   // that show in the Activity Log timeline with author + time.
-  const { user } = useCurrentUser();
-  const allJournalNotes = useSyncExternalStore(
-    journalNotesStore.subscribe,
-    journalNotesStore.getSnapshot,
-    journalNotesStore.getSnapshot,
-  );
-  const guestNotes = useMemo(
-    () => allJournalNotes.filter((n) => n.guestId === guest.id),
-    [allJournalNotes, guest.id],
-  );
+  // Saved as Daily Care records, so the next shift reads them; the author is
+  // the signed-in member, stamped by the server.
+  const { notes: guestNotes } = useJournalNotes(guest.id);
+  const addNote = useAddJournalNote(guest.id);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
 
@@ -111,18 +104,17 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
-    journalNotesStore.add({
-      guestId: guest.id,
-      date: todayIso(),
-      time: `${hh}:${mm}`,
-      author: user.name,
-      authorInitials: user.initials,
-      text,
-      createdAt: now.toISOString(),
-    });
-    setNoteText("");
-    setNoteOpen(false);
-    toast.success("Note added to journal.");
+    addNote.mutate(
+      { date: todayIso(), time: `${hh}:${mm}`, text },
+      {
+        onSuccess: () => {
+          setNoteText("");
+          setNoteOpen(false);
+          toast.success("Note added to journal.");
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   }
 
   const tasksForDay = useMemo(() => {
