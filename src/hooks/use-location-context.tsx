@@ -23,9 +23,9 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 // domain -- the cross-location toggles HQ Settings edits. No migration: a new
 // domain is an INSERT (`facility_settings` is keyed by (facility_id, domain),
 // see lib/settings/domains.ts). Converted HERE, not only on the settings
-// screen, for the same reason business hours were: `RedeemGiftCardModal`,
-// `DigitalWaiversManager` and `PetIncidentSafetyAlert` all read
-// `crossLocationGiftCards`/`sharedWaivers`/`sharedIncidentHistory` through
+// screen, for the same reason business hours were: `RedeemGiftCardModal`
+// and `DigitalWaiversManager` read `crossLocationGiftCards`/`sharedWaivers`
+// (and `sharedIncidentHistory` is read the same way) through
 // this context, and fixing the editor alone would have left every one of
 // them enforcing a value nobody could change.
 // ============================================================================

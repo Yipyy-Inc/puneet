@@ -127,13 +127,6 @@ const ALLOWED = new Map<string, string>([
       "than wrong. Delete this entry the day inventory is converted.",
   ],
   [
-    "src/components/incidents/PetIncidentSafetyAlert.tsx",
-    "Reads `incidents` from src/data and keys on a NUMERIC petId, so nothing " +
-      "here is a real row. Note that `public.incidents` DOES have location_id " +
-      "— when this component is converted, read that column, do not keep the " +
-      "hash.",
-  ],
-  [
     "src/hooks/use-unified-bookings.tsx",
     "The hash is applied ONLY to `custom` bookings, which are still the " +
       "fixture's; boarding, daycare, grooming and training come from Postgres " +
