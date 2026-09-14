@@ -21,6 +21,8 @@
 export interface BookingListParams {
   /** One booking, by its public reference. */
   ref?: number;
+  /** These bookings, by reference (at most MAX_BOOKING_REFS). */
+  refs?: readonly number[];
   /** One client's bookings, by the client's reference. */
   clientRef?: number;
   /** Bookings still going on or after this day (YYYY-MM-DD). */
@@ -36,6 +38,7 @@ export interface BookingListParams {
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const STATUS = /^[a-z_]{1,40}$/;
 export const MAX_BOOKING_LIST_LIMIT = 1000;
+export const MAX_BOOKING_REFS = 200;
 
 function positiveInt(value: string | null): number | undefined {
   if (!value || !/^\d{1,12}$/.test(value)) return undefined;
@@ -47,6 +50,11 @@ function positiveInt(value: string | null): number | undefined {
 export function bookingListSearch(params: BookingListParams = {}): string {
   const search = new URLSearchParams();
   if (params.ref) search.set("ref", String(params.ref));
+  const refs = [...new Set(params.refs ?? [])]
+    .filter((r) => Number.isInteger(r) && r > 0)
+    .sort((a, b) => a - b)
+    .slice(0, MAX_BOOKING_REFS);
+  if (refs.length > 0) search.set("refs", refs.join(","));
   if (params.clientRef) search.set("clientRef", String(params.clientRef));
   if (params.from && DAY.test(params.from)) search.set("from", params.from);
   if (params.to && DAY.test(params.to)) search.set("to", params.to);
@@ -78,6 +86,14 @@ export function parseBookingListParams(
   const limit = positiveInt(search.get("limit"));
   return {
     ref: positiveInt(search.get("ref")),
+    refs: (() => {
+      const list = (search.get("refs") ?? "")
+        .split(",")
+        .map((r) => positiveInt(r.trim()))
+        .filter((r): r is number => r !== undefined)
+        .slice(0, MAX_BOOKING_REFS);
+      return list.length > 0 ? list : undefined;
+    })(),
     clientRef: positiveInt(search.get("clientRef")),
     from: from && DAY.test(from) ? from : undefined,
     to: to && DAY.test(to) ? to : undefined,

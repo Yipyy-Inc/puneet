@@ -21,6 +21,7 @@ describe("bookingListSearch", () => {
     });
     expect(parseBookingListParams(new URLSearchParams(search))).toEqual({
       ref: undefined,
+      refs: undefined,
       clientRef: undefined,
       from: "2026-09-14",
       to: "2026-09-20",
@@ -46,6 +47,7 @@ describe("parseBookingListParams", () => {
       ),
     ).toEqual({
       ref: undefined,
+      refs: undefined,
       clientRef: undefined,
       from: undefined,
       to: undefined,
@@ -61,6 +63,14 @@ describe("parseBookingListParams", () => {
     expect(parsed.ref).toBe(62883);
     expect(parsed.clientRef).toBe(15);
   });
+});
+
+test("a list of refs is de-duplicated, sorted and read back as numbers", () => {
+  const search = bookingListSearch({ refs: [62883, 15, 62883, -2] });
+  expect(search).toBe("?refs=15%2C62883");
+  expect(parseBookingListParams(new URLSearchParams(search)).refs).toEqual([
+    15, 62883,
+  ]);
 });
 
 test("shiftDay crosses a month in UTC, whatever the machine's zone", () => {

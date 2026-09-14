@@ -96,6 +96,9 @@ export async function GET(request: NextRequest) {
   if (params.ref) {
     query = query.eq("ref", params.ref);
   }
+  if (params.refs) {
+    query = query.in("ref", [...params.refs]);
+  }
   // Padded a day each side: the days are the facility's, the columns are
   // instants, and every caller keeps its exact day filter.
   if (params.from) {

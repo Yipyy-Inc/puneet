@@ -3,11 +3,13 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { bookingQueries } from "@/lib/api/booking";
+import {
+  bookingClientSummaryQueries,
+  summaryByClient,
+} from "@/lib/api/booking-client-summary";
 import { useFacilityVaccinations } from "@/lib/api/vaccinations";
 import { NO_ITEMS } from "@/lib/no-items";
 import { addDaysIso, expiryState, localToday } from "@/lib/vaccinations";
-import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
 
 // ── WHAT THE FOUR RECORD FILTERS READ ───────────────────────────────────────
@@ -115,11 +117,16 @@ export function useClientFilters() {
   const needsVaccinations =
     filters.vaccineExpired !== "any" || filters.vaccineExpiryDays !== null;
 
-  const { data: bookingData } = useQuery({
-    ...bookingQueries.all(),
+  // Services, an open booking and the last visit per client, from the
+  // booking summary rather than every booking the facility ever had.
+  const { data: summaryData } = useQuery({
+    ...bookingClientSummaryQueries.all(),
     enabled: needsBookings,
   });
-  const bookings = (bookingData ?? NO_ITEMS) as Booking[];
+  const summary = useMemo(
+    () => summaryByClient(summaryData ?? NO_ITEMS),
+    [summaryData],
+  );
   const { vaccinations } = useFacilityVaccinations(needsVaccinations);
 
   const setFilter = useCallback(
@@ -345,20 +352,14 @@ export function useClientFilters() {
 
         // Services
         if (filters.services.length > 0) {
-          const clientServices = bookings
-            .filter((b) => b.clientId === client.id)
-            .map((b) => b.service.toLowerCase());
+          const clientServices = summary.get(client.id)?.services ?? [];
           if (!filters.services.some((s) => clientServices.includes(s)))
             return false;
         }
 
         // Has Active Booking
         if (filters.hasActiveBooking !== "any") {
-          const hasActive = bookings.some(
-            (b) =>
-              b.clientId === client.id &&
-              (b.status === "confirmed" || b.status === "pending"),
-          );
+          const hasActive = summary.get(client.id)?.hasActive ?? false;
           if (filters.hasActiveBooking === "yes" && !hasActive) return false;
           if (filters.hasActiveBooking === "no" && hasActive) return false;
         }
@@ -391,13 +392,9 @@ export function useClientFilters() {
 
         // Last Visit (day range)
         if (filters.lastVisitDays !== null) {
-          const clientBookings = bookings.filter(
-            (b) => b.clientId === client.id,
-          );
-          if (clientBookings.length === 0) return false;
-          const latest = Math.max(
-            ...clientBookings.map((b) => new Date(b.startDate).getTime()),
-          );
+          const lastDay = summary.get(client.id)?.lastDay;
+          if (!lastDay) return false;
+          const latest = new Date(`${lastDay}T12:00:00`).getTime();
           const daysAgo = (Date.now() - latest) / (1000 * 60 * 60 * 24);
           const range = filters.lastVisitDays;
           const maxDays = range.max ?? range.preset;
@@ -435,7 +432,7 @@ export function useClientFilters() {
         return true;
       });
     },
-    [filters, bookings, vaccinations],
+    [filters, summary, vaccinations],
   );
 
   return {

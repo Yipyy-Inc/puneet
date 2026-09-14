@@ -14,6 +14,7 @@ import { useActiveFacilityId } from "@/lib/api/active-facility";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { bookingMutations, bookingQueries } from "@/lib/api/booking";
+import { bookingClientSummaryQueries } from "@/lib/api/booking-client-summary";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -590,11 +591,6 @@ export function OperationsCalendar() {
   // Tasks are the task board's (`/api/tasks`). This comment used to say they
   // had no table and so stayed on the `facilityTasks` fixture — a morning of
   // invented feedings drawn on every facility's calendar.
-  const { data: bookingRecordsData, isPending: bookingsPending } = useQuery(
-    bookingQueries.all(),
-  );
-  // Stable while loading — see lib/no-items.ts.
-  const bookingRecords = bookingRecordsData ?? NO_ITEMS;
   const queryClient = useQueryClient();
 
   /**
@@ -631,12 +627,6 @@ export function OperationsCalendar() {
   const [bookingAddOnState, setBookingAddOnState] = useState<
     Record<number, BookingDrawerAddOnItem[]>
   >({});
-
-  // The drawer's add-on chips, derived from whatever the bookings actually
-  // carry rather than seeded once from a fixture.
-  useEffect(() => {
-    setBookingAddOnState(mapBookingToAddOns(bookingRecords));
-  }, [bookingRecords]);
 
   const [taskCompletionAudit, setTaskCompletionAudit] = useState<
     TaskCompletionAuditEntry[]
@@ -693,6 +683,41 @@ export function OperationsCalendar() {
   const [anchorDate, setAnchorDate] = useState<Date>(() => {
     return parseDateKey(searchParams.get("date")) ?? new Date();
   });
+
+  // The bookings of the window on screen (a day, a week, a month), padded a
+  // week each side, not every booking the facility ever had. A stay that
+  // began before the window still arrives: the route keeps any booking
+  // ending on or after `from`. Anniversaries come from the booking summary.
+  const bookingWindow = useMemo(() => {
+    const visible = getViewWindow(anchorDate, view);
+    const from = new Date(visible.start);
+    from.setDate(from.getDate() - 7);
+    const to = new Date(visible.end);
+    to.setDate(to.getDate() + 7);
+    return { from: formatDateKey(from), to: formatDateKey(to) };
+  }, [anchorDate, view]);
+  const { data: bookingRecordsData, isPending: bookingsPending } = useQuery(
+    bookingQueries.window(bookingWindow),
+  );
+  // Stable while loading — see lib/no-items.ts.
+  const bookingRecords = bookingRecordsData ?? NO_ITEMS;
+  const { data: bookingSummary } = useQuery(bookingClientSummaryQueries.all());
+  const firstBookingDates = useMemo(
+    () =>
+      new Map(
+        (bookingSummary ?? []).map((row) => [
+          row.clientRef,
+          new Date(`${row.firstDay}T12:00:00`),
+        ]),
+      ),
+    [bookingSummary],
+  );
+
+  // The drawer's add-on chips, derived from whatever the bookings actually
+  // carry rather than seeded once from a fixture.
+  useEffect(() => {
+    setBookingAddOnState(mapBookingToAddOns(bookingRecords));
+  }, [bookingRecords]);
 
   const [searchTerm, setSearchTerm] = useState<string>(() => {
     return searchParams.get("search") ?? "";
@@ -943,6 +968,7 @@ export function OperationsCalendar() {
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
       bookings: bookingRecords,
+      firstBookingDates,
       clients: clientRecords,
       // Neither is this facility's: both were fixture arrays — the sample
       // shop's sales and sample custom-service check-ins — drawn on every
@@ -977,6 +1003,7 @@ export function OperationsCalendar() {
   }, [
     activeModules,
     bookingRecords,
+    firstBookingDates,
     completedAddOns,
     manualFacilityEvents,
     taskRecords,
