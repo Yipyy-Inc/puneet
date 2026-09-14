@@ -17,6 +17,8 @@
 --   U9  staff cannot write the recovery record either
 --   U10 service_role resolves it, and a re-save after that does not reopen it
 --   U11 the outbox takes a booking_recovery message
+--   U12 a booking made for the client and service recovers the draft; another
+--       service's draft stays abandoned
 -- ============================================================================
 
 begin;
@@ -305,6 +307,38 @@ begin
   end;
   perform pg_temp.t('U11 the outbox takes a booking_recovery message',
     v_state = 'queued', v_state);
+end $$;
+
+-- ── U12 ───────────────────────────────────────────────────────────────────
+do $$
+declare v_grooming uuid; v_daycare_status text; v_grooming_status text; v_state text := 'none';
+begin
+  -- A second draft, for a service the booking below is not for.
+  insert into public.unfinished_bookings (facility_id, client_id, service, step)
+  values ('00000000-0000-0000-0000-0000009b0020', '00000000-0000-0000-0000-0000009b0041',
+          'grooming', 'service_selection')
+  returning id into v_grooming;
+
+  begin
+    insert into public.bookings
+      (facility_id, client_id, service, status, start_at, end_at,
+       base_price, discount, total_cost)
+    values
+      ('00000000-0000-0000-0000-0000009b0020', '00000000-0000-0000-0000-0000009b0041',
+       'daycare', 'confirmed', now() + interval '3 days',
+       now() + interval '3 days 8 hours', 40, 0, 40);
+    v_state := 'booked';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+
+  select status into v_daycare_status from public.unfinished_bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0041' and service = 'daycare';
+  select status into v_grooming_status from public.unfinished_bookings
+   where id = v_grooming;
+  perform pg_temp.t('U12 a booking recovers the draft for its service, and only that one',
+    v_state = 'booked' and v_daycare_status = 'recovered' and v_grooming_status = 'abandoned',
+    format('%s daycare=%s grooming=%s', v_state, v_daycare_status, v_grooming_status));
 end $$;
 
 -- ── Report ────────────────────────────────────────────────────────────────

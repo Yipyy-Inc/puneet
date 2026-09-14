@@ -116,6 +116,26 @@ export function useSaveUnfinishedBooking() {
   });
 }
 
+/**
+ * Customer: keep the draft as the page is hidden or closed.
+ *
+ * `keepalive` lets the request outlive the tab, which a mutation cannot. Fire
+ * and forget: there is nobody left to tell if it fails, and the next save
+ * (another step, another visit) writes the same open draft again.
+ */
+export function saveUnfinishedBookingOnLeave(write: UnfinishedBookingWrite) {
+  try {
+    void fetch("/api/customer/unfinished-bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(write),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // A browser refusing a keepalive body over its size cap: nothing to do.
+  }
+}
+
 /** Customer: they came back and booked. */
 export function useMarkUnfinishedBookingRecovered() {
   const invalidate = useInvalidate();

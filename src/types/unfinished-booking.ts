@@ -85,6 +85,8 @@ export interface UnfinishedBooking {
   clientPhone?: string;
   /** Set when the customer already selected a specific pet on their profile */
   petId?: number;
+  /** Every pet chosen, first included. */
+  petIds?: number[];
   petName?: string;
   petType?: "dog" | "cat";
   service?: string;
