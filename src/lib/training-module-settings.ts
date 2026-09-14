@@ -77,11 +77,6 @@ export interface TrainingModuleSettings {
    *  enrollment-confirmation email + toast. */
   defaultEnrollmentMessage: string;
 
-  /** Per-waiver "required" override. Key = waiver id (from
-   *  `defaultTrainingWaivers`); value = the facility's policy. Unlisted
-   *  waivers fall back to the catalog's own `required` flag. */
-  waiverRequiredOverrides: Record<string, boolean>;
-
   /** Whether the session-completion flow auto-drafts a report card. */
   autoCreateReportCardOnSessionComplete: boolean;
   /** When to deliver fresh report cards to owners. */
@@ -166,7 +161,6 @@ export const defaultTrainingModuleSettings: TrainingModuleSettings = {
   requireEvaluationBeforeEnrollment: false,
   defaultEnrollmentMessage:
     "Welcome! We can't wait to meet your dog. Please arrive 10 minutes early on the first day with your dog on a 6-foot leash, treats, and proof of vaccinations.",
-  waiverRequiredOverrides: {},
   autoCreateReportCardOnSessionComplete: true,
   reportCardSendMode: "after_review",
   requireVideoForHomeworkSubmission: false,

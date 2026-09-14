@@ -14383,3 +14383,29 @@ sent. The only readers of the old values were browser fixtures:
 The work is to read these domains in `/api/forms/[id]/submit` for red flags and
 staff notifications, and in the booking and kiosk paths for requirements.
 `src/lib/form-requirements.ts` was imported by nothing and is deleted.
+
+## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
+
+**Fixed.** The grooming Inventory tab was a 1,700-line page over
+`groomingProducts` and `inventoryOrders` in `src/data`: the same shampoo stock
+and purchase orders at every facility, none of them real. The tab is gone and
+its URL redirects to Retail → Inventory, which holds the facility's real
+products, stock ledger and purchase orders. `src/components/facility/GroomingSection.tsx`
+was imported by nothing (the settings route renders `_sections/grooming.tsx`).
+It was deleted, along with its fixture stock deduction
+(`src/lib/grooming-inventory-deduction.ts`), which toasted "Products deducted
+from inventory" for a count that lived only in the browser.
+
+Training settings listed three fixture waivers with a required/optional switch
+per fixture id, and no enrolment read those switches. The card now lists the
+facility's own active waivers that apply to training (a waiver naming
+training, general or no service) and links to Waivers & Contracts, where they
+are managed.
+
+**Still debt.** Supplies a grooming service uses are not deducted from stock
+when an appointment completes; nothing did that for real before either. The
+customer training page's enrolment and drop-in dialogs still tick the fixture
+waivers in `src/data/training-waivers.ts`, and they enrol through a
+`setTimeout`, not the `enroll_in_training_series` RPC. Signing belongs through
+`useBookingWaivers({ service: "training", asCustomer: true })` and
+`useSignWaiver`, as the booking form's Confirm step does.

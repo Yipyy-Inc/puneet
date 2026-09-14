@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { toast } from "sonner";
 import { trainingQueries } from "@/lib/api/training";
 import { useSaveFacilitySetting } from "@/lib/api/facility-settings";
@@ -72,7 +73,7 @@ import {
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { useTrainingLabels } from "@/lib/settings/use-training-labels";
 import { formatDuration, formatNumber } from "@/lib/i18n/format";
-import { defaultTrainingWaivers } from "@/data/training-waivers";
+import { waiverQueries, type WaiverRow } from "@/lib/api/waivers";
 import type {
   TrainingPathway,
   TrainingPathwayStep,
@@ -87,6 +88,8 @@ import {
 import type { TrainingPackage } from "@/types/training";
 import { MILESTONE_ORDER } from "@/lib/pet-milestones";
 import { MILESTONE_VISUAL } from "@/components/training/milestone-visual-table";
+
+const NO_WAIVER_ROWS: WaiverRow[] = [];
 
 // Module-level seed for newly-created location ids — keeps writes pure for
 // the React Compiler (no Date.now() inside render).
@@ -140,6 +143,19 @@ function TrainingModuleSettingsForm({
   const { locale, section } = useSettingsText();
   const t = section("training");
   const labels = useTrainingLabels();
+  // The waivers a customer signs before training are the facility's own, from
+  // Waivers & Contracts. This card listed three fixture waivers and saved a
+  // required/optional override per fixture id, which no enrolment read.
+  const { data: waiverRows, isPending: waiversPending } = useQuery(
+    waiverQueries.active(),
+  );
+  const trainingWaivers = (waiverRows ?? NO_WAIVER_ROWS).filter(
+    (waiver) =>
+      waiver.requiresSignature &&
+      (waiver.services.length === 0 ||
+        waiver.services.includes("general") ||
+        waiver.services.includes("training")),
+  );
   // Intl picks the plural form, not `n === 1`: French counts 0 as singular.
   const rules = new Intl.PluralRules(locale === "fr" ? "fr-CA" : "en-CA");
   const pluralWord = (n: number, one: string, other: string) =>
@@ -578,78 +594,42 @@ function TrainingModuleSettingsForm({
             </CardTitle>
             <p className="text-muted-foreground text-sm">{t("waiverIntro")}</p>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {defaultTrainingWaivers.map((waiver) => {
-                const overridden =
-                  draft.waiverRequiredOverrides[waiver.id] !== undefined;
-                const required = overridden
-                  ? draft.waiverRequiredOverrides[waiver.id]!
-                  : waiver.required;
-                return (
+          <CardContent className="space-y-3">
+            {waiversPending ? (
+              <Skeleton className="h-16 w-full rounded-xl" />
+            ) : trainingWaivers.length === 0 ? (
+              <p className="text-ink-tertiary text-[14.5px]">
+                {t("waiverNone")}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {trainingWaivers.map((waiver) => (
                   <li
                     key={waiver.id}
-                    className={cn(
-                      // The required state was a rose WASH behind the card — §6 rule 2
-                      // tints a metric tile and a status chip and nothing else. The chip
-                      // beside the title says "Required" in a word already.
-                      "bg-card rounded-xl border p-3 shadow-sm",
-                    )}
+                    className="bg-card flex items-center justify-between gap-3 rounded-xl border p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <p className="text-sm font-semibold">
-                            {labels.waiverTitle(waiver.id)}
-                          </p>
-                          <Badge variant={required ? "pending" : "outline"}>
-                            {required
-                              ? t("waiverRequired")
-                              : t("waiverOptional")}
-                          </Badge>
-                          {overridden && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px]"
-                              title={t("waiverOverriddenHelp")}
-                            >
-                              {t("waiverOverridden")}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-muted-foreground text-micro/relaxed mt-1">
-                          {labels.waiverSummary(waiver.id)}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={required}
-                        onCheckedChange={(next) =>
-                          setDraft((prev) => {
-                            const overrides = {
-                              ...prev.waiverRequiredOverrides,
-                            };
-                            if (next === waiver.required) {
-                              // Back to catalog default — clear the override.
-                              delete overrides[waiver.id];
-                            } else {
-                              overrides[waiver.id] = next;
-                            }
-                            return {
-                              ...prev,
-                              waiverRequiredOverrides: overrides,
-                            };
-                          })
-                        }
-                        aria-label={t("waiverToggle").replace(
-                          "{name}",
-                          labels.waiverTitle(waiver.id),
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{waiver.name}</p>
+                      <p className="text-ink-tertiary text-[13.5px]">
+                        {t("waiverVersion").replace(
+                          "{version}",
+                          waiver.version,
                         )}
-                      />
+                      </p>
                     </div>
+                    <Badge variant="outline" className="shrink-0 gap-1">
+                      <FileSignature className="size-4" />
+                      {t("waiverSignature")}
+                    </Badge>
                   </li>
-                );
-              })}
-            </ul>
+                ))}
+              </ul>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/facility/dashboard/waivers">
+                {t("waiverManage")}
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 
