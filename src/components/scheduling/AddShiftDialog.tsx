@@ -35,7 +35,11 @@ import { RecurrenceSection } from "@/components/scheduling/RecurrenceSection";
 import { ConflictList } from "@/components/scheduling/ConflictList";
 import { SkillMultiSelect } from "@/components/scheduling/SkillMultiSelect";
 import { skillsCatalog } from "@/data/scheduling";
-import { parseLocalDate, generateRecurringDates } from "@/lib/shift-recurrence";
+import {
+  parseLocalDate,
+  generateRecurringDates,
+  formatDateLocal,
+} from "@/lib/shift-recurrence";
 import {
   detectShiftConflicts,
   hasBlockingConflict,
@@ -96,7 +100,7 @@ export function AddShiftDialog({
 }: AddShiftDialogProps) {
   const isEditing = !!editingShift;
 
-  const todayIso = new Date().toISOString().split("T")[0];
+  const todayIso = formatDateLocal(new Date());
   const initialDate = editingShift?.date ?? defaultDate ?? todayIso;
 
   // ── Core fields
@@ -128,7 +132,7 @@ export function AddShiftDialog({
   const [endDate, setEndDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 3);
-    return d.toISOString().split("T")[0];
+    return formatDateLocal(d);
   });
   const [occurrences, setOccurrences] = useState("12");
 

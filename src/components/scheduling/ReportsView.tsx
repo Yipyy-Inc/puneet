@@ -59,6 +59,7 @@ import {
   toAttendanceEntries,
   toScheduleEmployees,
 } from "@/lib/api/mappers/scheduling";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 const RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -114,8 +115,8 @@ export function ReportsView() {
     const start = new Date();
     start.setDate(end.getDate() - parseInt(days));
     return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
+      start: formatDateLocal(start),
+      end: formatDateLocal(end),
     };
   }, [days]);
 

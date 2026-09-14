@@ -14233,6 +14233,14 @@ unit selector’s label rather than a phrase with its own case and plural.
 
 ## 2026-09-14 — the scheduling grid puts a shift on the wrong day in the evening
 
+> **Fixed 2026-09-14.** Every scheduling screen — the grid, its week range and
+> day view, Add shift, attendance, the roster, reports, the time clock and the
+> employee's own schedule — now formats its days with `formatDateLocal` from
+> `src/lib/shift-recurrence.ts`. `tests/unit/schedule-local-day.test.ts` pins it
+> in three zones (4 of its 6 cases fail on the old helper), and
+> `scheduling-calendar-screen` asserts the draft sits in the cell whose
+> `data-date` is today.
+
 **Severity: high. Found in passing, not fixed.** It is on production, and it
 predates the redesign — `main` had the same code.
 

@@ -41,6 +41,7 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import type { Schedule } from "@/types/staff";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 // Leave, swaps and the reason list all come from Postgres now. What is left
 // from this fixture is `shiftTasks` — the checklist attached to a shift, which
 // has no table yet and is flagged on screen as such.
@@ -123,8 +124,8 @@ export function StaffScheduleView() {
     const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
     return new Date(today.setDate(diff));
   });
-  const [_selectedDate, setSelectedDate] = useState(
-    () => new Date().toISOString().split("T")[0],
+  const [_selectedDate, setSelectedDate] = useState(() =>
+    formatDateLocal(new Date()),
   );
   const [selectedShift, setSelectedShift] = useState<Schedule | null>(null);
   const [isShiftDetailModalOpen, setIsShiftDetailModalOpen] = useState(false);
@@ -231,7 +232,7 @@ export function StaffScheduleView() {
   }, [currentWeekStart]);
 
   const getSchedulesForDate = (date: Date): Schedule[] => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr = formatDateLocal(date);
     return mySchedules.filter((s) => s.date === dateStr);
   };
 
@@ -252,7 +253,7 @@ export function StaffScheduleView() {
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1);
     setCurrentWeekStart(new Date(today.setDate(diff)));
-    setSelectedDate(today.toISOString().split("T")[0]);
+    setSelectedDate(formatDateLocal(today));
   };
 
   // Handle shift detail view
@@ -417,7 +418,7 @@ export function StaffScheduleView() {
 
   // Get today's shifts
   const todayShifts = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatDateLocal(new Date());
     return mySchedules.filter((s) => s.date === today);
   }, [mySchedules]);
 
@@ -661,8 +662,7 @@ export function StaffScheduleView() {
                 {weekDays.map((day, index) => {
                   const daySchedules = getSchedulesForDate(day);
                   const isToday =
-                    day.toISOString().split("T")[0] ===
-                    new Date().toISOString().split("T")[0];
+                    formatDateLocal(day) === formatDateLocal(new Date());
 
                   return (
                     <div

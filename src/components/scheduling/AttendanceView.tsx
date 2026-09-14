@@ -39,6 +39,7 @@ import { clockQueries, schedulingQueries } from "@/lib/api/scheduling";
 import { toAttendanceEntries } from "@/lib/api/mappers/scheduling";
 import { staffQueries } from "@/lib/api/staff";
 import type { TimeClockEntry } from "@/types/scheduling";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 const statusColor: Record<AttendanceStatus, string> = {
   on_time:
@@ -70,10 +71,10 @@ export function AttendanceView() {
   const cutoffDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - parseInt(days));
-    return d.toISOString().split("T")[0];
+    return formatDateLocal(d);
   }, [days]);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateLocal(new Date());
 
   // ── FROM POSTGRES ───────────────────────────────────────────────────────
   //
