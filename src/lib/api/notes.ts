@@ -17,6 +17,18 @@ const noteKey = (category: NoteCategory, ref: number) =>
   ["notes", category, ref] as const;
 
 export const noteQueries = {
+  /** How many notes each record of a category has, by its ref — a staff list. */
+  counts: (category: NoteCategory) => ({
+    queryKey: ["notes", category, "counts"] as const,
+    queryFn: async (): Promise<Record<number, number>> => {
+      const response = await fetch(`/api/notes/counts?category=${category}`);
+      if (response.status === 401) return {};
+      if (!response.ok) {
+        throw new Error(`Failed to count notes (${response.status})`);
+      }
+      return (await response.json()) as Record<number, number>;
+    },
+  }),
   forEntity: (category: NoteCategory, ref: number) => ({
     queryKey: noteKey(category, ref),
     queryFn: async (): Promise<Note[]> => {
@@ -66,6 +78,7 @@ export function useNoteMutations(category: NoteCategory, ref: number) {
   const queryClient = useQueryClient();
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: noteKey(category, ref) });
+  queryClient.invalidateQueries({ queryKey: ["notes", category, "counts"] });
 
   const create = useMutation({
     mutationFn: (write: Omit<NoteWrite, "category" | "entityRef">) =>
