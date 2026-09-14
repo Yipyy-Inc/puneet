@@ -33,6 +33,7 @@ import { hasPermission } from "@/lib/role-utils";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { bookingQueries } from "@/lib/api/booking";
+import { shiftDay } from "@/lib/api/booking-list-params";
 import { useCareFees } from "@/lib/api/facility-settings";
 import {
   useAddIncidentCare,
@@ -105,7 +106,12 @@ export function isIncidentInStay(
 
 /** `isIncidentInStay` over the facility's own bookings. */
 export function useIncidentInStay(incident: Incident): boolean {
-  const { data } = useQuery(bookingQueries.all());
+  // Stays that could still be here: the last 30 days up to today, so a pet
+  // kept past its end date is still found on site.
+  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const { data } = useQuery(
+    bookingQueries.window({ from: shiftDay(today, -30), to: today }),
+  );
   return isIncidentInStay(incident, data ?? NO_STAY_BOOKINGS);
 }
 

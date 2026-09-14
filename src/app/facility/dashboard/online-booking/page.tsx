@@ -244,6 +244,8 @@ function EmptyState({
   );
 }
 
+const REQUEST_STATUSES = ["request_submitted", "waitlisted"] as const;
+
 export default function OnlineBookingPage() {
   // Still the fixture's numeric id, for the unfinished-bookings tab below —
   // its own fixture, not yet converted (see the debt map).
@@ -251,7 +253,11 @@ export default function OnlineBookingPage() {
   const { t, fill } = useStaffText("bookingRequests");
   const { openBookingModal } = useBookingModal();
   const { profile } = useFacilityProfile();
-  const { data: bookings = [] } = useQuery(bookingQueries.all());
+  // Only the open requests and the waiting list: every other booking the
+  // facility ever had was fetched and filtered away here.
+  const { data: bookings = [] } = useQuery(
+    bookingQueries.byStatus(REQUEST_STATUSES),
+  );
   const { data: facilityClients = [] } = useQuery(clientQueries.all());
   const updateStatus = useUpdateBookingStatus();
   const createBooking = useCreateBookingFromModal();

@@ -392,8 +392,15 @@ function DaycareSectionAssignmentStep({
   const dates = daycareSelectedDates.map((d) => d.toISOString().split("T")[0]);
 
   // Capacity from the bookings the caller may see, not a fixture's.
+  // Only the days being booked (or today, before any is picked).
+  const firstDay =
+    dates.length > 0
+      ? [...dates].sort()[0]
+      : new Date().toISOString().split("T")[0];
+  const lastDay =
+    dates.length > 0 ? [...dates].sort()[dates.length - 1] : firstDay;
   const { data: facilityBookings = NO_BOOKINGS } = useQuery(
-    bookingQueries.all(),
+    bookingQueries.window({ from: firstDay, to: lastDay }),
   );
   const availabilitySummary = React.useMemo(() => {
     const base = focusPet

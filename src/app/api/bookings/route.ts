@@ -26,6 +26,10 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { staffForStylist } from "@/lib/api/stylist-staff";
+import {
+  parseBookingListParams,
+  shiftDay,
+} from "@/lib/api/booking-list-params";
 import type { NewBooking } from "@/types/booking";
 
 // ============================================================================
@@ -47,6 +51,22 @@ import type { NewBooking } from "@/types/booking";
 
 export const dynamic = "force-dynamic";
 
+/** public.booking_status, as the database has it. */
+const BOOKING_STATUSES = new Set([
+  "pending",
+  "estimate_sent",
+  "request_submitted",
+  "waitlisted",
+  "confirmed",
+  "checked_in",
+  "in_progress",
+  "ready",
+  "completed",
+  "no_show",
+  "cancelled",
+  "declined",
+]);
+
 export async function GET(request: NextRequest) {
   // 401 rather than an empty list. An unauthenticated caller getting `[]` is
   // indistinguishable from a facility with no bookings, and that ambiguity is
@@ -59,6 +79,10 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   const scope = await activeFacilityIdForStaff();
   const { searchParams } = new URL(request.url);
+  // A screen names the slice it needs (lib/api/booking-list-params.ts): one
+  // booking, one client, a date window, some statuses, a limit. With none, the
+  // whole list, which the all-time readers still ask for (debt map).
+  const params = parseBookingListParams(searchParams);
 
   let query = supabase
     .from("bookings")
@@ -66,9 +90,29 @@ export async function GET(request: NextRequest) {
     .match(inFacility(scope))
     .order("start_at", { ascending: false });
 
-  const clientRef = searchParams.get("clientRef");
-  if (clientRef) {
-    query = query.eq("clients.ref", Number(clientRef));
+  if (params.clientRef) {
+    query = query.eq("clients.ref", params.clientRef);
+  }
+  if (params.ref) {
+    query = query.eq("ref", params.ref);
+  }
+  // Padded a day each side: the days are the facility's, the columns are
+  // instants, and every caller keeps its exact day filter.
+  if (params.from) {
+    query = query.gte("end_at", `${shiftDay(params.from, -1)}T00:00:00Z`);
+  }
+  if (params.to) {
+    query = query.lt("start_at", `${shiftDay(params.to, 2)}T00:00:00Z`);
+  }
+  if (params.statuses) {
+    // Only real statuses: an unknown enum label is a database error, and a
+    // typo in a screen must read as "no such bookings", not as a 500.
+    const statuses = params.statuses.filter((s) => BOOKING_STATUSES.has(s));
+    if (statuses.length === 0) return NextResponse.json([]);
+    query = query.in("status", statuses as never);
+  }
+  if (params.limit) {
+    query = query.limit(params.limit);
   }
 
   const { data, error } = await query;

@@ -14574,6 +14574,30 @@ naming any refund that is refused. The 93 leftover bookings were refunded with
 the same corrected call (note "e2e cleanup: refund the spec failed to
 record"), and none of these specs' bookings still show money paid.
 
+**Partly fixed 2026-09-14: most screens now ask for a slice.**
+`GET /api/bookings` takes `ref`, `clientRef`, `from`/`to` (a padded,
+facility-day window), `statuses` (checked against `booking_status`) and
+`limit` (`lib/api/booking-list-params.ts`, unit-tested). These screens now ask
+for only what they show:
+
+- a booking's detail, by ref
+- setup progress, `limit=1`
+- online booking requests, by status
+- day tasks, the day
+- report cards, the last 30 days
+- the kennel view, from today on
+- in-stay care and the boarding overview, the last 30 days
+- daycare and boarding capacity, the dates being booked
+- the retail till, the selected client
+
+Six still read the whole history, because they need it: the bookings page
+(its KPIs, and search, sort and pagination done in the browser), client
+filters (last visit, services), the loyalty banner, the client picker's
+booking counts, the calendar's first-booking badge, and the booking modal's
+new-customer check. Each wants a server-side count or latest date rather
+than the list. Found in passing: the capacity engine counts cancelled
+bookings as taking space.
+
 **Still debt: the e2e facility's booking list is large enough to fail under
 load.** It holds 1,007 cancelled bookings, 847 of them spec-marked, and
 `GET /api/bookings` returns every booking with no limit. It then reads

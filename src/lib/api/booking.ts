@@ -5,6 +5,10 @@ import { BOOKING_REQUESTS } from "@/data/booking-requests";
 import { facilityStaff } from "@/data/facility-staff";
 import type { Booking, NewBooking } from "@/types/booking";
 import type { ServiceModule } from "@/types/facility-staff";
+import {
+  bookingListSearch,
+  type BookingListParams,
+} from "./booking-list-params";
 import { liveFetch, liveWrite } from "./live-fetch";
 
 // ============================================================================
@@ -128,16 +132,17 @@ export function scopeBookingsToRefs(
 // see the note in live-fetch.ts.
 // ============================================================================
 
-async function fetchBookings(params?: {
-  clientRef?: number;
-}): Promise<Booking[]> {
-  const search = params?.clientRef ? `?clientRef=${params.clientRef}` : "";
+async function fetchBookings(
+  params: BookingListParams = {},
+): Promise<Booking[]> {
   return liveFetch<Booking[]>(
-    `/api/bookings${search}`,
+    `/api/bookings${bookingListSearch(params)}`,
     () =>
-      params?.clientRef
-        ? bookings.filter((b) => b.clientId === params.clientRef)
-        : bookings,
+      bookings.filter(
+        (b) =>
+          (!params.clientRef || b.clientId === params.clientRef) &&
+          (!params.ref || b.id === params.ref),
+      ),
     "bookings",
   );
 }
@@ -153,9 +158,33 @@ export const bookingQueries = {
     queryKey: ["bookings", "all"] as const,
     queryFn: async () => fetchBookings(),
   }),
+  /**
+   * One booking. Asked for by ref, not found in the whole list: it fetched
+   * every booking the facility had to show one.
+   */
   detail: (id: number) => ({
     queryKey: ["bookings", id] as const,
-    queryFn: async () => (await fetchBookings()).find((b) => b.id === id),
+    queryFn: async () =>
+      (await fetchBookings({ ref: id })).find((b) => b.id === id),
+  }),
+  /**
+   * The bookings still going on or after `from` and starting by `to`, each a
+   * YYYY-MM-DD day. A superset: the route pads a day each side, so keep the
+   * screen's exact day filter.
+   */
+  window: (range: { from?: string; to?: string }) => ({
+    queryKey: [
+      "bookings",
+      "window",
+      range.from ?? null,
+      range.to ?? null,
+    ] as const,
+    queryFn: async () => fetchBookings(range),
+  }),
+  /** Only bookings in these statuses, e.g. the open requests. */
+  byStatus: (statuses: readonly string[]) => ({
+    queryKey: ["bookings", "status", [...statuses].sort().join(",")] as const,
+    queryFn: async () => fetchBookings({ statuses }),
   }),
   byClient: (clientId: number) => ({
     queryKey: ["bookings", "by-client", clientId] as const,
@@ -165,7 +194,8 @@ export const bookingQueries = {
     queryKey: ["bookings", "by-facility", facilityId] as const,
     // No facility filter is sent: RLS already scopes rows to the caller's
     // facility, and a client-supplied facility id is not a boundary anyway.
-    queryFn: async () => fetchBookings(),
+    // Its one reader asks "is there any booking", so one is enough.
+    queryFn: async () => fetchBookings({ limit: 1 }),
   }),
   requests: () => ({
     queryKey: ["booking-requests"] as const,

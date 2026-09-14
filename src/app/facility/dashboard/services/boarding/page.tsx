@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -24,6 +24,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { useBoardingRooms, summariseOccupancy } from "@/lib/api/boarding-rooms";
 import { useBoardingDay } from "@/lib/api/boarding-attendance";
 import { bookingQueries } from "@/lib/api/booking";
+import { shiftDay } from "@/lib/api/booking-list-params";
 import { clientQueries } from "@/lib/api/client";
 import {
   formatDateShort,
@@ -69,7 +70,11 @@ export default function BoardingDashboardPage() {
   const { data: roomsPayload } = useBoardingRooms();
   const occupancy = summariseOccupancy(roomsPayload);
   const { data: day, isPending, isError } = useBoardingDay();
-  const { data: bookings = [] } = useQuery(bookingQueries.all());
+  // Only stays that could be current guests: the last 30 days up to today.
+  const [windowDay] = useState(() => localDay(new Date().toISOString()));
+  const { data: bookings = [] } = useQuery(
+    bookingQueries.window({ from: shiftDay(windowDay, -30), to: windowDay }),
+  );
   const { data: clients = [] } = useQuery(clientQueries.all());
 
   const guests = useMemo(() => day?.guests ?? [], [day]);

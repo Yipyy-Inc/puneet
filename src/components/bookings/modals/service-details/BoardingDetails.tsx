@@ -406,9 +406,11 @@ function BoardingRoomSelectionStep({
     : (activePet ?? selectedPets[0] ?? undefined);
 
   // Capacity from the bookings the caller may see, not a fixture's.
-  const { data: facilityBookings = NO_BOOKINGS } = useQuery(
-    bookingQueries.all(),
-  );
+  // Only stays overlapping the requested dates, and none before they are set.
+  const { data: facilityBookings = NO_BOOKINGS } = useQuery({
+    ...bookingQueries.window({ from: startDate, to: endDate }),
+    enabled: Boolean(startDate && endDate),
+  });
   const availability = React.useMemo(() => {
     if (!startDate || !endDate) return [];
     return getBoardingCategoryAvailability(
