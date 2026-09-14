@@ -26,6 +26,9 @@ import {
   ABANDONMENT_STEP_LABELS,
   UNFINISHED_STATUS_LABELS,
 } from "@/data/unfinished-bookings";
+import { formatDateLong, formatTime } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { recoveryLines } from "@/lib/unfinished-bookings/recovery-status";
 
 // In a real app this comes from the auth context
 
@@ -76,6 +79,11 @@ export function UnfinishedBookingDetailSheet({
   onSchedule,
 }: Props) {
   const [noteText, setNoteText] = useState("");
+  const {
+    t: recoveryT,
+    fill: recoveryFill,
+    locale,
+  } = useStaffText("unfinishedRecovery");
   const notesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -270,6 +278,34 @@ export function UnfinishedBookingDetailSheet({
                   <Copy className="size-3.5" />
                 </Button>
               </div>
+            </div>
+
+            {/* What the messaging tick did with the recovery message */}
+            <div
+              className="bg-muted/20 rounded-xl border px-4 py-3.5"
+              data-testid="unfinished-recovery-status"
+            >
+              <div className="mb-2 flex items-center gap-1.5">
+                <Mail className="text-muted-foreground size-4" />
+                <p className="text-sm font-medium">
+                  {recoveryT("recoveryTitle")}
+                </p>
+              </div>
+              <ul className="space-y-1">
+                {recoveryLines(booking.recovery).map((line, index) => (
+                  <li key={index} className="text-sm">
+                    {"when" in line
+                      ? recoveryFill(line.key, {
+                          when: `${formatDateLong(line.when, locale)}, ${formatTime(line.when, locale)}`,
+                        })
+                      : "reasonKey" in line
+                        ? recoveryFill(line.key, {
+                            reason: recoveryT(line.reasonKey),
+                          })
+                        : recoveryT(line.key)}
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* Actions */}

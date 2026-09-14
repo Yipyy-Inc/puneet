@@ -33,6 +33,13 @@ export const ABANDONMENT_STEPS = [
 export const UNFINISHED_BOOKING_SELECT =
   "id, service, step, status, requested_start, requested_end, estimated_value, draft, notes, last_contacted_at, recovered_at, abandoned_at, clients(ref, name, email, phone)";
 
+/**
+ * What staff read: the customer's columns plus the recovery outcome
+ * (20260914144927). The customer's routes keep the narrower select, so the
+ * tick's internal reasons never reach them.
+ */
+export const UNFINISHED_BOOKING_STAFF_SELECT = `${UNFINISHED_BOOKING_SELECT}, recovery_outcome, recovery_detail, recovery_resolved_at`;
+
 export type UnfinishedBookingRow = {
   id: string;
   service: string | null;
@@ -46,6 +53,9 @@ export type UnfinishedBookingRow = {
   last_contacted_at: string | null;
   recovered_at: string | null;
   abandoned_at: string;
+  recovery_outcome?: "queued" | "none" | "skipped" | null;
+  recovery_detail?: string | null;
+  recovery_resolved_at?: string | null;
   clients: {
     ref: number;
     name: string | null;
@@ -143,5 +153,15 @@ export function rowToUnfinishedBooking(
     specialRequests: d.preSelectedSpecialRequests,
     notificationEmail: d.preSelectedNotificationEmail,
     notificationSMS: d.preSelectedNotificationSMS,
+    ...(row.recovery_outcome && row.recovery_resolved_at
+      ? {
+          recovery: {
+            outcome: row.recovery_outcome,
+            detail: row.recovery_detail ?? undefined,
+            resolvedAt: row.recovery_resolved_at,
+            sends: [],
+          },
+        }
+      : {}),
   };
 }
