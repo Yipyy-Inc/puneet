@@ -85,12 +85,16 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
+    // A refused refund used to be ignored, and every paid booking it left
+    // behind was walked again on the next run — 88 of them by 2026-09-14.
+    // Each answer is read now, and the run fails naming what it left.
+    const refused: string[] = [];
     for (const b of await allBookings(page)) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
       const paid = Number(b.amountPaid ?? 0);
       if (paid > 0) {
-        await page.request.post("/api/payments", {
+        const refund = await page.request.post("/api/payments", {
           data: {
             bookingRef: String(b.id),
             method: "cash",
@@ -102,15 +106,21 @@ test.afterAll(async ({ browser }) => {
             loyaltyDiscountApplied: 0,
             amountCharged: -paid,
             grandTotal: -paid,
+            // payments_cash_shape: a cash row says what changed hands.
+            cashReceived: -paid,
             receiptChannels: [],
             creditNote: "e2e cleanup",
           },
         });
+        if (!refund.ok()) {
+          refused.push(`refund ${b.id}: ${await refund.text()}`);
+        }
       }
       await page.request.patch(`/api/bookings/${b.id}`, {
         data: { status: "cancelled" },
       });
     }
+    expect(refused, "cleanup left paid bookings behind").toEqual([]);
   } finally {
     await page.close();
   }
