@@ -52,8 +52,11 @@ async function readBooking(
   page: import("@playwright/test").Page,
   ref: number,
 ): Promise<BookingPayload | undefined> {
+  // This client's bookings, not the facility's: the whole list is ~1,000 rows
+  // on this tenant, and one read of it under load came back as something other
+  // than an array ("all.find is not a function").
   const all = (await (
-    await page.request.get("/api/bookings")
+    await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
   ).json()) as BookingPayload[];
   return all.find((b) => b.id === ref);
 }
