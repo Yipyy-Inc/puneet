@@ -95,11 +95,31 @@ async function writeTax(page: Page, value: unknown) {
   expect(res.ok(), await res.text()).toBe(true);
 }
 
+/**
+ * Every booking the session can see.
+ *
+ * A read that answers with an error is retried twice, then fails naming the
+ * status and body. It used to be cast straight to an array, so a 500 under
+ * load surfaced as "all.find is not a function" — and in the cleanup, as a
+ * crash that left the run's paid bookings behind.
+ */
+async function listBookings(page: Page): Promise<BookingPayload[]> {
+  let last = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await page.request.get("/api/bookings");
+    const body = await res.text();
+    if (res.ok()) {
+      const parsed = JSON.parse(body) as unknown;
+      if (Array.isArray(parsed)) return parsed as BookingPayload[];
+    }
+    last = `${res.status()} ${body.slice(0, 300)}`;
+    await page.waitForTimeout(2_000);
+  }
+  throw new Error(`GET /api/bookings did not return a list: ${last}`);
+}
+
 async function findBooking(page: Page, id: number) {
-  const all = (await (
-    await page.request.get("/api/bookings")
-  ).json()) as BookingPayload[];
-  return all.find((b) => b.id === id);
+  return (await listBookings(page)).find((b) => b.id === id);
 }
 
 async function openCheckout(page: Page, booking: BookingPayload) {
@@ -122,15 +142,17 @@ test.afterAll(async ({ browser }) => {
     await signIn(page, ACCOUNTS.owner);
     if (originalTax) await writeTax(page, originalTax);
 
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+    const bookings = await listBookings(page);
+    // A refused refund used to be ignored, and every paid booking it left
+    // behind was walked again on the next run — 88 of them by 2026-09-14.
+    // Each answer is read now, and the run fails naming what it left.
+    const refused: string[] = [];
     for (const b of bookings ?? []) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
       const paid = b.amountPaid ?? 0;
       if (paid > 0) {
-        await page.request.post("/api/payments", {
+        const refund = await page.request.post("/api/payments", {
           data: {
             bookingRef: String(b.id),
             method: "cash",
@@ -142,15 +164,21 @@ test.afterAll(async ({ browser }) => {
             loyaltyDiscountApplied: 0,
             amountCharged: -paid,
             grandTotal: -paid,
+            // payments_cash_shape: a cash row says what changed hands.
+            cashReceived: -paid,
             receiptChannels: [],
             creditNote: "e2e cleanup",
           },
         });
+        if (!refund.ok()) {
+          refused.push(`refund ${b.id}: ${await refund.text()}`);
+        }
       }
       await page.request.patch(`/api/bookings/${b.id}`, {
         data: { status: "cancelled" },
       });
     }
+    expect(refused, "cleanup left paid bookings behind").toEqual([]);
   } finally {
     await page.close();
   }

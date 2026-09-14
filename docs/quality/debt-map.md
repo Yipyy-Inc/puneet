@@ -14566,6 +14566,27 @@ Now:
 
 ## 2026-09-14 — two booking specs leave paid, cancelled bookings behind, and their cleanup outgrows its timeout
 
+**Fixed 2026-09-14.** The cause was `payments_cash_shape`: a cash row must
+carry `cash_received >= amount_charged`. The cleanup posted a cash refund
+without `cashReceived`, the database refused every one, and the specs never
+read the answer. Both cleanups now send `cashReceived: -paid` and fail the run
+naming any refund that is refused. The 93 leftover bookings were refunded with
+the same corrected call (note "e2e cleanup: refund the spec failed to
+record"), and none of these specs' bookings still show money paid.
+
+**Still debt: the e2e facility's booking list is large enough to fail under
+load.** It holds 1,007 cancelled bookings, 847 of them spec-marked, and
+`GET /api/bookings` returns every booking with no limit. It then reads
+`booking_presence` and `booking_yipyy_go` in batches of 150. A local run on
+2026-09-14 got a non-list answer (a 500) twice from
+`booking-checkout-truth`. The spec now reads the list through
+`listBookings`, which retries twice and then fails with the status and body,
+instead of crashing its cleanup. The route still needs a bound or a date
+window, and `e2e:purge` removes only money-free bookings, so refunded spec
+bookings stay.
+
+The original entry follows.
+
 `booking-checkout-truth` and `booking-form-saves` each end by walking every
 booking carrying their marker, refunding what was paid and cancelling. 88
 marked bookings are **cancelled with `amount_paid > 0`**: 44 per spec, the
