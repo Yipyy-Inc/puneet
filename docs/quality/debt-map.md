@@ -14423,8 +14423,11 @@ booking, saved through the booking PATCH and read back onto the guest by
 Saving needs `edit_bookings`; a caretaker without it is refused with a message
 rather than seeing a note that did not save.
 
-**Still debt.** Free-text journal notes (`src/data/journal-notes-store.ts`)
-are still one tab's memory, and so is the journal's staff name. They belong
-in `daily_care_records`, whose `kind` check allows only `shift_note`,
-`pet_flag` and `head_count` today. The journal's dates are formatted `en-US`
-and its PDF title still says "Yipyy" rather than the facility's name.
+**Also fixed, the same day.** Free-text journal notes were one tab's memory
+(`src/data/journal-notes-store.ts`). They are `daily_care_records` of kind
+`journal_note` now (20260914114744), subject the booking ref, one row per note
+and never merged. The author is stamped by the server, and the journal reads a
+guest's notes across the whole stay (`?kind=journal_note&subject=`).
+
+**Still debt.** The journal's dates are formatted `en-US`, and its PDF title
+says "Yipyy" rather than the facility's name.

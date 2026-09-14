@@ -18,12 +18,17 @@ import { useQuery } from "@tanstack/react-query";
 // become real.
 // ============================================================================
 
-export type DailyCareRecordKind = "shift_note" | "pet_flag" | "head_count";
+export type DailyCareRecordKind =
+  | "shift_note"
+  | "pet_flag"
+  | "head_count"
+  | "journal_note";
 
 export interface DailyCareRecord {
   id: string;
   kind: DailyCareRecordKind;
   subject: string;
+  occurredOn: string;
   payload: Record<string, unknown>;
   createdByName: string | null;
   createdAt: string;

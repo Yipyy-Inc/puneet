@@ -13,6 +13,7 @@
 --   D5  a flag can be taken down; a shift note and a head count cannot
 --   D6  an edit cannot move a record to another facility or change its kind
 --   D7  anon holds nothing
+--   D8  a journal note is allowed, many per guest per day, and cannot be deleted
 -- ============================================================================
 
 begin;
@@ -153,6 +154,31 @@ begin
     not has_table_privilege('anon', 'public.daily_care_records', 'select')
     and not has_table_privilege('anon', 'public.daily_care_records', 'insert'),
     'anon can reach the table');
+end $$;
+
+-- ── D8 ────────────────────────────────────────────────────────────────────
+do $$
+declare v_state text; v_deleted int;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009d0100');
+  set local role authenticated;
+  begin
+    insert into public.daily_care_records (facility_id, occurred_on, kind, subject, payload)
+    values
+      ('00000000-0000-0000-0000-0000009d0020', current_date, 'journal_note', '4127',
+       '{"text": "Owner called, told them Luna is doing great", "time": "10:15"}'),
+      ('00000000-0000-0000-0000-0000009d0020', current_date, 'journal_note', '4127',
+       '{"text": "Ate all of dinner", "time": "18:05"}');
+    v_state := 'written';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+  delete from public.daily_care_records where kind = 'journal_note';
+  get diagnostics v_deleted = row_count;
+  reset role;
+  perform pg_temp.t('D8  journal notes are many, and a note stays',
+    v_state = 'written' and v_deleted = 0,
+    v_state || ', ' || v_deleted || ' deleted');
 end $$;
 
 select n, name, ok, detail from tap order by n;
