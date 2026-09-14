@@ -41,6 +41,7 @@ export interface CareGuest {
   petName: string;
   petPhotoUrl?: string;
   ownerName: string;
+  ownerPhone?: string;
   kennelName: string;
   packageType: string;
   totalNights: number;
@@ -59,6 +60,8 @@ export interface CareGuest {
   heatCycle?: HeatCycleInfo;
   tags?: string[];
   notes: string;
+  /** The stay-long care note staff set on the booking (`details.careNote`). */
+  careNote?: string;
 }
 
 /** What a booking's `details` carries that the board cares about. */
@@ -71,6 +74,7 @@ export interface BookingCareDetails {
   tags?: string[];
   specialRequests?: string;
   packageType?: string;
+  careNote?: string;
 }
 
 /**
@@ -160,6 +164,7 @@ export function careGuestFromBooking(
     petId: number;
     petNames: string[];
     ownerName: string;
+    ownerPhone?: string | null;
     roomName: string | null;
     scheduledArrival: string;
     scheduledDeparture: string;
@@ -177,6 +182,7 @@ export function careGuestFromBooking(
     // kennel card reads — they share a run and are fed together.
     petName: arrival.petNames.join(" & ") || "Guest",
     ownerName: arrival.ownerName,
+    ownerPhone: arrival.ownerPhone ?? undefined,
     // No photo rather than a placeholder: a broken image on a floor board is
     // read as a broken screen.
     petPhotoUrl: undefined,
@@ -204,5 +210,6 @@ export function careGuestFromBooking(
     heatCycle: details.heatCycle,
     tags: details.tags,
     notes: details.specialRequests ?? "",
+    careNote: details.careNote || undefined,
   };
 }

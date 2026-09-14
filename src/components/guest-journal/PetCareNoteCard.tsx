@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,28 +13,31 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StickyNote, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { petCareNotesStore } from "@/data/pet-care-notes";
+import { useSaveCareNote } from "@/lib/api/care-note";
 
 type Props = {
-  guestId: string;
+  /** The booking's ref — the Daily Care guest id. */
+  bookingRef: string;
   petName: string;
-  /** The pet record's own notes — shown when no stay override has been set. */
+  /** The note staff set on the booking, when there is one. */
+  careNote?: string;
+  /** The owner's own notes — shown when no stay note has been set. */
   fallbackNote?: string;
 };
 
 /**
- * Stay-long care note editor (A4.5 / A8.4). Shows the pet's current care note
- * and lets staff set/edit it for the whole stay. The note persists in the
- * pet-care-notes store and surfaces as the sticky-note indicator on every
- * PetRow across Daily Care.
+ * Stay-long care note editor (A4.5 / A8.4). Saved on the booking, so it shows
+ * on every PetRow across Daily Care, on every device, for the whole stay. It
+ * was a Map in one browser tab.
  */
-export function PetCareNoteCard({ guestId, petName, fallbackNote }: Props) {
-  const override = useSyncExternalStore(
-    petCareNotesStore.subscribe,
-    () => petCareNotesStore.getSnapshot(guestId),
-    () => petCareNotesStore.getSnapshot(guestId),
-  );
-  const effective = override ?? fallbackNote ?? "";
+export function PetCareNoteCard({
+  bookingRef,
+  petName,
+  careNote,
+  fallbackNote,
+}: Props) {
+  const effective = careNote || fallbackNote || "";
+  const save = useSaveCareNote();
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -45,23 +48,29 @@ export function PetCareNoteCard({ guestId, petName, fallbackNote }: Props) {
   }
 
   function handleSave() {
-    petCareNotesStore.set(guestId, draft);
-    setOpen(false);
-    toast.success(
-      draft.trim()
-        ? `Care note saved for ${petName}.`
-        : `Care note cleared for ${petName}.`,
+    const text = draft.trim();
+    save.mutate(
+      { bookingRef, careNote: text },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          toast.success(
+            text
+              ? `Care note saved for ${petName}.`
+              : `Care note cleared for ${petName}.`,
+          );
+        },
+        onError: (error) => toast.error(error.message),
+      },
     );
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
       <div className="flex items-start gap-2">
         <StickyNote className="mt-0.5 size-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-            Stay care note
-          </p>
+          <p className="text-xs font-semibold text-amber-700">Stay care note</p>
           {effective ? (
             <p className="mt-0.5 text-sm whitespace-pre-wrap">{effective}</p>
           ) : (
@@ -102,7 +111,9 @@ export function PetCareNoteCard({ guestId, petName, fallbackNote }: Props) {
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>Save note</Button>
+            <Button onClick={handleSave} disabled={save.isPending}>
+              Save note
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

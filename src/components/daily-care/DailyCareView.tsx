@@ -41,7 +41,6 @@ import {
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { petFlagsStore } from "@/data/pet-flags-store";
 import { headCountStore } from "@/data/head-count-store";
-import { petCareNotesStore } from "@/data/pet-care-notes";
 import { useDailyCareConfig } from "@/hooks/use-daily-care-config";
 import { useCareLog } from "@/hooks/use-care-log";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -149,23 +148,9 @@ export function DailyCareView() {
   const needsAttention = (guestId: string) =>
     flaggedGuestIds.has(guestId) || healthObservedGuestIds.has(guestId);
 
-  // Stay-long per-pet care notes (A4.5) — a stable map that flips reference when
-  // a note is edited, so the schedule re-derives careNote for the sticky-note.
-  const careNotes = useSyncExternalStore(
-    petCareNotesStore.subscribe,
-    petCareNotesStore.getNotesMap,
-    petCareNotesStore.getNotesMap,
-  );
-
   const allTasks = useMemo(
-    () =>
-      generateScheduledTasks(
-        guests,
-        config,
-        new Date(date + "T00:00:00"),
-        careNotes,
-      ),
-    [guests, config, date, careNotes],
+    () => generateScheduledTasks(guests, config, new Date(date + "T00:00:00")),
+    [guests, config, date],
   );
 
   // Step the selected day by ±1 via the navigator arrows.
@@ -1017,10 +1002,7 @@ export function DailyCareView() {
 
             <div className="px-4 pb-6">
               {selectedJournalGuest ? (
-                <ReservationJournalPanel
-                  bookingId={selectedJournalGuest.bookingId ?? ""}
-                  petIds={[selectedJournalGuest.petId]}
-                />
+                <ReservationJournalPanel guest={selectedJournalGuest} />
               ) : (
                 <div className="space-y-2">
                   {rosterPending ? (
