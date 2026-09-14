@@ -14533,8 +14533,14 @@ Now:
 
 **Still debt.**
 
-- Nothing sends a recovery message. The templates and delays are saved and
-  read by nothing.
+- ~~Nothing sends a recovery message.~~ **Fixed 2026-09-14**
+  (20260914144927). The messaging tick queues the step's email and/or SMS
+  once the step's delay has passed, one message per unfinished booking
+  (`recovery_resolved_at`, claimed once). The send pass applies suppression,
+  quiet hours, the daily cap and lateness. The shipped settings are now
+  **off**; a facility turns recovery on. The outcome is stored on the row
+  (`recovery_outcome`, `recovery_detail`), and the detail sheet does not show
+  it yet. SQL U7–U11.
 - A draft is kept only when the customer chooses "discard". Closing the tab
   keeps nothing.
 - The draft holds the first pet only.

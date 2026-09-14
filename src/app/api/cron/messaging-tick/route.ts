@@ -7,6 +7,7 @@ import {
   runDueAudienceWorkflows,
 } from "@/lib/workflows/engine";
 import { evaluateDueReviewNudges } from "@/lib/reputation/nudge";
+import { queueDueRecoveryMessages } from "@/lib/unfinished-bookings/recovery-tick";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -76,6 +77,8 @@ export async function GET(request: NextRequest) {
   const audience = await runDueAudienceWorkflows();
   const advanced = await advanceDueEnrollments();
   const nudges = await evaluateDueReviewNudges();
+  // Unfinished bookings whose recovery message is owed — queued, like 2 and 3.
+  const recovery = await queueDueRecoveryMessages();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -92,6 +95,8 @@ export async function GET(request: NextRequest) {
     // tick look like an outage.
     nudged: nudges.queued,
     nudgesExpired: nudges.expired,
+    recovered: recovery.queued,
+    recoveryDeferred: recovery.deferred,
     advanced: advanced.advanced,
     completed: advanced.completed,
     stopped: advanced.stopped,
@@ -100,6 +105,7 @@ export async function GET(request: NextRequest) {
       ...advanced.problems,
       ...audience.problems,
       ...nudges.problems,
+      ...recovery.problems,
     ].slice(0, 20),
   });
 }
