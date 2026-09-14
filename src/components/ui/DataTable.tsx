@@ -175,6 +175,23 @@ export interface DataTableProps<T> {
     description?: string;
     action?: TableEmptyStateAction;
   };
+  /**
+   * The server pages, searches, filters and sorts; this table draws the page.
+   *
+   * Without it (every table but one, today) `data` is the whole set and all
+   * of that happens here, exactly as before. With it, `data` IS the page:
+   * nothing is filtered, sorted or sliced locally, `total` sets the page
+   * count, and each change is handed back so the caller can ask the server.
+   * A filter's `filterFn` is not applied — the caller passes the value on.
+   */
+  serverPaging?: {
+    total: number;
+    page: number;
+    onPageChange: (page: number) => void;
+    onSearchChange?: (term: string) => void;
+    onFilterChange?: (values: Record<string, string>) => void;
+    onSortChange?: (key: string | null, direction: "asc" | "desc") => void;
+  };
 }
 
 export function DataTable<T extends object>({
@@ -202,6 +219,7 @@ export function DataTable<T extends object>({
   emptyState,
   stickyHeader = false,
   zebra = false,
+  serverPaging,
 }: DataTableProps<T>) {
   const t = useShellText("primitives");
   const [searchTerm, setSearchTerm] = useState("");
@@ -222,6 +240,13 @@ export function DataTable<T extends object>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  // With `serverPaging` the rows are the page, and search, filters, sort and
+  // the page number go back to the caller. See the prop.
+  const server = serverPaging;
+  const page = server ? server.page : currentPage;
+  const goToPage = (next: number) =>
+    server ? server.onPageChange(next) : setCurrentPage(next);
+
   // §5m's three contexts and §5n's density. Below 1024px the saved preference
   // is IGNORED rather than overwritten, so a manager who chose compact at
   // their desk still has it when they sit back down.
@@ -230,72 +255,90 @@ export function DataTable<T extends object>({
     useDensityPreference(tableId);
   const rowStyle = DENSITY[density];
 
-  const filteredData = data.filter((item) => {
-    // Search filter
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
+  const filteredData = server
+    ? data
+    : data.filter((item) => {
+        // Search filter
+        if (searchTerm) {
+          const lowerSearchTerm = searchTerm.toLowerCase();
 
-      if (getSearchValue) {
-        const searchValue = getSearchValue(item).toLowerCase();
-        if (!searchValue.includes(lowerSearchTerm)) {
-          return false;
+          if (getSearchValue) {
+            const searchValue = getSearchValue(item).toLowerCase();
+            if (!searchValue.includes(lowerSearchTerm)) {
+              return false;
+            }
+          } else if (searchKeys && searchKeys.length > 0) {
+            const matches = searchKeys.some((key) => {
+              const value = String(
+                (item as Record<string, unknown>)[key as string] ?? "",
+              ).toLowerCase();
+              return value.includes(lowerSearchTerm);
+            });
+            if (!matches) {
+              return false;
+            }
+          } else if (searchKey) {
+            const searchValue = String(
+              (item as Record<string, unknown>)[searchKey as string],
+            ).toLowerCase();
+            if (!searchValue.includes(lowerSearchTerm)) {
+              return false;
+            }
+          }
         }
-      } else if (searchKeys && searchKeys.length > 0) {
-        const matches = searchKeys.some((key) => {
-          const value = String(
-            (item as Record<string, unknown>)[key as string] ?? "",
-          ).toLowerCase();
-          return value.includes(lowerSearchTerm);
-        });
-        if (!matches) {
-          return false;
+
+        // Custom filters
+        for (const filter of filters) {
+          const filterValue = filterValues[filter.key];
+          if (filterValue && filterValue !== "all") {
+            if (filter.filterFn) {
+              if (!filter.filterFn(item, filterValue)) return false;
+            } else if (
+              String((item as Record<string, unknown>)[filter.key]) !==
+              filterValue
+            ) {
+              return false;
+            }
+          }
         }
-      } else if (searchKey) {
-        const searchValue = String(
-          (item as Record<string, unknown>)[searchKey as string],
-        ).toLowerCase();
-        if (!searchValue.includes(lowerSearchTerm)) {
-          return false;
-        }
-      }
-    }
 
-    // Custom filters
-    for (const filter of filters) {
-      const filterValue = filterValues[filter.key];
-      if (filterValue && filterValue !== "all") {
-        if (filter.filterFn) {
-          if (!filter.filterFn(item, filterValue)) return false;
-        } else if (
-          String((item as Record<string, unknown>)[filter.key]) !== filterValue
-        ) {
-          return false;
-        }
-      }
-    }
+        return true;
+      });
 
-    return true;
-  });
+  const sortedData = server
+    ? filteredData
+    : [...filteredData].sort((a, b) => {
+        if (!sortKey) return 0;
+        const col = columns.find((c) => c.key === sortKey);
+        if (!col || col.sortable === false) return 0;
+        const getSortValue = (item: T) => {
+          if (col.sortValue) return col.sortValue(item);
+          return item[col.key as keyof T];
+        };
+        // The comparison itself lives in src/lib/table/sort.ts, so it can be
+        // tested without a browser. See that file for why numbers get their own
+        // branch and why numeric strings deliberately do not.
+        return compareSortValues(
+          getSortValue(a),
+          getSortValue(b),
+          sortDirection,
+        );
+      });
 
-  const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortKey) return 0;
-    const col = columns.find((c) => c.key === sortKey);
-    if (!col || col.sortable === false) return 0;
-    const getSortValue = (item: T) => {
-      if (col.sortValue) return col.sortValue(item);
-      return item[col.key as keyof T];
-    };
-    // The comparison itself lives in src/lib/table/sort.ts, so it can be
-    // tested without a browser. See that file for why numbers get their own
-    // branch and why numeric strings deliberately do not.
-    return compareSortValues(getSortValue(a), getSortValue(b), sortDirection);
-  });
-
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-  const paginatedData = sortedData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const totalPages = server
+    ? Math.ceil(server.total / itemsPerPage)
+    : Math.ceil(sortedData.length / itemsPerPage);
+  const paginatedData = server
+    ? data
+    : sortedData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  // Every page up to seven; past that the first, the last and the neighbours
+  // of this one, so a long table does not draw seventy links across a phone.
+  const pageNumbers =
+    totalPages <= 7
+      ? Array.from({ length: totalPages }, (_, i) => i + 1)
+      : [...new Set([1, page - 1, page, page + 1, totalPages])]
+          .filter((n) => n >= 1 && n <= totalPages)
+          .sort((a, b) => a - b);
 
   // ── THE COLUMN BUDGET. §6 rule 6, §5m. ────────────────────────────────
   //
@@ -349,7 +392,7 @@ export function DataTable<T extends object>({
     selectable && getItemId ? (externalSelectedIds?.size ?? 0) : 0;
   // Distinguish "nothing here yet" from "your search/filter hid everything".
   const isFilteredEmpty =
-    data.length > 0 &&
+    (server ? paginatedData.length === 0 : data.length > 0) &&
     (searchTerm.trim() !== "" ||
       Object.values(filterValues).some((v) => v && v !== "all"));
 
@@ -368,8 +411,11 @@ export function DataTable<T extends object>({
       <p aria-live="polite" className="sr-only">
         {searchTerm.trim() || appliedFilters.length > 0
           ? t("shownOfTotal")
-              .replace("{shown}", String(sortedData.length))
-              .replace("{total}", String(data.length))
+              .replace(
+                "{shown}",
+                String(server ? server.total : sortedData.length),
+              )
+              .replace("{total}", String(server ? server.total : data.length))
           : ""}
       </p>
       {/* ── The filter band. §5b pattern 03. ────────────────────────────────
@@ -387,7 +433,8 @@ export function DataTable<T extends object>({
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1);
+                server?.onSearchChange?.(e.target.value);
+                goToPage(1);
               }}
             />
           )}
@@ -410,8 +457,10 @@ export function DataTable<T extends object>({
                 label={label}
                 removeLabel={t("removeFilter").replace("{label}", label)}
                 onRemove={() => {
-                  setFilterValues((prev) => ({ ...prev, [filter.key]: "all" }));
-                  setCurrentPage(1);
+                  const next = { ...filterValues, [filter.key]: "all" };
+                  setFilterValues(next);
+                  server?.onFilterChange?.(next);
+                  goToPage(1);
                 }}
               />
             );
@@ -537,11 +586,10 @@ export function DataTable<T extends object>({
                   key={filter.key}
                   value={filterValues[filter.key]}
                   onValueChange={(value) => {
-                    setFilterValues((prev) => ({
-                      ...prev,
-                      [filter.key]: value,
-                    }));
-                    setCurrentPage(1);
+                    const next = { ...filterValues, [filter.key]: value };
+                    setFilterValues(next);
+                    server?.onFilterChange?.(next);
+                    goToPage(1);
                   }}
                 >
                   <SelectTrigger
@@ -762,15 +810,14 @@ export function DataTable<T extends object>({
                       )}
                       onClick={() => {
                         if (col.sortable === false) return;
-                        if (sortKey === col.key) {
-                          setSortDirection(
-                            sortDirection === "asc" ? "desc" : "asc",
-                          );
-                        } else {
-                          setSortKey(col.key);
-                          setSortDirection("asc");
-                        }
-                        setCurrentPage(1);
+                        const nextDirection =
+                          sortKey === col.key && sortDirection === "asc"
+                            ? "desc"
+                            : "asc";
+                        setSortKey(col.key);
+                        setSortDirection(nextDirection);
+                        server?.onSortChange?.(col.key, nextDirection);
+                        goToPage(1);
                       }}
                     >
                       {col.icon && <col.icon className="mr-2 inline size-4" />}
@@ -923,33 +970,25 @@ export function DataTable<T extends object>({
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  className={
-                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                  }
+                  onClick={() => goToPage(Math.max(1, page - 1))}
+                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(page)}
-                      isActive={currentPage === page}
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ),
-              )}
+              {pageNumbers.map((pageNumber) => (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    onClick={() => goToPage(pageNumber)}
+                    isActive={page === pageNumber}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
               <PaginationItem>
                 <PaginationNext
-                  onClick={() =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1))
-                  }
+                  onClick={() => goToPage(Math.min(totalPages, page + 1))}
                   className={
-                    currentPage === totalPages
-                      ? "pointer-events-none opacity-50"
-                      : ""
+                    page === totalPages ? "pointer-events-none opacity-50" : ""
                   }
                 />
               </PaginationItem>

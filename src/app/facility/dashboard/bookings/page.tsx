@@ -41,17 +41,31 @@ import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFi
 import { useLocationContext } from "@/hooks/use-location-context";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { useAssignedScope } from "@/lib/facility-permissions";
+import { bookingMutations } from "@/lib/api/booking";
 import {
-  bookingMutations,
-  bookingQueries,
-  scopeBookingsToRefs,
-  useAssignedBookingRefs,
-} from "@/lib/api/booking";
+  bookingPageQueries,
+  fetchAllBookingPages,
+} from "@/lib/api/booking-page";
+import type {
+  BookingPageParams,
+  BookingPageSort,
+} from "@/lib/api/booking-page-params";
 import { useFieldMask } from "@/lib/staff/mask";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { PageHeader } from "@/components/ui/page-header";
 import { SavedViews } from "@/components/ui/saved-views";
 import { PetAvatar } from "@/components/ui/pet-avatar";
+const PAGE_SIZE = 15;
+// Stable while the page loads.
+const NO_BOOKINGS: Booking[] = [];
+/** The columns the server can order by; every other column is not sortable. */
+const SERVER_SORTS: Record<string, BookingPageSort> = {
+  id: "id",
+  dates: "dates",
+  status: "status",
+  totalCost: "totalCost",
+};
+
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -155,22 +169,6 @@ const calculateDuration = (startDate: string, endDate: string): string => {
     : `${diffDays + 1} day${diffDays > 0 ? "s" : ""}`;
 };
 
-// ── "TODAY" WAS 10 MARCH 2024 ────────────────────────────────────────────────
-//
-// Both of these hardcoded `new Date("2024-03-10")` and called it "Mock today's
-// date". Against the 202 bookings actually in the database — which run from
-// June 2024 to April 2027 — that made the UPCOMING tab list all 202 of them,
-// including the 134 that have already happened. A screen a facility opens to
-// see what is coming was showing two years of history as though it were.
-//
-// `now` is passed in rather than read here so the caller decides once per
-// render instead of once per row, and so the boundary is testable.
-const isToday = (dateString: string, now: Date): boolean =>
-  new Date(dateString).toDateString() === now.toDateString();
-
-const isUpcoming = (dateString: string, now: Date): boolean =>
-  new Date(dateString) > now;
-
 export default function FacilityBookingsPage() {
   const router = useRouter();
   // Section 5B: this table is shared by both portals. In the employee portal the
@@ -187,10 +185,6 @@ export default function FacilityBookingsPage() {
   // Real clients, RLS-scoped to the caller's facility, keyed for O(1) lookup.
   // A Map rather than `.find` per row: this runs twice per booking per render
   // on a table that pages 200 rows.
-  // Once per mount, not once per row. The empty dep list is deliberate: a tab
-  // that silently reclassified its rows because the clock ticked past midnight
-  // mid-session would be harder to trust than one that is stale until reload.
-  const now = useMemo(() => new Date(), []);
 
   // The pre-arrival form column reads each booking’s own status, derived in
   // SQL (booking_yipyy_go, through /api/bookings), in the viewer’s language.
@@ -222,18 +216,66 @@ export default function FacilityBookingsPage() {
   // from `bookings.assigned_staff_id` instead — and it has to be applied at the
   // call site, because only the caller can tell "not assigned" from "not
   // loaded", which a queryFn cannot.
-  const { refs: assignedRefs } = useAssignedBookingRefs(assignedStaffId);
-  const { data: unscopedBookings = [], isLoading } = useQuery(
-    bookingQueries.all(),
+  // ── ONE PAGE AT A TIME ───────────────────────────────────────────────────
+  //
+  // The table loaded every booking the facility ever had, then searched,
+  // filtered, sorted and paged them here, and the tiles added them all up. It
+  // asks /api/bookings/page for fifteen now, in the same scope this page
+  // applied: the chosen location when there are several, and the viewer's
+  // assigned bookings when view_bookings is assigned_only. The tiles come from
+  // /api/bookings/totals, counted in that scope.
+  const locationId =
+    isMultiLocation && !isHQView && currentLocationId
+      ? currentLocationId
+      : undefined;
+  const assignedOnly = Boolean(assignedStaffId);
+  const [activeTab, setActiveTab] = useState("all");
+  const [filterStart, setFilterStart] = useState<Date | null>(null);
+  const [filterEnd, setFilterEnd] = useState<Date | null>(null);
+  const [tablePage, setTablePage] = useState(1);
+  const [tableSearch, setTableSearch] = useState("");
+  const [tableFilters, setTableFilters] = useState<Record<string, string>>({});
+  const [tableSort, setTableSort] = useState<{
+    key: string | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "asc" });
+  const selectTab = (key: string) => {
+    setActiveTab(key);
+    setTablePage(1);
+  };
+  // A Date as its own YYYY-MM-DD, without a timezone shift.
+  const dayOf = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const chosen = (key: string) =>
+    tableFilters[key] && tableFilters[key] !== "all"
+      ? tableFilters[key]
+      : undefined;
+  const pageParams: BookingPageParams = {
+    page: tablePage,
+    pageSize: PAGE_SIZE,
+    q: tableSearch.trim() || undefined,
+    status: chosen("status"),
+    service: chosen("service"),
+    paymentStatus: chosen("paymentStatus"),
+    tagId: chosen("tag"),
+    view: activeTab === "today" ? "today" : "all",
+    from: filterStart ? dayOf(filterStart) : undefined,
+    to: filterStart ? dayOf(filterEnd ?? filterStart) : undefined,
+    locationId,
+    assigned: assignedOnly || undefined,
+    sort: tableSort.key ? SERVER_SORTS[tableSort.key] : undefined,
+    dir: tableSort.dir,
+  };
+  const { data: pageData, isLoading } = useQuery({
+    ...bookingPageQueries.page(pageParams),
+    // The previous page stays on screen while the next one loads, rather than
+    // the table emptying on every click.
+    placeholderData: (previous) => previous,
+  });
+  const { data: totals } = useQuery(
+    bookingPageQueries.totals({ locationId, assigned: assignedOnly }),
   );
-  // An unknown answer shows nothing rather than everything — the safe
-  // direction, and the one that does not flash the whole facility's diary at a
-  // scoped viewer.
-  const bookings = assignedStaffId
-    ? assignedRefs
-      ? scopeBookingsToRefs(unscopedBookings, assignedRefs)
-      : []
-    : unscopedBookings;
+  const bookings = pageData?.bookings ?? NO_BOOKINGS;
 
   const queryClient = useQueryClient();
   const saveBooking = useMutation({
@@ -245,59 +287,10 @@ export default function FacilityBookingsPage() {
       void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
   });
 
-  const facilityBookings = bookings.filter(
-    (booking) => booking.facilityId === facilityId,
-  );
-
-  // ── THE BOOKING'S OWN LOCATION, NOT A HASH OF ITS REFERENCE ────────────
-  //
-  // This filtered REAL bookings — `bookingQueries.all()` reads Postgres — by
-  // `deriveLocationId(b.id)`, which is the trailing digits of the reference
-  // modulo three against a fixed array of location ids. It is a fixture-era
-  // stand-in for a column that now exists and is populated.
-  //
-  // `currentLocationId` comes from `useFacilityLocations()`, which reads
-  // `public.locations` — so it is a UUID. The hash returns "loc-dv-main".
-  // The comparison could never be true, so the filter did not select the wrong
-  // bookings; it selected NONE.
-  //
-  //   bookings reaching the client      579
-  //   carrying a real location uuid     578   e.g. a0000000-…-0000000000c1
-  //   matching "loc-dv-main"              0
-  //
-  // ── AND IT WAS LATENT, NOT LIVE ────────────────────────────────────────
-  //
-  // `isMultiLocation` is `locations.length > 1`, and every facility on this
-  // deployment has exactly ONE location — the three rows in `public.locations`
-  // are one per facility, not three branches of one. So this branch is never
-  // entered today and nobody has seen an empty table because of it.
-  //
-  // Recorded because the first version of this comment claimed otherwise, on
-  // two counts. It said the hash was "66.8% wrong", which measured the hash's
-  // INDEX against real locations — a hypothetical, not what the code does. And
-  // it said a facility "saw a random third of its work", which nobody could
-  // have: the filter never runs. The bug was a landmine for the day somebody
-  // adds a second branch, which is a good enough reason to fix it without
-  // needing to be a fire.
-  //
-  // Bookings with no location recorded (1 of 582) are excluded rather than
-  // guessed at: an unassigned booking belongs to no branch, and the HQ view is
-  // where it shows.
-  const locationScopedBookings =
-    isMultiLocation && !isHQView && currentLocationId
-      ? facilityBookings.filter((b) => b.locationId === currentLocationId)
-      : facilityBookings;
-
-  // Section 8B scoping already happened in the query factory — applying
-  // `scopeBookingsToStaff` a second time here would be a no-op that reads like
-  // the rule, and the next person to change the rule would edit the wrong one.
-  const locationBookings = locationScopedBookings;
+  // The page, already scoped to its location and viewer by the server.
+  const locationBookings = bookings;
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-
-  const [activeTab, setActiveTab] = useState("all");
-  const [filterStart, setFilterStart] = useState<Date | null>(null);
-  const [filterEnd, setFilterEnd] = useState<Date | null>(null);
 
   useEffect(() => {
     // Not until the list is here. The draft's id is derived from the highest
@@ -354,26 +347,13 @@ export default function FacilityBookingsPage() {
   // the database and are already RLS-scoped; the facility name is decoration on
   // top of them, not a precondition for showing them.
 
-  // Filter bookings by tab
-  const allBookings = locationBookings;
-  const todayBookings = locationBookings.filter((b) =>
-    isToday(b.startDate, now),
-  );
-  const upcomingBookings = locationBookings.filter(
-    (b) => isUpcoming(b.startDate, now) && b.status !== "cancelled",
-  );
-  const pendingBookings = locationBookings.filter(
-    (b) => b.status === "pending",
-  );
-
-  // Calculate stats
-  const totalBookings = locationBookings.length;
-  const totalRevenue = locationBookings
-    .filter((b) => b.paymentStatus === "paid")
-    .reduce((sum, b) => sum + b.totalCost, 0);
-  const pendingRevenue = locationBookings
-    .filter((b) => b.paymentStatus === "pending")
-    .reduce((sum, b) => sum + b.totalCost, 0);
+  // The tiles, counted by the server in the table's own scope.
+  const totalBookings = totals?.total ?? 0;
+  const todayCount = totals?.today ?? 0;
+  const upcomingCount = totals?.upcoming ?? 0;
+  const pendingCount = totals?.pending ?? 0;
+  const totalRevenue = totals?.paidRevenue ?? 0;
+  const pendingRevenue = totals?.pendingRevenue ?? 0;
 
   const fmtDate = (d: string) => {
     try {
@@ -404,6 +384,7 @@ export default function FacilityBookingsPage() {
             label: "Location",
             icon: CircleDot,
             defaultVisible: true,
+            sortable: false,
             render: (booking: (typeof bookings)[number]) => {
               // The booking's own branch, resolved against the REAL locations
               // `useLocationContext` loads from `public.locations`.
@@ -440,9 +421,7 @@ export default function FacilityBookingsPage() {
       label: "Client",
       icon: User,
       defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) =>
-        clientById.get(booking.clientId)?.name || "Unknown",
+      sortable: false,
       render: (booking) => {
         const client = clientById.get(booking.clientId);
         const pet = client?.pets.find((p) => p.id === booking.petId);
@@ -487,6 +466,7 @@ export default function FacilityBookingsPage() {
       label: "Service",
       icon: CalendarDays,
       defaultVisible: true,
+      sortable: false,
       render: (booking) => (
         <Badge variant="outline" className="capitalize">
           {booking.service}
@@ -522,8 +502,7 @@ export default function FacilityBookingsPage() {
       label: "Time",
       icon: Clock,
       defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => booking.checkInTime,
+      sortable: false,
       render: (booking) => (
         <div className="flex flex-col text-xs">
           <span>In: {booking.checkInTime}</span>
@@ -559,8 +538,7 @@ export default function FacilityBookingsPage() {
       label: "On site",
       icon: CircleDot,
       defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => booking.presence ?? "unknown",
+      sortable: false,
       render: (booking) => {
         const presence = booking.presence ?? "unknown";
         if (presence === "unknown") {
@@ -590,6 +568,7 @@ export default function FacilityBookingsPage() {
             label: "Payment",
             icon: DollarSign,
             defaultVisible: true,
+            sortable: false,
             render: (booking: (typeof bookings)[number]) => (
               <StatusBadge type="status" value={booking.paymentStatus} />
             ),
@@ -601,6 +580,7 @@ export default function FacilityBookingsPage() {
       label: "Tags",
       icon: FileText,
       defaultVisible: true,
+      sortable: false,
       render: (booking) => (
         <TagList
           entityType="booking"
@@ -615,8 +595,7 @@ export default function FacilityBookingsPage() {
       label: "Notes",
       icon: FileText,
       defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => bookingNoteCounts?.[booking.id] ?? 0,
+      sortable: false,
       render: (booking) => {
         const count = bookingNoteCounts?.[booking.id] ?? 0;
         return count > 0 ? (
@@ -636,8 +615,7 @@ export default function FacilityBookingsPage() {
       // Each booking’s own status, derived in SQL: whether the facility asks
       // for a form for its service, and how far its dogs’ forms have got. A
       // booking that needs none sorts and reads as “—”.
-      sortValue: (booking) =>
-        booking.yipyyGo?.requirement ? booking.yipyyGo.status : "—",
+      sortable: false,
       render: (booking) =>
         booking.yipyyGo?.requirement ? (
           <FormStatusChip
@@ -653,8 +631,7 @@ export default function FacilityBookingsPage() {
       label: "Tasks",
       icon: CheckSquare,
       defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => calculateTaskCount(booking),
+      sortable: false,
       render: (booking) => {
         const taskCount = calculateTaskCount(booking);
         return (
@@ -743,21 +720,16 @@ export default function FacilityBookingsPage() {
     },
   ];
 
-  // Convert a Date to a YYYY-MM-DD string without timezone shift
-  const toDateStr = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-  // Keep bookings whose date range overlaps the selected filter range
-  const applyDateFilter = (list: Booking[]) => {
-    if (!filterStart) return list;
-    const startStr = toDateStr(filterStart);
-    const endStr = filterEnd ? toDateStr(filterEnd) : startStr;
-    return list.filter((b) => b.startDate <= endStr && b.endDate >= startStr);
-  };
-
-  const getDataForTab = () => {
-    const base = activeTab === "today" ? todayBookings : allBookings;
-    return applyDateFilter(base);
+  // An export holds everything the table matches, every page of it.
+  const exportAll = async () => {
+    try {
+      exportBookingsToCSV(
+        await fetchAllBookingPages({ ...pageParams, page: 1 }),
+        clientById,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   };
 
   // The cancel, payment and refund modals used to live here with their
@@ -804,10 +776,7 @@ export default function FacilityBookingsPage() {
           title="Bookings"
           description={profile.businessName}
           secondary={
-            <Button
-              variant="outline"
-              onClick={() => exportBookingsToCSV(getDataForTab(), clientById)}
-            >
+            <Button variant="outline" onClick={() => void exportAll()}>
               <Download />
               Export bookings
             </Button>
@@ -825,27 +794,27 @@ export default function FacilityBookingsPage() {
           icon={Calendar}
           tone="indigo"
           active={activeTab === "all"}
-          onClick={() => setActiveTab("all")}
+          onClick={() => selectTab("all")}
         />
         <KpiTile
           label="Today"
-          value={todayBookings.length}
+          value={todayCount}
           hint="Active today"
           icon={CalendarDays}
           tone="amber"
           active={activeTab === "today"}
-          onClick={() => setActiveTab(activeTab === "today" ? "all" : "today")}
+          onClick={() => selectTab(activeTab === "today" ? "all" : "today")}
         />
         <KpiTile
           label="Upcoming"
-          value={upcomingBookings.length}
+          value={upcomingCount}
           hint="Scheduled ahead"
           icon={Hourglass}
           tone="violet"
         />
         <KpiTile
           label="Pending"
-          value={pendingBookings.length}
+          value={pendingCount}
           hint="Awaiting action"
           icon={Clock}
           tone="rose"
@@ -874,11 +843,11 @@ export default function FacilityBookingsPage() {
         <div className="flex items-center gap-4 overflow-x-auto pb-1">
           <SavedViews
             views={[
-              { key: "all", label: "All bookings", count: allBookings.length },
-              { key: "today", label: "Today", count: todayBookings.length },
+              { key: "all", label: "All bookings", count: totalBookings },
+              { key: "today", label: "Today", count: todayCount },
             ]}
             activeKey={activeTab}
-            onSelect={setActiveTab}
+            onSelect={selectTab}
           />
           <BookingDateRangeFilter
             rangeStart={filterStart}
@@ -886,11 +855,12 @@ export default function FacilityBookingsPage() {
             onChange={(start, end) => {
               setFilterStart(start);
               setFilterEnd(end);
+              setTablePage(1);
             }}
           />
         </div>
         <div className="mt-4">
-          {getDataForTab().length === 0 ? (
+          {!isLoading && totalBookings === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-20">
                 <div className="bg-muted/60 mb-4 flex size-16 items-center justify-center rounded-2xl">
@@ -906,14 +876,22 @@ export default function FacilityBookingsPage() {
             </Card>
           ) : (
             <DataTable
-              data={getDataForTab() as unknown as Record<string, unknown>[]}
+              data={locationBookings as unknown as Record<string, unknown>[]}
               columns={
                 columns as unknown as ColumnDef<Record<string, unknown>>[]
               }
               filters={filters}
               searchKey="id"
               searchPlaceholder={"Search by booking ID, client, or pet..."}
-              itemsPerPage={15}
+              itemsPerPage={PAGE_SIZE}
+              serverPaging={{
+                total: pageData?.total ?? 0,
+                page: tablePage,
+                onPageChange: setTablePage,
+                onSearchChange: setTableSearch,
+                onFilterChange: setTableFilters,
+                onSortChange: (key, dir) => setTableSort({ key, dir }),
+              }}
               // §5n: names this table so its column choice and row height
               // survive a reload. §5m: the four fields a phone shows are a
               // decision only this screen can make — identity, what it is,

@@ -14590,12 +14590,33 @@ for only what they show:
 - daycare and boarding capacity, the dates being booked
 - the retail till, the selected client
 
-Six still read the whole history, because they need it: the bookings page
-(its KPIs, and search, sort and pagination done in the browser), client
-filters (last visit, services), the loyalty banner, the client picker's
-booking counts, the calendar's first-booking badge, and the booking modal's
-new-customer check. Each wants a server-side count or latest date rather
-than the list.
+~~Six still read the whole history.~~ **Fixed 2026-09-14.**
+`public.booking_client_summary` (20260914182439, SQL S1–S5) answers the
+per-client facts. For each client ref it returns the count, the first and
+last day, the services, whether a booking is still open, and whether they
+came back within 60 days. These screens read it:
+
+- client filters
+- the client picker's counts
+- the calendar's anniversary badge
+- loyalty retention
+
+The loyalty banner prices percentage vouchers from only the bookings they
+were spent on (`refs`). The booking modal reads the selected client's own
+bookings and the bookings on the dates being booked. The calendar reads its
+visible window, padded a week each side.
+
+The bookings page is paged on the server. `GET /api/bookings/page` searches
+(a booking number or the client's name), filters (status, service, payment,
+tag, today, date range), sorts (ID, dates, status, cost) and pages. It
+applies the page's scope: the chosen location, and the viewer's assigned
+bookings when `view_bookings` is assigned_only. The tiles come from
+`public.booking_facility_totals` (20260914183409, SQL T1–T6) through
+`GET /api/bookings/totals`. Export pages through everything the table
+matches. `DataTable` gained an optional `serverPaging` mode; every other
+table is unchanged. Columns the server cannot order by (client, time,
+presence, notes, tasks, form, service, tags, payment, location) are no
+longer sortable on this page. Search no longer matches pet names.
 
 **Fixed 2026-09-14, found in passing: capacity counted bookings that hold no
 space, and invented the rest.** `lib/capacity-engine.ts` counted cancelled,
