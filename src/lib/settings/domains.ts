@@ -511,8 +511,8 @@ export const SETTING_DOMAINS = {
     fallback: DEFAULT_FORM_NOTIFICATIONS,
   },
   form_red_flags: { schema: formRedFlagsSchema, fallback: NO_FORM_RED_FLAGS },
-  // How a facility follows up a booking left partway. Nothing sends from it
-  // yet — lib/settings/abandonment-recovery.ts.
+  // How a facility follows up a booking left partway. The messaging tick sends
+  // from it — lib/settings/abandonment-recovery.ts.
   abandonment_recovery: {
     schema: abandonmentRecoverySchema,
     fallback: SHIPPED_ABANDONMENT_RECOVERY,

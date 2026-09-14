@@ -14545,6 +14545,13 @@ Now:
   **off**; a facility turns recovery on. The outcome is stored on the row
   (`recovery_outcome`, `recovery_detail`), and the detail sheet does not show
   it yet. SQL U7–U11.
+- ~~The retail refund policy was one constant for every facility.~~ **Fixed
+  2026-09-14.** It is `retail_config.refundPolicy`, edited in Retail settings.
+  It covers which refund methods are offered, the owner-or-manager approval
+  threshold, and whether a reason or notes are required. A configuration
+  without one reads as the old constant's values. `/api/payments/retail/refund`
+  enforces the threshold and the original-payment switch, not only the dialog.
+  Reasons and notes are still checked on the screen only.
 - A draft is kept only when the customer chooses "discard". Closing the tab
   keeps nothing.
 - The draft holds the first pet only.

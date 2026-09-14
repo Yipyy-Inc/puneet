@@ -6,6 +6,10 @@ import { holds, myPermissions } from "@/lib/auth/permissions";
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { createServerClient } from "@/lib/supabase/server";
 import {
+  refundPolicyFromStored,
+  refundRefusal,
+} from "@/lib/retail/refund-policy";
+import {
   refundableFor,
   refundPayments,
   totalRefundable,
@@ -166,6 +170,39 @@ export async function POST(request: NextRequest) {
         refundableCents: totalCents,
       },
       { status: 409 },
+    );
+  }
+
+  // The facility's refund policy, asked here as well as on the screen: a
+  // request made without the dialog must not refund past the approval
+  // threshold, or to a card when the facility turned that method off.
+  const { data: settingRow } = await supabase
+    .from("facility_settings")
+    .select("value")
+    .eq("facility_id", context.facilityId)
+    .eq("domain", "retail_config")
+    .maybeSingle();
+  const membership = viewer.memberships.find(
+    (m) => m.facilityId === context.facilityId,
+  );
+  const refusal = refundRefusal(refundPolicyFromStored(settingRow?.value), {
+    method: "original_payment",
+    amount: wanted / 100,
+    canApprove:
+      viewer.isPlatformAdmin ||
+      membership?.role === "owner" ||
+      membership?.role === "manager",
+  });
+  if (refusal === "method_off") {
+    return NextResponse.json(
+      { error: "This facility does not refund to the original payment." },
+      { status: 403 },
+    );
+  }
+  if (refusal === "needs_approval") {
+    return NextResponse.json(
+      { error: "A refund this large needs an owner or a manager." },
+      { status: 403 },
     );
   }
 
