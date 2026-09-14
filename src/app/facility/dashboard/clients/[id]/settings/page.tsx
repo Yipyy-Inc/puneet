@@ -2,10 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  memberships as allMemberships,
-  membershipPlans,
-} from "@/data/services-pricing";
+import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
 import {
   defaultCustomerSettings,
   type Client,
@@ -174,19 +171,23 @@ function ClientSettingsForm({ client }: { client: Client }) {
   const isSaving = updateClient.isPending;
 
   const customerIdStr = String(clientId);
+  // This client's subscriptions and the facility's plans, from Postgres. These
+  // were another facility's members and plans, from src/data/services-pricing.
+  const { data: clientMemberships } = useMemberships(clientId);
+  const { data: membershipPlans } = useMembershipPlans();
   const activeMembership = useMemo(
     () =>
-      allMemberships.find(
+      (clientMemberships ?? []).find(
         (m) => m.customerId === customerIdStr && m.status === "active",
       ),
-    [customerIdStr],
+    [clientMemberships, customerIdStr],
   );
   const activePlan = useMemo(
     () =>
       activeMembership
-        ? membershipPlans.find((p) => p.id === activeMembership.planId)
+        ? (membershipPlans ?? []).find((p) => p.id === activeMembership.planId)
         : undefined,
-    [activeMembership],
+    [activeMembership, membershipPlans],
   );
   const planInstabookServices = activePlan?.instabookServices ?? [];
 

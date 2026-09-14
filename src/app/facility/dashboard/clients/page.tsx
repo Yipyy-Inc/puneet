@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
-import { facilities } from "@/data/facilities";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,8 +180,7 @@ export default function FacilityClientsPage() {
   // stays mounted and the profile's gates + 403 actually apply.
   const pathname = usePathname();
   const inEmployeePortal = pathname?.startsWith("/employee") ?? false;
-  const facilityId = 11;
-  const facility = facilities.find((f) => f.id === facilityId);
+  const { profile: facilityProfile } = useFacilityProfile();
   const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const {
@@ -225,10 +224,6 @@ export default function FacilityClientsPage() {
   // Above the early return, because it is a hook: "Facility not found" bails
   // out below and a hook after it would change the order between renders.
   const { refs: assignedRefs } = useAssignedClientRefs(assignedClientScope);
-
-  if (!facility) {
-    return <div>Facility not found</div>;
-  }
 
   // NO FACILITY FILTER. The rows are already this facility's.
   //
@@ -555,7 +550,7 @@ export default function FacilityClientsPage() {
             </Badge>
             <PageHeader
               title="Clients"
-              description={`${facility.name} client directory and pet relationships`}
+              description={`${facilityProfile.businessName} client directory and pet relationships`}
             />
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">
@@ -747,7 +742,7 @@ export default function FacilityClientsPage() {
         open={creatingClient}
         onOpenChange={setCreatingClient}
         onSave={handleCreateClient}
-        facilityName={facility.name}
+        facilityName={facilityProfile.businessName}
       />
 
       <Dialog open={segmentDialogOpen} onOpenChange={setSegmentDialogOpen}>

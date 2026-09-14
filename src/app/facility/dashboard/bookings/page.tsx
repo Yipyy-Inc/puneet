@@ -34,7 +34,7 @@ import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { FormStatusChip } from "@/components/yipyygo/form-status-chip";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { TagList } from "@/components/shared/TagList";
-import { getNoteCount } from "@/data/tags-notes";
+import { noteQueries } from "@/lib/api/notes";
 import { useTagCatalogue } from "@/lib/api/tags";
 import { useTagsByEntity } from "@/hooks/use-tags-notes";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
@@ -197,6 +197,7 @@ export default function FacilityBookingsPage() {
   const { t: formText } = useStaffText("yipyyGo");
 
   const { data: clientList = [] } = useQuery(clientQueries.all());
+  const { data: bookingNoteCounts } = useQuery(noteQueries.counts("booking"));
   const clientById = useMemo(
     () => new Map(clientList.map((c) => [c.id, c])),
     [clientList],
@@ -615,9 +616,9 @@ export default function FacilityBookingsPage() {
       icon: FileText,
       defaultVisible: true,
       sortable: true,
-      sortValue: (booking) => getNoteCount("booking", booking.id),
+      sortValue: (booking) => bookingNoteCounts?.[booking.id] ?? 0,
       render: (booking) => {
-        const count = getNoteCount("booking", booking.id);
+        const count = bookingNoteCounts?.[booking.id] ?? 0;
         return count > 0 ? (
           <Badge variant="outline" className="gap-1 text-xs">
             {count} {count === 1 ? "note" : "notes"}

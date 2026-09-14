@@ -29,9 +29,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
-import { bookings } from "@/data/bookings";
 import type { Client } from "@/types/client";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
 
 interface ClientFileSidebarProps {
   client: Client;
@@ -60,6 +61,9 @@ export function ClientFileSidebar({
   bookingCount,
 }: ClientFileSidebarProps) {
   const pathname = usePathname();
+  const { data: clientBookingRows } = useQuery(
+    bookingQueries.byClient(client.id),
+  );
   // Table 21 masking: hide contact + per-booking amounts from staff who lack the
   // permission. TODO: also strip server-side when a backend exists.
   const { maskContact, maskAmount } = useFieldMask();
@@ -119,7 +123,7 @@ export function ClientFileSidebar({
   // Other bookings for context
   const otherBookings = useMemo(
     () =>
-      bookings
+      (clientBookingRows ?? [])
         .filter(
           (b) => b.clientId === client.id && String(b.id) !== currentBookingId,
         )
@@ -128,7 +132,7 @@ export function ClientFileSidebar({
             new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
         )
         .slice(0, 3),
-    [client.id, currentBookingId],
+    [client.id, currentBookingId, clientBookingRows],
   );
 
   // Nav config
