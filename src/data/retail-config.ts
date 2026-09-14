@@ -2,6 +2,7 @@
 
 import type { PricingMethod } from "@/types/retail";
 import type { RoundingRule } from "@/lib/retail-pricing";
+import type { CustomPaymentMethod } from "@/types/retail";
 
 export interface RetailCategory {
   id: string;
@@ -134,6 +135,8 @@ export interface RetailConfig {
   lowStockConfig: RetailLowStockConfig;
   pricingConfig: RetailPricingConfig;
   brandMarginRules: BrandMarginRule[];
+  /** Tenders a facility adds itself (a cheque, an e-transfer). */
+  customPaymentMethods?: CustomPaymentMethod[];
 }
 
 // ── Default data ─────────────────────────────────────────────────────────────

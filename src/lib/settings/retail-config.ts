@@ -4,6 +4,7 @@ import {
   retailConfig as SHIPPED_RETAIL_CONFIG,
   type RetailConfig,
 } from "@/data/retail-config";
+import { customPaymentMethodSchema } from "@/types/retail";
 
 // ============================================================================
 // The facility's retail configuration — product categories, brands, tags and
@@ -50,6 +51,8 @@ export const retailConfigSchema = z
     brandMarginRules: z.array(
       z.object({ id: z.string(), brandName: z.string() }).passthrough(),
     ),
+    // Optional so a row saved before 2026-09-14 still validates: none added.
+    customPaymentMethods: z.array(customPaymentMethodSchema).optional(),
   })
   .passthrough();
 

@@ -41,10 +41,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { Product, PricingMethod } from "@/types/retail";
-import { retailConfig } from "@/data/retail-config";
+import { useRetailConfig } from "@/hooks/use-retail-config";
 import { sellingFromMargin } from "@/lib/retail-pricing";
 import { BulkPriceLabelPrint } from "@/components/retail/BulkPriceLabelPrint";
-import { getOpenPurchaseOrderForSupplier } from "@/data/retail";
+import { usePurchaseOrders } from "@/lib/api/retail-store";
 import {
   applyInvoiceImport,
   type ApplyInvoiceImportResult,
@@ -149,6 +149,10 @@ function buildRow(
   li: ExtractedLineItem,
   index: number,
   products: Product[],
+  pricing: {
+    defaultPricingMethod: PricingMethod;
+    defaultMarginPercent?: number;
+  },
 ): Row {
   const description = li.description || li.rawText || "";
   const result = matchLineToProduct(description, products);
@@ -187,8 +191,8 @@ function buildRow(
     newBrandCustom: false,
     newSku: suggestSku(description),
     newSkuTouched: false,
-    newPricingMethod: retailConfig.pricingConfig.defaultPricingMethod,
-    newMarginPercent: retailConfig.pricingConfig.defaultMarginPercent ?? 0,
+    newPricingMethod: pricing.defaultPricingMethod,
+    newMarginPercent: pricing.defaultMarginPercent ?? 0,
   };
 }
 
@@ -199,8 +203,13 @@ export function InvoiceLineItemsTable({
   onBack,
 }: InvoiceLineItemsTableProps) {
   const router = useRouter();
+  // The facility's categories, brands and pricing defaults (Settings → Retail).
+  // These were `retailConfig` from src/data, the same for every facility.
+  const retailConfig = useRetailConfig().config;
   const [rows, setRows] = useState<Row[]>(() =>
-    initialLines.map((li, i) => buildRow(li, i, products)),
+    initialLines.map((li, i) =>
+      buildRow(li, i, products, retailConfig.pricingConfig),
+    ),
   );
   const nextId = useRef(initialLines.length);
   const [view, setView] = useState<"table" | "summary" | "success">("table");
@@ -208,8 +217,14 @@ export function InvoiceLineItemsTable({
     useState<ApplyInvoiceImportResult | null>(null);
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   // An existing OPEN PO for this supplier, if any (spec 2.4). Offer to link.
+  const purchaseOrders = usePurchaseOrders().data;
   const openPo = header?.supplierId
-    ? getOpenPurchaseOrderForSupplier(header.supplierId)
+    ? purchaseOrders?.find(
+        (po) =>
+          po.supplierId === header.supplierId &&
+          po.status !== "received" &&
+          po.status !== "cancelled",
+      )
     : undefined;
   const [linkToPo, setLinkToPo] = useState(true);
 
@@ -963,6 +978,7 @@ function NewProductFields({
   row: Row;
   onChange: (patch: Partial<Row>) => void;
 }) {
+  const retailConfig = useRetailConfig().config;
   const costBasis = costPerSellableUnit(
     row.unitCost,
     row.itemsPerUnit,

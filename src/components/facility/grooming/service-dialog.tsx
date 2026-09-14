@@ -59,8 +59,9 @@ import type {
   AgeGroupPricingRule,
   AgeGroupAdjustment,
 } from "@/types/grooming";
-import { groomingProducts } from "@/data/grooming";
-import { GROOMING_ADD_ONS } from "@/data/grooming-add-ons";
+import { useGroomingAddOns } from "@/lib/api/grooming-catalogue";
+import { useRetailProducts } from "@/lib/api/retail-store";
+import { NO_ITEMS } from "@/lib/no-items";
 import {
   describeAddOnConditions,
   describeAgeGroupRule,
@@ -508,6 +509,10 @@ export function ServiceDialog({
   const { data: appointmentsData = [] } = useQuery(
     groomingQueries.appointments(),
   );
+  // The facility's own add-ons and stock. Both were fixtures: add-ons nobody
+  // offers, and shampoo the facility never bought.
+  const addOnOptions = useGroomingAddOns().data ?? NO_ITEMS;
+  const supplyProducts = useRetailProducts().data ?? NO_ITEMS;
   const activeStylists = useMemo(
     () => stylistsData.filter((s) => s.status === "active"),
     [stylistsData],
@@ -695,7 +700,7 @@ export function ServiceDialog({
 
   function addProductUsage() {
     if (!selectedProductId || !selectedQty) return;
-    const product = groomingProducts.find((p) => p.id === selectedProductId);
+    const product = supplyProducts.find((p) => p.id === selectedProductId);
     if (!product) return;
     if (productUsage.some((u) => u.productId === selectedProductId)) {
       toast.error("This product is already added");
@@ -707,7 +712,7 @@ export function ServiceDialog({
         productId: product.id,
         productName: product.name,
         quantity: parseFloat(selectedQty),
-        unit: product.measurementUnit as string,
+        unit: "unit",
         isOptional: false,
       },
     ]);
@@ -1504,7 +1509,7 @@ export function ServiceDialog({
                       </div>
                       <div className="divide-y">
                         {productUsage.map((usage) => {
-                          const product = groomingProducts.find(
+                          const product = supplyProducts.find(
                             (p) => p.id === usage.productId,
                           );
                           return (
@@ -1518,7 +1523,7 @@ export function ServiceDialog({
                                 </p>
                                 {product && (
                                   <p className="text-muted-foreground text-[10px]">
-                                    {product.brand} · {product.measurementUnit}
+                                    {product.brand}
                                   </p>
                                 )}
                               </div>
@@ -1579,10 +1584,8 @@ export function ServiceDialog({
                         <SelectValue placeholder="Choose product…" />
                       </SelectTrigger>
                       <SelectContent>
-                        {groomingProducts
-                          .filter(
-                            (p) => p.itemType === "consumable" && p.isActive,
-                          )
+                        {supplyProducts
+                          .filter((p) => p.status === "active")
                           .map((p) => (
                             <SelectItem
                               key={p.id}
@@ -1591,8 +1594,7 @@ export function ServiceDialog({
                             >
                               <span className="font-medium">{p.name}</span>
                               <span className="text-muted-foreground ml-1">
-                                ({p.currentStock.toLocaleString()}{" "}
-                                {p.measurementUnit} in stock)
+                                ({p.stock.toLocaleString()} in stock)
                               </span>
                             </SelectItem>
                           ))}
@@ -1607,13 +1609,6 @@ export function ServiceDialog({
                       onChange={(e) => setSelectedQty(e.target.value)}
                       className="h-8 w-20 text-xs"
                     />
-                    {selectedProductId && (
-                      <span className="text-muted-foreground w-8 shrink-0 self-center text-xs">
-                        {groomingProducts.find(
-                          (p) => p.id === selectedProductId,
-                        )?.measurementUnit ?? ""}
-                      </span>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -1686,9 +1681,7 @@ export function ServiceDialog({
                   )}
 
                   {defaultAddOnRules.map((rule) => {
-                    const ao = GROOMING_ADD_ONS.find(
-                      (a) => a.id === rule.addOnId,
-                    );
+                    const ao = addOnOptions.find((a) => a.id === rule.addOnId);
                     return (
                       <DefaultAddOnRuleRow
                         key={rule.addOnId}
@@ -1713,21 +1706,25 @@ export function ServiceDialog({
                         <SelectValue placeholder="Choose an add-on…" />
                       </SelectTrigger>
                       <SelectContent>
-                        {GROOMING_ADD_ONS.filter(
-                          (a) =>
-                            !defaultAddOnRules.some((r) => r.addOnId === a.id),
-                        ).map((a) => (
-                          <SelectItem
-                            key={a.id}
-                            value={a.id}
-                            className="text-xs"
-                          >
-                            <span className="font-medium">{a.name}</span>
-                            <span className="text-muted-foreground ml-1">
-                              · +${a.price}
-                            </span>
-                          </SelectItem>
-                        ))}
+                        {addOnOptions
+                          .filter(
+                            (a) =>
+                              !defaultAddOnRules.some(
+                                (r) => r.addOnId === a.id,
+                              ),
+                          )
+                          .map((a) => (
+                            <SelectItem
+                              key={a.id}
+                              value={a.id}
+                              className="text-xs"
+                            >
+                              <span className="font-medium">{a.name}</span>
+                              <span className="text-muted-foreground ml-1">
+                                · +${a.price}
+                              </span>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <Button

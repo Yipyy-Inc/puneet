@@ -44,7 +44,9 @@ import {
   type LowStockItem,
   type ServiceAttachRate,
 } from "@/lib/retail-reports";
-import { getAllTransactions, type Transaction } from "@/data/retail";
+import type { Transaction } from "@/data/retail";
+import { useRetailSales } from "@/lib/api/retail-store";
+import { NO_ITEMS } from "@/lib/no-items";
 import { downloadReportCsv } from "@/lib/report-export";
 import { formatCurrency, formatCount, formatPercent } from "@/lib/format";
 import {
@@ -1082,8 +1084,10 @@ function ReconciliationTable({
   startDate: Date;
   endDate: Date;
 }) {
+  // The till's recorded sales. This reconciled the fixture's transactions.
+  const sales = useRetailSales().data ?? NO_ITEMS;
   const transactions = useMemo(() => {
-    const all = getAllTransactions();
+    const all = sales;
     return all
       .filter((txn) => {
         const txnDate = new Date(txn.createdAt);
@@ -1097,7 +1101,7 @@ function ReconciliationTable({
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-  }, [startDate, endDate]);
+  }, [sales, startDate, endDate]);
 
   const reconciliationColumns: ColumnDef<Transaction>[] = [
     {

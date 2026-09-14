@@ -54,7 +54,6 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
-  categories,
   type Product,
   type ProductVariant,
   type VariantType,
@@ -698,7 +697,10 @@ export default function ProductsPage() {
       label: "Category",
       options: [
         { value: "all", label: "All Categories" },
-        ...categories.map((c) => ({ value: c, label: c })),
+        ...retailConfig.categories.map((c) => ({
+          value: c.name,
+          label: c.name,
+        })),
       ],
     },
     {
@@ -767,7 +769,9 @@ export default function ProductsPage() {
             <Tag className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{categories.length}</div>
+            <div className="text-2xl font-bold">
+              {retailConfig.categories.length}
+            </div>
             <p className="text-muted-foreground text-xs">Product categories</p>
           </CardContent>
         </Card>
