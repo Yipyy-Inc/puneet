@@ -160,8 +160,9 @@ test.describe("the kennels board", () => {
     expect(entry!.petNames.length, "the guest has a name").toBeGreaterThan(0);
     expect(entry!.clientName, "and an owner").not.toBe("");
 
+    // The kennel board is the whole page since 2026-09-14 — its Requests and
+    // Eligibility tabs read fixtures and were removed — so there is no tab.
     await page.goto("/facility/dashboard/services/boarding/ops");
-    await page.getByRole("tab", { name: /kennels/i }).click();
 
     // The pet's name, on screen, in the kennel it is in.
     await expect(

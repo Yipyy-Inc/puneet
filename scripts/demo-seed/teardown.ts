@@ -497,6 +497,92 @@ try {
     // The per-location daycare price stays: it is configuration, the client
     // may well have changed it, and a facility with no price is a broken one.
 
+    // ── The second pass (records.ts) ──────────────────────────────────────
+    // Found by the exact names, slugs and words it wrote. Waiver signatures
+    // go with their seeded waiver; a signature the client captured on one of
+    // them goes too, because it points at a document being removed.
+    {
+      const R = await import("./records");
+      const waiverIds = (
+        await tx`
+          select id::text from public.waivers
+           where facility_id = ${DEMO_FACILITY_ID}
+             and name = any(${pgTextArray(R.WAIVERS.map((w) => w.name))}::text[])`
+      ).map((r: { id: string }) => r.id);
+      await deleteChildren(tx, "public.waivers", waiverIds);
+      const waiversGone = await tx.unsafe(
+        `delete from public.waivers where id = any($1::uuid[])`,
+        [pgArray(waiverIds)],
+      );
+      if (waiversGone.count) removed["public.waivers"] = waiversGone.count;
+
+      const formIds = (
+        await tx`
+          select id::text from public.forms
+           where facility_id = ${DEMO_FACILITY_ID}
+             and slug = any(${pgTextArray(R.FORMS.map((f) => f.slug))}::text[])`
+      ).map((r: { id: string }) => r.id);
+      const subs = await tx.unsafe(
+        `delete from public.form_submissions where form_id = any($1::uuid[])`,
+        [pgArray(formIds)],
+      );
+      if (subs.count) removed["public.form_submissions"] = subs.count;
+      await deleteChildren(tx, "public.forms", formIds);
+      const formsGone = await tx.unsafe(
+        `delete from public.forms where id = any($1::uuid[])`,
+        [pgArray(formIds)],
+      );
+      if (formsGone.count) removed["public.forms"] = formsGone.count;
+
+      // The requirements setting goes only while every form it names is one
+      // of the seeded forms — once the client has required a form of his own,
+      // it is his setting and stays.
+      const [requirements] = await tx`
+        select value from public.facility_settings
+         where facility_id = ${DEMO_FACILITY_ID} and domain = 'form_requirements'`;
+      if (requirements) {
+        const named = (
+          (
+            requirements.value as {
+              services?: { requirements?: { formId?: string }[] }[];
+            }
+          ).services ?? []
+        ).flatMap((s) => (s.requirements ?? []).map((r) => r.formId ?? ""));
+        if (named.every((id) => formIds.includes(id))) {
+          const reqGone = await tx`
+            delete from public.facility_settings
+             where facility_id = ${DEMO_FACILITY_ID} and domain = 'form_requirements'`;
+          if (reqGone.count)
+            removed["public.facility_settings"] = reqGone.count;
+        } else {
+          kept.push("form requirements naming a form the client made");
+        }
+      }
+
+      const tagIds = (
+        await tx`
+          select id::text from public.facility_tags
+           where facility_id = ${DEMO_FACILITY_ID}
+             and name = any(${pgTextArray(R.TAGS.map((t) => t.name))}::text[])`
+      ).map((r: { id: string }) => r.id);
+      await deleteChildren(tx, "public.facility_tags", tagIds);
+      const tagsGone = await tx.unsafe(
+        `delete from public.facility_tags where id = any($1::uuid[])`,
+        [pgArray(tagIds)],
+      );
+      if (tagsGone.count) removed["public.facility_tags"] = tagsGone.count;
+
+      const floorGone = await tx`
+        delete from public.daily_care_records
+         where facility_id = ${DEMO_FACILITY_ID}
+           and payload->>'text' = any(${pgTextArray([
+             ...R.SHIFT_NOTES.map((n) => n.text),
+             ...R.JOURNAL_NOTES.map((n) => n.text),
+           ])}::text[])`;
+      if (floorGone.count)
+        removed["public.daily_care_records"] = floorGone.count;
+    }
+
     if (ROLLBACK) throw new Rollback();
   });
   console.log("removed:");
