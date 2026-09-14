@@ -136,8 +136,6 @@ import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import {
   getFiservConfig,
-  getTokenizedCardsByClient,
-  getDefaultTokenizedCard,
   getYipyyPayConfig,
   getYipyyPayDevicesByFacility,
   getYipyyPayDevice,
@@ -1659,18 +1657,6 @@ export default function POSPage() {
         if (selectedTokenizedCard && customerId) {
           paymentSource = "tokenized_card";
           tokenizedCardId = selectedTokenizedCard.id;
-        } else if (customerId && !cardFieldsReady) {
-          // Fall back to a card on file only when there is no usable card form
-          // — with the fields mounted, the operator is entering a card and
-          // silently charging a stored one instead would be a surprise.
-          const defaultCard = getDefaultTokenizedCard(
-            facilityId,
-            Number(customerId),
-          );
-          if (defaultCard) {
-            paymentSource = "tokenized_card";
-            tokenizedCardId = defaultCard.id;
-          }
         }
 
         // ── THE REAL CHARGE ────────────────────────────────────────────────
@@ -4227,7 +4213,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                               </p>
                               {(payment.method === "credit" ||
                                 payment.method === "debit") &&
-                                inPersonMethods?.payWithiPhone && (
+                                false /* Tap to Pay is not connected */ && (
                                   <p className="text-xs font-medium text-blue-600">
                                     💡 Final payment can be completed with Pay
                                     with iPhone
@@ -4266,7 +4252,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                       {/* Pay with iPhone option for credit/debit */}
                       {(payment.method === "credit" ||
                         payment.method === "debit") &&
-                        inPersonMethods?.payWithiPhone && (
+                        false /* Tap to Pay is not connected */ && (
                           <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
                             <div className="flex items-center justify-between">
                               <Label className="text-xs">
@@ -4514,7 +4500,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                         : null;
                     const tokenizedCards =
                       customerId && cardOnFileEnabled
-                        ? getTokenizedCardsByClient(facilityId, customerId)
+                        ? ([] as TokenizedCard[]) /* no card on file is charged at the till yet */
                         : [];
                     const hasSavedCards = tokenizedCards.length > 0;
 
@@ -4716,8 +4702,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                           )}
 
                         {/* Pay with iPhone (Tap to Pay) - if enabled and not using Clover */}
-                        {inPersonMethods?.payWithiPhone &&
-                          fiservConfig?.yipyyPay?.enabled &&
+                        {false /* Tap to Pay is not connected */ &&
                           !useCloverTerminal && (
                             <Button
                               type="button"
@@ -5140,7 +5125,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                     const tokenizedCards =
                       customerId &&
                       fiservConfig?.enabledPaymentMethods.cardOnFile
-                        ? getTokenizedCardsByClient(facilityId, customerId)
+                        ? ([] as TokenizedCard[]) /* no card on file is charged at the till yet */
                         : [];
 
                     if (tokenizedCards.length > 0) {
