@@ -28,6 +28,7 @@ import { schedulingQueries } from "@/lib/api/scheduling";
 import { staffQueries } from "@/lib/api/staff";
 import { computeShiftHours } from "@/lib/scheduling-utils";
 import type { ScheduleShift } from "@/types/scheduling";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 type ShiftBucket = "active" | "upcoming" | "finished" | "unfilled" | "late";
 
@@ -90,7 +91,7 @@ export function RosterView() {
   const targetDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + dateOffset);
-    return d.toISOString().split("T")[0] as string;
+    return formatDateLocal(d);
   }, [dateOffset]);
 
   // ── REAL DEPARTMENTS, POSITIONS, PEOPLE AND SHIFTS ──────────────────────

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { computeOvertimeHours } from "@/lib/scheduling-utils";
 import type { ScheduleShift, EnhancedTimeOffRequest } from "@/types/scheduling";
 import type { ViewMode } from "./ScheduleHeader";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 // ─── Date Utilities ───────────────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export function getDatesForView(currentDate: Date, viewMode: ViewMode): Date[] {
 }
 
 export function formatDateStr(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return formatDateLocal(date);
 }
 
 export const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

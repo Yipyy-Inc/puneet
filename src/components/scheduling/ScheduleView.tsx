@@ -52,6 +52,7 @@ import type {
   ShiftOpportunity,
   ShiftOpportunityNotificationSettings,
 } from "@/types/scheduling";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 // Scheduling settings (matching schedulingSettingsSchema)
 const schedulingSettings = {
@@ -111,7 +112,7 @@ export function ScheduleView() {
   // Date range for the current view
   const dateRange = useMemo(() => {
     if (viewMode === "day") {
-      const dayStr = currentDate.toISOString().split("T")[0];
+      const dayStr = formatDateLocal(currentDate);
       return { start: dayStr, end: dayStr };
     }
 
@@ -130,8 +131,8 @@ export function ScheduleView() {
     }
 
     return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
+      start: formatDateLocal(start),
+      end: formatDateLocal(end),
     };
   }, [currentDate, viewMode]);
 
@@ -269,7 +270,7 @@ export function ScheduleView() {
     [filteredShifts],
   );
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = formatDateLocal(new Date());
 
   const scheduledToday = useMemo(
     () =>

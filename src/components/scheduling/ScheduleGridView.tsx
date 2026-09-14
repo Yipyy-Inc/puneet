@@ -156,6 +156,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
     return (
       <div
         key={cellKey}
+        data-date={dateStr}
         className={cn(
           "group/cell border-border/50 relative flex min-h-[60px] cursor-pointer flex-col gap-1 border-r border-b p-1.5 transition-colors",
           weekend &&

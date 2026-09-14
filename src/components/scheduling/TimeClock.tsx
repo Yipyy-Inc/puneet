@@ -24,6 +24,7 @@ import type {
   TimeClockEntry,
   Department,
 } from "@/types/scheduling";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 interface TimeClockProps {
   open: boolean;
@@ -180,7 +181,7 @@ export function TimeClock({
   onClockOut,
   department,
 }: TimeClockProps) {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = formatDateLocal(new Date());
 
   const todayShifts = shifts.filter(
     (s) =>

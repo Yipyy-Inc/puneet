@@ -178,6 +178,12 @@ test("the calendar draws Postgres and publishes back to it", async ({
       "Loading the schedule",
     );
     expect(body, "the shift from Postgres is on the grid").toContain("DRAFT");
+    // And in today's column. The grid keyed its cells by the UTC day, so from
+    // 20:00 in Toronto every shift sat one column early — drawn, and wrong.
+    await expect(
+      page.locator(`[data-date="${today}"]`).getByText(/draft/i).first(),
+      "the shift is in the column for its own day",
+    ).toBeVisible();
     expect(body, "and the draft bar counted them").toContain(
       "waiting to be published",
     );
