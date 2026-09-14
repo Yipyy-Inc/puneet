@@ -36,7 +36,6 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { facilityStaff } from "@/data/facility-staff";
 import { useSettings } from "@/hooks/use-settings";
 import type { ServiceModule } from "@/types/facility-staff";
 import { useQuery } from "@tanstack/react-query";
@@ -52,6 +51,7 @@ import type { ServiceAddOn, TipConfig } from "@/types/facility";
 import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
 import { offeredMedicationAids } from "@/lib/settings/care-fees";
+import { staffQueries } from "@/lib/api/staff";
 
 /**
  * The unit an add-on is priced by — `/day`, `/hr`, `% of booking`.
@@ -312,6 +312,7 @@ export function ConfirmStep({
   const t = useShellText("booking");
   const { approval } = useBookingApproval();
   const { fees: careFees } = useCareFees();
+  const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
 
   // The facility's waivers that apply here, less what this client has
@@ -662,7 +663,7 @@ export function ConfirmStep({
         };
         const serviceModule = moduleMap[selectedService];
         if (!serviceModule) return null;
-        const eligible = facilityStaff.filter(
+        const eligible = (staffProfiles ?? []).filter(
           (s) =>
             s.status === "active" &&
             s.serviceAssignments.includes(serviceModule),

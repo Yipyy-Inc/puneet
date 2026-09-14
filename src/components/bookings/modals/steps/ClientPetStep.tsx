@@ -34,7 +34,6 @@ import {
   UserPlus,
   ArrowLeft,
 } from "lucide-react";
-import { bookings } from "@/data/bookings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Tooltip,
@@ -45,11 +44,13 @@ import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 import type { ModuleConfig } from "@/types/facility";
 import type { Pet } from "@/types/pet";
-import { trainingPackages } from "@/data/training";
 import {
   checkPrerequisitesForPet,
   hasCompletedPrerequisites,
 } from "@/lib/training-program-prereqs";
+import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
+import { trainingQueries } from "@/lib/api/training";
 
 interface ClientPetStepProps {
   searchQuery: string;
@@ -133,6 +134,8 @@ export function ClientPetStep({
   onAddClient,
   onAddPet,
 }: ClientPetStepProps) {
+  const { data: facilityBookings } = useQuery(bookingQueries.all());
+  const { data: trainingPrograms } = useQuery(trainingQueries.packages());
   const t = useShellText("booking");
   const locale = useShellLocale();
   // ── Quick-create state ────────────────────────────────────────────────
@@ -284,8 +287,11 @@ export function ClientPetStep({
   // below are a constant-time lookup per pet.
   const lockedProgram = React.useMemo(() => {
     if (selectedService !== "training" || !preSelectedProgramId) return null;
-    return trainingPackages.find((p) => p.id === preSelectedProgramId) ?? null;
-  }, [selectedService, preSelectedProgramId]);
+    return (
+      (trainingPrograms ?? []).find((p) => p.id === preSelectedProgramId) ??
+      null
+    );
+  }, [selectedService, preSelectedProgramId, trainingPrograms]);
 
   const canSelectForProgramPrereq = React.useCallback(
     (pet: Pet) => {
@@ -425,11 +431,11 @@ export function ClientPetStep({
   // Booking counts per client
   const bookingCounts = React.useMemo(() => {
     const counts: Record<number, number> = {};
-    for (const b of bookings) {
+    for (const b of facilityBookings ?? []) {
       counts[b.clientId] = (counts[b.clientId] ?? 0) + 1;
     }
     return counts;
-  }, []);
+  }, [facilityBookings]);
 
   // Client list sorted by frequency (most bookings first)
   const sortedClients = React.useMemo(() => {
