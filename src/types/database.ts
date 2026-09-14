@@ -4803,6 +4803,124 @@ export type Database = {
           },
         ];
       };
+      incident_care_items: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          created_by: string | null;
+          created_by_name: string | null;
+          detail: Json;
+          facility_id: string;
+          id: string;
+          incident_id: string;
+          kind: string;
+          name: string;
+          pet_ids: string[];
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          detail?: Json;
+          facility_id: string;
+          id?: string;
+          incident_id: string;
+          kind: string;
+          name: string;
+          pet_ids?: string[];
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          created_by_name?: string | null;
+          detail?: Json;
+          facility_id?: string;
+          id?: string;
+          incident_id?: string;
+          kind?: string;
+          name?: string;
+          pet_ids?: string[];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "incident_care_items_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incident_care_items_incident_id_fkey";
+            columns: ["incident_id"];
+            isOneToOne: false;
+            referencedRelation: "incidents";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      incident_care_logs: {
+        Row: {
+          care_item_id: string;
+          facility_id: string;
+          id: string;
+          incident_id: string;
+          logged_at: string;
+          logged_by: string | null;
+          logged_by_name: string | null;
+          note: string | null;
+          photo_url: string | null;
+        };
+        Insert: {
+          care_item_id: string;
+          facility_id: string;
+          id?: string;
+          incident_id: string;
+          logged_at?: string;
+          logged_by?: string | null;
+          logged_by_name?: string | null;
+          note?: string | null;
+          photo_url?: string | null;
+        };
+        Update: {
+          care_item_id?: string;
+          facility_id?: string;
+          id?: string;
+          incident_id?: string;
+          logged_at?: string;
+          logged_by?: string | null;
+          logged_by_name?: string | null;
+          note?: string | null;
+          photo_url?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "incident_care_logs_care_item_id_fkey";
+            columns: ["care_item_id"];
+            isOneToOne: false;
+            referencedRelation: "incident_care_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incident_care_logs_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "incident_care_logs_incident_id_fkey";
+            columns: ["incident_id"];
+            isOneToOne: false;
+            referencedRelation: "incidents";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       incidents: {
         Row: {
           booking_id: string | null;
@@ -4812,6 +4930,7 @@ export type Database = {
           description: string;
           facility_id: string;
           id: string;
+          in_stay_care_locked_at: string | null;
           internal_notes: string;
           kind: string;
           location_id: string | null;
@@ -4838,6 +4957,7 @@ export type Database = {
           description?: string;
           facility_id: string;
           id?: string;
+          in_stay_care_locked_at?: string | null;
           internal_notes?: string;
           kind: string;
           location_id?: string | null;
@@ -4864,6 +4984,7 @@ export type Database = {
           description?: string;
           facility_id?: string;
           id?: string;
+          in_stay_care_locked_at?: string | null;
           internal_notes?: string;
           kind?: string;
           location_id?: string | null;

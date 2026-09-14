@@ -27,12 +27,17 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission } from "@/lib/role-utils";
-import { addCareAction, addIncidentMedication } from "@/data/incidents";
-import { bookings } from "@/data/bookings";
-import { boardingGuests } from "@/data/boarding";
-import { facilityConfig } from "@/data/facility-config";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { bookingQueries } from "@/lib/api/booking";
+import { useCareFees } from "@/lib/api/facility-settings";
+import {
+  useAddIncidentCare,
+  useSetIncidentCareActive,
+} from "@/lib/api/incidents";
 import type {
   Incident,
   IncidentCareAction,
@@ -49,8 +54,6 @@ import type {
 // The tab renders only while at least one involved pet is on premises. Services
 // that have an "in-stay" phase (2B); one-shot services never show the tab.
 const IN_STAY_SERVICES = new Set(["boarding", "daycare", "grooming"]);
-// Booking statuses that mean the pet is physically here right now.
-const ON_PREMISES_STATUSES = new Set(["checked_in", "in_progress", "ready"]);
 
 function bookingHasPet(
   petId: number,
@@ -69,32 +72,41 @@ function bookingHasPet(
  *    on-premises booking for that pet).
  * When every involved pet has checked out the incident is historical → false.
  */
-export function isIncidentInStay(incident: Incident): boolean {
+type StayBooking = {
+  id: number;
+  service: string;
+  presence?: string;
+  petId: number | number[];
+};
+const NO_STAY_BOOKINGS: StayBooking[] = [];
+
+export function isIncidentInStay(
+  incident: Incident,
+  bookings: readonly StayBooking[],
+): boolean {
+  // On site is what the door recorded (`presence`), not a status: it read a
+  // fixture's bookings and boarding guests until 2026-09-14.
+  const here = (b: StayBooking) =>
+    IN_STAY_SERVICES.has(b.service.toLowerCase()) && b.presence === "on-site";
+
   // Path A — explicit booking link (0.1).
-  if (incident.bookingId != null) {
-    const booking = bookings.find((b) => b.id === incident.bookingId);
-    if (
-      booking &&
-      IN_STAY_SERVICES.has(booking.service.toLowerCase()) &&
-      ON_PREMISES_STATUSES.has(booking.status)
-    ) {
-      return true;
-    }
+  if (
+    incident.bookingId != null &&
+    bookings.some((b) => b.id === incident.bookingId && here(b))
+  ) {
+    return true;
   }
 
   // Path B — any involved pet has an active stay.
-  return incident.petIds.some(
-    (petId) =>
-      boardingGuests.some(
-        (g) => g.petId === petId && g.status === "checked-in",
-      ) ||
-      bookings.some(
-        (b) =>
-          IN_STAY_SERVICES.has(b.service.toLowerCase()) &&
-          ON_PREMISES_STATUSES.has(b.status) &&
-          bookingHasPet(petId, b.petId),
-      ),
+  return incident.petIds.some((petId) =>
+    bookings.some((b) => here(b) && bookingHasPet(petId, b.petId)),
   );
+}
+
+/** `isIncidentInStay` over the facility's own bookings. */
+export function useIncidentInStay(incident: Incident): boolean {
+  const { data } = useQuery(bookingQueries.all());
+  return isIncidentInStay(incident, data ?? NO_STAY_BOOKINGS);
 }
 
 // ── Option lists ──────────────────────────────────────────────────────────────
@@ -144,11 +156,9 @@ function describeSchedule(a: IncidentCareAction): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-// General medication-administration fee (2G) — used to prefill the fee inputs.
-const GENERAL_MED_FEE = facilityConfig.serviceFees.medication.adminFee;
-
 export function InStayCareTab({ incident }: { incident: Incident }) {
   const { user } = useCurrentUser();
+  const { t, fill } = useStaffText("incidentReport");
   const { role, userId } = useFacilityRole();
   const locked = !!incident.inStayCareLocked;
   // Only a manager/senior (manage_incidents) may create/edit care actions.
@@ -159,6 +169,15 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
     userId ?? undefined,
   );
   const canEditCare = canManageCare && !locked;
+  const addCare = useAddIncidentCare();
+  const setCareActive = useSetIncidentCareActive();
+  // The facility's medication fee (2G) prefills the fee inputs. It was a
+  // fixture's fee, the same at every facility.
+  const { fees } = useCareFees();
+  const GENERAL_MED_FEE = {
+    enabled: fees.medicationAdmin.enabled,
+    amount: fees.medicationAdmin.amount,
+  };
 
   const [careActions, setCareActions] = useState<IncidentCareAction[]>(
     incident.careActions,
@@ -208,53 +227,78 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
 
   const handleAddCare = () => {
     if (!careForm.name.trim()) return;
-    const created = addCareAction(incident.id, {
-      name: careForm.name.trim(),
-      frequency: careForm.frequency,
-      ...(careForm.frequency === "every_x_hours"
-        ? { everyXHours: careForm.everyXHours }
-        : {}),
-      duration: careForm.duration,
-      ...(careForm.duration === "x_days" ? { days: careForm.days } : {}),
-      starts: careForm.starts,
-      staffInstructions: careForm.staffInstructions.trim(),
-      requiresPhoto: careForm.requiresPhoto,
-      createdBy: user.name,
-      active: true,
-    });
-    if (created) setCareActions((prev) => [...prev, created]);
-    resetCareForm();
-    setShowCareForm(false);
+    addCare.mutate(
+      {
+        ref: incident.id,
+        write: {
+          kind: "action",
+          name: careForm.name.trim(),
+          detail: {
+            frequency: careForm.frequency,
+            ...(careForm.frequency === "every_x_hours"
+              ? { everyXHours: careForm.everyXHours }
+              : {}),
+            duration: careForm.duration,
+            ...(careForm.duration === "x_days" ? { days: careForm.days } : {}),
+            starts: careForm.starts,
+            staffInstructions: careForm.staffInstructions.trim(),
+            requiresPhoto: careForm.requiresPhoto,
+          },
+        },
+      },
+      {
+        onSuccess: (updated) => {
+          setCareActions(updated.careActions);
+          resetCareForm();
+          setShowCareForm(false);
+          toast.success(t("careActionAdded"));
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const handleAddMed = () => {
     if (!medForm.name.trim()) return;
-    const created = addIncidentMedication(incident.id, {
-      name: medForm.name.trim(),
-      medType: medForm.medType,
-      dosage: medForm.dosage.trim(),
-      frequency: medForm.frequency.trim(),
-      instructions: medForm.instructions.trim(),
-      critical: medForm.critical,
-      chargeFee: medForm.chargeFee,
-      ...(medForm.chargeFee
-        ? { feeType: medForm.feeType, feeAmount: medForm.feeAmount }
-        : {}),
-      createdBy: user.name,
-    });
-    if (created) setMedications((prev) => [...prev, created]);
-    setMedForm({
-      name: "",
-      medType: "oral",
-      dosage: "",
-      frequency: "Once daily",
-      instructions: "",
-      critical: false,
-      chargeFee: GENERAL_MED_FEE.enabled,
-      feeType: "per_admin",
-      feeAmount: GENERAL_MED_FEE.amount,
-    });
-    setShowMedForm(false);
+    addCare.mutate(
+      {
+        ref: incident.id,
+        write: {
+          kind: "medication",
+          name: medForm.name.trim(),
+          detail: {
+            medType: medForm.medType,
+            dosage: medForm.dosage.trim(),
+            frequency: medForm.frequency.trim(),
+            instructions: medForm.instructions.trim(),
+            critical: medForm.critical,
+            chargeFee: medForm.chargeFee,
+            ...(medForm.chargeFee
+              ? { feeType: medForm.feeType, feeAmount: medForm.feeAmount }
+              : {}),
+          },
+        },
+      },
+      {
+        onSuccess: (updated) => {
+          setMedications(updated.incidentMedications);
+          setMedForm({
+            name: "",
+            medType: "oral",
+            dosage: "",
+            frequency: "Once daily",
+            instructions: "",
+            critical: false,
+            chargeFee: GENERAL_MED_FEE.enabled,
+            feeType: "per_admin",
+            feeAmount: GENERAL_MED_FEE.amount,
+          });
+          setShowMedForm(false);
+          toast.success(t("careMedicationAdded"));
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const targetLabel = (log: IncidentCareLog): string => {
@@ -516,6 +560,38 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
                         Stopped
                       </Badge>
                     )}
+                    {canEditCare && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        disabled={setCareActive.isPending}
+                        onClick={() =>
+                          setCareActive.mutate(
+                            {
+                              ref: incident.id,
+                              itemId: a.id,
+                              active: !a.active,
+                            },
+                            {
+                              onSuccess: (saved) =>
+                                setCareActions((prev) =>
+                                  prev.map((c) =>
+                                    c.id === saved.id
+                                      ? { ...c, active: saved.active }
+                                      : c,
+                                  ),
+                                ),
+                              onError: (error) => toast.error(error.message),
+                            },
+                          )
+                        }
+                      >
+                        {fill(a.active ? "careStop" : "careRestart", {
+                          name: a.name,
+                        })}
+                      </Button>
+                    )}
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     {describeSchedule(a)}
@@ -547,7 +623,7 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
                 {medications.length}
               </Badge>
             </Label>
-            {!locked && (
+            {canEditCare && (
               <Button
                 variant="outline"
                 size="sm"
@@ -559,7 +635,7 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
             )}
           </div>
 
-          {showMedForm && (
+          {showMedForm && canEditCare && (
             <div className="space-y-3 rounded-lg border p-4">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div>
@@ -739,6 +815,28 @@ export function InStayCareTab({ incident }: { incident: Incident }) {
                         ${(m.feeAmount ?? 0).toFixed(2)}{" "}
                         {m.feeType === "one_time" ? "one-time" : "per admin"}
                       </Badge>
+                    )}
+                    {canEditCare && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto"
+                        disabled={setCareActive.isPending}
+                        onClick={() =>
+                          setCareActive.mutate(
+                            { ref: incident.id, itemId: m.id, active: false },
+                            {
+                              onSuccess: (saved) =>
+                                setMedications((prev) =>
+                                  prev.filter((x) => x.id !== saved.id),
+                                ),
+                              onError: (error) => toast.error(error.message),
+                            },
+                          )
+                        }
+                      >
+                        {fill("careStop", { name: m.name })}
+                      </Button>
                     )}
                   </div>
                   <p className="text-muted-foreground mt-0.5 text-xs capitalize">

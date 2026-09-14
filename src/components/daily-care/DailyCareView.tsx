@@ -31,11 +31,12 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { dailyCareQueries } from "@/lib/api/daily-care";
 import { useDayCareLog } from "@/hooks/use-day-care-log";
-import { logCareAction } from "@/data/incidents";
+import { useLogIncidentCare } from "@/lib/api/incidents";
 import { useStaffRoster } from "@/lib/api/staff-roster";
 import { shiftNotesStore } from "@/data/shift-notes-store";
 import {
   setDailyCareWriteErrorHandler,
+  reportDailyCareWriteError,
   useDailyCareRecordsSync,
 } from "@/lib/api/daily-care-records";
 import { useStaffText } from "@/lib/staff/use-staff-text";
@@ -94,6 +95,7 @@ function formatNoteTime(iso: string): string {
 export function DailyCareView() {
   const { config } = useDailyCareConfig();
   const { user } = useCurrentUser();
+  const logIncidentCare = useLogIncidentCare();
   // Selected day for the whole view — logs, executions, and the generated
   // schedule all follow it, so managers can review a past day or preview a
   // future one. Seeded from today.
@@ -443,18 +445,26 @@ export function DailyCareView() {
 
   // In-stay care writeback (2B/2D): logging an incident-sourced task also
   // appends an incident careLog (2B.4), carrying the note + first photo.
+  //
+  // Saved as an incident_care_logs row; the author is the signed-in member,
+  // stamped by the server. Only a stored photo's address is sent — a browser
+  // blob: URL means nothing once the tab closes.
   const writeIncidentCareLog = (
     task: ScheduledTask,
     opts: { note?: string; photoUrl?: string },
   ) => {
-    if (!task.sourceIncidentId) return;
-    logCareAction(task.sourceIncidentId, {
-      careActionId: task.careActionId,
-      medicationId: task.medicationId,
-      loggedBy: user.name,
-      note: opts.note,
-      photoUrl: opts.photoUrl,
-    });
+    const careItemId = task.careActionId ?? task.medicationId;
+    if (!task.sourceIncidentId || !careItemId) return;
+    logIncidentCare.mutate(
+      {
+        careItemId,
+        note: opts.note || undefined,
+        photoUrl: opts.photoUrl?.startsWith("https://")
+          ? opts.photoUrl
+          : undefined,
+      },
+      { onError: (error) => reportDailyCareWriteError(error) },
+    );
   };
 
   function handleLog(task: ScheduledTask, existing?: TaskExecution) {

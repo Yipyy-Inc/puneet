@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import type { Incident } from "@/types/incidents";
+import {
+  NO_INCIDENT_CARE,
+  type IncidentCare,
+} from "@/lib/api/mappers/incident-care";
 
 // ============================================================================
 // public.incidents ⇄ the `Incident` the incident screens read.
@@ -13,7 +17,8 @@ import type { Incident } from "@/types/incidents";
 // follow-up tasks, in-stay care, medications and per-owner notifications as
 // their own future tables rather than a blob — so a real incident maps them to
 // EMPTY here, and the screens say so instead of offering controls with nowhere
-// to write.
+// to write. In-stay care has its tables since 20260914130556: the hydrator
+// reads them and passes them in (mappers/incident-care.ts).
 //
 // ── IDS ───────────────────────────────────────────────────────────────────
 //
@@ -24,7 +29,7 @@ import type { Incident } from "@/types/incidents";
 // ============================================================================
 
 export const INCIDENT_SELECT_STAFF =
-  "id, ref, kind, severity, status, title, description, internal_notes, client_notes, pet_ids, staff_ids, occurred_at, reported_at, resolved_at, owner_notified_at, created_at, updated_at, reporter:profiles!incidents_reported_by_fkey(full_name), resolver:profiles!incidents_resolved_by_fkey(full_name), bookings(ref), clients(ref)";
+  "id, ref, kind, severity, status, title, description, internal_notes, client_notes, pet_ids, staff_ids, occurred_at, reported_at, resolved_at, owner_notified_at, in_stay_care_locked_at, created_at, updated_at, reporter:profiles!incidents_reported_by_fkey(full_name), resolver:profiles!incidents_resolved_by_fkey(full_name), bookings(ref), clients(ref)";
 
 /**
  * What a CUSTOMER is sent. RLS lets an owner read their own incidents but
@@ -50,6 +55,7 @@ export type IncidentRow = {
   reported_at: string;
   resolved_at: string | null;
   owner_notified_at: string | null;
+  in_stay_care_locked_at?: string | null;
   created_at: string;
   updated_at: string;
   reporter?: { full_name: string | null } | null;
@@ -65,6 +71,7 @@ export function rowToIncident(
   row: IncidentRow,
   pets: Map<string, PetRef>,
   staff: Map<string, StaffName>,
+  care: IncidentCare = NO_INCIDENT_CARE,
 ): Incident {
   const known = row.pet_ids
     .map((id) => pets.get(id))
@@ -103,9 +110,10 @@ export function rowToIncident(
     updatedAt: row.updated_at,
     bookingId: row.bookings?.ref ?? undefined,
     clientId: row.clients?.ref ?? undefined,
-    careActions: [],
-    incidentMedications: [],
-    careLogs: [],
+    careActions: care.careActions,
+    incidentMedications: care.incidentMedications,
+    careLogs: care.careLogs,
+    inStayCareLocked: Boolean(row.in_stay_care_locked_at),
   };
 }
 
@@ -148,6 +156,8 @@ export const incidentPatchSchema = z
     clientFacingNotes: z.string().max(10000).optional(),
     /** Record that the owner has been told. Never un-set. */
     ownerNotified: z.literal(true).optional(),
+    /** Lock in-stay care at checkout. Never un-set. */
+    inStayCareLocked: z.literal(true).optional(),
   })
   .refine((p) => Object.keys(p).length > 0, "Nothing to change.");
 export type IncidentPatch = z.infer<typeof incidentPatchSchema>;

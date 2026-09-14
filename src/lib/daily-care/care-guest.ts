@@ -1,3 +1,4 @@
+import type { IncidentCareAction, IncidentMedication } from "@/types/incidents";
 import type {
   AddonSchedule,
   HeatCycleInfo,
@@ -62,6 +63,16 @@ export interface CareGuest {
   notes: string;
   /** The stay-long care note staff set on the booking (`details.careNote`). */
   careNote?: string;
+  /** Active in-stay care from this pet's incidents, one entry per incident. */
+  incidentCare?: GuestIncidentCare[];
+}
+
+/** One incident's care still to give — read by pet, see /api/daily-care. */
+export interface GuestIncidentCare {
+  /** The incident's uuid. */
+  id: string;
+  careActions: IncidentCareAction[];
+  incidentMedications: IncidentMedication[];
 }
 
 /** What a booking's `details` carries that the board cares about. */

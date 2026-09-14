@@ -109,6 +109,7 @@ import { useBookingStatusRules } from "@/lib/api/facility-settings";
 import { isBookingStatus } from "@/lib/settings/booking-statuses";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
+import { incidentQueries } from "@/lib/api/incidents";
 import {
   balanceOf,
   refundTender,
@@ -240,6 +241,8 @@ export default function ClientBookingDetailPage({
   // stop, and a journal that silently rolled over at midnight mid-shift would
   // file the 00:05 dose against tomorrow.
   const queryClient = useQueryClient();
+  // The booking's incidents, for the in-stay care still due at checkout.
+  const { data: facilityIncidents } = useQuery(incidentQueries.all());
   const { data: careLog } = useQuery({
     ...careLogQueries.forBooking(bookingId),
     enabled: Number.isFinite(bookingId),
@@ -874,7 +877,9 @@ export default function ClientBookingDetailPage({
   const careStatus = getPendingCareItems(
     booking.feedingInstructions,
     booking.medicationInstructions,
-    booking.id,
+    (facilityIncidents ?? []).filter(
+      (incident) => incident.bookingId === booking.id,
+    ),
   );
 
   return (

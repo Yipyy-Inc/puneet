@@ -51,7 +51,9 @@ export async function PATCH(
   const supabase = await createServerClient();
   const { data: current } = await supabase
     .from("incidents")
-    .select("id, status, resolved_at, owner_notified_at")
+    .select(
+      "id, status, resolved_at, owner_notified_at, in_stay_care_locked_at",
+    )
     .eq("ref", ref)
     .maybeSingle();
   if (!current) {
@@ -76,6 +78,21 @@ export async function PATCH(
       ? (current.resolved_at ?? new Date().toISOString())
       : null;
     update.resolved_by = done ? user.id : null;
+  }
+  // Checkout locks in-stay care; the first lock's time stands. Every item is
+  // stopped first — a locked incident refuses the write after — so Daily Care
+  // stops scheduling it. Zero items stopped is a normal answer here.
+  if (patch.inStayCareLocked && !current.in_stay_care_locked_at) {
+    const { error: stopError } = await supabase
+      .from("incident_care_items")
+      .update({ active: false })
+      .eq("incident_id", current.id)
+      .eq("active", true)
+      .select("id");
+    if (stopError) {
+      return writeFailure(stopError, { duplicate: DENIED, denied: DENIED });
+    }
+    update.in_stay_care_locked_at = new Date().toISOString();
   }
   if (patch.ownerNotified && !current.owner_notified_at) {
     update.owner_notified_at = new Date().toISOString();
