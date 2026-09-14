@@ -14447,3 +14447,23 @@ the fixture and saves nothing. The till's payment grid still reads
 `getFiservConfig(11)` in about thirty places to decide which methods,
 terminals and devices it shows. That is the conversion recorded under "the
 till's Tap to Pay was a simulator".
+
+## 2026-09-14 — the till's payment options are the facility's own state
+
+**Fixed.** The till's payment grid, split-payment rows, terminal picker, card
+on file and Tap to Pay dialog read `getFiservConfig(11)`, facility 11's
+fixture, in about thirty places, at every facility. Now:
+
+- Cash, store credit and gift card are always offered.
+- Card is always offered. Without a live Clover connection the card fields
+  cannot tokenise, so the sale is refused. It is not recorded as paid.
+- Clover Terminal is offered when the facility has paired terminals
+  (`/api/payments/clover/terminals`).
+- Card on file and Tap to Pay are off: neither is connected.
+
+Receipts print and send by default.
+
+**Still debt.** The Tap to Pay dialog, device picker and `getYipyyPayDevice`
+fixtures are still in the file, unreachable, and should go when Tap to Pay is
+either connected or removed. Refund policy is still one stated constant (see
+"refund rules were facility 11's").
