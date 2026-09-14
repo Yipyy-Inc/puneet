@@ -14562,7 +14562,16 @@ Now:
   threshold, and whether a reason or notes are required. A configuration
   without one reads as the old constant's values. `/api/payments/retail/refund`
   enforces the threshold and the original-payment switch, not only the dialog.
-  Reasons and notes are still checked on the screen only.
+  ~~Reasons and notes are still checked on the screen only.~~ **Fixed
+  2026-09-14.** The dialog sends each item's reason and the notes, and the
+  route refuses a card refund the policy says is unexplained
+  (`refundRecordRefusal`, unit-tested). A store-credit or gift-card return is
+  deliberately not checked on the server. It writes through
+  `/api/store-credit` and `/api/gift-cards`, which other screens use too and
+  which cannot tell a return from any other issue, so a "this is a return"
+  flag would be skipped by any direct caller. What guards those ledgers is the
+  permission (`store_credit_insert` asks for `process_refund`), and a person
+  who holds it may issue credit without a return at all.
 
 ## 2026-09-14 — two booking specs leave paid, cancelled bookings behind, and their cleanup outgrows its timeout
 
@@ -14616,7 +14625,10 @@ bookings when `view_bookings` is assigned_only. The tiles come from
 matches. `DataTable` gained an optional `serverPaging` mode; every other
 table is unchanged. Columns the server cannot order by (client, time,
 presence, notes, tasks, form, service, tags, payment, location) are no
-longer sortable on this page. Search no longer matches pet names.
+longer sortable on this page. ~~Search no longer matches pet names.~~
+**Fixed 2026-09-14.** Search matches the client's name or any pet's name on
+the booking, through the computed field `public.booking_search_names`
+(20260914200143, SQL N1–N5).
 
 **Fixed 2026-09-14, found in passing: capacity counted bookings that hold no
 space, and invented the rest.** `lib/capacity-engine.ts` counted cancelled,

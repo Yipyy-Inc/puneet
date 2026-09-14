@@ -109,7 +109,8 @@ export async function GET(request: NextRequest) {
   if (params.q) {
     query = /^#?\d+$/.test(params.q)
       ? query.eq("ref", Number(params.q.replace("#", "")))
-      : query.ilike("clients.name", likePattern(params.q));
+      : // The client's name or any pet's (booking_search_names, 20260914200143).
+        query.ilike("booking_search_names", likePattern(params.q));
   }
 
   if (params.view === "today") {
