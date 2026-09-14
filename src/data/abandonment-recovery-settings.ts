@@ -5,10 +5,14 @@ import type { AbandonmentRecoverySettings } from "@/types/unfinished-booking";
  * Each step has a pre-written template; adjust channel/delay per step.
  * The payment step defaults to "both" (email + SMS) with a 1-hour delay
  * since it has the highest recovery rate.
+ *
+ * OFF until the facility turns it on: these messages are sent by the
+ * messaging tick in the facility's name, and a business must choose to email
+ * its customers rather than find it has been.
  */
 export const DEFAULT_ABANDONMENT_RECOVERY_SETTINGS: AbandonmentRecoverySettings =
   {
-    enabled: true,
+    enabled: false,
     defaultChannel: "email",
     defaultDelayHours: 2,
     stepRules: {

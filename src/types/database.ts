@@ -26,6 +26,10 @@ export type Database = {
           last_contacted_at: string | null;
           notes: Json;
           recovered_at: string | null;
+          recovery_detail: string | null;
+          recovery_not_before: string;
+          recovery_outcome: string | null;
+          recovery_resolved_at: string | null;
           requested_end: string | null;
           requested_start: string | null;
           service: string | null;
@@ -44,6 +48,10 @@ export type Database = {
           last_contacted_at?: string | null;
           notes?: Json;
           recovered_at?: string | null;
+          recovery_detail?: string | null;
+          recovery_not_before?: string;
+          recovery_outcome?: string | null;
+          recovery_resolved_at?: string | null;
           requested_end?: string | null;
           requested_start?: string | null;
           service?: string | null;
@@ -62,6 +70,10 @@ export type Database = {
           last_contacted_at?: string | null;
           notes?: Json;
           recovered_at?: string | null;
+          recovery_detail?: string | null;
+          recovery_not_before?: string;
+          recovery_outcome?: string | null;
+          recovery_resolved_at?: string | null;
           requested_end?: string | null;
           requested_start?: string | null;
           service?: string | null;

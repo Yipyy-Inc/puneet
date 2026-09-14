@@ -12,6 +12,11 @@
 --   U4  staff with edit_bookings mark it contacted and add a note
 --   U5  the customer marks it recovered when they come back and book
 --   U6  anon holds nothing
+--   U7  a new draft is due for a look now, with no recovery outcome
+--   U8  the customer cannot write the recovery record; re-saving restarts the clock
+--   U9  staff cannot write the recovery record either
+--   U10 service_role resolves it, and a re-save after that does not reopen it
+--   U11 the outbox takes a booking_recovery message
 -- ============================================================================
 
 begin;
@@ -175,6 +180,131 @@ begin
     not has_table_privilege('anon', 'public.unfinished_bookings', 'select')
     and not has_table_privilege('anon', 'public.unfinished_bookings', 'insert'),
     'anon can reach the table');
+end $$;
+
+-- ── U7 ────────────────────────────────────────────────────────────────────
+do $$
+declare v_state text := 'none'; v_due timestamptz; v_outcome text; v_resolved timestamptz;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0101');
+  set local role authenticated;
+  begin
+    insert into public.unfinished_bookings
+      (facility_id, client_id, service, step, recovery_not_before,
+       recovery_resolved_at, recovery_outcome)
+    values
+      ('00000000-0000-0000-0000-0000009b0020', '00000000-0000-0000-0000-0000009b0041',
+       'daycare', 'pet_selection', now() + interval '30 days', now(), 'queued')
+    returning recovery_not_before, recovery_outcome, recovery_resolved_at
+      into v_due, v_outcome, v_resolved;
+    v_state := 'saved';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+  reset role;
+  perform pg_temp.t('U7  a new draft is due for a look now, unresolved',
+    v_state = 'saved' and v_due <= now() and v_outcome is null and v_resolved is null,
+    format('%s due=%s outcome=%s resolved=%s', v_state, v_due, v_outcome, v_resolved));
+end $$;
+
+-- ── U8 ────────────────────────────────────────────────────────────────────
+do $$
+declare v_outcome text; v_due timestamptz; v_before timestamptz;
+begin
+  set local role service_role;
+  update public.unfinished_bookings
+     set recovery_not_before = now() + interval '5 hours'
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  reset role;
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0101');
+  set local role authenticated;
+  update public.unfinished_bookings
+     set recovery_outcome = 'none', recovery_resolved_at = now()
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  select recovery_not_before into v_before from public.unfinished_bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  update public.unfinished_bookings set step = 'date_and_details'
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  reset role;
+  select recovery_outcome, recovery_not_before into v_outcome, v_due
+    from public.unfinished_bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  perform pg_temp.t('U8  the customer cannot resolve it, and re-saving restarts the clock',
+    v_outcome is null and v_before > now() and v_due <= now(),
+    format('outcome=%s before=%s after=%s', v_outcome, v_before, v_due));
+end $$;
+
+-- ── U9 ────────────────────────────────────────────────────────────────────
+do $$
+declare v_outcome text;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0102');
+  set local role authenticated;
+  update public.unfinished_bookings
+     set recovery_outcome = 'skipped', recovery_resolved_at = now()
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  reset role;
+  select recovery_outcome into v_outcome from public.unfinished_bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  perform pg_temp.t('U9  staff cannot write the recovery record',
+    v_outcome is null, format('outcome=%s', v_outcome));
+end $$;
+
+-- ── U10 ───────────────────────────────────────────────────────────────────
+do $$
+declare v_rows int; v_second int; v_outcome text; v_resolved timestamptz; v_due timestamptz;
+begin
+  set local role service_role;
+  with claimed as (
+    update public.unfinished_bookings
+       set recovery_resolved_at = now(), recovery_outcome = 'queued'
+     where client_id = '00000000-0000-0000-0000-0000009b0041'
+       and recovery_resolved_at is null
+    returning 1
+  ) select count(*) into v_rows from claimed;
+  with claimed as (
+    update public.unfinished_bookings
+       set recovery_resolved_at = now(), recovery_outcome = 'queued'
+     where client_id = '00000000-0000-0000-0000-0000009b0041'
+       and recovery_resolved_at is null
+    returning 1
+  ) select count(*) into v_second from claimed;
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0101');
+  set local role authenticated;
+  update public.unfinished_bookings set step = 'review'
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  reset role;
+
+  select recovery_outcome, recovery_resolved_at, recovery_not_before
+    into v_outcome, v_resolved, v_due
+    from public.unfinished_bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0041';
+  perform pg_temp.t('U10 the tick claims it once, and a later re-save does not reopen it',
+    v_rows = 1 and v_second = 0 and v_outcome = 'queued' and v_resolved is not null,
+    format('first=%s second=%s outcome=%s resolved=%s', v_rows, v_second, v_outcome, v_resolved));
+end $$;
+
+-- ── U11 ───────────────────────────────────────────────────────────────────
+do $$
+declare v_state text := 'none';
+begin
+  begin
+    insert into public.message_sends
+      (facility_id, client_id, channel, to_address, source_kind, source_id,
+       subject_rendered, body_rendered, status, scheduled_for, idempotency_key, provider)
+    select facility_id, client_id, 'email', 'unf-other@example.invalid',
+           'booking_recovery', id, 'Your booking is waiting', 'Body', 'queued', now(),
+           'booking_recovery:test:' || gen_random_uuid()::text, 'resend'
+      from public.unfinished_bookings
+     where client_id = '00000000-0000-0000-0000-0000009b0041';
+    v_state := 'queued';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+  perform pg_temp.t('U11 the outbox takes a booking_recovery message',
+    v_state = 'queued', v_state);
 end $$;
 
 -- ── Report ────────────────────────────────────────────────────────────────

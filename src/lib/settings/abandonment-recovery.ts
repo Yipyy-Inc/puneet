@@ -9,9 +9,9 @@ import type { AbandonmentRecoverySettings } from "@/types/unfinished-booking";
 // The settings sheet saved nothing — a "settings saved" toast over a useState
 // seeded from src/data. It is the `abandonment_recovery` domain now.
 //
-// NOTHING SENDS FROM THESE YET. The unfinished booking is recorded
-// (unfinished_bookings) and staff follow it up by hand; no automation reads
-// these templates. See the debt map (2026-09-14).
+// The messaging tick reads them (lib/unfinished-bookings/recovery-tick.ts):
+// once a step's delay has passed, it queues that step's email and/or SMS, one
+// per unfinished booking. Shipped switched OFF — a facility turns it on.
 // ============================================================================
 
 const channel = z.enum(["email", "sms", "both", "off"]);

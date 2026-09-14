@@ -42,6 +42,8 @@ const EXEMPT: Record<string, string> = {
   "admin/team": "the platform team, not a facility",
   "auth/passkey": "the caller's own passkeys",
   "clients/me": "a customer's own client rows",
+  "customer/unfinished-bookings":
+    "a customer's own drafts, read through the client rows whose profile_id is theirs",
   "merchant-application/documents":
     "scoped by the application, itself resolved from the facility",
   "payments/clover/platform": "the platform's own Clover connection",
