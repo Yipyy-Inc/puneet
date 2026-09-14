@@ -14361,3 +14361,25 @@ picker are still there, unreachable, behind `false /* ... */` gates. The
 honest gate for a method is the facility's own state: a terminal paired, a
 Clover connection live, a saved card vaulted at Clover. Rebuilding the grid on
 that is the conversion; the gates are marked so it is findable.
+
+## 2026-09-14 — form requirements, form notifications and red flags are saved, and read by nothing yet
+
+**Fixed: the settings are the facility's own.** Three settings screens sat
+over three fixtures. Form requirements listed six invented form ids and saved
+by splicing an in-memory array. Form notifications seeded from
+`facilityConfig` and toasted "Saved" without writing anything. The red-flag
+rules wrote a module-level object. All three were back on reload and the same
+at every facility. They are now the `form_requirements`,
+`form_notifications` and `form_red_flags` settings domains
+(`src/lib/settings/form-settings.ts`). The requirement and red-flag pickers
+list the facility's own forms from Postgres. The Templates tab no longer shows
+facility 11's fixture templates as "Your templates".
+
+**Still debt: nothing acts on them.** No booking or check-in step checks a
+requirement. No submission is scanned for a red flag. No form notification is
+sent. The only readers of the old values were browser fixtures:
+`notifyStaffOnFormSubmission` in `src/data/facility-notifications.ts` and
+`src/lib/form-customer-notifications.ts`, which still read `facilityConfig`.
+The work is to read these domains in `/api/forms/[id]/submit` for red flags and
+staff notifications, and in the booking and kiosk paths for requirements.
+`src/lib/form-requirements.ts` was imported by nothing and is deleted.

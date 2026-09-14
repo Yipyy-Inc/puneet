@@ -60,12 +60,6 @@ const FORM_CATEGORIES: { value: FormType; label: string }[] = [
   { value: "internal", label: "Internal Forms" },
 ];
 
-// Only `FormTemplatesSection` still needs this. The FORMS on this page come
-// from Postgres, scoped by the session — templates have no table yet and stay
-// fixture-backed, the same line drawn on the waivers screen: a template is a
-// starting point somebody re-types, a form is what a customer answered.
-const FACILITY_ID = 11;
-
 export default function IntakeFormsPage() {
   const [category, setCategory] = useState<CategoryTab>("intake");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -162,7 +156,7 @@ export default function IntakeFormsPage() {
           </Button>
         </div>
         <TabsContent value="templates" className="mt-4">
-          <FormTemplatesSection facilityId={FACILITY_ID} embedded />
+          <FormTemplatesSection embedded />
         </TabsContent>
         {category !== "templates" && (
           <TabsContent value={category} className="mt-4">

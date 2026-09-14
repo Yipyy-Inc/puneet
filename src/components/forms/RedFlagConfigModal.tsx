@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -22,32 +22,31 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldAlert, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { formQueries, formMutations } from "@/lib/api/forms";
+import {
+  useFormRedFlags,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { Form, RedFlagConfig, RedFlagRule } from "@/types/forms";
 
 interface RedFlagConfigModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  facilityId: number;
 }
 
 export function RedFlagConfigModal({
   open,
   onOpenChange,
-  facilityId,
 }: RedFlagConfigModalProps) {
   const t = useSettingsText().section("form-notifications");
-  const config = useQuery({
-    ...formQueries.redFlags(),
-    enabled: open,
-  });
-  const forms = useQuery({
-    ...formQueries.byFacility(facilityId),
-    enabled: open,
-  });
+  // The facility's own keywords and rules, over the facility's own forms. Both
+  // were fixtures: a module-level config and facility 11's forms.
+  const { redFlags, isPending } = useFormRedFlags();
+  const forms = useQuery({ ...liveFormQueries.all(), enabled: open });
 
-  const ready = config.data && forms.data;
+  const ready = !isPending && forms.data;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,8 +67,8 @@ export function RedFlagConfigModal({
           </div>
         ) : (
           <RedFlagEditor
-            initial={config.data!}
-            forms={forms.data!}
+            initial={redFlags}
+            forms={forms.data!.map((row) => toFlatForm(row))}
             onClose={() => onOpenChange(false)}
           />
         )}
@@ -95,7 +94,6 @@ function RedFlagEditor({
   onClose: () => void;
 }) {
   const t = useSettingsText().section("form-notifications");
-  const queryClient = useQueryClient();
   const [keywords, setKeywords] = useState<string[]>(initial.keywords);
   const [keywordDraft, setKeywordDraft] = useState("");
   const [rules, setRules] = useState<RedFlagRule[]>(initial.rules);
@@ -133,18 +131,28 @@ function RedFlagEditor({
     setRules((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const save = useMutation({
-    ...formMutations.saveRedFlags({
-      keywords,
-      // Keep only rules pointing at a real question with a trigger value.
-      rules: rules.filter((r) => r.questionId && r.value.trim()),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["forms", "red-flags"] });
-      toast.success(t("configSaved"));
-      onClose();
-    },
-  });
+  const saveSetting = useSaveFacilitySetting();
+  const save = {
+    isPending: saveSetting.isPending,
+    mutate: () =>
+      saveSetting.mutate(
+        {
+          domain: "form_red_flags",
+          value: {
+            keywords,
+            // Keep only rules pointing at a real question with a trigger value.
+            rules: rules.filter((r) => r.questionId && r.value.trim()),
+          },
+        },
+        {
+          onSuccess: () => {
+            toast.success(t("configSaved"));
+            onClose();
+          },
+          onError: (error) => toast.error(error.message),
+        },
+      ),
+  };
 
   return (
     <>

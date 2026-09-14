@@ -193,7 +193,6 @@ const BASELINE = new Set<string>([
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",
   "src/components/facility/add-ons/AddOnCategorySheet.tsx",
-  "src/components/forms/FormNotificationSettings.tsx",
   "src/components/grooming/PriceAdjustmentForm.tsx",
   "src/components/messaging/CampaignsView.tsx",
   "src/components/messaging/ClientContextPanel.tsx",
