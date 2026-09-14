@@ -149,8 +149,8 @@ function CapacityBar({
 export interface PlayAreaCardProps {
   area: DaycarePlayArea;
   sections: DaycareSection[];
-  /** Simulated usage per section for the demo (sectionId → used count) */
-  mockUsage?: Record<string, number>;
+  /** Today's bookings per section (sectionId → used count). */
+  usage?: Record<string, number>;
   onEditArea: () => void;
   onDeleteArea: () => void;
   onToggleArea: () => void;
@@ -165,7 +165,7 @@ export interface PlayAreaCardProps {
 export function PlayAreaCard({
   area,
   sections,
-  mockUsage = {},
+  usage = {},
   onEditArea,
   onDeleteArea,
   onToggleArea,
@@ -179,7 +179,7 @@ export function PlayAreaCard({
   const activeSections = sections.filter((s) => s.isActive);
   const totalCapacity = activeSections.reduce((sum, s) => sum + s.capacity, 0);
   const totalUsed = activeSections.reduce(
-    (sum, s) => sum + (mockUsage[s.id] ?? 0),
+    (sum, s) => sum + (usage[s.id] ?? 0),
     0,
   );
 
@@ -312,7 +312,7 @@ export function PlayAreaCard({
                   <SectionTile
                     key={section.id}
                     section={section}
-                    used={mockUsage[section.id] ?? 0}
+                    used={usage[section.id] ?? 0}
                     areaImageUrl={area.imageUrl}
                     onEdit={() => onEditSection(section)}
                     onToggle={() => onToggleSection(section.id)}

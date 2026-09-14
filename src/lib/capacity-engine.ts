@@ -50,45 +50,52 @@ export function petMatchesRules(pet: Pet, rules: RoomRule[]): boolean {
   return true;
 }
 
-// ── Deterministic mock usage (for demo) ──────────────────────────────────────
+// ── Which bookings take up space ─────────────────────────────────────────────
+//
+// A cancelled, declined or no-show booking holds nothing, and neither does an
+// estimate or a place on the waiting list. They were all counted, so a section
+// or a kennel read fuller than it was and auto-assign sent a pet elsewhere, or
+// to the waitlist.
+//
+// And every daycare section had a MADE-UP 20–55% added to its real usage
+// (`getMockUsage`, "for demo"), so no facility ever saw an empty play area.
+// It is gone: usage is the bookings, and nothing else.
 
-/**
- * Returns a deterministic "existing usage" count for a section on a date.
- * Used to simulate realistic partial occupancy without touching booking data.
- * Range: 20–55% of capacity.
- */
-export function getMockUsage(
-  id: string,
-  date: string,
-  capacity: number,
-): number {
-  const hash = (id + date)
-    .split("")
-    .reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) & 0xffff, 0);
-  const pct = 0.2 + (hash % 35) / 100; // 20–55%
-  return Math.floor(pct * capacity);
+const HOLDS_NO_SPACE = new Set([
+  "cancelled",
+  "declined",
+  "no_show",
+  "estimate_sent",
+  "waitlisted",
+]);
+
+export function holdsSpace(booking: Pick<Booking, "status">): boolean {
+  return !HOLDS_NO_SPACE.has(booking.status);
 }
 
 // ── Daycare capacity ──────────────────────────────────────────────────────────
 
 /**
- * Returns the number of bookings already occupying a section on a date.
- * Counts both structured `sectionId` field and mock simulated usage.
+ * The bookings occupying a section on a date. A booking names its days in
+ * `daycareSelectedDates`; one that names none occupies every day from its
+ * start to its end. `capacity` is kept in the signature for its callers.
  */
 export function getDaycareSectionUsage(
   sectionId: string,
   date: string,
-  capacity: number,
+  _capacity: number,
   bookings: Booking[],
 ): number {
-  const realUsage = bookings.filter(
-    (b) =>
-      b.service === "daycare" &&
-      b.sectionId === sectionId &&
-      Array.isArray(b.daycareSelectedDates) &&
-      b.daycareSelectedDates.includes(date),
-  ).length;
-  return realUsage + getMockUsage(sectionId, date, capacity);
+  return bookings.filter((b) => {
+    if (b.service !== "daycare" || b.sectionId !== sectionId) return false;
+    if (!holdsSpace(b)) return false;
+    const days = Array.isArray(b.daycareSelectedDates)
+      ? b.daycareSelectedDates
+      : [];
+    return days.length > 0
+      ? days.includes(date)
+      : b.startDate <= date && (b.endDate || b.startDate) >= date;
+  }).length;
 }
 
 /** All sections the pet is eligible for (active + rules pass). */
@@ -210,6 +217,7 @@ export function getBoardingUnitUsage(
     (b) =>
       b.service === "boarding" &&
       b.unitAssignment === unitId &&
+      holdsSpace(b) &&
       datesOverlap(b.startDate, b.endDate, startDate, endDate),
   ).length;
 }
@@ -321,6 +329,7 @@ export function isGroomingStationBooked(
     (b) =>
       b.service === "grooming" &&
       b.stationAssignment === stationId &&
+      holdsSpace(b) &&
       b.startDate === date &&
       b.checkInTime != null &&
       b.checkOutTime != null &&

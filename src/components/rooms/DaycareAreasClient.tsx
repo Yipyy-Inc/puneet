@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,9 @@ import { Plus, TreePine } from "lucide-react";
 import { toast } from "sonner";
 import { PlayAreaCard } from "@/components/rooms/PlayAreaCard";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
-import { getMockUsage } from "@/lib/capacity-engine";
+import { getDaycareSectionUsage } from "@/lib/capacity-engine";
+import { bookingQueries } from "@/lib/api/booking";
+import type { Booking } from "@/types/booking";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import type {
   DaycarePlayArea,
@@ -44,6 +47,8 @@ const COLORS: RoomCategoryColor[] = [
 ];
 
 const TODAY = new Date().toISOString().split("T")[0];
+// Stable while the query loads, so the memo below does not recompute.
+const NO_BOOKINGS: Booking[] = [];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -118,21 +123,30 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
     isNew: boolean;
   } | null>(null);
 
-  // Deterministic mock usage for today
-  const mockUsage = useMemo(() => {
+  // Today's real bookings per section. This was an invented 20-55% of each
+  // section's capacity, so no play area ever showed empty.
+  const { data: todaysBookings = NO_BOOKINGS } = useQuery(
+    bookingQueries.window({ from: TODAY, to: TODAY }),
+  );
+  const usage = useMemo(() => {
     const map: Record<string, number> = {};
     for (const sec of sections) {
-      map[sec.id] = getMockUsage(sec.id, TODAY, sec.capacity);
+      map[sec.id] = getDaycareSectionUsage(
+        sec.id,
+        TODAY,
+        sec.capacity,
+        todaysBookings,
+      );
     }
     return map;
-  }, [sections]);
+  }, [sections, todaysBookings]);
 
   // ── Stats ────────────────────────────────────────────────────────────────────
 
   const activeSections = sections.filter((s) => s.isActive);
   const totalCapacity = activeSections.reduce((sum, s) => sum + s.capacity, 0);
   const totalUsed = activeSections.reduce(
-    (sum, s) => sum + (mockUsage[s.id] ?? 0),
+    (sum, s) => sum + (usage[s.id] ?? 0),
     0,
   );
 
@@ -271,7 +285,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                 key={area.id}
                 area={area}
                 sections={sections.filter((s) => s.playAreaId === area.id)}
-                mockUsage={mockUsage}
+                usage={usage}
                 onEditArea={() => openAreaDialog(area)}
                 onDeleteArea={() => deleteArea(area.id)}
                 onToggleArea={() => toggleArea(area.id)}
