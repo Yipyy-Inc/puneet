@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import type {
@@ -15,6 +16,7 @@ import {
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { incidentQueries, useUpdateIncident } from "@/lib/api/incidents";
 import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
 import { useChargeOnTerminal } from "@/lib/api/terminals";
@@ -84,6 +86,8 @@ export function useBookingCheckout(input: {
   const payWithGiftCard = usePayWithGiftCard();
   const writeStoreCredit = useWriteStoreCredit();
   const updateStatus = useUpdateBookingStatus();
+  const updateIncident = useUpdateIncident();
+  const queryClient = useQueryClient();
   const earnPoints = useEarnLoyaltyPoints();
   const { data: storeCredit } = useStoreCredit();
   const storeCreditBalance =
@@ -380,6 +384,38 @@ export function useBookingCheckout(input: {
     ) {
       try {
         await updateStatus.mutateAsync({ id: booking.id, status: "completed" });
+        // Flow C: the guest has left, so in-stay care on this booking's
+        // incidents is locked — every item stopped, and Daily Care stops
+        // scheduling it. Never blocking: a checkout by somebody who may not
+        // manage incidents leaves the care active and says so.
+        const incidents = await queryClient
+          .fetchQuery(incidentQueries.all())
+          .catch(() => []);
+        const withCare = incidents.filter(
+          (incident) =>
+            incident.bookingId === booking.id &&
+            !incident.inStayCareLocked &&
+            (incident.careActions.length > 0 ||
+              incident.incidentMedications.length > 0),
+        );
+        for (const incident of withCare) {
+          await updateIncident
+            .mutateAsync({
+              id: incident.id,
+              patch: { inStayCareLocked: true },
+            })
+            .catch((error: unknown) => {
+              toast.error(
+                `In-stay care for "${incident.title}" is still active`,
+                {
+                  description:
+                    error instanceof Error
+                      ? error.message
+                      : "A manager can stop it on the incident.",
+                },
+              );
+            });
+        }
       } catch (error) {
         toast.error("Paid, but the booking was not checked out", {
           description:
