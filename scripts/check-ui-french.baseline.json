@@ -876,8 +876,6 @@
     "src/app/facility/services/memberships/_components/subscribers/PauseSubscriptionDialog.tsx": 12,
     "src/app/facility/services/memberships/_components/subscribers/SubscribersTab.tsx": 41,
     "src/app/facility/services/memberships/_components/subscribers/SubscriptionDetailSheet.tsx": 33,
-    "src/app/facility/services/packages/page.tsx": 63,
-    "src/app/facility/services/promo-codes/page.tsx": 70,
     "src/app/facility/settings/billing/_components/all-invoices-dialog.tsx": 16,
     "src/app/facility/settings/billing/_components/billing-self-service-view.tsx": 48,
     "src/app/facility/settings/billing/_components/cancel-subscription-dialog.tsx": 11,

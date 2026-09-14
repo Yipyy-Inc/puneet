@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { customPaymentMethods, type CustomPaymentMethod } from "@/data/retail";
+import type { CustomPaymentMethod } from "@/data/retail";
 import type { BrandMarginRule } from "@/data/retail-config";
 import { resolveBrandRule } from "@/lib/api/retail";
 import { useRetailConfig } from "@/hooks/use-retail-config";
@@ -141,8 +141,6 @@ export default function RetailSettingsPage() {
     useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] =
     useState<CustomPaymentMethod | null>(null);
-  const [customPaymentMethodsList, setCustomPaymentMethodsList] =
-    useState<CustomPaymentMethod[]>(customPaymentMethods);
   const [customPaymentForm, setCustomPaymentForm] = useState({
     name: "",
     description: "",
@@ -167,6 +165,17 @@ export default function RetailSettingsPage() {
   const products = useRetailProducts().data ?? NO_ITEMS;
   const saveProduct = useSaveRetailProduct();
   const brandRules = retailConfig.brandMarginRules;
+  // Custom payment methods are part of the same `retail_config`. The list on
+  // screen was the fixture's while add, edit and delete changed a local copy
+  // that nothing saved — two lists, neither the facility's.
+  const customPaymentMethodsList = retailConfig.customPaymentMethods ?? [];
+  const saveCustomPaymentMethods = async (next: CustomPaymentMethod[]) => {
+    try {
+      await saveRetailConfig({ ...retailConfig, customPaymentMethods: next });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  };
   const [brandRuleModalOpen, setBrandRuleModalOpen] = useState(false);
   const [editingBrandRule, setEditingBrandRule] =
     useState<BrandMarginRule | null>(null);
@@ -695,7 +704,7 @@ export default function RetailSettingsPage() {
                 </Button>
               </div>
               <div className="space-y-2">
-                {customPaymentMethods.map((method) => (
+                {customPaymentMethodsList.map((method) => (
                   <div
                     key={method.id}
                     className="bg-muted/30 flex items-center justify-between rounded-lg border p-3"
@@ -746,7 +755,7 @@ export default function RetailSettingsPage() {
                         size="icon"
                         className="text-destructive size-8"
                         onClick={() => {
-                          setCustomPaymentMethodsList(
+                          void saveCustomPaymentMethods(
                             customPaymentMethodsList.filter(
                               (m) => m.id !== method.id,
                             ),
@@ -1526,7 +1535,7 @@ export default function RetailSettingsPage() {
               onClick={() => {
                 if (editingPaymentMethod) {
                   // Update existing
-                  setCustomPaymentMethodsList(
+                  void saveCustomPaymentMethods(
                     customPaymentMethodsList.map((m) =>
                       m.id === editingPaymentMethod.id
                         ? {
@@ -1552,7 +1561,7 @@ export default function RetailSettingsPage() {
                     createdAt: new Date().toISOString().slice(0, 19),
                     updatedAt: new Date().toISOString().slice(0, 19),
                   };
-                  setCustomPaymentMethodsList([
+                  void saveCustomPaymentMethods([
                     ...customPaymentMethodsList,
                     newMethod,
                   ]);

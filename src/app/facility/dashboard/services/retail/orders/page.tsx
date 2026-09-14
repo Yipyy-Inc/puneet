@@ -75,10 +75,6 @@ import {
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  createReturn,
-  createStoreCredit,
-  createGiftCard,
-  customPaymentMethods,
   type PurchaseOrder,
   type Supplier,
   type PurchaseOrderItem,
@@ -130,6 +126,9 @@ import {
   getLocationName,
 } from "@/lib/payment-method-utils";
 import { logPaymentAction } from "@/lib/payment-audit";
+import { useWriteStoreCredit } from "@/lib/api/store-credit";
+import { useIssueGiftCard } from "@/lib/api/gift-cards";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 
 /** A real counter sale, wearing the shape this screen already knows how to
  *  render and return.
@@ -338,6 +337,8 @@ export default function OrdersPage() {
   const purchaseOrders = usePurchaseOrders().data ?? NO_ITEMS;
   const suppliers = useSuppliers().data ?? NO_ITEMS;
   const retailSales = useRetailSales().data ?? NO_ITEMS;
+  const writeStoreCredit = useWriteStoreCredit();
+  const issueGiftCard = useIssueGiftCard();
   const saveOrder = useSavePurchaseOrder();
   const saveSupplier = useSaveSupplier();
   const receiveOrder = useReceivePurchaseOrder();
@@ -718,7 +719,14 @@ ${outcome.message}`);
       .filter(Boolean)
       .join(" | ");
 
-    const newReturn = createReturn({
+    // A record for the QuickBooks sync and the message below. There is no
+    // returns table: a card refund is its own payment row, and store credit and
+    // a gift card are written to their ledgers underneath.
+    const stamp = new Date();
+    const newReturn: Return = {
+      id: `ret-${stamp.getTime()}`,
+      returnNumber: `RET-${formatDateLocal(stamp).replace(/-/g, "")}-${String(stamp.getTime()).slice(-4)}`,
+      createdAt: stamp.toISOString().slice(0, 19),
       transactionId: selectedTransaction.id,
       transactionNumber: selectedTransaction.transactionNumber,
       items: returnForm.items.map((item) => ({
@@ -749,7 +757,10 @@ ${outcome.message}`);
       completedAt: cardRefundIsManual
         ? undefined
         : new Date().toISOString().slice(0, 19),
-    });
+    };
+
+    // One note for the ledger row, the sync and the gift card alike.
+    const returnNote = `Issued from return ${newReturn.returnNumber}`;
 
     // Create store credit if applicable
     let issuedStoreCredit: StoreCredit | undefined;
@@ -757,27 +768,48 @@ ${outcome.message}`);
       returnForm.refundMethod === "store_credit" &&
       selectedTransaction.customerId
     ) {
-      issuedStoreCredit = createStoreCredit({
+      // Onto the client's real store-credit ledger. This wrote the fixture's
+      // credit list, so the client was told of a balance no till could spend.
+      try {
+        await writeStoreCredit.mutateAsync({
+          clientRef: Number(selectedTransaction.customerId),
+          amount: refundTotal,
+          note: returnNote,
+          reason: "added",
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : String(error));
+        return;
+      }
+      issuedStoreCredit = {
+        id: `credit-${newReturn.id}`,
         customerId: selectedTransaction.customerId,
         customerName: selectedTransaction.customerName || "Customer",
         amount: refundTotal,
         balance: refundTotal,
         issuedFrom: newReturn.id,
-        notes: `Issued from return ${newReturn.returnNumber}`,
-      });
+        notes: returnNote,
+        createdAt: newReturn.createdAt,
+        updatedAt: newReturn.createdAt,
+      } as StoreCredit;
     }
 
     // Create gift card if applicable
     if (returnForm.refundMethod === "gift_card") {
-      createGiftCard({
-        amount: refundTotal,
-        balance: refundTotal,
-        issuedFrom: newReturn.id,
-        customerId: selectedTransaction.customerId,
-        customerName: selectedTransaction.customerName,
-        isActive: true,
-        notes: `Issued from return ${newReturn.returnNumber}`,
-      });
+      // A real card, in the gift-card ledger with its balance, or no return.
+      try {
+        await issueGiftCard.mutateAsync({
+          amount: refundTotal,
+          code: returnForm.giftCardNumber || undefined,
+          purchasedByClientRef: selectedTransaction.customerId
+            ? Number(selectedTransaction.customerId)
+            : undefined,
+          message: returnNote,
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : String(error));
+        return;
+      }
     }
 
     // Send it to QuickBooks. Fire-and-forget on purpose: the client already has
@@ -3120,7 +3152,7 @@ ${outcome.message}`);
                           </Button>
                         )}
                         {refundMethods?.custom !== false &&
-                          customPaymentMethods
+                          (retailConfig.customPaymentMethods ?? [])
                             .filter((m) => m.isActive && m.canBeUsedForRefunds)
                             .map((method) => (
                               <Button

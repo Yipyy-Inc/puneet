@@ -200,7 +200,6 @@ const BASELINE = new Set<string>([
   "src/components/messaging/InternalNotesTab.tsx",
   "src/components/messaging/MessagingSettingsView.tsx",
   "src/components/messaging/ScheduledMessagesView.tsx",
-  "src/components/retail/InvoiceLineItemsTable.tsx",
   "src/components/rooms/DaycareAreasClient.tsx",
   "src/components/scheduling/PostShiftOpportunityDialog.tsx",
   "src/components/scheduling/SaveAsTemplateDialog.tsx",
