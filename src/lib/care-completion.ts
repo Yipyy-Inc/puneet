@@ -1,5 +1,5 @@
 import type { FeedingEntry, MedicationEntry } from "@/types/booking";
-import { getIncidentsForBooking } from "@/data/incidents";
+import type { Incident } from "@/types/incidents";
 
 export interface PendingCareItem {
   kind: "feeding" | "medication" | "incident_care";
@@ -52,9 +52,9 @@ function isSameOrEarlierToday(iso: string, now: Date): boolean {
 export function getPendingCareItems(
   feeding: FeedingEntry[] | undefined,
   medications: MedicationEntry[] | undefined,
-  /** When set, incident-sourced care for this booking (2B) is included, each
+  /** The booking's incidents, whose in-stay care (2B) is included, each
    *  tagged with its incident reference. */
-  bookingId?: number,
+  incidents: readonly Incident[] = [],
   now: Date = new Date(),
 ): CareCompletionStatus {
   const pending: PendingCareItem[] = [];
@@ -88,9 +88,7 @@ export function getPendingCareItems(
   });
 
   // Incident-sourced care (2B) for this booking, tagged with the incident ref.
-  if (bookingId != null) {
-    pending.push(...getPendingIncidentCareItems(bookingId, now));
-  }
+  pending.push(...getPendingIncidentCareItems(incidents, now));
 
   return {
     pending,
@@ -108,12 +106,13 @@ function humanizeCareFrequency(freq: string): string {
  * incident id so the banner can render "… (Incident INC-007)".
  */
 function getPendingIncidentCareItems(
-  bookingId: number,
+  incidents: readonly Incident[],
   now: Date,
 ): PendingCareItem[] {
   const items: PendingCareItem[] = [];
 
-  for (const incident of getIncidentsForBooking(bookingId)) {
+  for (const incident of incidents) {
+    if (incident.inStayCareLocked) continue;
     const medLoggedToday = new Set<string>();
     const actionLoggedToday = new Set<string>();
     for (const entry of incident.careLogs) {

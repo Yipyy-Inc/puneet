@@ -4,6 +4,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { Incident } from "@/types/incidents";
 import type { IncidentPatch, IncidentWrite } from "@/lib/api/mappers/incident";
+import type {
+  IncidentCareItemWrite,
+  IncidentCareLogWrite,
+} from "@/lib/api/mappers/incident-care";
 
 // ============================================================================
 // Incidents, from Postgres (`/api/incidents`).
@@ -77,5 +81,68 @@ export function useUpdateIncident() {
         "The incident could not be changed.",
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+
+/** In-stay care changes what Daily Care schedules, so both lists refresh. */
+function useInvalidateCare() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["incidents"] }),
+      queryClient.invalidateQueries({ queryKey: ["daily-care"] }),
+    ]);
+}
+
+export function useAddIncidentCare() {
+  const invalidate = useInvalidateCare();
+  return useMutation({
+    mutationFn: ({
+      ref,
+      write,
+    }: {
+      ref: string;
+      write: IncidentCareItemWrite;
+    }) =>
+      send<Incident>(
+        `/api/incidents/${encodeURIComponent(ref)}/care`,
+        { method: "POST", body: JSON.stringify(write) },
+        "That care was not added.",
+      ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetIncidentCareActive() {
+  const invalidate = useInvalidateCare();
+  return useMutation({
+    mutationFn: ({
+      ref,
+      itemId,
+      active,
+    }: {
+      ref: string;
+      itemId: string;
+      active: boolean;
+    }) =>
+      send<{ id: string; active: boolean }>(
+        `/api/incidents/${encodeURIComponent(ref)}/care/${encodeURIComponent(itemId)}`,
+        { method: "PATCH", body: JSON.stringify({ active }) },
+        "That care was not changed.",
+      ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useLogIncidentCare() {
+  const invalidate = useInvalidateCare();
+  return useMutation({
+    mutationFn: (write: IncidentCareLogWrite) =>
+      send<unknown>(
+        "/api/incidents/care-logs",
+        { method: "POST", body: JSON.stringify(write) },
+        "That care was not logged.",
+      ),
+    onSuccess: invalidate,
   });
 }

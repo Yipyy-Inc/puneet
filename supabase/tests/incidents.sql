@@ -203,6 +203,145 @@ begin
     format('incident=%s', coalesce(v_incident::text, 'none')));
 end $$;
 
+-- ── I7–I10: in-stay care (20260914 in_stay_care_is_a_row_on_the_incident) ─
+--
+-- The same split as I1/I2, turned the other way: deciding what care a hurt
+-- pet gets is the manager's, and GIVING it is the caretaker's. And like the
+-- incident itself, neither the plan nor a dose given is ever deleted.
+
+-- I7: a caretaker cannot add a care item; a manager can.
+do $$
+declare v_incident uuid; v_care text := 'none'; v_mgr text := 'none'; v_facility uuid;
+begin
+  select id into v_incident from public.incidents
+   where facility_id = '00000000-0000-0000-0000-0000009a0020' limit 1;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0100');
+  set local role authenticated;
+  begin
+    insert into public.incident_care_items (facility_id, incident_id, kind, name)
+    values ('00000000-0000-0000-0000-0000009a0020', v_incident, 'action', 'Ice the paw');
+    v_care := 'added';
+  exception when others then
+    v_care := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0101');
+  set local role authenticated;
+  begin
+    -- The facility is taken from the incident, whatever the caller says.
+    insert into public.incident_care_items (facility_id, incident_id, kind, name, detail)
+    values ('00000000-0000-0000-0000-0000009a0020', v_incident, 'medication',
+            'Amoxicillin', '{"dosage": "250mg", "frequency": "Twice daily"}')
+    returning facility_id into v_facility;
+    v_mgr := 'added';
+  exception when others then
+    v_mgr := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.t(
+    'I7  only a manager adds in-stay care, on the incident''s own facility',
+    v_care = '42501' and v_mgr = 'added'
+      and v_facility = '00000000-0000-0000-0000-0000009a0020',
+    format('caretaker=%s manager=%s facility=%s', v_care, v_mgr, v_facility));
+end $$;
+
+-- I8: the caretaker logs the dose.
+do $$
+declare v_item uuid; v_state text := 'none'; v_incident uuid;
+begin
+  select id, incident_id into v_item, v_incident from public.incident_care_items
+   where facility_id = '00000000-0000-0000-0000-0000009a0020' and name = 'Amoxicillin';
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0100');
+  set local role authenticated;
+  begin
+    insert into public.incident_care_logs
+      (facility_id, incident_id, care_item_id, note, logged_by_name)
+    values ('00000000-0000-0000-0000-0000009a0020', v_incident, v_item,
+            'Given with breakfast', 'Cara Caretaker');
+    v_state := 'logged';
+  exception when others then
+    v_state := sqlstate || ' ' || sqlerrm;
+  end;
+  reset role;
+
+  perform pg_temp.t(
+    'I8  a caretaker logs a dose given',
+    v_state = 'logged',
+    format('got %s', v_state));
+end $$;
+
+-- I9: nobody deletes a care item or a log, and a log is never rewritten.
+do $$
+declare v_item_delete boolean; v_log_delete boolean; v_log_update boolean; v_anon boolean;
+begin
+  v_item_delete := has_table_privilege('authenticated', 'public.incident_care_items', 'delete');
+  v_log_delete  := has_table_privilege('authenticated', 'public.incident_care_logs', 'delete');
+  v_log_update  := has_table_privilege('authenticated', 'public.incident_care_logs', 'update');
+  v_anon        := has_table_privilege('anon', 'public.incident_care_logs', 'select')
+                or has_table_privilege('anon', 'public.incident_care_items', 'select');
+
+  perform pg_temp.t(
+    'I9  care given is never deleted or rewritten, and anon reads none of it',
+    not v_item_delete and not v_log_delete and not v_log_update and not v_anon,
+    format('item_delete=%s log_delete=%s log_update=%s anon=%s',
+           v_item_delete, v_log_delete, v_log_update, v_anon));
+end $$;
+
+-- I11: a care item takes its incident's pets, whatever the caller sends, so
+-- Daily Care can find it by pet without reading the incident.
+do $$
+declare v_incident uuid; v_pets uuid[]; v_item_pets uuid[];
+begin
+  select id into v_incident from public.incidents
+   where facility_id = '00000000-0000-0000-0000-0000009a0020' limit 1;
+  update public.incidents
+     set pet_ids = array['00000000-0000-0000-0000-0000009a0077'::uuid]
+   where id = v_incident
+  returning pet_ids into v_pets;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0101');
+  set local role authenticated;
+  insert into public.incident_care_items (facility_id, incident_id, kind, name, pet_ids)
+  values ('00000000-0000-0000-0000-0000009a0020', v_incident, 'action', 'Check the bandage',
+          array['00000000-0000-0000-0000-000000000bad'::uuid])
+  returning pet_ids into v_item_pets;
+  reset role;
+
+  perform pg_temp.t(
+    'I11 a care item carries its incident''s pets, not the caller''s',
+    v_item_pets = v_pets,
+    format('item=%s incident=%s', v_item_pets, v_pets));
+end $$;
+
+-- I10: once in-stay care is locked at checkout, a dose cannot be logged.
+do $$
+declare v_item uuid; v_incident uuid; v_state text := 'none';
+begin
+  select id, incident_id into v_item, v_incident from public.incident_care_items
+   where facility_id = '00000000-0000-0000-0000-0000009a0020' and name = 'Amoxicillin';
+  update public.incidents set in_stay_care_locked_at = now() where id = v_incident;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0100');
+  set local role authenticated;
+  begin
+    insert into public.incident_care_logs (facility_id, incident_id, care_item_id)
+    values ('00000000-0000-0000-0000-0000009a0020', v_incident, v_item);
+    v_state := 'logged';
+  exception when others then
+    v_state := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.t(
+    'I10 a locked incident refuses a new log',
+    v_state = '22023',
+    format('got %s', v_state));
+end $$;
+
 -- ── Report ────────────────────────────────────────────────────────────────
 
 select n, case when ok then 'PASS' else 'FAIL' end as result, name, detail

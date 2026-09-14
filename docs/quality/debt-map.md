@@ -14467,3 +14467,39 @@ Receipts print and send by default.
 fixtures are still in the file, unreachable, and should go when Tap to Pay is
 either connected or removed. Refund policy is still one stated constant (see
 "refund rules were facility 11's").
+
+## 2026-09-14 — in-stay care from an incident is rows, and Daily Care schedules it
+
+**Fixed.** The in-stay care tab, Daily Care's incident tasks, checkout's
+pending-care check and incident billing all read `src/data/incidents`. That is
+an empty array, so a care action or medication added to an incident was saved
+nowhere, and nothing was scheduled or logged. It is now two tables, from
+migrations 20260914130556 and 20260914131346:
+
+- `incident_care_items`: one care action or medication. It carries the
+  incident's facility and pets, copied by trigger.
+- `incident_care_logs`: one administration, append-only.
+
+The rules:
+
+- A manager (`ops_incidents_manage`) adds, stops and restarts care.
+- A caretaker (`view_pet_records`) logs it from Daily Care. The logging route
+  finds the item by its own id, because a caretaker may not read the incident.
+- Locking at checkout (`inStayCareLocked` on the incident PATCH) stops every
+  item, then refuses further writes.
+- Nothing is deleted.
+
+Daily Care reads active items by pet in `/api/daily-care`, since items carry
+their pets. The tab decides "in stay" from real bookings' `presence`, and
+prefills the medication fee from the facility's own care fees. SQL cases
+I7–I11 are in `supabase/tests/incidents.sql`.
+
+**Still debt.**
+
+- Nothing calls the lock yet. Checkout does not send `inStayCareLocked`, so
+  care stays active until a manager stops it.
+- A medication's fee is recorded on the item but charged nowhere.
+  `incident-billing.ts` had no importer and is deleted.
+- A photo from a Daily Care log is stored only when it is an `https` address.
+  The log modals produce none today.
+- The tab's 58 English strings are baselined.

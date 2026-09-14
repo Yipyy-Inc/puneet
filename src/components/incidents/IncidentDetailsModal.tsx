@@ -42,7 +42,7 @@ import { NotesList } from "@/components/shared/NotesList";
 import { FollowUpTaskCard } from "@/components/incidents/follow-up/FollowUpTaskCard";
 import {
   InStayCareTab,
-  isIncidentInStay,
+  useIncidentInStay,
 } from "@/components/incidents/InStayCareTab";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -98,8 +98,8 @@ export function IncidentDetailsModal({
   // In-Stay Care tab (2B): while an involved pet is still checked in, OR after
   // checkout locked it (Flow C) so the read-only Completed Care Log stays
   // reachable. Historical incidents with neither never show it.
-  const showInStayCare =
-    isIncidentInStay(incident) || !!incident.inStayCareLocked;
+  const inStay = useIncidentInStay(incident);
+  const showInStayCare = inStay || !!incident.inStayCareLocked;
 
   const handleTaskUpdate = (next: FollowUpTask) => {
     saveFollowUp(next).catch((error: unknown) =>

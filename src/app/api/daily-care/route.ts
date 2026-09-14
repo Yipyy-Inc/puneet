@@ -8,6 +8,11 @@ import {
   type CareGuest,
 } from "@/lib/daily-care/care-guest";
 import {
+  INCIDENT_CARE_ITEM_SELECT,
+  toIncidentCare,
+  type IncidentCareItemRow,
+} from "@/lib/api/mappers/incident-care";
+import {
   activeFacilityIdForStaff,
   inFacility,
 } from "@/lib/api/facility-context";
@@ -57,7 +62,7 @@ export interface DailyCarePayload {
 const SELECT = `
   ref, start_at, end_at, details,
   clients ( name, phone ),
-  booking_pets ( pets ( ref, name ) ),
+  booking_pets ( pets ( id, ref, name ) ),
   boarding_stays!inner ( checked_in_at, checked_out_at,
                          facility_rooms ( name ) )
 ` as const;
@@ -68,7 +73,9 @@ interface Row {
   end_at: string;
   details: BookingCareDetails | null;
   clients: { name: string; phone: string | null } | null;
-  booking_pets: { pets: { ref: number; name: string } | null }[] | null;
+  booking_pets:
+    | { pets: { id: string; ref: number; name: string } | null }[]
+    | null;
   /**
    * ONE stay, embedded as an object rather than a list.
    *
@@ -124,6 +131,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const petIdsByGuest = new Map<string, string[]>();
   const guests = (data as unknown as Row[])
     .filter((row) => {
       const stay = row.boarding_stays;
@@ -134,7 +142,13 @@ export async function GET(request: NextRequest) {
     .map((row) => {
       const pets = (row.booking_pets ?? [])
         .map((link) => link.pets)
-        .filter((pet): pet is { ref: number; name: string } => Boolean(pet));
+        .filter((pet): pet is { id: string; ref: number; name: string } =>
+          Boolean(pet),
+        );
+      petIdsByGuest.set(
+        String(row.ref),
+        pets.map((pet) => pet.id),
+      );
 
       return careGuestFromBooking(
         {
@@ -151,6 +165,47 @@ export async function GET(request: NextRequest) {
         row.details ?? {},
       );
     });
+
+  // ── In-stay care from the guests' incidents ────────────────────────────
+  //
+  // Read from the care items themselves, by pet: the caretaker at the board
+  // holds view_pet_records, which reads an item but not the incident behind
+  // it, so the item carries its incident's pets (20260914 migrations). Only
+  // active items: locking at checkout stops them all.
+  const allPetIds = [...new Set([...petIdsByGuest.values()].flat())];
+  if (allPetIds.length > 0) {
+    const careSelect: string = `${INCIDENT_CARE_ITEM_SELECT}, pet_ids`;
+    const { data: careRows } = await supabase
+      .from("incident_care_items")
+      .select(careSelect)
+      .match(inFacility(scope))
+      .eq("active", true)
+      .overlaps("pet_ids", allPetIds)
+      .order("created_at", { ascending: true });
+    const items = (careRows ?? []) as unknown as (IncidentCareItemRow & {
+      pet_ids: string[];
+    })[];
+    for (const guest of guests) {
+      const mine = new Set(petIdsByGuest.get(guest.id) ?? []);
+      const byIncident = new Map<string, IncidentCareItemRow[]>();
+      for (const item of items) {
+        if (!item.pet_ids.some((id) => mine.has(id))) continue;
+        byIncident.set(item.incident_id, [
+          ...(byIncident.get(item.incident_id) ?? []),
+          item,
+        ]);
+      }
+      if (byIncident.size === 0) continue;
+      guest.incidentCare = [...byIncident].map(([incidentId, rows]) => {
+        const care = toIncidentCare(incidentId, rows, []);
+        return {
+          id: incidentId,
+          careActions: care.careActions,
+          incidentMedications: care.incidentMedications,
+        };
+      });
+    }
+  }
 
   return NextResponse.json({ date, guests } satisfies DailyCarePayload);
 }

@@ -6,7 +6,6 @@ import type {
   MedFrequencyRule,
 } from "@/types/boarding";
 import type { ScheduledTask, ShiftType } from "@/types/care-log";
-import { getIncidentsForPet } from "@/data/incidents";
 import type { IncidentCareAction, IncidentMedication } from "@/types/incidents";
 
 // F1: whether a step's configured "Who This Task Applies To" rule includes a
@@ -523,11 +522,9 @@ export function generateScheduledTasks(
     // action, for every remaining day of the stay at frequency-implied times.
     // Care actions log via the enrichment modal, medications via the med modal;
     // both honor the requires-photo gate and write back an incident careLog.
-    for (const incident of getIncidentsForPet(guest.petId)) {
-      // Flow C: once in-stay care is locked at checkout, its tasks stop being
-      // generated for Daily Care (the incident stays open; follow-up tasks
-      // continue independently).
-      if (incident.inStayCareLocked) continue;
+    // Flow C: locking in-stay care at checkout stops every item, so what the
+    // guest carries is care still to give (the incident itself stays open).
+    for (const incident of guest.incidentCare ?? []) {
       for (const action of incident.careActions) {
         for (const time of careActionTimesForDay(action, guest, today)) {
           tasks.push({

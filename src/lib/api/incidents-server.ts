@@ -7,6 +7,13 @@ import {
   type PetRef,
   type StaffName,
 } from "@/lib/api/mappers/incident";
+import {
+  INCIDENT_CARE_ITEM_SELECT,
+  INCIDENT_CARE_LOG_SELECT,
+  toIncidentCare,
+  type IncidentCareItemRow,
+  type IncidentCareLogRow,
+} from "@/lib/api/mappers/incident-care";
 import type { Incident } from "@/types/incidents";
 
 type Supabase = Awaited<ReturnType<typeof createServerClient>>;
@@ -36,9 +43,12 @@ export async function hydrateIncidents(
   rows: IncidentRow[],
 ): Promise<Incident[]> {
   const petIds = [...new Set(rows.flatMap((r) => r.pet_ids))];
+  const incidentIds = rows.map((r) => r.id);
   const staffIds = [...new Set(rows.flatMap((r) => r.staff_ids ?? []))];
 
-  const [pets, staff] = await Promise.all([
+  // In-stay care passes through RLS too: an owner reads none of it, and a
+  // caretaker with view_pet_records reads what they are to give.
+  const [pets, staff, careItems, careLogs] = await Promise.all([
     inBatches<PetRef>(petIds, (slice) =>
       supabase.from("pets").select("id, ref, name").in("id", slice),
     ),
@@ -52,6 +62,20 @@ export async function hydrateIncidents(
         .select("id, first_name, last_name")
         .in("id", slice),
     ),
+    inBatches<IncidentCareItemRow>(incidentIds, (slice) =>
+      supabase
+        .from("incident_care_items")
+        .select(INCIDENT_CARE_ITEM_SELECT)
+        .in("incident_id", slice)
+        .order("created_at", { ascending: true }),
+    ),
+    inBatches<IncidentCareLogRow>(incidentIds, (slice) =>
+      supabase
+        .from("incident_care_logs")
+        .select(INCIDENT_CARE_LOG_SELECT)
+        .in("incident_id", slice)
+        .order("logged_at", { ascending: true }),
+    ),
   ]);
 
   const petMap = new Map(pets.map((p) => [p.id, p]));
@@ -64,5 +88,16 @@ export async function hydrateIncidents(
       },
     ]),
   );
-  return rows.map((row) => rowToIncident(row, petMap, staffMap));
+  return rows.map((row) =>
+    rowToIncident(
+      row,
+      petMap,
+      staffMap,
+      toIncidentCare(
+        String(row.ref),
+        careItems.filter((i) => i.incident_id === row.id),
+        careLogs.filter((l) => l.incident_id === row.id),
+      ),
+    ),
+  );
 }
