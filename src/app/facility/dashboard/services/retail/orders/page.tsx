@@ -630,6 +630,12 @@ export default function OrdersPage() {
           returnForm.notes ||
           returnForm.items.find((item) => item.reason)?.reason ||
           "Retail return",
+        // The route checks these against the facility's policy as well.
+        notes: returnForm.notes,
+        items: returnForm.items.map((item) => ({
+          reason: item.reason,
+          reasonNotes: item.reasonNotes,
+        })),
       });
       setIsRefunding(false);
 

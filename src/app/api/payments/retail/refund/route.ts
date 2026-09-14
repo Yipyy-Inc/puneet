@@ -7,6 +7,7 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 import { createServerClient } from "@/lib/supabase/server";
 import {
   refundPolicyFromStored,
+  refundRecordRefusal,
   refundRefusal,
 } from "@/lib/retail/refund-policy";
 import {
@@ -60,6 +61,18 @@ const RetailRefund = z.object({
   amountCents: z.number().int().positive().max(500_000).optional(),
   /** Why. Lands on `payments.note`, which is the only place it survives. */
   reason: z.string().max(500).optional(),
+  /** The return's notes, checked against the policy's `requireNotes`. */
+  notes: z.string().max(2000).optional(),
+  /** Each returned item's reason, checked against `requireReason`. */
+  items: z
+    .array(
+      z.object({
+        reason: z.string().max(100).nullish(),
+        reasonNotes: z.string().max(500).nullish(),
+      }),
+    )
+    .max(200)
+    .optional(),
 });
 
 /** `processor_payment_id` is NULLABLE on the table — a cash sale has nothing at
@@ -185,7 +198,8 @@ export async function POST(request: NextRequest) {
   const membership = viewer.memberships.find(
     (m) => m.facilityId === context.facilityId,
   );
-  const refusal = refundRefusal(refundPolicyFromStored(settingRow?.value), {
+  const policy = refundPolicyFromStored(settingRow?.value);
+  const refusal = refundRefusal(policy, {
     method: "original_payment",
     amount: wanted / 100,
     canApprove:
@@ -203,6 +217,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "A refund this large needs an owner or a manager." },
       { status: 403 },
+    );
+  }
+  const unrecorded = refundRecordRefusal(policy, {
+    items: parsed.data.items ?? [],
+    notes: parsed.data.notes,
+  });
+  if (unrecorded === "reason_required") {
+    return NextResponse.json(
+      { error: "This facility needs a return reason for every item." },
+      { status: 422 },
+    );
+  }
+  if (unrecorded === "notes_required") {
+    return NextResponse.json(
+      { error: "This facility needs notes on every refund." },
+      { status: 422 },
     );
   }
 

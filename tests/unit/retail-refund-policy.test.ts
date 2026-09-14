@@ -4,6 +4,7 @@ import {
   SHIPPED_REFUND_POLICY,
   refundPolicyFromStored,
   refundPolicyOf,
+  refundRecordRefusal,
   refundRefusal,
 } from "@/lib/retail/refund-policy";
 
@@ -59,5 +60,51 @@ describe("refundRefusal", () => {
     expect(
       refundRefusal(policy, { method: "cash", amount: 5, canApprove: true }),
     ).toBe("method_off");
+  });
+});
+
+describe("refundRecordRefusal", () => {
+  const strict = structuredClone(SHIPPED_REFUND_POLICY);
+  strict.refundRules.requireReason = true;
+  strict.refundRules.requireNotes = true;
+
+  test("the shipped policy asks for neither", () => {
+    expect(
+      refundRecordRefusal(SHIPPED_REFUND_POLICY, { items: [], notes: "" }),
+    ).toBe(null);
+  });
+
+  test("every item needs a reason, and 'other' needs its own words", () => {
+    const notes = "Customer changed their mind";
+    expect(
+      refundRecordRefusal(strict, {
+        items: [{ reason: "damaged" }, { reason: "" }],
+        notes,
+      }),
+    ).toBe("reason_required");
+    expect(
+      refundRecordRefusal(strict, { items: [{ reason: "other" }], notes }),
+    ).toBe("reason_required");
+    expect(
+      refundRecordRefusal(strict, {
+        items: [{ reason: "other", reasonNotes: "Wrong size" }],
+        notes,
+      }),
+    ).toBe(null);
+  });
+
+  test("a request that names no items has given no reason", () => {
+    expect(refundRecordRefusal(strict, { items: [], notes: "x" })).toBe(
+      "reason_required",
+    );
+  });
+
+  test("blank notes are no notes", () => {
+    expect(
+      refundRecordRefusal(strict, {
+        items: [{ reason: "damaged" }],
+        notes: "   ",
+      }),
+    ).toBe("notes_required");
   });
 });

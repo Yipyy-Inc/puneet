@@ -274,6 +274,8 @@ export async function refundRetailSale(input: {
   paymentId: string;
   amountCents?: number;
   reason?: string;
+  notes?: string;
+  items?: { reason?: string | null; reasonNotes?: string | null }[];
 }): Promise<RetailRefundOutcome> {
   let response: Response;
   try {
@@ -286,6 +288,8 @@ export async function refundRetailSale(input: {
           ? { amountCents: Math.round(input.amountCents) }
           : {}),
         ...(input.reason ? { reason: input.reason } : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
+        ...(input.items ? { items: input.items } : {}),
       }),
     });
   } catch {

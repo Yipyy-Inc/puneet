@@ -109,3 +109,34 @@ export function refundRefusal(
   }
   return null;
 }
+
+export type RefundRecordRefusal = "reason_required" | "notes_required";
+
+/**
+ * Whether the return says why, as the facility's policy asks.
+ *
+ * The same rule the return dialog applies: every item has a reason, and
+ * "other" carries its own words. The route asks it too, so a request made
+ * without the dialog cannot refund with no reason or notes on record.
+ */
+export function refundRecordRefusal(
+  policy: RetailRefundPolicy,
+  record: {
+    items: { reason?: string | null; reasonNotes?: string | null }[];
+    notes?: string | null;
+  },
+): RefundRecordRefusal | null {
+  const rules = policy.refundRules;
+  if (rules.requireReason) {
+    const unexplained =
+      record.items.length === 0 ||
+      record.items.some(
+        (item) =>
+          !item.reason?.trim() ||
+          (item.reason === "other" && !item.reasonNotes?.trim()),
+      );
+    if (unexplained) return "reason_required";
+  }
+  if (rules.requireNotes && !record.notes?.trim()) return "notes_required";
+  return null;
+}
