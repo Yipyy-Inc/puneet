@@ -36,8 +36,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { KennelCalendarView } from "./kennel-calendar";
 import type { KennelStatus } from "@/types/base";
 import { Switch } from "@/components/ui/switch";
-import { customServiceCheckIns } from "@/data/custom-service-checkins";
-import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
+import type { CustomServiceBadge } from "./_components/BookingBar";
+import { formatDateLocal } from "@/lib/shift-recurrence";
 import { COLOR_HEX_MAP } from "@/data/custom-services";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -54,8 +54,23 @@ import { OccupancyMeter } from "@/components/ui/occupancy-meter";
 
 type Kennel = OccupancyKennel;
 
-// Mock booking overlays keyed by room id — demonstrates each status colour.
-// In real wiring, this would join `bookings.ts` to rooms by kennel/room id.
+// The services with a board of their own; anything else is a custom service.
+const BUILT_IN_SERVICES = new Set([
+  "boarding",
+  "daycare",
+  "grooming",
+  "training",
+  "evaluation",
+]);
+// A booking still on the premises or expected today.
+const LIVE_STATUSES = new Set([
+  "pending",
+  "confirmed",
+  "checked_in",
+  "in_progress",
+  "ready",
+]);
+
 // ── THE BOARDING HALF READS THE DATABASE ─────────────────────────────────────
 //
 // What used to be here: `mockBookingOverlays`, a hand-written map of twelve
@@ -529,17 +544,37 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   const [showCustomServices, setShowCustomServices] = useState(true);
 
   // Get active modules for color mapping
-  const { activeModules } = useCustomServices();
+  const { activeModules, getModuleBySlug } = useCustomServices();
 
-  // Map petId → their custom service check-ins
+  // Map petId → the custom services they are booked into today, from the
+  // facility's own bookings. This read `customServiceCheckIns`, a fixture of
+  // invented check-ins keyed by numeric pet id.
   const petServicesMap = useMemo(() => {
-    const map = new Map<number, CustomServiceCheckIn[]>();
-    for (const csc of customServiceCheckIns) {
-      const existing = map.get(csc.petId) ?? [];
-      map.set(csc.petId, [...existing, csc]);
+    const today = formatDateLocal(new Date());
+    const map = new Map<number, CustomServiceBadge[]>();
+    for (const booking of allBookings) {
+      if (BUILT_IN_SERVICES.has(booking.service)) continue;
+      if (!LIVE_STATUSES.has(booking.status)) continue;
+      const end = booking.endDate || booking.startDate;
+      if (booking.startDate > today || end < today) continue;
+      const customModule = getModuleBySlug(booking.service);
+      if (!customModule) continue;
+      const petIds = Array.isArray(booking.petId)
+        ? booking.petId
+        : [booking.petId];
+      for (const petId of petIds) {
+        map.set(petId, [
+          ...(map.get(petId) ?? []),
+          {
+            id: `${booking.id}-${petId}`,
+            moduleId: customModule.id,
+            moduleName: customModule.name,
+          },
+        ]);
+      }
     }
     return map;
-  }, []);
+  }, [allBookings, getModuleBySlug]);
 
   // Map moduleId → hex color for badge styling
   const moduleColorMap = useMemo(

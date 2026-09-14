@@ -23,9 +23,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RoomCategory } from "@/types/rooms";
-import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 
-import { BookingBar } from "./_components/BookingBar";
+import { BookingBar, type CustomServiceBadge } from "./_components/BookingBar";
 import { BookingDetailsSheet } from "./_components/BookingDetailsSheet";
 import { RoomCell } from "./_components/RoomCell";
 import { BlockRoomDialog } from "./_components/BlockRoomDialog";
@@ -74,7 +73,7 @@ interface KennelCalendarViewProps {
   /** Arrival and departure from the details sheet; absent hides nothing. */
   onCheckIn?: (bookingId: number) => void;
   onCheckOut?: (bookingId: number) => void;
-  customServicesMap?: Map<number, CustomServiceCheckIn[]>;
+  customServicesMap?: Map<number, CustomServiceBadge[]>;
   moduleColorMap?: Map<string, string>;
   showCustomServices?: boolean;
 }

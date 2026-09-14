@@ -21,6 +21,8 @@ import type {
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type { BookingApproval } from "@/lib/settings/booking-approval";
 import type { CareFees } from "@/lib/settings/care-fees";
+import type { IncidentProtocols } from "@/lib/settings/incident-protocols";
+import type { FollowUpProtocol } from "@/types/incidents";
 import type {
   BookingRules,
   DropOffPickUpOverride,
@@ -140,6 +142,7 @@ export interface FacilitySettings {
    * routine, because an empty one is an empty board.
    */
   daily_care_config: SettingState<FacilityDailyCareConfig>;
+  incident_follow_up_protocols: SettingState<IncidentProtocols>;
   /** The daycare rates — hourly, half day, full day… Empty until set. */
   daycare_rates: SettingState<DaycareRatesConfig>;
   /** The training Rates tab's programs. Empty until set. */
@@ -420,6 +423,23 @@ export function useCareFees(): {
   return {
     fees: settings.care_fees.value,
     configured: settings.care_fees.configured,
+    isPending,
+  };
+}
+
+/**
+ * The facility's incident follow-up protocols — the shipped set until it saves
+ * its own. `isPending` travels with them, so an editor seeds only once they land.
+ */
+export function useFollowUpProtocols(): {
+  protocols: FollowUpProtocol[];
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    protocols: settings.incident_follow_up_protocols.value.protocols,
+    configured: settings.incident_follow_up_protocols.configured,
     isPending,
   };
 }

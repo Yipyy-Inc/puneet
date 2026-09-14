@@ -63,13 +63,11 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAiText } from "@/hooks/use-ai-text";
 import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
-import {
-  followUpProtocols,
-  suggestProtocols,
-} from "@/data/follow-up-protocols";
 import { generateFollowUpTasks } from "@/lib/incidents/generate-follow-up-tasks";
 import { toast } from "sonner";
 import type { ContactMethod } from "@/types/incidents";
+import { useFollowUpProtocols } from "@/lib/api/facility-settings";
+import { suggestProtocols } from "@/lib/settings/incident-protocols";
 
 type PrefilledPet = {
   id: number;
@@ -632,6 +630,7 @@ export function CreateIncidentModal({
   const report = useReportIncident();
   const updateIncident = useUpdateIncident();
   const { add: addFollowUp } = useIncidentFollowUps();
+  const { protocols: followUpProtocolList } = useFollowUpProtocols();
   const { data: realClients = [] } = useQuery(clientQueries.all());
   const { data: staffProfiles = [] } = useQuery(staffQueries.profiles());
   const [selectedProtocolId, setSelectedProtocolId] = useState<string | "">("");
@@ -717,7 +716,9 @@ export function CreateIncidentModal({
     // one browser tab.
     // Looked up here rather than read from `selectedProtocol` below, which is
     // declared after this handler.
-    const protocol = followUpProtocols.find((p) => p.id === selectedProtocolId);
+    const protocol = followUpProtocolList.find(
+      (p) => p.id === selectedProtocolId,
+    );
     const followUps = protocol
       ? generateFollowUpTasks(protocol, {
           incidentId: incident.id,
@@ -777,8 +778,8 @@ export function CreateIncidentModal({
   // Suggested protocols for the dropdown grouping (type + severity match).
   const suggestedProtocols = useMemo(() => {
     if (!incidentType || !severity) return [];
-    return suggestProtocols(severity, incidentType);
-  }, [incidentType, severity]);
+    return suggestProtocols(followUpProtocolList, severity, incidentType);
+  }, [incidentType, severity, followUpProtocolList]);
 
   // Severity-driven default. Any severity auto-selects the top suggested
   // protocol (type + severity match) when one exists — e.g. Injury/Medium →
@@ -787,17 +788,17 @@ export function CreateIncidentModal({
   const defaultProtocolId = useMemo(() => {
     if (!severity) return "";
     const typeMatch = incidentType
-      ? suggestProtocols(severity, incidentType)[0]
+      ? suggestProtocols(followUpProtocolList, severity, incidentType)[0]
       : undefined;
     if (typeMatch) return typeMatch.id;
     if (severity === "high" || severity === "critical") {
-      const severityMatch = followUpProtocols
+      const severityMatch = followUpProtocolList
         .filter((p) => p.isActive && p.severityScopes.includes(severity))
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))[0];
       return severityMatch?.id ?? "";
     }
     return "";
-  }, [severity, incidentType]);
+  }, [severity, incidentType, followUpProtocolList]);
 
   useEffect(() => {
     if (autoSuggested) return;
@@ -808,8 +809,8 @@ export function CreateIncidentModal({
   }, [defaultProtocolId, selectedProtocolId, autoSuggested]);
 
   const selectedProtocol = useMemo(
-    () => followUpProtocols.find((p) => p.id === selectedProtocolId),
-    [selectedProtocolId],
+    () => followUpProtocolList.find((p) => p.id === selectedProtocolId),
+    [selectedProtocolId, followUpProtocolList],
   );
 
   // Preview the tasks that will be generated
@@ -1421,14 +1422,14 @@ export function CreateIncidentModal({
                     ))}
                   </>
                 )}
-                {followUpProtocols.filter(
+                {followUpProtocolList.filter(
                   (p) => p.isActive && !suggestedProtocols.includes(p),
                 ).length > 0 && (
                   <>
                     <div className="text-muted-foreground px-2 py-1 text-[10px] font-semibold uppercase">
                       Other protocols
                     </div>
-                    {followUpProtocols
+                    {followUpProtocolList
                       .filter(
                         (p) => p.isActive && !suggestedProtocols.includes(p),
                       )

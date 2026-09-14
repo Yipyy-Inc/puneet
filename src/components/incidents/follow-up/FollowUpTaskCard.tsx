@@ -42,7 +42,7 @@ import type {
   FollowUpTask,
 } from "@/types/incidents";
 import { LogConversationDialog } from "./LogConversationDialog";
-import { appendNote } from "@/data/tags-notes";
+import { useNoteMutations } from "@/lib/api/notes";
 
 interface FollowUpTaskCardProps {
   task: FollowUpTask;
@@ -105,6 +105,13 @@ export function FollowUpTaskCard({
   currentUser = "Current User",
   siblingTasks = [],
 }: FollowUpTaskCardProps) {
+  // A logged conversation is also a note on the incident, in public.notes. It
+  // was appended to the fixture note store, which no reload kept.
+  const incidentRef = Number(task.incidentId);
+  const incidentNotes = useNoteMutations(
+    "incident",
+    Number.isInteger(incidentRef) ? incidentRef : 0,
+  );
   const [open, setOpen] = useState(defaultExpanded ?? false);
   const [logOpen, setLogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(true);
@@ -167,13 +174,9 @@ export function FollowUpTaskCard({
 
     // Mirror the contact into the incident's Structured Notes (Notes tab),
     // with a phone icon + the outcome as the label.
-    const incidentEntityId = Number(task.incidentId.replace(/\D/g, "")) || 1;
-    appendNote({
-      category: "incident",
-      entityId: incidentEntityId,
-      content: `📞 ${entry.summary}`,
-      createdBy: entry.loggedBy,
-    });
+    if (incidentRef > 0 && entry.summary.trim()) {
+      incidentNotes.create.mutate({ content: `📞 ${entry.summary}` });
+    }
 
     setLogOpen(false);
   };

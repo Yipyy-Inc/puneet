@@ -32,7 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dailyCareQueries } from "@/lib/api/daily-care";
 import { useDayCareLog } from "@/hooks/use-day-care-log";
 import { logCareAction } from "@/data/incidents";
-import { staffMembers } from "@/data/staff";
+import { useStaffRoster } from "@/lib/api/staff-roster";
 import { shiftNotesStore } from "@/data/shift-notes-store";
 import {
   setDailyCareWriteErrorHandler,
@@ -256,9 +256,13 @@ export function DailyCareView() {
   };
 
   // Staff Filter — "all" or a specific staff id. Reuses the facility staff
-  // roster (src/data/staff.ts); the F2 identity source (useCurrentUser) exposes
+  // roster (/api/staff); the F2 identity source (useCurrentUser) exposes
   // only the current user, not a list.
-  const staffList = useMemo(() => staffMembers.filter((s) => s.isActive), []);
+  const staffRoster = useStaffRoster();
+  const staffList = useMemo(
+    () => staffRoster.filter((s) => s.isActive),
+    [staffRoster],
+  );
 
   // F2 default: a signed-in staff member lands on THEIR tasks (assigned +
   // unassigned); managers land on All. We map the current user onto the roster
