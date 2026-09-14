@@ -14339,3 +14339,25 @@ a writer first, not a screen.
 **Still true of the message history.** Only OUTBOUND messages are stored.
 Inbound SMS replies are not written anywhere, so a two-way conversation shows
 one side.
+
+## 2026-09-14 — the till's Tap to Pay was a simulator, and its cards on file were fixtures
+
+**Severity: high, money.** `processYipyyPay` in `src/lib/yipyy-pay-service.ts`
+waited three seconds and approved nine payments in ten with an invented Visa
+transaction, and the till recorded the sale as paid. It read
+`src/data/fiserv-payments` for facility 11, and the till hard-codes
+`facilityId = 11`, so "Pay with iPhone" was offered at every facility. No money
+moved.
+
+**Fixed.** The service refuses every request and names the way to take the
+card instead. The till no longer offers Pay with iPhone, and shows no card on
+file: the fixture's tokenized cards belonged to nobody here (charging one was
+already refused as `savedCardUnavailable`).
+
+**Still in the till, and why it is debt.** The till's payment grid is gated by
+`getFiservConfig(11)` — which methods appear, the Clover Terminal button
+included — and the Tap to Pay dialog, the device picker and the saved-card
+picker are still there, unreachable, behind `false /* ... */` gates. The
+honest gate for a method is the facility's own state: a terminal paired, a
+Clover connection live, a saved card vaulted at Clover. Rebuilding the grid on
+that is the conversion; the gates are marked so it is findable.
