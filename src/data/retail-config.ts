@@ -124,6 +124,29 @@ export interface BrandMarginRule {
   marginPercent: number;
 }
 
+/**
+ * What the till allows when a sale is returned. Absent on a configuration
+ * saved before 2026-09-14, which reads as SHIPPED_REFUND_POLICY
+ * (lib/retail/refund-policy.ts).
+ */
+export interface RetailRefundPolicy {
+  refundMethods: {
+    originalPayment: boolean;
+    cash: boolean;
+    storeCredit: boolean;
+    giftCard: boolean;
+    custom: boolean;
+  };
+  refundRules: {
+    /** A refund above the threshold needs an owner or a manager. */
+    managerApprovalRequired: boolean;
+    /** Dollars. */
+    managerApprovalThreshold: number;
+    requireReason: boolean;
+    requireNotes: boolean;
+  };
+}
+
 export interface RetailConfig {
   categories: RetailCategory[];
   suppliers: RetailSupplier[];
@@ -137,6 +160,8 @@ export interface RetailConfig {
   brandMarginRules: BrandMarginRule[];
   /** Tenders a facility adds itself (a cheque, an e-transfer). */
   customPaymentMethods?: CustomPaymentMethod[];
+  /** What the till allows when a sale is returned. */
+  refundPolicy?: RetailRefundPolicy;
 }
 
 // ── Default data ─────────────────────────────────────────────────────────────

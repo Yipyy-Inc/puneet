@@ -89,26 +89,7 @@ import {
 } from "@/data/retail";
 // `processFiservRefund` and the two transaction lookups that fed it are gone
 // with the simulated refund — see the note in `handleProcessReturn`.
-// Refund rules. These were read from `getFiservConfig(11)` — facility 11's
-// fixture — at every facility. The values are unchanged and stated once here,
-// the same for every facility, until a refund policy setting exists (debt
-// map, 2026-09-14): every method offered, a refund over $100 needs someone
-// who may override, reasons and notes recommended rather than required.
-const REFUND_POLICY = {
-  refundMethods: {
-    originalPayment: true,
-    cash: true,
-    storeCredit: true,
-    giftCard: true,
-    custom: true,
-  },
-  refundRules: {
-    managerApprovalRequired: true,
-    managerApprovalThreshold: 100,
-    requireReason: false,
-    requireNotes: false,
-  },
-};
+import { refundPolicyOf } from "@/lib/retail/refund-policy";
 // The counter sales that are REAL — rows in `payments`, not the module array in
 // `src/data/retail.ts` that empties on refresh — and the call that reverses one.
 import {
@@ -350,6 +331,8 @@ export default function OrdersPage() {
   // database's own.
   const { t: tR, fill: fillR, locale } = useStaffText("retailStore");
   const retailConfig = useRetailConfig().config;
+  // The facility's refund policy, from Retail settings.
+  const refundPolicy = refundPolicyOf(retailConfig);
   const products = useRetailProducts().data ?? NO_ITEMS;
   const purchaseOrders = usePurchaseOrders().data ?? NO_ITEMS;
   const suppliers = useSuppliers().data ?? NO_ITEMS;
@@ -503,8 +486,8 @@ export default function OrdersPage() {
     if (!selectedTransaction || returnForm.items.length === 0) return;
 
     const facilityId = 11; // TODO: Get from context
-    const refundRules = REFUND_POLICY.refundRules;
-    const refundMethods = REFUND_POLICY.refundMethods;
+    const refundRules = refundPolicy.refundRules;
+    const refundMethods = refundPolicy.refundMethods;
 
     // Check if refund method is enabled
     if (refundMethods) {
@@ -3043,7 +3026,7 @@ ${outcome.message}`);
                   )}
 
                   {(() => {
-                    const refundMethods = REFUND_POLICY.refundMethods;
+                    const refundMethods = refundPolicy.refundMethods;
 
                     return (
                       <div className="grid grid-cols-2 gap-3">

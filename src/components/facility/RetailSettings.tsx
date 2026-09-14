@@ -46,6 +46,7 @@ import {
   ExternalLink,
   Receipt,
   Send,
+  Undo2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
@@ -58,6 +59,7 @@ import type {
   RetailBrand,
   RetailTaxMode,
   RetailReceiptFormat,
+  RetailRefundPolicy,
 } from "@/data/retail-config";
 import type { PricingMethod, Product } from "@/types/retail";
 import { useRetailConfig } from "@/hooks/use-retail-config";
@@ -65,6 +67,7 @@ import { retailKeys, useRetailProducts } from "@/lib/api/retail-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NO_ITEMS } from "@/lib/no-items";
 import type { RoundingRule } from "@/lib/retail-pricing";
+import { refundPolicyOf } from "@/lib/retail/refund-policy";
 
 // The `label` is the CODE — HST, GST, PST, QST are the same four letters in
 // both languages, and they are what a facility writes on a receipt. Only the
@@ -145,6 +148,17 @@ const COLOR_OPTIONS = [
   { value: "purple", key: "colourPurple", dot: "bg-purple-500" },
   { value: "pink", key: "colourPink", dot: "bg-pink-500" },
   { value: "slate", key: "colourGrey", dot: "bg-slate-500" },
+];
+
+const REFUND_METHOD_ROWS: {
+  key: keyof RetailRefundPolicy["refundMethods"];
+  labelKey: string;
+}[] = [
+  { key: "originalPayment", labelKey: "refundOriginal" },
+  { key: "cash", labelKey: "refundCash" },
+  { key: "storeCredit", labelKey: "refundStoreCredit" },
+  { key: "giftCard", labelKey: "refundGiftCard" },
+  { key: "custom", labelKey: "refundCustom" },
 ];
 
 let _id = 800;
@@ -241,6 +255,24 @@ function RetailSettingsForm({
   const [rounding, setRounding] = useState<RoundingRule>(
     retailConfig.pricingConfig.rounding,
   );
+
+  // What the till allows when a sale is returned.
+  const [refundPolicy, setRefundPolicy] = useState<RetailRefundPolicy>(
+    refundPolicyOf(initial),
+  );
+  const setRefundMethod = (
+    key: keyof RetailRefundPolicy["refundMethods"],
+    on: boolean,
+  ) =>
+    setRefundPolicy((p) => ({
+      ...p,
+      refundMethods: { ...p.refundMethods, [key]: on },
+    }));
+  const setRefundRule = (patch: Partial<RetailRefundPolicy["refundRules"]>) =>
+    setRefundPolicy((p) => ({
+      ...p,
+      refundRules: { ...p.refundRules, ...patch },
+    }));
 
   // Inline add state
   const [newCat, setNewCat] = useState("");
@@ -450,6 +482,7 @@ function RetailSettingsForm({
       rounding,
     },
     brandMarginRules: brandRules,
+    refundPolicy,
     ...patch,
   });
 
@@ -466,6 +499,10 @@ function RetailSettingsForm({
   // The toast waits for the write; a refusal keeps everything typed.
   const handleSave = async () => {
     if (saving) return;
+    if (!Object.values(refundPolicy.refundMethods).some(Boolean)) {
+      toast.error(t("refundNoMethod"));
+      return;
+    }
     setSaving(true);
     try {
       await save(currentConfig());
@@ -1305,6 +1342,117 @@ function RetailSettingsForm({
               <Send className="size-3.5" />
               {t("sendTestReceipt")}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Refunds */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Undo2 className="size-4" />
+            {t("refunds")}
+          </CardTitle>
+          <p className="text-muted-foreground text-xs">{t("refundsHelp")}</p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{t("refundMethods")}</p>
+            <div className="divide-y rounded-lg border">
+              {REFUND_METHOD_ROWS.map((row) => (
+                <div
+                  key={row.key}
+                  className="flex min-h-12 items-center justify-between gap-4 px-3 py-2"
+                >
+                  <Label
+                    htmlFor={`refund-method-${row.key}`}
+                    className="text-sm"
+                  >
+                    {t(row.labelKey)}
+                  </Label>
+                  <Switch
+                    id={`refund-method-${row.key}`}
+                    checked={refundPolicy.refundMethods[row.key]}
+                    onCheckedChange={(on) => setRefundMethod(row.key, on)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="refund-approval" className="text-sm font-medium">
+                {t("refundApproval")}
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                {t("refundApprovalHelp")}
+              </p>
+            </div>
+            <Switch
+              id="refund-approval"
+              checked={refundPolicy.refundRules.managerApprovalRequired}
+              onCheckedChange={(on) =>
+                setRefundRule({ managerApprovalRequired: on })
+              }
+            />
+          </div>
+
+          {refundPolicy.refundRules.managerApprovalRequired && (
+            <div className="space-y-1.5">
+              <Label htmlFor="refund-approval-threshold" className="text-xs">
+                {t("refundThreshold")}
+              </Label>
+              <Input
+                id="refund-approval-threshold"
+                type="number"
+                min="0"
+                step="1"
+                value={String(
+                  refundPolicy.refundRules.managerApprovalThreshold,
+                )}
+                onChange={(e) =>
+                  setRefundRule({
+                    managerApprovalThreshold: Math.max(
+                      0,
+                      Number.parseFloat(e.target.value) || 0,
+                    ),
+                  })
+                }
+                className="max-w-[160px] text-sm tabular-nums"
+              />
+            </div>
+          )}
+
+          <Separator />
+
+          <div className="flex items-center justify-between gap-4">
+            <Label
+              htmlFor="refund-require-reason"
+              className="text-sm font-medium"
+            >
+              {t("refundRequireReason")}
+            </Label>
+            <Switch
+              id="refund-require-reason"
+              checked={refundPolicy.refundRules.requireReason}
+              onCheckedChange={(on) => setRefundRule({ requireReason: on })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <Label
+              htmlFor="refund-require-notes"
+              className="text-sm font-medium"
+            >
+              {t("refundRequireNotes")}
+            </Label>
+            <Switch
+              id="refund-require-notes"
+              checked={refundPolicy.refundRules.requireNotes}
+              onCheckedChange={(on) => setRefundRule({ requireNotes: on })}
+            />
           </div>
         </CardContent>
       </Card>

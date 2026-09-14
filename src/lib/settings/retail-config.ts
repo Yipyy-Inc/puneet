@@ -4,6 +4,7 @@ import {
   retailConfig as SHIPPED_RETAIL_CONFIG,
   type RetailConfig,
 } from "@/data/retail-config";
+import { retailRefundPolicySchema } from "@/lib/retail/refund-policy";
 import { customPaymentMethodSchema } from "@/types/retail";
 
 // ============================================================================
@@ -53,6 +54,8 @@ export const retailConfigSchema = z
     ),
     // Optional so a row saved before 2026-09-14 still validates: none added.
     customPaymentMethods: z.array(customPaymentMethodSchema).optional(),
+    // Optional for the same reason: absent reads as SHIPPED_REFUND_POLICY.
+    refundPolicy: retailRefundPolicySchema.optional(),
   })
   .passthrough();
 
