@@ -134,8 +134,8 @@ import { NO_ITEMS } from "@/lib/no-items";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { usePermission } from "@/hooks/use-facility-rbac";
+import type { InPersonPaymentMethods } from "@/types/payments";
 import {
-  getFiservConfig,
   getYipyyPayConfig,
   getYipyyPayDevicesByFacility,
   getYipyyPayDevice,
@@ -1178,7 +1178,9 @@ export default function POSPage() {
         ? bookings.find((b) => b.id === selectedBookingId)
         : null;
 
-      const fiservConfig = getFiservConfig(facilityId);
+      // Which payment paths exist is the facility's own state: its paired
+      // Clover terminals, and card fields that tokenise only on a live Clover
+      // connection. The fixture config answered for facility 11 everywhere.
 
       // Log payment attempt
       logPaymentAction("payment_capture", {
@@ -1245,7 +1247,7 @@ export default function POSPage() {
                 description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
                 customerId: customerId ? Number(customerId) : undefined,
                 bookingId: selectedBookingId || undefined,
-                sendReceipt: fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
+                sendReceipt: true,
                 processedBy: currentUserId || "staff-001",
                 processedById: currentUserId
                   ? Number(currentUserId)
@@ -1294,8 +1296,7 @@ export default function POSPage() {
                 description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
                 customerId: customerId ? Number(customerId) : undefined,
                 bookingId: selectedBookingId || undefined,
-                printReceipt:
-                  fiservConfig?.cloverTerminal?.autoPrintReceipts ?? true,
+                printReceipt: true,
                 printCustomerCopy: true,
                 printMerchantCopy: true,
               };
@@ -1482,7 +1483,7 @@ export default function POSPage() {
       else if (
         useCloverTerminal &&
         cloverTerminalId &&
-        fiservConfig?.cloverTerminal?.enabled &&
+        cloverTerminals.length > 0 &&
         (paymentForm.method === "credit" || paymentForm.method === "debit")
       ) {
         const terminal = cloverTerminals.find(
@@ -1508,7 +1509,7 @@ export default function POSPage() {
           invoiceId: undefined, // TODO: Link to invoice if applicable
           customerId: customerId ? Number(customerId) : undefined,
           bookingId: selectedBookingId || undefined,
-          printReceipt: fiservConfig.cloverTerminal?.autoPrintReceipts ?? true,
+          printReceipt: true,
           printCustomerCopy: true,
           printMerchantCopy: true,
         };
@@ -1573,7 +1574,6 @@ export default function POSPage() {
       else if (
         useYipyyPay &&
         yipyyPayDeviceId &&
-        fiservConfig?.yipyyPay?.enabled &&
         (paymentForm.method === "credit" || paymentForm.method === "debit")
       ) {
         const _yipyyPayConfig = getYipyyPayConfig(facilityId);
@@ -1598,7 +1598,7 @@ export default function POSPage() {
           invoiceId: undefined, // TODO: Link to invoice if applicable
           customerId: customerId ? Number(customerId) : undefined,
           bookingId: selectedBookingId || undefined,
-          sendReceipt: fiservConfig.yipyyPay?.autoSendReceipt ?? true,
+          sendReceipt: true,
           processedBy: "Staff",
           processedById: currentUserId ? Number(currentUserId) : undefined,
         };
@@ -1646,9 +1646,7 @@ export default function POSPage() {
       else if (
         (paymentForm.method === "credit" || paymentForm.method === "debit") &&
         !useCloverTerminal &&
-        !useYipyyPay &&
-        fiservConfig?.integrationSettings.posEnabled &&
-        fiservConfig?.enabledPaymentMethods.card
+        !useYipyyPay
       ) {
         // Determine payment source
         let paymentSource: "new_card" | "tokenized_card" = "new_card";
@@ -3344,7 +3342,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
       {/* Camera Barcode/QR Scanner */}
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
         {/* Full-screen on mobile, centered modal on sm+ */}
-        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-sm">
+        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-0 max-sm:rounded-none sm:max-w-sm">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <ScanLine className="size-5" />
@@ -4076,8 +4074,6 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
 
                 {paymentForm.payments.map((payment, index) => {
                   const facilityId = 11; // TODO: Get from context
-                  const fiservConfig = getFiservConfig(facilityId);
-                  const inPersonMethods = fiservConfig?.inPersonMethods;
                   const isLastPayment =
                     index === paymentForm.payments.length - 1;
                   const remainingAmount =
@@ -4121,17 +4117,15 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {inPersonMethods?.cash !== false && (
+                              {
                                 <SelectItem value="cash">
                                   <div className="flex items-center gap-2">
                                     <Banknote className="size-4" />
                                     <span>Cash</span>
                                   </div>
                                 </SelectItem>
-                              )}
-                              {(inPersonMethods?.cloverTerminal ||
-                                inPersonMethods?.payWithiPhone ||
-                                fiservConfig?.enabledPaymentMethods.card) && (
+                              }
+                              {
                                 <>
                                   <SelectItem value="credit">
                                     <div className="flex items-center gap-2">
@@ -4146,23 +4140,23 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                     </div>
                                   </SelectItem>
                                 </>
-                              )}
-                              {inPersonMethods?.storeCredit !== false && (
+                              }
+                              {
                                 <SelectItem value="store_credit">
                                   <div className="flex items-center gap-2">
                                     <Wallet className="size-4" />
                                     <span>Store Credit</span>
                                   </div>
                                 </SelectItem>
-                              )}
-                              {inPersonMethods?.giftCard !== false && (
+                              }
+                              {
                                 <SelectItem value="gift_card">
                                   <div className="flex items-center gap-2">
                                     <Gift className="size-4" />
                                     <span>Gift Card</span>
                                   </div>
                                 </SelectItem>
-                              )}
+                              }
                             </SelectContent>
                           </Select>
                         </div>
@@ -4348,7 +4342,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                       {(payment.method === "credit" ||
                         payment.method === "debit") &&
                         !payment.useYipyyPay &&
-                        inPersonMethods?.cloverTerminal && (
+                        cloverTerminals.length > 0 && (
                           <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
                             <div className="flex items-center justify-between">
                               <Label className="text-xs">
@@ -4486,12 +4480,8 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                   <Label>Payment Method</Label>
                   {(() => {
                     const facilityId = 11; // TODO: Get from context
-                    const fiservConfig = getFiservConfig(facilityId);
-                    const inPersonMethods = fiservConfig?.inPersonMethods;
-                    const enabledPaymentMethods =
-                      fiservConfig?.enabledPaymentMethods;
-                    const cardOnFileEnabled =
-                      fiservConfig?.cardOnFileSettings?.enabled !== false;
+                    // No card on file is charged at the till yet.
+                    const cardOnFileEnabled = false;
 
                     // Check if customer has saved cards
                     const customerId =
@@ -4547,159 +4537,154 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                         )}
 
                         {/* Clover Terminal */}
-                        {inPersonMethods?.cloverTerminal &&
-                          fiservConfig?.cloverTerminal?.enabled && (
-                            <Button
-                              type="button"
-                              variant={
-                                paymentForm.method === "credit" &&
-                                useCloverTerminal
-                                  ? "default"
-                                  : "outline"
+                        {cloverTerminals.length > 0 && (
+                          <Button
+                            type="button"
+                            variant={
+                              paymentForm.method === "credit" &&
+                              useCloverTerminal
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex h-auto flex-col items-start gap-2 p-4"
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                method: "credit",
+                                chargeType: "pay_now",
+                                selectedBookingId: null,
+                              });
+                              setUseCloverTerminal(true);
+                              setUseYipyyPay(false);
+                              setYipyyPayDeviceId(null);
+                              setSelectedTokenizedCard(null);
+                              // Auto-select first terminal if available
+                              const terminals = cloverTerminals;
+                              if (terminals.length > 0) {
+                                const defaultTerminalId =
+                                  terminals[0].terminalId;
+                                setCloverTerminalId(defaultTerminalId);
                               }
-                              className="flex h-auto flex-col items-start gap-2 p-4"
-                              onClick={() => {
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  method: "credit",
-                                  chargeType: "pay_now",
-                                  selectedBookingId: null,
-                                });
-                                setUseCloverTerminal(true);
-                                setUseYipyyPay(false);
-                                setYipyyPayDeviceId(null);
-                                setSelectedTokenizedCard(null);
-                                // Auto-select first terminal if available
-                                const terminals = cloverTerminals;
-                                if (terminals.length > 0) {
-                                  const defaultTerminalId =
-                                    fiservConfig?.cloverTerminal?.terminalId ||
-                                    terminals[0].terminalId;
-                                  setCloverTerminalId(defaultTerminalId);
-                                }
-                              }}
-                            >
-                              <Printer className="size-5" />
-                              <div className="text-left">
-                                <p className="font-medium">Clover Terminal</p>
-                                <p className="text-muted-foreground text-xs">
-                                  Tap/Chip/Swipe
-                                </p>
-                              </div>
-                            </Button>
-                          )}
+                            }}
+                          >
+                            <Printer className="size-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Clover Terminal</p>
+                              <p className="text-muted-foreground text-xs">
+                                Tap/Chip/Swipe
+                              </p>
+                            </div>
+                          </Button>
+                        )}
 
                         {/* Cash */}
-                        {inPersonMethods?.cash !== false &&
-                          enabledPaymentMethods?.cash !== false && (
-                            <Button
-                              type="button"
-                              variant={
-                                paymentForm.method === "cash"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="flex h-auto flex-col items-start gap-2 p-4"
-                              onClick={() => {
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  method: "cash",
-                                  chargeType: "pay_now",
-                                  selectedBookingId: null,
-                                });
-                                setUseCloverTerminal(false);
-                                setCloverTerminalId(null);
-                                setUseYipyyPay(false);
-                                setYipyyPayDeviceId(null);
-                                setSelectedTokenizedCard(null);
-                              }}
-                            >
-                              <Banknote className="size-5" />
-                              <div className="text-left">
-                                <p className="font-medium">Cash</p>
-                                <p className="text-muted-foreground text-xs">
-                                  Cash payment
-                                </p>
-                              </div>
-                            </Button>
-                          )}
+                        {
+                          <Button
+                            type="button"
+                            variant={
+                              paymentForm.method === "cash"
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex h-auto flex-col items-start gap-2 p-4"
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                method: "cash",
+                                chargeType: "pay_now",
+                                selectedBookingId: null,
+                              });
+                              setUseCloverTerminal(false);
+                              setCloverTerminalId(null);
+                              setUseYipyyPay(false);
+                              setYipyyPayDeviceId(null);
+                              setSelectedTokenizedCard(null);
+                            }}
+                          >
+                            <Banknote className="size-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Cash</p>
+                              <p className="text-muted-foreground text-xs">
+                                Cash payment
+                              </p>
+                            </div>
+                          </Button>
+                        }
 
                         {/* Store Credit */}
-                        {inPersonMethods?.storeCredit !== false &&
-                          enabledPaymentMethods?.storeCredit !== false && (
-                            <Button
-                              type="button"
-                              variant={
-                                paymentForm.method === "store_credit"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="flex h-auto flex-col items-start gap-2 p-4"
-                              onClick={() => {
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  method: "store_credit",
-                                  chargeType: "pay_now",
-                                  selectedBookingId: null,
-                                });
-                                setUseCloverTerminal(false);
-                                setCloverTerminalId(null);
-                                setUseYipyyPay(false);
-                                setYipyyPayDeviceId(null);
-                                setSelectedTokenizedCard(null);
-                              }}
-                              disabled={
-                                !selectedClientId ||
-                                selectedClientId === "__walk_in__"
-                              }
-                            >
-                              <Wallet className="size-5" />
-                              <div className="text-left">
-                                <p className="font-medium">Store Credit</p>
-                                <p className="text-muted-foreground text-xs">
-                                  {selectedClientId &&
-                                  selectedClientId !== "__walk_in__"
-                                    ? `Available: $${getStoreCreditBalance(selectedClientId).toFixed(2)}`
-                                    : "Select customer first"}
-                                </p>
-                              </div>
-                            </Button>
-                          )}
+                        {
+                          <Button
+                            type="button"
+                            variant={
+                              paymentForm.method === "store_credit"
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex h-auto flex-col items-start gap-2 p-4"
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                method: "store_credit",
+                                chargeType: "pay_now",
+                                selectedBookingId: null,
+                              });
+                              setUseCloverTerminal(false);
+                              setCloverTerminalId(null);
+                              setUseYipyyPay(false);
+                              setYipyyPayDeviceId(null);
+                              setSelectedTokenizedCard(null);
+                            }}
+                            disabled={
+                              !selectedClientId ||
+                              selectedClientId === "__walk_in__"
+                            }
+                          >
+                            <Wallet className="size-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Store Credit</p>
+                              <p className="text-muted-foreground text-xs">
+                                {selectedClientId &&
+                                selectedClientId !== "__walk_in__"
+                                  ? `Available: $${getStoreCreditBalance(selectedClientId).toFixed(2)}`
+                                  : "Select customer first"}
+                              </p>
+                            </div>
+                          </Button>
+                        }
 
                         {/* Gift Card */}
-                        {inPersonMethods?.giftCard !== false &&
-                          enabledPaymentMethods?.giftCard !== false && (
-                            <Button
-                              type="button"
-                              variant={
-                                paymentForm.method === "gift_card"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="flex h-auto flex-col items-start gap-2 p-4"
-                              onClick={() => {
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  method: "gift_card",
-                                  chargeType: "pay_now",
-                                  selectedBookingId: null,
-                                });
-                                setUseCloverTerminal(false);
-                                setCloverTerminalId(null);
-                                setUseYipyyPay(false);
-                                setYipyyPayDeviceId(null);
-                                setSelectedTokenizedCard(null);
-                              }}
-                            >
-                              <Gift className="size-5" />
-                              <div className="text-left">
-                                <p className="font-medium">Gift Card</p>
-                                <p className="text-muted-foreground text-xs">
-                                  Enter gift card code
-                                </p>
-                              </div>
-                            </Button>
-                          )}
+                        {
+                          <Button
+                            type="button"
+                            variant={
+                              paymentForm.method === "gift_card"
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex h-auto flex-col items-start gap-2 p-4"
+                            onClick={() => {
+                              setPaymentForm({
+                                ...paymentForm,
+                                method: "gift_card",
+                                chargeType: "pay_now",
+                                selectedBookingId: null,
+                              });
+                              setUseCloverTerminal(false);
+                              setCloverTerminalId(null);
+                              setUseYipyyPay(false);
+                              setYipyyPayDeviceId(null);
+                              setSelectedTokenizedCard(null);
+                            }}
+                          >
+                            <Gift className="size-5" />
+                            <div className="text-left">
+                              <p className="font-medium">Gift Card</p>
+                              <p className="text-muted-foreground text-xs">
+                                Enter gift card code
+                              </p>
+                            </div>
+                          </Button>
+                        }
 
                         {/* Pay with iPhone (Tap to Pay) - if enabled and not using Clover */}
                         {false /* Tap to Pay is not connected */ &&
@@ -4750,11 +4735,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                   paymentForm.method === "debit") &&
                   useCloverTerminal &&
                   (() => {
-                    const facilityId = 11; // TODO: Get from context
-                    const fiservConfig = getFiservConfig(facilityId);
-                    const terminals = fiservConfig?.cloverTerminal?.enabled
-                      ? cloverTerminals
-                      : [];
+                    const terminals = cloverTerminals;
 
                     if (terminals.length > 0) {
                       return (
@@ -4822,10 +4803,6 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                           name — rather than three capability
                                           badges nobody ever checked. */}
                                       Serial: {terminal.terminalId}
-                                      {fiservConfig?.cloverTerminal
-                                        ?.autoPrintReceipts && (
-                                        <span> • Auto-print enabled</span>
-                                      )}
                                     </div>
                                   );
                                 })()}
@@ -4844,10 +4821,10 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                   !useCloverTerminal &&
                   (() => {
                     const facilityId = 11; // TODO: Get from context
-                    const fiservConfig = getFiservConfig(facilityId);
-                    const devices = fiservConfig?.yipyyPay?.enabled
-                      ? getYipyyPayDevicesByFacility(facilityId)
-                      : [];
+                    // Tap to Pay is not connected: no device is offered.
+                    const devices: ReturnType<
+                      typeof getYipyyPayDevicesByFacility
+                    > = [];
 
                     if (devices.length > 0) {
                       return (
@@ -4922,13 +4899,6 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                                       )}
                                       Tap card, iPhone, or Apple Watch to the
                                       top of the phone.
-                                      {fiservConfig?.yipyyPay
-                                        ?.autoSendReceipt && (
-                                        <span>
-                                          {" "}
-                                          • Receipt will be sent automatically
-                                        </span>
-                                      )}
                                     </div>
                                   );
                                 })()}
@@ -5116,15 +5086,13 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                   !useCloverTerminal &&
                   !useYipyyPay &&
                   (() => {
-                    const facilityId = 11; // TODO: Get from context
-                    const fiservConfig = getFiservConfig(facilityId);
                     const customerId =
                       selectedClientId && selectedClientId !== "__walk_in__"
                         ? Number(selectedClientId)
                         : null;
                     const tokenizedCards =
                       customerId &&
-                      fiservConfig?.enabledPaymentMethods.cardOnFile
+                      false /* no card on file is charged at the till yet */
                         ? ([] as TokenizedCard[]) /* no card on file is charged at the till yet */
                         : [];
 
@@ -5450,8 +5418,10 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
 
           {(() => {
             const facilityId = 11; // TODO: Get from context
-            const fiservConfig = getFiservConfig(facilityId);
-            const inPersonMethods = fiservConfig?.inPersonMethods;
+            // Tap to Pay is not connected; no facility has these settings.
+            const inPersonMethods = undefined as
+              | InPersonPaymentMethods
+              | undefined;
             const device = yipyyPayDeviceId
               ? getYipyyPayDevice(facilityId, yipyyPayDeviceId)
               : null;
@@ -5654,8 +5624,7 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
                               ? Number(customerId)
                               : undefined,
                             bookingId: selectedBookingId || undefined,
-                            sendReceipt:
-                              fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
+                            sendReceipt: true,
                             processedBy: currentUserId || "staff-001",
                             processedById: currentUserId
                               ? Number(currentUserId)
