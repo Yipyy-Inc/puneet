@@ -1,302 +1,46 @@
 "use client";
 
-import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
+import { ShieldCheck } from "lucide-react";
+
 import { formatMoney } from "@/lib/i18n/format";
-import { useMemo, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CreditCard, Plus, Check, ShieldCheck } from "lucide-react";
-import { paymentMethods as seedPaymentMethods } from "@/data/payments";
-import type { PaymentMethod } from "@/types/payments";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import type { DepositRule } from "@/types/deposit-rules";
-import { cn } from "@/lib/utils";
 
 export interface CustomerDepositPanelProps {
   rule: DepositRule;
   depositAmount: number;
-  bookingTotal: number;
-  clientId: number;
-  selectedPaymentMethodId: string | null;
-  onSelectPaymentMethod: (id: string | null) => void;
 }
 
 /**
- * Customer-side deposit + card-on-file picker shown on the Confirm step. The
- * user picks a card (or adds a new one) before they can submit; the parent
- * wizard's `canProceed` gates on whether a card is selected.
+ * What a customer is told about a deposit on the confirm step.
  *
- * "Add new card" is a stub here — it captures last-4 / brand client-side and
- * appends a transient PaymentMethod to the visible list. Real Stripe
- * Elements integration plugs in at submit time on the backend.
+ * It used to make them pick a card on file — or type one in, which invented a
+ * card in the browser — before they could send the request. Nothing read the
+ * choice: the server charged no card, and a customer's booking arrives with no
+ * price until the facility quotes it (private.enforce_booking_integrity). So
+ * the panel says what happens and asks for nothing.
  */
 export function CustomerDepositPanel({
   rule,
   depositAmount,
-  bookingTotal,
-  clientId,
-  selectedPaymentMethodId,
-  onSelectPaymentMethod,
 }: CustomerDepositPanelProps) {
-  // Session-only cards added via the "+ Add new card" stub. Real persistence
-  // happens on the backend when the booking submits.
-  const [sessionCards, setSessionCards] = useState<PaymentMethod[]>([]);
-  const [addCardOpen, setAddCardOpen] = useState(false);
-
-  const cardsOnFile = useMemo(
-    () =>
-      [...seedPaymentMethods, ...sessionCards].filter(
-        (pm) => pm.clientId === clientId && pm.type === "card",
-      ),
-    [sessionCards, clientId],
-  );
-
   const t = useShellText("booking");
   const locale = useShellLocale();
-  const remaining = Math.max(0, bookingTotal - depositAmount);
 
   return (
-    <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-4">
-      <div className="mb-3 flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-          <ShieldCheck className="size-5 text-amber-700" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-amber-900">
-            {t("depositRequired")}
-          </p>
-          <p className="text-xs text-amber-800">
-            {rule.label} {t("depositPayNow")}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] tracking-wide text-amber-700 uppercase">
-            {t("dueNow")}
-          </p>
-          <p className="text-lg font-bold text-amber-900 tabular-nums">
-            {formatMoney(depositAmount, locale)}
-          </p>
-          <p className="text-[10px] text-amber-700">
-            {formatMoney(remaining, locale)} {t("after")}
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
-          {t("paymentMethod")}
-        </p>
-        {cardsOnFile.length === 0 && (
-          <p className="text-muted-foreground text-xs italic">
-            {t("noCardsOnFile")}
-          </p>
-        )}
-        <div className="space-y-1.5">
-          {cardsOnFile.map((card) => {
-            const active = selectedPaymentMethodId === card.id;
-            return (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => onSelectPaymentMethod(card.id)}
-                className={cn(
-                  "bg-card flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition",
-                  active
-                    ? "border-amber-400 ring-2 ring-amber-300"
-                    : "hover:bg-muted",
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <CreditCard className="text-muted-foreground size-4" />
-                  <span className="text-sm font-medium capitalize">
-                    {card.cardBrand}
-                  </span>
-                  <span className="text-muted-foreground font-mono text-xs">
-                    •••• {card.cardLast4}
-                  </span>
-                  {card.isDefault && (
-                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-700 uppercase">
-                      {t("defaultCard")}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-[10px]">
-                    {String(card.cardExpMonth).padStart(2, "0")}/
-                    {String(card.cardExpYear).slice(-2)}
-                  </span>
-                  {active && <Check className="size-4 text-emerald-600" />}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setAddCardOpen(true)}
-          className="h-8 w-full gap-1 text-xs"
-        >
-          <Plus className="size-3.5" />
-          {t("addNewCard")}
-        </Button>
-      </div>
-
-      <AddCardDialog
-        open={addCardOpen}
-        onOpenChange={setAddCardOpen}
-        clientId={clientId}
-        onAdded={(card) => {
-          setSessionCards((prev) => [...prev, card]);
-          onSelectPaymentMethod(card.id);
-        }}
+    <div className="bg-card flex items-start gap-3 rounded-2xl border p-4">
+      <ShieldCheck
+        className="mt-0.5 size-5 shrink-0 text-amber-700"
+        aria-hidden="true"
       />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">{t("depositRequired")}</p>
+        <p className="text-muted-foreground text-sm">
+          {t("depositOnConfirm")
+            .replace("{rule}", rule.label)
+            .replace("{amount}", formatMoney(depositAmount, locale))}
+        </p>
+      </div>
     </div>
-  );
-}
-
-// ─── Stub Add Card form ──────────────────────────────────────────────────────
-function AddCardDialog({
-  open,
-  onOpenChange,
-  clientId,
-  onAdded,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  clientId: number;
-  onAdded: (card: PaymentMethod) => void;
-}) {
-  const t = useShellText("booking");
-  const [number, setNumber] = useState("");
-  const [exp, setExp] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [name, setName] = useState("");
-
-  // Lightweight brand sniff from the first 1–2 digits. Real card detection
-  // happens on the backend / Stripe Elements; this is purely cosmetic.
-  const detectedBrand = (() => {
-    const d = number.replace(/\s/g, "");
-    if (d.startsWith("4")) return "visa" as const;
-    if (/^(5[1-5]|2[2-7])/.test(d)) return "mastercard" as const;
-    if (/^3[47]/.test(d)) return "amex" as const;
-    if (/^(6011|65)/.test(d)) return "discover" as const;
-    return undefined;
-  })();
-
-  const canSubmit =
-    number.replace(/\s/g, "").length >= 13 &&
-    /^\d{2}\/\d{2}$/.test(exp) &&
-    cvc.length >= 3 &&
-    name.trim().length > 0;
-
-  const handleSubmit = () => {
-    const digits = number.replace(/\s/g, "");
-    const [mm, yy] = exp.split("/").map((p) => parseInt(p, 10));
-    onAdded({
-      id: `pm-session-${Date.now()}`,
-      clientId,
-      type: "card",
-      isDefault: false,
-      cardBrand: detectedBrand,
-      cardLast4: digits.slice(-4),
-      cardExpMonth: mm,
-      cardExpYear: 2000 + yy,
-      cardholderName: name.trim(),
-      createdAt: new Date().toISOString(),
-    });
-    setNumber("");
-    setExp("");
-    setCvc("");
-    setName("");
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{t("addACard")}</DialogTitle>
-          <DialogDescription className="text-xs">
-            {t("addACardHelp")}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label htmlFor="card-number" className="text-xs">
-              {t("cardNumber")}
-            </Label>
-            <Input
-              id="card-number"
-              inputMode="numeric"
-              autoComplete="cc-number"
-              placeholder="1234 5678 9012 3456"
-              value={number}
-              onChange={(e) => setNumber(e.target.value)}
-              className="mt-1 font-mono"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="card-exp" className="text-xs">
-                {t("expiry")}
-              </Label>
-              <Input
-                id="card-exp"
-                placeholder="MM/YY"
-                value={exp}
-                onChange={(e) => setExp(e.target.value)}
-                className="mt-1 font-mono"
-              />
-            </div>
-            <div>
-              <Label htmlFor="card-cvc" className="text-xs">
-                CVC
-              </Label>
-              <Input
-                id="card-cvc"
-                inputMode="numeric"
-                placeholder="123"
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value)}
-                className="mt-1 font-mono"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="card-name" className="text-xs">
-              {t("cardholderName")}
-            </Label>
-            <Input
-              id="card-name"
-              autoComplete="cc-name"
-              // french-ok: a sample name, which §5q keeps out of the locale layer
-              placeholder="Alex Customer"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            {t("cancel")}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {t("saveCard")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

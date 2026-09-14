@@ -7647,7 +7647,8 @@
       "methodETransfer": "Virement Interac",
       "feeMedicationAdmin": "Frais d’administration de médicament",
       "feeMedicationAid": "Aide à la médication : {item}",
-      "feeDaycareFeeding": "Frais de repas en garderie"
+      "feeDaycareFeeding": "Frais de repas en garderie",
+      "depositOnConfirm": "{rule} : un dépôt de {amount} sera demandé une fois votre réservation confirmée par l’équipe."
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",

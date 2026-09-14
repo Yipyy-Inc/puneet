@@ -18,7 +18,6 @@ import {
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
-import { bookings as allBookings } from "@/data/bookings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
@@ -28,6 +27,12 @@ import {
   formatMoney,
   formatWeightFromLb,
 } from "@/lib/i18n/format";
+import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
+import type { Booking } from "@/types/booking";
+
+// Stable while the query loads, so a memo keyed on it does not recompute.
+const NO_BOOKINGS: Booking[] = [];
 
 interface DaycareDetailsProps {
   currentSubStep: number;
@@ -386,19 +391,23 @@ function DaycareSectionAssignmentStep({
   const focusPet = selectedPet ?? draggedPet ?? selectedPets[0] ?? null;
   const dates = daycareSelectedDates.map((d) => d.toISOString().split("T")[0]);
 
+  // Capacity from the bookings the caller may see, not a fixture's.
+  const { data: facilityBookings = NO_BOOKINGS } = useQuery(
+    bookingQueries.all(),
+  );
   const availabilitySummary = React.useMemo(() => {
     const base = focusPet
       ? getDaycareAvailabilitySummary(
           focusPet,
           dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
           daycareSections,
-          allBookings,
+          facilityBookings,
         )
       : getDaycareAvailabilitySummary(
           { weight: 0, type: "Dog" } as Pet,
           dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
           daycareSections,
-          allBookings,
+          facilityBookings,
         );
     if (skipEligibility) {
       return base.map((item) => ({
@@ -408,7 +417,7 @@ function DaycareSectionAssignmentStep({
       }));
     }
     return base;
-  }, [focusPet, dates, daycareSections, skipEligibility]);
+  }, [focusPet, dates, daycareSections, skipEligibility, facilityBookings]);
 
   const availabilityBySectionId = React.useMemo(() => {
     const map: Record<string, (typeof availabilitySummary)[number]> = {};

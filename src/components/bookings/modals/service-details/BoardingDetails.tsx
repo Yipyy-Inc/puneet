@@ -17,12 +17,17 @@ import {
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
-import { bookings as allBookings } from "@/data/bookings";
 import { useRooms } from "@/hooks/use-rooms";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { addOnPriceLabel } from "./addon-price-label";
 import { formatDuration, formatMoney } from "@/lib/i18n/format";
 import { rich } from "@/lib/i18n/rich";
+import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
+import type { Booking } from "@/types/booking";
+
+// Stable while the query loads, so a memo keyed on it does not recompute.
+const NO_BOOKINGS: Booking[] = [];
 
 // Boarding categories are rendered dynamically inside the component
 // with live availability via getBoardingCategoryAvailability()
@@ -400,6 +405,10 @@ function BoardingRoomSelectionStep({
     ? undefined
     : (activePet ?? selectedPets[0] ?? undefined);
 
+  // Capacity from the bookings the caller may see, not a fixture's.
+  const { data: facilityBookings = NO_BOOKINGS } = useQuery(
+    bookingQueries.all(),
+  );
   const availability = React.useMemo(() => {
     if (!startDate || !endDate) return [];
     return getBoardingCategoryAvailability(
@@ -407,10 +416,17 @@ function BoardingRoomSelectionStep({
       endDate,
       boardingCategories,
       boardingRooms,
-      allBookings,
+      facilityBookings,
       focusPet,
     );
-  }, [startDate, endDate, focusPet, boardingCategories, boardingRooms]);
+  }, [
+    startDate,
+    endDate,
+    focusPet,
+    boardingCategories,
+    boardingRooms,
+    facilityBookings,
+  ]);
 
   function assignPet(pet: Pet, categoryId: string) {
     const newAssignments = [

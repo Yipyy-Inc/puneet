@@ -7647,7 +7647,8 @@
       "methodETransfer": "E-transfer",
       "feeMedicationAdmin": "Medication administration fee",
       "feeMedicationAid": "Medication aid: {item}",
-      "feeDaycareFeeding": "Daycare meals fee"
+      "feeDaycareFeeding": "Daycare meals fee",
+      "depositOnConfirm": "{rule}: a deposit of {amount} is asked for once the team confirms your booking."
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",

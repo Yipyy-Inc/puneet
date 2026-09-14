@@ -17,7 +17,7 @@ import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Booking } from "@/types/booking";
-import { clients } from "@/data/clients";
+import { useClientRecord } from "@/lib/api/client";
 
 const TIME_STEP_MINUTES = 30;
 
@@ -62,7 +62,7 @@ export function EditBookingModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const client = clients.find((c) => c.id === booking.clientId);
+  const { client } = useClientRecord(booking.clientId);
   const pet = client?.pets.find((p) => p.id === booking.petId);
 
   const isSameDay =

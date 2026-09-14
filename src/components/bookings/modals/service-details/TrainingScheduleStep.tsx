@@ -28,7 +28,6 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { trainingQueries } from "@/lib/api/training";
-import { trainingPackages } from "@/data/training";
 import { getDayName, type TrainingSeries } from "@/lib/training-series";
 import {
   defaultTrainingCourseTypes,
@@ -42,6 +41,10 @@ import {
 import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
+import type { TrainingPackage } from "@/types/training";
+
+// Stable while the query loads.
+const NO_PROGRAMS: TrainingPackage[] = [];
 
 interface Props {
   startDate: string;
@@ -174,6 +177,10 @@ export function TrainingScheduleStep({
     trainingQueries.allSeriesEnrollments(),
   );
   const { data: courseTypes = [] } = useQuery(trainingQueries.courseTypes());
+  // The facility's own programs (the training_programs settings domain).
+  const { data: trainingPrograms = NO_PROGRAMS } = useQuery(
+    trainingQueries.packages(),
+  );
   const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
 
   const todayISO = useMemo(() => formatDateString(new Date()), []);
@@ -205,7 +212,7 @@ export function TrainingScheduleStep({
         (s) => s.programId === preSelectedProgramId,
       )?.courseTypeId;
       if (viaSeries) return viaSeries;
-      const program = trainingPackages.find(
+      const program = trainingPrograms.find(
         (p) => p.id === preSelectedProgramId,
       );
       if (program) {
@@ -221,7 +228,13 @@ export function TrainingScheduleStep({
       }
     }
     return null;
-  }, [preSelectedCourseTypeId, preSelectedProgramId, seriesList, courseTypes]);
+  }, [
+    preSelectedCourseTypeId,
+    preSelectedProgramId,
+    seriesList,
+    courseTypes,
+    trainingPrograms,
+  ]);
 
   const isDeepLinked = !!(preSelectedCourseTypeId || preSelectedProgramId);
 
@@ -369,8 +382,8 @@ export function TrainingScheduleStep({
     if (selectedPets.length === 0) return null;
     const target = normalize(series.courseTypeName);
     const program =
-      trainingPackages.find((p) => p.id === series.programId) ??
-      trainingPackages.find((p) => normalize(p.name) === target);
+      trainingPrograms.find((p) => p.id === series.programId) ??
+      trainingPrograms.find((p) => normalize(p.name) === target);
     if (!program) return null;
     if ((program.prerequisitePackageIds?.length ?? 0) === 0) return null;
     const blocker: PrereqDetail[] = [];

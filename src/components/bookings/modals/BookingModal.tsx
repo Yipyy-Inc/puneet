@@ -90,11 +90,9 @@ import {
   autoAssignDaycareSection,
   autoAssignBoardingUnit,
 } from "@/lib/capacity-engine";
-import { bookings as historicalBookings } from "@/data/bookings";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
-import { facilityStaff } from "@/data/facility-staff";
 import {
   groomingCatalogueQueries,
   useGroomingAddOns,
@@ -110,7 +108,6 @@ import {
   type DepositPromptValue,
 } from "./BookingDepositPrompt";
 import { CustomerDepositPanel } from "./CustomerDepositPanel";
-import { MembershipCreditPanel } from "./MembershipCreditPanel";
 import {
   TrainingEnrollmentCartPanel,
   type TrainingCartItem,
@@ -132,6 +129,11 @@ import type {
 import type { Pet, Evaluation } from "@/types/pet";
 import { useCareFees } from "@/lib/api/facility-settings";
 import { careFeeLines } from "@/lib/settings/care-fees";
+import { bookingQueries } from "@/lib/api/booking";
+import { staffQueries } from "@/lib/api/staff";
+
+// Stable while the query loads, so a memo keyed on it does not recompute.
+const NO_BOOKINGS: Booking[] = [];
 
 // Types
 
@@ -309,6 +311,11 @@ export function BookingModal({
   // so its words live in `shell.booking` rather than in any one portal group.
   const t = useShellText("booking");
   const { fees: careFees } = useCareFees();
+  // The bookings the caller may see: the facility's for staff, a customer's
+  // own for a customer. Availability and "new customer" were computed from a
+  // fixture array of another facility's bookings.
+  const { data: knownBookings = NO_BOOKINGS } = useQuery(bookingQueries.all());
+  const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
   const {
     daycare,
@@ -911,12 +918,6 @@ export function BookingModal({
   // rule engine can swap out only the auto picks when the package or pet changes.
   const [groomingAutoAttachedAddOnIds, setGroomingAutoAttachedAddOnIds] =
     useState<string[]>([]);
-  // Customer-mode card selection. When a deposit rule applies, the customer
-  // must pick a card before they can submit; staff mode uses the existing
-  // BookingDepositPrompt flow instead.
-  const [customerPaymentMethodId, setCustomerPaymentMethodId] = useState<
-    string | null
-  >(null);
 
   // Clear redemption whenever the client or service changes — otherwise a
   // stale "$0 - covered by package" carries over to a service the package
@@ -1279,7 +1280,7 @@ export function BookingModal({
           pet,
           firstDate,
           daycareSections,
-          historicalBookings,
+          knownBookings,
         );
         if (section) next.push({ petId: pet.id, roomId: section.id });
       }
@@ -1300,7 +1301,7 @@ export function BookingModal({
           null,
           roomCategories,
           facilityRooms,
-          historicalBookings,
+          knownBookings,
         );
         if (unit) next.push({ petId: pet.id, roomId: unit.id });
       }
@@ -1316,14 +1317,15 @@ export function BookingModal({
     daycareSections,
     roomCategories,
     facilityRooms,
+    knownBookings,
   ]);
 
   const selectedClientBookings = useMemo(() => {
     if (selectedClientId == null) return [];
-    return historicalBookings.filter(
+    return knownBookings.filter(
       (existingBooking) => existingBooking.clientId === selectedClientId,
     );
-  }, [selectedClientId]);
+  }, [selectedClientId, knownBookings]);
 
   const isNewCustomer = useMemo(() => {
     if (selectedClientId == null) return false;
@@ -2021,16 +2023,6 @@ export function BookingModal({
         // what is outstanding for the counter or check-in.
         if (isCustomerMode && (waivers.loading || waivers.pending.length > 0))
           return false;
-        // Customer-mode deposit: when a rule applies and a deposit > 0 is
-        // required, the customer must pick a card before they can submit.
-        // Pass-redemption bookings skip payment entirely.
-        if (isCustomerMode && applicableDepositRule && !passRedemption) {
-          const required = computeDepositAmount(
-            applicableDepositRule,
-            calculatePrice.total,
-          );
-          if (required > 0 && !customerPaymentMethodId) return false;
-        }
         return true;
       }
       default:
@@ -2057,7 +2049,6 @@ export function BookingModal({
     waivers.loading,
     waivers.pending.length,
     applicableDepositRule,
-    customerPaymentMethodId,
     calculatePrice.total,
     isCustomerMode,
     passRedemption,
@@ -2496,7 +2487,7 @@ export function BookingModal({
       notificationSMS: notificationSMS,
       assignedStaff: (() => {
         if (!selectedStaffId) return undefined;
-        const s = facilityStaff.find((m) => m.id === selectedStaffId);
+        const s = (staffProfiles ?? []).find((m) => m.id === selectedStaffId);
         return s ? `${s.firstName} ${s.lastName}` : undefined;
       })(),
       // For grooming, serviceType holds the picked GroomingPackage.id —
@@ -2551,20 +2542,10 @@ export function BookingModal({
       evaluationStatus: includesEvaluation ? "pending" : undefined,
       initialDeposit: (() => {
         if (!applicableDepositRule) return undefined;
-        // Customer flow: payment method picked on the Confirm panel.
-        if (isCustomerMode) {
-          const required = computeDepositAmount(
-            applicableDepositRule,
-            calculatePrice.total,
-          );
-          if (required <= 0 || !customerPaymentMethodId) return undefined;
-          return {
-            amount: required,
-            method: "card",
-            ruleLabel: applicableDepositRule.label,
-            paymentMethodId: customerPaymentMethodId,
-          };
-        }
+        // A customer's booking arrives unpriced (enforce_booking_integrity),
+        // so there is no deposit to take yet: the facility asks for it when it
+        // confirms. The card this used to send was charged by nothing.
+        if (isCustomerMode) return undefined;
         // Staff flow: recorded as a payment by the server, in the tender
         // BookingDepositPrompt took it in.
         if (depositPrompt.collectNow && depositPrompt.amount > 0) {
@@ -2900,7 +2881,6 @@ export function BookingModal({
     setGroomingManualDuration(undefined);
     setGroomingSelectedAddOnIds([]);
     setGroomingAutoAttachedAddOnIds([]);
-    setCustomerPaymentMethodId(null);
   };
 
   const handleSendEstimate = () => {
@@ -4203,32 +4183,10 @@ export function BookingModal({
                           <CustomerDepositPanel
                             rule={applicableDepositRule}
                             depositAmount={required}
-                            bookingTotal={calculatePrice.total}
-                            clientId={selectedClientId}
-                            selectedPaymentMethodId={customerPaymentMethodId}
-                            onSelectPaymentMethod={setCustomerPaymentMethodId}
                           />
                         </div>
                       );
                     })()}
-
-                  {/* Membership-credit summary (Table 30/31) */}
-                  {isCustomerMode &&
-                    !passRedemption &&
-                    !showingTipStep &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
-                    !bookingRequested &&
-                    selectedClientId !== null &&
-                    selectedClientId > 0 &&
-                    !!selectedService && (
-                      <div className="mx-1 mb-4">
-                        <MembershipCreditPanel
-                          clientId={selectedClientId}
-                          service={selectedService}
-                          onClose={() => onOpenChange(false)}
-                        />
-                      </div>
-                    )}
 
                   {/* Customer booking request confirmation state */}
                   {isCustomerMode && bookingRequested && (
