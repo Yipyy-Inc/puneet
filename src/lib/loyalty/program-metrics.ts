@@ -293,7 +293,14 @@ export function voucherDollarValue(
 export function computeProgramPerformanceFromLedger(input: {
   accounts: { clientRef: number }[];
   vouchers: LedgerVoucherLite[];
+  /** The bookings the vouchers were spent on; retention when `retention` is absent. */
   bookings: BookingMoneyLite[];
+  /**
+   * Per client ref, whether they came back within 60 days, from the booking
+   * summary. When given, retention is read from it rather than worked out
+   * from `bookings`, so the caller need not load every booking ever made.
+   */
+  retention?: Map<number, boolean>;
   now: string;
 }): LedgerProgramPerformance {
   const now = new Date(input.now);
@@ -362,6 +369,25 @@ export function computeProgramPerformanceFromLedger(input: {
         .length / ids.length
     );
   };
+
+  if (input.retention) {
+    const members: boolean[] = [];
+    const others: boolean[] = [];
+    for (const [clientRef, rebooked] of input.retention) {
+      (memberRefs.has(clientRef) ? members : others).push(rebooked);
+    }
+    const share = (list: boolean[]) =>
+      list.length === 0 ? 0 : list.filter(Boolean).length / list.length;
+    return {
+      revenueRetained,
+      redemptionRate: totalMembers > 0 ? membersRedeemed / totalMembers : 0,
+      membersRedeemed,
+      totalMembers,
+      memberRetention: share(members),
+      nonMemberRetention: share(others),
+      unvaluedRewards,
+    };
+  }
 
   return {
     revenueRetained,

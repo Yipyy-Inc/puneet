@@ -181,6 +181,15 @@ export const bookingQueries = {
     ] as const,
     queryFn: async () => fetchBookings(range),
   }),
+  /** These bookings, by reference: what a list of vouchers was spent on. */
+  byRefs: (refs: readonly number[]) => ({
+    queryKey: [
+      "bookings",
+      "refs",
+      [...new Set(refs)].sort((a, b) => a - b).join(","),
+    ] as const,
+    queryFn: async () => (refs.length === 0 ? [] : fetchBookings({ refs })),
+  }),
   /** Only bookings in these statuses, e.g. the open requests. */
   byStatus: (statuses: readonly string[]) => ({
     queryKey: ["bookings", "status", [...statuses].sort().join(",")] as const,

@@ -49,7 +49,10 @@ import {
   hasCompletedPrerequisites,
 } from "@/lib/training-program-prereqs";
 import { useQuery } from "@tanstack/react-query";
-import { bookingQueries } from "@/lib/api/booking";
+import {
+  bookingClientSummaryQueries,
+  summaryByClient,
+} from "@/lib/api/booking-client-summary";
 import { trainingQueries } from "@/lib/api/training";
 
 interface ClientPetStepProps {
@@ -134,7 +137,8 @@ export function ClientPetStep({
   onAddClient,
   onAddPet,
 }: ClientPetStepProps) {
-  const { data: facilityBookings } = useQuery(bookingQueries.all());
+  // Visit counts from the booking summary, not every booking the facility has.
+  const { data: bookingSummary } = useQuery(bookingClientSummaryQueries.all());
   const { data: trainingPrograms } = useQuery(trainingQueries.packages());
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -431,11 +435,11 @@ export function ClientPetStep({
   // Booking counts per client
   const bookingCounts = React.useMemo(() => {
     const counts: Record<number, number> = {};
-    for (const b of facilityBookings ?? []) {
-      counts[b.clientId] = (counts[b.clientId] ?? 0) + 1;
+    for (const [ref, row] of summaryByClient(bookingSummary ?? [])) {
+      counts[ref] = row.bookingCount;
     }
     return counts;
-  }, [facilityBookings]);
+  }, [bookingSummary]);
 
   // Client list sorted by frequency (most bookings first)
   const sortedClients = React.useMemo(() => {

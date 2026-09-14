@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { loyaltyLedgerQueries } from "@/lib/api/loyalty-ledger";
 import { bookingQueries } from "@/lib/api/booking";
+import { bookingClientSummaryQueries } from "@/lib/api/booking-client-summary";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { computeProgramPerformanceFromLedger } from "@/lib/loyalty/program-metrics";
 
@@ -43,17 +44,43 @@ export function LoyaltyPerformanceBanner() {
   // the same reason: retention was being measured against invented history.
   const accountsQ = useQuery(loyaltyLedgerQueries.accounts());
   const vouchersQ = useQuery(loyaltyLedgerQueries.allVouchers());
-  const bookingsQ = useQuery(bookingQueries.all());
   const accounts = accountsQ.data ?? [];
   const vouchers = vouchersQ.data ?? [];
+  // Only the bookings a voucher was spent on (to price a percentage off), and
+  // retention from the booking summary: not every booking the facility has.
+  const spentOnRefs = useMemo(
+    () =>
+      vouchers
+        .map((v) => v.usedOnBookingRef)
+        .filter((ref): ref is number => ref !== null),
+    [vouchers],
+  );
+  const bookingsQ = useQuery({
+    ...bookingQueries.byRefs(spentOnRefs),
+    enabled: !vouchersQ.isPending,
+  });
+  const summaryQ = useQuery(bookingClientSummaryQueries.all());
   const bookings = bookingsQ.data ?? [];
+  const retention = useMemo(
+    () =>
+      new Map(
+        (summaryQ.data ?? []).map((row) => [
+          row.clientRef,
+          row.rebookedWithin60Days,
+        ]),
+      ),
+    [summaryQ.data],
+  );
   // Every default above is EMPTY, and an empty ledger computes to $0, 0%,
   // "0 of 0 members" — which is not "loading", it is a claim, and a wrong one.
   // Measured on the demo facility: the first paint said $0 and 0 of 0 while the
   // truth was 3 of 4 members and real money off real bills. A zero that arrives
   // before the data is the same lie as an invented constant, told faster.
   const loading =
-    accountsQ.isPending || vouchersQ.isPending || bookingsQ.isPending;
+    accountsQ.isPending ||
+    vouchersQ.isPending ||
+    bookingsQ.isPending ||
+    summaryQ.isPending;
 
   const perf = useMemo(
     () =>
@@ -61,9 +88,10 @@ export function LoyaltyPerformanceBanner() {
         accounts,
         vouchers,
         bookings,
+        retention,
         now: NOW_ISO,
       }),
-    [accounts, vouchers, bookings],
+    [accounts, vouchers, bookings, retention],
   );
 
   if (!hydrated || loading) {

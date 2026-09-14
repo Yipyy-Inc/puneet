@@ -371,6 +371,13 @@ export interface CompletedAddOnEntry {
 
 interface BuildUnifiedEventsInput {
   bookings: Booking[];
+  /**
+   * Each client's first booking day, for the anniversary badge. The calendar
+   * reads only its visible window of bookings now, so the first booking is
+   * usually outside it; this comes from the booking summary. Absent, it is
+   * worked out from `bookings`, as before.
+   */
+  firstBookingDates?: Map<number, Date>;
   clients: Client[];
   customServiceCheckIns: CustomServiceCheckIn[];
   tasks: FacilityTask[];
@@ -1123,11 +1130,12 @@ function buildDecorationContext(
   clients: Client[],
   bookings: Booking[],
   vaccinations: VaccinationRecord[],
+  firstBookingDates?: Map<number, Date>,
 ): DecorationContext {
   return {
     vaccinationWarnings: buildVaccinationWarnings(now, vaccinations),
     birthdays: buildPetBirthdays(clients),
-    firstBookings: buildFirstBookingDates(bookings),
+    firstBookings: firstBookingDates ?? buildFirstBookingDates(bookings),
   };
 }
 
@@ -1870,6 +1878,7 @@ export function buildUnifiedEvents(
     input.clients,
     input.bookings,
     input.vaccinations ?? [],
+    input.firstBookingDates,
   );
 
   // Built once per call rather than per event: the previous version scanned a

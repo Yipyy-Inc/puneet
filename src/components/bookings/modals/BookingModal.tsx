@@ -323,7 +323,6 @@ export function BookingModal({
   // The bookings the caller may see: the facility's for staff, a customer's
   // own for a customer. Availability and "new customer" were computed from a
   // fixture array of another facility's bookings.
-  const { data: knownBookings = NO_BOOKINGS } = useQuery(bookingQueries.all());
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
   const locale = useShellLocale();
   const {
@@ -1277,6 +1276,24 @@ export function BookingModal({
     selectedPets,
   ]);
 
+  // Only the bookings on the dates being booked, for auto-assigning a section
+  // or a unit, not every booking the facility (or customer) ever had.
+  const sortedDaycareDays = daycareSelectedDates
+    .map((d) => d.toISOString().split("T")[0])
+    .sort();
+  const assignFrom =
+    selectedService === "boarding"
+      ? boardingRangeStart?.toISOString().split("T")[0]
+      : sortedDaycareDays[0];
+  const assignTo =
+    selectedService === "boarding"
+      ? boardingRangeEnd?.toISOString().split("T")[0]
+      : sortedDaycareDays[sortedDaycareDays.length - 1];
+  const { data: knownBookings = NO_BOOKINGS } = useQuery({
+    ...bookingQueries.window({ from: assignFrom, to: assignTo }),
+    enabled: Boolean(assignFrom && assignTo),
+  });
+
   // In customer mode the Room Assignment step is hidden — the system
   // auto-assigns each pet to the best-fit section/unit based on the facility's
   // configured rules (pet type, weight) and available capacity. The facility
@@ -1334,12 +1351,16 @@ export function BookingModal({
     knownBookings,
   ]);
 
-  const selectedClientBookings = useMemo(() => {
-    if (selectedClientId == null) return [];
-    return knownBookings.filter(
-      (existingBooking) => existingBooking.clientId === selectedClientId,
-    );
-  }, [selectedClientId, knownBookings]);
+  // The selected client's own bookings, asked for by client: whether they are
+  // new, and which pets are. A customer may read their own; staff theirs.
+  const { data: selectedClientBookingsData } = useQuery({
+    ...bookingQueries.byClient(selectedClientId ?? 0),
+    enabled: selectedClientId != null,
+  });
+  const selectedClientBookings =
+    selectedClientId == null
+      ? NO_BOOKINGS
+      : (selectedClientBookingsData ?? NO_BOOKINGS);
 
   const isNewCustomer = useMemo(() => {
     if (selectedClientId == null) return false;
