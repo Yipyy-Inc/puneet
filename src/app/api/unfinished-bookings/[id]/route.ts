@@ -5,7 +5,7 @@ import { getViewer } from "@/lib/auth/viewer";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
-  UNFINISHED_BOOKING_SELECT,
+  UNFINISHED_BOOKING_STAFF_SELECT,
   rowToUnfinishedBooking,
   unfinishedBookingStaffPatchSchema,
   type UnfinishedBookingRow,
@@ -82,7 +82,7 @@ export async function PATCH(
     .from("unfinished_bookings")
     .update(update as never)
     .eq("id", id)
-    .select(UNFINISHED_BOOKING_SELECT);
+    .select(UNFINISHED_BOOKING_STAFF_SELECT);
 
   if (error) return writeFailure(error, { duplicate: DENIED, denied: DENIED });
   const denied = deniedIfUntouched(data, DENIED);

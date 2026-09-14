@@ -59,6 +59,23 @@ export interface UnfinishedBookingNote {
   staffName: string;
 }
 
+/** One recovery message in the outbox, as the messaging tick left it. */
+export interface UnfinishedBookingRecoverySend {
+  channel: "email" | "sms";
+  /** message_sends.status: queued | sending | sent | skipped | failed */
+  status: string;
+  sentAt?: string;
+  skipReason?: string;
+}
+
+/** What the messaging tick decided for this booking, for staff only. */
+export interface UnfinishedBookingRecovery {
+  outcome: "queued" | "none" | "skipped";
+  detail?: string;
+  resolvedAt: string;
+  sends: UnfinishedBookingRecoverySend[];
+}
+
 export interface UnfinishedBooking {
   id: string;
   /** Set when the abandoner already has a client profile */
@@ -85,6 +102,11 @@ export interface UnfinishedBooking {
   notes?: UnfinishedBookingNote[];
   /** Estimated value of the booking they would have completed */
   estimatedValue?: number;
+  /**
+   * The recovery message, once the messaging tick has decided. Staff routes
+   * only: absent on what a customer reads.
+   */
+  recovery?: UnfinishedBookingRecovery;
 
   // ── Resume data ────────────────────────────────────────────────────────────
   // Everything the customer entered before abandoning, so the wizard can
