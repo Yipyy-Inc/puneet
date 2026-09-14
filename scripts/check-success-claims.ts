@@ -252,7 +252,6 @@ const BASELINE = new Set<string>([
   "src/app/dashboard/facilities/page.tsx",
   "src/app/dashboard/support/calling/_components/call-log-detail.tsx",
   "src/app/employee/(shell)/schedule/staff-schedule-view.tsx",
-  "src/app/facility/dashboard/services/retail/page.tsx",
   "src/app/facility/dashboard/staff/_components/staff-form-dialog.tsx",
   "src/app/facility/dashboard/staff/_components/write-ups-tab.tsx",
   "src/app/facility/dashboard/tasks/CareTasks.tsx",

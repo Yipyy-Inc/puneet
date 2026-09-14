@@ -14362,6 +14362,17 @@ honest gate for a method is the facility's own state: a terminal paired, a
 Clover connection live, a saved card vaulted at Clover. Rebuilding the grid on
 that is the conversion; the gates are marked so it is findable.
 
+**Removed 2026-09-14.** The grid has read the facility's own paired
+terminals since 63816e2a. Tap to Pay is now deleted from the till rather
+than hidden: the dialog, both device pickers, the split and single payment
+branches, the state, and `src/lib/yipyy-pay-service.ts` and
+`src/lib/device-detection.ts`, which nothing else imported. Taking a card on
+an iPhone needs a native Tap to Pay SDK this web app does not have; Clover
+Terminal and the web card fields are the ways a card is taken. The fixture
+getters in `src/data/fiserv-payments.ts` stay for the billing payment
+settings page, which is still a fixture screen. The saved-card picker is
+still gated off.
+
 ## 2026-09-14 — form requirements, form notifications and red flags are saved, and read by nothing yet
 
 **Fixed: the settings are the facility's own.** Three settings screens sat
