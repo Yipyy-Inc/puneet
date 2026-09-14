@@ -35,15 +35,12 @@ import { BookingDetailActionBar } from "@/components/bookings/BookingDetailActio
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
-import { getIncidentCareCharges } from "@/lib/incidents/incident-billing";
-import { getIncidentsForBooking, lockInStayCare } from "@/data/incidents";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useClientEstimates } from "@/lib/api/estimates";
 import { clientQueries } from "@/lib/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/use-settings";
-import { facilities } from "@/data/facilities";
-import { boardingGuests, type BoardingGuest } from "@/data/boarding";
+import type { BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
@@ -324,11 +321,6 @@ export default function ClientBookingDetailPage({
       .filter(Boolean) as NonNullable<(typeof client.pets)[number]>[];
   }, [client, booking]);
   const pet = pets[0] ?? null;
-  const facility = useMemo(
-    () =>
-      booking ? facilities.find((f) => f.id === booking.facilityId) : null,
-    [booking],
-  );
 
   const nights = booking
     ? nightsBetween(booking.startDate, booking.endDate)
@@ -531,9 +523,6 @@ export default function ClientBookingDetailPage({
   const [incidentOpen, setIncidentOpen] = useState(false);
   // Flow C: checkout must lock any open incident's in-stay care first. Holds the
   // pending checkout action to run after the manager confirms the lock.
-  const [checkoutLock, setCheckoutLock] = useState<null | { run: () => void }>(
-    null,
-  );
   // Was `useState<InvoiceLineItem[]>` — items lived here until checkout cleared
   // them. They are rows now, summed into `extras_total` by the database
   // (20260806820000), so this reads what the booking actually carries rather
@@ -551,8 +540,6 @@ export default function ClientBookingDetailPage({
   const boardingGuestForPrint = useMemo<BoardingGuest | null>(() => {
     if (!isBoarding || !booking || !pet) return null;
     const refId = `bk-${String(booking.id).padStart(3, "0")}`;
-    const matched = boardingGuests.find((g) => g.bookingId === refId);
-    if (matched) return matched;
     const allergyList = pet.allergies
       ? pet.allergies
           .split(/[,;]/)
@@ -819,36 +806,6 @@ export default function ClientBookingDetailPage({
       ? `${day(booking.startDate)} - ${day(booking.endDate)}`
       : `${day(booking.startDate)}${times ? `, ${times}` : ""}`;
   })();
-  // Incident-medication charges (2B.3) — gated by the med's chargeFee + the
-  // facility toggle (2G.1); per_admin lines recompute as care logs accrue.
-  const incidentCareItems = getIncidentCareCharges(booking.id);
-  const incidentCareTotal = incidentCareItems.reduce((s, i) => s + i.price, 0);
-
-  // Flow C: open, unlocked incidents with active in-stay care that checkout must
-  // lock before proceeding.
-  const lockableIncidents = getIncidentsForBooking(booking.id).filter(
-    (i) =>
-      i.status !== "closed" &&
-      !i.inStayCareLocked &&
-      (i.careActions.some((a) => a.active) || i.incidentMedications.length > 0),
-  );
-  // Gate a checkout action behind the in-stay-care lock warning when needed.
-  const guardCheckout = (run: () => void) => {
-    if (lockableIncidents.length > 0) {
-      setCheckoutLock({ run });
-      return;
-    }
-    run();
-  };
-  const confirmCheckoutLock = () => {
-    lockableIncidents.forEach((i) => lockInStayCare(i.id));
-    const pending = checkoutLock;
-    setCheckoutLock(null);
-    toast.warning(
-      "In-stay care locked — the incident stays open and its follow-up tasks continue.",
-    );
-    pending?.run();
-  };
 
   const storeCreditBalance =
     storeCredit?.accounts.find((a) => a.clientRef === client.id)?.balance ?? 0;
@@ -1431,12 +1388,8 @@ export default function ClientBookingDetailPage({
             // It ran the CHECK-IN rule — on a booking already checked in, so
             // it changed nothing — and said "Marked as ready". It writes the
             // `ready` status the database has for exactly this.
-            onMarkAsReady={() =>
-              guardCheckout(() => void revertTo("ready", "markedReady"))
-            }
-            onEarlyCheckout={() =>
-              guardCheckout(() => setEarlyCheckoutOpen(true))
-            }
+            onMarkAsReady={() => void revertTo("ready", "markedReady")}
+            onEarlyCheckout={() => setEarlyCheckoutOpen(true)}
             // With no checkout rule configured this did nothing and said
             // nothing. It falls back to `completed`, as check-in falls back
             // to `checked_in`.
@@ -1959,7 +1912,6 @@ export default function ClientBookingDetailPage({
                 // from; see the component for which source each has.
                 <BookingPaymentBreakdown
                   booking={booking}
-                  incidentCareTotal={incidentCareTotal}
                   action={
                     !isPaid && !isCancelled ? (
                       <AcceptPaymentButton
@@ -1998,7 +1950,7 @@ export default function ClientBookingDetailPage({
           onOpenChange={setEditOpen}
           clients={allClients}
           facilityId={booking.facilityId}
-          facilityName={facility?.name ?? ""}
+          facilityName={facilityProfile.businessName}
           editMode
           preSelectedClientId={booking.clientId}
           preSelectedPetId={
@@ -2475,43 +2427,6 @@ export default function ClientBookingDetailPage({
                 }}
               >
                 {destructiveConfirm?.confirmLabel ?? "Confirm"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Flow C — lock in-stay care before checkout when an incident is open */}
-        <AlertDialog
-          open={checkoutLock !== null}
-          onOpenChange={(open) => {
-            if (!open) setCheckoutLock(null);
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Lock in-stay care for checkout?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This booking has {lockableIncidents.length} open incident
-                {lockableIncidents.length === 1 ? "" : "s"} with active in-stay
-                care:{" "}
-                <strong>
-                  {lockableIncidents
-                    .map((i) => `${i.id} — ${i.title}`)
-                    .join("; ")}
-                </strong>
-                . Checking out stops in-stay care (no more care tasks in Daily
-                Care), but the incident stays open and its follow-up tasks
-                continue on schedule.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setCheckoutLock(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={confirmCheckoutLock}>
-                Lock &amp; continue
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
