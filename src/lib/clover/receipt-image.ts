@@ -430,7 +430,9 @@ export function buildReceiptSvg(
  * So render one of each and compare. Cheap, and it cannot be fooled by a font
  * that merely looks wrong.
  */
-async function glyphsRender(sharp: typeof import("sharp")): Promise<boolean> {
+async function glyphsRender(
+  sharp: typeof import("sharp").default,
+): Promise<boolean> {
   const probe = (text: string) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="30"><rect width="120" height="30" fill="#fff"/><text x="2" y="22" font-family="${FAMILY}" font-weight="${WEIGHT}" font-size="20" fill="#000">${text}</text></svg>`;
 
