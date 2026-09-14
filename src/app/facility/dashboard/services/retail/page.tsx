@@ -203,7 +203,6 @@ export default function POSPage() {
   const queryClient = useQueryClient();
   const products = useRetailProducts().data ?? NO_ITEMS;
   const { clients } = useFacilityClientList();
-  const bookings = useQuery(bookingQueries.all()).data ?? NO_ITEMS;
   const giftCardRows = useQuery(giftCardQueries.all()).data ?? NO_ITEMS;
   const storeCreditAccounts = useStoreCredit().data?.accounts ?? NO_ITEMS;
   const salesRows = useRetailSales().data ?? NO_ITEMS;
@@ -242,6 +241,13 @@ export default function POSPage() {
   const [isEditPriceModalOpen, setIsEditPriceModalOpen] = useState(false);
   const [selectedCartItem, setSelectedCartItem] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  // The till reads one client's bookings — to add the sale to one, or show
+  // an active stay — never the facility's whole history. None for a walk-in.
+  const bookings =
+    useQuery({
+      ...bookingQueries.byClient(Number(selectedClientId)),
+      enabled: /^d+$/.test(selectedClientId),
+    }).data ?? NO_ITEMS;
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);

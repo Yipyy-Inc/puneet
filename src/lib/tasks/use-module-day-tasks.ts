@@ -65,8 +65,9 @@ export function useModuleDayTasks(
   templates: TaskTemplate[],
   day: string = localDay(),
 ) {
+  // The day's bookings, not the facility's whole history.
   const { data: bookings = NO_BOOKINGS, isPending: bookingsPending } = useQuery(
-    bookingQueries.all(),
+    bookingQueries.window({ from: day, to: day }),
   );
   const { clients } = useFacilityClientList();
 

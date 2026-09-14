@@ -287,9 +287,12 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   // every render, the effect below depends on it and sets state, and the
   // board re-rendered itself into React's update-depth limit — caught by the
   // occupancy-calendar spec as "We couldn't load your board".
-  const { data: bookingsData } = useQuery(bookingQueries.all());
-  const allBookings = bookingsData ?? NO_BOOKINGS;
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  // From today on: the board shows what is here and what is coming.
+  const { data: bookingsData } = useQuery(
+    bookingQueries.window({ from: today }),
+  );
+  const allBookings = bookingsData ?? NO_BOOKINGS;
   const [daycareKennels, setDaycareKennels] = useState<Kennel[]>([]);
   // Rebuilt whenever the sections or the bookings change — both arrive
   // asynchronously, and the board carries a move on top until the refetch.

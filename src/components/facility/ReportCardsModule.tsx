@@ -58,6 +58,7 @@ import {
   Star,
 } from "lucide-react";
 import { bookingQueries } from "@/lib/api/booking";
+import { shiftDay } from "@/lib/api/booking-list-params";
 import { clientQueries } from "@/lib/api/client";
 import { groomingAppointments } from "@/data/grooming";
 import { getReportCardPrefillFromAppointment } from "@/lib/api/grooming";
@@ -473,9 +474,12 @@ export function ReportCardsModule({
   // `groomingAppointments`, training `enrollments`), so the card was posted
   // with a fixture pet's ref — a 422 "No pet N you can write a report card
   // for", or a card filed against whichever real pet shared that number.
-  const { data: allBookings = [] } = useQuery(bookingQueries.all());
-  const { data: allClients = [] } = useQuery(clientQueries.all());
   const [visitToday] = useState(() => new Date().toISOString().slice(0, 10));
+  // The last 30 days, which is all the picker offers.
+  const { data: allBookings = [] } = useQuery(
+    bookingQueries.window({ from: shiftDay(visitToday, -30), to: visitToday }),
+  );
+  const { data: allClients = [] } = useQuery(clientQueries.all());
 
   const visitOptions = useMemo(() => {
     const service = serviceType === "hotel" ? "boarding" : serviceType;
