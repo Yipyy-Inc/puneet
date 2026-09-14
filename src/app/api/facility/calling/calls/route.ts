@@ -97,6 +97,20 @@ export async function GET(request: Request) {
   const followUp = params.get("followUp");
   if (followUp === "open") query = query.eq("follow_up_status", "pending");
 
+  // One client's calls, for their file. The ref is looked up inside the
+  // caller's facility, so a ref from elsewhere matches nobody.
+  const clientRef = Number(params.get("clientRef"));
+  if (Number.isInteger(clientRef) && clientRef > 0) {
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("ref", clientRef)
+      .match(inFacility(scope))
+      .maybeSingle();
+    if (!client) return NextResponse.json({ calls: [], filtered: false });
+    query = query.eq("client_id", (client as { id: string }).id);
+  }
+
   const { data, error } = await query;
 
   if (error) {

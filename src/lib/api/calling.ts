@@ -103,7 +103,11 @@ export function toCallLog(row: CallRecordRow): CallLog | null {
 }
 
 export const callingQueries = {
-  calls: (params?: { status?: string; followUp?: "open" }) => ({
+  calls: (params?: {
+    status?: string;
+    followUp?: "open";
+    clientRef?: number;
+  }) => ({
     queryKey: ["calling", "calls", params ?? {}] as const,
     queryFn: async (): Promise<{ logs: CallLog[]; filtered: boolean }> => {
       const search = new URLSearchParams();
@@ -111,6 +115,7 @@ export const callingQueries = {
         search.set("status", params.status);
       }
       if (params?.followUp) search.set("followUp", params.followUp);
+      if (params?.clientRef) search.set("clientRef", String(params.clientRef));
 
       const response = await fetch(
         `/api/facility/calling/calls${search.size ? `?${search}` : ""}`,

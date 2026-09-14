@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { bookingQueries } from "@/lib/api/booking";
 import { clientQueries, useClientRecord, useUpdatePet } from "@/lib/api/client";
-import { petPhotos, petRelationships } from "@/data/pet-data";
 import { usePetVaccinations } from "@/lib/api/vaccinations";
 import { useVaccinationRules } from "@/lib/api/facility-settings";
 import { expiryState, localToday, recordMatchesRule } from "@/lib/vaccinations";
@@ -45,18 +44,13 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Image as ImageIcon,
   Camera,
-  Upload,
   Award,
   Syringe,
   Edit,
   Save,
   X,
   Heart,
-  UserPlus,
-  AlertTriangle,
-  Users,
   Star,
   Bell,
   Ghost,
@@ -273,12 +267,18 @@ export default function PetDetailPage({
     );
   }
 
-  const photos = petPhotos.filter((p) => p.petId === pet.id);
+  // The photos taken on this pet's report cards — the only pet photos stored.
+  // This was `petPhotos` from a fixture, matched by numeric id.
+  const photos = petReportCards.flatMap((report) =>
+    usablePhotos(report.photos).map((photo) => ({
+      ...photo,
+      takenOn: report.visitDate,
+    })),
+  );
   const petBookings = (ownerBookings ?? []).filter((b) =>
     (Array.isArray(b.petId) ? b.petId : [b.petId]).includes(pet.id),
   );
   const reports = petReportCards;
-  const relationships = petRelationships.filter((r) => r.petId === pet.id);
 
   const petApplicableForms = (liveForms ?? [])
     .map((row) => toFlatForm(row))
@@ -294,13 +294,6 @@ export default function PetDetailPage({
     .filter((s) => s.clientRef === client.id && s.petName === pet.name)
     .map((s) => ({ ...s, createdAt: s.submittedAt }));
   const petCompletedFormIds = new Set(petSubmissions.map((s) => s.formId));
-  const friends = relationships.filter(
-    (r) =>
-      r.relationshipType === "friend" || r.relationshipType === "best_friend",
-  );
-  const enemies = relationships.filter(
-    (r) => r.relationshipType === "keep_apart",
-  );
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
   // A rejected certificate is not one that lapsed; only the live records
   // raise the banner.
@@ -618,17 +611,9 @@ export default function PetDetailPage({
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList
-            className={`grid w-full ${canUseEvaluationForm ? "grid-cols-7" : `grid-cols-6`} `}
+            className={`grid w-full ${canUseEvaluationForm ? "grid-cols-6" : `grid-cols-5`} `}
           >
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="relationships">
-              Relationships
-              {enemies.length > 0 && (
-                <Badge variant="destructive" className="ml-1 text-xs">
-                  {enemies.length}
-                </Badge>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="photos">Photos</TabsTrigger>
             <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
             <TabsTrigger value="history">Stay History</TabsTrigger>
@@ -977,155 +962,6 @@ export default function PetDetailPage({
             </Card>
           </TabsContent>
 
-          {/* Relationships Tab */}
-          <TabsContent value="relationships" className="space-y-4">
-            {/* Friends Section */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <Heart className="size-4 text-green-600" />
-                  Friends ({friends.length})
-                </CardTitle>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="mr-1 size-4" />
-                  Add Friend
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {friends.length > 0 ? (
-                  <div className="space-y-3">
-                    {friends.map((rel) => (
-                      <div
-                        key={rel.id}
-                        className="bg-card hover:bg-muted flex items-center justify-between rounded-lg border p-4 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-10 items-center justify-center rounded-full bg-green-100">
-                            {rel.relatedPetType === "Dog" ? (
-                              <Dog className="size-5 text-green-600" />
-                            ) : (
-                              <Cat className="size-5 text-green-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold">
-                              {rel.relatedPetName}
-                            </h4>
-                            <p className="text-muted-foreground text-xs">
-                              {rel.relatedPetBreed}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            variant="outline"
-                            className={
-                              rel.relationshipType === "best_friend"
-                                ? "border-pink-200 bg-pink-50 text-pink-700"
-                                : "border-green-200 bg-green-50 text-green-700"
-                            }
-                          >
-                            {rel.relationshipType === "best_friend"
-                              ? "Best Friend"
-                              : "Friend"}
-                          </Badge>
-                          <Badge
-                            variant={rel.allowAlerts ? "default" : "secondary"}
-                            className="cursor-pointer text-xs"
-                            title={
-                              rel.allowAlerts
-                                ? "Playdate alerts enabled for this friend"
-                                : "Playdate alerts disabled for this friend"
-                            }
-                          >
-                            {rel.allowAlerts ? "Alerts On" : "Alerts Off"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    {friends.map((rel) =>
-                      rel.notes ? (
-                        <div
-                          key={`${rel.id}-notes`}
-                          className="text-muted-foreground -mt-2 px-4 text-xs"
-                        >
-                          Note: {rel.notes}
-                        </div>
-                      ) : null,
-                    )}
-                  </div>
-                ) : (
-                  <div className="py-8 text-center">
-                    <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
-                    <p className="text-muted-foreground text-sm">
-                      No friends added yet
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Enemies Section */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <AlertTriangle className="text-destructive size-4" />
-                  Keep Apart ({enemies.length})
-                </CardTitle>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="mr-1 size-4" />
-                  Add
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {enemies.length > 0 ? (
-                  <div className="space-y-3">
-                    {enemies.map((rel) => (
-                      <div
-                        key={rel.id}
-                        className="border-destructive/20 bg-destructive/5 rounded-lg border p-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-destructive/10 flex size-10 items-center justify-center rounded-full">
-                              {rel.relatedPetType === "Dog" ? (
-                                <Dog className="text-destructive size-5" />
-                              ) : (
-                                <Cat className="text-destructive size-5" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold">
-                                {rel.relatedPetName}
-                              </h4>
-                              <p className="text-muted-foreground text-xs">
-                                {rel.relatedPetBreed}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant="destructive">Keep Apart</Badge>
-                        </div>
-                        {rel.notes && (
-                          <div className="bg-destructive/10 text-destructive mt-3 rounded-sm p-2 text-xs">
-                            <AlertTriangle className="mr-1 inline size-3" />
-                            {rel.notes}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-8 text-center">
-                    <Users className="text-muted-foreground mx-auto mb-2 size-12" />
-                    <p className="text-muted-foreground text-sm">
-                      No pets to keep apart
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Photos Tab */}
           <TabsContent value="photos" className="space-y-4">
             <Card>
@@ -1133,27 +969,19 @@ export default function PetDetailPage({
                 <CardTitle className="text-sm font-semibold">
                   Photo Gallery
                 </CardTitle>
-                <Button variant="outline" size="sm">
-                  <Upload className="mr-1 size-4" />
-                  Upload Photo
-                </Button>
               </CardHeader>
               <CardContent>
                 {photos.length > 0 ? (
                   <div className="grid grid-cols-3 gap-4">
                     {photos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="group relative cursor-pointer"
-                      >
+                      <div key={photo.id} className="relative">
                         <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
-                          <ImageIcon className="text-muted-foreground size-12" />
+                          <img
+                            src={photo.url}
+                            alt=""
+                            className="size-full object-cover"
+                          />
                         </div>
-                        {photo.isPrimary && (
-                          <Badge className="absolute top-2 right-2 text-xs">
-                            Primary
-                          </Badge>
-                        )}
                         <div className="mt-2">
                           {photo.caption && (
                             <p className="text-muted-foreground truncate text-xs">
@@ -1161,7 +989,7 @@ export default function PetDetailPage({
                             </p>
                           )}
                           <p className="text-muted-foreground text-xs">
-                            {formatDate(photo.uploadedAt)}
+                            {formatDate(photo.takenOn)}
                           </p>
                         </div>
                       </div>
@@ -1335,7 +1163,7 @@ export default function PetDetailPage({
                     >
                       {/* Decorative corner icon */}
                       <DecorativeIcon
-                        className={`absolute h-20 w-20 text-gray-900 opacity-[0.06] ${
+                        className={`absolute size-20 text-gray-900 opacity-[0.06] ${
                           theme.iconPosition === "top-right"
                             ? "-top-1 -right-1"
                             : theme.iconPosition === "top-left"

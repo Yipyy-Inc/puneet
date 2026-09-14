@@ -2,7 +2,8 @@
 
 import { use, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { clientCommunications } from "@/data/communications";
+import { useQuery } from "@tanstack/react-query";
+import { clientMessageQueries } from "@/lib/api/client-messages";
 import { useClientRecord } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,10 @@ export default function ClientMessagesPage({
     () => searchParams.get("compose") ?? "",
   );
   const [now] = useState(() => Date.now());
+  // What the facility really sent this client, from message_sends.
+  const { data: clientMessages } = useQuery(
+    clientMessageQueries.forClient(clientId),
+  );
 
   if (!client) return null;
 
@@ -46,12 +51,9 @@ export default function ClientMessagesPage({
       client.preferredLanguage,
     );
 
-  const messages = clientCommunications
-    .filter((c) => c.clientId === clientId)
-    .sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    );
+  const messages = [...(clientMessages ?? [])].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
 
   const timeAgo = (ts: string) => {
     const diff = now - new Date(ts).getTime();
