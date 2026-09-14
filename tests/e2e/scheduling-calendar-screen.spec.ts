@@ -49,6 +49,12 @@ const POSITION = "E2E Calendar Screen Position";
 
 const SCHEDULING = "/facility/dashboard/services/scheduling";
 
+// The browser sits in the facility's zone too. The grid opens on the browser's
+// own week, and CI runs in UTC — already Monday for the evening of every
+// Toronto Sunday — so the shift seeded on the facility's today was in a week
+// the screen was not showing, and there was no DRAFT to find.
+test.use({ timezoneId: "America/Toronto" });
+
 /** The facility's own today. Every seeded facility is Toronto. */
 function facilityToday(): string {
   return new Intl.DateTimeFormat("en-CA", {

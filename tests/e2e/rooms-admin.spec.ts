@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Browser } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 
@@ -26,6 +26,8 @@ import { ACCOUNTS, signIn } from "./_auth";
 const API = "/api/rooms";
 const MARKER = "e2e-rooms";
 const CATEGORY = `cat-${MARKER}`;
+// The client the booked-into test uses, so the sweep reads only theirs.
+const CLIENT_REF = 15;
 
 interface Catalogue {
   categories: {
@@ -49,7 +51,13 @@ interface Catalogue {
 
 test.describe.configure({ mode: "serial" });
 
-test.afterAll(async ({ browser }) => {
+/**
+ * Removes whatever a run of this file left behind. It runs BEFORE the tests as
+ * well as after them: a run that is cancelled, or whose cleanup fails, leaves
+ * the category behind, and the next run's first test then failed on its name
+ * with a 409.
+ */
+async function sweep(browser: Browser, when: "before" | "after") {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
@@ -59,10 +67,17 @@ test.afterAll(async ({ browser }) => {
     // room stays undeletable and the next run would collide on the category id.
     // Clearing the assignment deletes the stay, which is exactly what
     // `roomId: null` is for.
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as { id: number; specialRequests?: string }[] | null;
-    for (const b of bookings ?? []) {
+    // Only this client's: the facility's whole list is ~1,000 rows here, slow
+    // enough to fail, and a failed read used to throw before a single room was
+    // removed.
+    const listed = await page.request.get(
+      `/api/bookings?clientRef=${CLIENT_REF}`,
+    );
+    const bookings = listed.ok()
+      ? ((await listed.json()) as { id: number; specialRequests?: string }[])
+      : [];
+    if (!listed.ok()) console.log(`cleanup: bookings -> ${listed.status()}`);
+    for (const b of bookings) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       await page.request.put("/api/boarding/stays", {
         data: { bookingRef: b.id, roomId: null },
@@ -93,10 +108,20 @@ test.afterAll(async ({ browser }) => {
       if (res.ok()) categories++;
       else console.log(`cleanup: category ${cat.id} -> ${res.status()}`);
     }
-    console.log(`cleanup: ${removed} room(s), ${categories} category(ies)`);
+    console.log(
+      `cleanup (${when}): ${removed} room(s), ${categories} category(ies)`,
+    );
   } finally {
     await page.close();
   }
+}
+
+test.beforeAll(async ({ browser }) => {
+  await sweep(browser, "before");
+});
+
+test.afterAll(async ({ browser }) => {
+  await sweep(browser, "after");
 });
 
 test.describe("the rooms page writes to the database", () => {
@@ -219,7 +244,7 @@ test.describe("the rooms page writes to the database", () => {
 
     const booking = await page.request.post("/api/bookings", {
       data: {
-        clientId: 15,
+        clientId: CLIENT_REF,
         petId: 1,
         facilityId: 11,
         service: "boarding",
