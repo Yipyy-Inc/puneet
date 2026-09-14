@@ -14498,8 +14498,12 @@ I7–I11 are in `supabase/tests/incidents.sql`.
 
 - Nothing calls the lock yet. Checkout does not send `inStayCareLocked`, so
   care stays active until a manager stops it.
-- A medication's fee is recorded on the item but charged nowhere.
-  `incident-billing.ts` had no importer and is deleted.
+- ~~A medication's fee is recorded on the item but charged nowhere.~~
+  **Fixed 2026-09-14.** Each logged dose keeps one `fee` line on the
+  incident's booking in sync: quantity is the number of doses for a per-admin
+  fee, or 1 for a one-time fee. Nothing is charged until a dose is logged,
+  and an incident with no booking charges nothing. If staff remove the line
+  it is waived and not added back. SQL I12–I15.
 - A photo from a Daily Care log is stored only when it is an `https` address.
   The log modals produce none today.
 - The tab's 58 English strings are baselined.
