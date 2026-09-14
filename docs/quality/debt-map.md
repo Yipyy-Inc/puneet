@@ -14303,3 +14303,39 @@ and incident-charge switch; they move with the in-stay care conversion (the
 incident mapper returns no care actions at all yet). The "how is it given"
 options stay a fixed product list in the fixture file: they are not a facility's
 data.
+
+## 2026-09-14 — the booking form, booking page and client file stop reading fixtures
+
+**Converted.** The New booking form's availability, auto-assignment, client
+history, staff picker and training prerequisites; the booking page's facility
+name and boarding print card; the client file's messages (`message_sends`,
+through `GET /api/clients/[ref]/messages`), calls (`call_record`, through the
+calls route's `clientRef` filter), retail purchases, report-card photos,
+memberships and "other bookings"; the client list's facility name; and the
+bookings list's note counts (`GET /api/notes/counts`).
+
+**Removed, because nothing stores what they showed or did.** Each was a fixture
+presented as a fact about a real record. Rebuilding any of them is a table and
+a writer first, not a screen.
+
+- **In-stay care at checkout.** The booking page asked to "lock in-stay care"
+  and added incident medication charges from `src/data/incidents`. The incident
+  mapper returns no care actions and no medications for any real incident, so
+  both could only fire on a fixture incident sharing the booking's number.
+  `InStayCareTab` and `lib/incidents/incident-billing.ts` still read the
+  fixture; they are the conversion this waits on.
+- **Membership credits.** `MembershipCreditPanel` told a customer a credit had
+  been applied at no cost. Nothing spends a credit or prices a booking with one.
+- **A card for the customer's deposit.** `CustomerDepositPanel` required a
+  card, and could invent one in the browser; the server charged none, and a
+  customer's booking arrives unpriced. It is a notice now. Taking a real
+  deposit on a request needs the booking priced on the server first.
+- **Playdate alert history, pet relationships (friends / keep apart), and
+  resuming an unfinished booking from the client file.** No table holds any
+  of them. The unfinished-bookings screens themselves are still fixtures.
+- **A call's "Handled by" name and its Play recording button.** `call_record`
+  stores `handled_by` as a staff uuid and no recording URL.
+
+**Still true of the message history.** Only OUTBOUND messages are stored.
+Inbound SMS replies are not written anywhere, so a two-way conversation shows
+one side.
