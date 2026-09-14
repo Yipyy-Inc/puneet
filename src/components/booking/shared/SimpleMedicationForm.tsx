@@ -32,6 +32,11 @@ import type {
   MedFrequency,
   MedGivenWith,
 } from "@/types/booking";
+import { useCareFees } from "@/lib/api/facility-settings";
+import {
+  medicationFeeApplies,
+  offeredMedicationAids,
+} from "@/lib/settings/care-fees";
 
 interface PetOption {
   id: number;
@@ -66,10 +71,6 @@ const MED_FREQUENCIES: { value: MedFrequency; label: string }[] = [
 // Read from facility config (editable in Settings > Care Tasks)
 const QUICK_TIMES = facilityConfig.medicationOptions.quickTimes;
 const GIVEN_WITH_OPTIONS = facilityConfig.serviceFees.givenWithOptions;
-const MED_FEES = facilityConfig.serviceFees.medication;
-const FACILITY_AID_ITEMS = MED_FEES.facilityProvides.enabled
-  ? MED_FEES.facilityProvides.items
-  : [];
 
 const HIGH_RISK_KEYWORDS = [
   "insulin",
@@ -102,10 +103,10 @@ export function SimpleMedicationForm({
   selectedPets,
   serviceType,
 }: SimpleMedicationFormProps) {
-  const showMedFee =
-    MED_FEES.adminFee.enabled &&
-    (!serviceType ||
-      MED_FEES.adminFee.applicableServices.includes(serviceType));
+  // The facility's own fees — none until it sets them in Booking rules.
+  const { fees } = useCareFees();
+  const FACILITY_AID_ITEMS = offeredMedicationAids(fees);
+  const showMedFee = medicationFeeApplies(fees, serviceType);
 
   // Tracks which medication indices have a pending custom-time picker open
   const pendingCustomValue = useRef<Record<number, string>>({});
@@ -194,16 +195,16 @@ export function SimpleMedicationForm({
               Medication administration fee applies
             </p>
             <p className="text-[11px] text-amber-600">
-              ${MED_FEES.adminFee.amount.toFixed(2)}{" "}
-              {MED_FEES.adminFee.scope === "per_medication"
+              ${fees.medicationAdmin.amount.toFixed(2)}{" "}
+              {fees.medicationAdmin.scope === "per_medication"
                 ? "per medication"
-                : MED_FEES.adminFee.scope === "per_pet"
+                : fees.medicationAdmin.scope === "per_pet"
                   ? "per pet"
                   : "flat fee"}{" "}
               for{" "}
               {serviceType
                 ? serviceType
-                : MED_FEES.adminFee.applicableServices.join(" & ")}
+                : fees.medicationAdmin.services.join(" & ")}
             </p>
           </div>
         </div>

@@ -58,6 +58,11 @@ import {
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { depositConfigSchema, NO_DEPOSITS } from "@/lib/settings/deposits";
 import {
+  bookingApprovalSchema,
+  DEFAULT_BOOKING_APPROVAL,
+} from "@/lib/settings/booking-approval";
+import { careFeesSchema, NO_CARE_FEES } from "@/lib/settings/care-fees";
+import {
   SHIPPED_VACCINATION_RULES,
   vaccinationRulesSchema,
 } from "@/lib/settings/vaccinations";
@@ -374,6 +379,16 @@ export const SETTING_DOMAINS = {
   // any browser that had never opened the settings screen was taking those off
   // real cards. See the banner in lib/settings/deposits.ts.
   deposit_rules: { schema: depositConfigSchema, fallback: NO_DEPOSITS },
+  // The wait a customer is told to expect after asking for a booking. It was a
+  // localStorage map with a switch the server never read — see the banner in
+  // lib/settings/booking-approval.ts.
+  booking_approval: {
+    schema: bookingApprovalSchema,
+    fallback: DEFAULT_BOOKING_APPROVAL,
+  },
+  // Medication and daycare feeding fees. A fixture added them to every
+  // facility's bookings until 2026-09-14; the fallback is none.
+  care_fees: { schema: careFeesSchema, fallback: NO_CARE_FEES },
   // ── VACCINATION REQUIREMENTS ───────────────────────────────────────────
   //
   // Which vaccines are required, of which species, for which services. This

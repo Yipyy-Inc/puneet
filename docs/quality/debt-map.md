@@ -14270,3 +14270,36 @@ drawn in.
 `ScheduleView`'s range and day view, and wherever else
 `src/components/scheduling` formats a local date that way — and make the spec
 assert the column.
+
+## 2026-09-14 — booking fees and the approval promise are the facility's
+
+**What changed.** Two things the New booking form read from
+`src/data/facility-config.ts` — one set of values for every facility — are
+settings domains now.
+
+- **`care_fees`** (Settings → Booking rules → Medication and feeding fees): the
+  medication administration fee, medication aids and the daycare meals fee.
+  The fixture added $5 per medication and $5 per pet fed at daycare to real
+  bookings at every business, with no screen to change them. The fallback is
+  **no fees** — the `NO_DEPOSITS` precedent — so a facility that has not set
+  them now charges nothing for them. `careFeeLines` is the one calculation;
+  `tests/unit/care-fees.test.ts` pins it.
+- **`booking_approval`**: the response time a customer is promised, per
+  service, shown on the confirm step of a customer's booking.
+
+**What was deliberately NOT kept.** The approval card offered a per-service
+"requires approval" switch and an auto-confirm delay, in localStorage. Neither
+decided anything: `private.enforce_booking_integrity` makes every booking a
+customer inserts `request_submitted` with no price, and nothing read the
+delay. So "Direct booking — customers are confirmed instantly" was never true.
+The switch, the delay and their copy are gone; the booking form sends a
+customer's booking as a request, always, which is what the database did anyway.
+
+**Still open.** A real "direct booking" would have to price the booking on the
+server first — an owner's insert is zeroed today, so confirming it would confirm
+an unpriced stay. Not attempted. `InStayCareTab` and
+`lib/incidents/incident-billing.ts` still read the fixture's medication fee
+and incident-charge switch; they move with the in-stay care conversion (the
+incident mapper returns no care actions at all yet). The "how is it given"
+options stay a fixed product list in the fixture file: they are not a facility's
+data.

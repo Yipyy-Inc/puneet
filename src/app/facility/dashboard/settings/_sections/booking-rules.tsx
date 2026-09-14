@@ -2,6 +2,7 @@
 
 import { BookingApprovalSettingsCard } from "../_components/booking-approval-settings-card";
 import { BookingRulesCard } from "../_components/booking-rules-card";
+import { CareFeesSettingsCard } from "../_components/care-fees-settings-card";
 import { FacilityBookingFlowCard } from "../_components/facility-booking-flow-card";
 import { SettingsCardGrid } from "@/components/ui/settings-card-grid";
 
@@ -10,6 +11,7 @@ export function BookingRulesSection() {
     <SettingsCardGrid>
       <BookingRulesCard />
       <BookingApprovalSettingsCard />
+      <CareFeesSettingsCard />
       <FacilityBookingFlowCard />
     </SettingsCardGrid>
   );

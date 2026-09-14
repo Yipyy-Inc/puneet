@@ -46,13 +46,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
-import {
-  facilityConfig,
-  isApprovalRequired,
-  getEstimatedResponseTime,
-} from "@/data/facility-config";
+import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { ServiceAddOn, TipConfig } from "@/types/facility";
+import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
+import { responseHoursFor } from "@/lib/settings/booking-approval";
+import { offeredMedicationAids } from "@/lib/settings/care-fees";
 
 /**
  * The unit an add-on is priced by — `/day`, `/hr`, `% of booking`.
@@ -311,6 +310,8 @@ export function ConfirmStep({
   // extra the booking screen had never offered.
   const resolvedAddOns = addOnsCatalog ?? facilityAddOns;
   const t = useShellText("booking");
+  const { approval } = useBookingApproval();
+  const { fees: careFees } = useCareFees();
   const locale = useShellLocale();
 
   // The facility's waivers that apply here, less what this client has
@@ -398,7 +399,9 @@ export function ConfirmStep({
       </div>
 
       {/* ── Approval Required Banner ──────────────────────────── */}
-      {isApprovalRequired(selectedService) && (
+      {/* Every booking a customer makes is a request the team confirms —
+          the database decides that, not a setting. */}
+      {isCustomerMode && (
         <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
           <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
           <div className="text-sm text-blue-800">
@@ -406,7 +409,7 @@ export function ConfirmStep({
             <p className="mt-0.5 text-blue-700">
               {t("requiresApprovalHelp").replace(
                 "{hours}",
-                String(getEstimatedResponseTime(selectedService)),
+                String(responseHoursFor(approval, selectedService)),
               )}
             </p>
           </div>
@@ -1069,7 +1072,7 @@ export function ConfirmStep({
                     {med.facilityProvidesMedAid && med.facilityMedAidItem && (
                       <p className="text-[11px] text-blue-600">
                         {t("facilityProvidesLabel")}{" "}
-                        {facilityConfig.serviceFees.medication.facilityProvides.items.find(
+                        {offeredMedicationAids(careFees).find(
                           (i) => i.id === med.facilityMedAidItem,
                         )?.name ?? med.facilityMedAidItem}
                       </p>

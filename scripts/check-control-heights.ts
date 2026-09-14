@@ -273,7 +273,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/custom-services/wizard/steps/YipyyGoConfigStep.tsx", 2],
   ["src/components/customer/AddVaccinationModal.tsx", 1],
   ["src/components/customer/CareInstructionsStep.tsx", 9],
-  ["src/components/customer/CustomerBookingModal.tsx", 5],
   ["src/components/customer/CustomerNotifications.tsx", 1],
   ["src/components/customer/RedeemPointsDialog.tsx", 2],
   ["src/components/daily-care/DailyCareView.tsx", 2],

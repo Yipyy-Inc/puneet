@@ -19,6 +19,8 @@ import type {
   CallingTags,
 } from "@/lib/settings/calling";
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
+import type { BookingApproval } from "@/lib/settings/booking-approval";
+import type { CareFees } from "@/lib/settings/care-fees";
 import type {
   BookingRules,
   DropOffPickUpOverride,
@@ -112,6 +114,8 @@ export interface FacilitySettings {
   pricing_rules: SettingState<PricingRules>;
   /** What is asked for up front, and what happens to it on a cancellation. */
   deposit_rules: SettingState<DepositConfig>;
+  booking_approval: SettingState<BookingApproval>;
+  care_fees: SettingState<CareFees>;
   /** Which vaccines are required, of which species, for which services. */
   vaccination_rules: SettingState<VaccinationRules>;
   /** How estimates are numbered, when they expire, who may accept one. */
@@ -383,6 +387,43 @@ export function useDepositRules(): {
  * requirements" — it means "the standard list, unreviewed". A screen that wants
  * to say so needs the flag; one that just enforces the rules does not.
  */
+/**
+ * The response time a customer is promised, per service. Not money, but a
+ * promise made on the facility's behalf — so it comes from the facility's row
+ * and nowhere else.
+ */
+export function useBookingApproval(): {
+  approval: BookingApproval;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    approval: settings.booking_approval.value,
+    configured: settings.booking_approval.configured,
+    isPending,
+  };
+}
+
+/**
+ * Medication and daycare feeding fees. Like `useDepositRules`, `isPending`
+ * travels with them: a bill with no medication fee because the facility charges
+ * none, and one with none because the row has not arrived, must not look the
+ * same to the code adding up the total.
+ */
+export function useCareFees(): {
+  fees: CareFees;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    fees: settings.care_fees.value,
+    configured: settings.care_fees.configured,
+    isPending,
+  };
+}
+
 export function useVaccinationRules(): {
   rules: VaccinationRules;
   configured: boolean;

@@ -1,167 +1,153 @@
 "use client";
 
-import { SaveBar } from "@/components/ui/save-bar";
 import { useState } from "react";
+import { toast } from "sonner";
 
-import {
-  getApprovalConfig,
-  saveApprovalConfig,
-  type ServiceApprovalConfig,
-} from "@/data/facility-config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-import { Switch } from "@/components/ui/switch";
+import { SaveBar } from "@/components/ui/save-bar";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useBookingApproval,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import {
+  APPROVAL_SERVICES,
+  DEFAULT_RESPONSE_HOURS,
+  responseHoursSchema,
+  type ApprovalService,
+  type BookingApproval,
+} from "@/lib/settings/booking-approval";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
-// Booking Approval Settings Component
-export function BookingApprovalSettingsCard() {
-  const t = useSettingsText().section("booking-rules");
-  const BUILT_IN_SERVICES = [
-    { key: "boarding", label: t("svcBoarding") },
-    { key: "daycare", label: t("svcDaycare") },
-    { key: "grooming", label: t("svcGrooming") },
-    { key: "training", label: t("svcTraining") },
-  ];
+// ============================================================================
+// The wait a customer is told to expect after asking for a booking.
+//
+// This card used to offer a per-service "requires approval" switch and an
+// auto-confirm delay, saved to localStorage. Neither decided anything: the
+// database makes every booking a customer inserts a request, and nothing read
+// the delay. What a customer really reads is the response time, so that is
+// what this sets — see lib/settings/booking-approval.ts.
+// ============================================================================
 
-  const [config, setConfig] = useState(() => getApprovalConfig());
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(config);
+const SERVICE_KEY: Record<ApprovalService, string> = {
+  boarding: "svcBoarding",
+  daycare: "svcDaycare",
+  grooming: "svcGrooming",
+  training: "svcTraining",
+};
+
+type HoursDraft = Record<ApprovalService, string>;
+
+function hoursOf(approval: BookingApproval): HoursDraft {
+  return Object.fromEntries(
+    APPROVAL_SERVICES.map((service) => [
+      service,
+      String(approval.responseHours[service] ?? DEFAULT_RESPONSE_HOURS),
+    ]),
+  ) as HoursDraft;
+}
+
+// Nothing renders until the row has arrived: the editor seeds `useState` from
+// what it is handed, and a first Save against the fallback would write the
+// defaults over the facility's own hours.
+export function BookingApprovalSettingsCard() {
+  const { approval, configured, isPending } = useBookingApproval();
+
+  if (isPending) {
+    return <Skeleton className="h-72 w-full rounded-xl" />;
+  }
+
+  return (
+    <ResponseHoursEditor
+      key={configured ? "stored" : "shipped"}
+      initial={approval}
+    />
+  );
+}
+
+function ResponseHoursEditor({ initial }: { initial: BookingApproval }) {
+  const t = useSettingsText().section("booking-rules");
+  const save = useSaveFacilitySetting();
+  const [saved, setSaved] = useState<HoursDraft>(() => hoursOf(initial));
+  const [draft, setDraft] = useState<HoursDraft>(saved);
+
+  const dirty = APPROVAL_SERVICES.some(
+    (service) => draft[service] !== saved[service],
+  );
 
   const handleSave = () => {
-    saveApprovalConfig(draft);
-    setConfig(draft);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setDraft(config);
-    setIsEditing(false);
-  };
-
-  const updateService = (
-    key: string,
-    updates: Partial<ServiceApprovalConfig>,
-  ) => {
-    setDraft((prev) => ({
-      ...prev,
-      [key]: {
-        ...(prev[key] ?? {
-          enabled: false,
-          estimatedResponseTime: 24,
-          autoConfirmAfterHours: null,
-        }),
-        ...updates,
+    const parsed = APPROVAL_SERVICES.map((service) =>
+      responseHoursSchema.safeParse(Number(draft[service])),
+    );
+    if (parsed.some((result) => !result.success)) {
+      toast.error(t("responseHoursInvalid"));
+      return;
+    }
+    const value: BookingApproval = {
+      responseHours: Object.fromEntries(
+        APPROVAL_SERVICES.map((service) => [service, Number(draft[service])]),
+      ),
+    };
+    save.mutate(
+      { domain: "booking_approval", value },
+      {
+        onSuccess: () => {
+          setSaved(draft);
+          toast.success(t("responseSaved"));
+        },
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : t("saveFailed")),
       },
-    }));
+    );
   };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>{t("approvalTitle")}</CardTitle>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t("approvalHelp")}
-          </p>
-        </div>
-        {/* Edit alone in the header; save and discard live at the card's
-            foot in SaveBar, the same place they sit on every other screen. */}
-        {!isEditing && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            {t("edit")}
-          </Button>
-        )}
+      <CardHeader>
+        <CardTitle>{t("responseTitle")}</CardTitle>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {t("responseHelp")}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {BUILT_IN_SERVICES.map(({ key, label }) => {
-          const svc = draft[key] ?? {
-            enabled: false,
-            estimatedResponseTime: 24,
-            autoConfirmAfterHours: null,
-          };
-          return (
-            <div key={key} className="rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{label}</div>
-                  <div className="text-muted-foreground text-sm">
-                    {svc.enabled ? t("requiresApproval") : t("directBooking")}
-                  </div>
-                </div>
-                <Switch
-                  checked={svc.enabled}
-                  disabled={!isEditing}
-                  onCheckedChange={(checked) =>
-                    updateService(key, { enabled: checked })
-                  }
-                />
-              </div>
-              {svc.enabled && (
-                <div className="mt-3 grid grid-cols-2 gap-4 border-t pt-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">{t("responseTime")}</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={svc.estimatedResponseTime}
-                      onChange={(e) =>
-                        updateService(key, {
-                          estimatedResponseTime: parseInt(e.target.value) || 24,
-                        })
-                      }
-                      readOnly={!isEditing}
-                      className={
-                        !isEditing ? "cursor-not-allowed bg-gray-100" : ""
-                      }
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">{t("autoConfirmAfter")}</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder={t("never")}
-                      value={svc.autoConfirmAfterHours ?? ""}
-                      onChange={(e) =>
-                        updateService(key, {
-                          autoConfirmAfterHours: e.target.value
-                            ? parseInt(e.target.value)
-                            : null,
-                        })
-                      }
-                      readOnly={!isEditing}
-                      className={
-                        !isEditing ? "cursor-not-allowed bg-gray-100" : ""
-                      }
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      {t("leaveEmptyManual")}
-                    </p>
-                  </div>
-                </div>
-              )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {APPROVAL_SERVICES.map((service) => (
+            <div key={service} className="min-w-0 space-y-1.5">
+              <Label htmlFor={`response-hours-${service}`}>
+                {t(SERVICE_KEY[service])}
+              </Label>
+              <Input
+                id={`response-hours-${service}`}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={720}
+                step={1}
+                value={draft[service]}
+                aria-describedby="response-hours-unit"
+                className="tabular-nums"
+                onChange={(event) =>
+                  setDraft((previous) => ({
+                    ...previous,
+                    [service]: event.target.value,
+                  }))
+                }
+              />
             </div>
-          );
-        })}
-        {/* `dirty` derived from the draft against the committed config — no
-            third copy of the truth, and nothing captured before a query
-            answered. */}
-        {isEditing && (
-          <SaveBar
-            placement="card"
-            dirty={JSON.stringify(draft) !== JSON.stringify(config)}
-            onSave={handleSave}
-            onReset={handleCancel}
-          />
-        )}
+          ))}
+        </div>
+        <p id="response-hours-unit" className="text-muted-foreground text-xs">
+          {t("responseHoursUnit")}
+        </p>
+        <SaveBar
+          placement="card"
+          dirty={dirty}
+          saving={save.isPending}
+          onSave={handleSave}
+          onReset={() => setDraft(saved)}
+        />
       </CardContent>
     </Card>
   );
