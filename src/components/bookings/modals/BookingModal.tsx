@@ -1,6 +1,9 @@
 "use client";
 
-import { useSaveUnfinishedBooking } from "@/lib/api/unfinished-bookings";
+import {
+  saveUnfinishedBookingOnLeave,
+  useSaveUnfinishedBooking,
+} from "@/lib/api/unfinished-bookings";
 import { formatDateLocal } from "@/lib/shift-recurrence";
 
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
@@ -156,6 +159,8 @@ export interface NewBookingModalProps {
   ) => void | boolean | Promise<void | boolean>;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
+  /** Every pet to start with, as a resumed draft had; wins over preSelectedPetId. */
+  preSelectedPetIds?: number[];
   preSelectedService?: string;
   /** Deep-link the training booking flow to a specific Course Type from the
    *  Course Catalog — the TrainingScheduleStep skips the course-type picker
@@ -286,6 +291,7 @@ export function BookingModal({
   onCreateBooking,
   preSelectedClientId,
   preSelectedPetId,
+  preSelectedPetIds,
   preSelectedService,
   preSelectedCourseTypeId,
   preSelectedProgramId,
@@ -599,7 +605,11 @@ export function BookingModal({
     preSelectedClientId ?? null,
   );
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>(
-    preSelectedPetId ? [preSelectedPetId] : [],
+    preSelectedPetIds?.length
+      ? preSelectedPetIds
+      : preSelectedPetId
+        ? [preSelectedPetId]
+        : [],
   );
 
   // ── A CLIENT OR PET ADDED HERE IS SAVED HERE ─────────────────────────────
@@ -2156,6 +2166,7 @@ export function BookingModal({
       setCurrentStep(nextStep);
       setCurrentSubStep(0);
       setHighestStepReached((prev) => Math.max(prev, nextStep));
+      rememberUnfinished(nextStep);
 
       // Intercept before confirm step to show package prompt or tip screen
       if (nextStepId === "confirm" && !isEstimateMode) {
@@ -2374,11 +2385,18 @@ export function BookingModal({
   const handleComplete = async () => {
     if (submitting) return;
     setSubmitting(true);
+    // No draft is saved while the booking is being sent, or after it was.
+    draftSubmittedRef.current = true;
     try {
       if (await completeBooking()) {
         resetForm();
         onOpenChange(false);
+      } else {
+        draftSubmittedRef.current = false;
       }
+    } catch (error) {
+      draftSubmittedRef.current = false;
+      throw error;
     } finally {
       setSubmitting(false);
     }
@@ -2834,14 +2852,25 @@ export function BookingModal({
     );
   };
 
-  // A customer leaving the form partway: what they entered is kept as an
-  // unfinished booking, so the facility can follow up and the resume link
-  // reopens it. Never blocking, and never for staff, an edit or an estimate.
-  const rememberUnfinished = () => {
-    if (!isCustomerMode || editMode || isEstimateMode || !selectedClient) {
-      return;
+  // A customer's booking form keeps what they have entered as an unfinished
+  // booking: on every step forward, when the page is hidden or closed, and
+  // when they discard it. The facility can follow up and the resume link
+  // reopens it. A booking made for the client and service marks the draft
+  // recovered in the database (20260914170117). Never for staff, an edit or an
+  // estimate, before anything was chosen, or once the booking has been sent.
+  const draftSubmittedRef = useRef(false);
+  const unfinishedWrite = (stepIndex: number = currentStep) => {
+    if (
+      !isCustomerMode ||
+      editMode ||
+      isEstimateMode ||
+      !selectedClient ||
+      draftSubmittedRef.current
+    ) {
+      return null;
     }
-    const stepId = displayedSteps[currentStep]?.id;
+    if (stepIndex === 0 && !selectedService) return null;
+    const stepId = displayedSteps[stepIndex]?.id;
     const step =
       stepId === "client-pet"
         ? "pet_selection"
@@ -2850,9 +2879,9 @@ export function BookingModal({
           : stepId === "confirm"
             ? "review"
             : "date_and_details";
-    const day = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+    const day = (v: string) => (/^d{4}-d{2}-d{2}$/.test(v) ? v : undefined);
     const firstPet = selectedPets[0];
-    saveUnfinished.mutate({
+    return {
       clientRef: selectedClient.id,
       service: selectedService || undefined,
       step,
@@ -2860,6 +2889,7 @@ export function BookingModal({
       requestedEnd: day(endDate),
       draft: {
         preSelectedPetId: firstPet?.id,
+        preSelectedPetIds: selectedPets.map((pet) => pet.id),
         petName: firstPet?.name,
         preSelectedCheckInTime: checkInTime || undefined,
         preSelectedCheckOutTime: checkOutTime || undefined,
@@ -2873,8 +2903,35 @@ export function BookingModal({
         preSelectedNotificationEmail: notificationEmail,
         preSelectedNotificationSMS: notificationSMS,
       },
-    });
+    } as const;
   };
+
+  const rememberUnfinished = (stepIndex?: number) => {
+    const write = unfinishedWrite(stepIndex);
+    if (write) saveUnfinished.mutate(write);
+  };
+
+  // The draft as it stands, for listeners that outlive the render.
+  const leaveDraftRef = useRef<ReturnType<typeof unfinishedWrite>>(null);
+  useEffect(() => {
+    leaveDraftRef.current = unfinishedWrite();
+  });
+  useEffect(() => {
+    if (!isCustomerMode) return;
+    const keep = () => {
+      const write = leaveDraftRef.current;
+      if (write) saveUnfinishedBookingOnLeave(write);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") keep();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", keep);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", keep);
+    };
+  }, [isCustomerMode]);
 
   const resetForm = () => {
     setCurrentStep(0);

@@ -14597,6 +14597,14 @@ non-list from `/api/bookings` while the server was busy. CI passed the same
 specs on acab04e8. Still to do: find why the refund on a cancelled booking
 leaves `amount_paid` unchanged, then fix the cleanup and purge the rows.
 
-- A draft is kept only when the customer chooses "discard". Closing the tab
-  keeps nothing.
-- The draft holds the first pet only.
+- ~~A draft is kept only when the customer chooses "discard".~~ **Fixed
+  2026-09-14.** The customer's booking form saves the draft on every step
+  forward. It saves again when the page is hidden or closed (a `keepalive`
+  request) and on discard. It never saves while the booking is being sent or
+  after. A booking inserted for the client and service marks their open
+  drafts recovered in the database (20260914170117, SQL U12), so a customer
+  who finishes, comes back in another tab, or is booked by staff gets no
+  recovery message.
+- ~~The draft holds the first pet only.~~ **Fixed 2026-09-14.** It keeps
+  `preSelectedPetIds`, and resuming restores every pet. `petName`, used by
+  `{{pet_name}}`, is still the first pet's.

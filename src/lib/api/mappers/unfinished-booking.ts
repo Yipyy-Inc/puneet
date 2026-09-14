@@ -68,6 +68,8 @@ export type UnfinishedBookingRow = {
 const draftSchema = z
   .object({
     preSelectedPetId: z.number().int().positive().optional(),
+    // Every pet chosen; `preSelectedPetId` stays the first, for older drafts.
+    preSelectedPetIds: z.array(z.number().int().positive()).max(20).optional(),
     petName: z.string().max(200).optional(),
     petType: z.enum(["dog", "cat"]).optional(),
     serviceType: z.string().max(100).optional(),
@@ -126,6 +128,9 @@ export function rowToUnfinishedBooking(
     clientEmail: row.clients?.email ?? "",
     clientPhone: row.clients?.phone ?? undefined,
     petId: d.preSelectedPetId,
+    petIds:
+      d.preSelectedPetIds ??
+      (d.preSelectedPetId ? [d.preSelectedPetId] : undefined),
     petName: d.petName,
     petType: d.petType,
     service: row.service ?? undefined,

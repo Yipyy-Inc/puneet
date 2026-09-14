@@ -120,6 +120,7 @@ export default function NewBookingPage() {
           // that service so Step 2 is hidden + skipped.
           lockService={!resumePreselection && !!preSelectedService}
           preSelectedPetId={resumePreselection?.preSelectedPetId}
+          preSelectedPetIds={resumePreselection?.preSelectedPetIds}
           preSelectedStartDate={resumePreselection?.preSelectedStartDate}
           preSelectedEndDate={resumePreselection?.preSelectedEndDate}
           preSelectedCheckInTime={resumePreselection?.preSelectedCheckInTime}

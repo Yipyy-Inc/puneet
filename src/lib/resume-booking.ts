@@ -7,6 +7,8 @@ import type { UnfinishedBooking } from "@/types/unfinished-booking";
 export interface ResumeBookingPreselection {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
+  /** Every pet the draft held; restores a multi-pet booking whole. */
+  preSelectedPetIds?: number[];
   preSelectedService?: string;
   preSelectedStartDate?: string;
   preSelectedEndDate?: string;
@@ -29,6 +31,7 @@ export function buildResumePreselection(
   return {
     preSelectedClientId: ub.clientId,
     preSelectedPetId: ub.petId,
+    preSelectedPetIds: ub.petIds,
     preSelectedService: ub.service,
     preSelectedStartDate: ub.requestedStartDate,
     preSelectedEndDate: ub.requestedEndDate ?? ub.requestedStartDate,
