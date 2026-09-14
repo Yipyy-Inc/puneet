@@ -4895,6 +4895,7 @@ export type Database = {
           created_by_name: string | null;
           detail: Json;
           facility_id: string;
+          fee_line_item_id: string | null;
           id: string;
           incident_id: string;
           kind: string;
@@ -4909,6 +4910,7 @@ export type Database = {
           created_by_name?: string | null;
           detail?: Json;
           facility_id: string;
+          fee_line_item_id?: string | null;
           id?: string;
           incident_id: string;
           kind: string;
@@ -4923,6 +4925,7 @@ export type Database = {
           created_by_name?: string | null;
           detail?: Json;
           facility_id?: string;
+          fee_line_item_id?: string | null;
           id?: string;
           incident_id?: string;
           kind?: string;

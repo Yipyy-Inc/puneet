@@ -342,6 +342,127 @@ begin
     format('got %s', v_state));
 end $$;
 
+-- ── I12–I15: a medication's fee reaches the stay's bill (20260914 fee) ────
+--
+-- A second incident, on a booking, so the lock in I10 does not apply.
+
+insert into public.bookings
+  (id, facility_id, client_id, service, status, start_at, end_at,
+   base_price, discount, total_cost)
+values
+  ('00000000-0000-0000-0000-0000009a0500', '00000000-0000-0000-0000-0000009a0020',
+   '00000000-0000-0000-0000-0000009a0040', 'boarding', 'confirmed',
+   now() - interval '1 day', now() + interval '2 days', 150, 0, 150);
+
+insert into public.incidents
+  (id, facility_id, booking_id, kind, severity, title, occurred_at, reported_by)
+values
+  ('00000000-0000-0000-0000-0000009a0501', '00000000-0000-0000-0000-0000009a0020',
+   '00000000-0000-0000-0000-0000009a0500', 'illness', 'medium', 'Upset stomach',
+   now(), '00000000-0000-0000-0000-0000009a0100');
+
+create or replace function pg_temp.dose(p_item text) returns void language plpgsql as $$
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0100');
+  set local role authenticated;
+  insert into public.incident_care_logs (facility_id, incident_id, care_item_id)
+  select facility_id, incident_id, id from public.incident_care_items
+   where name = p_item and incident_id = '00000000-0000-0000-0000-0000009a0501';
+  reset role;
+end $$;
+
+create or replace function pg_temp.fee_line(p_item text) returns table (qty int, price numeric)
+language sql as $$
+  select li.quantity, li.price
+    from public.booking_line_items li
+    join public.incident_care_items i on i.fee_line_item_id = li.id
+   where i.name = p_item and i.incident_id = '00000000-0000-0000-0000-0000009a0501';
+$$;
+
+do $$
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0101');
+  set local role authenticated;
+  insert into public.incident_care_items (facility_id, incident_id, kind, name, detail) values
+    ('00000000-0000-0000-0000-0000009a0020', '00000000-0000-0000-0000-0000009a0501',
+     'medication', 'Metronidazole',
+     '{"medType": "oral", "chargeFee": true, "feeType": "per_admin", "feeAmount": 12.5}'),
+    ('00000000-0000-0000-0000-0000009a0020', '00000000-0000-0000-0000-0000009a0501',
+     'medication', 'Probiotic',
+     '{"medType": "oral", "chargeFee": true, "feeType": "one_time", "feeAmount": 20}'),
+    ('00000000-0000-0000-0000-0000009a0020', '00000000-0000-0000-0000-0000009a0501',
+     'medication', 'Pumpkin',
+     '{"medType": "oral", "chargeFee": false, "feeAmount": 5}');
+  reset role;
+end $$;
+
+-- I12: a per-dose fee is charged per dose logged, by a caretaker who cannot
+-- touch the bill themselves.
+do $$
+declare v_qty int; v_price numeric; v_extras numeric; v_none int;
+begin
+  perform pg_temp.dose('Pumpkin');
+  select count(*) into v_none from public.booking_line_items
+   where booking_id = '00000000-0000-0000-0000-0000009a0500';
+  perform pg_temp.dose('Metronidazole');
+  perform pg_temp.dose('Metronidazole');
+  select qty, price into v_qty, v_price from pg_temp.fee_line('Metronidazole');
+  select extras_total into v_extras from public.bookings
+   where id = '00000000-0000-0000-0000-0000009a0500';
+  perform pg_temp.t('I12 a per-dose fee is charged for each dose, and no fee means no line',
+    v_none = 0 and v_qty = 2 and v_price = 25 and v_extras = 25,
+    format('no_fee_lines=%s qty=%s price=%s extras=%s', v_none, v_qty, v_price, v_extras));
+end $$;
+
+-- I13: a one-time fee is charged once, however many doses.
+do $$
+declare v_before int; v_qty int; v_price numeric;
+begin
+  select count(*) into v_before from pg_temp.fee_line('Probiotic');
+  perform pg_temp.dose('Probiotic');
+  perform pg_temp.dose('Probiotic');
+  perform pg_temp.dose('Probiotic');
+  select qty, price into v_qty, v_price from pg_temp.fee_line('Probiotic');
+  perform pg_temp.t('I13 a one-time fee is charged once, from the first dose',
+    v_before = 0 and v_qty = 1 and v_price = 20,
+    format('before=%s qty=%s price=%s', v_before, v_qty, v_price));
+end $$;
+
+-- I14: a fee removed from the bill is waived, and the next dose does not add it back.
+do $$
+declare v_lines int; v_extras numeric;
+begin
+  delete from public.booking_line_items li
+   using public.incident_care_items i
+   where i.fee_line_item_id = li.id and i.name = 'Metronidazole'
+     and i.incident_id = '00000000-0000-0000-0000-0000009a0501';
+  perform pg_temp.dose('Metronidazole');
+  select count(*) into v_lines from public.booking_line_items
+   where booking_id = '00000000-0000-0000-0000-0000009a0500'
+     and source_id like 'incident-medication:%';
+  select extras_total into v_extras from public.bookings
+   where id = '00000000-0000-0000-0000-0000009a0500';
+  perform pg_temp.t('I14 a waived fee stays waived',
+    v_lines = 1 and v_extras = 20,
+    format('fee_lines=%s extras=%s', v_lines, v_extras));
+end $$;
+
+-- I15: a manager cannot point an item at a bill line; only the fee sync does.
+do $$
+declare v_line uuid;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009a0101');
+  set local role authenticated;
+  update public.incident_care_items
+     set fee_line_item_id = '00000000-0000-0000-0000-000000000bad'
+   where name = 'Pumpkin' and incident_id = '00000000-0000-0000-0000-0000009a0501';
+  reset role;
+  select fee_line_item_id into v_line from public.incident_care_items
+   where name = 'Pumpkin' and incident_id = '00000000-0000-0000-0000-0000009a0501';
+  perform pg_temp.t('I15 the bill link is written by the fee sync only',
+    v_line is null, format('fee_line_item_id=%s', v_line));
+end $$;
+
 -- ── Report ────────────────────────────────────────────────────────────────
 
 select n, case when ok then 'PASS' else 'FAIL' end as result, name, detail
