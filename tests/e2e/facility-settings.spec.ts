@@ -203,49 +203,64 @@ test.describe("a facility's settings", () => {
     // Hiding a service and pricing a module are decisions the BOOKING page has
     // to honour. Both were read from a fixture, so a facility that hid grooming
     // still had it offered.
-    expect(
-      (
-        await page.request.patch(SETTINGS, {
-          data: {
-            domain: "booking_flow",
-            value: {
-              ...base.booking_flow.value,
-              evaluationRequired: true,
-              hiddenServices: ["grooming"],
+    //
+    // Put back in `finally`. This left grooming hidden and evaluations required
+    // on the shared e2e facility, and grooming-menu-live's customer wizard then
+    // landed on "Service configuration not found" (2026-09-14).
+    try {
+      expect(
+        (
+          await page.request.patch(SETTINGS, {
+            data: {
+              domain: "booking_flow",
+              value: {
+                ...base.booking_flow.value,
+                evaluationRequired: true,
+                hiddenServices: ["grooming"],
+              },
             },
-          },
-        })
-      ).status(),
-    ).toBe(200);
+          })
+        ).status(),
+      ).toBe(200);
 
-    expect(
-      (
-        await page.request.patch(SETTINGS, {
-          data: {
-            domain: "daycare_config",
-            value: { ...base.daycare_config.value, basePrice: 77 },
-          },
-        })
-      ).status(),
-    ).toBe(200);
+      expect(
+        (
+          await page.request.patch(SETTINGS, {
+            data: {
+              domain: "daycare_config",
+              value: { ...base.daycare_config.value, basePrice: 77 },
+            },
+          })
+        ).status(),
+      ).toBe(200);
 
-    const other = await browser.newContext();
-    const otherPage = await other.newPage();
-    await signIn(otherPage, ACCOUNTS.manager);
+      const other = await browser.newContext();
+      const otherPage = await other.newPage();
+      await signIn(otherPage, ACCOUNTS.manager);
 
-    const body = (await (await otherPage.request.get(SETTINGS)).json()) as {
-      booking_flow: {
-        value: { evaluationRequired: boolean; hiddenServices: string[] };
-        configured: boolean;
+      const body = (await (await otherPage.request.get(SETTINGS)).json()) as {
+        booking_flow: {
+          value: { evaluationRequired: boolean; hiddenServices: string[] };
+          configured: boolean;
+        };
+        daycare_config: { value: { basePrice: number }; configured: boolean };
       };
-      daycare_config: { value: { basePrice: number }; configured: boolean };
-    };
-    expect(body.booking_flow.value.evaluationRequired).toBe(true);
-    expect(body.booking_flow.value.hiddenServices).toContain("grooming");
-    expect(body.daycare_config.value.basePrice).toBe(77);
-    expect(body.daycare_config.configured).toBe(true);
+      expect(body.booking_flow.value.evaluationRequired).toBe(true);
+      expect(body.booking_flow.value.hiddenServices).toContain("grooming");
+      expect(body.daycare_config.value.basePrice).toBe(77);
+      expect(body.daycare_config.configured).toBe(true);
 
-    await other.close();
+      await other.close();
+    } finally {
+      for (const domain of ["booking_flow", "daycare_config"] as const) {
+        const restored = await page.request.patch(SETTINGS, {
+          data: { domain, value: base[domain].value },
+        });
+        if (!restored.ok()) {
+          console.log(`cleanup: ${domain} -> ${restored.status()}`);
+        }
+      }
+    }
   });
 
   test("a list domain round-trips as a list, not an object", async ({
