@@ -76,9 +76,12 @@ export function useEntityNotes(category: NoteCategory, ref: number) {
 /** Every mutation below invalidates the one entity's list it changed. */
 export function useNoteMutations(category: NoteCategory, ref: number) {
   const queryClient = useQueryClient();
-  const refresh = () =>
+  // Both inside the function: a note added or removed changes the entity’s
+  // list and the per-record counts. A bare call here ran on every render.
+  const refresh = () => {
     queryClient.invalidateQueries({ queryKey: noteKey(category, ref) });
-  queryClient.invalidateQueries({ queryKey: ["notes", category, "counts"] });
+    queryClient.invalidateQueries({ queryKey: ["notes", category, "counts"] });
+  };
 
   const create = useMutation({
     mutationFn: (write: Omit<NoteWrite, "category" | "entityRef">) =>
