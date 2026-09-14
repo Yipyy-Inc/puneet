@@ -22,6 +22,11 @@ import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type { BookingApproval } from "@/lib/settings/booking-approval";
 import type { CareFees } from "@/lib/settings/care-fees";
 import type { IncidentProtocols } from "@/lib/settings/incident-protocols";
+import type {
+  FormNotifications,
+  FormRedFlags,
+  FormRequirements,
+} from "@/lib/settings/form-settings";
 import type { FollowUpProtocol } from "@/types/incidents";
 import type {
   BookingRules,
@@ -143,6 +148,9 @@ export interface FacilitySettings {
    */
   daily_care_config: SettingState<FacilityDailyCareConfig>;
   incident_follow_up_protocols: SettingState<IncidentProtocols>;
+  form_requirements: SettingState<FormRequirements>;
+  form_notifications: SettingState<FormNotifications>;
+  form_red_flags: SettingState<FormRedFlags>;
   /** The daycare rates — hourly, half day, full day… Empty until set. */
   daycare_rates: SettingState<DaycareRatesConfig>;
   /** The training Rates tab's programs. Empty until set. */
@@ -440,6 +448,48 @@ export function useFollowUpProtocols(): {
   return {
     protocols: settings.incident_follow_up_protocols.value.protocols,
     configured: settings.incident_follow_up_protocols.configured,
+    isPending,
+  };
+}
+
+/** Which forms each service requires. `isPending` so an editor seeds once. */
+export function useFormRequirements(): {
+  requirements: FormRequirements;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    requirements: settings.form_requirements.value,
+    configured: settings.form_requirements.configured,
+    isPending,
+  };
+}
+
+/** Who hears about a form submission, and when a reminder goes. */
+export function useFormNotifications(): {
+  notifications: FormNotifications;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    notifications: settings.form_notifications.value,
+    configured: settings.form_notifications.configured,
+    isPending,
+  };
+}
+
+/** The keywords and question rules that mark an answer as a red flag. */
+export function useFormRedFlags(): {
+  redFlags: FormRedFlags;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    redFlags: settings.form_red_flags.value,
+    configured: settings.form_red_flags.configured,
     isPending,
   };
 }

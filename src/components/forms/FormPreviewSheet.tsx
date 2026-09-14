@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileQuestion, Lock } from "lucide-react";
-import { formQueries } from "@/lib/api/forms";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type { FormQuestion, QuestionType } from "@/types/forms";
 
@@ -53,9 +54,12 @@ export function FormPreviewSheet({
     data: form,
     isLoading,
     isError,
-  } = useQuery({ ...formQueries.detail(formId), enabled: open && !!formId });
+  } = useQuery({
+    ...liveFormQueries.detail(formId),
+    enabled: open && !!formId,
+  });
 
-  const questions = form?.questions ?? [];
+  const questions = form ? toFlatForm(form).questions : [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

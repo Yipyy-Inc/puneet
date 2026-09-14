@@ -31,11 +31,13 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
-import { facilityConfig } from "@/data/facility-config";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useFormNotifications,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import type { FormNotifications } from "@/lib/settings/form-settings";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
-
-// Facility whose forms back the settings demo (matches the seeded forms).
-const DEMO_FACILITY_ID = 11;
 
 // Lazy-loaded — the red-flag config modal chunk only downloads when opened.
 const RedFlagConfigModal = dynamic(
@@ -54,9 +56,25 @@ interface NotifToggle {
   enabled: boolean;
 }
 
+// Nothing renders until the row has arrived — the editor seeds `useState`, and
+// a first Save against the defaults would overwrite the facility's choices.
 export function FormNotificationSettings() {
+  const { notifications, configured, isPending } = useFormNotifications();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-xl" />;
+  }
+
+  return (
+    <FormNotificationEditor
+      key={configured ? "stored" : "shipped"}
+      initial={notifications}
+    />
+  );
+}
+
+function FormNotificationEditor({ initial }: { initial: FormNotifications }) {
   const t = useSettingsText().section("form-notifications");
-  const initial = facilityConfig.notifications?.forms;
 
   const [staffToggles, setStaffToggles] = useState<NotifToggle[]>([
     {
@@ -64,21 +82,21 @@ export function FormNotificationSettings() {
       label: "newSubmission",
       description: "newSubmissionHelp",
       icon: <FileText className="size-4 text-blue-600" />,
-      enabled: initial?.staff?.newSubmission ?? true,
+      enabled: initial.staff.newSubmission,
     },
     {
       key: "redFlagAnswers",
       label: "redFlagAnswers",
       description: "redFlagAnswersHelp",
       icon: <ShieldAlert className="size-4 text-red-600" />,
-      enabled: initial?.staff?.redFlagAnswers ?? true,
+      enabled: initial.staff.redFlagAnswers,
     },
     {
       key: "hasFileUpload",
       label: "hasFileUpload",
       description: "hasFileUploadHelp",
       icon: <Paperclip className="size-4 text-amber-600" />,
-      enabled: initial?.staff?.hasFileUpload ?? true,
+      enabled: initial.staff.hasFileUpload,
     },
   ]);
 
@@ -88,37 +106,36 @@ export function FormNotificationSettings() {
       label: "submissionConfirmed",
       description: "submissionConfirmedHelp",
       icon: <CheckCircle className="size-4 text-green-600" />,
-      enabled: initial?.customer?.submissionConfirmed ?? true,
+      enabled: initial.customer.submissionConfirmed,
     },
     {
       key: "missingRequiredFormsReminder",
       label: "missingFormsReminder",
       description: "missingFormsReminderHelp",
       icon: <Clock className="size-4 text-amber-600" />,
-      enabled: initial?.customer?.missingRequiredFormsReminder ?? true,
+      enabled: initial.customer.missingRequiredFormsReminder,
     },
     {
       key: "formRejectedNeedsCorrection",
       label: "formRejected",
       description: "formRejectedHelp",
       icon: <AlertTriangle className="size-4 text-red-600" />,
-      enabled: initial?.customer?.formRejectedNeedsCorrection ?? true,
+      enabled: initial.customer.formRejectedNeedsCorrection,
     },
   ]);
 
   const [redFlagModalOpen, setRedFlagModalOpen] = useState(false);
 
-  // Timing for the "Missing required forms reminder" — default 48h before check-in.
-  const initialTiming = initial?.customer?.missingRequiredFormsReminderTiming;
+  // Timing for the "Missing required forms reminder".
   const [reminderValue, setReminderValue] = useState<number>(
-    initialTiming?.value ?? 48,
+    initial.reminder.value,
   );
   const [reminderUnit, setReminderUnit] = useState<"hours" | "days">(
-    initialTiming?.unit ?? "hours",
+    initial.reminder.unit,
   );
   const [reminderAnchor, setReminderAnchor] = useState<
     "appointment" | "check_in"
-  >(initialTiming?.anchor ?? "check_in");
+  >(initial.reminder.anchor);
 
   const toggleStaff = (key: string) => {
     setStaffToggles((prev) =>
@@ -132,20 +149,43 @@ export function FormNotificationSettings() {
     );
   };
 
+  const save = useSaveFacilitySetting();
+
+  // Both toggle lists and the reminder timing are one `form_notifications`
+  // row. This toasted "Saved" and wrote nothing; see lib/settings/form-settings.
   const handleSave = () => {
-    // ── SAME AS CareTaskSettings: A WRITE INTO AN IMPORTED FIXTURE ────────
-    //
-    // This mutated `facilityConfig.notifications.forms.customer` in place, and
-    // the React Compiler refuses it now that this scope is analysed. It reached
-    // nobody either: both consumers — facility-notifications.ts:571 and
-    // form-customer-notifications.ts:9 — read their slice into a MODULE-LEVEL
-    // const at first evaluation. And the two toggle LISTS were never written
-    // anywhere at all, not even here.
-    //
-    // The reminder timing and both toggle lists need a `form_notifications`
-    // settings domain. Recorded in the debt map; this file is already in
-    // check:success-claims' baseline for the toast below.
-    toast.success(t("saved"));
+    const on = (list: NotifToggle[], key: string) =>
+      list.find((toggle) => toggle.key === key)?.enabled ?? false;
+    const value: FormNotifications = {
+      staff: {
+        newSubmission: on(staffToggles, "newSubmission"),
+        redFlagAnswers: on(staffToggles, "redFlagAnswers"),
+        hasFileUpload: on(staffToggles, "hasFileUpload"),
+      },
+      customer: {
+        submissionConfirmed: on(customerToggles, "submissionConfirmed"),
+        missingRequiredFormsReminder: on(
+          customerToggles,
+          "missingRequiredFormsReminder",
+        ),
+        formRejectedNeedsCorrection: on(
+          customerToggles,
+          "formRejectedNeedsCorrection",
+        ),
+      },
+      reminder: {
+        value: reminderValue,
+        unit: reminderUnit,
+        anchor: reminderAnchor,
+      },
+    };
+    save.mutate(
+      { domain: "form_notifications", value },
+      {
+        onSuccess: () => toast.success(t("saved")),
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const activeStaffCount = staffToggles.filter((t) => t.enabled).length;
@@ -160,7 +200,12 @@ export function FormNotificationSettings() {
               sentence explaining it reads backwards. */}
           <div className="flex items-start justify-between gap-4">
             <p className="text-muted-foreground text-sm">{t("intro")}</p>
-            <Button size="sm" className="shrink-0" onClick={handleSave}>
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={handleSave}
+              disabled={save.isPending}
+            >
               {t("saveChanges")}
             </Button>
           </div>
@@ -347,11 +392,7 @@ export function FormNotificationSettings() {
       </Card>
 
       {redFlagModalOpen && (
-        <RedFlagConfigModal
-          open
-          onOpenChange={setRedFlagModalOpen}
-          facilityId={DEMO_FACILITY_ID}
-        />
+        <RedFlagConfigModal open onOpenChange={setRedFlagModalOpen} />
       )}
     </div>
   );

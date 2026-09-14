@@ -2,6 +2,14 @@ import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
+  DEFAULT_FORM_NOTIFICATIONS,
+  formNotificationsSchema,
+  formRedFlagsSchema,
+  formRequirementsSchema,
+  NO_FORM_RED_FLAGS,
+  NO_FORM_REQUIREMENTS,
+} from "@/lib/settings/form-settings";
+import {
   daycareRatesSchema,
   NO_DAYCARE_RATES,
 } from "@/lib/settings/daycare-rates";
@@ -487,6 +495,18 @@ export const SETTING_DOMAINS = {
     schema: incidentProtocolsSchema,
     fallback: SHIPPED_INCIDENT_PROTOCOLS,
   },
+  // Which forms each service requires, who hears about a submission, and which
+  // answers are a red flag — lib/settings/form-settings.ts. Three fixtures
+  // until 2026-09-14; none of them saved anywhere.
+  form_requirements: {
+    schema: formRequirementsSchema,
+    fallback: NO_FORM_REQUIREMENTS,
+  },
+  form_notifications: {
+    schema: formNotificationsSchema,
+    fallback: DEFAULT_FORM_NOTIFICATIONS,
+  },
+  form_red_flags: { schema: formRedFlagsSchema, fallback: NO_FORM_RED_FLAGS },
   // ── DAYCARE RATES ──────────────────────────────────────────────────────
   //
   // Hourly, half day, full day… with size pricing, included add-ons and the

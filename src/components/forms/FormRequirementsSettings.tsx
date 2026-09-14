@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +34,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  formRequirements,
+  useFormRequirements,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import {
+  requirementsForEditor,
+  type FormRequirements,
   type ServiceFormRequirementsConfig,
   type ServiceFormRequirement,
   type FormRequirementGate,
-} from "@/data/settings";
-import { formMutations } from "@/lib/api/forms";
+} from "@/lib/settings/form-settings";
 
 // Read-only field preview — lazy-loaded so its chunk only downloads when an
 // admin actually opens a preview.
@@ -100,23 +106,27 @@ const ENFORCEMENT_STYLES: Record<
   },
 };
 
-/** Demo form list — in production this would come from getFormsByFacility() */
-const AVAILABLE_FORMS = [
-  { id: "form-intake-demo", name: "New Client Intake Form" },
-  { id: "form-vaccine-upload", name: "Vaccination Records" },
-  {
-    id: "form-boarding-agreement",
-    name: "Boarding Agreement & Liability Waiver",
-  },
-  {
-    id: "form-training-questionnaire",
-    name: "Training Goals & Behavior Questionnaire",
-  },
-  { id: "form-grooming-consent", name: "Grooming Consent Form" },
-  { id: "form-emergency-contact", name: "Emergency Contact & Authorization" },
-];
+const NO_FORMS: { id: string; name: string }[] = [];
 
+// Nothing renders until the row has arrived — the editor seeds `useState`, and
+// a first Save against the fallback would clear the facility's requirements.
+// The list of forms is the facility's own; it was six invented form ids.
 export function FormRequirementsSettings() {
+  const { requirements, configured, isPending } = useFormRequirements();
+
+  if (isPending) {
+    return <Skeleton className="h-96 w-full rounded-xl" />;
+  }
+
+  return (
+    <FormRequirementsEditor
+      key={configured ? "stored" : "shipped"}
+      initial={requirements}
+    />
+  );
+}
+
+function FormRequirementsEditor({ initial }: { initial: FormRequirements }) {
   const t = useSettingsText().section("form-requirements");
   const serviceLabel = useServiceTypeLabel();
   const fill = (key: string, values: Record<string, string>) =>
@@ -125,13 +135,16 @@ export function FormRequirementsSettings() {
       t(key),
     );
   const [configs, setConfigs] = useState<ServiceFormRequirementsConfig[]>(() =>
-    JSON.parse(JSON.stringify(formRequirements)),
+    requirementsForEditor(initial),
   );
+  const { data: liveForms } = useQuery(liveFormQueries.all());
+  const availableForms = liveForms
+    ? liveForms.map((f) => ({ id: f.id, name: f.name }))
+    : NO_FORMS;
   const [preview, setPreview] = useState<{ id: string; name: string } | null>(
     null,
   );
   const [dirty, setDirty] = useState(false);
-  const queryClient = useQueryClient();
 
   // Any edit routes through here so the dirty state (and the sticky Save bar)
   // stays in sync.
@@ -212,9 +225,7 @@ export function FormRequirementsSettings() {
         JSON.stringify(prev),
       ) as ServiceFormRequirementsConfig[];
       const existingIds = next[serviceIdx].requirements.map((r) => r.formId);
-      const available = AVAILABLE_FORMS.find(
-        (f) => !existingIds.includes(f.id),
-      );
+      const available = availableForms.find((f) => !existingIds.includes(f.id));
       if (!available) {
         toast.error(t("allFormsAdded"));
         return prev;
@@ -239,17 +250,19 @@ export function FormRequirementsSettings() {
     });
   };
 
-  const saveRequirements = useMutation({
-    ...formMutations.saveRequirements(configs),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["forms", "requirements"] });
-      setDirty(false);
-      toast.success(t("saved"));
-    },
-  });
+  const saveRequirements = useSaveFacilitySetting();
 
   const handleSave = () => {
-    saveRequirements.mutate();
+    saveRequirements.mutate(
+      { domain: "form_requirements", value: { services: configs } },
+      {
+        onSuccess: () => {
+          setDirty(false);
+          toast.success(t("saved"));
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   return (
@@ -362,7 +375,7 @@ export function FormRequirementsSettings() {
                             <Select
                               value={req.formId}
                               onValueChange={(v) => {
-                                const form = AVAILABLE_FORMS.find(
+                                const form = availableForms.find(
                                   (f) => f.id === v,
                                 );
                                 if (form)
@@ -376,7 +389,7 @@ export function FormRequirementsSettings() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {AVAILABLE_FORMS.map((f) => (
+                                {availableForms.map((f) => (
                                   <SelectItem key={f.id} value={f.id}>
                                     {f.name}
                                   </SelectItem>

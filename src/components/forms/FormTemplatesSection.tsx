@@ -21,11 +21,7 @@ import {
   Hotel,
   ShieldCheck,
 } from "lucide-react";
-import {
-  getStarterTemplates,
-  getTemplatesByFacility,
-  type FormTemplate,
-} from "@/data/forms";
+import { getStarterTemplates, type FormTemplate } from "@/data/forms";
 
 const TEMPLATE_META: Record<
   string,
@@ -98,18 +94,17 @@ function questionTypeLabel(t: string): string {
 }
 
 export function FormTemplatesSection({
-  facilityId,
   defaultOpen = true,
   embedded = false,
 }: {
-  facilityId: number;
   defaultOpen?: boolean;
   embedded?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const router = useRouter();
   const starters = getStarterTemplates();
-  const facilityTemplates = getTemplatesByFacility(facilityId);
+  // The starters only. A "Your templates" row listed the fixture's facility-11
+  // templates at every facility; a facility's own forms are on the Forms tab.
 
   // Opens the builder SEEDED from the template; the form is created in
   // Postgres when it is saved there. This created a form in the fixture and
@@ -195,67 +190,6 @@ export function FormTemplatesSection({
           </div>
         )}
       </div>
-
-      {facilityTemplates.length > 0 && (
-        <div>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <FileText className="text-muted-foreground size-4" />
-            Your templates
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {facilityTemplates.map((t) => (
-              <div
-                key={t.id}
-                className="bg-card flex flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
-              >
-                <div className="bg-muted/30 flex items-center gap-3 px-4 py-3">
-                  <FileText className="text-muted-foreground size-5" />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-semibold">{t.name}</h4>
-                    <Badge variant="secondary" className="mt-0.5 text-[10px]">
-                      {TYPE_BADGES[t.formType] ?? t.formType}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex-1 px-4 py-3">
-                  <div className="space-y-1">
-                    {t.questions.slice(0, 4).map((q) => (
-                      <div
-                        key={q.id}
-                        className="flex items-center gap-2 text-[11px]"
-                      >
-                        <span className="text-muted-foreground shrink-0">
-                          {questionTypeLabel(q.type)}
-                        </span>
-                        <span className="text-foreground truncate">
-                          {q.label}
-                        </span>
-                        {q.required && (
-                          <span className="shrink-0 text-rose-400">*</span>
-                        )}
-                      </div>
-                    ))}
-                    {t.questions.length > 4 && (
-                      <p className="text-muted-foreground text-[11px]">
-                        + {t.questions.length - 4} more
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-3">
-                  <span className="text-muted-foreground text-xs">
-                    {t.questions.length} questions
-                  </span>
-                  <Button size="sm" onClick={() => handleUseTemplate(t)}>
-                    <Copy className="mr-2 size-3.5" />
-                    Use template
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 
