@@ -18,7 +18,10 @@ import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
 import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
-import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
+import { unfinishedBookingQueries } from "@/lib/api/unfinished-bookings";
+import type { UnfinishedBooking } from "@/types/unfinished-booking";
+
+const NO_UNFINISHED: UnfinishedBooking[] = [];
 import { bookingQueries } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useQuery } from "@tanstack/react-query";
@@ -76,10 +79,15 @@ export default function CustomerBookingsPage() {
     enabled: customerId != null,
   });
 
+  const { data: myUnfinished } = useQuery(unfinishedBookingQueries.mine());
   const myUnfinishedBookings = useMemo(
     () =>
-      customerId == null ? [] : getUnfinishedBookingsForCustomer(customerId),
-    [customerId],
+      customerId == null
+        ? NO_UNFINISHED
+        : (myUnfinished ?? NO_UNFINISHED).filter(
+            (ub) => ub.clientId === customerId,
+          ),
+    [customerId, myUnfinished],
   );
 
   // Redirect to new-booking page when ?service=... is present

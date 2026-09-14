@@ -14,6 +14,78 @@ export type Database = {
   };
   public: {
     Tables: {
+      unfinished_bookings: {
+        Row: {
+          abandoned_at: string;
+          client_id: string;
+          created_at: string;
+          draft: Json;
+          estimated_value: number | null;
+          facility_id: string;
+          id: string;
+          last_contacted_at: string | null;
+          notes: Json;
+          recovered_at: string | null;
+          requested_end: string | null;
+          requested_start: string | null;
+          service: string | null;
+          status: string;
+          step: string;
+          updated_at: string;
+        };
+        Insert: {
+          abandoned_at?: string;
+          client_id: string;
+          created_at?: string;
+          draft?: Json;
+          estimated_value?: number | null;
+          facility_id: string;
+          id?: string;
+          last_contacted_at?: string | null;
+          notes?: Json;
+          recovered_at?: string | null;
+          requested_end?: string | null;
+          requested_start?: string | null;
+          service?: string | null;
+          status?: string;
+          step: string;
+          updated_at?: string;
+        };
+        Update: {
+          abandoned_at?: string;
+          client_id?: string;
+          created_at?: string;
+          draft?: Json;
+          estimated_value?: number | null;
+          facility_id?: string;
+          id?: string;
+          last_contacted_at?: string | null;
+          notes?: Json;
+          recovered_at?: string | null;
+          requested_end?: string | null;
+          requested_start?: string | null;
+          service?: string | null;
+          status?: string;
+          step?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "unfinished_bookings_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "unfinished_bookings_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       yipyy_go_charges: {
         Row: {
           add_on_id: string | null;

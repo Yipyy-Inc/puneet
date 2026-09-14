@@ -1,5 +1,8 @@
 "use client";
 
+import { useSaveUnfinishedBooking } from "@/lib/api/unfinished-bookings";
+import { formatDateLocal } from "@/lib/shift-recurrence";
+
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatMoney } from "@/lib/i18n/format";
 import React, {
@@ -588,6 +591,7 @@ export function BookingModal({
   const [highestStepReached, setHighestStepReached] =
     useState(initialStepIndex);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const saveUnfinished = useSaveUnfinishedBooking();
 
   // Client selection state
   const [searchQuery, setSearchQuery] = useState("");
@@ -2830,6 +2834,48 @@ export function BookingModal({
     );
   };
 
+  // A customer leaving the form partway: what they entered is kept as an
+  // unfinished booking, so the facility can follow up and the resume link
+  // reopens it. Never blocking, and never for staff, an edit or an estimate.
+  const rememberUnfinished = () => {
+    if (!isCustomerMode || editMode || isEstimateMode || !selectedClient) {
+      return;
+    }
+    const stepId = displayedSteps[currentStep]?.id;
+    const step =
+      stepId === "client-pet"
+        ? "pet_selection"
+        : stepId === "service"
+          ? "service_selection"
+          : stepId === "confirm"
+            ? "review"
+            : "date_and_details";
+    const day = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+    const firstPet = selectedPets[0];
+    saveUnfinished.mutate({
+      clientRef: selectedClient.id,
+      service: selectedService || undefined,
+      step,
+      requestedStart: day(startDate),
+      requestedEnd: day(endDate),
+      draft: {
+        preSelectedPetId: firstPet?.id,
+        petName: firstPet?.name,
+        preSelectedCheckInTime: checkInTime || undefined,
+        preSelectedCheckOutTime: checkOutTime || undefined,
+        preSelectedDaycareDates: daycareSelectedDates.map((d) =>
+          formatDateLocal(d),
+        ),
+        preSelectedExtraServices: extraServices,
+        preSelectedFeedingSchedule: feedingSchedule,
+        preSelectedMedications: medications,
+        preSelectedSpecialRequests: specialRequests || undefined,
+        preSelectedNotificationEmail: notificationEmail,
+        preSelectedNotificationSMS: notificationSMS,
+      },
+    });
+  };
+
   const resetForm = () => {
     setCurrentStep(0);
     setCurrentSubStep(0);
@@ -4518,6 +4564,7 @@ export function BookingModal({
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
+                rememberUnfinished();
                 resetForm();
                 onOpenChange(false);
               }}

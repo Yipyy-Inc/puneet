@@ -14503,3 +14503,38 @@ I7–I11 are in `supabase/tests/incidents.sql`.
 - A photo from a Daily Care log is stored only when it is an `https` address.
   The log modals produce none today.
 - The tab's 58 English strings are baselined.
+
+## 2026-09-14 — an unfinished booking is a row
+
+**Fixed.** Every unfinished-booking screen read `src/data/unfinished-bookings`,
+invented abandonments at facility 11. That covered the facility's Unfinished
+tab and detail sheet, and the customer's dashboard, bookings list and resume
+link. Nothing recorded a real one.
+
+- "Recovery email sent" and "Send Email" sent nothing.
+- Notes lived in React state.
+- The recovery settings sheet toasted "saved" and saved nothing.
+- Staff "Schedule" went to the client page with `?resumeBooking=`, which
+  nothing there reads.
+
+Now:
+
+- `unfinished_bookings` (20260914133049). When a customer discards the booking
+  form partway, `BookingModal` saves what they entered, updating an open draft
+  for the same service. The customer can resume it, dismiss it, or mark it
+  recovered, and booking from the resume link does that.
+- Staff with `edit_bookings` mark it contacted or recovered and add notes,
+  stamped with their own name.
+- The facility always comes from the client.
+- The fake email actions are gone.
+- "Schedule" opens the booking form on the draft.
+- The settings are the `abandonment_recovery` domain.
+- SQL cases U1–U6 are in `supabase/tests/unfinished-bookings.sql`.
+
+**Still debt.**
+
+- Nothing sends a recovery message. The templates and delays are saved and
+  read by nothing.
+- A draft is kept only when the customer chooses "discard". Closing the tab
+  keeps nothing.
+- The draft holds the first pet only.

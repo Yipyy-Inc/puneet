@@ -10,7 +10,6 @@ import {
   CalendarDays,
   Mail,
   Phone,
-  MessageSquare,
   CheckCircle2,
   RefreshCw,
   SendHorizonal,
@@ -21,7 +20,6 @@ import {
 import { toast } from "sonner";
 import type {
   UnfinishedBooking,
-  UnfinishedBookingNote,
   UnfinishedBookingStatus,
 } from "@/types/unfinished-booking";
 import {
@@ -30,7 +28,6 @@ import {
 } from "@/data/unfinished-bookings";
 
 // In a real app this comes from the auth context
-const CURRENT_STAFF = "Staff";
 
 function getInitials(name: string): string {
   return name
@@ -66,8 +63,8 @@ interface Props {
   booking: UnfinishedBooking | null;
   onClose: () => void;
   onMarkAs: (id: string, status: UnfinishedBookingStatus) => void;
-  onAddNote: (id: string, note: UnfinishedBookingNote) => void;
-  onSendEmail: (booking: UnfinishedBooking) => void;
+  /** Saves the note; resolves once it is on the booking. */
+  onAddNote: (id: string, text: string) => Promise<unknown>;
   onSchedule: (booking: UnfinishedBooking) => void;
 }
 
@@ -76,7 +73,6 @@ export function UnfinishedBookingDetailSheet({
   onClose,
   onMarkAs,
   onAddNote,
-  onSendEmail,
   onSchedule,
 }: Props) {
   const [noteText, setNoteText] = useState("");
@@ -92,16 +88,15 @@ export function UnfinishedBookingDetailSheet({
   const statusConfig = UNFINISHED_STATUS_LABELS[booking.status];
   const notes = booking.notes ?? [];
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     const text = noteText.trim();
     if (!text) return;
-    const note: UnfinishedBookingNote = {
-      id: `note-${Date.now()}`,
-      text,
-      createdAt: new Date().toISOString(),
-      staffName: CURRENT_STAFF,
-    };
-    onAddNote(booking.id, note);
+    try {
+      await onAddNote(booking.id, text);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Note not saved");
+      return;
+    }
     setNoteText("");
     toast.success("Note added");
     setTimeout(
@@ -258,7 +253,7 @@ export function UnfinishedBookingDetailSheet({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0"
+                  className="size-6 p-0"
                   onClick={() => {
                     const link = `${
                       typeof window !== "undefined"
@@ -288,17 +283,6 @@ export function UnfinishedBookingDetailSheet({
                 <CalendarDays className="size-3.5" />
                 Schedule
               </Button>
-              {booking.status !== "recovered" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => onSendEmail(booking)}
-                >
-                  <MessageSquare className="size-3.5" />
-                  Send Email
-                </Button>
-              )}
               {booking.status === "abandoned" && (
                 <Button
                   variant="outline"

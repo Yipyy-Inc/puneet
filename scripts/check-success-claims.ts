@@ -79,7 +79,6 @@ const ALLOW = /success-claim-ok:/;
 const BASELINE = new Set<string>([
   "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx",
   "src/app/dashboard/support/email-templates/_components/template-panel.tsx",
-  "src/components/bookings/UnfinishedBookingsTable.tsx",
   "src/components/dashboard/facilities/AddStaffAccountModal.tsx",
   "src/components/dashboard/facilities/StaffTab.tsx",
   // CustomEmailDomainSettings.tsx left this list on 2026-09-05. It was the
@@ -166,7 +165,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/services/memberships/_components/subscribers/CancelSubscriptionDialog.tsx",
   "src/app/facility/settings/billing/_components/billing-self-service-view.tsx",
   "src/components/analytics/CustomReportsManager.tsx",
-  "src/components/bookings/AbandonmentRecoverySettings.tsx",
   "src/components/bookings/MedicationSection.tsx",
   "src/components/bookings/UnfinishedBookingDetailSheet.tsx",
   "src/components/camera-integration/CameraIntegrationSettings.tsx",

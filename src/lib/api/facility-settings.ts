@@ -22,6 +22,7 @@ import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
 import type { BookingApproval } from "@/lib/settings/booking-approval";
 import type { CareFees } from "@/lib/settings/care-fees";
 import type { IncidentProtocols } from "@/lib/settings/incident-protocols";
+import type { AbandonmentRecoverySettings } from "@/types/unfinished-booking";
 import type {
   FormNotifications,
   FormRedFlags,
@@ -151,6 +152,7 @@ export interface FacilitySettings {
   form_requirements: SettingState<FormRequirements>;
   form_notifications: SettingState<FormNotifications>;
   form_red_flags: SettingState<FormRedFlags>;
+  abandonment_recovery: SettingState<AbandonmentRecoverySettings>;
   /** The daycare rates — hourly, half day, full day… Empty until set. */
   daycare_rates: SettingState<DaycareRatesConfig>;
   /** The training Rates tab's programs. Empty until set. */
@@ -490,6 +492,20 @@ export function useFormRedFlags(): {
   return {
     redFlags: settings.form_red_flags.value,
     configured: settings.form_red_flags.configured,
+    isPending,
+  };
+}
+
+/** How a booking left partway is followed up. `isPending` so the sheet seeds once. */
+export function useAbandonmentRecovery(): {
+  recovery: AbandonmentRecoverySettings;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    recovery: settings.abandonment_recovery.value,
+    configured: settings.abandonment_recovery.configured,
     isPending,
   };
 }

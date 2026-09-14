@@ -45,7 +45,10 @@ import type {
   AbandonmentStep,
 } from "@/types/unfinished-booking";
 import { ABANDONMENT_STEP_LABELS } from "@/data/unfinished-bookings";
-import { DEFAULT_ABANDONMENT_RECOVERY_SETTINGS } from "@/data/abandonment-recovery-settings";
+import {
+  useAbandonmentRecovery,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -319,10 +322,30 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+// The sheet seeds `useState` from the saved settings, so it renders only once
+// they have arrived — a Save against the shipped templates would overwrite a
+// facility's own.
 export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
-  const [settings, setSettings] = useState<AbandonmentRecoverySettings>(
-    DEFAULT_ABANDONMENT_RECOVERY_SETTINGS,
+  const { recovery, configured, isPending } = useAbandonmentRecovery();
+  if (isPending) return null;
+  return (
+    <AbandonmentRecoveryEditor
+      key={configured ? "stored" : "shipped"}
+      open={open}
+      onOpenChange={onOpenChange}
+      initial={recovery}
+    />
   );
+}
+
+function AbandonmentRecoveryEditor({
+  open,
+  onOpenChange,
+  initial,
+}: Props & { initial: AbandonmentRecoverySettings }) {
+  const [settings, setSettings] =
+    useState<AbandonmentRecoverySettings>(initial);
+  const save = useSaveFacilitySetting();
 
   const updateStep = (
     step: AbandonmentStep,
@@ -341,8 +364,16 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
   ).length;
 
   const handleSave = () => {
-    toast.success("Abandonment recovery settings saved");
-    onOpenChange(false);
+    save.mutate(
+      { domain: "abandonment_recovery", value: settings },
+      {
+        onSuccess: () => {
+          toast.success("Abandonment recovery settings saved");
+          onOpenChange(false);
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   return (

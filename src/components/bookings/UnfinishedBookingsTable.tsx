@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import type {
   UnfinishedBooking,
-  UnfinishedBookingNote,
   AbandonmentStep,
   UnfinishedBookingStatus,
 } from "@/types/unfinished-booking";
@@ -35,6 +34,7 @@ import {
   ABANDONMENT_STEP_LABELS,
   UNFINISHED_STATUS_LABELS,
 } from "@/data/unfinished-bookings";
+import { useFollowUpUnfinishedBooking } from "@/lib/api/unfinished-bookings";
 import { AbandonmentRecoverySettings } from "@/components/bookings/AbandonmentRecoverySettings";
 import { UnfinishedBookingDetailSheet } from "@/components/bookings/UnfinishedBookingDetailSheet";
 
@@ -98,29 +98,23 @@ export function UnfinishedBookingsTable({
   data: initialData,
   onSchedule,
 }: Props) {
-  const [records, setRecords] = useState<UnfinishedBooking[]>(initialData);
+  // The facility's own, from Postgres; a change is saved and the list re-reads.
+  const records = initialData;
+  const followUp = useFollowUpUnfinishedBooking();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const selectedBooking = records.find((r) => r.id === selectedId) ?? null;
 
   const markAs = (id: string, status: UnfinishedBookingStatus) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status,
-              lastContactedAt:
-                status === "contacted" || status === "recovered"
-                  ? new Date().toISOString()
-                  : r.lastContactedAt,
-            }
-          : r,
-      ),
-    );
     const label = UNFINISHED_STATUS_LABELS[status].label;
-    toast.success(`Marked as ${label}`);
+    followUp.mutate(
+      { id, status },
+      {
+        onSuccess: () => toast.success(`Marked as ${label}`),
+        onError: (error) => toast.error(error.message),
+      },
+    );
   };
 
   const handleSchedule = (record: UnfinishedBooking) => {
@@ -133,18 +127,10 @@ export function UnfinishedBookingsTable({
     );
   };
 
-  const handleSendEmail = (record: UnfinishedBooking) => {
-    toast.success(`Recovery email sent to ${record.clientEmail}`);
-    markAs(record.id, "contacted");
-  };
-
-  const handleAddNote = (id: string, note: UnfinishedBookingNote) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, notes: [...(r.notes ?? []), note] } : r,
-      ),
-    );
-  };
+  // Saved with the signed-in member's name, stamped by the server. There is
+  // no "send email" here: nothing sends a recovery message yet.
+  const handleAddNote = (id: string, text: string) =>
+    followUp.mutateAsync({ id, note: text });
 
   const columns: ColumnDef<UnfinishedBooking>[] = [
     {
@@ -300,20 +286,6 @@ export function UnfinishedBookingsTable({
             <CalendarDays className="mr-1 size-3" />
             Schedule
           </Button>
-          {r.status !== "recovered" && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSendEmail(r);
-              }}
-            >
-              <MessageSquare className="mr-1 size-3" />
-              Email
-            </Button>
-          )}
           {r.status === "abandoned" && (
             <Button
               size="sm"
@@ -422,7 +394,6 @@ export function UnfinishedBookingsTable({
         onClose={() => setSelectedId(null)}
         onMarkAs={markAs}
         onAddNote={handleAddNote}
-        onSendEmail={handleSendEmail}
         onSchedule={handleSchedule}
       />
 

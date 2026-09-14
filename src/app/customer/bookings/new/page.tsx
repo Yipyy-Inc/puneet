@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingMutations } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +9,10 @@ import Link from "next/link";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useShellText } from "@/lib/shell/use-shell-text";
 import { ChevronLeft } from "lucide-react";
-import { unfinishedBookings } from "@/data/unfinished-bookings";
+import {
+  unfinishedBookingQueries,
+  useMarkUnfinishedBookingRecovered,
+} from "@/lib/api/unfinished-bookings";
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
@@ -35,15 +38,19 @@ export default function NewBookingPage() {
 
   // If the customer clicked a recovery link in an email we'll restore every
   // field they had previously entered.
+  // The saved draft, read through RLS: a link to somebody else's is a 404.
+  const { data: resumed } = useQuery(
+    unfinishedBookingQueries.one(resumeBookingId),
+  );
+  const markRecovered = useMarkUnfinishedBookingRecovered();
   const resumePreselection = useMemo(() => {
-    if (!resumeBookingId) return null;
-    const ub = unfinishedBookings.find((r) => r.id === resumeBookingId);
-    if (!ub) return null;
+    if (!resumeBookingId || !resumed) return null;
+    const ub = resumed;
     // Only allow resume when the saved session belongs to this customer so
     // shared/forwarded links can't pull someone else's draft.
     if (ub.clientId && ub.clientId !== customerId) return null;
     return buildResumePreselection(ub);
-  }, [customerId, resumeBookingId]);
+  }, [customerId, resumeBookingId, resumed]);
 
   if (!selectedFacility || !customer) {
     return (
@@ -177,6 +184,11 @@ export default function NewBookingPage() {
               });
 
               await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+              // They came back and booked: the draft is recovered. Never
+              // blocking — the booking is already made.
+              if (resumeBookingId) {
+                markRecovered.mutate(resumeBookingId);
+              }
 
               // ── ONE MESSAGE, BECAUSE THERE IS ONE OUTCOME ─────────────
               //
