@@ -1,8 +1,4 @@
 import { NextResponse, after, type NextRequest } from "next/server";
-import {
-  rowToBookingYipyyGo,
-  type BookingYipyyGoRow,
-} from "@/lib/api/mappers/yipyy-go";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
@@ -26,6 +22,7 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { staffForStylist } from "@/lib/api/stylist-staff";
+import { enrichBookingRows } from "@/lib/api/booking-enrich";
 import {
   parseBookingListParams,
   shiftDay,
@@ -123,95 +120,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // ── Where the pet actually is ────────────────────────────────────────────
-  //
-  // A SECOND QUERY, not an embed. `booking_presence` (20260806960000) is a
-  // UNION over three tables and carries no foreign key of its own, so PostgREST
-  // has no relationship to follow. Merged here instead, which is also cheaper
-  // than the join it would have written.
-  //
-  // A booking with no row is `unknown`, and that is the honest answer for
-  // training and custom services — they have no attendance table at all — and
-  // for a boarding booking whose kennel has not been assigned yet.
-  const bookings = data.map(rowToBooking);
-  // Only the bookings in this list: the view has no facility_id, so an
-  // unfiltered read returns presence for every booking RLS lets the caller
-  // see — every facility's, for a platform admin.
-  //
-  // In BATCHES. `.in()` is a query-string filter, and one with every id of a
-  // facility holding hundreds of bookings is a URL PostgREST refuses — which
-  // the first version of this did, silently, and every booking read `unknown`
-  // (caught by booking-presence.spec against the e2e tenant's 400+ rows).
-  const ids = (data as unknown as { id: string }[]).map((row) => row.id);
-  const presenceRows: unknown[] = [];
-  for (let i = 0; i < ids.length; i += 150) {
-    const { data: batch, error: presenceError } = await supabase
-      .from("booking_presence")
-      .select("booking_id, presence, arrived_at, departed_at")
-      .in("booking_id", ids.slice(i, i + 150));
-    if (presenceError) {
-      return NextResponse.json(
-        { error: presenceError.message },
-        { status: 500 },
-      );
-    }
-    presenceRows.push(...(batch ?? []));
+  // Mapped, with where the pet is and where its pre-arrival form stands:
+  // lib/api/booking-enrich.ts, shared with GET /api/bookings/page.
+  const enriched = await enrichBookingRows(supabase, data ?? []);
+  if (!enriched.ok) {
+    return NextResponse.json({ error: enriched.error }, { status: 500 });
   }
-
-  // ── Where the pre-arrival form stands ──────────────────────────────────
-  //
-  // `booking_yipyy_go` (20260913133630): whether the facility asks for a form
-  // on this booking and how many of its dogs have one that counts. Merged the
-  // same way, and for the same reasons, as presence above — a view PostgREST
-  // cannot embed, read in batches so the URL stays short.
-  const yipyyGoRows: unknown[] = [];
-  for (let i = 0; i < ids.length; i += 150) {
-    const { data: batch, error: yipyyGoError } = await supabase
-      .from("booking_yipyy_go")
-      .select(
-        "booking_id, requirement, status, satisfied, pets_total, pets_satisfied",
-      )
-      .in("booking_id", ids.slice(i, i + 150));
-    if (yipyyGoError) {
-      return NextResponse.json(
-        { error: yipyyGoError.message },
-        { status: 500 },
-      );
-    }
-    yipyyGoRows.push(...(batch ?? []));
-  }
-  const yipyyGoById = new Map(
-    (yipyyGoRows as BookingYipyyGoRow[]).map((row) => [
-      row.booking_id,
-      rowToBookingYipyyGo(row),
-    ]),
-  );
-
-  const presenceById = new Map(
-    (
-      presenceRows as {
-        booking_id: string;
-        presence: string;
-        arrived_at: string | null;
-        departed_at: string | null;
-      }[]
-    ).map((row) => [row.booking_id, row]),
-  );
-
-  return NextResponse.json(
-    bookings.map((booking, index) => {
-      const row = presenceById.get(
-        (data[index] as unknown as { id: string }).id,
-      );
-      return {
-        ...booking,
-        presence: row?.presence ?? "unknown",
-        arrivedAt: row?.arrived_at ?? null,
-        departedAt: row?.departed_at ?? null,
-        yipyyGo: yipyyGoById.get((data[index] as unknown as { id: string }).id),
-      };
-    }),
-  );
+  return NextResponse.json(enriched.bookings);
 }
 
 export async function POST(request: NextRequest) {
