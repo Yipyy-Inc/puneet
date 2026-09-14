@@ -7580,6 +7580,14 @@ database; here that would have built a fourth listing of the same money.
 
 ## 2026-09-03 — staging.yipyy.com shares the production database
 
+> **Resolved 2026-09-14.** None of this applies any more. Staging was retired on
+> 2026-09-13 — its container and Caddy site, `docker-compose.staging.yml`,
+> `deploy/deploy-staging.sh`, its CI job, the banner, `outboundSendsSuppressed()`
+> and `check:staging-sends` all removed — and the redesign reached production on
+> 2026-09-14, when `main` was fast-forwarded to `redesign`. With no second
+> deployment on the database, a new sender needs no guard. The entry stays as
+> the record of the trade that was made while staging existed.
+
 **Severity: high.** Not a defect — a deliberate trade, made with the product
 owner and recorded in
 [ADR 0007](../architecture/decisions/0007-staging-precedes-production-for-the-redesign.md).
@@ -14222,3 +14230,35 @@ unit selector’s label rather than a phrase with its own case and plural.
 - A local dev server that has been compiling for hours slows until a spec’s
   `page.goto` exceeds its timeout; the retry passes. Restart it before a long
   local run.
+
+## 2026-09-14 — the scheduling grid puts a shift on the wrong day in the evening
+
+**Severity: high. Found in passing, not fixed.** It is on production, and it
+predates the redesign — `main` had the same code.
+
+`ScheduleView` starts from `useState(new Date())` — the current moment, not a
+midnight — and `getDatesForView` builds the visible days from it, so every day
+on the grid carries the time the page was opened. The grid keys each cell with
+`formatDateStr(date)`, which is `toISOString()`, a UTC date, while its header
+prints `date.getDate()`, the local one. West of UTC the two disagree for the
+last hours of every day: in Toronto from 20:00 in summer and 19:00 in winter,
+until midnight.
+
+So a manager in Toronto planning in the evening sees each shift one column
+early, that week's Monday shifts on no column at all and next Monday's under
+Sunday — and a click on an empty cell opens Add shift on the NEXT day's date,
+because `onCellClick` passes the same `dateStr` down as `defaultDate`. The
+week's fetch range is computed the same way, and so is the day view's
+`currentDate.toISOString()`.
+
+The suite could not see it. CI's browser runs in UTC, where the two dates never
+disagree. `scheduling-calendar-screen` now runs in America/Toronto for a
+different reason (the comment above its `test.use` says why) and still passes in
+the evening, because it asserts that the shift is drawn, not which column it is
+drawn in.
+
+**The fix:** build `YYYY-MM-DD` from `getFullYear()`, `getMonth()` and
+`getDate()` instead of `toISOString()` — in `formatDateStr`, in
+`ScheduleView`'s range and day view, and wherever else
+`src/components/scheduling` formats a local date that way — and make the spec
+assert the column.
