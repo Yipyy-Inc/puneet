@@ -7,7 +7,6 @@ import {
   Calendar,
   Users,
   Package,
-  BoxesIcon,
   Settings,
   FileText,
   DollarSign,
@@ -51,11 +50,6 @@ const tabs: Tab[] = [
     name: "Packages",
     href: "/facility/dashboard/services/grooming/packages",
     icon: Package,
-  },
-  {
-    name: "Inventory",
-    href: "/facility/dashboard/services/grooming/inventory",
-    icon: BoxesIcon,
   },
   {
     name: "Rates",
