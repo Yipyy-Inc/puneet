@@ -1432,7 +1432,15 @@
         "unavailable": "Non disponible",
         "unsaved": "Modifications non enregistrées",
         "saveAvailability": "Enregistrer la disponibilité",
-        "saved": "Modèle de disponibilité mis à jour"
+        "saved": "Modèle de disponibilité mis à jour",
+        "loading": "Chargement de la disponibilité",
+        "loadFailed": "Impossible de charger cette disponibilité.",
+        "noStaffRow": "Cette personne n’a pas encore de dossier d’employé pour un horaire hebdomadaire.",
+        "allDay": "Toute la journée",
+        "bothTimes": "Indiquez les deux heures, ou aucune pour toute la journée",
+        "saving": "Enregistrement…",
+        "saveFailed": "La disponibilité n’a pas été enregistrée",
+        "sentForApproval": "Disponibilité envoyée pour approbation"
       },
       "rolesTab": {
         "resultingPermissions": "Permissions résultantes",

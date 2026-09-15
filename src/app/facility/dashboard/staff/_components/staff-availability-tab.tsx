@@ -1,89 +1,141 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarClock, Info, Save } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
-import { useStaffLocations } from "./use-staff-locations";
+import type { AvailabilityDay } from "@/lib/api/mappers/scheduling";
 import {
-  staffAvailability,
-  upsertStaffAvailabilityForStaff,
-} from "@/data/staff-availability";
-import { fullNameOf } from "./staff-shared";
+  availabilityQueries,
+  useDecideAvailability,
+  useProposeAvailability,
+} from "@/lib/api/scheduling";
+import { localDay } from "@/lib/tasks/use-module-day-tasks";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { formatWeekday } from "@/lib/i18n/format";
 
+// ============================================================================
+// A staff member's weekly availability, as the schedule reads it.
+//
+// This tab seeded its grid from `src/data/staff-availability` and saved back
+// into that array, so a manager's edit reached nothing the scheduler checks
+// and was gone on reload. It now reads `staff_availability` through
+// `/api/scheduling/availability`, and a save goes the audited way that route
+// already offers: a proposal for this person, approved at once when the viewer
+// may decide availability (the approval applies the week in one transaction),
+// or left in the approval queue when they may not.
+// ============================================================================
+
 // Monday-first, mirroring the employee availability view.
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-// The EIGHTH copy of the weekday names in this repo, and the second found
-// on a measured surface. `formatWeekday` replaced the first; the remaining
-// six are in the debt map.
-const DAY_LABEL_UNUSED: Record<number, string> = {
-  0: "Sunday",
-  1: "Monday",
-  2: "Tuesday",
-  3: "Wednesday",
-  4: "Thursday",
-  5: "Friday",
-  6: "Saturday",
-};
 
 interface DayRow {
   dayOfWeek: number;
   isAvailable: boolean;
+  /** Empty with `endTime` empty means all day. */
   startTime: string;
   endTime: string;
 }
 
-function seedRows(staffId: string): DayRow[] {
-  return DAY_ORDER.map((dow) => {
-    const existing = staffAvailability.find(
-      (a) => a.staffId === staffId && a.dayOfWeek === dow,
-    );
-    return existing
+/**
+ * The stored week as rows. A day nobody stated arrives from the route as
+ * available with no window, the reading that produces no conflict either way.
+ */
+function rowsFrom(week: AvailabilityDay[] | undefined): DayRow[] {
+  return DAY_ORDER.map((dayOfWeek) => {
+    const day = week?.find((d) => d.dayOfWeek === dayOfWeek);
+    return {
+      dayOfWeek,
+      isAvailable: day?.isAvailable ?? true,
+      startTime: day?.startTime ?? "",
+      endTime: day?.endTime ?? "",
+    };
+  });
+}
+
+/** Seven days, Sunday first, as the route takes them. */
+function weekFrom(rows: DayRow[]): AvailabilityDay[] {
+  return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
+    const row = rows.find((r) => r.dayOfWeek === dayOfWeek);
+    if (!row || !row.isAvailable) return { dayOfWeek, isAvailable: false };
+    return row.startTime && row.endTime
       ? {
-          dayOfWeek: dow,
-          isAvailable: existing.isAvailable,
-          startTime: existing.startTime,
-          endTime: existing.endTime,
+          dayOfWeek,
+          isAvailable: true,
+          startTime: row.startTime,
+          endTime: row.endTime,
         }
-      : {
-          dayOfWeek: dow,
-          isAvailable: false,
-          startTime: "09:00",
-          endTime: "17:00",
-        };
+      : { dayOfWeek, isAvailable: true };
   });
 }
 
 /**
- * Stands in when a staff member has neither an availability row nor an
- * assigned location. It is WRITTEN INTO the availability record by save()
- * below, so it is a stored value rather than a label — translating it would
- * put a French word in a row a report reads back.
+ * What is wrong with a day, if anything. A window may run past midnight (a
+ * night worker's 22:00 to 06:00), which the route accepts; half a window and a
+ * window of no length are not windows.
  */
-// french-ok: stored, not a label
-const DEFAULT_FACILITY = "Main";
+function problemOf(row: DayRow): "bothTimes" | "endAfterStart" | null {
+  if (!row.isAvailable) return null;
+  if (Boolean(row.startTime) !== Boolean(row.endTime)) return "bothTimes";
+  if (row.startTime && row.startTime === row.endTime) return "endAfterStart";
+  return null;
+}
 
-/**
- * Manager-editable weekly availability TEMPLATE — the preference grid the
- * employee submitted at onboarding. Editing here updates the availability
- * template only; it does NOT touch already-approved / published future shifts.
- */
 export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
-  const { t, fill, locale } = useStaffText("availability");
-  const [rows, setRows] = useState<DayRow[]>(() => seedRows(staff.id));
-  const [dirty, setDirty] = useState(false);
-  const { labelsFor } = useStaffLocations();
+  const { t } = useStaffText("availability");
+  const { data, isPending, isError } = useQuery(availabilityQueries.all());
 
-  const facility =
-    staffAvailability.find((a) => a.staffId === staff.id)?.facility ??
-    labelsFor(staff.assignedLocations)[0] ??
-    DEFAULT_FACILITY;
+  if (isPending) {
+    return (
+      <Skeleton
+        className="h-80 rounded-[16px]"
+        aria-busy="true"
+        aria-label={t("loading")}
+      />
+    );
+  }
+  if (isError) {
+    return <p className="text-muted-foreground text-sm">{t("loadFailed")}</p>;
+  }
+  // Patterns are keyed by the staff row; a profile without one has nowhere to
+  // hold a week.
+  if (!staff.rowId) {
+    return <p className="text-muted-foreground text-sm">{t("noStaffRow")}</p>;
+  }
+
+  return (
+    <AvailabilityEditor
+      key={staff.rowId}
+      staff={staff}
+      rowId={staff.rowId}
+      week={data.patterns[staff.rowId]}
+      canDecide={data.canDecide}
+    />
+  );
+}
+
+function AvailabilityEditor({
+  staff,
+  rowId,
+  week,
+  canDecide,
+}: {
+  staff: StaffProfile;
+  rowId: string;
+  week: AvailabilityDay[] | undefined;
+  canDecide: boolean;
+}) {
+  const { t, fill, locale } = useStaffText("availability");
+  const [rows, setRows] = useState<DayRow[]>(() => rowsFrom(week));
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { mutateAsync: propose } = useProposeAvailability();
+  const { mutateAsync: decide } = useDecideAvailability();
 
   const update = (dow: number, patch: Partial<DayRow>) => {
     setRows((rs) =>
@@ -92,87 +144,106 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
     setDirty(true);
   };
 
-  const invalid = rows.some((r) => r.isAvailable && r.startTime >= r.endTime);
+  const invalid = rows.some((r) => problemOf(r) !== null);
   const activeDays = rows.filter((r) => r.isAvailable).length;
 
-  const save = () => {
-    upsertStaffAvailabilityForStaff(
-      staff.id,
-      fullNameOf(staff),
-      facility,
-      rows,
-    );
-    setDirty(false);
-    toast.success(t("saved"));
+  const save = async () => {
+    if (saving || invalid) return;
+    setSaving(true);
+    try {
+      const request = await propose({
+        employeeId: rowId,
+        proposed: weekFrom(rows),
+        effectiveFrom: localDay(),
+      });
+      if (canDecide) {
+        await decide({ id: request.id, status: "approved" });
+        toast.success(t("saved"));
+      } else {
+        toast.success(t("sentForApproval"));
+      }
+      setDirty(false);
+    } catch (error) {
+      toast.error(t("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="text-muted-foreground flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/20">
-        <Info className="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+      <div className="text-muted-foreground flex items-start gap-2 rounded-[16px] border p-3 text-xs">
+        <Info className="mt-0.5 size-4 shrink-0" />
         <span>{fill("templateNotice", { name: staff.firstName })}</span>
       </div>
 
-      <div className="border-border/60 overflow-hidden rounded-xl border">
-        <div className="text-muted-foreground bg-muted/40 flex items-center gap-2 border-b px-4 py-2 text-xs font-medium">
-          <CalendarClock className="size-3.5" />
+      <div className="overflow-hidden rounded-[16px] border">
+        <div className="text-muted-foreground flex items-center gap-2 border-b px-4 py-2 text-xs font-medium">
+          <CalendarClock className="size-4" />
           {fill("weeklyHeading", { count: activeDays })}
         </div>
         <div className="divide-y">
-          {rows.map((row) => (
-            <div
-              key={row.dayOfWeek}
-              className={cn(
-                "flex flex-wrap items-center gap-3 px-4 py-3",
-                !row.isAvailable && "opacity-60",
-              )}
-            >
-              <label className="flex w-32 shrink-0 cursor-pointer items-center gap-2.5">
-                <Switch
-                  checked={row.isAvailable}
-                  onCheckedChange={(v) =>
-                    update(row.dayOfWeek, { isAvailable: v })
-                  }
-                />
-                <span className="text-sm font-medium">
-                  {formatWeekday(row.dayOfWeek, locale, "long")}
-                </span>
-              </label>
-
-              {row.isAvailable ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="time"
-                    value={row.startTime}
-                    onChange={(e) =>
-                      update(row.dayOfWeek, { startTime: e.target.value })
+          {rows.map((row) => {
+            const problem = problemOf(row);
+            return (
+              <div
+                key={row.dayOfWeek}
+                className="flex flex-wrap items-center gap-3 px-4 py-3"
+              >
+                <label className="flex w-36 shrink-0 cursor-pointer items-center gap-2.5">
+                  <Switch
+                    checked={row.isAvailable}
+                    onCheckedChange={(v) =>
+                      update(row.dayOfWeek, { isAvailable: v })
                     }
-                    className="h-8 w-32"
                   />
-                  <span className="text-muted-foreground text-xs">
-                    {t("to")}
+                  <span className="text-sm font-medium">
+                    {formatWeekday(row.dayOfWeek, locale, "long")}
                   </span>
-                  <Input
-                    type="time"
-                    value={row.endTime}
-                    onChange={(e) =>
-                      update(row.dayOfWeek, { endTime: e.target.value })
-                    }
-                    className="h-8 w-32"
-                  />
-                  {row.startTime >= row.endTime && (
-                    <span className="text-xs text-rose-600 dark:text-rose-400">
-                      {t("endAfterStart")}
+                </label>
+
+                {row.isAvailable ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="time"
+                      value={row.startTime}
+                      onChange={(e) =>
+                        update(row.dayOfWeek, { startTime: e.target.value })
+                      }
+                      className="w-32"
+                    />
+                    <span className="text-muted-foreground text-xs">
+                      {t("to")}
                     </span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-muted-foreground text-xs">
-                  {t("unavailable")}
-                </span>
-              )}
-            </div>
-          ))}
+                    <Input
+                      type="time"
+                      value={row.endTime}
+                      onChange={(e) =>
+                        update(row.dayOfWeek, { endTime: e.target.value })
+                      }
+                      className="w-32"
+                    />
+                    {!row.startTime && !row.endTime && (
+                      <span className="text-muted-foreground text-xs">
+                        {t("allDay")}
+                      </span>
+                    )}
+                    {problem && (
+                      <span className="text-destructive text-xs">
+                        {t(problem)}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-xs">
+                    {t("unavailable")}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -183,11 +254,13 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
           </span>
         )}
         <Button
-          onClick={save}
-          disabled={!dirty || invalid}
-          className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+          onClick={() => void save()}
+          disabled={!dirty || invalid || saving}
+          aria-busy={saving}
+          className="gap-1.5"
         >
-          <Save className="size-4" /> {t("saveAvailability")}
+          <Save className="size-4" />
+          {saving ? t("saving") : t("saveAvailability")}
         </Button>
       </div>
     </div>
