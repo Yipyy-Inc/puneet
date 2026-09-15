@@ -612,6 +612,35 @@ test.describe("forms", () => {
     }
   });
 
+  test("staff send a submission back with a note, and the note is required", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    const submission = await unfiledSubmission(page, "changes");
+
+    const noNote = await page.request.patch(`${SUBMISSIONS}/${submission.id}`, {
+      data: { status: "changes_requested" },
+    });
+    expect(noNote.status(), await noNote.text()).toBe(422);
+
+    const note = "The rabies vaccination date is missing.";
+    const sent = await page.request.patch(`${SUBMISSIONS}/${submission.id}`, {
+      data: { status: "changes_requested", reviewNote: note },
+    });
+    expect(sent.ok(), await sent.text()).toBe(true);
+
+    // Read back rather than trusting the write's response.
+    const reread = await page.request.get(`${SUBMISSIONS}/${submission.id}`);
+    expect(reread.ok(), await reread.text()).toBe(true);
+    const row = (
+      (await reread.json()) as {
+        submission: Submission & { reviewNote?: string | null };
+      }
+    ).submission;
+    expect(row.status).toBe("changes_requested");
+    expect(row.reviewNote).toBe(note);
+  });
+
   test("a groomer cannot author a form", async ({ page }) => {
     await signIn(page, ACCOUNTS.groomer);
 

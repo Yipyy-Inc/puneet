@@ -1,4 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+
+import { notifyChangesRequested } from "@/lib/forms/notify";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { resolvePetNames } from "@/lib/api/form-pets";
@@ -94,6 +96,8 @@ export async function PATCH(
     scoreOutcome?: string | null;
     scoreDetails?: Record<string, unknown> | null;
     clientRef?: number;
+    /** What to change, when sending a submission back. */
+    reviewNote?: string | null;
   } | null;
 
   if (!body) {
@@ -105,7 +109,13 @@ export async function PATCH(
   const patch: TablesUpdate<"form_submissions"> = {};
 
   if (body.status !== undefined) {
-    const allowed = ["submitted", "reviewed", "flagged", "archived"];
+    const allowed = [
+      "submitted",
+      "reviewed",
+      "flagged",
+      "archived",
+      "changes_requested",
+    ];
     if (!allowed.includes(body.status)) {
       return NextResponse.json(
         {
@@ -115,6 +125,28 @@ export async function PATCH(
       );
     }
     patch.status = body.status;
+
+    // Sending a form back says what to change. The customer is emailed the
+    // note, and answers by submitting the form again.
+    if (body.status === "changes_requested") {
+      const note = body.reviewNote?.trim() ?? "";
+      if (!note) {
+        return NextResponse.json(
+          {
+            error:
+              "Say what needs changing, so the customer knows what to fix.",
+          },
+          { status: 422 },
+        );
+      }
+      if (note.length > 1000) {
+        return NextResponse.json(
+          { error: "Keep the note to 1,000 characters." },
+          { status: 422 },
+        );
+      }
+      (patch as Record<string, unknown>).review_note = note;
+    }
   }
 
   if (body.score !== undefined) patch.score = body.score;
@@ -181,6 +213,22 @@ export async function PATCH(
   if (refused) return refused;
 
   const updated = (data as unknown as SubmissionRecord[])[0];
+
+  // The customer hears what to change, when the facility's settings ask for
+  // it, after this answer is sent.
+  if (body.status === "changes_requested") {
+    const note = (patch as Record<string, unknown>).review_note as string;
+    after(() =>
+      notifyChangesRequested({
+        facilityId: updated.facility_id,
+        formId: updated.form_id,
+        clientId: updated.client_id,
+        note,
+        request,
+      }),
+    );
+  }
+
   const result: ReviewSubmissionResult = {
     submission: toSubmissionRow(
       updated,

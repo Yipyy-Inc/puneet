@@ -24,7 +24,8 @@ export type SubmissionStatus =
   | "submitted"
   | "reviewed"
   | "flagged"
-  | "archived";
+  | "archived"
+  | "changes_requested";
 
 export interface FormRow {
   id: string;
@@ -81,6 +82,8 @@ export interface SubmissionRow {
   scoreOutcome: string | null;
   submittedBy: string | null;
   submittedAt: string;
+  /** What staff asked the customer to change, when they sent it back. */
+  reviewNote: string | null;
 }
 
 export const FORM_SELECT =
@@ -120,7 +123,7 @@ export type SubmissionRecord = Tables<"form_submissions"> & {
 };
 
 export const SUBMISSION_SELECT =
-  "id, form_id, form_version_id, client_id, pet_id, booking_id, status, answers, staff_assisted, score, score_outcome, submitted_by, submitted_at, clients:client_id(ref, name), form_versions:form_version_id(id, form_id, version_number, schema, published_at, created_at, forms:form_id(name))";
+  "id, facility_id, form_id, form_version_id, client_id, pet_id, booking_id, status, answers, staff_assisted, score, score_outcome, review_note, submitted_by, submitted_at, clients:client_id(ref, name), form_versions:form_version_id(id, form_id, version_number, schema, published_at, created_at, forms:form_id(name))";
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -210,5 +213,6 @@ export function toSubmissionRow(
     scoreOutcome: row.score_outcome,
     submittedBy: row.submitted_by,
     submittedAt: row.submitted_at,
+    reviewNote: (row as { review_note?: string | null }).review_note ?? null,
   };
 }

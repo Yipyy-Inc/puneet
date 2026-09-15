@@ -31,6 +31,8 @@ import {
 } from "@/components/forms/SubmissionAnswers";
 import { submissionFlags } from "@/components/forms/submission-shape";
 import { FileUnderCustomer } from "./_components/FileUnderCustomer";
+import { SendBackForChanges } from "./_components/SendBackForChanges";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { PageHeader } from "@/components/ui/page-header";
 
 // ============================================================================
@@ -101,6 +103,7 @@ export default function SubmissionDetailPage({
   } = useQuery(liveFormQueries.submission(id));
 
   const review = useReviewSubmission();
+  const { t: reviewText } = useStaffText("formReview");
   const [pendingStatus, setPendingStatus] = useState<ReviewStatus | null>(null);
 
   const flags = useMemo(
@@ -268,20 +271,34 @@ export default function SubmissionDetailPage({
                   <Label htmlFor="review-status">Status</Label>
                   <Select
                     value={status}
-                    onValueChange={(v) => saveStatus(v as ReviewStatus)}
+                    onValueChange={(v) => {
+                      // Sending back needs a note: SendBackForChanges does it.
+                      if (v === "changes_requested") return;
+                      saveStatus(v as ReviewStatus);
+                    }}
                     disabled={review.isPending}
                   >
                     <SelectTrigger id="review-status" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {REVIEW_OPTIONS.map((o) => (
+                      {(status === "changes_requested"
+                        ? [
+                            ...REVIEW_OPTIONS,
+                            {
+                              value: "changes_requested" as const,
+                              label: reviewText("statusChangesRequested"),
+                            },
+                          ]
+                        : REVIEW_OPTIONS
+                      ).map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <SendBackForChanges submission={submission} />
                 </div>
               )}
 

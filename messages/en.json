@@ -2250,6 +2250,20 @@
         "discountLine": "Membership discount — {plan} ({pct}%)",
         "discountRefused": "The membership discount was not applied"
       },
+      "formReview": {
+        "sendBack": "Send back for changes",
+        "sendBackHelp": "The customer answers by sending the form again. A required form counts as missing until they do.",
+        "noteLabel": "What needs changing",
+        "notePlaceholder": "For example, the rabies vaccination date is missing",
+        "noteRequired": "Say what needs changing before sending it back.",
+        "send": "Send back for changes",
+        "cancel": "Keep the current status",
+        "sent": "Sent back for changes",
+        "sentHelp": "The customer is emailed the note when your form notification settings ask for it.",
+        "notSent": "Not sent back",
+        "askedFor": "Changes asked for",
+        "statusChangesRequested": "Changes requested"
+      },
       "unfinishedRecovery": {
         "recoveryTitle": "Recovery message",
         "recoveryNotYet": "Not sent yet. It goes out after this step's delay, if recovery is switched on.",

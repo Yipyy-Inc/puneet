@@ -293,7 +293,14 @@ export function useReviewSubmission() {
       ...patch
     }: {
       id: string;
-      status?: "submitted" | "reviewed" | "flagged" | "archived";
+      status?:
+        | "submitted"
+        | "reviewed"
+        | "flagged"
+        | "archived"
+        | "changes_requested";
+      /** What to change. Required when sending a submission back. */
+      reviewNote?: string;
       score?: number | null;
       scoreOutcome?: string | null;
       /** Only ever accepted on a submission that has no customer yet. */
