@@ -14437,8 +14437,23 @@ asks through the one dialog. `form-requirements.spec.ts` covers approval and
 daycare check-in. No spec drives the online-booking approval screen itself.
 
 **Still debt.** `enroll_in_training_series` calls `create_booking`, so a blocking training
-requirement also refuses enrolment, which has no place to give a reason. No
-form notification is sent and no red flag is evaluated.
+requirement also refuses enrolment, which has no place to give a reason.
+
+**Fixed 2026-09-15: a submission is checked for red flags, and the facility and
+customer hear about it.** `POST /api/forms/[id]/submit` reads
+`form_red_flags` and `form_notifications` with the service role (the customer
+cannot read facility settings). A submission matching a rule (equals or
+contains, on that form's question) or a keyword is stored as `flagged`
+(`lib/forms/red-flags.ts`, unit-tested; `forms.spec.ts`). After the answer is
+sent, the facility's active owners and admins are emailed when the staff
+switches ask for it: every submission, a flagged one, or one with a file
+(`lib/forms/notice-rules.ts`, unit-tested), listed by
+`public.facility_staff_recipients` (20260915112844, service role only, SQL
+R10). The customer is emailed a confirmation in their language when
+`submissionConfirmed` is on, unless suppressed. No test sees an email arrive.
+
+**Still debt.** "Changes requested" (`formRejectedNeedsCorrection`) has no
+status to set, and the missing-forms reminder is not sent.
 
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 

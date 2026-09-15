@@ -231,6 +231,16 @@ begin
     'a grant is wider than intended');
 end $$;
 
+-- ── R10 ───────────────────────────────────────────────────────────────────
+do $$
+begin
+  perform pg_temp.t('R10 only the service role lists a facility''s staff to email',
+    not has_function_privilege('anon', 'public.facility_staff_recipients(uuid)', 'execute')
+      and not has_function_privilege('authenticated', 'public.facility_staff_recipients(uuid)', 'execute')
+      and has_function_privilege('service_role', 'public.facility_staff_recipients(uuid)', 'execute'),
+    'a grant is wider or narrower than intended');
+end $$;
+
 -- ── Report ────────────────────────────────────────────────────────────────
 
 select n, case when ok then 'PASS' else 'FAIL' end as result, name, detail
