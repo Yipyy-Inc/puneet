@@ -8790,9 +8790,9 @@ sees — not after a reload, and not before one.
 **`form-notifications` is the same shape**, and worse: `handleSave` wrote only
 the reminder timing into `facilityConfig.notifications.forms.customer`, and the
 two toggle LISTS — twelve switches deciding who is notified about a form — were
-never written anywhere at all. Its two readers are module consts too
-(`src/data/facility-notifications.ts:571`,
-`src/lib/form-customer-notifications.ts:9`).
+never written anywhere at all. Its two readers were module consts too. (Since
+2026-09-14 the section saves the `form_notifications` domain, and on
+2026-09-15 both fixture readers were deleted; the server reads the domain.)
 
 Both files are in `check:success-claims`' baseline for the toast, so the claim
 is recorded; what was not recorded is that the gate built to catch exactly this
@@ -14391,13 +14391,14 @@ at every facility. They are now the `form_requirements`,
 list the facility's own forms from Postgres. The Templates tab no longer shows
 facility 11's fixture templates as "Your templates".
 
-**Still debt: nothing acts on them.** No booking or check-in step checks a
-requirement. No submission is scanned for a red flag. No form notification is
-sent. The only readers of the old values were browser fixtures:
-`notifyStaffOnFormSubmission` in `src/data/facility-notifications.ts` and
-`src/lib/form-customer-notifications.ts`, which still read `facilityConfig`.
-The work is to read these domains in `/api/forms/[id]/submit` for red flags and
-staff notifications, and in the booking and kiosk paths for requirements.
+**Was debt, closed by the entries below: nothing acted on them.** The only
+readers of the old values were browser fixtures, and they are deleted
+(2026-09-15): `notifyStaffOnFormSubmission` in
+`src/data/facility-notifications.ts` (FormWizard pushed a bell notice nobody
+else could see), `src/lib/form-customer-notifications.ts` (imported by
+nothing), `facilityConfig.notifications.forms`,
+`facilityConfig.formRequirements`, `bookingRules.allowBookingWithoutForms`,
+and the invented `formRequirements` list in `src/data/settings.ts`.
 `src/lib/form-requirements.ts` was imported by nothing and is deleted.
 
 **Fixed 2026-09-15, the prerequisite: a customer's answers reach the
@@ -14474,6 +14475,15 @@ link, in the customer's language, dated in the facility's time zone. One per
 booking and set of missing forms (`reminderKey`). The send pass treats
 `form_reminder` as transactional. The window, key and words are unit-tested
 (`lib/forms/reminder.ts`); no test runs the tick end to end.
+
+**Found 2026-09-15, still debt: four customer "book" buttons confirm a request
+that is never written.** `QuickBookButton`, the report card's "Book again"
+(`report-card-detail.tsx`), `PurchasedPackageCard` and `ActiveMembershipCard`
+open the booking modal with `onCreateBooking: () => {}`. The modal treats any
+answer but `false` as saved (`BookingModal.tsx` `saveThrough`), so the
+customer sees the request confirmation and no booking exists — and a required
+form is never asked for. `/customer/bookings/new` is the one caller that saves
+through `bookingMutations.create`; the four should share that handler.
 
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 

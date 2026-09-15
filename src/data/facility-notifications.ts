@@ -5,8 +5,6 @@
 
 import { useSyncExternalStore } from "react";
 
-import { facilityConfig } from "@/data/facility-config";
-
 // Types re-exported from @/types/facility (single source of truth)
 export type {
   FacilityNotificationType,
@@ -566,57 +564,4 @@ export function notifyFacilityStaffVaccinationUploaded(params: {
     link: `/facility/dashboard/clients/${clientId}/vaccinations`,
     meta: { petName },
   });
-}
-
-const formsNotify = facilityConfig.notifications?.forms?.staff;
-
-/** Notify staff when a form submission is received. Respects config: newSubmission, redFlagAnswers, hasFileUpload. */
-export function notifyStaffOnFormSubmission(params: {
-  facilityId: number;
-  submissionId: string;
-  formId: string;
-  formName: string;
-  hasFiles: boolean;
-  hasRedFlag: boolean;
-}): void {
-  const { facilityId, submissionId, formId, formName, hasFiles, hasRedFlag } =
-    params;
-  const baseMeta = { submissionId, formId, formName, hasRedFlag, hasFiles };
-
-  if (formsNotify?.newSubmission) {
-    addFacilityNotification({
-      type: "form_submission_new",
-      title: "New form submission",
-      message: `${formName} – new submission`,
-      facilityId,
-      submissionId,
-      category: "forms",
-      link: `/facility/dashboard/forms/submissions/${submissionId}`,
-      meta: { ...baseMeta },
-    });
-  }
-  if (hasRedFlag && formsNotify?.redFlagAnswers) {
-    addFacilityNotification({
-      type: "form_submission_red_flag",
-      title: "Form has red-flag answers",
-      message: `${formName} – review submission`,
-      facilityId,
-      submissionId,
-      category: "forms",
-      link: `/facility/dashboard/forms/submissions/${submissionId}`,
-      meta: { ...baseMeta, hasRedFlag: true },
-    });
-  }
-  if (hasFiles && formsNotify?.hasFileUpload) {
-    addFacilityNotification({
-      type: "form_submission_has_files",
-      title: "Form submission includes file upload",
-      message: `${formName} – attachment(s) to review`,
-      facilityId,
-      submissionId,
-      category: "forms",
-      link: `/facility/dashboard/forms/submissions/${submissionId}`,
-      meta: { ...baseMeta, hasFiles: true },
-    });
-  }
 }

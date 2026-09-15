@@ -13,8 +13,6 @@ import {
   createSubmission,
 } from "@/data/form-submissions";
 import { triggerFormEvent } from "@/lib/form-automation-events";
-import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
-import { submissionHasFiles } from "@/data/form-submissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -711,16 +709,6 @@ export function FormWizard({
         submissionId: submission.id,
         customerId,
         petIds: [petId],
-      });
-
-      // Notify staff
-      notifyStaffOnFormSubmission({
-        facilityId,
-        submissionId: submission.id,
-        formId: currentForm.id,
-        formName: currentForm.name,
-        hasFiles: submissionHasFiles(submission.id),
-        hasRedFlag: logicEffects?.alertFlag ?? false,
       });
 
       // Clear draft for this form
