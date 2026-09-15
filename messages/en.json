@@ -2700,6 +2700,26 @@
         "photoAlt": "Photo {n} of {pet}",
         "rated": "The owner rated it {stars} out of 5",
         "ownerReply": "The owner’s reply"
+      },
+      "saveTemplate": {
+        "title": "Save as a template",
+        "description": "Save this schedule’s shifts as a weekly template you can apply to future weeks.",
+        "savingFrom": "Saving from",
+        "shiftCount": "{count} shifts",
+        "peopleCount": "{count} people",
+        "dayCount": "{count} days",
+        "nameLabel": "Template name",
+        "namePlaceholder": "Regular week",
+        "descriptionLabel": "Description (optional)",
+        "descriptionPlaceholder": "When to use this template",
+        "noShifts": "There are no shifts in this view to save.",
+        "cancel": "Cancel",
+        "saveTemplate": "Save template",
+        "saving": "Saving…",
+        "saved": "Template “{name}” is saved",
+        "savedBody": "{count} shifts, ready on the Templates page.",
+        "viewTemplates": "Open templates",
+        "saveFailed": "The template was not saved"
       }
     }
   },

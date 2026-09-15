@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -13,27 +14,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  BookmarkPlus,
-  Calendar,
-  Clock,
-  Users,
-  AlertCircle,
-} from "lucide-react";
+import { BookmarkPlus, Calendar, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { parseLocalDate } from "@/lib/shift-recurrence";
+import { formatWeekday } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import {
+  useCreateScheduleTemplate,
+  type NewTemplateShift,
+} from "@/lib/api/schedule-templates";
 import type { ScheduleShift, Department } from "@/types/scheduling";
+
+// ============================================================================
+// Save the shifts on screen as a weekly template.
+//
+// This showed "Template saved" and saved nothing — its own comment said so
+// ("for the mock layer we just show a success toast"), and the Templates page
+// it pointed to reads Postgres, so the template was never there. It now
+// creates one through /api/schedule-templates, the same write the Templates
+// page's own dialog uses, and says so only once the database has answered.
+//
+// A template is a WEEK: each shift becomes its weekday, and the same slot seen
+// on two dates in the view is kept once. Open shifts are kept as open — the
+// template route stores them, and a template that silently dropped them would
+// generate a week short of cover.
+// ============================================================================
 
 interface SaveAsTemplateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shifts: ScheduleShift[];
-  department: Department;
+  department: Department | undefined;
   dateRangeLabel: string;
 }
 
-const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEK = [0, 1, 2, 3, 4, 5, 6];
+
+function templateShiftsFrom(shifts: ScheduleShift[]): NewTemplateShift[] {
+  const seen = new Set<string>();
+  const out: NewTemplateShift[] = [];
+  for (const shift of shifts) {
+    const dayOfWeek = parseLocalDate(shift.date).getDay();
+    const startTime = shift.startTime.slice(0, 5);
+    const endTime = shift.endTime.slice(0, 5);
+    const key = [
+      dayOfWeek,
+      shift.employeeId ?? "",
+      shift.positionId,
+      startTime,
+      endTime,
+    ].join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      dayOfWeek,
+      staffId: shift.employeeId ?? null,
+      departmentId: shift.departmentId,
+      positionId: shift.positionId,
+      startTime,
+      endTime,
+      breakMinutes: shift.breakMinutes,
+      slots: shift.slots,
+      requiredSkills: shift.requiredSkills,
+    });
+  }
+  return out;
+}
 
 export function SaveAsTemplateDialog({
   open,
@@ -42,38 +88,50 @@ export function SaveAsTemplateDialog({
   department,
   dateRangeLabel,
 }: SaveAsTemplateDialogProps) {
+  const { t, fill, locale } = useStaffText("saveTemplate");
+  const router = useRouter();
+  const create = useCreateScheduleTemplate();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  // Separate assigned vs unassigned shifts
-  const assignedShifts = shifts.filter((s) => !!s.employeeId);
-  const unassignedCount = shifts.length - assignedShifts.length;
+  const templateShifts = templateShiftsFrom(shifts);
+  const people = new Set(
+    shifts.map((shift) => shift.employeeId).filter(Boolean),
+  ).size;
+  const days = new Set(templateShifts.map((shift) => shift.dayOfWeek));
+  const saving = create.isPending;
+  const canSave =
+    Boolean(name.trim()) &&
+    templateShifts.length > 0 &&
+    Boolean(department) &&
+    !saving;
 
-  // Summary stats
-  const uniqueEmployees = new Set(assignedShifts.map((s) => s.employeeId)).size;
-  const activeDays = new Set(
-    assignedShifts.map((s) => parseLocalDate(s.date).getDay()),
-  );
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-
-    // In a real app this would persist to a store/API.
-    // For the mock layer we just show a success toast.
-    toast.success(`Template "${name}" saved`, {
-      description: `${assignedShifts.length} shifts saved. Find it on the Templates page.`,
-      action: {
-        label: "View Templates",
-        onClick: () => {
-          window.location.href =
-            "/facility/dashboard/services/scheduling/templates";
+  const handleSave = async () => {
+    if (!canSave || !department) return;
+    const templateName = name.trim();
+    try {
+      await create.mutateAsync({
+        name: templateName,
+        description: description.trim() || null,
+        departmentId: department.id,
+        shifts: templateShifts,
+      });
+      toast.success(fill("saved", { name: templateName }), {
+        description: fill("savedBody", { count: templateShifts.length }),
+        action: {
+          label: t("viewTemplates"),
+          onClick: () =>
+            router.push("/facility/dashboard/services/scheduling/templates"),
         },
-      },
-    });
-
-    setName("");
-    setDescription("");
-    onOpenChange(false);
+      });
+      setName("");
+      setDescription("");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(t("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -81,104 +139,82 @@ export function SaveAsTemplateDialog({
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-indigo-500">
-              <BookmarkPlus className="size-4 text-white" />
-            </div>
-            Save as Template
+            <BookmarkPlus className="size-5" />
+            {t("title")}
           </DialogTitle>
-          <DialogDescription>
-            Save the current schedule as a reusable template for future weeks.
-          </DialogDescription>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-1">
-          {/* Source info */}
-          <div className="bg-muted/30 space-y-2 rounded-lg border p-3">
-            <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-              Saving from
+          <div className="space-y-2 rounded-[16px] border p-3">
+            <p className="text-muted-foreground text-xs font-bold tracking-[.06em] uppercase">
+              {t("savingFrom")}
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="outline"
-                style={{
-                  borderColor: department.color,
-                  color: department.color,
-                }}
-                className="text-[11px]"
-              >
-                {department.name}
-              </Badge>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              {department && (
+                <span className="font-semibold">{department.name}</span>
+              )}
               <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Calendar className="size-3" /> {dateRangeLabel}
+                <Calendar className="size-4" /> {dateRangeLabel}
               </span>
             </div>
-            <div className="text-muted-foreground flex items-center gap-4 text-xs">
+            <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-xs tabular-nums">
               <span className="flex items-center gap-1">
-                <Clock className="size-3" />
-                {assignedShifts.length} shifts
+                <Clock className="size-4" />
+                {fill("shiftCount", { count: templateShifts.length })}
               </span>
               <span className="flex items-center gap-1">
-                <Users className="size-3" />
-                {uniqueEmployees} employees
+                <Users className="size-4" />
+                {fill("peopleCount", { count: people })}
               </span>
               <span className="flex items-center gap-1">
-                <Calendar className="size-3" />
-                {activeDays.size} days
+                <Calendar className="size-4" />
+                {fill("dayCount", { count: days.size })}
               </span>
             </div>
 
-            {/* Day dots */}
-            <div className="flex gap-1 pt-0.5">
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                <div
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {WEEK.map((day) => (
+                <span
                   key={day}
-                  className={`flex size-7 items-center justify-center rounded-sm text-[10px] font-medium ${
-                    activeDays.has(day)
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                  data-active={days.has(day)}
+                  className="text-muted-foreground data-[active=true]:bg-primary data-[active=true]:border-primary data-[active=true]:text-primary-foreground rounded-[12px] border px-2 py-1 text-xs font-medium"
                 >
-                  {DAY_NAMES[day]}
-                </div>
+                  {formatWeekday(day, locale, "short")}
+                </span>
               ))}
             </div>
           </div>
 
-          {/* Unassigned notice */}
-          {unassignedCount > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-              <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                {unassignedCount} unassigned open shift
-                {unassignedCount !== 1 ? "s" : ""} will not be included —
-                templates capture assigned shifts only.
-              </p>
-            </div>
+          {templateShifts.length === 0 && (
+            <p className="text-muted-foreground text-sm">{t("noShifts")}</p>
           )}
 
-          {/* Name */}
           <div className="space-y-1.5">
-            <Label>
-              Template Name <span className="text-destructive">*</span>
+            <Label htmlFor="save-template-name">
+              {t("nameLabel")}{" "}
+              <span aria-hidden="true" className="text-destructive">
+                *
+              </span>
             </Label>
             <Input
+              id="save-template-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Regular Week, Holiday Schedule…"
+              placeholder={t("namePlaceholder")}
               autoFocus
             />
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-sm">
-              Description{" "}
-              <span className="text-xs font-normal">(optional)</span>
+            <Label htmlFor="save-template-description">
+              {t("descriptionLabel")}
             </Label>
             <Textarea
+              id="save-template-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe when to use this template…"
+              placeholder={t("descriptionPlaceholder")}
               rows={2}
               className="resize-none"
             />
@@ -186,16 +222,20 @@ export function SaveAsTemplateDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
+            {t("cancel")}
           </Button>
           <Button
-            onClick={handleSave}
-            disabled={!name.trim() || assignedShifts.length === 0}
-            className="bg-linear-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600"
+            onClick={() => void handleSave()}
+            disabled={!canSave}
+            aria-busy={saving}
           >
-            <BookmarkPlus className="mr-1.5 size-4" />
-            Save Template
+            <BookmarkPlus className="size-4" />
+            {saving ? t("saving") : t("saveTemplate")}
           </Button>
         </DialogFooter>
       </DialogContent>
