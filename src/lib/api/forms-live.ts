@@ -9,6 +9,12 @@ import type {
 } from "@/lib/api/mappers/form";
 import type { SubmissionsPayload } from "@/app/api/forms/submissions/route";
 import type { SubmitFormResult } from "@/app/api/forms/[id]/submit/route";
+import type { PublicFormResponse } from "@/app/api/forms/by-slug/[slug]/route";
+
+export type PublicFormPayload =
+  | ({ status: "ok" } & PublicFormResponse)
+  | { status: "signed_out" }
+  | { status: "missing" };
 
 // ============================================================================
 // Forms, from the browser — the Postgres ones.
@@ -121,6 +127,31 @@ export const liveFormQueries = {
           `/api/forms/submissions/${encodeURIComponent(id ?? "")}`,
         )
       ).submission,
+  }),
+
+  /**
+   * A published form by its address, with the signed-in customer's own pets.
+   *
+   * Signed out and not found are answers a page renders, not errors, so they
+   * come back as states rather than throwing.
+   */
+  bySlug: (slug: string | undefined) => ({
+    queryKey: ["forms-live", "by-slug", slug] as const,
+    enabled: Boolean(slug),
+    queryFn: async (): Promise<PublicFormPayload> => {
+      const response = await fetch(
+        `/api/forms/by-slug/${encodeURIComponent(slug ?? "")}`,
+      );
+      if (response.status === 401) return { status: "signed_out" };
+      if (response.status === 404) return { status: "missing" };
+      const body = (await response.json().catch(() => null)) as
+        | (PublicFormResponse & { error?: string })
+        | null;
+      if (!response.ok || !body) {
+        throw new Error(body?.error ?? `Request failed (${response.status})`);
+      }
+      return { status: "ok", ...body };
+    },
   }),
 
   /** A CUSTOMER's own answers, wherever they were given. */
