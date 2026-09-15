@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatCalendarDayLong,
   formatDateISO,
   formatDateLong,
   formatDateShort,
@@ -417,5 +418,29 @@ describe("formatDayHeading", () => {
 
   test("an unreadable day is the em dash, not a thrown RangeError", () => {
     expect(formatDayHeading("", "fr")).toBe("—");
+  });
+});
+
+describe("formatCalendarDayLong", () => {
+  test("a day is the day, whatever zone the process is in", () => {
+    const original = process.env.TZ;
+    try {
+      for (const zone of ["Pacific/Kiritimati", "Etc/GMT+12", "UTC"]) {
+        process.env.TZ = zone;
+        expect(formatCalendarDayLong("2026-10-10", "fr")).toBe(
+          "sam. 10 oct. 2026",
+        );
+        expect(formatCalendarDayLong("2026-10-10", "en")).toBe(
+          "Sat, Oct 10, 2026",
+        );
+      }
+    } finally {
+      process.env.TZ = original;
+    }
+  });
+
+  test("anything but a calendar day is the em dash", () => {
+    expect(formatCalendarDayLong("2026-10", "en")).toBe("—");
+    expect(formatCalendarDayLong("", "fr")).toBe("—");
   });
 });
