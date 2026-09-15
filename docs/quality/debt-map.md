@@ -14527,6 +14527,16 @@ fixtures. `AddStaffAccountModal` and `LocationDetailSheet` in the platform
 admin still list `FACILITY_LOCATIONS`. No spec drives the availability tab
 itself; `scheduling-availability.spec.ts` covers the route.
 
+**Fixed 2026-09-15: "Save as template" on the schedule saves a template.** The
+dialog toasted "Template saved" and saved nothing (its comment said "for the
+mock layer we just show a success toast"); the Templates page it pointed to
+reads Postgres, so the template never appeared. It now creates one through
+`POST /api/schedule-templates` from the shifts on screen: each becomes its
+weekday, the same slot seen twice in the view is kept once, and open shifts
+stay open. Its words are in the `saveTemplate` staff area in both languages.
+No spec drives the dialog; the templates route is covered by the scheduling
+specs.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over

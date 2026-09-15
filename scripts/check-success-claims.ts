@@ -197,7 +197,6 @@ const BASELINE = new Set<string>([
   "src/components/messaging/MessagingSettingsView.tsx",
   "src/components/messaging/ScheduledMessagesView.tsx",
   "src/components/scheduling/PostShiftOpportunityDialog.tsx",
-  "src/components/scheduling/SaveAsTemplateDialog.tsx",
   "src/components/scheduling/ShiftOpportunityBoard.tsx",
   "src/components/scheduling/ShiftOpportunityNotificationSettingsDialog.tsx",
   "src/components/security-compliance/compliance/retention-edit-drawer.tsx",

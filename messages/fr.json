@@ -2700,6 +2700,26 @@
         "photoAlt": "Photo {n} de {pet}",
         "rated": "Le propriétaire l’a noté {stars} sur 5",
         "ownerReply": "Réponse du propriétaire"
+      },
+      "saveTemplate": {
+        "title": "Enregistrer comme modèle",
+        "description": "Enregistrez les quarts de cet horaire comme modèle hebdomadaire à appliquer aux semaines à venir.",
+        "savingFrom": "Source",
+        "shiftCount": "{count} quarts",
+        "peopleCount": "{count} personnes",
+        "dayCount": "{count} jours",
+        "nameLabel": "Nom du modèle",
+        "namePlaceholder": "Semaine régulière",
+        "descriptionLabel": "Description (facultative)",
+        "descriptionPlaceholder": "Quand utiliser ce modèle",
+        "noShifts": "Aucun quart dans cette vue à enregistrer.",
+        "cancel": "Annuler",
+        "saveTemplate": "Enregistrer le modèle",
+        "saving": "Enregistrement…",
+        "saved": "Le modèle « {name} » est enregistré",
+        "savedBody": "{count} quarts, prêts dans la page Modèles.",
+        "viewTemplates": "Ouvrir les modèles",
+        "saveFailed": "Le modèle n’a pas été enregistré"
       }
     }
   },
