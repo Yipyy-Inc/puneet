@@ -14,6 +14,8 @@ import { ACCOUNTS, signIn } from "./_auth";
 //      is never stored on the booking itself.
 //   3. Once the customer has submitted the form, their own booking goes
 //      through.
+//   4. Approving a request and checking the dog in each ask why a form the
+//      facility requires at that stage is missing, and go ahead with a reason.
 //
 // The SQL behind it is proved in supabase/tests/booking-form-gate.sql and
 // form-requirements.sql.
@@ -43,6 +45,9 @@ interface Refusal {
 
 let formId = "";
 let formSlug = "";
+/** A second form, asked before approval and check-in, never answered. */
+let laterFormId = "";
+let laterFormSlug = "";
 let previousRequirements: unknown = { services: [] };
 
 function isoDaysAhead(days: number): string {
@@ -126,6 +131,40 @@ test.beforeAll(async ({ browser }) => {
     });
     expect(published.ok(), await published.text()).toBe(true);
 
+    const later = await page.request.post("/api/forms", {
+      data: { name: `${MARKER} arrival ${Date.now()}` },
+    });
+    expect(later.ok(), await later.text()).toBe(true);
+    const laterForm = (
+      (await later.json()) as { form: { id: string; slug: string } }
+    ).form;
+    laterFormId = laterForm.id;
+    laterFormSlug = laterForm.slug;
+    const laterPublished = await page.request.patch(
+      `/api/forms/${laterFormId}`,
+      {
+        data: {
+          status: "published",
+          publish: true,
+          schema: {
+            questions: [
+              {
+                id: "f1",
+                type: "yes_no",
+                label: "Has your dog eaten today?",
+                required: true,
+                sectionId: "s1",
+              },
+            ],
+            sections: [{ id: "s1", title: "Arrival", order: 1 }],
+            logicRules: [],
+            fieldMapping: [],
+          },
+        },
+      },
+    );
+    expect(laterPublished.ok(), await laterPublished.text()).toBe(true);
+
     await saveRequirements(page, {
       services: [
         {
@@ -152,8 +191,9 @@ test.afterAll(async ({ browser }) => {
   try {
     await signIn(page, ACCOUNTS.owner);
     await saveRequirements(page, previousRequirements);
-    if (formId) {
-      await page.request.patch(`/api/forms/${formId}`, {
+    for (const id of [formId, laterFormId]) {
+      if (!id) continue;
+      await page.request.patch(`/api/forms/${id}`, {
         data: { status: "archived" },
       });
     }
@@ -226,5 +266,79 @@ test.describe("a booking waits for the forms the facility requires", () => {
     expect(((await res.json()) as BookingPayload).status).toBe(
       "request_submitted",
     );
+  });
+
+  test("approving a request and checking the dog in each ask why a required form is missing", async ({
+    browser,
+  }) => {
+    // The customer's request, made while only the before-booking form (which
+    // they have answered) is required.
+    const customer = await browser.newPage();
+    await signIn(customer, ACCOUNTS.customer);
+    const requested = await customer.request.post("/api/bookings", {
+      data: daycare(),
+    });
+    expect(requested.status(), await requested.text()).toBe(201);
+    const booking = (await requested.json()) as BookingPayload;
+    await customer.close();
+
+    const page = await browser.newPage();
+    await signIn(page, ACCOUNTS.owner);
+    await saveRequirements(page, {
+      services: [
+        {
+          serviceType: "daycare",
+          serviceLabel: "Daycare",
+          requirements: [
+            {
+              formId: laterFormId,
+              formName: "Arrival",
+              enabled: true,
+              gates: [
+                { stage: "before_approval", enforcement: "block" },
+                { stage: "before_checkin", enforcement: "block" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Approval.
+    const unexplained = await page.request.patch(
+      `/api/bookings/${booking.id}`,
+      {
+        data: { status: "confirmed" },
+      },
+    );
+    expect(unexplained.status(), await unexplained.text()).toBe(422);
+    const approvalRefusal = (await unexplained.json()) as Refusal;
+    expect(approvalRefusal.code).toBe("form_override_reason_required");
+    expect(approvalRefusal.missing?.map((m) => m.form_slug)).toContain(
+      laterFormSlug,
+    );
+
+    const approved = await page.request.patch(`/api/bookings/${booking.id}`, {
+      data: { status: "confirmed", formOverrideReason: REASON },
+    });
+    expect(approved.status(), await approved.text()).toBe(200);
+    const approvedBooking = (await approved.json()) as BookingPayload;
+    expect(approvedBooking.status).toBe("confirmed");
+    expect(JSON.stringify(approvedBooking)).not.toContain(REASON);
+
+    // Check-in.
+    const noReason = await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: booking.id },
+    });
+    expect(noReason.status(), await noReason.text()).toBe(422);
+    expect(((await noReason.json()) as Refusal).code).toBe(
+      "form_override_reason_required",
+    );
+
+    const checkedIn = await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: booking.id, formOverrideReason: REASON },
+    });
+    expect(checkedIn.status(), await checkedIn.text()).toBe(201);
+    await page.close();
   });
 });

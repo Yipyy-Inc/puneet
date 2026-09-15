@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { bookingMutations } from "./booking";
+import { withFormOverride } from "@/lib/forms/override-prompt";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -57,7 +58,15 @@ export function useUpdateBookingStatus() {
       /** The booking's numeric ref. */
       id: number;
       status: Booking["status"];
-    }) => bookingMutations.update(input.id, { status: input.status }),
+    }) =>
+      // Approving a request missing a form the facility requires before
+      // approval: staff are asked why, and it is sent once more with the reason.
+      withFormOverride((formOverrideReason) =>
+        bookingMutations.update(input.id, {
+          status: input.status,
+          ...(formOverrideReason ? { formOverrideReason } : {}),
+        }),
+      ),
 
     onSuccess: () => {
       // Bookings AND clients: a client's outstanding balance and its "next

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { recordArrival } from "@/lib/api/boarding-arrival-write";
+import { requireForms } from "@/lib/forms/require-forms";
 import {
   bookingEventContext,
   emitAutomationEvent,
@@ -111,6 +112,8 @@ export async function GET(request: NextRequest) {
 
 interface CheckInInput {
   bookingRef?: number;
+  /** Going ahead without a form required before check-in: why. */
+  formOverrideReason?: string;
 }
 
 /**
@@ -141,6 +144,26 @@ export async function POST(request: NextRequest) {
       { error: "Which booking is arriving?" },
       { status: 422 },
     );
+  }
+
+  // The forms the facility requires before check-in, asked before the arrival
+  // is recorded. A booking the caller cannot see is left to recordArrival's
+  // own refusal.
+  const gate = await createServerClient();
+  const { data: arriving } = await gate
+    .from("bookings")
+    .select("id")
+    .eq("ref", body!.bookingRef!)
+    .maybeSingle();
+  const arrivingId = (arriving as { id: string } | null)?.id;
+  if (arrivingId) {
+    const refused = await requireForms(
+      gate,
+      arrivingId,
+      "before_checkin",
+      body!.formOverrideReason,
+    );
+    if (refused) return refused;
   }
 
   const response = await recordArrival(body!.bookingRef!, "check_in");

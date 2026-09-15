@@ -11,6 +11,7 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
+import { requireForms } from "@/lib/forms/require-forms";
 import {
   parseExerciseRatings,
   parseSessionConditions,
@@ -110,6 +111,8 @@ interface CheckInInput {
   exercises?: unknown;
   /** Weather and distraction — {weather, distractionLevel}. See 20260913112156. */
   conditions?: unknown;
+  /** Going ahead without a form required before check-in: why. */
+  formOverrideReason?: string;
 }
 
 const MARKS = new Set(["late", "absent", "excused"]);
@@ -210,6 +213,19 @@ export async function POST(request: NextRequest) {
   }
 
   const bookingId = (booking as { id: string }).id;
+
+  // The forms the facility requires before check-in. Marking a dog absent is
+  // not letting it in, so it asks nothing.
+  if (body!.mark !== "absent" && body!.mark !== "excused") {
+    const refused = await requireForms(
+      supabase,
+      bookingId,
+      "before_checkin",
+      body!.formOverrideReason,
+    );
+    if (refused) return refused;
+  }
+
   const { data: existing } = await supabase
     .from("training_attendance")
     .select("booking_id, checked_in_at")

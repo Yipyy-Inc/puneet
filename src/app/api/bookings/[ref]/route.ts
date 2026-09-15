@@ -9,6 +9,7 @@ import {
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { staffForStylist } from "@/lib/api/stylist-staff";
 import type { NewBooking } from "@/types/booking";
+import { requireForms } from "@/lib/forms/require-forms";
 
 // ============================================================================
 // A single booking, by its app-facing numeric ref.
@@ -77,7 +78,26 @@ export async function PATCH(
   }
 
   const existing = rowToBooking(current);
-  const merged = { ...existing, ...input } as Partial<NewBooking>;
+
+  // Approving a request: the forms the facility requires before approval. The
+  // reason belongs to the override, so it is taken off the booking's changes
+  // before `bookingToRow` could file it in `details`.
+  const { formOverrideReason, ...changes } = input;
+  const currentStatus = (current as { status: string }).status;
+  if (
+    changes.status === "confirmed" &&
+    (currentStatus === "request_submitted" || currentStatus === "waitlisted")
+  ) {
+    const refused = await requireForms(
+      supabase,
+      (current as { id: string }).id,
+      "before_approval",
+      formOverrideReason,
+    );
+    if (refused) return refused;
+  }
+
+  const merged = { ...existing, ...changes } as Partial<NewBooking>;
 
   const row = bookingToRow(merged, {
     facilityId: facility.facilityId,

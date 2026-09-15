@@ -14424,8 +14424,19 @@ the staff booking form asks for the reason in one dialog mounted at the root,
 and the customer booking page names the forms and opens the first.
 `form-requirements.spec.ts` (full suite) covers all three paths.
 
-**Still debt.** Before approval and before check-in are not enforced yet.
-`enroll_in_training_series` calls `create_booking`, so a blocking training
+**Fixed 2026-09-15: approval and check-in wait for their required forms too.**
+`PATCH /api/bookings/[ref]` (a request or waitlisted booking becoming
+confirmed) and the daycare, boarding, training and grooming check-in routes ask
+`public.booking_missing_forms` through `lib/forms/require-forms.ts`. A
+blocking form answers 422 `form_override_reason_required`; with a reason,
+`public.record_form_requirement_override` (20260915111109, SQL G7–G8) saves it,
+asking `edit_bookings` for approval and a check-in permission for check-in.
+Every check-in hook and the status update retry through `withFormOverride`
+(`lib/forms/override-prompt.ts`, unit-tested), so every button on every screen
+asks through the one dialog. `form-requirements.spec.ts` covers approval and
+daycare check-in. No spec drives the online-booking approval screen itself.
+
+**Still debt.** `enroll_in_training_series` calls `create_booking`, so a blocking training
 requirement also refuses enrolment, which has no place to give a reason. No
 form notification is sent and no red flag is evaluated.
 
