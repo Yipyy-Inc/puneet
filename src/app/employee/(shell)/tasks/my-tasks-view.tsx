@@ -1,163 +1,169 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  CheckCircle2,
-  Circle,
-  Camera,
-  StickyNote,
-  Clock,
   AlertTriangle,
   CalendarDays,
-  PawPrint,
+  Camera,
+  CheckCircle2,
+  Clock,
   ListChecks,
+  StickyNote,
 } from "lucide-react";
-import { staffTasks, getTaskCategoryLabel } from "@/data/staff-tasks";
-import type { StaffTask, TaskStatus, TaskPriority } from "@/types/staff";
 import { useFacilityViewer } from "@/hooks/use-facility-rbac";
+import { staffQueries } from "@/lib/api/staff";
+import {
+  taskQueries,
+  useUpdateTask,
+  type TaskRow,
+} from "@/lib/api/facility-tasks";
+import { formatDateShort } from "@/lib/i18n/format";
+import { localDay } from "@/lib/tasks/use-module-day-tasks";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
-// Per-task local edits layered over the static mock data.
-// TODO: persist through a staff-tasks store / API when one exists.
-interface TaskEdit {
-  status?: TaskStatus;
-  notes?: string;
-  photoUrl?: string;
-  completedAt?: string;
-}
+// ============================================================================
+// The signed-in employee's own tasks.
+//
+// This listed `staffTasks` from `src/data/staff-tasks` and kept every change
+// in component state: Complete, a note and a photo all toasted and were gone on
+// reload, and a real task assigned to this person never appeared. It now reads
+// `facility_tasks` through `/api/tasks` — RLS gives a caretaker their own tasks
+// and a manager the board, so the list is narrowed to this person's staff row —
+// and Complete and a note are saved through `PATCH /api/tasks/[id]`, which is
+// what `private.task_owner_moves_status_only` lets an assignee change.
+//
+// There is no photo on a task row, so there is no photo button: "Photo
+// required" is shown as what the task asks for, not as something this screen
+// can collect.
+// ============================================================================
 
-const PRIORITY_STYLE: Record<TaskPriority, string> = {
-  urgent:
-    "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300",
-  high: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
-  medium:
-    "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300",
-  low: "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300",
+type Group = "overdue" | "dueToday" | "upcoming" | "completed";
+
+const PRIORITY_KEY: Record<TaskRow["priority"], string> = {
+  urgent: "priorityUrgent",
+  high: "priorityHigh",
+  medium: "priorityMedium",
+  low: "priorityLow",
 };
 
-const isOpen = (s: TaskStatus) => s !== "completed" && s !== "skipped";
+const isOpen = (task: TaskRow) =>
+  task.status !== "completed" && task.status !== "cancelled";
+
+function groupOf(task: TaskRow, today: string): Group {
+  if (!isOpen(task)) return "completed";
+  if (!task.dueAt) return "upcoming";
+  const due = localDay(new Date(task.dueAt));
+  if (due < today) return "overdue";
+  if (due === today) return "dueToday";
+  return "upcoming";
+}
 
 export function MyTasksView() {
-  // The signed-in employee — staff data is keyed by facility staff id (`fs-*`).
+  const { t, fill } = useStaffText("myTasks");
   const { viewer } = useFacilityViewer();
-  const staffId = viewer.id;
-  const [today] = useState(() => new Date().toISOString().split("T")[0]);
-  const [edits, setEdits] = useState<Record<number, TaskEdit>>({});
+  const [today] = useState(() => localDay());
 
-  const myTasks = useMemo(
-    () => staffTasks.filter((t) => t.assignedTo === staffId),
-    [staffId],
-  );
+  const roster = useQuery(staffQueries.profiles());
+  const tasks = useQuery(taskQueries.all());
 
-  const effective = (task: StaffTask): StaffTask => ({
-    ...task,
-    ...edits[task.id],
-  });
+  // Tasks name the assignee by staff row; the viewer is known by legacy id.
+  const myRowId = roster.data?.find((member) => member.id === viewer.id)?.rowId;
 
   const groups = useMemo(() => {
-    const overdue: StaffTask[] = [];
-    const dueToday: StaffTask[] = [];
-    const upcoming: StaffTask[] = [];
-    const done: StaffTask[] = [];
-    for (const raw of myTasks) {
-      const t = { ...raw, ...edits[raw.id] };
-      if (!isOpen(t.status)) {
-        done.push(t);
-      } else if (t.dueDate < today) {
-        overdue.push(t);
-      } else if (t.dueDate === today) {
-        dueToday.push(t);
-      } else {
-        upcoming.push(t);
-      }
-    }
-    const byDue = (a: StaffTask, b: StaffTask) =>
-      (a.dueDate + (a.dueTime ?? "")).localeCompare(
-        b.dueDate + (b.dueTime ?? ""),
-      );
-    return {
-      overdue: overdue.sort(byDue),
-      dueToday: dueToday.sort(byDue),
-      upcoming: upcoming.sort(byDue),
-      done: done.sort(byDue),
+    const out: Record<Group, TaskRow[]> = {
+      overdue: [],
+      dueToday: [],
+      upcoming: [],
+      completed: [],
     };
-  }, [myTasks, edits, today]);
-
-  const update = (id: number, patch: TaskEdit) =>
-    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
-
-  const markComplete = (task: StaffTask) => {
-    const t = effective(task);
-    if (task.requiresPhoto && !t.photoUrl) {
-      toast.error("A photo is required to complete this task.");
-      return;
+    if (!myRowId) return out;
+    for (const task of tasks.data?.tasks ?? []) {
+      if (task.assignedToId !== myRowId || task.status === "cancelled") {
+        continue;
+      }
+      out[groupOf(task, today)].push(task);
     }
-    update(task.id, {
-      status: "completed",
-      completedAt: new Date().toISOString(),
-    });
-    toast.success("Task marked complete");
-  };
+    const byDue = (a: TaskRow, b: TaskRow) =>
+      (a.dueAt ?? "~").localeCompare(b.dueAt ?? "~");
+    for (const list of Object.values(out)) list.sort(byDue);
+    return out;
+  }, [tasks.data, myRowId, today]);
+
+  if (roster.isPending || tasks.isPending) {
+    return (
+      <div
+        className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6"
+        aria-busy="true"
+        aria-label={t("loading")}
+      >
+        <Skeleton className="h-10 w-48 rounded-[12px]" />
+        <Skeleton className="h-28 rounded-[16px]" />
+        <Skeleton className="h-28 rounded-[16px]" />
+      </div>
+    );
+  }
+
+  if (roster.isError || tasks.isError) {
+    return (
+      <p className="text-muted-foreground mx-auto max-w-3xl p-6 text-sm">
+        {t("loadFailed")}
+      </p>
+    );
+  }
+
+  if (!myRowId) {
+    return (
+      <p className="text-muted-foreground mx-auto max-w-3xl p-6 text-sm">
+        {t("noStaffRow")}
+      </p>
+    );
+  }
 
   const openCount = groups.overdue.length + groups.dueToday.length;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 p-4 sm:p-6">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
-          <ListChecks className="text-primary size-6" /> My Tasks
+        <h1 className="flex items-center gap-2 text-2xl font-bold">
+          <ListChecks className="text-primary size-6" /> {t("title")}
         </h1>
         <p className="text-muted-foreground text-sm">
           {openCount === 0
-            ? "You're all caught up 🎉"
-            : `${openCount} task${openCount === 1 ? "" : "s"} need attention today.`}
+            ? t("openNone")
+            : fill("openSome", { count: openCount })}
         </p>
       </div>
 
       <TaskGroup
-        title="Overdue"
+        title={t("overdue")}
         icon={AlertTriangle}
-        tone="text-rose-600 dark:text-rose-400"
+        urgent
         tasks={groups.overdue}
-        edits={edits}
-        onUpdate={update}
-        onComplete={markComplete}
-        emptyHint="Nothing overdue — nice."
+        emptyHint={t("emptyOverdue")}
       />
       <TaskGroup
-        title="Due Today"
+        title={t("dueToday")}
         icon={Clock}
-        tone="text-amber-600 dark:text-amber-400"
         tasks={groups.dueToday}
-        edits={edits}
-        onUpdate={update}
-        onComplete={markComplete}
-        emptyHint="No tasks due today."
+        emptyHint={t("emptyToday")}
       />
       <TaskGroup
-        title="Upcoming"
+        title={t("upcoming")}
         icon={CalendarDays}
-        tone="text-sky-600 dark:text-sky-400"
         tasks={groups.upcoming}
-        edits={edits}
-        onUpdate={update}
-        onComplete={markComplete}
-        emptyHint="No upcoming tasks."
+        emptyHint={t("emptyUpcoming")}
       />
-      {groups.done.length > 0 && (
+      {groups.completed.length > 0 && (
         <TaskGroup
-          title="Completed"
+          title={t("completed")}
           icon={CheckCircle2}
-          tone="text-emerald-600 dark:text-emerald-400"
-          tasks={groups.done}
-          edits={edits}
-          onUpdate={update}
-          onComplete={markComplete}
+          tasks={groups.completed}
           emptyHint=""
         />
       )}
@@ -168,144 +174,122 @@ export function MyTasksView() {
 function TaskGroup({
   title,
   icon: Icon,
-  tone,
+  urgent = false,
   tasks,
-  edits,
-  onUpdate,
-  onComplete,
   emptyHint,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone: string;
-  tasks: StaffTask[];
-  edits: Record<number, TaskEdit>;
-  onUpdate: (id: number, patch: TaskEdit) => void;
-  onComplete: (task: StaffTask) => void;
+  urgent?: boolean;
+  tasks: TaskRow[];
   emptyHint: string;
 }) {
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
-        <Icon className={cn("size-4", tone)} />
-        <h2 className="text-sm font-semibold">{title}</h2>
-        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+        <Icon
+          className={urgent ? "text-destructive size-4" : "size-4"}
+          aria-hidden="true"
+        />
+        <h2 className="text-sm font-bold">{title}</h2>
+        <span className="text-muted-foreground text-xs tabular-nums">
           {tasks.length}
-        </Badge>
+        </span>
       </div>
       {tasks.length === 0
         ? emptyHint && (
-            <p className="text-muted-foreground pl-6 text-xs">{emptyHint}</p>
+            <p className="text-muted-foreground pl-6 text-sm">{emptyHint}</p>
           )
-        : tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              edit={edits[task.id] ?? {}}
-              onUpdate={onUpdate}
-              onComplete={onComplete}
-            />
-          ))}
+        : tasks.map((task) => <TaskCard key={task.id} task={task} />)}
     </section>
   );
 }
 
-function TaskCard({
-  task,
-  edit,
-  onUpdate,
-  onComplete,
-}: {
-  task: StaffTask;
-  edit: TaskEdit;
-  onUpdate: (id: number, patch: TaskEdit) => void;
-  onComplete: (task: StaffTask) => void;
-}) {
+function TaskCard({ task }: { task: TaskRow }) {
+  const { t, fill, locale } = useStaffText("myTasks");
+  const { mutateAsync: updateTask, isPending } = useUpdateTask();
   const [noteOpen, setNoteOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState(edit.notes ?? task.notes ?? "");
-  const done = !isOpen(task.status);
-  const photoUrl = edit.photoUrl ?? task.photoUrl;
-  const notes = edit.notes ?? task.notes;
+  const [noteDraft, setNoteDraft] = useState(task.notes ?? "");
+  const done = !isOpen(task);
 
-  const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    onUpdate(task.id, { photoUrl: URL.createObjectURL(file) });
-    toast.success("Photo attached");
+  const complete = async () => {
+    if (done || isPending) return;
+    try {
+      await updateTask({ id: task.id, status: "completed" });
+      toast.success(fill("markedComplete", { title: task.title }));
+    } catch (error) {
+      toast.error(t("completeFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  const saveNote = async () => {
+    if (isPending) return;
+    try {
+      await updateTask({ id: task.id, notes: noteDraft.trim() || null });
+      setNoteOpen(false);
+      toast.success(t("noteSaved"));
+    } catch (error) {
+      toast.error(t("noteFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
-    <Card className={cn(done && "opacity-70")}>
-      <CardContent className="space-y-2.5 p-3.5">
+    <Card>
+      <CardContent className="space-y-2.5 p-4">
         <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => !done && onComplete(task)}
-            className="mt-0.5 shrink-0"
-            aria-label={done ? "Completed" : "Mark complete"}
-            disabled={done}
-          >
-            {done ? (
-              <CheckCircle2 className="size-5 text-emerald-500" />
-            ) : (
-              <Circle className="text-muted-foreground hover:text-primary size-5" />
-            )}
-          </button>
+          {done ? (
+            <CheckCircle2
+              className="text-muted-foreground mt-0.5 size-5 shrink-0"
+              aria-hidden="true"
+            />
+          ) : (
+            <Clock
+              className="text-muted-foreground mt-0.5 size-5 shrink-0"
+              aria-hidden="true"
+            />
+          )}
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <p
-                className={cn(
-                  "text-sm font-semibold",
-                  done && "text-muted-foreground line-through",
-                )}
+                className={
+                  done
+                    ? "text-muted-foreground text-[15px] font-semibold line-through"
+                    : "text-[15px] font-semibold"
+                }
               >
-                {task.templateName}
+                {task.title}
               </p>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "h-4 px-1 text-[9px]",
-                  PRIORITY_STYLE[task.priority],
-                )}
-              >
-                {task.priority}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground text-xs">{task.description}</p>
-            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
-              <span>{getTaskCategoryLabel(task.category)}</span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="size-3" />
-                {task.dueDate}
-                {task.dueTime ? ` · ${task.dueTime}` : ""}
+              <span className="text-muted-foreground text-xs font-bold tracking-[.06em] uppercase">
+                {t(PRIORITY_KEY[task.priority])}
               </span>
-              {task.petName && (
-                <span className="inline-flex items-center gap-1">
-                  <PawPrint className="size-3" />
-                  {task.petName}
-                </span>
-              )}
+            </div>
+            {task.description && (
+              <p className="text-muted-foreground text-sm">
+                {task.description}
+              </p>
+            )}
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+              <span className="inline-flex items-center gap-1">
+                <Clock className="size-4" aria-hidden="true" />
+                {task.dueAt ? formatDateShort(task.dueAt, locale) : t("noDate")}
+              </span>
               {task.requiresPhoto && (
-                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <Camera className="size-3" /> Photo required
+                <span className="inline-flex items-center gap-1">
+                  <Camera className="size-4" aria-hidden="true" />
+                  {t("photoRequired")}
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {photoUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoUrl}
-            alt="Task"
-            className="h-24 w-full rounded-lg object-cover"
-          />
-        )}
-
-        {notes && !noteOpen && (
-          <p className="bg-muted/40 text-muted-foreground rounded-md px-2.5 py-1.5 text-xs">
-            {notes}
+        {task.notes && !noteOpen && (
+          <p className="text-muted-foreground rounded-[12px] border px-3 py-2 text-sm">
+            {task.notes}
           </p>
         )}
 
@@ -315,55 +299,44 @@ function TaskCard({
               rows={2}
               value={noteDraft}
               onChange={(e) => setNoteDraft(e.target.value)}
-              placeholder="Add a note…"
+              placeholder={t("notePlaceholder")}
+              aria-label={t("addNote")}
             />
             <div className="flex justify-end gap-2">
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => {
-                  setNoteDraft(notes ?? "");
+                  setNoteDraft(task.notes ?? "");
                   setNoteOpen(false);
                 }}
+                disabled={isPending}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
-                size="sm"
-                onClick={() => {
-                  onUpdate(task.id, { notes: noteDraft.trim() });
-                  setNoteOpen(false);
-                  toast.success("Note saved");
-                }}
+                onClick={() => void saveNote()}
+                disabled={isPending}
+                aria-busy={isPending}
               >
-                Save note
+                {isPending ? t("saving") : t("saveNote")}
               </Button>
             </div>
           </div>
         )}
 
-        {!done && (
+        {!done && !noteOpen && (
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onComplete(task)}>
-              <CheckCircle2 className="size-3.5" /> Complete
-            </Button>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNoteOpen((v) => !v)}
+              onClick={() => void complete()}
+              disabled={isPending}
+              aria-busy={isPending}
+              aria-label={fill("completeNamed", { title: task.title })}
             >
-              <StickyNote className="size-3.5" /> Note
+              <CheckCircle2 className="size-4" />
+              {isPending ? t("saving") : t("completeTask")}
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <label className="cursor-pointer">
-                <Camera className="size-3.5" /> Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={onPhoto}
-                />
-              </label>
+            <Button variant="outline" onClick={() => setNoteOpen(true)}>
+              <StickyNote className="size-4" /> {t("addNote")}
             </Button>
           </div>
         )}

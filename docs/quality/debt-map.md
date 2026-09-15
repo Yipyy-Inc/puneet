@@ -14566,6 +14566,25 @@ signed-agreement and visit-history lookups over `src/data/pet-data`,
 note state only (`OperationsCalendar.tsx`), and the drawer's `formatCurrency`
 and `formatLocalDateTime` still name `en-US` and `USD`.
 
+**Fixed 2026-09-15: an employee's "My tasks" is their real task list.** The
+employee portal's `my-tasks-view.tsx` listed `staffTasks` from
+`src/data/staff-tasks` and kept Complete, notes and photos in component state,
+so a real task assigned to the person never appeared and nothing survived a
+reload. It now reads `facility_tasks` through `/api/tasks`, narrowed to the
+viewer's staff row, and saves Complete and a note through
+`PATCH /api/tasks/[id]` — the two things `private.task_owner_moves_status_only`
+lets an assignee change. A task row has no photo, so the photo button is gone
+and "Photo required" is shown as what the task asks for. Words are in the
+`myTasks` staff area in both languages.
+
+**Still debt: a grooming report card's prefill never fills.**
+`ReportCardsModule.tsx` looks the picked visit up in the `groomingAppointments`
+fixture to prefill mood, notes and photos. The visit is now a real booking, so
+the lookup finds nothing, and `/api/grooming/appointments` does not return the
+intake (mood tags, before photos, session notes) or after photos the prefill
+reads. It needs those on the appointment response, or read from the grooming
+photos and notes routes.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over

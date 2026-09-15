@@ -155,7 +155,6 @@ const BASELINE = new Set<string>([
   "src/app/dashboard/support/tickets/[id]/_components/ticket-sidebar.tsx",
   "src/app/dashboard/support/tickets/_components/assign-cell.tsx",
   "src/app/dashboard/system-admin/system-config/integrations/[id]/_components/update-credentials-dialog.tsx",
-  "src/app/employee/(shell)/tasks/my-tasks-view.tsx",
   "src/app/facility/account/payment-method/_components/payment-method-view.tsx",
   "src/app/facility/dashboard/inventory/InventoryClient.tsx",
   "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
