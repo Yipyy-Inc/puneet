@@ -28,6 +28,11 @@ import {
   shiftDay,
 } from "@/lib/api/booking-list-params";
 import type { NewBooking } from "@/types/booking";
+import {
+  FORM_OVERRIDE_REASON_REQUIRED,
+  FORM_REQUIRED,
+  type MissingForm,
+} from "@/lib/forms/requirements";
 
 // ============================================================================
 // Bookings.
@@ -264,24 +269,32 @@ export async function POST(request: NextRequest) {
   // written, so the booking owed its full price and the cash in the drawer
   // had no record. It is taken off the booking here and recorded below.
   const petIdByRef = new Map(resolved.map((p) => [p.ref, p.id]));
-  const items = planned.map(({ initialDeposit: _deposit, ...booking }) => {
-    const row = bookingToRow(booking, {
-      facilityId: facility.facilityId,
-      clientRowId: client.id,
-      locationId: facility.locationId,
-      timeZone: facility.timeZone,
-    });
-    if (stylist) {
-      row.assigned_staff_id = stylist.staffId;
-      row.assigned_staff_name ??= stylist.name;
-    }
-    return {
-      booking: row,
-      petIds: refsOf(booking).map((ref) => petIdByRef.get(ref)),
-      grooming: groomingFor(booking),
-      boarding: boardingFor(booking),
-    };
-  });
+  // A staff member going ahead without a form the facility requires gives a
+  // reason. It is read by create_booking and saved with the override; it is
+  // taken off the booking here so `bookingToRow` never files it in `details`.
+  const formOverrideReason = input.formOverrideReason?.trim() || undefined;
+  const items = planned.map(
+    ({ initialDeposit: _deposit, formOverrideReason: _reason, ...booking }) => {
+      const row = bookingToRow(booking, {
+        facilityId: facility.facilityId,
+        clientRowId: client.id,
+        locationId: facility.locationId,
+        timeZone: facility.timeZone,
+      });
+      if (stylist) {
+        row.assigned_staff_id = stylist.staffId;
+        row.assigned_staff_name ??= stylist.name;
+      }
+      return {
+        booking: formOverrideReason
+          ? { ...row, form_override_reason: formOverrideReason }
+          : row,
+        petIds: refsOf(booking).map((ref) => petIdByRef.get(ref)),
+        grooming: groomingFor(booking),
+        boarding: boardingFor(booking),
+      };
+    },
+  );
 
   // THE BOOKING, ITS PETS AND — PER MODULE — ITS APPOINTMENT OR ITS KENNEL,
   // IN ONE TRANSACTION.
@@ -329,6 +342,35 @@ export async function POST(request: NextRequest) {
             "That room is already booked for those dates. Pick another room or another date.",
         },
         { status: 409 },
+      );
+    }
+
+    // A form the facility requires before booking is missing. Say WHICH, so a
+    // customer can open each one and staff can see what they are overriding.
+    if (
+      error.hint === FORM_REQUIRED ||
+      error.hint === FORM_OVERRIDE_REASON_REQUIRED
+    ) {
+      const petUuids = [
+        ...new Set(items.flatMap((item) => item.petIds)),
+      ].filter((id): id is string => Boolean(id));
+      const askMissing = supabase.rpc.bind(supabase) as unknown as (
+        fn: "client_missing_forms",
+        args: Record<string, unknown>,
+      ) => PromiseLike<{ data: MissingForm[] | null }>;
+      const { data: missing } = await askMissing("client_missing_forms", {
+        p_client_id: client.id,
+        p_pet_ids: petUuids,
+        p_service: input.service,
+        p_stage: "before_booking",
+      });
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.hint,
+          missing: (missing ?? []).filter((m) => m.enforcement === "block"),
+        },
+        { status: 422 },
       );
     }
 

@@ -77,6 +77,31 @@ export async function liveWriteOptional<T>(
   return (await response.json()) as T;
 }
 
+/**
+ * A refused write, carrying what the server said beyond its sentence.
+ *
+ * Still an `Error` whose message is the server's `error`, so every existing
+ * `error.message` reader is unchanged. `code` and `body` are for the screens
+ * that act on a refusal, such as a booking missing a required form.
+ */
+export class LiveWriteError extends Error {
+  readonly status: number;
+  readonly code: string | undefined;
+  readonly body: Record<string, unknown> | null;
+
+  constructor(
+    message: string,
+    status: number,
+    body: Record<string, unknown> | null,
+  ) {
+    super(message);
+    this.name = "LiveWriteError";
+    this.status = status;
+    this.body = body;
+    this.code = typeof body?.code === "string" ? body.code : undefined;
+  }
+}
+
 /** Write helper — no fallback, because a write must never silently no-op. */
 export async function liveWrite<T>(
   path: string,
@@ -91,11 +116,16 @@ export async function liveWrite<T>(
   });
 
   if (!response.ok) {
-    const detail = await response
-      .json()
-      .then((b: { error?: string }) => b.error)
-      .catch(() => null);
-    throw new Error(detail ?? `Request failed (${response.status})`);
+    const refused = (await response.json().catch(() => null)) as Record<
+      string,
+      unknown
+    > | null;
+    const detail = typeof refused?.error === "string" ? refused.error : null;
+    throw new LiveWriteError(
+      detail ?? `Request failed (${response.status})`,
+      response.status,
+      refused,
+    );
   }
 
   return (await response.json()) as T;
