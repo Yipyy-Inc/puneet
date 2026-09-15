@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
+  DEFAULT_SCHEDULING_RULES,
+  schedulingRulesSchema,
+} from "@/lib/settings/scheduling-rules";
+import {
   DEFAULT_INVOICE_TEMPLATE,
   invoiceTemplateSchema,
 } from "@/lib/settings/invoice-template";
@@ -889,6 +893,14 @@ export const SETTING_DOMAINS = {
   invoice_template: {
     schema: invoiceTemplateSchema,
     fallback: DEFAULT_INVOICE_TEMPLATE,
+  },
+
+  // Minimum rest between shifts and maximum days in a row — the two rules the
+  // schedule warns about that belong to scheduling alone. Overtime is read from
+  // `payroll_config`, never copied. See lib/settings/scheduling-rules.ts.
+  scheduling_rules: {
+    schema: schedulingRulesSchema,
+    fallback: DEFAULT_SCHEDULING_RULES,
   },
 } as const;
 

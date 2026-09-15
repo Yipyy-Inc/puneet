@@ -1212,7 +1212,6 @@
     "src/components/scheduling/ScheduleMonthView.tsx": 5,
     "src/components/scheduling/ScheduleStats.tsx": 4,
     "src/components/scheduling/ScheduleView.tsx": 25,
-    "src/components/scheduling/SchedulingSettings.tsx": 154,
     "src/components/scheduling/ShiftOpportunityNotificationSettingsDialog.tsx": 25,
     "src/components/scheduling/SkillMultiSelect.tsx": 3,
     "src/components/scheduling/TimeClock.tsx": 9,

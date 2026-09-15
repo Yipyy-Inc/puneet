@@ -53,13 +53,7 @@ import type {
   ShiftOpportunityNotificationSettings,
 } from "@/types/scheduling";
 import { formatDateLocal } from "@/lib/shift-recurrence";
-
-// Scheduling settings (matching schedulingSettingsSchema)
-const schedulingSettings = {
-  overtimeThresholdWeekly: 40,
-  minTimeBetweenShifts: 8,
-  maxConsecutiveDays: 6,
-};
+import { shiftRulesFrom } from "@/lib/settings/scheduling-rules";
 
 export function ScheduleView() {
   // Section 5E — editing shifts (opening the edit dialog, drag move/copy)
@@ -87,7 +81,22 @@ export function ScheduleView() {
   // One list now, in `facility_settings.payroll_config`, read here and billed
   // there. The `id` is synthesised for React keys only; the settings shape has
   // none because a holiday is identified by its date.
-  const payrollConfig = useFacilitySettings().settings.payroll_config.value;
+  const facilitySettings = useFacilitySettings().settings;
+  const payrollConfig = facilitySettings.payroll_config.value;
+
+  // ── THE WARNINGS READ THE FACILITY'S RULES ─────────────────────────────
+  //
+  // This was a constant — 40 hours, 8 hours' rest, 6 days in a row — for every
+  // facility, while Scheduling → Settings saved nothing and payroll paid
+  // overtime from its own threshold. Rest and days in a row are the facility's
+  // `scheduling_rules`; overtime and the first day of the week are payroll's,
+  // so the warning and the pay run cannot disagree. No overtime rule in payroll
+  // means no overtime warning.
+  const schedulingRulesValue = facilitySettings.scheduling_rules.value;
+  const schedulingSettings = useMemo(
+    () => shiftRulesFrom(schedulingRulesValue, payrollConfig),
+    [schedulingRulesValue, payrollConfig],
+  );
   const holidayRates = useMemo<HolidayRate[]>(
     () =>
       (payrollConfig?.holidays ?? []).map((holiday) => ({
@@ -219,8 +228,8 @@ export function ScheduleView() {
         status: member.status === "active" ? "active" : "inactive",
         // `maxHoursPerWeek` and `employmentType` have nowhere to come from yet:
         // `PayrollConfig` is WITHHELD without `view_payroll`, and a default of 0
-        // would render as a fact about somebody's contract. 40 is the same
-        // number `schedulingSettings.overtimeThresholdWeekly` already assumes.
+        // would render as a fact about somebody's contract. 40 is a common
+        // full-time week; overtime warnings come from payroll's own rule.
         maxHoursPerWeek: 40,
         employmentType: "full_time",
         role: member.jobTitle ?? member.primaryRole,

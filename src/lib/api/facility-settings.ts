@@ -72,6 +72,7 @@ import type { TagNotePolicy } from "@/lib/settings/tag-notes";
 import type { MobileAppConfig } from "@/lib/settings/mobile-app";
 import type { TaxConfig } from "@/lib/settings/tax";
 import type { PayrollConfig } from "@/lib/settings/payroll";
+import type { SchedulingRules } from "@/lib/settings/scheduling-rules";
 import type { RebookConfig } from "@/lib/settings/rebook";
 import type { ReputationConfig } from "@/lib/settings/reputation";
 import type { MessagingPolicy } from "@/lib/settings/messaging-policy";
@@ -285,6 +286,8 @@ export interface FacilitySettings {
   mobile_grooming: SettingState<MobileGroomingSettings>;
   /** How invoices and receipts look. Identity comes from the profile. */
   invoice_template: SettingState<InvoiceTemplate>;
+  /** Rest between shifts and days in a row, for the schedule's warnings. */
+  scheduling_rules: SettingState<SchedulingRules>;
 }
 
 /**
