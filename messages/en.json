@@ -642,7 +642,12 @@
         "statusActive": "Active",
         "statusInvited": "Invited",
         "statusOnLeave": "On leave",
-        "statusFormer": "Former employee"
+        "statusFormer": "Former employee",
+        "loading": "Loading this profile",
+        "loadFailed": "This profile could not be loaded.",
+        "saving": "Saving…",
+        "saved": "{name}'s profile is saved",
+        "saveFailed": "The profile was not saved"
       },
       "status": {
         "active": "Active",
