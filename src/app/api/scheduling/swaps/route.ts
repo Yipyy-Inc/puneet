@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toSwapRequest,
@@ -216,9 +217,87 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Whoever can approve swaps hears about it — not the person who asked.
+  const made = data as unknown as SwapNoticeRow;
+  after(() =>
+    notifyStaff({
+      facilityId: context.facilityId,
+      kind: "swap_requested",
+      params: {
+        staff: personName(made.requester),
+        date: made.requesting_shift?.starts_at?.slice(0, 10),
+      },
+      link: SWAPS_LINK,
+      sourceId: made.id,
+      dedupeKey: `swap_requested:${made.id}`,
+      actorProfileId: viewer.userId,
+      request,
+    }),
+  );
+
   return NextResponse.json(
     toSwapRequest(data as unknown as SwapRow, context.timeZone),
     { status: 201 },
+  );
+}
+
+const SWAPS_LINK = "/facility/dashboard/services/scheduling/shift-swaps";
+
+interface SwapNoticeRow {
+  id: string;
+  requesting_staff_id: string;
+  requester: { first_name: string | null; last_name: string | null } | null;
+  requesting_shift: { starts_at: string | null } | null;
+}
+
+function personName(
+  person: { first_name: string | null; last_name: string | null } | null,
+): string | undefined {
+  const name = [person?.first_name, person?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return name || undefined;
+}
+
+/**
+ * Tell whoever asked for the swap what was decided. Looked up before the
+ * response, with the caller's session; only the notice itself waits.
+ */
+async function noticeSwapDecision(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  notice: {
+    request: Request;
+    facilityId: string;
+    row: SwapNoticeRow | undefined;
+    decision: "approved" | "denied";
+    actorProfileId: string | null;
+  },
+): Promise<void> {
+  if (!notice.row) return;
+  const { data: staff } = await supabase
+    .from("staff")
+    .select("membership_id")
+    .eq("id", notice.row.requesting_staff_id)
+    .maybeSingle();
+  const membershipId = (staff as { membership_id: string | null } | null)
+    ?.membership_id;
+  if (!membershipId) return;
+  const row = notice.row;
+  after(() =>
+    notifyStaff({
+      facilityId: notice.facilityId,
+      kind: "swap_decided",
+      params: {
+        decision: notice.decision,
+        date: row.requesting_shift?.starts_at?.slice(0, 10),
+      },
+      sourceId: row.id,
+      dedupeKey: `swap_decided:${row.id}:${notice.decision}`,
+      actorProfileId: notice.actorProfileId,
+      onlyMembershipIds: [membershipId],
+      request: notice.request,
+    }),
   );
 }
 
@@ -315,6 +394,14 @@ export async function PATCH(request: NextRequest) {
       nowAssignedTo: row.now_assigned,
     }));
 
+    await noticeSwapDecision(supabase, {
+      request,
+      facilityId: context.facilityId,
+      row: data as unknown as SwapNoticeRow | undefined,
+      decision: "approved",
+      actorProfileId: viewer.userId,
+    });
+
     return NextResponse.json(decision);
   }
 
@@ -343,6 +430,17 @@ export async function PATCH(request: NextRequest) {
     "No request you can decide with that id.",
   );
   if (refused) return refused;
+
+  // A withdrawal is the requester's own act; only a denial is news to them.
+  if (input.status === "denied") {
+    await noticeSwapDecision(supabase, {
+      request,
+      facilityId: context.facilityId,
+      row: (data as unknown as SwapNoticeRow[])[0],
+      decision: "denied",
+      actorProfileId: viewer.userId,
+    });
+  }
 
   return NextResponse.json(
     toSwapRequest((data as unknown as SwapRow[])[0], context.timeZone),

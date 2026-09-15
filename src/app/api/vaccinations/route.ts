@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   activeFacilityIdForStaff,
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
   const { data: pet } = await supabase
     .from("pets")
-    .select("id")
+    .select("id, name")
     .eq("ref", write.petRef)
     .match(inFacility(facility.facilityId))
     .maybeSingle();
@@ -153,6 +154,25 @@ export async function POST(request: NextRequest) {
       duplicate: "That record already exists.",
       denied: "You do not have permission to edit medical records.",
     });
+  }
+
+  // A record filed for review, rather than entered as approved, is somebody
+  // else's to check.
+  if (status === "pending_review") {
+    const recordId = (data as unknown as { id: string }).id;
+    const petName = (pet as { name?: string | null }).name ?? undefined;
+    after(() =>
+      notifyStaff({
+        facilityId: facility.facilityId,
+        kind: "vaccination_uploaded",
+        params: { pet: petName, vaccine: write.vaccineName },
+        link: null,
+        sourceId: recordId,
+        dedupeKey: `vaccination_uploaded:${recordId}`,
+        actorProfileId: user.id,
+        request,
+      }),
+    );
   }
 
   return NextResponse.json(

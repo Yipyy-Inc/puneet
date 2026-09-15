@@ -9,6 +9,7 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
+import { nextQuery } from "@/lib/auth/safe-next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get("x-facility-slug");
@@ -54,7 +55,14 @@ export async function generateMetadata(): Promise<Metadata> {
 // them they are joining would be false.
 // ============================================================================
 
-export default async function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  // Signing in from here instead keeps where they were headed.
+  const rawNext = (await searchParams).next;
+  const next = nextQuery(Array.isArray(rawNext) ? rawNext[0] : rawNext);
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
   const t = await getTranslations("auth");
@@ -92,7 +100,7 @@ export default async function SignUpPage() {
         footer={
           <p className="text-muted-foreground text-center text-sm">
             <Link
-              href="/sign-in"
+              href={`/sign-in${next}`}
               className="text-primary font-medium hover:underline"
             >
               {t("signUp.noFacilitySignIn")}
@@ -124,7 +132,7 @@ export default async function SignUpPage() {
         <p className="text-muted-foreground text-center text-sm">
           {t("signUp.haveAccount")}{" "}
           <Link
-            href="/sign-in"
+            href={`/sign-in${next}`}
             className="text-primary font-medium hover:underline"
           >
             {t("signUp.signInLink")}

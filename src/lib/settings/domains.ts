@@ -10,6 +10,10 @@ import {
   NO_ESTIMATE_FOLLOW_UPS,
 } from "@/lib/settings/estimate-follow-ups";
 import {
+  notificationRoleDefaultsSchema,
+  SHIPPED_NOTIFICATION_ROLE_DEFAULTS,
+} from "@/lib/notifications/catalog";
+import {
   DEFAULT_INVOICE_TEMPLATE,
   invoiceTemplateSchema,
 } from "@/lib/settings/invoice-template";
@@ -914,6 +918,14 @@ export const SETTING_DOMAINS = {
   estimate_follow_ups: {
     schema: estimateFollowUpsSchema,
     fallback: NO_ESTIMATE_FOLLOW_UPS,
+  },
+
+  // Which notification categories each of the thirteen staff roles hears about
+  // until a person chooses for themselves. Read by the notification fan-out;
+  // see lib/notifications/catalog.ts.
+  notification_role_defaults: {
+    schema: notificationRoleDefaultsSchema,
+    fallback: SHIPPED_NOTIFICATION_ROLE_DEFAULTS,
   },
 } as const;
 

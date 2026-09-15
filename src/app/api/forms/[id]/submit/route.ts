@@ -224,6 +224,8 @@ export async function POST(
   after(() =>
     notifyFormSubmitted({
       facilityId: doc.facility_id,
+      submissionId: (inserted as unknown as { id: string }).id,
+      actorProfileId: viewer.userId,
       formName: doc.name,
       clientId,
       flags: flags.map((flag) => flag.label),

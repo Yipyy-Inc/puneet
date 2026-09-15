@@ -3,16 +3,10 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFormTemplateForService } from "@/data/yipyygo-config";
 import { formatDateLong } from "@/lib/i18n/format";
-import {
-  facilityCustomerLinkOrigin,
-  facilityStaffLinkOrigin,
-} from "@/lib/public-origin";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
+import { facilityCustomerLinkOrigin } from "@/lib/public-origin";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
-import {
-  STAFF_EMAIL_LOCALE,
-  notifyStaffOfSubmission,
-  sendOwnerConfirmation,
-} from "@/lib/yipyy-go/notify";
+import { sendOwnerConfirmation } from "@/lib/yipyy-go/notify";
 import { yipyyGoOff, yipyyGoSettingsSchema } from "@/lib/settings/yipyy-go";
 import {
   rowToYipyyGoSubmission,
@@ -172,20 +166,21 @@ export async function POST(request: NextRequest, { params }: Params) {
     `${wallClockParts(booking.startAt, facility?.timezone ?? DEFAULT_TIMEZONE).date}T12:00:00Z`,
   );
 
+  // The facility's notice is a staff notification now: it reaches whoever
+  // follows forms and may see bookings, in the bell, and by email for those
+  // who switched it on — not every owner and admin by email regardless.
   if (result.notifyStaff) {
-    const staffOrigin = facilityStaffLinkOrigin(facility?.slug, request);
     const submissionId = result.submission.id;
-    const staffLocale = STAFF_EMAIL_LOCALE;
     after(() =>
-      notifyStaffOfSubmission({
-        submissionId,
-        facilityName,
-        clientName: client?.name ?? "",
-        petName: pet.name,
-        serviceLabel: booking.service,
-        arrivalLabel: formatDateLong(arrival, staffLocale),
-        bookingUrl: `${staffOrigin}/facility/dashboard/bookings/${booking.ref}#yipyy-go`,
-        origin: staffOrigin,
+      notifyStaff({
+        facilityId: booking.facilityId,
+        kind: "pre_arrival_submitted",
+        params: { client: client?.name ?? undefined, pet: pet.name },
+        link: `/facility/dashboard/bookings/${booking.ref}#yipyy-go`,
+        sourceId: submissionId,
+        dedupeKey: `pre_arrival_submitted:${submissionId}`,
+        actorProfileId: user.id,
+        request,
       }),
     );
   }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { PasskeySetupPrompt } from "@/components/auth/PasskeySetupPrompt";
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { getViewer } from "@/lib/auth/viewer";
 import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 
@@ -35,7 +36,16 @@ export async function generateMetadata(): Promise<Metadata> {
 // could later disagree with the first. See requireVerifiedUser().
 // ============================================================================
 
-export default async function PasskeySetupPage() {
+export default async function PasskeySetupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  // Where the person was headed before signing up, handed on by the code step.
+  // Every way out of this page goes there, and only if it is a path on this site.
+  const rawNext = (await searchParams).next;
+  const next = safeNextPath(Array.isArray(rawNext) ? rawNext[0] : rawNext);
+
   const viewer = await getViewer();
   if (viewer.source !== "session") redirect("/sign-in");
 
@@ -45,13 +55,13 @@ export default async function PasskeySetupPage() {
     .select("credential_id")
     .limit(1);
 
-  if (existing && existing.length > 0) redirect("/");
+  if (existing && existing.length > 0) redirect(next ?? "/");
 
   const t = await getTranslations("auth.passkey");
 
   return (
     <AuthCard title={t("setupTitle")} description={t("setupDescription")}>
-      <PasskeySetupPrompt />
+      <PasskeySetupPrompt next={next} />
     </AuthCard>
   );
 }

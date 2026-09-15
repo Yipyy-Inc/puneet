@@ -38,7 +38,8 @@ import type {
 } from "@/types/facility-staff";
 import { useEffectivePermissions } from "@/hooks/use-facility-rbac";
 import { useEmployeeTodayCounts } from "@/lib/employee-today-counts";
-import { useScopedNotifications } from "@/lib/employee-notification-scope";
+import { useStaffNotifications } from "@/lib/api/staff-notifications";
+import { useNotificationText } from "@/components/notifications/use-notification-text";
 import {
   useOnboarding,
   setOnboardingTaskComplete,
@@ -526,12 +527,12 @@ interface AlertItem {
 }
 
 export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
-  // Alerts are derived from real profile signals plus the viewer's
-  // PERMISSION-SCOPED notification feed (4D): an employee is only alerted about
-  // things their keys justify — never payment/staff-management traffic, and
-  // never another module's bookings.
+  // Alerts are the person's own unread notifications — already narrowed on the
+  // server to what their permissions, role defaults and preferences allow — plus
+  // real profile signals.
   const { t } = useStaffText("employeeDashboard");
-  const notifications = useScopedNotifications();
+  const { feed } = useStaffNotifications("active");
+  const notificationText = useNotificationText();
   const alerts: AlertItem[] = [];
   if (!isOnboarded(staff)) {
     alerts.push({
@@ -540,11 +541,12 @@ export function MyAlertsWidget({ staff }: { staff: StaffProfile }) {
       tone: "warning",
     });
   }
-  for (const n of notifications.filter((x) => !x.read).slice(0, 4)) {
+  for (const n of feed.items.filter((x) => !x.read).slice(0, 4)) {
     alerts.push({
       id: n.id,
-      text: n.title,
-      tone: n.type === "incident" || n.type === "warning" ? "warning" : "info",
+      text: notificationText.title(n),
+      tone: n.urgent ? "warning" : "info",
+      ...(n.link ? { href: n.link } : {}),
     });
   }
 

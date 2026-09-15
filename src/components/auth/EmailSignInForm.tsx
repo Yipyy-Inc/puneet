@@ -78,6 +78,9 @@ function asCallbackErrorKey(value: string | null): CallbackErrorKey | null {
 export function EmailSignInForm() {
   const t = useTranslations("auth");
   const searchParams = useSearchParams();
+  // Where the portal gate was sending them. Passed through as given; the
+  // server action decides whether it is safe to go there.
+  const next = searchParams.get("next");
   const callbackErrorKey = asCallbackErrorKey(searchParams.get("error"));
   const callbackError = callbackErrorKey
     ? t(`callbackErrors.${callbackErrorKey}`)
@@ -98,7 +101,7 @@ export function EmailSignInForm() {
     e.preventDefault();
     setMessage(null);
     startTransition(async () => {
-      const result = await signInWithPassword(email, password);
+      const result = await signInWithPassword(email, password, next);
       // A successful sign-in redirects on the server and never returns.
       if (result?.needsVerification) {
         setNotice(t("notices.codeSent", { email: email.trim() }));
@@ -113,7 +116,7 @@ export function EmailSignInForm() {
     e.preventDefault();
     setMessage(null);
     startTransition(async () => {
-      const result = await verifyEmailCode(code);
+      const result = await verifyEmailCode(code, next);
       if (result?.error) setMessage(result.error);
     });
   }

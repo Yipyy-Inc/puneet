@@ -77,6 +77,9 @@ applyWorkosTestKeys();
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Returns the teardown: the test facility's staff notices from this run are
+  // removed once it ends. See the file for why it is one sweep.
+  globalSetup: "./tests/e2e/_notification-sweep.ts",
   // The dev server is a single shared process; serialise to avoid compile races.
   fullyParallel: false,
   workers: 1,

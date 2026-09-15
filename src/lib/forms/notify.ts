@@ -1,15 +1,12 @@
 import {
   buildCustomerChangesRequested,
   buildCustomerFormConfirmation,
-  buildStaffFormEmail,
 } from "@/lib/forms/emails";
 import { staffNoticeWanted } from "@/lib/forms/notice-rules";
 import { sendEmail } from "@/lib/messaging/send";
 import { isSuppressed } from "@/lib/messaging/suppression";
-import {
-  facilityCustomerLinkOrigin,
-  facilityStaffLinkOrigin,
-} from "@/lib/public-origin";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
+import { facilityCustomerLinkOrigin } from "@/lib/public-origin";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import type {
   FormNotifications,
@@ -72,6 +69,10 @@ export async function formSettingsFor(
 
 export async function notifyFormSubmitted(input: {
   facilityId: string;
+  /** The submission, so a retried request notifies nobody twice. */
+  submissionId: string;
+  /** Whoever filed it; staff filing on a customer's behalf are not told. */
+  actorProfileId: string | null;
   formName: string;
   clientId: string | null;
   flags: string[];
@@ -114,47 +115,25 @@ export async function notifyFormSubmitted(input: {
       hasFiles: input.hasFiles,
     })
   ) {
+    // The facility's switches still decide WHETHER staff hear (a flagged
+    // answer, an attachment, every submission). WHO hears is the notification
+    // fan-out now: everyone who follows forms and may see clients, in the bell,
+    // and by email for those who switched email on — not every owner and admin
+    // by email regardless.
     sends.push(
-      (async () => {
-        const listRecipients = admin.rpc.bind(admin) as unknown as (
-          fn: "facility_staff_recipients",
-          args: { p_facility_id: string },
-        ) => PromiseLike<{
-          data: { email: string }[] | null;
-          error: { message: string } | null;
-        }>;
-        const { data, error } = await listRecipients(
-          "facility_staff_recipients",
-          { p_facility_id: input.facilityId },
-        );
-        if (error) {
-          console.warn("[forms] could not list who to notify:", error.message);
-          return;
-        }
-        const recipients = data ?? [];
-        if (recipients.length === 0) return;
-        const origin = facilityStaffLinkOrigin(facility?.slug, input.request);
-        const email = buildStaffFormEmail({
-          facilityName,
-          formName: input.formName,
-          clientName: client?.name ?? null,
-          flags: input.flags,
-          hasFiles: input.hasFiles,
-          inboxUrl: `${origin}/facility/dashboard/forms/submissions`,
-          origin,
-        });
-        const results = await Promise.allSettled(
-          recipients.map((r) => sendEmail({ to: r.email, ...email })),
-        );
-        const notSent = results.filter(
-          (result) => result.status === "rejected" || !result.value.sent,
-        ).length;
-        if (notSent > 0) {
-          console.warn(
-            `[forms] staff notice: ${notSent} of ${recipients.length} not sent`,
-          );
-        }
-      })(),
+      notifyStaff({
+        facilityId: input.facilityId,
+        kind: "form_submitted",
+        params: {
+          form: input.formName,
+          client: client?.name ?? undefined,
+        },
+        link: "/facility/dashboard/forms/submissions",
+        sourceId: input.submissionId,
+        dedupeKey: `form_submitted:${input.submissionId}`,
+        actorProfileId: input.actorProfileId,
+        request: input.request,
+      }),
     );
   }
 

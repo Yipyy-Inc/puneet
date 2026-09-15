@@ -94,7 +94,7 @@ export function FacilityHeaderActions({
         </Popover>
       )}
 
-      <FacilityNotificationsDropdown facilityId={facilityId} />
+      <FacilityNotificationsDropdown />
       <UserProfileSheet showNotifications={false} viewer={viewer} />
     </div>
   );

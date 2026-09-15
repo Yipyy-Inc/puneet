@@ -51,7 +51,6 @@ import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { facilityConfig } from "@/data/facility-config";
-import { notifyFacilityStaffVaccinationUploaded } from "@/data/facility-notifications";
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
@@ -305,14 +304,9 @@ export default function CustomerPetDetailPage({
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     if (newVaccinations.length === 0) return;
-    notifyFacilityStaffVaccinationUploaded({
-      facilityId: facilityId,
-      clientId: customerId ?? 0,
-      // french-ok: a name field on a staff notification, filled by a person's name
-      clientName: customer ? customer.name : "Customer",
-      petName: pet.name,
-      vaccineCount: newVaccinations.length,
-    });
+    // No staff notice from here: this upload saves nothing yet, and a notice
+    // about a record that does not exist would send staff looking for it. A
+    // record filed for review through /api/vaccinations notifies them.
     router.refresh();
   };
 

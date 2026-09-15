@@ -201,7 +201,6 @@ const BASELINE = new Set<string>([
   "src/components/system-admin/DataManagement.tsx",
   "src/components/system-admin/data-management/backup-schedule-card.tsx",
   "src/components/system-health/notification-recipients-card.tsx",
-  "src/lib/express-checkin-reminder.tsx",
 
   // ── BACK ON 2026-09-10, BECAUSE IT NEVER SHOULD HAVE LEFT ───────────────
   //

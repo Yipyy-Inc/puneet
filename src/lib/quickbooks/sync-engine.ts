@@ -2,7 +2,6 @@
 
 import { useSyncExternalStore } from "react";
 
-import { addFacilityNotification } from "@/data/facility-notifications";
 import {
   resyncToQuickBooks,
   syncPaymentToQuickBooks,
@@ -347,14 +346,13 @@ function backoffFor(attemptCount: number): number {
   return BACKOFF_MINUTES[index];
 }
 
+// This wrote to the browser-only notification feed, which is gone. The sync
+// engine is itself a browser simulation, so there is no server event to turn
+// into a staff notification; the failure stays visible on the sync screen.
 function notifyTerminalFailure(job: SyncJob) {
-  addFacilityNotification({
-    type: "warning",
-    category: "quickbooks",
-    title: "QuickBooks sync failed",
-    message: `${job.description} couldn't be sent to QuickBooks after ${MAX_ATTEMPTS} attempts. The payment itself was taken successfully.`,
-    link: "/facility/dashboard/settings/integrations/quickbooks",
-  });
+  console.warn(
+    `[quickbooks] ${job.description} was not sent after ${MAX_ATTEMPTS} attempts`,
+  );
 }
 
 export interface AttemptOptions {

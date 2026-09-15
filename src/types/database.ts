@@ -10496,6 +10496,114 @@ export type Database = {
           },
         ];
       };
+      staff_notification_preferences: {
+        Row: {
+          email: Json;
+          facility_id: string;
+          in_app: Json;
+          membership_id: string;
+          profile_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          email?: Json;
+          facility_id: string;
+          in_app?: Json;
+          membership_id: string;
+          profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          email?: Json;
+          facility_id?: string;
+          in_app?: Json;
+          membership_id?: string;
+          profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_notification_preferences_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_notification_preferences_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: true;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_notifications: {
+        Row: {
+          archived_at: string | null;
+          category: string;
+          created_at: string;
+          dedupe_key: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          link: string | null;
+          membership_id: string;
+          params: Json;
+          read_at: string | null;
+          recipient_profile_id: string;
+          source_id: string | null;
+          urgent: boolean;
+        };
+        Insert: {
+          archived_at?: string | null;
+          category: string;
+          created_at?: string;
+          dedupe_key: string;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          link?: string | null;
+          membership_id: string;
+          params?: Json;
+          read_at?: string | null;
+          recipient_profile_id: string;
+          source_id?: string | null;
+          urgent?: boolean;
+        };
+        Update: {
+          archived_at?: string | null;
+          category?: string;
+          created_at?: string;
+          dedupe_key?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          link?: string | null;
+          membership_id?: string;
+          params?: Json;
+          read_at?: string | null;
+          recipient_profile_id?: string;
+          source_id?: string | null;
+          urgent?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_notifications_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_notifications_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       store_credit_entries: {
         Row: {
           amount: number;
@@ -13203,7 +13311,52 @@ export type Database = {
         Args: { p_new_id: string; p_old_id: string };
         Returns: undefined;
       };
+      mark_all_my_notifications_read: {
+        Args: { p_facility_id: string };
+        Returns: number;
+      };
       my_client_at: { Args: { p_facility_slug: string }; Returns: string };
+      my_notification_preferences: {
+        Args: { p_facility_id: string };
+        Returns: {
+          email: Json;
+          in_app: Json;
+          membership_id: string;
+          role: string;
+        }[];
+      };
+      notify_staff: {
+        Args: {
+          p_actor_profile_id?: string;
+          p_category: string;
+          p_dedupe_key: string;
+          p_facility_id: string;
+          p_kind: string;
+          p_link: string;
+          p_mandatory: boolean;
+          p_only_memberships?: string[];
+          p_params: Json;
+          p_permission: string;
+          p_role_defaults: Json;
+          p_source_id: string;
+          p_urgent: boolean;
+        };
+        Returns: {
+          created: boolean;
+          email: string;
+          full_name: string;
+          membership_id: string;
+          send_email: boolean;
+        }[];
+      };
+      save_my_notification_preferences: {
+        Args: { p_email: Json; p_facility_id: string; p_in_app: Json };
+        Returns: undefined;
+      };
+      set_my_notification_state: {
+        Args: { p_archived?: boolean; p_id: string; p_read?: boolean };
+        Returns: boolean;
+      };
       my_permissions: {
         Args: never;
         Returns: {

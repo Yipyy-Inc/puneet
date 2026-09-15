@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import {
   allocateDeposit,
   expandBookingParts,
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
   // facility the booking is at.
   const { data: client } = await supabase
     .from("clients")
-    .select("id")
+    .select("id, name")
     .eq("ref", input.clientId)
     .maybeSingle();
 
@@ -490,6 +491,35 @@ export async function POST(request: NextRequest) {
         }
       });
     }
+  }
+
+  // ── STAFF HEAR ABOUT A CUSTOMER'S BOOKING ───────────────────────────────
+  //
+  // Only when a customer made it: staff need no notice of a booking they just
+  // entered themselves. A request waiting for approval and an online booking
+  // that went straight through are different notices, because only the first
+  // asks somebody to act. One notice for the whole request, not one per day.
+  if (!isStaff) {
+    const first = created[0];
+    const status = (items[0].booking as { status?: string }).status;
+    const clientName = (client as { name?: string | null }).name ?? undefined;
+    after(() =>
+      notifyStaff({
+        facilityId: facility.facilityId,
+        kind:
+          status === "request_submitted" ? "booking_request" : "booking_online",
+        params: {
+          client: clientName,
+          service: input.service,
+          date: planned[0]?.startDate?.slice(0, 10),
+        },
+        link: `/facility/dashboard/bookings/${first.booking_ref}`,
+        sourceId: first.booking_id,
+        dedupeKey: `booking_created:${first.booking_id}`,
+        actorProfileId: user.id,
+        request,
+      }),
+    );
   }
 
   // The FIRST booking, as this route has always answered — every caller reads
