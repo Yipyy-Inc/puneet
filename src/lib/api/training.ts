@@ -303,14 +303,14 @@ export const trainingQueries = {
       })) ?? [],
     staleTime: Infinity,
   }),
-  /** Drop-in bookings — single-session attendance for series with
-   *  `allowDropIns: true`. Pure client-state today; the customer drop-in
-   *  dialog writes through this so the facility-side counters and the
-   *  session view student list see the booking instantly. */
+  /** Drop-in bookings — a dog booked into one session of a series it is not
+   *  enrolled in, from the facility's real session bookings (see
+   *  `buildTrainingBook`). This returned `[]` forever, so a saved drop-in
+   *  never reached the calendar filter or the session's attendance grid. */
   dropInBookings: () => ({
     queryKey: ["training", "drop-in-bookings"] as const,
-    queryFn: async (): Promise<TrainingDropInBooking[]> => [],
-    staleTime: Infinity,
+    queryFn: async (): Promise<TrainingDropInBooking[]> =>
+      (await fetchTrainingBook()).dropInBookings ?? [],
   }),
   /** Facility-wide Training module settings. Pure client-state today —
    *  Settings → Training writes to this cache; consumers (customer Homework

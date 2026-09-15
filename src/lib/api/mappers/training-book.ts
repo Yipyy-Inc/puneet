@@ -19,6 +19,10 @@ import type {
   SeriesPaymentStatus,
   TrainingEnrollment,
 } from "@/lib/training-enrollment";
+import type {
+  DropInStatus,
+  TrainingDropInBooking,
+} from "@/lib/training-drop-ins";
 
 // ============================================================================
 // The training book, in the shapes the training screens already draw.
@@ -97,6 +101,27 @@ export interface BookEnrollmentRow {
   } | null;
 }
 
+/**
+ * A booking tied to one series session, as the route reads it. Every session
+ * booking comes through here; `buildTrainingBook` decides which are drop-ins.
+ */
+export interface BookSessionBookingRow {
+  ref: number;
+  training_series_session_id: string | null;
+  status: string | null;
+  total_cost: number | string | null;
+  created_at: string;
+  updated_at: string | null;
+  checkedIn: boolean;
+  clients: {
+    ref: number;
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  pets: { ref: number; name: string; breed: string | null }[];
+}
+
 export interface TrainingBook {
   classes: TrainingClass[];
   sessions: TrainingSession[];
@@ -105,6 +130,23 @@ export interface TrainingBook {
   seriesEnrollments: TrainingEnrollment[];
   /** Courses named by a series that the catalogue does not carry. */
   extraCourseTypes: TrainingCourseType[];
+  /**
+   * Dogs booked into one session of a series they are not enrolled in.
+   *
+   * `trainingQueries.dropInBookings` returned `[]` forever, so a drop-in the
+   * booking form had really saved (a booking with `training_series_session_id`)
+   * never reached the calendar's drop-in filter or the session's attendance
+   * grid. A session booking is a drop-in when its dog has no enrolled or
+   * completed enrollment in that series and is not an offered make-up guest.
+   */
+  dropInBookings: TrainingDropInBooking[];
+}
+
+function dropInStatusOf(row: BookSessionBookingRow): DropInStatus {
+  if (row.status === "cancelled") return "cancelled";
+  if (row.status === "no_show") return "no-show";
+  if (row.checkedIn) return "checked-in";
+  return "booked";
 }
 
 const normalize = (name: string) => name.trim().toLowerCase();
@@ -168,6 +210,8 @@ export function buildTrainingBook(input: {
   bookingRefs?: Map<string, Map<number, number>>;
   /** Offered make-up seats: a dog of another series booked into a session. */
   makeupGuests?: { hostSessionId: string; seriesId: string; petRef: number }[];
+  /** Every booking tied to one of these sessions; drop-ins are picked out. */
+  sessionBookings?: BookSessionBookingRow[];
   timeZone: string;
   /** Today on the facility's clock — decides "upcoming" versus "active". */
   today?: string;
@@ -376,6 +420,57 @@ export function buildTrainingBook(input: {
     };
   });
 
+  // ── Drop-ins: a dog in one session of a series it is not enrolled in ──────
+  const makeupGuestKeys = new Set(
+    (input.makeupGuests ?? []).map((g) => `${g.hostSessionId}:${g.petRef}`),
+  );
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
+  const dropInBookings: TrainingDropInBooking[] = [];
+  for (const booking of input.sessionBookings ?? []) {
+    const session = booking.training_series_session_id
+      ? sessionById.get(booking.training_series_session_id)
+      : undefined;
+    const parent = session ? seriesById.get(session.series_id) : undefined;
+    if (!session || !parent) continue;
+    const start = wallClockParts(session.start_at, timeZone);
+    const price = Number(booking.total_cost ?? 0);
+    for (const pet of booking.pets) {
+      if (enrollmentBySeriesPet.has(`${session.series_id}:${pet.ref}`))
+        continue;
+      if (makeupGuestKeys.has(`${session.id}:${pet.ref}`)) continue;
+      dropInBookings.push({
+        id: `${booking.ref}-${pet.ref}`,
+        seriesId: session.series_id,
+        sessionId: session.id,
+        sessionDate: start.date,
+        sessionNumber: session.session_number,
+        sessionStartTime: start.time,
+        petId: pet.ref,
+        petName: pet.name,
+        ...(pet.breed ? { petBreed: pet.breed } : {}),
+        ownerId: booking.clients?.ref ?? 0,
+        ownerName: booking.clients?.name ?? "",
+        ...(booking.clients?.phone
+          ? { ownerPhone: booking.clients.phone }
+          : {}),
+        ...(booking.clients?.email
+          ? { ownerEmail: booking.clients.email }
+          : {}),
+        price,
+        invoiceLine: {
+          id: `booking-${booking.ref}`,
+          description: parent.name,
+          category: "training-drop-in",
+          amount: price,
+          dateISO: start.date,
+        },
+        status: dropInStatusOf(booking),
+        createdAt: booking.created_at,
+        updatedAt: booking.updated_at ?? booking.created_at,
+      });
+    }
+  }
+
   const seriesEnrollments: TrainingEnrollment[] = [];
   for (const e of enrollments) {
     const parent = seriesById.get(e.series_id);
@@ -416,5 +511,6 @@ export function buildTrainingBook(input: {
     series: seriesOut,
     seriesEnrollments,
     extraCourseTypes: [...extraCourseTypes.values()],
+    dropInBookings,
   };
 }

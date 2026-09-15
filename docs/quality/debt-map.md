@@ -14663,6 +14663,22 @@ refundable balance is derived from the payments ledger.
 of which are browser-side fakes (see the payment audit entries). They go when
 those do.
 
+**Fixed 2026-09-15: a training drop-in reaches the calendar and the session.**
+`trainingQueries.dropInBookings` returned `[]` forever, so a drop-in the booking
+form had really saved — a booking with `training_series_session_id` — never
+reached the calendar's drop-in filter or the session view's attendance grid.
+`/api/training/book` already read every session booking; it now carries the
+status, price, owner and pet, and `buildTrainingBook` returns
+`dropInBookings`: a session booking whose dog has no enrolled or completed
+enrollment in that series and is not an offered make-up guest, dated on the
+facility's clock (`tests/unit/training-book-drop-ins.test.ts`).
+
+**Still debt.** The customer training page's drop-in dialog still writes a
+`fanOutDropInUpsert` into the query cache from fixture clients rather than
+creating the booking, so a customer's own drop-in is not saved; staff drop-ins
+through the booking form are. A dog whose enrollment was cancelled keeps its
+session bookings, and those now read as drop-ins with the booking's status.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
