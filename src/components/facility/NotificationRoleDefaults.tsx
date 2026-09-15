@@ -1,10 +1,10 @@
 "use client";
 
-import { useSettingsText } from "@/lib/settings/use-settings-text";
-
 import { useState } from "react";
-import { Users2, RotateCcw } from "lucide-react";
+import { RotateCcw, Users2 } from "lucide-react";
+import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,133 +20,148 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import {
-  NOTIFICATION_CATEGORY_KEYS,
-  NOTIFICATION_ROLE_DEFAULTS,
-  type NotificationCategoryKey,
-  type NotificationRoleKey,
-} from "@/data/notification-role-defaults";
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import {
-  useRoleDefaultOverrides,
-  useEffectiveRoleCategories,
-  setRoleDefaultCategory,
-  resetRoleDefault,
-} from "@/lib/notification-role-defaults-store";
+  NOTIFICATION_CATEGORIES,
+  SHIPPED_ROLE_DEFAULTS,
+  STAFF_ROLES,
+  type NotificationCategory,
+  type NotificationRoleDefaults as RoleDefaults,
+  type StaffRole,
+} from "@/lib/notifications/catalog";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
-const ROLE_KEYS = Object.keys(
-  NOTIFICATION_ROLE_DEFAULTS,
-) as NotificationRoleKey[];
+// ============================================================================
+// Which notification categories each staff role follows until a person chooses
+// for themselves.
+//
+// It was a localStorage map keyed on six roles the database does not have
+// ("front desk", "kennel tech"…), read by nothing that sent a notification. It
+// is the `notification_role_defaults` settings domain now, keyed on the
+// thirteen real roles, and the notification fan-out reads it. Incidents are
+// mandatory: the switch is shown on and cannot be turned off.
+// ============================================================================
 
-/**
- * The fixture's `label` and `description` are English, and this screen renders
- * them straight — so a French admin read every role and every category in
- * English while the section reported converted. The gate cannot see it: the
- * strings live in `src/data`, which no extractor reads.
- *
- * The fixture keeps the ENABLED CATEGORIES, which is the part that is data.
- * The words come from the catalogue, keyed off the fixture's own key so the
- * two cannot drift apart silently — a new role fails typecheck here.
- */
-const ROLE_TEXT: Record<NotificationRoleKey, { label: string; help: string }> =
-  {
-    owner: { label: "roleOwner", help: "roleOwnerHelp" },
-    manager: { label: "roleManager", help: "roleManagerHelp" },
-    front_desk: { label: "roleFrontDesk", help: "roleFrontDeskHelp" },
-    groomer: { label: "roleGroomer", help: "roleGroomerHelp" },
-    trainer: { label: "roleTrainer", help: "roleTrainerHelp" },
-    kennel_tech: { label: "roleKennelTech", help: "roleKennelTechHelp" },
-    driver: { label: "roleDriver", help: "roleDriverHelp" },
-  };
-
-const CATEGORY_TEXT: Record<NotificationCategoryKey, string> = {
-  customers: "catCustomers",
-  boarding: "catBoarding",
-  daycare: "catDaycare",
-  grooming: "catGrooming",
-  training: "catTraining",
-  tasks: "catTasks",
-  schedule: "catSchedule",
-  forms: "catForms",
-  yipyygo: "catYipyygo",
-};
-
-/**
- * Facility-level notification role defaults (spec Table 51). An admin picks a
- * role and chooses which categories new accounts of that role start with. These
- * seed each staff member's personal preferences (Part 5), which then override
- * the defaults per-user.
- */
 export function NotificationRoleDefaults() {
   const t = useSettingsText().section("notifications");
-  const [role, setRole] = useState<NotificationRoleKey>("front_desk");
-  const overrides = useRoleDefaultOverrides();
-  const enabled = useEffectiveRoleCategories(role);
-  const enabledSet = new Set(enabled);
-  const isOverridden = role in overrides;
+  const { t: tc } = useStaffText("notificationCentre");
+  const { t: tr } = useStaffText("notificationRoles");
+  const { settings, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const stored = settings.notification_role_defaults.value;
+
+  const [role, setRole] = useState<StaffRole>("reception");
+  const [draft, setDraft] = useState<RoleDefaults | null>(null);
+  const form = draft ?? stored;
+  const enabled = new Set(form.roles[role] ?? []);
+
+  const setCategory = (category: NotificationCategory, on: boolean) => {
+    const next = new Set(form.roles[role] ?? []);
+    if (on) next.add(category);
+    else next.delete(category);
+    setDraft({
+      roles: {
+        ...form.roles,
+        [role]: NOTIFICATION_CATEGORIES.filter((c) => next.has(c)),
+      },
+    });
+  };
+
+  const resetRole = () =>
+    setDraft({
+      roles: { ...form.roles, [role]: [...SHIPPED_ROLE_DEFAULTS[role]] },
+    });
+
+  const handleSave = async () => {
+    try {
+      await saveSetting.mutateAsync({
+        domain: "notification_role_defaults",
+        value: form,
+      });
+      setDraft(null);
+      toast.success(t("roleDefaultsSaved"));
+    } catch (cause) {
+      toast.error(t("roleDefaultsFailed"), {
+        description: cause instanceof Error ? cause.message : undefined,
+      });
+    }
+  };
+
+  if (isPending) return <Skeleton className="h-96 w-full rounded-3xl" />;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users2 className="size-5" />
-          {t("roleDefaults")}
+          {t("roleDefaultsTitle")}
         </CardTitle>
-        <CardDescription>{t("roleDefaultsHelp")}</CardDescription>
+        <CardDescription>{t("roleDefaultsIntro")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
-            value={role}
-            onValueChange={(v) => setRole(v as NotificationRoleKey)}
-          >
-            <SelectTrigger className="min-w-[240px]" aria-label={t("role")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_KEYS.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {t(ROLE_TEXT[k].label)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {isOverridden && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-[13.5px]"
-              onClick={() => resetRoleDefault(role)}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="notification-role">{t("roleLabel")}</Label>
+            <Select
+              value={role}
+              onValueChange={(value) => setRole(value as StaffRole)}
             >
-              <RotateCcw className="size-3.5" />
-              {t("resetToDefault")}
-            </Button>
-          )}
+              <SelectTrigger id="notification-role" className="min-w-60">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STAFF_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {tr(r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="ghost" onClick={resetRole}>
+            <RotateCcw className="size-4" />
+            {t("resetRole")}
+          </Button>
         </div>
 
-        <p className="text-muted-foreground text-xs">
-          {t(ROLE_TEXT[role].help)}
+        <div className="divide-y rounded-2xl border">
+          {NOTIFICATION_CATEGORIES.map((category) => {
+            const mandatory = category === "incidents";
+            const id = `role-${role}-${category}`;
+            return (
+              <div
+                key={category}
+                className="flex min-h-12 items-center justify-between gap-4 px-4 py-2 max-lg:min-h-14"
+              >
+                <Label htmlFor={id} className="text-sm font-normal">
+                  {tc(`cat_${category}`)}
+                </Label>
+                <Switch
+                  id={id}
+                  checked={mandatory || enabled.has(category)}
+                  disabled={mandatory}
+                  onCheckedChange={(on) => setCategory(category, on)}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-ink-tertiary text-[13.5px]">
+          {t("incidentsAlwaysOn")}
         </p>
 
-        <div className="divide-y overflow-hidden rounded-lg border">
-          {NOTIFICATION_CATEGORY_KEYS.map((cat) => (
-            <div
-              key={cat}
-              // §5m / §5n: rows are 48 at balanced density and roomy wins below
-              // 1024px. Measured at 599px these were 41px, which cannot
-              // contain the 48px tap target §6 rule 7 requires of the switch
-              // inside them — the overlay had to bleed into the row above.
-              className="flex min-h-12 items-center justify-between px-4 py-2.5 max-lg:min-h-14"
-            >
-              <span className="text-sm">{t(CATEGORY_TEXT[cat])}</span>
-              <Switch
-                checked={enabledSet.has(cat)}
-                onCheckedChange={(v) => setRoleDefaultCategory(role, cat, v)}
-                aria-label={t(CATEGORY_TEXT[cat])}
-              />
-            </div>
-          ))}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saveSetting.isPending}>
+            {saveSetting.isPending
+              ? t("savingRoleDefaults")
+              : t("saveRoleDefaults")}
+          </Button>
         </div>
       </CardContent>
     </Card>

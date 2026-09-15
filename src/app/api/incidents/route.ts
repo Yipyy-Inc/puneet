@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   activeFacilityIdForStaff,
@@ -194,5 +195,22 @@ export async function POST(request: NextRequest) {
   const [incident] = await hydrateIncidents(supabase, [
     data as unknown as IncidentRow,
   ]);
+
+  // Mandatory: everyone who may see incidents hears, whatever they switched
+  // off. Not the person who reported it.
+  const incidentId = (data as unknown as { id: string }).id;
+  after(() =>
+    notifyStaff({
+      facilityId: facility.facilityId,
+      kind: "incident_reported",
+      params: { title: write.title, severity: write.severity },
+      link: "/facility/dashboard/incidents",
+      sourceId: incidentId,
+      dedupeKey: `incident_reported:${incidentId}`,
+      actorProfileId: user.id,
+      request,
+    }),
+  );
+
   return NextResponse.json(incident, { status: 201 });
 }

@@ -10,6 +10,7 @@ import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { PasskeySignInButton } from "@/components/auth/PasskeySignInButton";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
+import { nextQuery } from "@/lib/auth/safe-next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const slug = (await headers()).get("x-facility-slug");
@@ -54,7 +55,14 @@ export async function generateMetadata(): Promise<Metadata> {
 // A Server Component; only the button carries a client boundary.
 // ============================================================================
 
-export default async function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  // Creating an account from here keeps where they were headed.
+  const rawNext = (await searchParams).next;
+  const next = nextQuery(Array.isArray(rawNext) ? rawNext[0] : rawNext);
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
   const t = await getTranslations("auth");
@@ -78,7 +86,7 @@ export default async function SignInPage() {
         <p className="text-muted-foreground text-center text-sm">
           {t("signIn.noAccount")}{" "}
           <Link
-            href="/sign-up"
+            href={`/sign-up${next}`}
             className="text-primary font-medium hover:underline"
           >
             {t("signIn.signUpLink")}

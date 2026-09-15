@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { FacilityAuthBrand } from "@/components/auth/FacilityAuthBrand";
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
+import { nextQuery, safeNextPath } from "@/lib/auth/safe-next";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 import { JoinFacilityForm } from "./join-facility-form";
@@ -50,9 +51,20 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: branding ? `Join ${branding.name}` : "Join — Yipyy" };
 }
 
-export default async function JoinPage() {
+export default async function JoinPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  // The page that sent them here (the customer layout, or a link), kept
+  // through sign-in and joining. Only a path on this site survives.
+  const rawNext = (await searchParams).next;
+  const next = safeNextPath(Array.isArray(rawNext) ? rawNext[0] : rawNext);
+
   const user = await getCurrentUser().catch(() => null);
-  if (!user) redirect("/sign-in?next=%2Fjoin");
+  if (!user) {
+    redirect(`/sign-in?next=${encodeURIComponent(`/join${nextQuery(next)}`)}`);
+  }
 
   const slug = (await headers()).get("x-facility-slug");
   const branding = slug ? await getBrandingBySlug(slug) : null;
@@ -91,7 +103,7 @@ export default async function JoinPage() {
       .eq("id", user.id)
       .maybeSingle(),
   ]);
-  if (existing) redirect("/customer/dashboard");
+  if (existing) redirect(next ?? "/customer/dashboard");
 
   return (
     <AuthCard
@@ -107,6 +119,7 @@ export default async function JoinPage() {
         facilityName={branding.name}
         open={branding.allowCustomerSignup}
         suggestedName={profile?.full_name ?? ""}
+        next={next}
       />
     </AuthCard>
   );

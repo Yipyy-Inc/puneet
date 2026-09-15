@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 // ============================================================================
 // The one act that makes somebody a customer of a facility.
@@ -34,10 +35,13 @@ export function JoinFacilityForm({
   facilityName,
   open,
   suggestedName,
+  next,
 }: {
   facilityName: string;
   open: boolean;
   suggestedName: string;
+  /** Where they were headed before joining; the dashboard when nowhere. */
+  next?: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(suggestedName);
@@ -73,7 +77,7 @@ export function JoinFacilityForm({
       // this person is a client here, and the answer just changed. Pushing
       // without it can land on a cached negative and bounce straight back.
       router.refresh();
-      router.push("/customer/dashboard");
+      router.push(safeNextPath(next) ?? "/customer/dashboard");
     } catch {
       setMessage("Could not reach Yipyy just now. Please try again.");
       setPending(false);

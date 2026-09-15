@@ -1,5 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
+import { getViewer } from "@/lib/auth/viewer";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
   BOOKING_SELECT,
@@ -154,6 +156,43 @@ export async function PATCH(
     .select(BOOKING_SELECT)
     .eq("ref", bookingRef)
     .single();
+
+  // A customer cancelling their own booking is news to the desk; staff
+  // cancelling one is not. The facility comes from the booking row, never from
+  // getFacilityContext(), which answers the demo facility for a customer.
+  if (changes.status === "cancelled" && currentStatus !== "cancelled") {
+    const viewer = await getViewer().catch(() => null);
+    if (viewer && viewer.memberships.length === 0) {
+      const { data: booked } = await supabase
+        .from("bookings")
+        .select("id, facility_id, clients(name)")
+        .eq("ref", bookingRef)
+        .maybeSingle();
+      const row = booked as unknown as {
+        id: string;
+        facility_id: string;
+        clients: { name: string | null } | null;
+      } | null;
+      if (row) {
+        after(() =>
+          notifyStaff({
+            facilityId: row.facility_id,
+            kind: "booking_cancelled",
+            params: {
+              client: row.clients?.name ?? undefined,
+              service: existing.service,
+              date: existing.startDate?.slice(0, 10),
+            },
+            link: `/facility/dashboard/bookings/${bookingRef}`,
+            sourceId: row.id,
+            dedupeKey: `booking_cancelled:${row.id}`,
+            actorProfileId: user.id,
+            request,
+          }),
+        );
+      }
+    }
+  }
 
   return NextResponse.json(updated ? rowToBooking(updated) : null);
 }

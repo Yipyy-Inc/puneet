@@ -12,6 +12,7 @@ import {
   hasPlatformAuthenticator,
   usePasskeySupport,
 } from "@/lib/auth/passkey-client";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 // ============================================================================
 // "Add a passkey so you can skip your password next time."
@@ -38,8 +39,14 @@ import {
 // cookie the server has to re-read.
 // ============================================================================
 
-export function PasskeySetupPrompt() {
+export function PasskeySetupPrompt({
+  next,
+}: {
+  /** Where the person was headed before signing up, from the page. */
+  next?: string | null;
+}) {
   const t = useTranslations("auth.passkey");
+  const destination = safeNextPath(next) ?? "/";
   const supported = usePasskeySupport();
   // Enrolment targets this device's own sensor, so with none there is nothing
   // to offer and the page shows itself out rather than presenting a button
@@ -56,11 +63,11 @@ export function PasskeySetupPrompt() {
     // Navigating is a genuine side effect, so it belongs in an effect; the
     // capability READ does not, which is why it is not a setState above.
     if (supported === false || hasSensor === false)
-      window.location.replace("/");
-  }, [supported, hasSensor]);
+      window.location.replace(destination);
+  }, [supported, hasSensor, destination]);
 
   function done() {
-    window.location.assign("/");
+    window.location.assign(destination);
   }
 
   async function add() {

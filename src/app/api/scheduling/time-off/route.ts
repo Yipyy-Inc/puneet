@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { getFacilityContext } from "@/lib/api/facility-context";
+import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { ownStaffId } from "@/lib/api/own-staff";
 import {
   toTimeOffRequest,
@@ -241,9 +242,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Whoever can approve leave hears about it — not the person who asked.
+  const filed = data as unknown as TimeOffNoticeRow;
+  after(() =>
+    notifyStaff({
+      facilityId: context.facilityId,
+      kind: "time_off_requested",
+      params: {
+        staff: personName(filed.staff),
+        from: filed.starts_on,
+        to: filed.ends_on,
+      },
+      link: TIME_OFF_LINK,
+      sourceId: filed.id,
+      dedupeKey: `time_off_requested:${filed.id}`,
+      actorProfileId: viewer.userId,
+      request,
+    }),
+  );
+
   return NextResponse.json(toTimeOffRequest(data as unknown as TimeOffRow), {
     status: 201,
   });
+}
+
+const TIME_OFF_LINK = "/facility/dashboard/services/scheduling/time-off";
+
+interface TimeOffNoticeRow {
+  id: string;
+  staff_id: string;
+  starts_on: string;
+  ends_on: string;
+  staff: { first_name: string | null; last_name: string | null } | null;
+}
+
+function personName(
+  person: { first_name: string | null; last_name: string | null } | null,
+): string | undefined {
+  const name = [person?.first_name, person?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return name || undefined;
 }
 
 interface DecisionInput {
@@ -327,6 +367,37 @@ export async function PATCH(request: NextRequest) {
   const decided = toTimeOffRequest(
     (data as unknown as TimeOffRow[])[0],
   ) as TimeOffDecision;
+
+  // The person who asked hears the decision. Their membership is read now,
+  // with the caller's session; only the notice waits for the response.
+  if (input.status === "approved" || input.status === "denied") {
+    const row = (data as unknown as TimeOffNoticeRow[])[0];
+    const [{ data: staff }, context] = await Promise.all([
+      supabase
+        .from("staff")
+        .select("membership_id")
+        .eq("id", row.staff_id)
+        .maybeSingle(),
+      getFacilityContext(),
+    ]);
+    const membershipId = (staff as { membership_id: string | null } | null)
+      ?.membership_id;
+    const decision = input.status;
+    if (membershipId && context) {
+      after(() =>
+        notifyStaff({
+          facilityId: context.facilityId,
+          kind: "time_off_decided",
+          params: { decision, from: row.starts_on, to: row.ends_on },
+          sourceId: row.id,
+          dedupeKey: `time_off_decided:${row.id}:${decision}`,
+          actorProfileId: viewer.userId,
+          onlyMembershipIds: [membershipId],
+          request,
+        }),
+      );
+    }
+  }
 
   // Only on approval, and only as information. Somebody granted leave they are
   // still rostered to work is the failure this whole feature exists to catch,

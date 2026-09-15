@@ -1,346 +1,146 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationRow } from "@/components/notifications/notification-row";
+import { useNotificationText } from "@/components/notifications/use-notification-text";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  markFacilityNotificationRead,
-  markAllFacilityNotificationsRead,
-  useFacilityNotifications,
-} from "@/data/facility-notifications";
-import { isUrgentNotification } from "@/types/facility";
-import type { FacilityNotification } from "@/types/facility";
-import { NotificationTypeIcon } from "@/lib/notification-icons";
-import {
-  useScheduleNotifications,
-  swapIdFromNotification,
-  ShiftSwapNotificationActions,
-} from "@/lib/schedule-notifications";
-import {
-  useTaskNotifications,
-  taskIdFromNotification,
-  TaskCompleteAction,
-} from "@/lib/task-notifications-feed";
-import { useAnnouncementNotifications } from "@/lib/announcement-notifications";
-import { useBookingRequestNotifications } from "@/lib/booking-request-notifications";
-import {
-  isExpressCheckinMissing,
-  ExpressCheckinReminderAction,
-} from "@/lib/express-checkin-reminder";
-import { NotificationRowMenu } from "@/components/facility/NotificationRowMenu";
-import { cn } from "@/lib/utils";
-import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import { formatRelative } from "@/lib/i18n/format";
+  useStaffNotificationMutations,
+  useStaffNotifications,
+} from "@/lib/api/staff-notifications";
+import { formatNumber } from "@/lib/i18n/format";
 
-interface FacilityNotificationsDropdownProps {
-  facilityId?: number;
-  /** Where "View all notifications →" points. Defaults to the facility center;
-   *  the employee portal passes its own in-portal route. */
-  viewAllHref?: string;
-}
+// ============================================================================
+// The bell.
+//
+// It read a seeded localStorage array that every member of staff shared, plus
+// four feeds derived in the browser, filtered to a hard-coded facility 11. It
+// reads the signed-in person's own notifications now (/api/notifications):
+// only what their role and their own preferences say they follow, and only
+// what their permissions let them see. "Mark all as read" is saved.
+// ============================================================================
 
-// An unread urgent notification needs action: it floats to the top under the
-// "Action Required" sub-header, gets a red left border, and clears only when
-// the user acts on it (no quick "Mark read"). Read urgent items are normal.
-function isActionRequired(n: FacilityNotification): boolean {
-  return !n.read && isUrgentNotification(n);
-}
-
-const CATEGORY_LABEL: Record<string, string> = {
-  customers: "Customers",
-  boarding: "Boarding",
-  daycare: "Daycare",
-  grooming: "Grooming",
-  training: "Training",
-  forms: "Forms",
-  yipyygo: "Express Check-in",
-  schedule: "Schedule",
-  tasks: "Tasks",
-};
-
-function categoryLabel(c: string): string {
-  return CATEGORY_LABEL[c] ?? c.charAt(0).toUpperCase() + c.slice(1);
-}
-
-// Was a local reimplementation of `Intl.RelativeTimeFormat` — "Just now",
-// "5m ago", "3h ago", then a bare `toLocaleDateString()` with no locale at
-// all. `formatRelative` does all four correctly, including the 24-hour expiry
-// §5q asks for and the fallback to a real date after it.
-
-function NotificationRow({
-  n,
-  urgent,
-  canToggleRead,
-  onMarkRead,
-  onClose,
-}: {
-  n: FacilityNotification;
-  urgent: boolean;
-  canToggleRead: boolean;
-  onMarkRead: (id: string) => void;
-  onClose: () => void;
-}) {
-  // Shift-swap rows resolve in place with Approve/Decline (spec Table 33) and
-  // task rows with "Mark Complete" (spec Table 34) instead of a "Mark read" link.
-  const locale = useShellLocale();
-  const relative = (iso: string) => formatRelative(iso, locale);
-  const swapId = swapIdFromNotification(n);
-  const taskId = taskIdFromNotification(n);
-  const content = (
-    <div
-      className={cn(
-        "hover:bg-muted/50 flex gap-2.5 px-4 py-2.5 transition-colors",
-        urgent ? "bg-red-50/50 dark:bg-red-950/20" : !n.read && "bg-primary/5",
-      )}
-    >
-      <div className="mt-0.5 shrink-0">
-        <NotificationTypeIcon n={n} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{n.title}</p>
-        <p className="text-muted-foreground text-xs">{n.message}</p>
-        <p className="text-muted-foreground mt-1 text-[10px]">
-          {relative(n.timestamp)}
-        </p>
-        {swapId && (
-          <div className="mt-2">
-            <ShiftSwapNotificationActions swapId={swapId} />
-          </div>
-        )}
-        {taskId && (
-          <div className="mt-2">
-            <TaskCompleteAction taskId={taskId} />
-          </div>
-        )}
-        {/* Table 39 — one-click "Send Reminder" for a missing express check-in. */}
-        {isExpressCheckinMissing(n) && (
-          <div className="mt-2">
-            <ExpressCheckinReminderAction notification={n} />
-          </div>
-        )}
-      </div>
-      {/* Table 37 — read/unread demoted into a ··· overflow menu. Urgent rows
-          still clear only on action (no menu); swap + task rows use their inline
-          actions above instead. */}
-      {!urgent && !swapId && !taskId && (
-        <NotificationRowMenu
-          notification={n}
-          canToggleRead={canToggleRead}
-          onNavigate={() => {
-            if (!n.read) onMarkRead(n.id);
-            onClose();
-          }}
-        />
-      )}
-    </div>
-  );
-
-  if (n.link) {
-    return (
-      <Link
-        href={n.link}
-        className="block"
-        onClick={() => {
-          if (!n.read) onMarkRead(n.id);
-          onClose();
-        }}
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
-}
+const SHOWN = 8;
 
 export function FacilityNotificationsDropdown({
-  facilityId = 11,
   viewAllHref = "/facility/notifications",
-}: FacilityNotificationsDropdownProps) {
-  const tn = useShellText("notifications");
-  const base = useFacilityNotifications();
-  const schedule = useScheduleNotifications();
-  const tasks = useTaskNotifications();
-  const announcements = useAnnouncementNotifications(facilityId);
-  const bookingRequests = useBookingRequestNotifications(facilityId);
+}: {
+  /** Where "View all notifications" points; the employee portal has its own. */
+  viewAllHref?: string;
+}) {
+  const text = useNotificationText();
+  const { feed, error } = useStaffNotifications("active");
+  const { markAllRead } = useStaffNotificationMutations();
   const [open, setOpen] = useState(false);
 
-  const notifications = useMemo(() => {
-    const scoped = [
-      ...base,
-      ...schedule,
-      ...tasks,
-      ...announcements,
-      ...bookingRequests,
-    ].filter((n) => n.facilityId == null || n.facilityId === facilityId);
-    return [...scoped].sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    );
-  }, [base, schedule, tasks, announcements, bookingRequests, facilityId]);
-  // Total unread across ALL categories + urgency for the badge color language
-  // (spec Table 22 & 23 / Design Principle 3): red if any unread is urgent,
-  // amber if unread but none urgent, no badge at all when count is 0.
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const hasUrgentUnread = notifications.some(
-    (n) => !n.read && isUrgentNotification(n),
-  );
-
-  const markRead = (id: string) => markFacilityNotificationRead(id);
-  const markAllRead = () => markAllFacilityNotificationsRead(facilityId);
-
-  // Only store-backed notifications can persist a read/unread flip (Table 37).
-  const storeIds = useMemo(() => new Set(base.map((n) => n.id)), [base]);
-
-  // 8 most recent, but action-required (unread urgent) always first (Table 27).
-  const visible = useMemo(() => {
-    return [...notifications]
-      .sort((a, b) => {
-        const rank =
-          (isActionRequired(b) ? 1 : 0) - (isActionRequired(a) ? 1 : 0);
-        if (rank !== 0) return rank;
-        return (
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-      })
-      .slice(0, 8);
-  }, [notifications]);
-  const urgentRows = visible.filter(isActionRequired);
-  const normalRows = visible.filter((n) => !isActionRequired(n));
-
-  // Footer summary: top unread categories by count (Table 30).
-  const categorySummary = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const n of notifications) {
-      if (n.read || !n.category) continue;
-      counts.set(n.category, (counts.get(n.category) ?? 0) + 1);
-    }
-    const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-    if (entries.length === 0) return "";
-    const top = entries
-      .slice(0, 3)
-      .map(([c, count]) => `${categoryLabel(c)} ${count}`);
-    const more = entries.length - 3;
-    return top.join(" · ") + (more > 0 ? ` · +${more} more` : "");
-  }, [notifications]);
+  // Urgent and unread first — the incident that needs somebody now — then newest.
+  const rows = [...feed.items]
+    .sort((a, b) => {
+      const rank = Number(!b.read && b.urgent) - Number(!a.read && a.urgent);
+      return rank !== 0 ? rank : b.createdAt.localeCompare(a.createdAt);
+    })
+    .slice(0, SHOWN);
+  const urgentUnread = feed.items.some((n) => n.urgent && !n.read);
 
   return (
-    <TooltipProvider delayDuration={150}>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="group relative size-10 rounded-xl"
-                aria-label={tn("title")}
-              >
-                <Bell className="text-muted-foreground group-hover:text-foreground size-5 transition-colors" />
-                {unreadCount > 0 && (
-                  <span
-                    className={`absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium text-white ${
-                      hasUrgentUnread ? "bg-red-500" : "bg-amber-500"
-                    }`}
-                  >
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="center">
-            {tn("title")}
-          </TooltipContent>
-        </Tooltip>
-        <DropdownMenuContent
-          align="end"
-          sideOffset={8}
-          className="w-[420px] max-w-[calc(100vw-1rem)] overflow-hidden p-0"
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full"
+          aria-label={
+            feed.unread > 0
+              ? `${text.t("title")}, ${text.t("unread").replace("{count}", formatNumber(feed.unread, text.locale))}`
+              : text.t("title")
+          }
         >
-          {/* Red accent bar when there are unread urgent notifications (Table 26) */}
-          {hasUrgentUnread && <div className="h-0.5 w-full bg-red-500" />}
-
-          {/* Zone 1 — header */}
-          <div className="flex items-center justify-between border-b px-4 py-2.5">
-            <span className="text-sm font-semibold">{tn("title")}</span>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground h-auto p-0 text-xs"
-                onClick={markAllRead}
-              >
-                {tn("markAllRead")}
-              </Button>
-            )}
-          </div>
-
-          {/* Zone 2 — list (scrolls) */}
-          <div className="max-h-[440px] overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="text-muted-foreground py-10 text-center text-sm">
-                {tn("none")}
-              </div>
-            ) : (
-              <div className="py-1">
-                {urgentRows.length > 0 && (
-                  <p className="px-4 pt-1.5 pb-1 text-[10px] font-semibold tracking-wider text-red-600 uppercase dark:text-red-400">
-                    {tn("actionRequired")}
-                  </p>
-                )}
-                {urgentRows.map((n) => (
-                  <NotificationRow
-                    key={n.id}
-                    n={n}
-                    urgent
-                    canToggleRead={storeIds.has(n.id)}
-                    onMarkRead={markRead}
-                    onClose={() => setOpen(false)}
-                  />
-                ))}
-                {normalRows.map((n) => (
-                  <NotificationRow
-                    key={n.id}
-                    n={n}
-                    urgent={false}
-                    canToggleRead={storeIds.has(n.id)}
-                    onMarkRead={markRead}
-                    onClose={() => setOpen(false)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Zone 3 — footer (always visible) */}
-          <div className="flex items-center justify-between gap-3 border-t px-4 py-2">
-            <span className="text-muted-foreground min-w-0 truncate text-[11px]">
-              {categorySummary}
-            </span>
-            <Link
-              href={viewAllHref}
-              className="text-primary shrink-0 text-xs font-medium hover:underline"
-              onClick={() => setOpen(false)}
+          <Bell className="size-5" />
+          {feed.unread > 0 && (
+            <span
+              className={
+                urgentUnread
+                  ? "bg-destructive absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full px-1 text-[11px] font-bold text-white tabular-nums"
+                  : "bg-primary absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full px-1 text-[11px] font-bold text-white tabular-nums"
+              }
+              aria-hidden
             >
-              {tn("viewAll")} →
-            </Link>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </TooltipProvider>
+              {feed.unread > 9 ? "9+" : feed.unread}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+      >
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+          <span className="text-heading text-[17px] font-bold">
+            {text.t("title")}
+          </span>
+          {feed.unread > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={markAllRead.isPending}
+              onClick={() =>
+                markAllRead.mutate(undefined, {
+                  onError: () => toast.error(text.t("markAllFailed")),
+                })
+              }
+            >
+              {text.t("markAllRead")}
+            </Button>
+          )}
+        </div>
+
+        <div className="max-h-[440px] divide-y overflow-y-auto">
+          {error ? (
+            <p className="text-destructive px-4 py-8 text-center text-sm">
+              {text.t("loadFailed")}
+            </p>
+          ) : rows.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-foreground text-sm font-semibold">
+                {text.t("none")}
+              </p>
+              <p className="text-ink-tertiary mt-1 text-[13.5px]">
+                {text.t("noneHelp")}
+              </p>
+            </div>
+          ) : (
+            rows.map((n) => (
+              <NotificationRow
+                key={n.id}
+                notification={n}
+                compact
+                onNavigate={() => setOpen(false)}
+              />
+            ))
+          )}
+        </div>
+
+        <div className="border-t px-4 py-3">
+          <Link
+            href={viewAllHref}
+            className="text-primary text-sm font-semibold hover:underline"
+            onClick={() => setOpen(false)}
+          >
+            {text.t("viewAll")}
+          </Link>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

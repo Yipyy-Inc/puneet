@@ -55,7 +55,12 @@ export function OAuthButton({
   function start() {
     setMessage(null);
     startTransition(async () => {
-      const result = await startOAuth(provider);
+      // Where the portal gate was sending them; startOAuth decides whether it
+      // is safe and carries it across the provider round trip.
+      const result = await startOAuth(
+        provider,
+        new URLSearchParams(window.location.search).get("next"),
+      );
       // Only reached when the hand-off never happened; a success redirects.
       if (result?.error) setMessage(result.error);
     });

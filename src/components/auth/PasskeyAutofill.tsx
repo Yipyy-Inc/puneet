@@ -6,6 +6,7 @@ import {
   signInWithPasskey,
   supportsPasskeyAutofill,
 } from "@/lib/auth/passkey-client";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 // ============================================================================
 // The passkey offered inside the email field. Renders nothing, ever.
@@ -51,7 +52,12 @@ export function PasskeyAutofill() {
       if (!cancelled && "ok" in result) {
         // Full navigation, so the server sees the session cookie the verify
         // response just set. See PasskeySignInButton for the same reasoning.
-        window.location.assign("/");
+        // And to where the portal gate was sending them, if that is safe.
+        window.location.assign(
+          safeNextPath(
+            new URLSearchParams(window.location.search).get("next"),
+          ) ?? "/",
+        );
       }
     })();
 

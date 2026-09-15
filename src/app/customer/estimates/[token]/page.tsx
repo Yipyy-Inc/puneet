@@ -4,15 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Calendar,
-  Clock,
-  Moon,
-  UserPlus,
-  CalendarCheck,
-  LogIn,
-  Check,
-} from "lucide-react";
+import { Calendar, Clock, Moon, CalendarCheck, Check } from "lucide-react";
 import { useEstimate, useEstimateMutations } from "@/lib/api/estimates";
 import { useCustomerFacility } from "@/lib/api/customer-facility";
 import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload";
@@ -73,11 +65,6 @@ export default function CustomerEstimateViewPage() {
       </div>
     );
   }
-
-  // Portal login that returns the customer to this estimate after signing in.
-  const loginHref = `/customer/auth/login?from=estimate&redirect=${encodeURIComponent(
-    `/customer/estimates/${token}`,
-  )}`;
 
   const isExpired =
     estimate.expiresAt && new Date(estimate.expiresAt) < new Date();
@@ -303,36 +290,12 @@ export default function CustomerEstimateViewPage() {
                   </button>
                 )}
 
-                {estimate.accountCreated ? (
-                  <>
-                    {/* New auto-created account → set a password via the magic link */}
-                    <Button asChild variant="outline" className="w-full gap-2">
-                      <Link href={`/customer/estimates/${token}/setup`}>
-                        <UserPlus className="size-4" />
-                        {t("setUpAccountAndView")}
-                      </Link>
-                    </Button>
-                    <p className="text-muted-foreground text-xs">
-                      {t("alreadyHaveAccount")}{" "}
-                      <Link
-                        href={loginHref}
-                        className="text-primary font-medium hover:underline"
-                      >
-                        <LogIn className="mr-1 inline-block size-3" />
-                        {t("logIn")}
-                      </Link>
-                    </p>
-                  </>
-                ) : (
-                  /* Existing account (spec 5.4) → log in to the portal; a
-                     logged-in session lands straight on the estimate. */
-                  <Button asChild variant="outline" className="w-full gap-2">
-                    <Link href={loginHref}>
-                      <LogIn className="size-4" />
-                      {t("viewInYourAccount")}
-                    </Link>
-                  </Button>
-                )}
+                {/* No "set up an account" or "log in" here: this page is
+                    behind the customer portal's sign-in, so whoever reads it
+                    is already signed in. A link from an email reaches it
+                    through /sign-in?next=, and /join?next= for someone new to
+                    the facility. The setup page those buttons opened was a
+                    fixture, and the login route did not exist. */}
               </div>
             </div>
           )}

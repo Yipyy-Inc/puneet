@@ -2,65 +2,14 @@ import { escapeHtml, renderEmail, renderPlainText } from "@/lib/email/shell";
 import type { BuiltEmail } from "@/lib/yipyy-go/emails";
 
 // ============================================================================
-// The two emails a submitted facility form sends.
+// The emails a submitted facility form sends to the CUSTOMER: a confirmation
+// that the facility has their answers, and a request for changes, in the
+// customer's preferred language.
 //
-// ── TO THE FACILITY ───────────────────────────────────────────────────────
-//
-// Its active owners and admins hear that a form came in, when the facility's
-// `form_notifications` asks for it: every submission, or only one with a
-// flagged answer, or only one carrying a file. In English, as every other staff
-// email in the product is.
-//
-// ── TO THE CUSTOMER ───────────────────────────────────────────────────────
-//
-// A confirmation that the facility has their answers, in the customer's
-// preferred language.
+// The facility's own notice is a staff notification now
+// (lib/notifications/notify-staff.ts), sent to whoever follows forms, by email
+// only to those who switched email on.
 // ============================================================================
-
-export function buildStaffFormEmail(input: {
-  facilityName: string;
-  formName: string;
-  clientName: string | null;
-  flags: string[];
-  hasFiles: boolean;
-  inboxUrl: string;
-  origin: string;
-}): BuiltEmail {
-  const who = input.clientName ?? "A customer";
-  const flagged = input.flags.length > 0;
-  const subject = flagged
-    ? `Flagged answers: ${input.formName} from ${who}`
-    : `${input.formName} submitted by ${who}`;
-  const heading = flagged
-    ? "A form answer needs attention"
-    : "A form was submitted";
-  const paragraphs = [
-    escapeHtml(`${who} submitted ${input.formName} at ${input.facilityName}.`),
-  ];
-  if (flagged) {
-    paragraphs.push(escapeHtml(`Flagged: ${input.flags.join("; ")}.`));
-  }
-  if (input.hasFiles) {
-    paragraphs.push(escapeHtml("It includes an uploaded file."));
-  }
-  const cta = { label: "Open the submissions inbox", url: input.inboxUrl };
-  const footer = escapeHtml(
-    `You get this because you are an owner or admin at ${input.facilityName}.`,
-  );
-
-  return {
-    subject,
-    html: renderEmail({
-      preheader: subject,
-      heading,
-      paragraphs,
-      cta,
-      footer,
-      origin: input.origin,
-    }),
-    text: renderPlainText({ heading, paragraphs, cta, footer }),
-  };
-}
 
 const CONFIRMATION = {
   en: {

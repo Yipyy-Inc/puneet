@@ -9,6 +9,7 @@ import {
   signInWithPasskey,
   usePasskeySupport,
 } from "@/lib/auth/passkey-client";
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 // ============================================================================
 // The explicit way in, for when the invisible one is not available.
@@ -45,7 +46,11 @@ export function PasskeySignInButton() {
     const result = await signInWithPasskey();
     // Cancelling is not failing — they dismissed the sheet. Say nothing.
     if ("ok" in result) {
-      window.location.assign("/");
+      // Where the portal gate was sending them, if it is a path on this site.
+      window.location.assign(
+        safeNextPath(new URLSearchParams(window.location.search).get("next")) ??
+          "/",
+      );
       return;
     }
     if ("error" in result) setMessage(result.error);

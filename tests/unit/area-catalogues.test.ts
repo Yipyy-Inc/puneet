@@ -157,6 +157,12 @@ const SAME_IN_BOTH = new Set([
   "customerPages.cameras.audio", // Audio / Audio
   "customerPages.giftCards.statusActive", // Active / Active (la carte)
   "staff.trainingProfile.historyStatusAbsent", // Absent / Absent
+  // The notification centre: two cognates, and three lines of values only.
+  "staff.notificationCentre.title", // Notifications / Notifications
+  "staff.notificationCentre.cat_incidents", // Incidents / Incidents
+  "staff.notificationCentre.kind_booking_detail", // {service} · {date}
+  "staff.notificationCentre.kind_vaccination_detail", // {vaccine}
+  "staff.notificationCentre.kind_date_detail", // {date}
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

@@ -1,5 +1,4 @@
 import type { FacilityNotificationType } from "@/types/facility";
-import { addFacilityNotification } from "@/data/facility-notifications";
 import {
   getStaffHrConfig,
   recordOnboardingEmail,
@@ -18,10 +17,6 @@ function staffNameFor(staffId: string): string {
   const s = facilityStaff.find((x) => x.id === staffId);
   return s ? `${s.firstName} ${s.lastName}`.trim() : "A staff member";
 }
-
-// Single-facility mock — the demo facility. Every staff notification is scoped
-// to it (matches the seed feed's facilityId).
-const DEMO_FACILITY_ID = 11;
 
 export function getStaffTrigger(key: StaffNotifTriggerKey) {
   return getStaffHrConfig().notificationTriggers[key];
@@ -55,9 +50,12 @@ interface EmailParams {
 
 /**
  * Fire a staff-lifecycle trigger (Table 5), respecting the per-facility config:
- * skips entirely when the trigger is disabled, and fires only the channels
- * (in-app facility feed / mock email) the facility has enabled. Central gate so
- * every trigger site is toggleable from one settings surface.
+ * skips entirely when the trigger is disabled.
+ *
+ * The in-app half wrote to a browser-only feed every viewer shared, which is
+ * gone (staff notifications are rows now, lib/notifications). Onboarding and
+ * offboarding are not among the kinds that create one yet, so `inApp` is
+ * accepted and not delivered — recorded in the debt map rather than pretended.
  */
 export function notifyStaffLifecycle(
   key: StaffNotifTriggerKey,
@@ -65,13 +63,6 @@ export function notifyStaffLifecycle(
 ): void {
   const cfg = getStaffTrigger(key);
   if (!cfg?.enabled) return;
-  if (cfg.inApp && params.inApp) {
-    addFacilityNotification({
-      ...params.inApp,
-      category: "staff",
-      facilityId: DEMO_FACILITY_ID,
-    });
-  }
   if (cfg.email && params.email) {
     recordOnboardingEmail(params.email);
   }

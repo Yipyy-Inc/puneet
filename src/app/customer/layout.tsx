@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getBrandingBySlug } from "@/lib/api/facility-branding";
 import { canAccessCustomerPortal } from "@/lib/auth/viewer";
+import { nextQuery } from "@/lib/auth/safe-next";
 import { guardPortal } from "@/lib/auth/portal-gate";
 import { createServerClient } from "@/lib/supabase/server";
 import { CustomerShell } from "./_shell";
@@ -54,8 +55,12 @@ export default async function CustomerLayout({
     const { data: clientId } = await supabase.rpc("my_client_at", {
       p_facility_slug: slug,
     });
-    // /join is outside /customer, so this cannot loop.
-    if (!clientId) redirect("/join");
+    // /join is outside /customer, so this cannot loop. It carries the page
+    // they asked for, so joining returns them to it — the estimate a link in
+    // their email opened, rather than the dashboard.
+    if (!clientId) {
+      redirect(`/join${nextQuery((await headers()).get("x-pathname"))}`);
+    }
   }
 
   // ── THE PORTAL NAMES THE BUSINESS WHOSE DOOR THEY CAME THROUGH ──────────

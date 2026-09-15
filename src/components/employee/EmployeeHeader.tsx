@@ -244,10 +244,7 @@ export function EmployeeHeader({ staffId }: { staffId: string }) {
         )}
 
         {/* Notification bell — always on; the personal center lives in-portal. */}
-        <FacilityNotificationsDropdown
-          facilityId={11}
-          viewAllHref="/employee/notifications"
-        />
+        <FacilityNotificationsDropdown viewAllHref="/employee/notifications" />
 
         {/* Avatar / profile menu — role-colored initials, Profile Settings,
             portal + employee switching, and Logout. */}

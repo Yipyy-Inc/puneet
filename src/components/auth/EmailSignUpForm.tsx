@@ -2,7 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+
+import { safeNextPath } from "@/lib/auth/safe-next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +54,9 @@ export function EmailSignUpForm({
   facilityName?: string;
 }) {
   const t = useTranslations("auth");
+  // Where the portal gate was sending them, carried from /sign-in. The server
+  // actions decide whether it is safe; the link below only passes it on.
+  const next = safeNextPath(useSearchParams().get("next"));
   const [step, setStep] = useState<Step>("details");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -70,6 +76,7 @@ export function EmailSignUpForm({
         lastName,
         email,
         password,
+        next,
       );
       if (result?.alreadyExists) {
         // Not an error box. This is good news badly timed -- their password
@@ -91,7 +98,7 @@ export function EmailSignUpForm({
     e.preventDefault();
     setMessage(null);
     startTransition(async () => {
-      const result = await verifyEmailCode(code);
+      const result = await verifyEmailCode(code, next);
       if (result?.error) setMessage(result.error);
     });
   }
@@ -200,7 +207,9 @@ export function EmailSignUpForm({
               : t("notices.alreadyHaveAccountPlain")}
           </p>
           <Link
-            href={`/sign-in?email=${encodeURIComponent(email.trim())}`}
+            href={`/sign-in?email=${encodeURIComponent(email.trim())}${
+              next ? `&next=${encodeURIComponent(next)}` : ""
+            }`}
             className="text-primary inline-block font-medium hover:underline"
           >
             {t("actions.goToSignIn")}

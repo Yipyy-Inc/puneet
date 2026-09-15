@@ -1,6 +1,7 @@
 import { getWorkOS, saveSession } from "@workos-inc/authkit-nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { redirectUrl } from "@/lib/request-origin";
 
 // ============================================================================
@@ -30,6 +31,8 @@ import { redirectUrl } from "@/lib/request-origin";
 
 const clientId = process.env.WORKOS_CLIENT_ID!;
 const OAUTH_STATE_COOKIE = "workos-oauth-state";
+/** Set by startOAuth: where the person was headed before signing in. */
+const OAUTH_NEXT_COOKIE = "workos-oauth-next";
 
 /** Back to the branded sign-in page with something the form can explain. */
 function refuse(request: NextRequest, reason: string) {
@@ -40,6 +43,7 @@ function refuse(request: NextRequest, reason: string) {
   url.searchParams.set("error", reason);
   const response = NextResponse.redirect(url);
   response.cookies.delete(OAUTH_STATE_COOKIE);
+  response.cookies.delete(OAUTH_NEXT_COOKIE);
   return response;
 }
 
@@ -75,13 +79,17 @@ export async function GET(request: NextRequest) {
     // the parent domain.
     await saveSession(auth, request);
 
-    // `/` routes on to the portal chosen by landingPathFor(viewer) from the
-    // token, rather than being guessed here. One sign-in serves every account.
-    response = NextResponse.redirect(redirectUrl(request, "/"));
+    // Where they were headed, if startOAuth kept a safe one — checked again,
+    // because a cookie is only as trustworthy as whoever last wrote it.
+    // Otherwise `/`, which routes on to the portal chosen by
+    // landingPathFor(viewer) from the token. One sign-in serves every account.
+    const next = safeNextPath(request.cookies.get(OAUTH_NEXT_COOKIE)?.value);
+    response = NextResponse.redirect(redirectUrl(request, next ?? "/"));
   } catch {
     return refuse(request, "exchange");
   }
 
   response.cookies.delete(OAUTH_STATE_COOKIE);
+  response.cookies.delete(OAUTH_NEXT_COOKIE);
   return response;
 }

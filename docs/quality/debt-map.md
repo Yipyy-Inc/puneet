@@ -14684,13 +14684,98 @@ day, while making browser-only settings real):
 
   Unit: `estimate-message.test.ts`; e2e: `estimates.spec.ts` (a sent guest
   estimate is filed under one client with that address; sent by link, so
-  nothing is emailed). **Still debt:** the emailed link opens a page behind
-  sign-in, and sign-in always lands on `/` — it ignores `?next=` for every
-  method — so a customer reaches the estimate through their dashboard rather
-  than straight from the link; carrying `next` through sign-in, sign-up and
-  `/join` is an auth change of its own. `src/lib/estimates/email-sends.ts`
-  and `account-provisioning.ts` are still in-memory mocks, and the
-  `/customer/estimates/[token]/setup` page still reads the fixture.
+  nothing is emailed).
+
+  **Fixed the same day, what that left.**
+  - **Signing in returns to the page that asked.** Every portal gate put
+    `?next=<path>` on /sign-in and nothing read it. `lib/auth/safe-next.ts`
+    admits only a same-site path (no `//`, backslash, scheme or control
+    character, and never an auth screen), and it is checked on the server by
+    every action that redirects: password sign-in and sign-up, the code step
+    (which hands it to /passkey-setup), Google/Apple (a `workos-oauth-next`
+    cookie beside the state, re-checked in /auth/callback), and passkey
+    sign-in. /sign-in and /sign-up keep it on the links between them; the
+    customer layout sends a non-client to `/join?next=` and joining returns
+    them there. Unit: `safe-next.test.ts`; e2e: `sign-in-next.spec.ts`.
+  - **The estimate mocks are deleted:** `/customer/estimates/[token]/setup`
+    (a fixture password page), `lib/estimates/account-provisioning.ts`,
+    `email-sends.ts`, the unused `accept-estimate.ts` and
+    `decline-estimate.ts`, and `components/estimates/emails/email-helpers.ts`.
+    The estimate page's "set up an account" and "log in" buttons went with them
+    — the page is behind sign-in, and the login route they opened did not
+    exist.
+
+**Fixed 2026-09-15: the staff notification centre, role defaults and personal
+preferences are real.** The bell and `/facility/notifications` read a seeded
+localStorage array every member of staff shared, merged with four feeds derived
+in the browser and filtered to a hard-coded facility 11; role defaults and
+personal preferences were localStorage maps keyed on six roles the database
+does not have, read by nothing that notified anybody.
+
+- **A notification is a row addressed to one person** (`staff_notifications`,
+  20260915194612). `notify_staff` (service role only) fans an event out:
+  every active member who holds the kind's permission, whose own switch — or,
+  unset, their role's default — is on; mandatory kinds (incidents) reach the
+  bell regardless. The actor is never told. Email goes to those who switched
+  it on, only for a newly created row, so a retried request never mails twice.
+- **One catalogue** (`lib/notifications/catalog.ts`) names the thirteen kinds,
+  their category, permission and urgency, and the shipped defaults for the
+  thirteen real roles; the fan-out is told these by its one caller
+  (`lib/notifications/notify-staff.ts`).
+- **Role defaults** are the `notification_role_defaults` settings domain;
+  **personal preferences** are one row per membership
+  (`staff_notification_preferences`, written through
+  `save_my_notification_preferences`, which cleans the switches).
+- **Events wired:** a customer's booking request or online booking and a
+  customer's cancellation; a form and a pre-arrival form submitted (these
+  replace the owner/admin emails — the facility's form switches still decide
+  whether staff hear); a vaccination record filed for review; shift-swap and
+  time-off requests, and their decisions back to whoever asked; an incident
+  reported; a customer accepting or declining an estimate.
+- **Screens:** the bell and the centre read `/api/notifications` (read, unread,
+  archive, mark all read, category filter), in the viewer's language — rows
+  carry a kind and its values, never a sentence. The role-defaults card and My
+  notifications save through the domain and `/api/notifications/preferences`.
+- **Deleted:** `src/data/facility-notifications.ts`,
+  `src/data/notification-role-defaults.ts`, the role-defaults, preferences and
+  retention stores, the schedule/task/announcement/booking-request derived
+  feeds, `employee-notification-scope.ts`, `notification-icons.tsx`,
+  `express-checkin-reminder.tsx` and `NotificationRowMenu.tsx`.
+
+Unit: `notification-catalog.test.ts`, `staff-notification-email.test.ts`;
+SQL: `staff-notifications.sql` (N1–N10); e2e: `staff-notifications.spec.ts`.
+
+**Still debt.** Staff onboarding and offboarding triggers
+(`lib/staff-notifications.ts`) no longer reach any bell — they wrote the
+deleted fixture feed and are not yet notification kinds; their mock emails are
+unchanged. A customer's vaccination upload on `/customer/pets/[petId]` saves
+nothing, so it notifies nobody. The QuickBooks sync engine's terminal failure
+is only logged (the engine is a browser simulation). No push or SMS channel;
+staff emails are English. The notification list is capped at 200 per view with
+no paging.
+
+The "Notification settings" card that opens Settings → Notifications
+(`_components/notification-settings-card.tsx`) saves its Email / SMS / Push
+switches to the `notification_toggles` domain, and nothing reads that domain:
+its "Incident Alert — notify manager of new incidents" row is not what decides
+who hears of an incident (the catalogue and role defaults are). Retire it or
+wire each row to a real sender — a product decision, not made here.
+
+**Test runs sweep their notices.** A notice is a side effect of other writes,
+and the specs that make those writes remove their records, not the notices: the
+first full run with the fan-out live left 108 rows at the test facility.
+`tests/e2e/_notification-sweep.ts` (Playwright's `globalSetup`, whose return
+value is the teardown) deletes the test facility's notices created since the
+run began. A spec that asserts on notices still cleans its own; the sweep is the
+net under the rest.
+
+**Fixed 2026-09-15: the rebook template editor no longer opens on the shipped
+wording.** Its Email/Text buttons waited for the templates but not for the
+facility's settings. Opened in that gap, the editor could not yet see which of
+the facility's own templates `rebook_config` names, captured the shipped
+`rebook_reminder` in state on mount, and kept it — so saving overwrote the
+facility's words with the shipped ones. The buttons now wait for both. Found by
+`rebook-template-editor.spec.ts` failing once in a full run.
 
 - **Weather warnings:** the dashboard widget fetches a real forecast and reads
   the stored `weather_rules`, but the custom forecast areas and the alert log

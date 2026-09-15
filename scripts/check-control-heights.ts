@@ -318,7 +318,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/facility/grooming/zone-and-tax-settings-panel.tsx", 2],
   ["src/components/facility/ImpersonationBanner.tsx", 1],
   ["src/components/facility/InvoiceTemplateSettings.tsx", 5],
-  ["src/components/facility/NotificationCenter.tsx", 1],
   ["src/components/facility/operations/OperationsCalendarColorPanel.tsx", 1],
   ["src/components/facility/operations/OperationsCalendarContent.tsx", 1],
   ["src/components/facility/operations/OperationsCalendarEventDrawer.tsx", 3],
@@ -395,9 +394,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/user-management/CreateAdminUserModal.tsx", 1],
   ["src/components/yipyygo/form-sections/FeedingSection.tsx", 3],
   ["src/components/yipyygo/form-sections/MedicationSection.tsx", 3],
-  ["src/lib/express-checkin-reminder.tsx", 1],
-  ["src/lib/schedule-notifications.tsx", 2],
-  ["src/lib/task-notifications-feed.tsx", 1],
 ]);
 
 /** The primitives that own their own height. */

@@ -4,8 +4,15 @@ import { getWorkOS, saveSession, withAuth } from "@workos-inc/authkit-nextjs";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { nextQuery, safeNextPath } from "@/lib/auth/safe-next";
+
 // ============================================================================
 // Every credential operation this app performs, in one server module.
+//
+// WHERE A SIGN-IN LANDS. Each action that signs somebody in takes the `next`
+// the portal gate put on /sign-in and sends them there — checked HERE, on the
+// server, by safeNextPath, because a redirect to whatever the browser says is
+// an open redirect. With no safe `next` it is `/`, as it always was.
 //
 // WHY SERVER ACTIONS RATHER THAN CLIENT HOOKS. Clerk shipped browser hooks
 // (`useSignIn`, `useSignUp`) that talked to its Frontend API directly. WorkOS
@@ -30,6 +37,8 @@ const clientId = process.env.WORKOS_CLIENT_ID!;
 /** Ten minutes: long enough for a slow provider round trip, short enough to expire. */
 const OAUTH_STATE_MAX_AGE = 600;
 const OAUTH_STATE_COOKIE = "workos-oauth-state";
+/** Where a social sign-in returns to, carried across the provider round trip. */
+const OAUTH_NEXT_COOKIE = "workos-oauth-next";
 
 /**
  * The origin this request arrived on — NOT a configured constant.
@@ -72,6 +81,7 @@ function readableError(error: unknown, fallback: string): string {
 export async function signInWithPassword(
   email: string,
   password: string,
+  next?: string | null,
 ): Promise<{ error?: string; needsVerification?: boolean }> {
   try {
     const auth = await getWorkOS().userManagement.authenticateWithPassword({
@@ -98,7 +108,7 @@ export async function signInWithPassword(
   }
   // Outside the try: redirect() signals by throwing, and catching it here would
   // turn a successful sign-in into an error message.
-  redirect("/");
+  redirect(safeNextPath(next) ?? "/");
 }
 
 export async function signUpWithPassword(
@@ -106,6 +116,7 @@ export async function signUpWithPassword(
   lastName: string,
   email: string,
   password: string,
+  next?: string | null,
 ): Promise<{
   error?: string;
   needsVerification?: boolean;
@@ -158,11 +169,12 @@ export async function signUpWithPassword(
   // Sign in immediately, which is what triggers the verification email and
   // returns the pending token. One code path for "new account" and "unverified
   // returning account" rather than two that can disagree.
-  return signInWithPassword(email, password);
+  return signInWithPassword(email, password, next);
 }
 
 export async function verifyEmailCode(
   code: string,
+  next?: string | null,
 ): Promise<{ error?: string }> {
   const pendingAuthenticationToken = (await cookies()).get(
     PENDING_TOKEN_COOKIE,
@@ -191,8 +203,8 @@ export async function verifyEmailCode(
   // proved who they are and is holding the device. /passkey-setup makes the
   // offer and sends them on; it skips itself for anyone who already has a
   // passkey or whose browser cannot make one, so the returning-but-unverified
-  // user does not meet it twice.
-  redirect("/passkey-setup");
+  // user does not meet it twice. It passes `next` on when it is done.
+  redirect(`/passkey-setup${nextQuery(next)}`);
 }
 
 const PENDING_TOKEN_COOKIE = "workos-pending-auth";
@@ -259,17 +271,33 @@ export type SupportedOAuthProvider = "GoogleOAuth" | "AppleOAuth";
  */
 export async function startOAuth(
   provider: SupportedOAuthProvider,
+  next?: string | null,
 ): Promise<{ error?: string }> {
   let url: string;
   try {
     const state = crypto.randomUUID();
-    (await cookies()).set(OAUTH_STATE_COOKIE, state, {
+    const jar = await cookies();
+    jar.set(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: OAUTH_STATE_MAX_AGE,
       path: "/",
     });
+    // The destination survives the provider round trip beside the state, with
+    // the same flags. Checked now and again in the callback.
+    const destination = safeNextPath(next);
+    if (destination) {
+      jar.set(OAUTH_NEXT_COOKIE, destination, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: OAUTH_STATE_MAX_AGE,
+        path: "/",
+      });
+    } else {
+      jar.delete(OAUTH_NEXT_COOKIE);
+    }
 
     url = getWorkOS().userManagement.getAuthorizationUrl({
       clientId,
