@@ -10,6 +10,7 @@ import type {
 import type { SubmissionsPayload } from "@/app/api/forms/submissions/route";
 import type { SubmitFormResult } from "@/app/api/forms/[id]/submit/route";
 import type { PublicFormResponse } from "@/app/api/forms/by-slug/[slug]/route";
+import type { PetFormsPayload } from "@/app/api/customer/pets/[ref]/forms/route";
 
 export type PublicFormPayload =
   | ({ status: "ok" } & PublicFormResponse)
@@ -159,6 +160,19 @@ export const liveFormQueries = {
     queryKey: ["forms-live", "submissions", "mine"] as const,
     queryFn: async () =>
       await get<SubmissionsPayload>("/api/forms/submissions?mine=1"),
+  }),
+
+  /**
+   * One of the customer's pets: the forms the database says it still needs,
+   * the facility's published forms, and its own submissions.
+   */
+  forPet: (petRef: number | undefined) => ({
+    queryKey: ["forms-live", "pet", petRef] as const,
+    enabled: Number.isInteger(petRef),
+    queryFn: async () =>
+      await get<PetFormsPayload>(
+        `/api/customer/pets/${encodeURIComponent(String(petRef))}/forms`,
+      ),
   }),
 };
 

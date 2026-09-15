@@ -12,12 +12,12 @@ import { z } from "zod";
 // all behind a "Saved" toast; the red-flag rules wrote a module-level object.
 // All three were back on reload, identical at every facility.
 //
-// ── WHAT IS STILL NOT READ ────────────────────────────────────────────────
+// ── WHO READS THEM ────────────────────────────────────────────────────────
 //
-// These are now the facility's own values, stored. Nothing yet ENFORCES a
-// requirement at booking or check-in, sends a form notification, or flags an
-// answer on submission — the readers of the old values were fixture code in
-// the browser. Recorded in docs/quality/debt-map.md (2026-09-14).
+// The server, never the browser. Requirements: `private.missing_required_forms`
+// (booking, approval, check-in, the reminder tick). Notifications and red flags:
+// `POST /api/forms/[id]/submit`, the submission review route and
+// `lib/forms/reminder-tick.ts`. The fixture readers were deleted 2026-09-15.
 // ============================================================================
 
 export const FORM_REQUIREMENT_SERVICES = [
