@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { LiveWriteError } from "@/lib/api/live-fetch";
+import { withFormOverride } from "@/lib/forms/override-prompt";
 import type { DaycareCheckIn } from "@/types/daycare";
 import type { PetSize } from "@/types/base";
 
@@ -103,23 +105,30 @@ export function useDaycareCheckIn() {
       rateType?: string;
       playGroup?: string;
       notes?: string;
-    }) => {
-      const response = await fetch("/api/daycare/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      const parsed = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      if (!response.ok) {
-        throw Object.assign(
-          new Error(parsed?.error ?? "Could not check that dog in."),
-          { status: response.status },
-        );
-      }
-      return input.bookingRef;
-    },
+    }) =>
+      // A form the facility requires before check-in: staff are asked why,
+      // and the check-in is sent once more with their reason.
+      withFormOverride(async (formOverrideReason) => {
+        const response = await fetch("/api/daycare/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, formOverrideReason }),
+        });
+        const parsed = (await response.json().catch(() => null)) as Record<
+          string,
+          unknown
+        > | null;
+        if (!response.ok) {
+          throw new LiveWriteError(
+            typeof parsed?.error === "string"
+              ? parsed.error
+              : "Could not check that dog in.",
+            response.status,
+            parsed,
+          );
+        }
+        return input.bookingRef;
+      }),
     onSuccess: invalidate,
   });
 }

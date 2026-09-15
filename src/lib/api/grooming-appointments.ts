@@ -2,6 +2,9 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { LiveWriteError } from "@/lib/api/live-fetch";
+import { withFormOverride } from "@/lib/forms/override-prompt";
+
 import type {
   AlertNote,
   AppointmentHistoryEntry,
@@ -46,22 +49,29 @@ export function useSetGroomingAppointmentStatus() {
       stationId?: string | null;
       /** The groomer's ready estimate, "HH:MM" — applied after the status. */
       estimatedReadyTime?: string;
-    }) => {
-      const response = await fetch("/api/grooming/appointments", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      if (!response.ok) {
-        const parsed = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw Object.assign(
-          new Error(parsed?.error ?? "Could not update that appointment."),
-          { status: response.status },
-        );
-      }
-    },
+    }) =>
+      // Checking a pet in without a form the facility requires: staff are
+      // asked why, and the change is sent once more with their reason.
+      withFormOverride(async (formOverrideReason) => {
+        const response = await fetch("/api/grooming/appointments", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, formOverrideReason }),
+        });
+        if (!response.ok) {
+          const parsed = (await response.json().catch(() => null)) as Record<
+            string,
+            unknown
+          > | null;
+          throw new LiveWriteError(
+            typeof parsed?.error === "string"
+              ? parsed.error
+              : "Could not update that appointment.",
+            response.status,
+            parsed,
+          );
+        }
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["grooming", "appointments"],

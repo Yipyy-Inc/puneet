@@ -11,6 +11,7 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
+import { requireForms } from "@/lib/forms/require-forms";
 import {
   DAYCARE_BOOKING_SELECT,
   rowToDaycareCheckIn,
@@ -116,6 +117,8 @@ interface CheckInInput {
   rateType?: string;
   playGroup?: string;
   notes?: string;
+  /** Going ahead without a form required before check-in: why. */
+  formOverrideReason?: string;
 }
 
 /**
@@ -172,6 +175,15 @@ export async function POST(request: NextRequest) {
   }
 
   const bookingId = (booking as { id: string }).id;
+
+  // The forms the facility requires before check-in.
+  const refused = await requireForms(
+    supabase,
+    bookingId,
+    "before_checkin",
+    body!.formOverrideReason,
+  );
+  if (refused) return refused;
 
   const { data: existing } = await supabase
     .from("daycare_attendance")

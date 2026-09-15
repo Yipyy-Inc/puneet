@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { LiveWriteError } from "@/lib/api/live-fetch";
 import type { BoardingArrival } from "@/lib/api/mappers/boarding-arrival";
+import { withFormOverride } from "@/lib/forms/override-prompt";
 
 // ============================================================================
 // The boarding arrivals board, from Postgres.
@@ -30,10 +32,13 @@ async function readError(response: Response, fallback: string) {
     error?: string;
   } | null;
   // The status rides along, so the desk can name the reason in the reader’s
-  // language rather than show the database’s sentence.
-  return Object.assign(new Error(parsed?.error ?? fallback), {
-    status: response.status,
-  });
+  // language rather than show the database’s sentence — and the body, so a
+  // check-in missing a required form can be retried with a reason.
+  return new LiveWriteError(
+    parsed?.error ?? fallback,
+    response.status,
+    parsed as Record<string, unknown> | null,
+  );
 }
 
 export function useBoardingDay(date?: string) {
@@ -82,17 +87,20 @@ function useBoardingInvalidation() {
 export function useBoardingCheckIn() {
   const invalidate = useBoardingInvalidation();
   return useMutation({
-    mutationFn: async (bookingRef: number) => {
-      const response = await fetch("/api/boarding/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingRef }),
-      });
-      if (!response.ok) {
-        throw await readError(response, "Could not check that guest in.");
-      }
-      return bookingRef;
-    },
+    mutationFn: (bookingRef: number) =>
+      // A form the facility requires before check-in: staff are asked why,
+      // and the arrival is sent once more with their reason.
+      withFormOverride(async (formOverrideReason) => {
+        const response = await fetch("/api/boarding/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingRef, formOverrideReason }),
+        });
+        if (!response.ok) {
+          throw await readError(response, "Could not check that guest in.");
+        }
+        return bookingRef;
+      }),
     onSuccess: invalidate,
   });
 }

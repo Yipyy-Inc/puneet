@@ -15,6 +15,9 @@
 --   G5  a form set to warn never refuses, and records no override
 --   G6  client_missing_forms answers for a client the caller can see, and
 --       nothing for a stranger; anon executes neither new function
+--   G7  a stranger cannot record an approval or check-in override
+--   G8  staff record one at check-in; the before-booking stage is refused
+--       there, because create_booking records it
 -- ============================================================================
 
 begin;
@@ -229,6 +232,58 @@ begin
       and not has_function_privilege('anon', 'public.client_missing_forms(uuid,uuid[],text,text)', 'execute')
       and not has_function_privilege('anon', 'private.record_form_overrides(uuid,text,text)', 'execute'),
     format('customer=%s stranger=%s', v_customer, v_stranger));
+end $$;
+
+-- ── G7 / G8: approval and check-in overrides ─────────────────────────────
+-- A check-in requirement set to block, on the booking G5 made.
+insert into public.facility_settings (facility_id, domain, value)
+values ('00000000-0000-0000-0000-0000009b0020', 'form_requirements', jsonb_build_object(
+  'services', jsonb_build_array(jsonb_build_object(
+    'serviceType', 'daycare', 'serviceLabel', 'Daycare',
+    'requirements', jsonb_build_array(jsonb_build_object(
+      'formId', '00000000-0000-0000-0000-0000009b0060', 'formName', 'Gate Intake',
+      'enabled', true,
+      'gates', jsonb_build_array(jsonb_build_object(
+        'stage', 'before_checkin', 'enforcement', 'block'))))))))
+on conflict (facility_id, domain) do update set value = excluded.value;
+
+do $$
+declare
+  v_booking uuid;
+  v_stranger text; v_owner integer; v_owner_booking_stage text; v_saved int;
+begin
+  select id into v_booking from public.bookings
+   where client_id = '00000000-0000-0000-0000-0000009b0040'
+   order by created_at desc limit 1;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0102');
+  set local role authenticated;
+  begin
+    perform public.record_form_requirement_override(v_booking, 'before_checkin', 'no reason to trust');
+    v_stranger := 'ALLOWED';
+  exception when others then v_stranger := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000009b0100');
+  set local role authenticated;
+  v_owner := public.record_form_requirement_override(v_booking, 'before_checkin', 'Owner vouched at the door');
+  begin
+    perform public.record_form_requirement_override(v_booking, 'before_booking', 'wrong door');
+    v_owner_booking_stage := 'ALLOWED';
+  exception when others then v_owner_booking_stage := sqlstate;
+  end;
+  reset role;
+
+  select count(*) into v_saved from public.form_requirement_overrides
+   where booking_id = v_booking and stage = 'before_checkin'
+     and reason = 'Owner vouched at the door';
+
+  perform pg_temp.t('G7  a stranger cannot record a check-in override',
+    v_stranger = '42501', v_stranger);
+  perform pg_temp.t('G8  staff record one at check-in; the before-booking stage is not theirs to write here',
+    v_owner = 1 and v_saved = 1 and v_owner_booking_stage = '22023',
+    format('owner=%s saved=%s booking_stage=%s', v_owner, v_saved, v_owner_booking_stage));
 end $$;
 
 -- ── Report ────────────────────────────────────────────────────────────────

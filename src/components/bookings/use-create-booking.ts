@@ -7,7 +7,7 @@ import { useLocationContext } from "@/hooks/use-location-context";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import { formatMoney } from "@/lib/i18n/format";
 import type { NewBooking } from "@/types/booking";
-import { askFormOverrideReason } from "@/components/forms/form-override-dialog";
+import { askFormOverrideReason } from "@/lib/forms/override-prompt";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   formRefusalOf,

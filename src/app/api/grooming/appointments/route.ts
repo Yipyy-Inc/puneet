@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
+import { requireForms } from "@/lib/forms/require-forms";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   activeFacilityIdForStaff,
@@ -183,6 +184,8 @@ export async function PATCH(request: NextRequest) {
     stationId?: string | null;
     sessionProgress?: { step: string; done: boolean; at?: string }[];
     estimatedReadyTime?: string;
+    /** Checking in without a form required before check-in: why. */
+    formOverrideReason?: string;
   } | null;
 
   if (!body?.id) {
@@ -305,6 +308,17 @@ export async function PATCH(request: NextRequest) {
         { error: `Unknown status: ${body.status}` },
         { status: 422 },
       );
+    }
+
+    // Checking a pet in: the forms the facility requires before check-in.
+    if (bookingStatus === "checked_in") {
+      const refused = await requireForms(
+        supabase,
+        booking.id,
+        "before_checkin",
+        body.formOverrideReason,
+      );
+      if (refused) return refused;
     }
 
     // Status only. check_in_at, check_out_at and estimated_ready_at are the

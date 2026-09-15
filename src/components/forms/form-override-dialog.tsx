@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,72 +13,33 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { FormRefusal } from "@/lib/forms/requirements";
+import {
+  settleFormOverride,
+  usePendingFormOverride,
+} from "@/lib/forms/override-prompt";
 import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Staff going ahead without a form the facility requires: why.
 //
-// Nine staff screens create bookings through `useCreateBookingFromModal`, and a
-// hook cannot render a dialog. So the question is asked here, once, mounted at
-// the root: the hook calls `askFormOverrideReason` and waits. The answer is the
-// reason, which the booking route passes to `create_booking` and the database
-// saves as the override, or null when staff go back to the booking instead.
+// Mounted once at the root. The booking form, the check-in buttons and the
+// approval of a request ask through `withFormOverride`
+// (lib/forms/override-prompt.ts) and wait for the answer here: the reason,
+// which the server saves as the override, or null when staff go back instead.
 // ============================================================================
-
-interface Pending {
-  refusal: FormRefusal;
-  resolve: (reason: string | null) => void;
-}
-
-let pending: Pending | null = null;
-const listeners = new Set<() => void>();
-
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-/** Ask for a reason. Resolves with it, or null when staff go back instead. */
-export function askFormOverrideReason(
-  refusal: FormRefusal,
-): Promise<string | null> {
-  pending?.resolve(null);
-  return new Promise((resolve) => {
-    pending = { refusal, resolve };
-    emit();
-  });
-}
-
-function settle(reason: string | null) {
-  const current = pending;
-  pending = null;
-  emit();
-  current?.resolve(reason);
-}
 
 export function FormOverrideDialogHost() {
   const t = useShellText("header");
-  const current = useSyncExternalStore(
-    subscribe,
-    () => pending,
-    () => null,
-  );
+  const refusal = usePendingFormOverride();
   const [reason, setReason] = useState("");
   const [tried, setTried] = useState(false);
 
-  if (!current) return null;
+  if (!refusal) return null;
 
   const close = (value: string | null) => {
     setReason("");
     setTried(false);
-    settle(value);
+    settleFormOverride(value);
   };
   const empty = reason.trim() === "";
 
@@ -95,9 +56,9 @@ export function FormOverrideDialogHost() {
           <DialogDescription>{t("formsRequiredBody")}</DialogDescription>
         </DialogHeader>
 
-        {current.refusal.missing.length > 0 ? (
+        {refusal.missing.length > 0 ? (
           <ul className="space-y-1 text-sm">
-            {current.refusal.missing.map((form) => (
+            {refusal.missing.map((form) => (
               <li
                 key={`${form.form_id}:${form.pet_id ?? ""}`}
                 className="font-semibold"
@@ -111,7 +72,7 @@ export function FormOverrideDialogHost() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm">{current.refusal.message}</p>
+          <p className="text-sm">{refusal.message}</p>
         )}
 
         <div className="space-y-2">
