@@ -14411,6 +14411,24 @@ answers on their own client record found from the session. `forms.spec.ts`
 covers both. The page's words are still English; it is not on a surface
 `check:ui-french` counts.
 
+**Fixed 2026-09-15: a booking waits for the forms required before booking.**
+`private.missing_required_forms` (20260915102313, SQL R1–R9) is the one reader
+of `form_requirements`: a submitted, reviewed or flagged submission counts, a
+per-pet form needs one per booked pet of the named species, and a requirement
+naming an unpublished form is skipped. `create_booking` (20260915104919, SQL
+G1–G6) refuses a customer missing a blocking form (`form_required`) and asks
+staff for a reason (`form_override_reason_required`); with one the booking is
+made and the reason is saved in `form_requirement_overrides`. A warning never
+refuses. `POST /api/bookings` answers 422 with the code and the missing forms;
+the staff booking form asks for the reason in one dialog mounted at the root,
+and the customer booking page names the forms and opens the first.
+`form-requirements.spec.ts` (full suite) covers all three paths.
+
+**Still debt.** Before approval and before check-in are not enforced yet.
+`enroll_in_training_series` calls `create_booking`, so a blocking training
+requirement also refuses enrolment, which has no place to give a reason. No
+form notification is sent and no red flag is evaluated.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
