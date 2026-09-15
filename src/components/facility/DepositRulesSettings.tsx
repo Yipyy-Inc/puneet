@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { facilityConfig } from "@/data/facility-config";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { ensureAllServiceRules } from "@/lib/settings/deposits";
 import {
   useDepositRules,
@@ -153,10 +153,12 @@ function DepositRulesEditor({
     useState<DepositRefundPolicy>(initialRefundPolicy);
   const [dirty, setDirty] = useState(false);
 
-  // Free-cancellation window from Business Settings — the deposit refund policy
-  // references this so the two don't contradict each other.
-  const freeCancellationHours =
-    facilityConfig.bookingRules.cancellationPolicies.freeCancellationHours;
+  // The free-cancellation window the facility stored in its booking rules — the
+  // deposit refund policy references it so the two don't contradict each other.
+  // It read `facilityConfig` (a fixture's 24 hours), so the "matches your
+  // cancellation policy" hint compared a real policy against an invented one.
+  const { settings } = useFacilitySettings();
+  const freeCancellationHours = settings.booking_rules.value.cancelPolicyHours;
 
   // One domain, written whole. The API stores `value jsonb` per
   // (facility_id, domain), so a partial write is not a thing that exists here.
