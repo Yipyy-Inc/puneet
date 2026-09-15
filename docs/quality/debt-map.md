@@ -14488,6 +14488,17 @@ handler, `useCustomerBookingRequest`
 (`src/components/bookings/use-customer-booking-request.ts`). No spec drives
 these four buttons.
 
+**Fixed 2026-09-15: a pet's "required forms" are the database's answer.** The
+customer pet page's Forms tab listed facility 11's fixture forms, called every
+"pet" form not filled in on that browser required, and read answers from
+`src/data/form-submissions`. It now reads `GET /api/customer/pets/[ref]/forms`:
+the forms `client_missing_forms` says the pet still needs before booking or
+check-in, for every standard service; the facility's published forms; and the
+pet's own submissions, laid out against the version that was answered. A
+submission sent back for changes is listed as required again. The rest of that
+page (vaccinations, bookings, photos, care instructions) still reads fixtures,
+and no spec opens the tab.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over

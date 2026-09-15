@@ -7,8 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { bookings } from "@/data/bookings";
-import { getFormsByFacility } from "@/data/forms";
-import { getSubmissionsForPet } from "@/data/form-submissions";
+import { liveFormQueries } from "@/lib/api/forms-live";
+import { answeredQuestions } from "@/components/forms/submission-shape";
 import { petPhotos, vaccinationRecords } from "@/data/pet-data";
 import { useQuery } from "@tanstack/react-query";
 import { reportCardQueries } from "@/lib/api/report-cards";
@@ -114,21 +114,10 @@ export default function CustomerPetDetailPage({
   });
 
   const facilityId = selectedFacility?.id ?? 11;
-  const allFacilityForms = useMemo(
-    () =>
-      getFormsByFacility(facilityId).filter(
-        (f) => !f.internal && f.status !== "archived",
-      ),
-    [facilityId],
-  );
-  const petSubmissions = useMemo(
-    () => (pet ? getSubmissionsForPet(facilityId, pet.id) : []),
-    [facilityId, pet],
-  );
-  const completedFormIds = useMemo(
-    () => new Set(petSubmissions.map((s) => s.formId)),
-    [petSubmissions],
-  );
+  // This pet's forms, from Postgres: what the database says it still needs,
+  // the facility's published forms, and its own submissions. Declared before
+  // the early return below, like the report cards.
+  const { data: petForms } = useQuery(liveFormQueries.forPet(pet?.id));
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(
     null,
   );
@@ -235,13 +224,20 @@ export default function CustomerPetDetailPage({
     );
   }
 
-  const facilityForms = allFacilityForms.filter((f) => f.type === "pet");
-  const optionalForms = allFacilityForms.filter((f) => f.type === "service");
-  const requiredForms = facilityForms.filter(
-    (f) => !completedFormIds.has(f.id),
+  // Required is the database's answer, never "a pet form not filled in on this
+  // browser". A submission sent back for changes is not done: the database
+  // counts the form as missing again, so it is listed as required.
+  const requiredForms = petForms?.required ?? [];
+  const requiredFormIds = new Set(requiredForms.map((f) => f.formId));
+  const completedSubmissions = (petForms?.submissions ?? []).filter(
+    (s, index, all) =>
+      s.formId !== null &&
+      s.status !== "changes_requested" &&
+      all.findIndex((other) => other.formId === s.formId) === index,
   );
-  const completedForms = facilityForms.filter((f) =>
-    completedFormIds.has(f.id),
+  const completedFormIds = new Set(completedSubmissions.map((s) => s.formId));
+  const optionalForms = (petForms?.forms ?? []).filter(
+    (f) => !requiredFormIds.has(f.id) && !completedFormIds.has(f.id),
   );
 
   const photos = petPhotos.filter((p) => p.petId === pet.id);
@@ -1272,22 +1268,19 @@ export default function CustomerPetDetailPage({
                     </h4>
                     <ul className="space-y-2">
                       {requiredForms.map((form) => (
-                        <li key={form.id}>
+                        <li key={form.formId}>
                           <Link
-                            href={`/forms/${form.slug}?petId=${pet.id}&customerId=${customerId}`}
+                            href={`/forms/${encodeURIComponent(form.slug)}`}
                             className="border-destructive/30 hover:bg-destructive/5 flex items-center justify-between rounded-lg border p-3 transition-colors"
                           >
                             <div>
                               <span className="font-medium">{form.name}</span>
                               <p className="text-muted-foreground mt-0.5 text-xs">
-                                {fill(
-                                  form.questions.length === 1
-                                    ? "questionsOne"
-                                    : "questionsMany",
-                                  { count: form.questions.length },
-                                )}
-                                {form.settings?.welcomeMessage &&
-                                  ` · ${form.settings.welcomeMessage.slice(0, 60)}...`}
+                                {form.services
+                                  .map((service) =>
+                                    serviceTypeLabel(locale, service),
+                                  )
+                                  .join(" · ")}
                               </p>
                             </div>
                             <Badge
@@ -1304,70 +1297,59 @@ export default function CustomerPetDetailPage({
                 )}
 
                 {/* Completed (view-only with expandable answers) */}
-                {completedForms.length > 0 && (
+                {completedSubmissions.length > 0 && (
                   <div>
                     <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-green-600">
                       <CheckCircle2 className="size-4" />
                       {fill("completedCount", {
-                        count: completedForms.length,
+                        count: completedSubmissions.length,
                       })}
                     </h4>
                     <ul className="space-y-2">
-                      {completedForms.map((form) => {
-                        const sub = petSubmissions.find(
-                          (s) => s.formId === form.id,
-                        );
-                        const isExpanded = expandedSubmission === form.id;
+                      {completedSubmissions.map((sub) => {
+                        const isExpanded = expandedSubmission === sub.id;
+                        // The questions as they were asked, from the version
+                        // this was answered against — never today's form.
+                        const answered = answeredQuestions(sub);
                         return (
-                          <li key={form.id}>
+                          <li key={sub.id}>
                             <button
                               type="button"
                               className="w-full rounded-lg border bg-green-50/50 p-3 text-left transition-colors hover:bg-green-50"
                               onClick={() =>
                                 setExpandedSubmission(
-                                  isExpanded ? null : form.id,
+                                  isExpanded ? null : sub.id,
                                 )
                               }
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-medium">{form.name}</span>
+                                <span className="font-medium">
+                                  {sub.formName}
+                                </span>
                                 <span className="text-muted-foreground text-xs">
-                                  {sub?.createdAt
-                                    ? formatDateShort(sub.createdAt, locale)
-                                    : ""}
+                                  {formatDateShort(sub.submittedAt, locale)}
                                 </span>
                               </div>
                             </button>
-                            {isExpanded && sub && (
+                            {isExpanded && (
                               <div className="bg-muted/30 mt-1 space-y-2 rounded-lg border p-3">
-                                {form.questions
-                                  .filter(
-                                    (q) =>
-                                      sub.answers[q.id] !== undefined &&
-                                      sub.answers[q.id] !== "",
-                                  )
-                                  .map((q) => (
-                                    <div key={q.id} className="text-sm">
-                                      <span className="text-muted-foreground text-xs">
-                                        {q.label}
-                                      </span>
-                                      <p className="font-medium">
-                                        {Array.isArray(sub.answers[q.id])
-                                          ? (
-                                              sub.answers[q.id] as string[]
-                                            ).join(", ")
-                                          : typeof sub.answers[q.id] ===
-                                              "object"
-                                            ? JSON.stringify(sub.answers[q.id])
-                                            : String(sub.answers[q.id])}
-                                      </p>
-                                    </div>
-                                  ))}
-                                {form.questions.filter(
-                                  (q) =>
-                                    sub.answers[q.id] !== undefined &&
-                                    sub.answers[q.id] !== "",
-                                ).length === 0 && (
+                                {answered.map((q) => (
+                                  <div key={q.id} className="text-sm">
+                                    <span className="text-muted-foreground text-xs">
+                                      {q.label}
+                                    </span>
+                                    <p className="font-medium">
+                                      {Array.isArray(sub.answers[q.id])
+                                        ? (sub.answers[q.id] as string[]).join(
+                                            ", ",
+                                          )
+                                        : typeof sub.answers[q.id] === "object"
+                                          ? JSON.stringify(sub.answers[q.id])
+                                          : String(sub.answers[q.id])}
+                                    </p>
+                                  </div>
+                                ))}
+                                {answered.length === 0 && (
                                   <p className="text-muted-foreground text-xs">
                                     {t("noAnswers")}
                                   </p>
@@ -1404,7 +1386,7 @@ export default function CustomerPetDetailPage({
                               </div>
                             ) : (
                               <Link
-                                href={`/forms/${form.slug}?petId=${pet.id}&customerId=${customerId}`}
+                                href={`/forms/${encodeURIComponent(form.slug)}`}
                                 className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                               >
                                 <span className="text-sm">{form.name}</span>
@@ -1420,11 +1402,14 @@ export default function CustomerPetDetailPage({
                   </div>
                 )}
 
-                {facilityForms.length === 0 && optionalForms.length === 0 && (
-                  <p className="text-muted-foreground py-4 text-sm">
-                    {t("noForms")}
-                  </p>
-                )}
+                {petForms &&
+                  requiredForms.length === 0 &&
+                  completedSubmissions.length === 0 &&
+                  optionalForms.length === 0 && (
+                    <p className="text-muted-foreground py-4 text-sm">
+                      {t("noForms")}
+                    </p>
+                  )}
               </CardContent>
             </Card>
           </TabsContent>
