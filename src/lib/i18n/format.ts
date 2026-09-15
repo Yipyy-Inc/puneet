@@ -156,6 +156,23 @@ export function formatDateLong(
   }).format(d);
 }
 
+/**
+ * `Tuesday, Sep 1` · `mardi 1 sept.` — a day's heading inside a stay, where
+ * the year is the stay's and the weekday is what staff plan by.
+ */
+export function formatDayHeading(
+  value: Date | string | number,
+  locale: AppLocale,
+): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, "dayHeading", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
 /** `Sep 1` · `1 sept.` — for a column where the year is obvious. */
 export function formatDateShort(
   value: Date | string | number,

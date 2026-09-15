@@ -11,6 +11,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { format12h } from "@/lib/care-log-scheduler";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { formatDayHeading } from "@/lib/i18n/format";
 import { metaFor } from "@/components/daily-care/task-type-meta";
 import {
   outcomeBadgeClass,
@@ -43,11 +45,8 @@ export function JournalDayCard({
     executions.some((e) => e.taskId === t.id),
   ).length;
 
-  const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  const locale = useAppLocale();
+  const dateLabel = formatDayHeading(date, locale);
 
   return (
     <Card>

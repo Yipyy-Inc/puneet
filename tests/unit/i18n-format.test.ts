@@ -4,6 +4,7 @@ import {
   formatDateISO,
   formatDateLong,
   formatDateShort,
+  formatDayHeading,
   formatDayRelative,
   formatDuration,
   formatMoney,
@@ -401,5 +402,20 @@ describe("a weight stored in pounds", () => {
   test("it never reads the pounds as kilograms", () => {
     // The exact wrong output this replaced.
     expect(formatWeightFromLb(50, "en")).not.toBe("50 kg (110 lb)");
+  });
+});
+
+describe("formatDayHeading", () => {
+  test("names the weekday in full, in the user's language, with no year", () => {
+    expect(formatDayHeading("2026-09-15", "en")).toBe("Tuesday, Sep 15");
+    expect(formatDayHeading("2026-09-15", "fr")).toBe("mardi 15 sept.");
+  });
+
+  test("a bare calendar day is that day, not the evening before", () => {
+    expect(formatDayHeading("2026-09-01", "en")).toStartWith("Tuesday");
+  });
+
+  test("an unreadable day is the em dash, not a thrown RangeError", () => {
+    expect(formatDayHeading("", "fr")).toBe("—");
   });
 });

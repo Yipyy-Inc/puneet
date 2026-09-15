@@ -5339,6 +5339,11 @@ job writing last-seen to a column — not a fan-out on render.
 
 ### 🟡 `/facility/dashboard/billing/payment-settings` is a fixture screen called "Yipyy Pay" — 2026-08-23
 
+**Fixed 2026-09-15.** The page is a redirect to Settings → Yipyy Pay, and the
+onboarding step "Connect a payment method" links there. The fixture
+`src/data/fiserv-payments.ts` stays: other files still import its types and
+helpers.
+
 2,035 lines, last touched 2026-03-26, reading `getYipyyPayConfig` and
 `getFiservConfig` from `src/data/`. It contains a card titled **"Yipyy Pay / Tap
 to Pay Configuration"** whose switches save to nothing, and a Fiserv block for a
@@ -14440,8 +14445,13 @@ rather than seeing a note that did not save.
 and never merged. The author is stamped by the server, and the journal reads a
 guest's notes across the whole stay (`?kind=journal_note&subject=`).
 
-**Still debt.** The journal's dates are formatted `en-US`, and its PDF title
-says "Yipyy" rather than the facility's name.
+~~**Still debt.** The journal's dates are formatted `en-US`, and its PDF title
+says "Yipyy" rather than the facility's name.~~ **Fixed 2026-09-15.** The
+stay dates, day tabs, day headings, activity log and the PDF's day lines use
+the user's locale through `lib/i18n/format.ts` (`formatDayHeading` is new,
+unit-tested). The PDF title and file name carry the facility's name from its
+profile, and just "Guest Journal" while it loads. The journal's own labels
+("Day 1 of 3", "Activity Log") are still English, under the French baseline.
 
 ## 2026-09-14 — refund rules were facility 11's, at every facility
 
@@ -14452,9 +14462,10 @@ in. The same values are now one stated `REFUND_POLICY` in
 `retail/orders/page.tsx`, with no fixture facility id behind them. Behaviour
 is unchanged.
 
-**Still debt.** A facility cannot set its own refund policy. The payment
+**Still debt.** A facility cannot set its own refund policy. ~~The payment
 settings page (`billing/payment-settings`) shows refund switches seeded from
-the fixture and saves nothing. The till's payment grid still reads
+the fixture and saves nothing.~~ **Fixed 2026-09-15:** it redirects to
+Settings → Yipyy Pay. The till's payment grid still reads
 `getFiservConfig(11)` in about thirty places to decide which methods,
 terminals and devices it shows. That is the conversion recorded under "the
 till's Tap to Pay was a simulator".
