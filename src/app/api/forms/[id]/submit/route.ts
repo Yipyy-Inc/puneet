@@ -1,4 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+
+import { formSettingsFor, notifyFormSubmitted } from "@/lib/forms/notify";
+import { answersHaveFiles, redFlagsIn } from "@/lib/forms/red-flags";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { resolvePetNames } from "@/lib/api/form-pets";
@@ -78,7 +81,7 @@ export async function POST(
 
   const { data: form } = await supabase
     .from("forms")
-    .select("id, facility_id, status")
+    .select("id, facility_id, status, name")
     .eq("id", id)
     .maybeSingle();
 
@@ -100,7 +103,7 @@ export async function POST(
   // not what the person was shown.
   const { data: versionRow } = await supabase
     .from("form_versions")
-    .select("id, version_number")
+    .select("id, version_number, schema")
     .eq("form_id", doc.id)
     .not("published_at", "is", null)
     .order("version_number", { ascending: false })
@@ -170,6 +173,23 @@ export async function POST(
     }
   }
 
+  // The facility's red flags, checked before the row is written so a matching
+  // submission is stored as `flagged`, and its notification settings, used
+  // after the answer is sent.
+  const settings = await formSettingsFor(doc.facility_id);
+  const flags = redFlagsIn({
+    formId: doc.id,
+    answers,
+    flags: settings.redFlags,
+  });
+  const schema = (versionRow as { schema: unknown }).schema as {
+    questions?: unknown;
+  } | null;
+  const questions = Array.isArray(schema?.questions)
+    ? (schema.questions as { id: string; type?: string }[])
+    : [];
+  const hasFiles = answersHaveFiles(questions, answers);
+
   const { data: inserted, error } = await supabase
     .from("form_submissions")
     .insert({
@@ -179,7 +199,7 @@ export async function POST(
       client_id: clientId,
       pet_id: petId,
       answers: answers as never,
-      status: "submitted",
+      status: flags.length > 0 ? "flagged" : "submitted",
       staff_assisted: body?.staffAssisted ?? false,
       staff_assistant_id: body?.staffAssisted ? viewer.userId : null,
       submitted_by: viewer.userId,
@@ -198,6 +218,20 @@ export async function POST(
       { status: denied ? 403 : 400 },
     );
   }
+
+  // Staff hear, and the customer is confirmed, as the facility's settings say,
+  // after this answer is sent.
+  after(() =>
+    notifyFormSubmitted({
+      facilityId: doc.facility_id,
+      formName: doc.name,
+      clientId,
+      flags: flags.map((flag) => flag.label),
+      hasFiles,
+      notifications: settings.notifications,
+      request,
+    }),
+  );
 
   const result: SubmitFormResult = {
     // Resolved rather than left null: a submission filed WITH a pet would

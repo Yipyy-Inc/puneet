@@ -548,6 +548,70 @@ test.describe("forms", () => {
     await owner.close();
   });
 
+  test("an answer the facility flags is stored as flagged", async ({
+    page,
+  }) => {
+    const owner = await page.context().browser()!.newContext();
+    const ownerPage = await owner.newPage();
+    await signIn(ownerPage, ACCOUNTS.owner);
+
+    const current = await ownerPage.request.get("/api/facility/settings");
+    expect(current.ok(), await current.text()).toBe(true);
+    const previous = (
+      (await current.json()) as Record<string, { value: unknown }>
+    ).form_red_flags?.value ?? { keywords: [], rules: [] };
+
+    const form = await createForm(ownerPage, freshName("flag"));
+    await patchForm(ownerPage, form.id, {
+      schema: questions("FLAG: is your dog vaccinated?"),
+      publish: true,
+      status: "published",
+    });
+
+    const saveFlags = (value: unknown) =>
+      ownerPage.request.patch("/api/facility/settings", {
+        data: { domain: "form_red_flags", value },
+      });
+    const saved = await saveFlags({
+      keywords: [],
+      rules: [
+        {
+          id: `e2e-${Date.now()}`,
+          formId: form.id,
+          formName: form.name,
+          questionId: "f1",
+          questionLabel: "FLAG: is your dog vaccinated?",
+          operator: "equals",
+          value: "no",
+        },
+      ],
+    });
+    expect(saved.ok(), await saved.text()).toBe(true);
+
+    try {
+      await signIn(page, ACCOUNTS.customer);
+      const filed = await page.request.post(`${FORMS}/${form.id}/submit`, {
+        data: { answers: { f1: "No" } },
+      });
+      expect(filed.status(), await filed.text()).toBe(201);
+      const submission = ((await filed.json()) as { submission: Submission })
+        .submission;
+
+      // Read back by the owner, in another browser.
+      const reread = await ownerPage.request.get(
+        `${SUBMISSIONS}/${submission.id}`,
+      );
+      expect(reread.ok(), await reread.text()).toBe(true);
+      expect(
+        ((await reread.json()) as { submission: Submission }).submission.status,
+      ).toBe("flagged");
+    } finally {
+      const restored = await saveFlags(previous);
+      expect(restored.ok(), await restored.text()).toBe(true);
+      await owner.close();
+    }
+  });
+
   test("a groomer cannot author a form", async ({ page }) => {
     await signIn(page, ACCOUNTS.groomer);
 
