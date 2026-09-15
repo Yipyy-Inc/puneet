@@ -220,6 +220,9 @@ export const newBookingSchema = z.object({
   groomingStyle: z.string().optional(),
   groomingAddOns: z.array(z.string()).optional(),
   stylistPreference: z.string().optional(),
+  /** Staff booking without a form the facility requires before booking: why.
+   * Saved as a form_requirement_overrides row, never on the booking itself. */
+  formOverrideReason: z.string().max(500).optional(),
   /** Grooming: ids of secondary co-groomers working alongside the primary
    * stylist on this booking (payroll-credited as a shared appointment). */
   additionalStylistIds: z.array(z.string()).optional(),

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { FormOverrideDialogHost } from "@/components/forms/form-override-dialog";
+
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -17,6 +19,11 @@ function makeQueryClient() {
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(makeQueryClient);
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      {/* Renders nothing until a booking asks staff why it goes ahead
+          without a required form. */}
+      <FormOverrideDialogHost />
+    </QueryClientProvider>
   );
 }

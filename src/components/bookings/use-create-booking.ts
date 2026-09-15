@@ -7,6 +7,11 @@ import { useLocationContext } from "@/hooks/use-location-context";
 import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 import { formatMoney } from "@/lib/i18n/format";
 import type { NewBooking } from "@/types/booking";
+import { askFormOverrideReason } from "@/components/forms/form-override-dialog";
+import {
+  FORM_OVERRIDE_REASON_REQUIRED,
+  formRefusalOf,
+} from "@/lib/forms/requirements";
 
 /** What POST /api/bookings adds to the booking it answers with. */
 interface CreatedExtras {
@@ -43,10 +48,30 @@ export function useCreateBookingFromModal() {
       // The id comes back from the database, never computed from a list.
       created = await bookingMutations.create(bookingData, currentLocationId);
     } catch (error) {
-      toast.error(t("createBookingFailed"), {
-        description: error instanceof Error ? error.message : t("tryAgain"),
-      });
-      return false;
+      // A form the facility requires before booking is missing. Staff may go
+      // ahead with a reason, which the database saves as the override; going
+      // back leaves the form open with everything entered.
+      const refusal = formRefusalOf(error);
+      if (refusal?.code !== FORM_OVERRIDE_REASON_REQUIRED) {
+        toast.error(t("createBookingFailed"), {
+          description: error instanceof Error ? error.message : t("tryAgain"),
+        });
+        return false;
+      }
+      const reason = await askFormOverrideReason(refusal);
+      if (!reason) return false;
+      try {
+        created = await bookingMutations.create(
+          { ...bookingData, formOverrideReason: reason },
+          currentLocationId,
+        );
+      } catch (retryError) {
+        toast.error(t("createBookingFailed"), {
+          description:
+            retryError instanceof Error ? retryError.message : t("tryAgain"),
+        });
+        return false;
+      }
     }
 
     await queryClient.invalidateQueries({ queryKey: ["bookings"] });

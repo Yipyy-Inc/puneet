@@ -18,6 +18,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
 import { toast } from "sonner";
 import type { NewBooking } from "@/types/booking";
+import { FORM_REQUIRED, formRefusalOf } from "@/lib/forms/requirements";
 
 export default function NewBookingPage() {
   const t = useShellText("booking");
@@ -214,6 +215,39 @@ export default function NewBookingPage() {
 
               router.push("/customer/bookings");
             } catch (error) {
+              // The facility requires forms before booking. Name them, and
+              // open the first in a new tab so this booking stays as it is.
+              const refusal = formRefusalOf(error);
+              if (
+                refusal?.code === FORM_REQUIRED &&
+                refusal.missing.length > 0
+              ) {
+                const first = refusal.missing[0];
+                const names = refusal.missing
+                  .map((form) =>
+                    form.pet_name
+                      ? t("formForPet")
+                          .replace("{form}", form.form_name)
+                          .replace("{pet}", form.pet_name)
+                      : form.form_name,
+                  )
+                  .join(", ");
+                toast.error(t("formsNeededTitle"), {
+                  description: `${t("formsNeededBody")} ${names}`,
+                  duration: Infinity,
+                  action: {
+                    label: t("openForm").replace("{form}", first.form_name),
+                    onClick: () => {
+                      window.open(
+                        `/forms/${encodeURIComponent(first.form_slug)}`,
+                        "_blank",
+                        "noopener",
+                      );
+                    },
+                  },
+                });
+                return false;
+              }
               // The modal stays where it is, holding what was entered. There
               // is no row, so saying anything else would be the claim this
               // whole change removed.
