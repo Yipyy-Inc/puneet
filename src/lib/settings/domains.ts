@@ -6,6 +6,10 @@ import {
   schedulingRulesSchema,
 } from "@/lib/settings/scheduling-rules";
 import {
+  estimateFollowUpsSchema,
+  NO_ESTIMATE_FOLLOW_UPS,
+} from "@/lib/settings/estimate-follow-ups";
+import {
   DEFAULT_INVOICE_TEMPLATE,
   invoiceTemplateSchema,
 } from "@/lib/settings/invoice-template";
@@ -901,6 +905,15 @@ export const SETTING_DOMAINS = {
   scheduling_rules: {
     schema: schedulingRulesSchema,
     fallback: DEFAULT_SCHEDULING_RULES,
+  },
+
+  // When a customer is reminded about an open estimate. It lived in
+  // localStorage with no sender; the messaging tick now queues what it asks
+  // for. OFF until a facility turns it on — see
+  // lib/settings/estimate-follow-ups.ts.
+  estimate_follow_ups: {
+    schema: estimateFollowUpsSchema,
+    fallback: NO_ESTIMATE_FOLLOW_UPS,
   },
 } as const;
 

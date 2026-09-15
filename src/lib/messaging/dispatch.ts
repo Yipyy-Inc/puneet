@@ -1024,6 +1024,32 @@ async function sendOneQueued(
     }
   }
 
+  // An estimate follow-up can wait in the queue — quiet hours hold it
+  // overnight — and a customer who accepted, declined or let the estimate
+  // expire in that time must not be reminded about it.
+  if (message.source_kind === "estimate_follow_up" && message.source_id) {
+    const { data: estimate } = await db
+      .from("estimates")
+      .select("status, expires_at")
+      .eq("id", message.source_id)
+      .maybeSingle();
+    const row = estimate as {
+      status: string;
+      expires_at: string | null;
+    } | null;
+    const stillOpen =
+      row?.status === "sent" &&
+      (!row.expires_at || new Date(row.expires_at).getTime() > now.getTime());
+    if (!stillOpen) {
+      result.skipped += 1;
+      await db
+        .from("message_sends")
+        .update({ status: "skipped", skip_reason: "estimate_closed" })
+        .eq("id", message.id);
+      return;
+    }
+  }
+
   const { data: facility } = await db
     .from("facilities")
     .select("name")

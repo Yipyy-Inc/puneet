@@ -14645,10 +14645,26 @@ can print. No spec drives the button; sending is environment-gated on Resend.
 **Still debt, and each needs a decision rather than a save** (found the same
 day, while making browser-only settings real):
 
-- **Estimate follow-ups** (`EstimateFollowUpSettings.tsx`) save to
-  localStorage, and nothing but that card reads them — there is no follow-up
-  sender. Storing them would add a switch that decides nothing; they need a
-  sender, or the card removed.
+- ~~**Estimate follow-ups**~~ **Fixed 2026-09-15: estimate follow-up
+  reminders are saved and sent.** The card edits the `estimate_follow_ups`
+  domain (off until a facility turns it on). The messaging tick queues due
+  reminders into `message_sends` under the new `estimate_follow_up` source kind
+  (20260915165533): "not viewed" every N days after sending, "viewed" every N
+  days after the customer opened it, each up to its maximum, and never once
+  the estimate is accepted, declined, converted or expired or the customer has
+  booked since it was sent. A follow-up is not transactional, so quiet hours,
+  the daily cap, lateness and opt-outs apply, and the send pass re-checks the
+  estimate is still open before it goes. An empty message sends the standard
+  one in the customer's language; a typed one goes out as typed. The card's
+  duplicate expiry block (its "expired estimate action" had no reader), the
+  "stop when" choice and the sample-data preview are removed. Unit:
+  `estimate-follow-up.test.ts`; SQL: `estimate-follow-ups.sql`; e2e:
+  `estimate-follow-ups.spec.ts` (settings only — it never runs the tick, which
+  would drain production's outbox). **Still debt:** guest estimates get no
+  reminder (the link needs a customer sign-in); sending an estimate still
+  emails nothing, so a "not viewed" reminder is often the first message the
+  customer receives; the defaults card's expiry-warning email has no sender;
+  and `src/lib/estimates/email-sends.ts` is still an in-memory mock.
 - **Weather warnings:** the dashboard widget fetches a real forecast and reads
   the stored `weather_rules`, but the custom forecast areas and the alert log
   are localStorage-only, and only the settings page reads the areas.

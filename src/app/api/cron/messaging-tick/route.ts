@@ -9,6 +9,7 @@ import {
 import { evaluateDueReviewNudges } from "@/lib/reputation/nudge";
 import { queueDueRecoveryMessages } from "@/lib/unfinished-bookings/recovery-tick";
 import { queueDueFormReminders } from "@/lib/forms/reminder-tick";
+import { queueDueEstimateFollowUps } from "@/lib/estimates/follow-up-tick";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -83,6 +84,8 @@ export async function GET(request: NextRequest) {
   // Bookings still missing a required form inside the facility's reminder
   // window — queued, like the recovery messages.
   const formReminders = await queueDueFormReminders();
+  // Open estimates owed a follow-up reminder — queued, like the form reminders.
+  const estimateFollowUps = await queueDueEstimateFollowUps();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -102,6 +105,7 @@ export async function GET(request: NextRequest) {
     recovered: recovery.queued,
     recoveryDeferred: recovery.deferred,
     formReminders: formReminders.queued,
+    estimateFollowUps: estimateFollowUps.queued,
     advanced: advanced.advanced,
     completed: advanced.completed,
     stopped: advanced.stopped,
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
       ...nudges.problems,
       ...recovery.problems,
       ...formReminders.problems,
+      ...estimateFollowUps.problems,
     ].slice(0, 20),
   });
 }

@@ -283,7 +283,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/employee/employee-dashboard-widgets.tsx", 1],
   ["src/components/employee/EmployeeHeader.tsx", 1],
   ["src/components/employee/RegisterCloseWatcher.tsx", 1],
-  ["src/components/estimates/EstimateFollowUpSettings.tsx", 9],
   ["src/components/estimates/EstimateWizard.tsx", 1],
   ["src/components/estimates/GuestContactForm.tsx", 1],
   ["src/components/evaluations/EvaluationFormBuilder.tsx", 2],
