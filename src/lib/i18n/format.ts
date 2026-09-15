@@ -184,6 +184,30 @@ export function formatDateShort(
 }
 
 /**
+ * `Tue, Sep 1, 2026` · `mar. 1 sept. 2026` — a calendar DAY, `YYYY-MM-DD`,
+ * already worked out in the zone it belongs to (a facility's, on a server).
+ *
+ * Pinned in UTC and read back in UTC, like `formatMonthShort` and
+ * `formatWeekday`, so the machine's own zone cannot move it. `formatDateLong`
+ * reads a bare day at the machine's local midnight, which is right in a
+ * browser and one day wrong anywhere the zone the formatter was built in is
+ * not the zone the day was read in — found by CI, 2026-09-15.
+ */
+export function formatCalendarDayLong(day: string, locale: AppLocale): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return NO_DATE;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, "calendarDayLong", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/**
  * `Sep` · `sept.` — a chart axis month, from `YYYY-MM`.
  *
  * Read in UTC from the first of the month, so no zone can move it into the

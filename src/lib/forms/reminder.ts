@@ -1,4 +1,4 @@
-import { formatDateLong } from "@/lib/i18n/format";
+import { formatCalendarDayLong } from "@/lib/i18n/format";
 import type { FormNotifications } from "@/lib/settings/form-settings";
 import { wallClockParts } from "@/lib/time/facility-time";
 
@@ -77,7 +77,7 @@ export function reminderMessage(input: {
   forms: ReminderForm[];
 }): { subject: string; body: string } {
   const copy = COPY[input.locale];
-  const day = formatDateLong(
+  const day = formatCalendarDayLong(
     wallClockParts(input.startAt, input.timeZone).date,
     input.locale,
   );
