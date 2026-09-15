@@ -2424,7 +2424,8 @@
         "promo_nothing_due": "Il ne reste rien à réduire.",
         "receiptSent": "Reçu envoyé à {email}",
         "receiptNotSent": "Le reçu n’a pas été envoyé",
-        "emailingReceipt": "Envoi du reçu…"
+        "emailingReceipt": "Envoi du reçu…",
+        "restockFailed": "Le retour est enregistré, mais {count} articles n’ont pas été remis en stock. Ajustez-les dans l’onglet Inventaire."
       },
       "kiosk": {
         "title": "Arrivées",

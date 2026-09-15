@@ -2424,7 +2424,8 @@
         "promo_nothing_due": "Nothing is left to discount.",
         "receiptSent": "Receipt sent to {email}",
         "receiptNotSent": "The receipt was not sent",
-        "emailingReceipt": "Sending receipt…"
+        "emailingReceipt": "Sending receipt…",
+        "restockFailed": "The return is recorded, but {count} items were not put back in stock. Adjust them on the Inventory tab."
       },
       "kiosk": {
         "title": "Check-in",

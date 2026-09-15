@@ -827,30 +827,49 @@ ${outcome.message}`);
       { storeCredit: issuedStoreCredit },
     );
 
-    // Update transaction status and add return to transaction history
-    if (selectedTransaction) {
-      // Add return to transaction's returns array
-      const updatedReturns = [
-        ...(selectedTransaction.returns || []),
-        newReturn,
-      ];
-      // Update transaction status if fully refunded
-      const totalRefunded = updatedReturns.reduce(
-        (sum, r) => sum + r.refundTotal,
-        0,
-      );
-      if (totalRefunded >= selectedTransaction.total) {
-        // Transaction is fully refunded
-        // Note: In a real app, this would update the transaction in the database
-        // For now, we just log it
-        console.log(
-          `Transaction ${selectedTransaction.transactionNumber} fully refunded`,
-        );
-      }
-    }
+    // No "fully refunded" status to write: what is still refundable on a sale
+    // is derived from its payments ledger (`/api/payments/retail/sales`), and
+    // the invalidation after the refund above refreshes it. This branch only
+    // printed to the console.
 
-    // TODO: Restock items to inventory
-    // This would update product/variant stock levels
+    // ── RETURNED ITEMS GO BACK ON THE SHELF ─────────────────────────────────
+    //
+    // This was a TODO, so a return refunded the money and left the product
+    // counted as sold: the shelf held a bag of food the stock said was gone.
+    // Each returned item is now a `return` movement on the stock ledger, which
+    // moves the count through the database's trigger and which
+    // `retail_stock_movements_insert` admits for the cashier taking the return.
+    //
+    // After the money, on purpose: the refund or credit above is already done,
+    // so a refused restock is reported for staff to fix on the Inventory tab,
+    // never a reason to undo the return.
+    const toRestock = returnForm.items.filter(
+      (item) => item.restocked && item.productId && item.quantity > 0,
+    );
+    const restockResults = await Promise.all(
+      toRestock.map((item) =>
+        fetch("/api/retail/stock-movements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: item.productId,
+            variantId: item.variantId,
+            delta: item.quantity,
+            reason: "return",
+            note: newReturn.returnNumber,
+          }),
+        })
+          .then((response) => response.ok)
+          .catch(() => false),
+      ),
+    );
+    const notRestocked = restockResults.filter((ok) => !ok).length;
+    if (toRestock.length > 0) {
+      void queryClient.invalidateQueries({ queryKey: ["retail"] });
+    }
+    if (notRestocked > 0) {
+      toast.error(fillR("restockFailed", { count: notRestocked }));
+    }
 
     // Close modal and reset
     setIsReturnModalOpen(false);

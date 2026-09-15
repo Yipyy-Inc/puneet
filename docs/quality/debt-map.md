@@ -14646,6 +14646,23 @@ day, while making browser-only settings real):
   its one reader is Smart Insights, which is fixture data for facility 11. It
   becomes worth storing when insights are computed from real bookings.
 
+**Fixed 2026-09-15: a till return puts the stock back.** The return handler in
+`services/retail/orders/page.tsx` refunded the money and ended at
+`// TODO: Restock items to inventory`, so a returned product stayed counted as
+sold. Each returned item marked restocked is now a `return` movement through
+`POST /api/retail/stock-movements`, which moves the count through the ledger's
+trigger; `retail_stock_movements_insert` already admitted `return` for
+`retail_process_sale`, and the route now accepts the reason and refuses a
+return that takes stock off. The restock runs after the money, so a refusal is
+reported for staff to fix on the Inventory tab rather than undoing the return.
+The "fully refunded" branch, which only printed to the console, is gone — the
+refundable balance is derived from the payments ledger.
+
+**Still debt.** The same handler still passes `facilityId = 11` and
+"Current User" — but only to the QuickBooks sync and `logPaymentAction`, both
+of which are browser-side fakes (see the payment audit entries). They go when
+those do.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
