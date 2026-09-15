@@ -29,7 +29,7 @@ import {
   type PermissionKey,
   type StaffProfile,
 } from "@/types/facility-staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "../_components/use-staff-locations";
 import {
   useOnboardingInstance,
   useOnboarding,
@@ -155,6 +155,7 @@ function StaffProfileInner({ staff }: { staff: StaffProfile }) {
   const { t, fill, locale } = useStaffText("profile");
   const relative = useRelativeTime();
   const queryClient = useQueryClient();
+  const { locations, labelsFor } = useStaffLocations();
 
   // Permission gates (stable hook order — one call per distinct key).
   const canViewStaff = usePermission("view_staff");
@@ -312,9 +313,7 @@ function StaffProfileInner({ staff }: { staff: StaffProfile }) {
       (t.id !== "offboarding" || staff.status === "terminated"),
   );
   const status = STATUS_META[staff.status];
-  const locationLabels = staff.assignedLocations
-    .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
-    .filter(Boolean) as string[];
+  const locationLabels = labelsFor(staff.assignedLocations);
 
   return (
     <div className="space-y-5">
@@ -363,7 +362,8 @@ function StaffProfileInner({ staff }: { staff: StaffProfile }) {
                 </span>
                 <span className="flex items-center gap-2 truncate sm:col-span-2">
                   <MapPin className="size-3.5 shrink-0" />
-                  {locationLabels.length === FACILITY_LOCATIONS.length
+                  {locations.length > 0 &&
+                  locationLabels.length === locations.length
                     ? t("allLocations")
                     : locationLabels.join(" · ") || t("noLocations")}
                 </span>

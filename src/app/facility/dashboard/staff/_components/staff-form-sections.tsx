@@ -51,7 +51,7 @@ import {
   type NotificationEvent,
   type NotificationScope,
 } from "@/types/facility-staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "./use-staff-locations";
 import { useStaffHrConfig } from "@/lib/api/staff-onboarding";
 import { RoleIcon, ServiceIcon } from "./staff-shared";
 import { AdditionalRolesGrid } from "./additional-roles-grid";
@@ -523,11 +523,13 @@ export function LocationsSection({
   update: SectionUpdate;
 }) {
   const { t } = useStaffText("formSections");
+  // The facility's own branches, not a fixture's.
+  const { locations, realIds } = useStaffLocations();
   return (
     <div className="space-y-4">
       <SectionHeader title={t("workingLocations")} hint={t("hintLocations")} />
       <div className="grid gap-2">
-        {FACILITY_LOCATIONS.map((loc) => {
+        {locations.map((loc) => {
           const active = draft.assignedLocations.includes(loc.id);
           return (
             <label
@@ -544,9 +546,13 @@ export function LocationsSection({
                 onCheckedChange={() =>
                   update(
                     "assignedLocations",
+                    // An id naming no branch here (an old fixture id) is
+                    // dropped rather than carried along.
                     active
-                      ? draft.assignedLocations.filter((id) => id !== loc.id)
-                      : [...draft.assignedLocations, loc.id],
+                      ? realIds(draft.assignedLocations).filter(
+                          (id) => id !== loc.id,
+                        )
+                      : [...realIds(draft.assignedLocations), loc.id],
                   )
                 }
               />

@@ -30,7 +30,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "./use-staff-locations";
 import {
   RolePill,
   ServiceChip,
@@ -82,6 +82,7 @@ export function StaffCard({
   onRemind,
 }: StaffCardProps) {
   const { t, fill } = useStaffText("card");
+  const { locations, labelsFor } = useStaffLocations();
 
   /**
    * An audit action's words.
@@ -130,9 +131,7 @@ export function StaffCard({
     !isOnboardingStarted(onboarding) &&
     daysInvited >= (notStartedCfg.days ?? 3);
 
-  const locationLabels = profile.assignedLocations
-    .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
-    .filter(Boolean) as string[];
+  const locationLabels = labelsFor(profile.assignedLocations);
 
   return (
     <div
@@ -322,7 +321,7 @@ export function StaffCard({
           </div>
           <div className="flex items-center gap-2 truncate">
             <MapPin className="size-3 shrink-0" />
-            {locationLabels.length === FACILITY_LOCATIONS.length
+            {locations.length > 0 && locationLabels.length === locations.length
               ? t("allLocations")
               : locationLabels.join(" · ") || t("noLocations")}
           </div>

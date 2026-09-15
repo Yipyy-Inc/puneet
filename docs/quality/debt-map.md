@@ -14499,6 +14499,25 @@ submission sent back for changes is listed as required again. The rest of that
 page (vaccinations, bookings, photos, care instructions) still reads fixtures,
 and no spec opens the tab.
 
+**Fixed 2026-09-15: a staff profile opens from the database, and staff are
+assigned to the facility's own branches.** `/facility/dashboard/staff/[id]`
+looked the person up in `src/data/facility-staff`, so a staff member created
+through the real roster opened as "not found" and Save wrote into that array.
+It now reads `staffQueries.profile`, saves through `PATCH /api/staff/[id]`
+sending only changed fields (a redacted field is never written back), and
+waits for the answer (`staff-profile.spec.ts`, full suite). Every staff screen
+listed `FACILITY_LOCATIONS`, three Montreal branches of a business not in this
+database; no staff row held a real location id (18 rows at
+`yipyy-demo-facility` held the fixture ids). They now list the facility's own
+branches through `useStaffLocations`; an old fixture id is not shown and is
+dropped the next time the list is saved.
+
+**Still debt.** The directory still copies each saved profile into the
+fixture (`upsertFacilityStaff`) for the screens that read it; the onboarding
+checklist, availability tab, documents, write-ups, warnings and performance
+still read fixtures. `AddStaffAccountModal` and `LocationDetailSheet` in the
+platform admin still list `FACILITY_LOCATIONS`.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
