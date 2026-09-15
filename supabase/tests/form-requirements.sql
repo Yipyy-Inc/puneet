@@ -231,6 +231,33 @@ begin
     'a grant is wider than intended');
 end $$;
 
+-- ── R11 ───────────────────────────────────────────────────────────────────
+-- R8 archived the customer's Intake answer; a fresh answer sent back for
+-- changes must not satisfy it either.
+select pg_temp.submit('00000000-0000-0000-0000-0000009a0060', '00000000-0000-0000-0000-0000009a0070',
+  '00000000-0000-0000-0000-0000009a0040', null, 'changes_requested');
+select pg_temp.t('R11 an answer sent back for changes does not count as having the form',
+  pg_temp.missing('daycare', 'before_booking') = 'req-intake/block',
+  pg_temp.missing('daycare', 'before_booking'));
+
+-- ── R12 ───────────────────────────────────────────────────────────────────
+do $$
+declare v_state text;
+begin
+  begin
+    insert into public.message_sends
+      (facility_id, client_id, channel, to_address, source_kind, source_id,
+       subject_rendered, body_rendered, status, scheduled_for, provider, idempotency_key)
+    values ('00000000-0000-0000-0000-0000009a0020', '00000000-0000-0000-0000-0000009a0040',
+            'email', 'req-customer@example.invalid', 'form_reminder',
+            '00000000-0000-0000-0000-0000009a0080', 'Forms to complete', 'body',
+            'queued', now(), 'resend', 'form_reminder:r12-test');
+    v_state := 'OK';
+  exception when others then v_state := sqlstate;
+  end;
+  perform pg_temp.t('R12 the outbox accepts a form reminder', v_state = 'OK', v_state);
+end $$;
+
 -- ── R10 ───────────────────────────────────────────────────────────────────
 do $$
 begin

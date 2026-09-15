@@ -895,7 +895,11 @@ async function sendOneQueued(
   result: DispatchResult,
 ): Promise<void> {
   const policy = await loadMessagingPolicy(db, message.facility_id);
-  const transactional = await ruleIsTransactional(db, message.source_id);
+  // A reminder about a form the business requires is transactional: a
+  // marketing opt-out does not stop it and the marketing cap does not count it.
+  const transactional =
+    message.source_kind === "form_reminder" ||
+    (await ruleIsTransactional(db, message.source_id));
   const now = new Date();
   const scheduledFor = new Date(message.scheduled_for);
 

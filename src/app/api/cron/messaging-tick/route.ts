@@ -8,6 +8,7 @@ import {
 } from "@/lib/workflows/engine";
 import { evaluateDueReviewNudges } from "@/lib/reputation/nudge";
 import { queueDueRecoveryMessages } from "@/lib/unfinished-bookings/recovery-tick";
+import { queueDueFormReminders } from "@/lib/forms/reminder-tick";
 
 // ============================================================================
 // The messaging tick: sending what was queued for later.
@@ -79,6 +80,9 @@ export async function GET(request: NextRequest) {
   const nudges = await evaluateDueReviewNudges();
   // Unfinished bookings whose recovery message is owed — queued, like 2 and 3.
   const recovery = await queueDueRecoveryMessages();
+  // Bookings still missing a required form inside the facility's reminder
+  // window — queued, like the recovery messages.
+  const formReminders = await queueDueFormReminders();
   const result = await sendDueMessages();
 
   // The counts are the point. A tick that reports `sent: 0, skipped: 12` is a
@@ -97,6 +101,7 @@ export async function GET(request: NextRequest) {
     nudgesExpired: nudges.expired,
     recovered: recovery.queued,
     recoveryDeferred: recovery.deferred,
+    formReminders: formReminders.queued,
     advanced: advanced.advanced,
     completed: advanced.completed,
     stopped: advanced.stopped,
@@ -106,6 +111,7 @@ export async function GET(request: NextRequest) {
       ...audience.problems,
       ...nudges.problems,
       ...recovery.problems,
+      ...formReminders.problems,
     ].slice(0, 20),
   });
 }

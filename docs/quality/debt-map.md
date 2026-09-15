@@ -14452,8 +14452,28 @@ switches ask for it: every submission, a flagged one, or one with a file
 R10). The customer is emailed a confirmation in their language when
 `submissionConfirmed` is on, unless suppressed. No test sees an email arrive.
 
-**Still debt.** "Changes requested" (`formRejectedNeedsCorrection`) has no
-status to set, and the missing-forms reminder is not sent.
+**Fixed 2026-09-15: staff can send a submission back for changes.** A
+submission can be `changes_requested` (20260915114540), with the note staff
+write in `review_note`. `PATCH /api/forms/submissions/[id]` requires the note,
+and the customer is emailed it, with a link to answer the form again, when
+`formRejectedNeedsCorrection` is on. A submission sent back does not count as
+having the form (SQL R11), so a required form is missing again until the new
+one arrives. The submission page's `SendBackForChanges` asks for the note, in
+the staff `formReview` area. `forms.spec.ts` covers the note being required and
+saved.
+
+**Fixed 2026-09-15: a customer is reminded of a required form before their
+booking.** The messaging tick runs `queueDueFormReminders`
+(`lib/forms/reminder-tick.ts`) before it sends. For an upcoming booking
+(pending, a request or confirmed) inside the facility's reminder window
+(`reminder.value` hours or days before the start; both anchors are the
+booking's start), with `customer.missingRequiredFormsReminder` on, a form
+required before check-in still missing, and a client email, it queues one
+`form_reminder` email (20260915115310, SQL R12) naming each form with its
+link, in the customer's language, dated in the facility's time zone. One per
+booking and set of missing forms (`reminderKey`). The send pass treats
+`form_reminder` as transactional. The window, key and words are unit-tested
+(`lib/forms/reminder.ts`); no test runs the tick end to end.
 
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
