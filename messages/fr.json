@@ -2250,6 +2250,20 @@
         "discountLine": "Rabais d’abonnement — {plan} ({pct} %)",
         "discountRefused": "Le rabais d’abonnement n’a pas été appliqué"
       },
+      "formReview": {
+        "sendBack": "Renvoyer pour modifications",
+        "sendBackHelp": "Le client répond en envoyant de nouveau le formulaire. Un formulaire obligatoire est considéré comme manquant tant qu’il ne l’a pas fait.",
+        "noteLabel": "Ce qui doit être modifié",
+        "notePlaceholder": "Par exemple, la date du vaccin contre la rage manque",
+        "noteRequired": "Indiquez ce qui doit être modifié avant de le renvoyer.",
+        "send": "Renvoyer pour modifications",
+        "cancel": "Garder le statut actuel",
+        "sent": "Renvoyé pour modifications",
+        "sentHelp": "Le client reçoit la note par courriel lorsque vos réglages de notification des formulaires le prévoient.",
+        "notSent": "Non renvoyé",
+        "askedFor": "Modifications demandées",
+        "statusChangesRequested": "Modifications demandées"
+      },
       "unfinishedRecovery": {
         "recoveryTitle": "Message de relance",
         "recoveryNotYet": "Pas encore envoyé. Il part après le délai de cette étape, si la relance est activée.",

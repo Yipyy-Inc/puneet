@@ -1,4 +1,5 @@
 import {
+  buildCustomerChangesRequested,
   buildCustomerFormConfirmation,
   buildStaffFormEmail,
 } from "@/lib/forms/emails";
@@ -188,4 +189,77 @@ export async function notifyFormSubmitted(input: {
   }
 
   await Promise.allSettled(sends);
+}
+
+/**
+ * Staff sent a submission back for changes: tell the customer, with the note,
+ * when the facility's `formRejectedNeedsCorrection` is on. Transactional, so a
+ * marketing opt-out does not stop it and a withdrawal from all mail does.
+ */
+export async function notifyChangesRequested(input: {
+  facilityId: string;
+  formId: string | null;
+  clientId: string | null;
+  note: string;
+  request: Request;
+}): Promise<void> {
+  if (!hasServiceRoleKey() || !input.clientId) return;
+  const settings = await formSettingsFor(input.facilityId);
+  if (!settings.notifications.customer.formRejectedNeedsCorrection) return;
+
+  const admin = createAdminClient();
+  const [facilityResult, clientResult, formResult] = await Promise.all([
+    admin
+      .from("facilities")
+      .select("name, slug")
+      .eq("id", input.facilityId)
+      .maybeSingle(),
+    admin
+      .from("clients")
+      .select("email, preferred_language")
+      .eq("id", input.clientId)
+      .maybeSingle(),
+    input.formId
+      ? admin
+          .from("forms")
+          .select("name, slug")
+          .eq("id", input.formId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const facility = facilityResult.data as {
+    name: string;
+    slug: string | null;
+  } | null;
+  const client = clientResult.data as {
+    email: string | null;
+    preferred_language: string | null;
+  } | null;
+  const form = formResult.data as { name: string; slug: string } | null;
+
+  const to = client?.email?.trim();
+  if (!to) return;
+  const check = await isSuppressed(admin, {
+    facilityId: input.facilityId,
+    channel: "email",
+    address: to,
+    isTransactional: true,
+  });
+  if (check.suppressed) return;
+
+  const origin = facilityCustomerLinkOrigin(facility?.slug, input.request);
+  const email = buildCustomerChangesRequested({
+    formName: form?.name ?? "your form",
+    facilityName: facility?.name ?? "Your facility",
+    note: input.note,
+    locale: client?.preferred_language?.startsWith("fr") ? "fr" : "en",
+    formUrl: form?.slug
+      ? `${origin}/forms/${encodeURIComponent(form.slug)}`
+      : `${origin}/customer/documents`,
+    origin,
+  });
+  const result = await sendEmail({ to, ...email });
+  if (!result.sent) {
+    console.warn("[forms] changes-requested notice not sent:", result.detail);
+  }
 }
