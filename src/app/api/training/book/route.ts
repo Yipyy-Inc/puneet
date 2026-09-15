@@ -10,6 +10,7 @@ import type { SeriesPaymentStatus } from "@/lib/training-enrollment";
 import {
   buildTrainingBook,
   type BookEnrollmentRow,
+  type BookSessionBookingRow,
   type BookSeriesRow,
   type BookSessionRow,
 } from "@/lib/api/mappers/training-book";
@@ -63,6 +64,7 @@ export async function GET() {
       series: [],
       seriesEnrollments: [],
       extraCourseTypes: [],
+      dropInBookings: [],
     });
   }
   const seriesIds = series.map((s) => s.id);
@@ -90,8 +92,10 @@ export async function GET() {
       supabase
         .from("bookings")
         .select(
-          `ref, training_series_session_id, payment_status,
-           booking_pets(pets(ref)),
+          `ref, training_series_session_id, payment_status, status,
+           total_cost, created_at, updated_at,
+           clients(ref, name, phone, email),
+           booking_pets(pets(ref, name, breed)),
            training_attendance(checked_in_at)`,
         )
         .match(inFacility(scope))
@@ -152,11 +156,27 @@ export async function GET() {
   // Which booking is which dog's place in which session — what attendance is
   // written against when the session is completed.
   const bookingRefs = new Map<string, Map<number, number>>();
+  // Every session booking, for `buildTrainingBook` to pick the drop-ins from.
+  const sessionBookings: BookSessionBookingRow[] = [];
   for (const row of (bookingsResult.data ?? []) as unknown as {
     ref: number;
     training_series_session_id: string | null;
     payment_status: string | null;
-    booking_pets: { pets: { ref: number } | null }[] | null;
+    status: string | null;
+    total_cost: number | string | null;
+    created_at: string;
+    updated_at: string | null;
+    clients: {
+      ref: number;
+      name: string | null;
+      phone: string | null;
+      email: string | null;
+    } | null;
+    booking_pets:
+      | {
+          pets: { ref: number; name: string; breed: string | null } | null;
+        }[]
+      | null;
     training_attendance:
       | { checked_in_at: string | null }
       | { checked_in_at: string | null }[]
@@ -185,6 +205,19 @@ export async function GET() {
     const attendance = Array.isArray(row.training_attendance)
       ? row.training_attendance[0]
       : row.training_attendance;
+    sessionBookings.push({
+      ref: row.ref,
+      training_series_session_id: row.training_series_session_id,
+      status: row.status,
+      total_cost: row.total_cost,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      checkedIn: Boolean(attendance?.checked_in_at),
+      clients: row.clients,
+      pets: (row.booking_pets ?? []).flatMap((bp) =>
+        bp.pets ? [bp.pets] : [],
+      ),
+    });
     if (!attendance?.checked_in_at) continue;
     const bySeries = attended.get(seriesId) ?? new Map<number, number>();
     for (const bp of row.booking_pets ?? []) {
@@ -220,6 +253,7 @@ export async function GET() {
       paid,
       bookingRefs,
       makeupGuests,
+      sessionBookings,
       timeZone,
       today,
     }),

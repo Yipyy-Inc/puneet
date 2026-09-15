@@ -31,6 +31,7 @@ const EMPTY_BOOK: TrainingBook = {
   series: [],
   seriesEnrollments: [],
   extraCourseTypes: [],
+  dropInBookings: [],
 };
 let bookLoad: { at: number; promise: Promise<TrainingBook> } | null = null;
 
