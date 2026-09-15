@@ -101,12 +101,22 @@ let bookingRef = 0;
 
 test.describe.configure({ mode: "serial" });
 
+// The address a guest estimate is quoted to. Sending files the estimate under a
+// client with this email, which afterAll removes; `.invalid` can never receive
+// mail, and these sends go by link, so nothing is emailed.
+const GUEST_EMAIL = "e2e-estimate-guest@example.invalid";
+
 test.afterAll(async () => {
   const db = admin();
   const { count } = await db
     .from("estimates")
     .delete({ count: "exact" })
     .eq("internal_note", MARKER);
+  const { count: guests } = await db
+    .from("clients")
+    .delete({ count: "exact" })
+    .eq("email", GUEST_EMAIL);
+  console.log(`cleanup: ${guests ?? 0} guest client(s) deleted`);
   if (bookingRef) {
     await db
       .from("bookings")
@@ -183,6 +193,60 @@ test.describe("estimates", () => {
       "accepted",
       "declined",
     ]);
+  });
+
+  test("sending a guest's estimate files it under a client with their email", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    type Sent = EstimatePayload & {
+      clientId: number;
+      clientEmail: string;
+      delivery?: unknown;
+      guestClient?: { created?: boolean; reason?: string };
+    };
+    const guestDraft = async (): Promise<Sent> => {
+      const res = await page.request.post("/api/estimates", {
+        data: {
+          guest: {
+            name: "E2E Estimate Guest",
+            email: GUEST_EMAIL,
+            phone: "5555550123",
+          },
+          service: "daycare",
+          lineItems: [{ label: "Daycare", amount: 38, quantity: 1 }],
+          internalNote: MARKER,
+          send: false,
+        },
+      });
+      expect(res.status(), await res.text()).toBe(201);
+      return (await res.json()) as Sent;
+    };
+    const sendByLink = async (id: string): Promise<Sent> => {
+      const res = await page.request.patch(`/api/estimates/${id}`, {
+        data: { action: "send", via: "link" },
+      });
+      expect(res.status(), await res.text()).toBe(200);
+      return (await res.json()) as Sent;
+    };
+
+    // A draft stays a guest's.
+    const first = await guestDraft();
+    expect(first.clientId).toBe(0);
+
+    // Sent, it belongs to a client with that address — the row joining the
+    // facility claims — and a link send emails nothing.
+    const sent = await sendByLink(first.id);
+    expect(sent.status).toBe("sent");
+    expect(sent.clientId).toBeGreaterThan(0);
+    expect(sent.clientEmail).toBe(GUEST_EMAIL);
+    expect(sent.guestClient?.reason).toBeUndefined();
+    expect(sent.delivery).toBeUndefined();
+
+    // A second estimate to the same address finds that client, not a new one.
+    const second = await sendByLink((await guestDraft()).id);
+    expect(second.clientId).toBe(sent.clientId);
+    expect(second.guestClient?.created).toBe(false);
   });
 
   test("converting makes a real booking and points the estimate at it", async ({

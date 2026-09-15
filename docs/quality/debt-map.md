@@ -14660,11 +14660,38 @@ day, while making browser-only settings real):
   "stop when" choice and the sample-data preview are removed. Unit:
   `estimate-follow-up.test.ts`; SQL: `estimate-follow-ups.sql`; e2e:
   `estimate-follow-ups.spec.ts` (settings only — it never runs the tick, which
-  would drain production's outbox). **Still debt:** guest estimates get no
-  reminder (the link needs a customer sign-in); sending an estimate still
-  emails nothing, so a "not viewed" reminder is often the first message the
-  customer receives; the defaults card's expiry-warning email has no sender;
-  and `src/lib/estimates/email-sends.ts` is still an in-memory mock.
+  would drain production's outbox).
+
+  **Fixed the same day, the three gaps it left.**
+  - **Send emails the estimate.** The send action and a create with `send`
+    take `via`; the screens ask for email, and
+    `lib/estimates/deliver-estimate.ts` sends it after the write is
+    confirmed, through the one sender and the opt-out list (transactional, like
+    the pay link), in the client's language, with the link and how to sign in.
+    The response carries per-channel `delivery` with a reason code, and the
+    toast (`sendToast` in `use-estimate-actions.ts`) says "emailed to …" only
+    when the email service took it.
+  - **A guest's estimate reaches the guest.** Sending files it under the
+    facility's client with the guest's email (`lib/estimates/guest-client.ts`),
+    found first and created only when there is none, with the staff session
+    (so `clients_insert` decides). Joining the facility claims that client
+    (`link_client_at`), so the estimate is on their dashboard and the
+    follow-ups can reach them. A draft stays a guest's.
+  - **The expiry warning is sent.** `lib/estimates/expiry-warning-tick.ts`
+    queues it on the messaging tick, only for a facility with a STORED
+    `estimate_settings` row with the switch on (the shipped default is on,
+    and a default is not a decision to email customers).
+
+  Unit: `estimate-message.test.ts`; e2e: `estimates.spec.ts` (a sent guest
+  estimate is filed under one client with that address; sent by link, so
+  nothing is emailed). **Still debt:** the emailed link opens a page behind
+  sign-in, and sign-in always lands on `/` — it ignores `?next=` for every
+  method — so a customer reaches the estimate through their dashboard rather
+  than straight from the link; carrying `next` through sign-in, sign-up and
+  `/join` is an auth change of its own. `src/lib/estimates/email-sends.ts`
+  and `account-provisioning.ts` are still in-memory mocks, and the
+  `/customer/estimates/[token]/setup` page still reads the fixture.
+
 - **Weather warnings:** the dashboard widget fetches a real forecast and reads
   the stored `weather_rules`, but the custom forecast areas and the alert log
   are localStorage-only, and only the settings page reads the areas.

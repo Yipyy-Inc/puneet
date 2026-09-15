@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
@@ -14,6 +15,13 @@ import {
   estimateTotals,
   linesWithTotals,
 } from "@/lib/api/mappers/estimate";
+import { deliverEstimate } from "@/lib/estimates/deliver-estimate";
+import type { EstimateDelivery } from "@/lib/estimates/estimate-message";
+import {
+  clientForGuest,
+  type GuestClientResult,
+} from "@/lib/estimates/guest-client";
+import { facilityCustomerLinkOrigin } from "@/lib/public-origin";
 
 // ============================================================================
 // Estimates: the facility's list, a client's, a customer's own; and a new one.
@@ -28,6 +36,10 @@ import {
 // for a client's estimate the database resets it to the client's anyway. The
 // totals are recomputed here from the lines — a total sent by the browser is
 // a preview, never the quote.
+//
+// Created with `send`, a guest's estimate is filed under a client with their
+// email, and `via` email/sms/both sends it once the row exists — the same two
+// steps the send action takes ([key]/route.ts).
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -153,6 +165,19 @@ export async function POST(request: NextRequest) {
     ).toISOString();
   }
 
+  // A guest's estimate that is SENT goes under a client with their email —
+  // found, or made — so the customer can open it once they sign in and join.
+  // See lib/estimates/guest-client.ts. A draft stays a guest's.
+  let guestClient: GuestClientResult | null = null;
+  if (!clientId && body.send && body.guest) {
+    guestClient = await clientForGuest(
+      supabase as unknown as SupabaseClient,
+      facility.facilityId,
+      body.guest,
+    );
+    clientId = guestClient.clientId;
+  }
+
   const viewer = await getViewer().catch(() => null);
   const actor = viewer?.fullName ?? viewer?.email ?? "Staff";
   const now = new Date().toISOString();
@@ -164,7 +189,9 @@ export async function POST(request: NextRequest) {
       // Reset to the client's facility by the trigger when there is a client.
       facility_id: facility.facilityId,
       client_id: clientId,
-      guest: clientId ? null : (body.guest ?? null),
+      // Kept when the guest was filed under a client: it still carries the
+      // pet they named, which has no pet record.
+      guest: body.guest ?? null,
       pet_ids: petIds,
       service: body.service,
       service_type: body.serviceType ?? null,
@@ -183,7 +210,7 @@ export async function POST(request: NextRequest) {
       deposit_required: body.depositRequired ?? null,
       status: body.send ? "sent" : "draft",
       sent_at: body.send ? now : null,
-      sent_via: body.send ? "link" : null,
+      sent_via: body.send ? body.via : null,
       expires_at: expiresAt,
       public_note: body.publicNote ?? null,
       internal_note: body.internalNote ?? null,
@@ -204,14 +231,47 @@ export async function POST(request: NextRequest) {
       denied: "You do not have permission to write estimates.",
     });
   }
+  const id = (data as { id: string }).id;
 
-  const created = await loadEstimates(supabase, (q) =>
-    q.eq("id", (data as { id: string }).id),
+  // Only once the row exists: an email about an estimate that was not saved
+  // would point the customer at nothing.
+  let delivery: EstimateDelivery[] | undefined;
+  if (body.send && body.via !== "link") {
+    const { data: facilityRow } = await supabase
+      .from("facilities")
+      .select("slug")
+      .eq("id", facility.facilityId)
+      .maybeSingle();
+    delivery = await deliverEstimate(supabase as unknown as SupabaseClient, {
+      estimateId: id,
+      via: body.via,
+      customerOrigin: facilityCustomerLinkOrigin(
+        (facilityRow as { slug: string | null } | null)?.slug,
+        request,
+      ),
+    });
+  }
+
+  const created = await loadEstimates(supabase, (q) => q.eq("id", id));
+  if (created.error || created.data.length === 0) {
+    return NextResponse.json(
+      { error: created.error ?? "Not found." },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json(
+    {
+      ...created.data[0],
+      ...(delivery ? { delivery } : {}),
+      ...(guestClient
+        ? {
+            guestClient:
+              "reason" in guestClient
+                ? { reason: guestClient.reason }
+                : { created: guestClient.created },
+          }
+        : {}),
+    },
+    { status: 201 },
   );
-  return created.error || created.data.length === 0
-    ? NextResponse.json(
-        { error: created.error ?? "Not found." },
-        { status: 500 },
-      )
-    : NextResponse.json(created.data[0], { status: 201 });
 }

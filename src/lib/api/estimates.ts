@@ -110,6 +110,8 @@ export function useEstimate(key: string | undefined) {
 
 export type EstimateCreate = EstimateBody & {
   send?: boolean;
+  /** How a send on creation reaches the customer; "link" sends no message. */
+  via?: "email" | "sms" | "both" | "link";
   duplicatedFrom?: string;
 };
 

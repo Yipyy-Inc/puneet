@@ -45,7 +45,11 @@ import { clientQueries, useCreateClient, useCreatePet } from "@/lib/api/client";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
-import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
+import {
+  customerEstimateLink,
+  sendToast,
+  type SentEstimate,
+} from "@/components/bookings/use-estimate-actions";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 import {
@@ -604,25 +608,27 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     if (saving) return;
     setSaving(true);
     try {
-      const saved = savedId
-        ? await actOnEstimate.mutateAsync({
-            id: savedId,
-            patch: { action: "send", via: "link" },
-          })
-        : await createEstimate.mutateAsync({
-            ...(await resolveRecipient()),
-            ...estimateBody(),
-            send: true,
-          });
+      const saved = (
+        savedId
+          ? await actOnEstimate.mutateAsync({
+              id: savedId,
+              patch: { action: "send", via: "email" },
+            })
+          : await createEstimate.mutateAsync({
+              ...(await resolveRecipient()),
+              ...estimateBody(),
+              send: true,
+              via: "email",
+            })
+      ) as SentEstimate;
       setSavedId(saved.id);
       setGeneratedEstimateId(saved.estimateId);
       const copied = await copyLink(saved.estimateToken);
       setLinkCopied(copied);
       setCreated(true);
       setSent(true);
-      toast.success(wizFill("sentToast", { number: saved.estimateId }), {
-        description: wizT(copied ? "sentCopied" : "sentNotCopied"),
-      });
+      const message = sendToast({ t: wizT, fill: wizFill }, saved, copied);
+      toast.success(message.title, { description: message.description });
     } catch (error) {
       toast.error(wizT("sendFailed"), {
         description: error instanceof Error ? error.message : undefined,
