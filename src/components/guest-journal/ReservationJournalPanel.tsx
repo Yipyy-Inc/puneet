@@ -16,6 +16,13 @@ import {
 } from "@/lib/care-log-scheduler";
 import { getOutcomeOption } from "@/components/daily-care/outcome-meta";
 import { downloadReportPdf } from "@/lib/report-export";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import {
+  formatDateLong,
+  formatDateShort,
+  formatDayHeading,
+} from "@/lib/i18n/format";
 import { JournalDayCard } from "./JournalDayCard";
 import { JournalActivityLog } from "./JournalActivityLog";
 import { LogModalRouter } from "@/components/daily-care/log-modals/LogModalRouter";
@@ -38,19 +45,8 @@ type Props = {
   guest: CareGuest;
 };
 
-// Single-facility mock — matches DailyCareView's facility naming.
-const FACILITY_NAME = "Yipyy";
-
-function fmtDate(s: string): string {
-  const d = new Date((s ?? "").slice(0, 10) + "T00:00:00");
-  if (isNaN(d.getTime())) return s;
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+/** The document's name, after the facility's own when the profile has one. */
+const JOURNAL = "Guest Journal";
 
 /** Digits (and leading +) only, for a tel: href. */
 function telHref(phone: string): string {
@@ -75,6 +71,13 @@ function dateRange(checkIn: string, checkOut: string): string[] {
 }
 
 function GuestJournalContent({ guest }: { guest: CareGuest }) {
+  const locale = useAppLocale();
+  // The facility's own name on the journal it hands an owner. It said "Yipyy"
+  // at every facility.
+  const { profile } = useFacilityProfile();
+  const journalTitle = [profile.businessName, JOURNAL]
+    .filter(Boolean)
+    .join(" — ");
   const { config } = useDailyCareConfig();
   const { executions, log } = useGuestCareLog(guest.id);
 
@@ -283,7 +286,7 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
   // shared report-export helper (AREA 9). Latin-1 text only — no glyphs.
   function handleDownload() {
     const L: string[] = [];
-    L.push(`${FACILITY_NAME} — Guest Journal`);
+    L.push(journalTitle);
     L.push(`${guest.petName} · ${guest.kennelName}`);
     if (guest.ownerName) L.push(`Owner: ${guest.ownerName}`);
     L.push(
@@ -298,11 +301,7 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
 
     days.forEach((d, i) => {
       const dateObj = new Date(d + "T00:00:00");
-      const dateLabel = dateObj.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      });
+      const dateLabel = formatDayHeading(d, locale);
       L.push(`Day ${i + 1} of ${days.length} — ${dateLabel}`);
 
       const dayTasks = generateScheduledTasks([guest], config, dateObj)
@@ -355,7 +354,9 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
     const slug = guest.petName.replace(/\s+/g, "-").toLowerCase();
     downloadReportPdf(
       `journal-${slug}-${guest.id}`,
-      `${FACILITY_NAME} — ${guest.petName} — Guest Journal`,
+      [profile.businessName, guest.petName, JOURNAL]
+        .filter(Boolean)
+        .join(" — "),
       L,
     );
     toast.success(`Journal downloaded for ${guest.petName}.`);
@@ -368,11 +369,15 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
           <div>
             <dt className="text-muted-foreground">Check-in</dt>
-            <dd className="font-medium">{fmtDate(guest.checkInDate)}</dd>
+            <dd className="font-medium">
+              {formatDateLong((guest.checkInDate ?? "").slice(0, 10), locale)}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Check-out</dt>
-            <dd className="font-medium">{fmtDate(guest.checkOutDate)}</dd>
+            <dd className="font-medium">
+              {formatDateLong((guest.checkOutDate ?? "").slice(0, 10), locale)}
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Room / Kennel</dt>
@@ -430,11 +435,7 @@ function GuestJournalContent({ guest }: { guest: CareGuest }) {
         {days.map((d, i) => {
           const isActive = d === activeDay;
           const isToday = d === today;
-          const dateObj = new Date(d + "T00:00:00");
-          const label = dateObj.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
+          const label = formatDateShort(d, locale);
           return (
             <button
               key={d}

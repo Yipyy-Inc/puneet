@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { History, MessageSquare } from "lucide-react";
 import { format12h } from "@/lib/care-log-scheduler";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { formatDateShort } from "@/lib/i18n/format";
 import { metaFor } from "@/components/daily-care/task-type-meta";
 import {
   outcomeBadgeClass,
@@ -24,19 +26,13 @@ type TimelineItem = { date: string; time: string } & (
   | { kind: "note"; note: JournalNote }
 );
 
-function shortDate(date: string): string {
-  return new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 /**
  * Permanent, append-only history of every action logged for this guest, plus
  * manual journal notes — merged into one reverse-chronological timeline.
  * Per spec: cannot be edited or deleted, only corrected with a note.
  */
 export function JournalActivityLog({ executions, notes = [] }: Props) {
+  const locale = useAppLocale();
   const items: TimelineItem[] = [
     ...executions.map(
       (exec): TimelineItem => ({
@@ -93,8 +89,8 @@ export function JournalActivityLog({ executions, notes = [] }: Props) {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-medium">Note</span>
                         <span className="text-muted-foreground">
-                          {shortDate(note.date)} · {format12h(note.time)} ·{" "}
-                          {note.author}
+                          {formatDateShort(note.date, locale)} ·{" "}
+                          {format12h(note.time)} · {note.author}
                         </span>
                       </div>
                       <p className="whitespace-pre-wrap">{note.text}</p>
@@ -132,7 +128,8 @@ export function JournalActivityLog({ executions, notes = [] }: Props) {
                         </Badge>
                       )}
                       <span className="text-muted-foreground">
-                        {shortDate(exec.date)} · {format12h(exec.executedAt)} ·{" "}
+                        {formatDateShort(exec.date, locale)} ·{" "}
+                        {format12h(exec.executedAt)} ·{" "}
                         {exec.staffName ?? exec.staffInitials}
                       </span>
                     </div>
