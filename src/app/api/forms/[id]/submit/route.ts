@@ -34,12 +34,12 @@ import type { Tables } from "@/types/database";
 //
 // ── SIGNED-IN CALLERS ONLY, DELIBERATELY ──────────────────────────────────
 //
-// `/forms/[slug]` is reachable signed-out and its "email verification" is a
-// `sessionStorage` flag the browser sets for itself. Accepting a submission
-// from an unauthenticated caller needs an anon-callable write path, which is
-// the exact class this repo has repaired five times. So the customer portal and
-// the front desk write here; the public anonymous page is unchanged and still
-// stores nothing. A known gap, recorded rather than papered over.
+// Accepting a submission from an unauthenticated caller needs an anon-callable
+// write path, which is the exact class this repo has repaired five times. So
+// `/forms/[slug]` asks a signed-out visitor to sign in (its old "email
+// verification" was a `sessionStorage` flag the browser set for itself), and
+// then files here. A customer who names no client is filed under their OWN
+// client record at the form's facility, found from the session.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -135,6 +135,23 @@ export async function POST(
       }
       clientId = (client as { id: string }).id;
     }
+  }
+
+  // A customer answering a form of a facility they are a client of: their own
+  // record, from the session. The page does not need to know their number, and
+  // cannot name somebody else's this way.
+  if (
+    !clientId &&
+    viewer.userId &&
+    (body?.clientRef === undefined || body.clientRef === null)
+  ) {
+    const { data: ownClient } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("facility_id", doc.facility_id)
+      .eq("profile_id", viewer.userId)
+      .maybeSingle();
+    clientId = (ownClient as { id: string } | null)?.id ?? null;
   }
 
   let petId: string | null = null;

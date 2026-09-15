@@ -482,6 +482,72 @@ test.describe("forms", () => {
     await expect(page.getByText("Answers", { exact: true })).toBeVisible();
   });
 
+  test("a signed-out visitor to a form address is asked to sign in", async ({
+    page,
+  }) => {
+    const owner = await page.context().browser()!.newContext();
+    const ownerPage = await owner.newPage();
+    await signIn(ownerPage, ACCOUNTS.owner);
+    const form = await createForm(ownerPage, freshName("signed-out"));
+    await patchForm(ownerPage, form.id, {
+      schema: questions("SIGNED OUT: is your dog vaccinated?"),
+      publish: true,
+      status: "published",
+    });
+    await owner.close();
+
+    // The old gate "sent" a six-digit code nobody received and accepted any
+    // six digits, then filed the answers into a browser fixture.
+    await page.goto(`/forms/${form.slug}`);
+    await expect(
+      page.getByRole("link", { name: "Sign in to continue" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByText("SIGNED OUT: is your dog vaccinated?"),
+    ).toHaveCount(0);
+  });
+
+  test("a customer's answers on the form page reach the database, under their own file", async ({
+    page,
+  }) => {
+    const owner = await page.context().browser()!.newContext();
+    const ownerPage = await owner.newPage();
+    await signIn(ownerPage, ACCOUNTS.owner);
+    const question = `PAGE ${Date.now()}: is your dog vaccinated?`;
+    const form = await createForm(ownerPage, freshName("page"));
+    await patchForm(ownerPage, form.id, {
+      schema: questions(question),
+      publish: true,
+      status: "published",
+    });
+
+    await signIn(page, ACCOUNTS.customer);
+    await page.goto(`/forms/${form.slug}`);
+    await expect(page.getByText(question)).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Yes", exact: true }).click();
+    await page.getByRole("button", { name: "Submit", exact: true }).click();
+    await expect(page.getByText("Thank you")).toBeVisible({ timeout: 30_000 });
+
+    // THE POINT. The page filed into a fixture that did not outlive a
+    // refresh. Read back by the owner, in another browser: the row exists,
+    // carries the answer, and is on the customer's own client record — which
+    // the page never named; the server found it from the session.
+    const listed = await ownerPage.request.get(
+      `${SUBMISSIONS}?formId=${form.id}`,
+    );
+    expect(listed.ok(), await listed.text()).toBe(true);
+    const { submissions } = (await listed.json()) as {
+      submissions: Submission[];
+    };
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].answers.f1).toBe("yes");
+    expect(
+      submissions[0].clientRef,
+      "filed under the customer's own file",
+    ).not.toBeNull();
+    await owner.close();
+  });
+
   test("a groomer cannot author a form", async ({ page }) => {
     await signIn(page, ACCOUNTS.groomer);
 

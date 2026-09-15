@@ -2,32 +2,27 @@
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import {
-  getFormBySlug,
-  shouldShowQuestion,
-  evaluateLogicRules,
-  type Form,
-  type FormQuestion,
-} from "@/data/forms";
-import { createSubmission, submissionHasFiles } from "@/data/form-submissions";
-import { notifyStaffOnFormSubmission } from "@/data/facility-notifications";
+import { useQuery } from "@tanstack/react-query";
+import type { Form, FormQuestion } from "@/data/forms";
+import { shouldShowQuestion, evaluateLogicRules } from "@/lib/forms/logic";
+import { liveFormQueries, useSubmitForm } from "@/lib/api/forms-live";
+import { toFlatForm } from "@/components/forms/live-shape";
 import { triggerFormEvent } from "@/lib/form-automation-events";
-import { clients } from "@/data/clients";
 import { Button } from "@/components/ui/button";
 import { YipyyPose } from "@/components/ui/yipyy-pose";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Mail,
-  KeyRound,
   Shield,
   Edit2,
   Dog,
   Cat,
   ArrowLeft,
   Languages,
+  LogIn,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import type { SupportedFormLocale } from "@/data/forms-phase2-types";
 import {
@@ -41,16 +36,11 @@ import {
 } from "@/hooks/use-app-locale";
 
 const DRAFT_PREFIX = "formDraft_";
-const AUTH_PREFIX = "formAuth_";
 
 function draftKey(formId: string, petId?: number, customerId?: number): string {
   if (petId != null) return `${DRAFT_PREFIX}${formId}_pet_${petId}`;
   if (customerId != null) return `${DRAFT_PREFIX}${formId}_cust_${customerId}`;
   return `${DRAFT_PREFIX}${formId}_anon`;
-}
-
-function authKey(formId: string): string {
-  return `${AUTH_PREFIX}${formId}`;
 }
 
 type Pet = {
@@ -64,50 +54,25 @@ export default function PublicFormPage() {
   const searchParams = useSearchParams();
   const slug = params?.slug as string | undefined;
 
-  const [form, _setForm] = useState<Form | null>(() =>
-    slug ? (getFormBySlug(slug) ?? null) : null,
+  // The published form, from Postgres, by the address the customer was sent —
+  // with their own pets at that facility. It read `src/data/forms` before,
+  // and filed answers into a fixture that did not outlive a refresh.
+  const formQuery = useQuery(liveFormQueries.bySlug(slug));
+  const payload = formQuery.data;
+  const liveForm = payload?.status === "ok" ? payload.form : null;
+  const form = useMemo<Form | null>(
+    () => (liveForm ? toFlatForm(liveForm) : null),
+    [liveForm],
   );
-  const [answers, setAnswers] = useState<Record<string, unknown>>(() => {
-    if (!form || typeof window === "undefined") return {};
-    const lpid = searchParams?.get("petId");
-    const lcid = searchParams?.get("customerId");
-    const fpid = lpid
-      ? [parseInt(lpid, 10)].filter((n) => !Number.isNaN(n))[0]
-      : undefined;
-    const cid = lcid ? parseInt(lcid, 10) : undefined;
-    try {
-      const raw = localStorage.getItem(draftKey(form.id, fpid, cid));
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, unknown>;
-        if (parsed && typeof parsed === "object") return parsed;
-      }
-    } catch {
-      // ignore invalid draft
-    }
-    return {};
-  });
+  const submitForm = useSubmitForm();
+
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [draftRestored, setDraftRestored] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [draftSavedShow, setDraftSavedShow] = useState(false);
   const formStartedEmittedRef = useRef(false);
-
-  // Feature 1: Authentication Gate state
-  const [authVerified, setAuthVerified] = useState(() => {
-    if (!form || typeof window === "undefined") return false;
-    const requireAuth =
-      (form as Form & { requireAuth?: boolean }).requireAuth ?? false;
-    if (!requireAuth) return true;
-    try {
-      return sessionStorage.getItem(authKey(form.id)) === "verified";
-    } catch {
-      return false;
-    }
-  });
-  const [authEmail, setAuthEmail] = useState("");
-  const [authCodeSent, setAuthCodeSent] = useState(false);
-  const [authCode, setAuthCode] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
 
   // Feature 2: Post-Submission Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -154,21 +119,40 @@ export default function PublicFormPage() {
   const firstPetId = petIds?.[0];
   const customerId = linkCustomerId ? parseInt(linkCustomerId, 10) : undefined;
 
-  // Feature 3: Look up customer pets for multi-pet support
+  // Feature 3: the signed-in customer's own pets at this facility, from Postgres.
   const repeatPerPet = form?.repeatPerPet ?? false;
-  const customerRecord = customerId
-    ? clients.find((c) => c.id === customerId)
-    : undefined;
   const customerPets: Pet[] = useMemo(
     () =>
-      customerRecord?.pets?.map((p) => ({
-        id: p.id,
-        name: p.name,
-        type: p.type,
-      })) ?? [],
-    [customerRecord?.pets],
+      payload?.status === "ok"
+        ? payload.pets.map((p) => ({
+            id: p.ref,
+            name: p.name,
+            type: p.species,
+          }))
+        : [],
+    [payload],
   );
-  const isMultiPet = repeatPerPet && !!customerId && customerPets.length > 0;
+  const draftCustomerId =
+    customerId ??
+    (payload?.status === "ok" ? (payload.clientRef ?? undefined) : undefined);
+  const isMultiPet = repeatPerPet && customerPets.length > 0;
+
+  // A draft saved in this browser comes back once the form has loaded.
+  useEffect(() => {
+    if (!form || draftRestored || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(
+        draftKey(form.id, firstPetId, draftCustomerId),
+      );
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        if (parsed && typeof parsed === "object") setAnswers(parsed);
+      }
+    } catch {
+      // An unreadable draft starts the form empty.
+    }
+    setDraftRestored(true);
+  }, [form, draftRestored, firstPetId, draftCustomerId]);
 
   // Evaluate logic rules to determine hide/require/end effects
   const logicEffects = form?.logicRules?.length
@@ -207,8 +191,9 @@ export default function PublicFormPage() {
 
   // Autosave draft (debounced) with saved indicator
   useEffect(() => {
-    if (!form || typeof window === "undefined" || submitted) return;
-    const key = draftKey(form.id, firstPetId, customerId);
+    if (!form || typeof window === "undefined" || submitted || !draftRestored)
+      return;
+    const key = draftKey(form.id, firstPetId, draftCustomerId);
     const t = setTimeout(() => {
       try {
         if (Object.keys(answers).length > 0) {
@@ -223,10 +208,10 @@ export default function PublicFormPage() {
       }
     }, 800);
     return () => clearTimeout(t);
-  }, [form, answers, submitted, firstPetId, customerId]);
+  }, [form, answers, submitted, draftRestored, firstPetId, draftCustomerId]);
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       if (!form) return;
       setAttemptedSubmit(true);
@@ -250,74 +235,55 @@ export default function PublicFormPage() {
       const eventSuffix = isEditing ? " (revised)" : "";
       const formEventName = form.name + eventSuffix;
 
-      // Feature 3: Multi-pet — create one submission per selected pet
-      if (isMultiPet && selectedPetIds.length > 0) {
-        setMultiPetSubmitting(true);
-        let lastSubId = "";
-        selectedPetIds.forEach((pid) => {
-          const submission = createSubmission({
+      // One row in form_submissions per pet answered for, or one with no pet.
+      // The server files each against the form's newest published version and,
+      // for a customer, under their own client record.
+      const petRefs: (number | undefined)[] =
+        isMultiPet && selectedPetIds.length > 0 ? selectedPetIds : [firstPetId];
+
+      setMultiPetSubmitting(true);
+      let sent = 0;
+      let lastSubId = "";
+      try {
+        for (const petRef of petRefs) {
+          const submission = await submitForm.mutateAsync({
             formId: form.id,
-            facilityId: form.facilityId,
-            context: Object.keys(context).length ? context : undefined,
+            ...(customerId !== undefined && { clientRef: customerId }),
+            ...(petRef !== undefined && { petRef }),
             answers,
-            ...(customerId && { customerId }),
-            petIds: [pid],
           });
+          sent += 1;
           lastSubId = submission.id;
           triggerFormEvent("form_submitted", {
             facilityId: form.facilityId,
             formId: form.id,
             formName: formEventName,
             submissionId: submission.id,
-            customerId,
-            petIds: [pid],
+            customerId: draftCustomerId,
+            petIds: petRef !== undefined ? [petRef] : undefined,
           });
-          notifyStaffOnFormSubmission({
-            facilityId: form.facilityId,
-            submissionId: submission.id,
-            formId: form.id,
-            formName: formEventName,
-            hasFiles: submissionHasFiles(submission.id),
-            hasRedFlag: logicEffects?.alertFlag ?? false,
-          });
-        });
-        setMultiPetSubmittedCount(selectedPetIds.length);
-        setPreviousSubmissionId(lastSubId);
-        setLastSubmittedAnswers({ ...answers });
+        }
+      } catch (err) {
+        const reason =
+          err instanceof Error ? err.message : "Your answers were not sent.";
+        setError(
+          sent > 0
+            ? `${sent} of ${petRefs.length} were sent. The rest were not: ${reason}`
+            : reason,
+        );
+        return;
+      } finally {
         setMultiPetSubmitting(false);
-      } else {
-        // Single submission flow
-        const submission = createSubmission({
-          formId: form.id,
-          facilityId: form.facilityId,
-          context: Object.keys(context).length ? context : undefined,
-          answers,
-          ...(customerId && { customerId }),
-          ...(petIds?.length && { petIds }),
-        });
-        triggerFormEvent("form_submitted", {
-          facilityId: form.facilityId,
-          formId: form.id,
-          formName: formEventName,
-          submissionId: submission.id,
-          customerId,
-          petIds,
-        });
-        notifyStaffOnFormSubmission({
-          facilityId: form.facilityId,
-          submissionId: submission.id,
-          formId: form.id,
-          formName: formEventName,
-          hasFiles: submissionHasFiles(submission.id),
-          hasRedFlag: false,
-        });
-        setPreviousSubmissionId(submission.id);
-        setLastSubmittedAnswers({ ...answers });
       }
 
+      setMultiPetSubmittedCount(petRefs.length);
+      setPreviousSubmissionId(lastSubId);
+      setLastSubmittedAnswers({ ...answers });
       try {
         if (typeof window !== "undefined") {
-          localStorage.removeItem(draftKey(form.id, firstPetId, customerId));
+          localStorage.removeItem(
+            draftKey(form.id, firstPetId, draftCustomerId),
+          );
         }
       } catch {}
       setIsEditing(false);
@@ -327,14 +293,13 @@ export default function PublicFormPage() {
       form,
       visibleQuestions,
       answers,
-      context,
       customerId,
-      petIds,
+      draftCustomerId,
       firstPetId,
       isEditing,
       isMultiPet,
       selectedPetIds,
-      logicEffects?.alertFlag,
+      submitForm,
       logicEffects?.requiredQuestionIds,
     ],
   );
@@ -349,40 +314,80 @@ export default function PublicFormPage() {
     setError(null);
   }, [lastSubmittedAnswers]);
 
-  // Feature 1: Auth handlers
-  const handleSendCode = useCallback(() => {
-    if (!authEmail || !authEmail.includes("@")) {
-      setAuthError("Please enter a valid email address.");
-      return;
-    }
-    setAuthError(null);
-    // Mock: just mark code as sent
-    setAuthCodeSent(true);
-  }, [authEmail]);
-
-  const handleVerifyCode = useCallback(() => {
-    if (authCode.length !== 6 || !/^\d{6}$/.test(authCode)) {
-      setAuthError("Please enter a valid 6-digit code.");
-      return;
-    }
-    setAuthError(null);
-    setAuthVerified(true);
-    // Persist in sessionStorage
-    if (form && typeof window !== "undefined") {
-      try {
-        sessionStorage.setItem(authKey(form.id), "verified");
-      } catch {
-        // ignore
-      }
-    }
-  }, [authCode, form]);
-
   if (!slug) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <p className="text-destructive">Invalid form link.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (formQuery.isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md" aria-busy="true">
+          <CardContent className="space-y-3 pt-6">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (formQuery.isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>This form did not load</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">{formQuery.error.message}</p>
+            <Button
+              onClick={() => void formQuery.refetch()}
+              className="min-h-12 w-full text-base"
+            >
+              Load the form again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // A submission is filed under a real account, so answering starts by
+  // signing in. The old gate here "sent" a code nobody received and accepted
+  // any six digits.
+  if (payload?.status === "signed_out") {
+    const query = searchParams?.toString();
+    const back = `/forms/${slug}${query ? `?${query}` : ""}`;
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">
+              Sign in to answer this form
+            </CardTitle>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Your answers are saved to your account, so the business receives
+              them.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="min-h-12 w-full text-base">
+              <Link
+                href={`/customer/auth/login?redirect=${encodeURIComponent(back)}`}
+              >
+                <LogIn className="mr-2 size-4" />
+                Sign in to continue
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -400,109 +405,6 @@ export default function PublicFormPage() {
             <p className="text-muted-foreground">
               This form does not exist or is no longer available.
             </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Feature 1: Authentication Gate
-  const requireAuth =
-    (form as Form & { requireAuth?: boolean }).requireAuth ?? false;
-  if (requireAuth && !authVerified) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-blue-50">
-              <Shield className="size-6 text-blue-600" />
-            </div>
-            <CardTitle className="text-xl">{form.name}</CardTitle>
-            <p className="text-muted-foreground mt-2 text-sm">
-              Please verify your identity to access this form
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {authError && (
-              <div
-                className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm"
-                role="alert"
-              >
-                {authError}
-              </div>
-            )}
-            {!authCodeSent ? (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="auth-email">Email address</Label>
-                  <div className="relative">
-                    <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="auth-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      className="min-h-12 pl-10 text-base"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleSendCode}
-                  className="min-h-12 w-full text-base"
-                >
-                  <Mail className="mr-2 size-4" />
-                  Send verification code
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground text-center text-sm">
-                  A 6-digit code has been sent to{" "}
-                  <span className="text-foreground font-medium">
-                    {authEmail}
-                  </span>
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="auth-code">Verification code</Label>
-                  <div className="relative">
-                    <KeyRound className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      id="auth-code"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="000000"
-                      value={authCode}
-                      onChange={(e) =>
-                        setAuthCode(
-                          e.target.value.replace(/\D/g, "").slice(0, 6),
-                        )
-                      }
-                      className="min-h-12 pl-10 text-center font-mono text-base tracking-widest"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleVerifyCode}
-                  className="min-h-12 w-full text-base"
-                >
-                  <KeyRound className="mr-2 size-4" />
-                  Verify code
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthCodeSent(false);
-                    setAuthCode("");
-                    setAuthError(null);
-                  }}
-                  className="text-muted-foreground hover:text-foreground w-full text-sm transition-colors"
-                >
-                  Use a different email
-                </button>
-              </>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -562,7 +464,6 @@ export default function PublicFormPage() {
     form?.questions.some((q) => q.labelI18n?.fr) ?? false;
   const showLocaleSwitcher = hasFrenchTranslations && enabledLocales.length > 1;
 
-  const isAnonymous = !customerId && !petIds?.length;
   const total = visibleQuestions.length;
   const answered = visibleQuestions.filter(
     (q) => answers[q.id] !== undefined && answers[q.id] !== "",
@@ -668,17 +569,6 @@ export default function PublicFormPage() {
           )}
         </CardHeader>
         <CardContent>
-          {isAnonymous && (
-            <p className="bg-muted/50 text-muted-foreground mb-4 rounded-lg p-3 text-xs">
-              <a
-                href="/customer/auth/login"
-                className="hover:text-foreground underline"
-              >
-                Sign in
-              </a>{" "}
-              to link this response to your account and save progress.
-            </p>
-          )}
           <div className="text-muted-foreground mb-4 flex items-center justify-between text-xs">
             <p>
               Your progress is saved automatically. You can leave and come back
@@ -757,7 +647,7 @@ export default function PublicFormPage() {
                   setError("Please select at least one pet before submitting.");
                   return;
                 }
-                handleSubmit(e);
+                void handleSubmit(e);
               }}
               className="space-y-6"
             >
@@ -793,11 +683,13 @@ export default function PublicFormPage() {
                 className="min-h-12 w-full touch-manipulation text-base"
                 disabled={multiPetSubmitting}
               >
-                {isEditing
-                  ? "Resubmit"
-                  : isMultiPet && selectedPetIds.length > 1
-                    ? `Submit for ${selectedPetIds.length} pets`
-                    : "Submit"}
+                {multiPetSubmitting
+                  ? "Sending…"
+                  : isEditing
+                    ? "Resubmit"
+                    : isMultiPet && selectedPetIds.length > 1
+                      ? `Submit for ${selectedPetIds.length} pets`
+                      : "Submit"}
               </Button>
             </form>
           )}

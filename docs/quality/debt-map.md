@@ -14400,6 +14400,17 @@ The work is to read these domains in `/api/forms/[id]/submit` for red flags and
 staff notifications, and in the booking and kiosk paths for requirements.
 `src/lib/form-requirements.ts` was imported by nothing and is deleted.
 
+**Fixed 2026-09-15, the prerequisite: a customer's answers reach the
+database.** `/forms/[slug]` read `src/data/forms`, "verified" the visitor with
+a six-digit code nobody was sent, and filed answers into
+`src/data/form-submissions`, so no required form could ever be satisfied. It
+now reads the published form through `GET /api/forms/by-slug/[slug]` (with
+the customer's own pets at that facility), asks a signed-out visitor to sign
+in, and files through `POST /api/forms/[id]/submit`, which puts a customer's
+answers on their own client record found from the session. `forms.spec.ts`
+covers both. The page's words are still English; it is not on a surface
+`check:ui-french` counts.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
