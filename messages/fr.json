@@ -2038,8 +2038,8 @@
       },
       "estimateActions": {
         "sentToast": "{number} est ouvert au client",
-        "sentCopied": "Son lien est copié — collez-le dans un courriel ou un texto. Aucun message n’a été envoyé d’ici.",
-        "sentNotCopied": "Copiez son lien depuis l’estimation pour la partager. Aucun message n’a été envoyé d’ici.",
+        "sentCopied": "Son lien est copié, pour que vous le partagiez vous-même.",
+        "sentNotCopied": "Copiez son lien depuis l’estimation pour le partager vous-même.",
         "sendFailed": "L’estimation n’a pas été ouverte au client",
         "linkCopied": "Lien de l’estimation copié",
         "linkNotCopied": "Le lien n’a pas pu être copié",
@@ -2059,10 +2059,20 @@
         "draftSavedToast": "{number} enregistré comme brouillon",
         "saveFailed": "L’estimation n’a pas été enregistrée",
         "readyTitle": "Estimation ouverte au client",
-        "readyBody": "{number} est ouvert à {client}. Aucun courriel n’a été envoyé d’ici — partagez le lien ci-dessous.",
+        "readyBody": "{number} est ouvert à {client}.",
         "linkCopiedShare": "Copié dans le presse-papiers :",
         "linkToShare": "Le lien à partager :",
-        "clientCreated": "Un dossier client a été créé pour {name}, afin que cette estimation puisse devenir une réservation."
+        "clientCreated": "Un dossier client a été créé pour {name}, afin que cette estimation puisse devenir une réservation.",
+        "emailedToast": "{number} envoyé par courriel à {email}",
+        "emailedCopied": "Son lien est aussi copié.",
+        "emailedNotCopied": "Vous pouvez aussi copier son lien depuis l’estimation.",
+        "notEmailed": "Elle n’a pas été envoyée par courriel : {reason}.",
+        "reasonNoAddress": "aucune adresse courriel au dossier",
+        "reasonInvalidAddress": "l’adresse courriel au dossier n’est pas valide",
+        "reasonOptedOut": "le client s’est désabonné des messages",
+        "reasonNotConfigured": "l’envoi de courriels n’est pas configuré",
+        "reasonFailed": "le service de courriel ne l’a pas acceptée",
+        "clientAttached": "{name} a été ajouté comme client, pour pouvoir l’ouvrir après s’être connecté."
       },
       "formBuilder": {
         "savedToast": "« {name} » est enregistré",

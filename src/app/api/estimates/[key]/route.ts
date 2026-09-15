@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
@@ -11,6 +12,13 @@ import {
   linesWithTotals,
   type EstimateRow,
 } from "@/lib/api/mappers/estimate";
+import { deliverEstimate } from "@/lib/estimates/deliver-estimate";
+import type { EstimateDelivery } from "@/lib/estimates/estimate-message";
+import {
+  clientForGuest,
+  type GuestClientResult,
+} from "@/lib/estimates/guest-client";
+import { facilityCustomerLinkOrigin } from "@/lib/public-origin";
 
 // ============================================================================
 // One estimate: read it (by id, or by the customer's link token), act on it,
@@ -20,8 +28,12 @@ import {
 // one is a line in the estimate's history and has its own rule:
 //
 //   send              draft → sent; stamps the expiry from the facility's
-//                     `defaultExpiryDays`. It sends NO message: the screen
-//                     copies the customer's link, and says so.
+//                     `defaultExpiryDays`. A guest's estimate is filed under a
+//                     client with their email (lib/estimates/guest-client.ts)
+//                     so the customer can open it. `via` email/sms/both also
+//                     SENDS it (lib/estimates/deliver-estimate.ts) and the
+//                     response says per channel whether it went; "link" sends
+//                     nothing.
 //   accept_on_behalf  sent → accepted, under the signed-in person's name
 //   decline           → declined, with the reason
 //   convert           accepted/sent → converted, pointing at the booking the
@@ -31,7 +43,9 @@ import {
 //                     with the old total kept in `revisions`
 //
 // Every write reads back through `.select()` — an RLS refusal touches zero
-// rows, and `deniedIfUntouched` makes that the 403 it was.
+// rows, and `deniedIfUntouched` makes that the 403 it was. The message goes
+// only AFTER the write is confirmed: an email about an estimate the database
+// refused to open would be a promise nothing keeps.
 // ============================================================================
 
 export const dynamic = "force-dynamic";
@@ -51,6 +65,7 @@ type RawRow = Pick<
   | "revisions"
   | "activity_log"
   | "client_id"
+  | "guest"
 >;
 
 export async function GET(
@@ -107,7 +122,7 @@ export async function PATCH(
   const { data: current } = await supabase
     .from("estimates")
     .select(
-      "id, facility_id, status, expires_at, total, current_version, revisions, activity_log, client_id",
+      "id, facility_id, status, expires_at, total, current_version, revisions, activity_log, client_id, guest",
     )
     .eq("id", key)
     .maybeSingle();
@@ -129,6 +144,7 @@ export async function PATCH(
     new Date(row.expires_at as string).getTime() <= Date.now();
 
   let update: Record<string, unknown>;
+  let guestClient: GuestClientResult | null = null;
 
   switch (patch.action) {
     case "send": {
@@ -148,6 +164,13 @@ export async function PATCH(
         (settings?.value as { defaultExpiryDays?: number } | null)
           ?.defaultExpiryDays ?? 30,
       );
+      if (!row.client_id) {
+        guestClient = await clientForGuest(
+          supabase as unknown as SupabaseClient,
+          row.facility_id,
+          row.guest,
+        );
+      }
       update = {
         status: "sent",
         sent_at: now,
@@ -155,6 +178,7 @@ export async function PATCH(
         expires_at: new Date(
           Date.now() + Math.max(1, days) * 86_400_000,
         ).toISOString(),
+        ...(guestClient?.clientId ? { client_id: guestClient.clientId } : {}),
         activity_log: log(row.status === "sent" ? "resent" : "sent"),
       };
       break;
@@ -292,8 +316,38 @@ export async function PATCH(
   const refused = deniedIfUntouched(data, DENIED);
   if (refused) return refused;
 
+  let delivery: EstimateDelivery[] | undefined;
+  if (patch.action === "send" && patch.via !== "link") {
+    const { data: facility } = await supabase
+      .from("facilities")
+      .select("slug")
+      .eq("id", row.facility_id)
+      .maybeSingle();
+    delivery = await deliverEstimate(supabase as unknown as SupabaseClient, {
+      estimateId: key,
+      via: patch.via,
+      customerOrigin: facilityCustomerLinkOrigin(
+        (facility as { slug: string | null } | null)?.slug,
+        request,
+      ),
+    });
+  }
+
   const updated = await loadEstimates(supabase, (q) => q.eq("id", key));
-  return NextResponse.json(updated.data[0] ?? null);
+  const estimate = updated.data[0] ?? null;
+  if (!estimate) return NextResponse.json(null);
+  return NextResponse.json({
+    ...estimate,
+    ...(delivery ? { delivery } : {}),
+    ...(guestClient
+      ? {
+          guestClient:
+            "reason" in guestClient
+              ? { reason: guestClient.reason }
+              : { created: guestClient.created },
+        }
+      : {}),
+  });
 }
 
 export async function DELETE(

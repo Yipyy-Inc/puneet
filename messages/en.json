@@ -2038,8 +2038,8 @@
       },
       "estimateActions": {
         "sentToast": "{number} is open to the customer",
-        "sentCopied": "Its link is copied — paste it into an email or a text. No message was sent from here.",
-        "sentNotCopied": "Copy its link from the estimate to share it. No message was sent from here.",
+        "sentCopied": "Its link is copied, to share it yourself.",
+        "sentNotCopied": "Copy its link from the estimate to share it yourself.",
         "sendFailed": "The estimate was not opened to the customer",
         "linkCopied": "Estimate link copied",
         "linkNotCopied": "The link could not be copied",
@@ -2059,10 +2059,20 @@
         "draftSavedToast": "{number} saved as a draft",
         "saveFailed": "The estimate was not saved",
         "readyTitle": "Estimate open to the customer",
-        "readyBody": "{number} is open to {client}. Nothing was emailed from here — share the link below.",
+        "readyBody": "{number} is open to {client}.",
         "linkCopiedShare": "Copied to your clipboard:",
         "linkToShare": "The link to share:",
-        "clientCreated": "A client record was created for {name}, so this estimate can become a booking."
+        "clientCreated": "A client record was created for {name}, so this estimate can become a booking.",
+        "emailedToast": "{number} emailed to {email}",
+        "emailedCopied": "Its link is copied too.",
+        "emailedNotCopied": "You can also copy its link from the estimate.",
+        "notEmailed": "It was not emailed: {reason}.",
+        "reasonNoAddress": "there is no email address on file",
+        "reasonInvalidAddress": "the email address on file is not valid",
+        "reasonOptedOut": "the customer has opted out of messages",
+        "reasonNotConfigured": "email sending is not set up",
+        "reasonFailed": "the email service did not accept it",
+        "clientAttached": "{name} was added as a client, so they can open it after signing in."
       },
       "formBuilder": {
         "savedToast": "“{name}” is saved",

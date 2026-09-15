@@ -98,7 +98,12 @@ import {
 } from "@/lib/capacity-engine";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
-import { customerEstimateLink } from "@/components/bookings/use-estimate-actions";
+import {
+  customerEstimateLink,
+  sendToast,
+  type SentEstimate,
+} from "@/components/bookings/use-estimate-actions";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   groomingCatalogueQueries,
   useGroomingAddOns,
@@ -319,6 +324,8 @@ export function BookingModal({
   // This modal is reached from THREE shells — customer, facility and employee —
   // so its words live in `shell.booking` rather than in any one portal group.
   const t = useShellText("booking");
+  // The send toast's words, shared with the estimate card and the wizard.
+  const estimateText = useStaffText("estimateActions");
   const { fees: careFees } = useCareFees();
   // The bookings the caller may see: the facility's for staff, a customer's
   // own for a customer. Availability and "new customer" were computed from a
@@ -3024,20 +3031,24 @@ export function BookingModal({
 
     setEstimatePricingSnapshot(latestSnapshot);
     if (!savedEstimate || estimateBusy) return;
-    // Opens it to the customer and copies the link. No message is sent from
-    // here, and the success screen says so.
+    // Opens it to the customer, emails it to the address on file and copies
+    // the link. The toast says whether the email went, and why not.
     setEstimateBusy(true);
     actOnEstimate
       .mutateAsync({
         id: savedEstimate.id,
-        patch: { action: "send", via: "link" },
+        patch: { action: "send", via: "email" },
       })
       .then(async (sent) => {
+        let copied = false;
         if (sent.estimateToken) {
-          await navigator.clipboard
+          copied = await navigator.clipboard
             .writeText(customerEstimateLink(sent))
-            .catch(() => undefined);
+            .then(() => true)
+            .catch(() => false);
         }
+        const message = sendToast(estimateText, sent as SentEstimate, copied);
+        toast.success(message.title, { description: message.description });
         setEstimateSent(true);
       })
       .catch((error: unknown) => {

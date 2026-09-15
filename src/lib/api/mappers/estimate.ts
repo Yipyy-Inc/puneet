@@ -239,6 +239,8 @@ export const estimateCreateSchema = estimateBodySchema
   .extend({
     /** Send on creation (the wizard's "Send"), or keep as a draft. */
     send: z.boolean().default(false),
+    /** How a send on creation reaches the customer; "link" sends no message. */
+    via: z.enum(["email", "sms", "both", "link"]).default("link"),
     duplicatedFrom: z.string().uuid().optional(),
   })
   .refine((b) => b.clientRef !== undefined || b.guest !== undefined, {
