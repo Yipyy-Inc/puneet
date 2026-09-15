@@ -11,16 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
-import { upsertFacilityStaff } from "@/data/facility-staff";
+import { useUpdateStaff } from "@/lib/api/staff";
 import { RolePill } from "@/app/facility/dashboard/staff/_components/staff-shared";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // ============================================================================
 // "My Profile" — the personal settings section every account holds, gated on
-// NOTHING (edit_own_profile is always-on). The signed-in staff (the RBAC
-// viewer) edits their own contact details; changes persist through the shared
-// directory (upsertFacilityStaff) so they survive navigation. Password change
-// is a mock stub (no backend).
+// NOTHING (edit_own_profile is always-on). The signed-in staff member (the RBAC
+// viewer, read from the staff table) edits their own name and phone, saved
+// through PATCH /api/staff/[id]: `staff_update` admits a person's own row, and
+// the trigger reverts anything they may not set.
+//
+// It saved into `upsertFacilityStaff` — the fixture array — so the change was
+// gone on reload. Email is read-only: it is the address this person signs in
+// and is invited with, and changing the staff row alone would split the two.
+// Password change is real (`changePassword` re-authenticates first).
 // ============================================================================
 
 function initials(first: string, last: string) {
@@ -33,18 +38,33 @@ export function MyAccountSettings() {
 
   const [firstName, setFirstName] = useState(viewer.firstName);
   const [lastName, setLastName] = useState(viewer.lastName);
-  const [email, setEmail] = useState(viewer.email);
   const [phone, setPhone] = useState(viewer.phone ?? "");
+  const { mutateAsync: updateStaff, isPending: saving } = useUpdateStaff();
 
   const dirty =
     firstName !== viewer.firstName ||
     lastName !== viewer.lastName ||
-    email !== viewer.email ||
     (phone ?? "") !== (viewer.phone ?? "");
 
-  const saveProfile = () => {
-    upsertFacilityStaff({ ...viewer, firstName, lastName, email, phone });
-    toast.success(t("profileUpdated"));
+  const saveProfile = async () => {
+    if (!dirty || saving) return;
+    try {
+      // Only these three: the rest of the row is the facility's to set, and
+      // the viewer copy may have fields redacted.
+      await updateStaff({
+        staffId: viewer.id,
+        patch: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone,
+        },
+      });
+      toast.success(t("profileUpdated"));
+    } catch (error) {
+      toast.error(t("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
   };
 
   return (
@@ -100,9 +120,13 @@ export function MyAccountSettings() {
               <Input
                 id="my-email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={viewer.email}
+                readOnly
+                aria-describedby="my-email-help"
               />
+              <p id="my-email-help" className="text-muted-foreground text-xs">
+                {t("emailHelp")}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="my-phone">{t("phone")}</Label>
@@ -115,8 +139,14 @@ export function MyAccountSettings() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={saveProfile} disabled={!dirty} className="gap-1.5">
-              <Save className="size-4" /> {t("saveChanges")}
+            <Button
+              onClick={() => void saveProfile()}
+              disabled={!dirty || saving}
+              aria-busy={saving}
+              className="gap-1.5"
+            >
+              <Save className="size-4" />{" "}
+              {saving ? t("saving") : t("saveChanges")}
             </Button>
           </div>
         </CardContent>
@@ -124,10 +154,7 @@ export function MyAccountSettings() {
 
       <ChangePasswordCard />
 
-      {/*
-        The real credential surface on this screen. ChangePasswordCard above
-        is still a mock that toasts success with no backend behind it.
-      */}
+      {/* Passkeys: the other credential this account can manage here. */}
       <PasskeysCard />
     </div>
   );
