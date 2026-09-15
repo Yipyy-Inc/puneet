@@ -298,7 +298,6 @@
     "src/app/employee/(shell)/performance/my-performance-view.tsx": 12,
     "src/app/employee/(shell)/register/page.tsx": 4,
     "src/app/employee/(shell)/schedule/staff-schedule-view.tsx": 87,
-    "src/app/employee/(shell)/tasks/my-tasks-view.tsx": 19,
     "src/app/employee/(shell)/write-ups/my-write-ups-view.tsx": 14,
     "src/app/employee/onboarding/_components/onboarding-checklist.tsx": 7,
     "src/app/employee/onboarding/_components/onboarding-header.tsx": 5,
