@@ -49,7 +49,8 @@ import { staffQueries, useCreateStaff, useUpdateStaff } from "@/lib/api/staff";
 // `upsertFacilityStaff` still writes the mock directory, which the 46 files
 // that have not moved yet continue to read. Kept in step with the API write
 // until they do; it becomes dead the moment the last of them migrates.
-import { upsertFacilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { upsertFacilityStaff } from "@/data/facility-staff";
+import { useStaffLocations } from "./_components/use-staff-locations";
 // The MANAGER's per-hire checklist, which is the one part of onboarding with no
 // table behind it yet — see the note in review-activate-dialog.tsx. Everything
 // the HIRE submits goes through @/lib/api/onboarding-instances.
@@ -109,6 +110,8 @@ export default function FacilityStaffPage() {
   // Table 4 — editing staff (Add / Edit, incl. the form's payroll fields)
   // requires manage_staff; admin resolves to all-access via the fallback.
   const canManageStaff = usePermission("manage_staff");
+  // The facility's own branches, for the filter and the count column.
+  const staffLocations = useStaffLocations();
 
   // THE ROSTER COMES FROM POSTGRES.
   //
@@ -474,7 +477,7 @@ export default function FacilityStaffPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("allLocations")}</SelectItem>
-                {FACILITY_LOCATIONS.map((l) => (
+                {staffLocations.locations.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
                     {l.label}
                   </SelectItem>
@@ -931,6 +934,7 @@ function StaffListView({
   canEdit: boolean;
 }) {
   const { t } = useStaffText("directory");
+  const staffLocations = useStaffLocations();
   const relative = useRelativeTime();
   return (
     <Card>
@@ -998,9 +1002,11 @@ function StaffListView({
                     </div>
                   </td>
                   <td className="text-muted-foreground px-4 py-3 text-xs">
-                    {p.assignedLocations.length === FACILITY_LOCATIONS.length
+                    {staffLocations.locations.length > 0 &&
+                    staffLocations.labelsFor(p.assignedLocations).length ===
+                      staffLocations.locations.length
                       ? t("allLocationsShort")
-                      : `${p.assignedLocations.length}/${FACILITY_LOCATIONS.length}`}
+                      : `${staffLocations.labelsFor(p.assignedLocations).length}/${staffLocations.locations.length}`}
                   </td>
                   <td className="text-muted-foreground px-4 py-3 text-xs">
                     {/* An empty `lastActive` is not an unknown date, it is a

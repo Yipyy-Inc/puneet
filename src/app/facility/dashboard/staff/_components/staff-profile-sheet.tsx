@@ -54,7 +54,7 @@ import {
   useStaffHomeLocation,
   useUpdateStaffHomeLocation,
 } from "@/lib/api/staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "./use-staff-locations";
 import {
   RolePill,
   ServiceChip,
@@ -378,9 +378,8 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
   const { t, fill, locale } = useStaffText("profileSheet");
   const reasonLabel = useStatusReasonLabel();
   const employmentTypeLabel = useEmploymentTypeLabel();
-  const locationLabels = profile.assignedLocations
-    .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
-    .filter(Boolean) as string[];
+  const { locations, labelsFor } = useStaffLocations();
+  const locationLabels = labelsFor(profile.assignedLocations);
 
   return (
     <div className="space-y-4">
@@ -457,11 +456,11 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
           label={t("locations")}
           value={locationLabels.join(", ") || "—"}
           sub={
-            locationLabels.length === FACILITY_LOCATIONS.length
+            locations.length > 0 && locationLabels.length === locations.length
               ? t("allLocations")
               : fill("someLocations", {
                   count: locationLabels.length,
-                  total: FACILITY_LOCATIONS.length,
+                  total: locations.length,
                 })
           }
         />

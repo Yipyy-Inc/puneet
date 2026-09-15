@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CalendarClock, Info, Save } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "./use-staff-locations";
 import {
   staffAvailability,
   upsertStaffAvailabilityForStaff,
@@ -78,11 +78,11 @@ export function StaffAvailabilityTab({ staff }: { staff: StaffProfile }) {
   const { t, fill, locale } = useStaffText("availability");
   const [rows, setRows] = useState<DayRow[]>(() => seedRows(staff.id));
   const [dirty, setDirty] = useState(false);
+  const { labelsFor } = useStaffLocations();
 
   const facility =
     staffAvailability.find((a) => a.staffId === staff.id)?.facility ??
-    FACILITY_LOCATIONS.find((l) => l.id === staff.assignedLocations[0])
-      ?.label ??
+    labelsFor(staff.assignedLocations)[0] ??
     DEFAULT_FACILITY;
 
   const update = (dow: number, patch: Partial<DayRow>) => {

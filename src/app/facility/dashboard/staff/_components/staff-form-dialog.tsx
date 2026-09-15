@@ -29,7 +29,7 @@ import {
   type FacilityStaffRole,
   type StaffProfile,
 } from "@/types/facility-staff";
-import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import { useStaffLocations } from "./use-staff-locations";
 import {
   createOnboardingInstance,
   type OnboardingTemplate,
@@ -85,7 +85,8 @@ function emptyProfile(): StaffProfile {
     primaryRole: "reception",
     additionalRoles: [],
     serviceAssignments: ROLE_PRESETS.reception.services,
-    assignedLocations: [FACILITY_LOCATIONS[0].id],
+    // Chosen on the Locations step from the facility's own branches.
+    assignedLocations: [],
     showOnCalendar: true,
     calendarAccess: { mode: "all" },
     clockIn: { requireAccessCode: false },
@@ -423,10 +424,8 @@ function ReviewScreen({
   const roleLabels = [draft.primaryRole, ...draft.additionalRoles]
     .map((r) => roleLabel(r))
     .join(", ");
-  const locationNames =
-    FACILITY_LOCATIONS.filter((l) => draft.assignedLocations.includes(l.id))
-      .map((l) => l.label)
-      .join(", ") || "—";
+  const { labelsFor } = useStaffLocations();
+  const locationNames = labelsFor(draft.assignedLocations).join(", ") || "—";
   const template = templates.find((t) => t.id === templateId);
   const stepCount = template?.employeeTasks.length ?? 0;
 
