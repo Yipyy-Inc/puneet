@@ -14615,6 +14615,37 @@ row — and the viewer refreshes from the staff query. Email is read-only there:
 it is the address the person signs in and is invited with, and changing the
 staff row alone would split the two.
 
+**Fixed 2026-09-15: the till's "Email Receipt" sends the receipt.** It was
+`console.log("Sending receipt to:")` followed by closing the dialog, so a
+customer was told a receipt was coming and none was sent. The till now keeps
+the recorded sale's id and posts to `POST /api/retail/sales/[id]/receipt`,
+which reads the sale under the caller's RLS for the session's facility, builds
+the itemised receipt from the stored items with the facility's own identity
+and tax registrations, and sends it through `emailItemisedReceipt` (the
+terminal's sender). The time is the facility's, through the new
+`formatDateTimeInZone` (unit-tested). A failure keeps the dialog open so staff
+can print. No spec drives the button; sending is environment-gated on Resend.
+
+**Still debt, and each needs a decision rather than a save** (found the same
+day, while making browser-only settings real):
+
+- **Estimate follow-ups** (`EstimateFollowUpSettings.tsx`) save to
+  localStorage, and nothing but that card reads them — there is no follow-up
+  sender. Storing them would add a switch that decides nothing; they need a
+  sender, or the card removed.
+- **Weather warnings:** the dashboard widget fetches a real forecast and reads
+  the stored `weather_rules`, but the custom forecast areas and the alert log
+  are localStorage-only, and only the settings page reads the areas.
+- **The loyalty module guard** (`useLoyaltyConfig`) reads a fixture for
+  facility id 1 with a hard-coded admin role. It gates only the loyalty reports
+  page, which is itself fixture data, and `useCustomerLoyaltyAccess`,
+  `useLoyaltyModuleAvailable` and `ConditionalLoyaltyFeature` have no callers.
+  It belongs with making loyalty reports real (`loyalty_config.enabled` and
+  `marketing_manage_loyalty` are the real sources).
+- **"Max pets per staff"** (`MaxPetsPerStaffCard`) is localStorage-only, and
+  its one reader is Smart Insights, which is fixture data for facility 11. It
+  becomes worth storing when insights are computed from real bookings.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over

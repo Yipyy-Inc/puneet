@@ -250,6 +250,10 @@ export default function POSPage() {
     }).data ?? NO_ITEMS;
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  // The sale the receipt dialog is about, as the database recorded it — what
+  // "Email receipt" asks the server to send.
+  const [receiptSaleId, setReceiptSaleId] = useState<string | null>(null);
+  const [emailingReceipt, setEmailingReceipt] = useState(false);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(
     null,
@@ -1019,6 +1023,7 @@ export default function POSPage() {
       note: input.notes,
       cashierName: input.cashierName,
     });
+    setReceiptSaleId(result.saleId);
     void queryClient.invalidateQueries({ queryKey: retailKeys.all });
     void queryClient.invalidateQueries({ queryKey: ["payments"] });
     void queryClient.invalidateQueries({ queryKey: ["store-credit"] });
@@ -1690,11 +1695,50 @@ export default function POSPage() {
     }
   };
 
-  const completeTransaction = (sendReceipt: boolean) => {
-    if (sendReceipt && customerEmail) {
-      // Send receipt email
-      console.log("Sending receipt to:", customerEmail);
+  const completeTransaction = async (sendReceipt: boolean) => {
+    // ── THE RECEIPT IS SENT, OR THE SCREEN SAYS IT WAS NOT ─────────────────
+    //
+    // This was `console.log("Sending receipt to:", …)` and then closed the
+    // dialog, so staff told a customer a receipt was on its way and nothing
+    // left the building. The server builds the itemised receipt from the
+    // recorded sale and sends it through the same sender the terminal uses.
+    if (sendReceipt && customerEmail && receiptSaleId) {
+      setEmailingReceipt(true);
+      try {
+        const response = await fetch(
+          `/api/retail/sales/${encodeURIComponent(receiptSaleId)}/receipt`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to: customerEmail, locale: tLocale }),
+          },
+        );
+        const result = (await response.json().catch(() => null)) as {
+          sent?: boolean;
+          detail?: string;
+          error?: string;
+        } | null;
+        if (response.ok && result?.sent) {
+          toast.success(
+            tR("receiptSent").replace("{email}", customerEmail.trim()),
+          );
+        } else {
+          // The dialog stays open, so staff can print instead.
+          toast.error(tR("receiptNotSent"), {
+            description: result?.detail ?? result?.error,
+          });
+          return;
+        }
+      } catch (error) {
+        toast.error(tR("receiptNotSent"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return;
+      } finally {
+        setEmailingReceipt(false);
+      }
     }
+    setReceiptSaleId(null);
     // Reset cart and customer info
     setCart([]);
     setSelectedClientId("");
@@ -5011,17 +5055,19 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
             <Button
               variant="outline"
               className="gap-2"
-              disabled={!customerEmail}
-              onClick={() => completeTransaction(true)}
+              disabled={!customerEmail || !receiptSaleId || emailingReceipt}
+              aria-busy={emailingReceipt}
+              onClick={() => void completeTransaction(true)}
             >
               <Mail className="size-4" />
-              Email Receipt
+              {emailingReceipt ? tR("emailingReceipt") : "Email Receipt"}
             </Button>
           </div>
 
           <Button
             className="mt-2 w-full"
-            onClick={() => completeTransaction(false)}
+            disabled={emailingReceipt}
+            onClick={() => void completeTransaction(false)}
           >
             Done
           </Button>
