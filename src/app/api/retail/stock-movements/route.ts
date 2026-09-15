@@ -30,7 +30,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const REASONS = new Set(["adjustment", "damaged", "count", "sale"]);
+// `return` is an item coming back onto the shelf from a till return. The
+// table's insert policy already admits it for `retail_process_sale`, like a
+// sale, so the cashier who takes the return can put the stock back.
+const REASONS = new Set(["adjustment", "damaged", "count", "sale", "return"]);
 
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
@@ -96,6 +99,14 @@ export async function POST(request: NextRequest) {
   if (reason === "sale" && delta > 0) {
     return NextResponse.json(
       { error: "A sale takes stock off, never puts it back." },
+      { status: 422 },
+    );
+  }
+  // The mirror of the rule above, and for the same reason: the policy admits
+  // `return` for a cashier, so a return must only ever put stock back.
+  if (reason === "return" && delta < 0) {
+    return NextResponse.json(
+      { error: "A return puts stock back, never takes it off." },
       { status: 422 },
     );
   }
