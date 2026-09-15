@@ -22,6 +22,7 @@ import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHe
 import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
 import { businessProfile, reportCardConfig } from "@/data/settings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerBookingRequest } from "@/components/bookings/use-customer-booking-request";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import {
   type ReportCardTimelineItem,
@@ -70,6 +71,7 @@ export function ReportCardDetail({
 
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
+  const requestBooking = useCustomerBookingRequest();
 
   // Pre-filter the booking flow to this report's service + pet (Table 59).
   const handleBookVisit = () => {
@@ -83,9 +85,7 @@ export function ReportCardDetail({
       preSelectedService: item.serviceType,
       lockService: true,
       isCustomerMode: true,
-      onCreateBooking: () => {
-        // Modal shows its own booking-request confirmation.
-      },
+      onCreateBooking: requestBooking,
     });
   };
 

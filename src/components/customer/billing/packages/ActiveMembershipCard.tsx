@@ -34,6 +34,7 @@ import type {
 import { defaultMembershipChangePolicy } from "@/data/services-pricing";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerBookingRequest } from "@/components/bookings/use-customer-booking-request";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
 import { rich } from "@/lib/i18n/rich";
@@ -111,6 +112,7 @@ export function ActiveMembershipCard({
   const [nowMs] = useState(() => Date.now());
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
+  const requestBooking = useCustomerBookingRequest();
 
   const policy: MembershipChangePolicy =
     plan?.changePolicy ?? defaultMembershipChangePolicy;
@@ -158,9 +160,7 @@ export function ActiveMembershipCard({
       preSelectedService: soleService,
       lockService: soleService !== undefined,
       isCustomerMode: true,
-      onCreateBooking: () => {
-        // Modal stays open to show the booking request confirmation screen.
-      },
+      onCreateBooking: requestBooking,
     });
   };
 
