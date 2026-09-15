@@ -14607,6 +14607,14 @@ which is why `src/data/invoice-template.ts` still exists. And
 `check:settings-persistence` treats any mutation as a write; it should follow
 the mutation to a network call, or it will pass the next localStorage save too.
 
+**Fixed 2026-09-15: "My profile" saves the person's own staff row.** Settings →
+My profile wrote name, email and phone into `upsertFacilityStaff`, the fixture
+array, so the change was gone on reload. It now saves first name, last name and
+phone through `PATCH /api/staff/[id]` — `staff_update` admits a person's own
+row — and the viewer refreshes from the staff query. Email is read-only there:
+it is the address the person signs in and is invited with, and changing the
+staff row alone would split the two.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
