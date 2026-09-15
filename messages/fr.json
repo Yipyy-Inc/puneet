@@ -642,7 +642,12 @@
         "statusActive": "Actif",
         "statusInvited": "Invité",
         "statusOnLeave": "En congé",
-        "statusFormer": "Ancien employé"
+        "statusFormer": "Ancien employé",
+        "loading": "Chargement du profil",
+        "loadFailed": "Impossible de charger ce profil.",
+        "saving": "Enregistrement…",
+        "saved": "Le profil de {name} est enregistré",
+        "saveFailed": "Le profil n’a pas été enregistré"
       },
       "status": {
         "active": "Actif",

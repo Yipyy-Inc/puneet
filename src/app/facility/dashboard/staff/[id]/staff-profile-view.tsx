@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { staffQueries, useUpdateStaff } from "@/lib/api/staff";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -26,11 +29,7 @@ import {
   type PermissionKey,
   type StaffProfile,
 } from "@/types/facility-staff";
-import {
-  facilityStaff,
-  FACILITY_LOCATIONS,
-  upsertFacilityStaff,
-} from "@/data/facility-staff";
+import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import {
   useOnboardingInstance,
   useOnboarding,
@@ -115,13 +114,47 @@ export function StaffProfileView({ staffId }: { staffId: string }) {
   // The provider now lives at the facility layout, holding the identity
   // resolved from the session. Mounting a second one here would shadow it with
   // a fresh default — which is to say, with the owner.
-  return <StaffProfileInner staffId={staffId} />;
+  const { t } = useStaffText("profile");
+
+  // The person, from Postgres. This looked them up in `src/data/facility-staff`,
+  // so anyone hired through the real roster opened as "not found", and a save
+  // went into that array and was gone on reload.
+  const {
+    data: staff,
+    isPending,
+    isError,
+  } = useQuery(staffQueries.profile(staffId));
+
+  if (isPending) {
+    return (
+      <div className="space-y-5" aria-busy="true" aria-label={t("loading")}>
+        <Skeleton className="h-44 rounded-[24px]" />
+        <Skeleton className="h-72 rounded-[24px]" />
+      </div>
+    );
+  }
+
+  if (isError || !staff) {
+    return (
+      <div className="text-muted-foreground flex h-60 flex-col items-center justify-center gap-2 text-sm">
+        <ShieldAlert className="size-8" />
+        {isError ? t("loadFailed") : t("notFound")}
+        <Button asChild variant="outline" size="sm" className="mt-2">
+          <Link href="/facility/dashboard/staff">{t("back")}</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Keyed by the person, so the edit draft starts from what was loaded.
+  return <StaffProfileInner key={staff.id} staff={staff} />;
 }
 
-function StaffProfileInner({ staffId }: { staffId: string }) {
+function StaffProfileInner({ staff }: { staff: StaffProfile }) {
+  const staffId = staff.id;
   const { t, fill, locale } = useStaffText("profile");
   const relative = useRelativeTime();
-  const staff = facilityStaff.find((s) => s.id === staffId);
+  const queryClient = useQueryClient();
 
   // Permission gates (stable hook order — one call per distinct key).
   const canViewStaff = usePermission("view_staff");
@@ -159,7 +192,9 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     staff ? { ...staff } : null,
   );
 
-  const { mutate: setStaffCustomRoles } = useSetStaffCustomRoles();
+  const { mutateAsync: setStaffCustomRoles } = useSetStaffCustomRoles();
+  const { mutateAsync: updateStaff } = useUpdateStaff();
+  const [saving, setSaving] = useState(false);
 
   // Onboarding review/activation (derived pending-review state).
   const onboardingInstance = useOnboardingInstance(staffId);
@@ -168,7 +203,6 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     Boolean(onboardingInstance?.submittedAt) &&
     !onboardingInstance?.reviewedAt;
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [, bumpProfile] = useReducer((x: number) => x + 1, 0);
 
   // Onboarding checklist (store-backed). Seed an invited hire's default.
   const onboarding = useOnboarding(staff?.id);
@@ -189,18 +223,6 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
   }, [onboarding, staff]);
 
   const [active, setActive] = useState("profile");
-
-  if (!staff) {
-    return (
-      <div className="text-muted-foreground flex h-60 flex-col items-center justify-center gap-2 text-sm">
-        <ShieldAlert className="size-8" />
-        {t("notFound")}
-        <Button asChild variant="outline" size="sm" className="mt-2">
-          <Link href="/facility/dashboard/staff">{t("back")}</Link>
-        </Button>
-      </div>
-    );
-  }
 
   if (!canViewStaff) {
     return (
@@ -238,19 +260,49 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
     });
   }
 
-  const saveProfile = () => {
-    if (!draft) return;
-    upsertFacilityStaff(draft);
-    // Custom-role assignments are the one part of this profile that the
-    // database already owns — they feed private.resolve_permission. Saving
-    // them only into the mock array would mean the roles shown here and the
-    // permissions actually enforced disagree.
-    setStaffCustomRoles({
-      staffId: draft.id,
-      roleIds: draft.customRoleIds ?? [],
-    });
-    bumpProfile();
-    toast.success(`${fullNameOf(draft)}'s profile updated`);
+  const saveProfile = async () => {
+    if (!draft || saving) return;
+    // ── ONLY WHAT CHANGED ───────────────────────────────────────────────────
+    //
+    // The profile was read through the staff route's redaction, so a field this
+    // viewer may not see (payroll, HR notes) arrives blank. Sending the whole
+    // draft would hand those blanks to the PATCH, which merges them over the
+    // stored row. A key is sent only when its value differs from what loaded.
+    const changed = Object.fromEntries(
+      Object.entries(draft).filter(
+        ([key, value]) =>
+          JSON.stringify(value) !==
+          JSON.stringify(staff[key as keyof StaffProfile]),
+      ),
+    ) as Partial<StaffProfile>;
+    const { customRoleIds, ...patch } = changed;
+
+    setSaving(true);
+    try {
+      if (Object.keys(patch).length > 0) {
+        await updateStaff({ staffId: staff.id, patch });
+      }
+      // Custom-role assignments feed private.resolve_permission, so they go
+      // through their own route, which the roles shown here and the
+      // permissions enforced both read.
+      if (customRoleIds !== undefined) {
+        await setStaffCustomRoles({
+          staffId: staff.id,
+          roleIds: customRoleIds ?? [],
+        });
+      }
+      // What the database stored, not what was sent: the trigger reverts
+      // fields this caller may not set.
+      await queryClient.invalidateQueries({ queryKey: ["staff", "profiles"] });
+      setDraft(null);
+      toast.success(fill("saved", { name: fullNameOf(draft) }));
+    } catch (error) {
+      toast.error(t("saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
   const discard = () => setDraft({ ...staff });
 
@@ -370,10 +422,12 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
         profile={reviewOpen ? staff : null}
         open={reviewOpen}
         onOpenChange={setReviewOpen}
-        onActivated={(next) => {
-          upsertFacilityStaff(next);
-          setDraft({ ...next });
-          bumpProfile();
+        onActivated={() => {
+          // The review route activated them; read the record back.
+          void queryClient.invalidateQueries({
+            queryKey: ["staff", "profiles"],
+          });
+          setDraft(null);
         }}
       />
 
@@ -467,15 +521,23 @@ function StaffProfileInner({ staffId }: { staffId: string }) {
             {fill("unsaved", { name: staff.firstName })}
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={discard}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={discard}
+              disabled={saving}
+            >
               {t("discard")}
             </Button>
             <Button
               size="sm"
               className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-              onClick={saveProfile}
+              onClick={() => void saveProfile()}
+              disabled={saving}
+              aria-busy={saving}
             >
-              <Save className="size-4" /> {t("saveChanges")}
+              <Save className="size-4" />{" "}
+              {saving ? t("saving") : t("saveChanges")}
             </Button>
           </div>
         </div>
