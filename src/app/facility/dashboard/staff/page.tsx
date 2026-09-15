@@ -36,7 +36,7 @@ import {
   Building2,
   UserMinus,
 } from "lucide-react";
-import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
+import Link from "next/link";
 import {
   ROLE_META,
   type FacilityStaffRole,
@@ -793,14 +793,22 @@ export default function FacilityStaffPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Departments management */}
+      {/* Departments are managed on the scheduling Departments screen, which
+          writes facility_departments. This dialog held a second editor over the
+          `departments` fixture that saved into an in-memory array. */}
       <Dialog open={departmentsOpen} onOpenChange={setDepartmentsOpen}>
-        <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-5xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("departmentsTitle")}</DialogTitle>
             <DialogDescription>{t("departmentsBody")}</DialogDescription>
           </DialogHeader>
-          <DepartmentSettings />
+          <DialogFooter>
+            <Button asChild>
+              <Link href="/facility/dashboard/services/scheduling/departments">
+                {t("openDepartments")}
+              </Link>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

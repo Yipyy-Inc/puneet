@@ -484,6 +484,7 @@
         "transferConfirm": "Transfer",
         "departmentsTitle": "Departments",
         "departmentsBody": "Create departments to organize your staff and assign tasks by team. Each staff member belongs to one department.",
+        "openDepartments": "Open departments",
         "colStaff": "Staff",
         "colRole": "Role",
         "colServices": "Services",

@@ -484,6 +484,7 @@
         "transferConfirm": "Transférer",
         "departmentsTitle": "Services",
         "departmentsBody": "Créez des services pour organiser votre personnel et assigner les tâches par équipe. Chaque membre appartient à un seul service.",
+        "openDepartments": "Ouvrir les services",
         "colStaff": "Membre",
         "colRole": "Rôle",
         "colServices": "Services",

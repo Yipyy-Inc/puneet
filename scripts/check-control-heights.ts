@@ -292,7 +292,6 @@ const BASELINE = new Map<string, number>([
   ["src/components/facility/boarding/ScheduleTemplates.tsx", 1],
   ["src/components/facility/CareTaskSettings.tsx", 4],
   ["src/components/facility/CheckinRequirementsSettings.tsx", 4],
-  ["src/components/facility/DepartmentSettings.tsx", 3],
   ["src/components/facility/DepositRulesSettings.tsx", 1],
   ["src/components/facility/EvaluationBookingWizardSettings.tsx", 2],
   ["src/components/facility/EvaluationSettings.tsx", 4],
