@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { bookingMutations } from "@/lib/api/booking";
+import { useQuery } from "@tanstack/react-query";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,9 +15,7 @@ import {
 import { buildResumePreselection } from "@/lib/resume-booking";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useSettings } from "@/hooks/use-settings";
-import { toast } from "sonner";
-import type { NewBooking } from "@/types/booking";
-import { FORM_REQUIRED, formRefusalOf } from "@/lib/forms/requirements";
+import { useCustomerBookingRequest } from "@/components/bookings/use-customer-booking-request";
 
 export default function NewBookingPage() {
   const t = useShellText("booking");
@@ -30,7 +27,6 @@ export default function NewBookingPage() {
   const { selectedFacility } = useCustomerFacility();
 
   const { bookingFlow } = useSettings();
-  const queryClient = useQueryClient();
 
   const preSelectedService = searchParams?.get("service") ?? undefined;
   const preSelectedProgramId = searchParams?.get("program") ?? undefined;
@@ -44,6 +40,14 @@ export default function NewBookingPage() {
     unfinishedBookingQueries.one(resumeBookingId),
   );
   const markRecovered = useMarkUnfinishedBookingRecovered();
+  const requestBooking = useCustomerBookingRequest({
+    onSent: () => {
+      // They came back and booked: the draft is recovered. Never blocking —
+      // the booking is already made.
+      if (resumeBookingId) markRecovered.mutate(resumeBookingId);
+      router.push("/customer/bookings");
+    },
+  });
   const resumePreselection = useMemo(() => {
     if (!resumeBookingId || !resumed) return null;
     const ub = resumed;
@@ -149,115 +153,7 @@ export default function NewBookingPage() {
           }
           isCustomerMode={true}
           bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
-          onCreateBooking={async (booking: NewBooking) => {
-            if (!customer || !selectedFacility) return false;
-
-            const petId = Array.isArray(booking.petId)
-              ? booking.petId[0]
-              : booking.petId;
-            const pet = customer.pets?.find((p) => p.id === petId);
-
-            try {
-              const created = await bookingMutations.create({
-                ...booking,
-                clientId: customer.id,
-                // ── THE DATABASE DECIDES THE STATUS, NOT THIS SCREEN ──────
-                //
-                // Every INSERT into `bookings` is forced to
-                // `request_submitted` with the prices zeroed and preserved as
-                // `details.requestedQuote` (20260806840000). So a booking is a
-                // REQUEST by construction, whoever makes it — which is exactly
-                // the model a customer needs, and it is why no separate
-                // `booking_requests` table is required.
-                //
-                // A status is still sent because `NewBooking` requires one and
-                // an absent field would read as an oversight. It is discarded;
-                // do not build anything on it being honoured.
-                status: "request_submitted",
-                // Deliberately dropped. A room creates a `boarding_stays` row,
-                // and its exclusion constraint keys on `released_at is null`
-                // rather than on the booking's status — so an unconfirmed
-                // request naming a kennel would hold that kennel against every
-                // other booking until somebody noticed. Rooms are assigned on
-                // the ops board after a stay exists, which is how the facility
-                // side already works.
-                unitAssignment: undefined,
-                kennel: undefined,
-              });
-
-              await queryClient.invalidateQueries({ queryKey: ["bookings"] });
-              // They came back and booked: the draft is recovered. Never
-              // blocking — the booking is already made.
-              if (resumeBookingId) {
-                markRecovered.mutate(resumeBookingId);
-              }
-
-              // ── ONE MESSAGE, BECAUSE THERE IS ONE OUTCOME ─────────────
-              //
-              // This used to say "<pet> is confirmed! Skipped staff approval"
-              // when `resolveInstabookEligibility` said so. The database
-              // contradicts that: the insert trigger forces
-              // `request_submitted`, so an instabook-eligible customer was
-              // told their dog had a place while the row said otherwise.
-              //
-              // Instabook is not implemented against the database — honouring
-              // it means a second, permitted act that confirms the booking,
-              // and a customer cannot update their own booking's status. It is
-              // in the debt map. Until then this says what happened.
-              toast.success(
-                t("requestSentTo").replace("{facility}", selectedFacility.name),
-                {
-                  description: t("bookingAwaitingConfirmation")
-                    .replace("{id}", String(created.id))
-                    .replace("{pet}", pet?.name ?? t("yourPetLower")),
-                },
-              );
-
-              router.push("/customer/bookings");
-            } catch (error) {
-              // The facility requires forms before booking. Name them, and
-              // open the first in a new tab so this booking stays as it is.
-              const refusal = formRefusalOf(error);
-              if (
-                refusal?.code === FORM_REQUIRED &&
-                refusal.missing.length > 0
-              ) {
-                const first = refusal.missing[0];
-                const names = refusal.missing
-                  .map((form) =>
-                    form.pet_name
-                      ? t("formForPet")
-                          .replace("{form}", form.form_name)
-                          .replace("{pet}", form.pet_name)
-                      : form.form_name,
-                  )
-                  .join(", ");
-                toast.error(t("formsNeededTitle"), {
-                  description: `${t("formsNeededBody")} ${names}`,
-                  duration: Infinity,
-                  action: {
-                    label: t("openForm").replace("{form}", first.form_name),
-                    onClick: () => {
-                      window.open(
-                        `/forms/${encodeURIComponent(first.form_slug)}`,
-                        "_blank",
-                        "noopener",
-                      );
-                    },
-                  },
-                });
-                return false;
-              }
-              // The modal stays where it is, holding what was entered. There
-              // is no row, so saying anything else would be the claim this
-              // whole change removed.
-              toast.error(t("couldNotSendBooking"), {
-                description:
-                  error instanceof Error ? error.message : t("tryAgainPlain"),
-              });
-              return false;
-            }
-          }}
+          onCreateBooking={requestBooking}
         />
       </div>
     </div>

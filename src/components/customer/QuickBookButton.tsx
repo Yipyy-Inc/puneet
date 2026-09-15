@@ -7,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerBookingRequest } from "@/components/bookings/use-customer-booking-request";
 
 export function QuickBookButton() {
   const t = useShellText("customer");
   const { client: customer } = useCurrentCustomer();
-  const customerId = customer?.id;
 
   const { selectedFacility } = useCustomerFacility();
   const { openBookingModal } = useBookingModal();
+  const requestBooking = useCustomerBookingRequest();
 
   const handleOpenBookingWizard = () => {
     if (!selectedFacility || !customer) return;
@@ -25,9 +26,7 @@ export function QuickBookButton() {
       facilityName: selectedFacility.name,
       preSelectedClientId: customer.id,
       isCustomerMode: true,
-      onCreateBooking: () => {
-        // Modal stays open to show the booking request confirmation screen.
-      },
+      onCreateBooking: requestBooking,
     });
   };
 

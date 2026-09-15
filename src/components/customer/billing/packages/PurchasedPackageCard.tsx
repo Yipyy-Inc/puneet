@@ -50,6 +50,7 @@ import { defaultPackagePolicy } from "@/data/services-pricing";
 import { useRedeemPackagePass } from "@/lib/api/customer-packages";
 import type { Booking } from "@/types/booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { useCustomerBookingRequest } from "@/components/bookings/use-customer-booking-request";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatDateLong, formatMoney } from "@/lib/i18n/format";
@@ -486,6 +487,8 @@ function BookWithPassButton({
   const { openBookingModal } = useBookingModal();
   const { mutateAsync: redeemPass } = useRedeemPackagePass();
   const { client: customer } = useCurrentCustomer();
+  // The pass is spent only once this has written the booking.
+  const requestBooking = useCustomerBookingRequest();
 
   const handleBook = () => {
     if (!selectedFacility || !customer) return;
@@ -525,9 +528,7 @@ function BookWithPassButton({
           }
         },
       },
-      onCreateBooking: () => {
-        // Modal shows its own pass-confirmation screen.
-      },
+      onCreateBooking: requestBooking,
     });
   };
 

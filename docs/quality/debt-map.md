@@ -14476,14 +14476,17 @@ booking and set of missing forms (`reminderKey`). The send pass treats
 `form_reminder` as transactional. The window, key and words are unit-tested
 (`lib/forms/reminder.ts`); no test runs the tick end to end.
 
-**Found 2026-09-15, still debt: four customer "book" buttons confirm a request
-that is never written.** `QuickBookButton`, the report card's "Book again"
+**Fixed 2026-09-15: four customer "book" buttons confirmed a request that was
+never written.** `QuickBookButton`, the report card's "Book again"
 (`report-card-detail.tsx`), `PurchasedPackageCard` and `ActiveMembershipCard`
-open the booking modal with `onCreateBooking: () => {}`. The modal treats any
-answer but `false` as saved (`BookingModal.tsx` `saveThrough`), so the
-customer sees the request confirmation and no booking exists — and a required
-form is never asked for. `/customer/bookings/new` is the one caller that saves
-through `bookingMutations.create`; the four should share that handler.
+opened the booking modal with `onCreateBooking: () => {}`. The modal treats any
+answer but `false` as saved (`BookingModal.tsx` `saveThrough`), so the customer
+saw the request confirmation with no booking behind it, a required form was
+never asked for, and the package card then spent a prepaid pass on the booking
+that did not exist. All four and `/customer/bookings/new` now save through one
+handler, `useCustomerBookingRequest`
+(`src/components/bookings/use-customer-booking-request.ts`). No spec drives
+these four buttons.
 
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
