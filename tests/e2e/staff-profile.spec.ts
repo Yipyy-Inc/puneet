@@ -113,3 +113,144 @@ test.describe("staff profile", () => {
     await expect(phone).toHaveValue(PROBE_PHONE);
   });
 });
+
+// ============================================================================
+// The profile's availability tab writes the week the scheduler reads.
+//
+// It used to seed from and save into `src/data/staff-availability`. A save now
+// files a proposal for that person and, for a manager who may decide, approves
+// it — so the stored pattern is read back here through the route. The groomer's
+// week is put back exactly as it was, and the requests this filed are removed.
+// ============================================================================
+
+interface AvailabilityDay {
+  dayOfWeek: number;
+  isAvailable: boolean;
+  startTime?: string;
+  endTime?: string;
+}
+
+interface AvailabilityPayload {
+  patterns: Record<string, AvailabilityDay[]>;
+  requests: { id: string; employeeId: string; requestedAt: string }[];
+}
+
+async function availability(page: Page): Promise<AvailabilityPayload> {
+  const res = await page.request.get("/api/scheduling/availability?status=all");
+  expect(res.ok(), await res.text()).toBe(true);
+  return (await res.json()) as AvailabilityPayload;
+}
+
+test.describe("staff profile availability", () => {
+  let rowId = "";
+  let groomerId = "";
+  let weekBefore: AvailabilityDay[] | undefined;
+  let requestsBefore = new Set<string>();
+
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      const res = await page.request.get("/api/staff");
+      const staff = (await res.json()) as {
+        id: string;
+        rowId?: string;
+        email: string;
+      }[];
+      const groomer = staff.find((m) => m.email === ACCOUNTS.groomer);
+      rowId = groomer?.rowId ?? "";
+      groomerId = groomer?.id ?? "";
+      expect(rowId, "the groomer has a staff row").not.toBe("");
+      const live = await availability(page);
+      weekBefore = live.patterns[rowId];
+      requestsBefore = new Set(live.requests.map((r) => r.id));
+    } finally {
+      await page.close();
+    }
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      const failures: string[] = [];
+
+      // The week first: back to what was stated, or to unstated.
+      if (weekBefore) {
+        const filed = await page.request.post("/api/scheduling/availability", {
+          data: {
+            employeeId: rowId,
+            proposed: weekBefore,
+            effectiveFrom: new Date().toISOString().slice(0, 10),
+          },
+        });
+        if (filed.ok()) {
+          const { id } = (await filed.json()) as { id: string };
+          const approved = await page.request.patch(
+            "/api/scheduling/availability",
+            { data: { id, status: "approved" } },
+          );
+          if (!approved.ok()) failures.push(`restore: ${approved.status()}`);
+        } else {
+          failures.push(`restore proposal: ${filed.status()}`);
+        }
+      } else {
+        const cleared = await page.request.delete(
+          `/api/scheduling/availability?staff=${rowId}`,
+        );
+        if (!cleared.ok()) failures.push(`clear: ${cleared.status()}`);
+      }
+
+      // Then every request this run filed, including the restore's.
+      const live = await availability(page);
+      for (const request of live.requests) {
+        if (request.employeeId !== rowId || requestsBefore.has(request.id)) {
+          continue;
+        }
+        const gone = await page.request.delete(
+          `/api/scheduling/availability?id=${request.id}`,
+        );
+        if (!gone.ok())
+          failures.push(`request ${request.id}: ${gone.status()}`);
+      }
+
+      expect(failures, "cleanup").toEqual([]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  test("a manager's edit on the tab is the stored week", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+    await page.goto(
+      `/facility/dashboard/staff/${encodeURIComponent(groomerId)}`,
+    );
+    await page.getByRole("tab", { name: /availability/i }).click();
+
+    // Monday: available, 08:00 to 16:00.
+    const monday = page
+      .locator("div.flex.flex-wrap.items-center.gap-3")
+      .filter({ hasText: /monday/i })
+      .first();
+    const toggle = monday.getByRole("switch");
+    if ((await toggle.getAttribute("aria-checked")) !== "true") {
+      await toggle.click();
+    }
+    const times = monday.locator('input[type="time"]');
+    await times.nth(0).fill("08:00");
+    await times.nth(1).fill("16:00");
+
+    await page.getByRole("button", { name: /save availability/i }).click();
+    await expect(
+      page.getByText(/availability template updated/i),
+    ).toBeVisible();
+
+    const stored = (await availability(page)).patterns[rowId];
+    expect(stored?.find((day) => day.dayOfWeek === 1)).toEqual({
+      dayOfWeek: 1,
+      isAvailable: true,
+      startTime: "08:00",
+      endTime: "16:00",
+    });
+  });
+});
