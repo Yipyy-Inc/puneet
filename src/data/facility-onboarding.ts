@@ -58,7 +58,7 @@ export const onboardingSteps: OnboardingStepDef[] = [
     title: "Connect a payment method",
     description:
       "Connect a card so you can accept payments and pay your subscription.",
-    route: "/facility/dashboard/billing/payment-settings",
+    route: settingsHref("yipyy-pay"),
     cta: "Connect payment",
   },
   {

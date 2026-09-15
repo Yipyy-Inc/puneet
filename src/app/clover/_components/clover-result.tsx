@@ -45,9 +45,11 @@ import { settingsHref } from "@/lib/settings/nav";
 // ============================================================================
 
 /** Back into the wizard, on the step that follows a successful connection. */
-const SETUP_HREF = `${settingsHref("yipyy-pay")}&step=2`;
+// `?`, not `&`: settingsHref returns a path since settings became a route per
+// section, and `/settings/yipyy-pay&step=2` is an address with no page.
+const SETUP_HREF = `${settingsHref("yipyy-pay")}?step=2`;
 /** Back to step 1, for somebody who has to try again. */
-const RETRY_HREF = `${settingsHref("yipyy-pay")}&step=1`;
+const RETRY_HREF = `${settingsHref("yipyy-pay")}?step=1`;
 
 export type CloverOutcome =
   | { kind: "connected"; merchantId: string; environment: string }
