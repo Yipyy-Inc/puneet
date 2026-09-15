@@ -2421,7 +2421,10 @@
         "promo_client_limit": "Ce client a déjà utilisé le code autant de fois que permis.",
         "promo_first_time": "Le code est réservé à une première visite, et ce client est déjà venu.",
         "promo_minimum": "Le panier est sous le minimum du code.",
-        "promo_nothing_due": "Il ne reste rien à réduire."
+        "promo_nothing_due": "Il ne reste rien à réduire.",
+        "receiptSent": "Reçu envoyé à {email}",
+        "receiptNotSent": "Le reçu n’a pas été envoyé",
+        "emailingReceipt": "Envoi du reçu…"
       },
       "kiosk": {
         "title": "Arrivées",

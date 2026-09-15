@@ -2421,7 +2421,10 @@
         "promo_client_limit": "This client has already used the code as often as it allows.",
         "promo_first_time": "The code is for a first visit, and this client has been before.",
         "promo_minimum": "The basket is under the code’s minimum.",
-        "promo_nothing_due": "Nothing is left to discount."
+        "promo_nothing_due": "Nothing is left to discount.",
+        "receiptSent": "Receipt sent to {email}",
+        "receiptNotSent": "The receipt was not sent",
+        "emailingReceipt": "Sending receipt…"
       },
       "kiosk": {
         "title": "Check-in",

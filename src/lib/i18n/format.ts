@@ -213,6 +213,29 @@ export function formatCalendarDayLong(day: string, locale: AppLocale): string {
  * Read in UTC from the first of the month, so no zone can move it into the
  * month before.
  */
+/**
+ * `Sep 10, 2026, 2:30 p.m.` · `10 sept. 2026, 14 h 30` — on the clock of a
+ * named zone.
+ *
+ * For a document handed to a customer (a receipt, an emailed invoice) that is
+ * composed on the SERVER. The server's own zone is not the facility's, so a
+ * sale at 14:30 in Montreal would print as 18:30 without it. The zone is part
+ * of the cache key: two facilities in two zones must not share a formatter.
+ */
+export function formatDateTimeInZone(
+  value: Date | string | number,
+  locale: AppLocale,
+  timeZone: string,
+): string {
+  const d = asDate(value);
+  if (unformattable(d)) return NO_DATE;
+  return dateFmt(locale, `dateTimeIn:${timeZone}`, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(d);
+}
+
 export function formatMonthShort(month: string, locale: AppLocale): string {
   const d = new Date(`${month}-01T00:00:00Z`);
   if (unformattable(d)) return NO_DATE;
