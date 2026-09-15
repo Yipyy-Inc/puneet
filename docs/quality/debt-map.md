@@ -14686,3 +14686,30 @@ leaves `amount_paid` unchanged, then fix the cleanup and purge the rows.
 - ~~The draft holds the first pet only.~~ **Fixed 2026-09-14.** It keeps
   `preSelectedPetIds`, and resuming restores every pet. `petName`, used by
   `{{pet_name}}`, is still the first pet's.
+
+## 2026-09-15 — a ledger read checked the viewer's permission once per row
+
+**Fixed 2026-09-15** (20260915092924, SQL P1–P6 in
+`permitted-facility-ids.sql`). The nightly suite failed `gift-cards › a
+groomer holds no gift cards and cannot issue one` on a statement timeout. The
+read policies of `gift_cards`, `gift_card_transactions`,
+`loyalty_transactions`, `payments` and `store_credit_entries` called
+`private.has_permission(facility_id, …)`, which Postgres evaluates for every
+row. A viewer let in by no arm pays for the whole table: a groomer's read of
+the e2e facility's 5,373 gift cards took 10.2 s to return nothing. Those
+tables only grow (gift cards and their ledger cannot be deleted, so the specs
+drain rather than remove), so the timeout was going to spread.
+
+The five policies now match `facility_id in (select
+private.permitted_facility_ids('<permission>'))`, one hashed subplan per
+query; the same read takes 0.25 s. The helper's body is `has_permission`'s own
+conditions, and P1 asserts the two admit exactly the same facilities for every
+real member and permission.
+
+**Still debt.** About thirty-five other policies call `has_permission` per
+row, `bookings_read` (1,300 rows) and `facility_tasks_read` among them. They
+are correct and not yet slow. Convert one the same way when it shows up in a
+timeout, with an equivalence assertion like P1.
+
+**Do instead** for a new policy: put a permission check on a growing table
+through `permitted_facility_ids`, never `has_permission(facility_id, …)`.
