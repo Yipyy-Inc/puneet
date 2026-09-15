@@ -51,9 +51,6 @@ import {
   toCsv,
 } from "@/components/facility/operations/OperationsCalendarHelpers";
 import {
-  getBookingNotes,
-  getCustomerNotes,
-  getPetNotes,
   toDisplayRole,
   type NoteSectionState,
 } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
@@ -1615,37 +1612,13 @@ export function OperationsCalendar() {
     ? (bookingAddOnState[selectedBooking.id] ?? [])
     : [];
 
-  useEffect(() => {
-    if (!selectedBooking) return;
-
-    const selectedBookingPetId = getPrimaryPetId(selectedBooking.petId);
-
-    setNoteStateByBooking((previous) => {
-      if (previous[selectedBooking.id]) return previous;
-
-      return {
-        ...previous,
-        [selectedBooking.id]: {
-          booking: {
-            content: getBookingNotes(selectedBooking.id),
-            lastEditedBy: "System",
-            lastEditedAt: "",
-          },
-          pet: {
-            content: getPetNotes(selectedBookingPetId),
-            lastEditedBy: "System",
-            lastEditedAt: "",
-          },
-          customer: {
-            content: getCustomerNotes(selectedBooking.clientId),
-            lastEditedBy: "System",
-            lastEditedAt: "",
-          },
-        },
-      };
-    });
-  }, [selectedBooking]);
-
+  // ── NO NOTES ARE SEEDED FROM A FIXTURE ─────────────────────────────────
+  //
+  // This filled each booking's note sections from `src/data/tags-notes` by
+  // numeric id, so a real booking could show a fixture customer's note, signed
+  // "System". The drawer's Notes tab reads the booking's real notes through
+  // `NotesList` (`/api/notes`); the sections here start empty and hold only
+  // what this session appends.
   const selectedNotesState =
     selectedBooking && noteStateByBooking[selectedBooking.id]
       ? noteStateByBooking[selectedBooking.id]

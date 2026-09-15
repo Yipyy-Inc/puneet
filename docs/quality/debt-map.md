@@ -14553,6 +14553,19 @@ days — and those come from a constant in `ScheduleView.tsx`, not from this
 page. Storing all seventy would be switches that decide nothing; the fix is a
 settings domain for the values something reads, and the page trimmed to them.
 
+**Fixed 2026-09-15: the operations calendar no longer seeds fixture notes.**
+When a booking was selected, the calendar filled its note sections from
+`src/data/tags-notes` by numeric id, so a real booking could show a fixture
+customer's note signed "System" (in the read-only fallback and the History
+tab's "Note added" row). The seeding is removed; the drawer's Notes tab already
+reads the booking's real notes through `NotesList`. The drawer helpers' vaccine,
+signed-agreement and visit-history lookups over `src/data/pet-data`,
+`src/data/documents` and `src/data/settings` had no caller and are deleted.
+
+**Still debt.** Task-completion notes are still appended to that in-session
+note state only (`OperationsCalendar.tsx`), and the drawer's `formatCurrency`
+and `formatLocalDateTime` still name `en-US` and `USD`.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
