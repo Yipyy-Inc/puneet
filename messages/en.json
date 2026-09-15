@@ -1432,7 +1432,15 @@
         "unavailable": "Unavailable",
         "unsaved": "Unsaved changes",
         "saveAvailability": "Save availability",
-        "saved": "Availability template updated"
+        "saved": "Availability template updated",
+        "loading": "Loading availability",
+        "loadFailed": "This availability could not be loaded.",
+        "noStaffRow": "This person has no staff record to hold a weekly schedule yet.",
+        "allDay": "All day",
+        "bothTimes": "Set both times, or neither for all day",
+        "saving": "Saving…",
+        "saveFailed": "The availability was not saved",
+        "sentForApproval": "Availability sent for approval"
       },
       "rolesTab": {
         "resultingPermissions": "Resulting permissions",

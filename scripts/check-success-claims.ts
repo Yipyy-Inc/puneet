@@ -159,7 +159,6 @@ const BASELINE = new Set<string>([
   "src/app/facility/account/payment-method/_components/payment-method-view.tsx",
   "src/app/facility/dashboard/inventory/InventoryClient.tsx",
   "src/app/facility/dashboard/staff/_components/custom-role-quick-create-dialog.tsx",
-  "src/app/facility/dashboard/staff/_components/staff-availability-tab.tsx",
   "src/app/facility/documents/_components/facility-documents-client.tsx",
   "src/app/facility/services/memberships/_components/plans/PlanBuilderDialog.tsx",
   "src/app/facility/services/memberships/_components/subscribers/CancelSubscriptionDialog.tsx",

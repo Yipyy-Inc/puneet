@@ -14512,11 +14512,20 @@ database; no staff row held a real location id (18 rows at
 branches through `useStaffLocations`; an old fixture id is not shown and is
 dropped the next time the list is saved.
 
+**Fixed 2026-09-15: the profile's availability tab is the schedule's.** It
+seeded its grid from `src/data/staff-availability` and saved back into that
+array, so a manager's edit reached nothing the scheduler checks. It now reads
+`staff_availability` through `/api/scheduling/availability`; Save files a
+proposal for that person and approves it at once when the viewer may decide
+availability (the approval RPC applies the week), or leaves it in the approval
+queue when they may not. A window may run past midnight, as the route allows.
+
 **Still debt.** The directory still copies each saved profile into the
 fixture (`upsertFacilityStaff`) for the screens that read it; the onboarding
-checklist, availability tab, documents, write-ups, warnings and performance
-still read fixtures. `AddStaffAccountModal` and `LocationDetailSheet` in the
-platform admin still list `FACILITY_LOCATIONS`.
+checklist, documents, write-ups, warnings and performance still read
+fixtures. `AddStaffAccountModal` and `LocationDetailSheet` in the platform
+admin still list `FACILITY_LOCATIONS`. No spec drives the availability tab
+itself; `scheduling-availability.spec.ts` covers the route.
 
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
