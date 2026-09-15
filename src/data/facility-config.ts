@@ -34,54 +34,6 @@ export const facilityConfig = {
       ],
     },
   },
-  /** Form notification config: when to notify staff (in-app) and customer (email/SMS or in-app). */
-  notifications: {
-    forms: {
-      staff: {
-        newSubmission: true,
-        redFlagAnswers: true,
-        hasFileUpload: true,
-      },
-      customer: {
-        submissionConfirmed: true,
-        missingRequiredFormsReminder: true,
-        /** When the missing-required-forms reminder fires. */
-        missingRequiredFormsReminderTiming: {
-          value: 48,
-          unit: "hours" as "hours" | "days",
-          anchor: "check_in" as "appointment" | "check_in",
-        },
-        formRejectedNeedsCorrection: true,
-      },
-    },
-  },
-  /** 7.1 Required forms before booking/approve/check-in (configurable per service). Form IDs from Form Builder. */
-  formRequirements: {
-    boarding: {
-      beforeRequest: [] as string[], // Before customer can request a booking
-      beforeApprove: [] as string[], // Before staff can approve a booking
-      beforeCheckIn: [] as string[],
-      ifMissing: "banner" as "block" | "banner", // Block step vs allow with "incomplete requirements" banner
-    },
-    daycare: {
-      beforeRequest: [] as string[],
-      beforeApprove: [] as string[],
-      beforeCheckIn: [] as string[],
-      ifMissing: "banner" as "block" | "banner",
-    },
-    grooming: {
-      beforeRequest: [] as string[],
-      beforeApprove: [] as string[],
-      beforeCheckIn: [] as string[],
-      ifMissing: "banner" as "block" | "banner",
-    },
-    training: {
-      beforeRequest: [] as string[],
-      beforeApprove: [] as string[],
-      beforeCheckIn: [] as string[],
-      ifMissing: "banner" as "block" | "banner",
-    },
-  },
   bookingRules: {
     enforceOnAll: false,
     cutOffTimes: {
@@ -138,8 +90,6 @@ export const facilityConfig = {
         }
       >,
     },
-    /** If true, customer can reach Confirm even with missing forms; booking is "pending until requirements completed". If false, customer must complete required forms before Confirm. */
-    allowBookingWithoutForms: true,
     tipping: {
       enabled: true,
       /** "percent" = suggest % of booking total; "fixed" = suggest fixed dollar amounts */
