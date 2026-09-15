@@ -1,5 +1,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
+import { settingsHref } from "@/lib/settings/nav";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -165,8 +167,8 @@ test.describe("old settings addresses still resolve", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    // The exact address src/app/clover/_components/clover-result.tsx sends a
-    // merchant to after a successful connection.
+    // The address src/app/clover/_components/clover-result.tsx used to send a
+    // merchant to after a successful connection, as an old bookmark still has it.
     await page.goto("/facility/dashboard/settings?section=yipyy-pay&step=2");
     await page.waitForURL(/\/settings\/yipyy-pay/, { timeout: 30_000 });
 
@@ -176,6 +178,21 @@ test.describe("old settings addresses still resolve", () => {
       url.searchParams.get("step"),
       "the connect wizard's step was dropped by the redirect — a merchant who just connected lands back on 'connect an account'",
     ).toBe("2");
+
+    // The address it sends now. It was built as `/settings/yipyy-pay&step=2`
+    // after settings became a route per section: no `?`, so a not-found. That
+    // form first, so the absence asserted below is known to be visible.
+    const moved = page.getByText("That settings section has moved");
+    await page.goto(`${settingsHref("yipyy-pay")}&step=2`);
+    await expect(moved).toBeVisible({ timeout: 30_000 });
+
+    await page.goto(`${settingsHref("yipyy-pay")}?step=2`);
+    await expect(page).toHaveURL(/\/settings\/yipyy-pay\?step=2$/, {
+      timeout: 30_000,
+    });
+    // The not-found is server-rendered, so it is on the page by the load event
+    // `goto` waits for, as the address above just showed.
+    await expect(moved).toHaveCount(0);
   });
 
   test("a section that does not exist says so, instead of rendering another one", async ({
