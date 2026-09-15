@@ -178,7 +178,7 @@ export function RebookRemindersCard() {
   // service's own template if the facility has written one, the shipped
   // `rebook_reminder` otherwise — which is the same choice the send route
   // makes, so this screen cannot preview wording a customer would not get.
-  const { settings } = useFacilitySettings();
+  const { settings, isPending: settingsPending } = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
   const templates = useQuery(automationQueries.templates());
   const createTemplate = useCreateTemplate();
@@ -709,12 +709,15 @@ export function RebookRemindersCard() {
                               </div>
                             </div>
                             <div className="flex shrink-0 gap-1">
-                              {/* Disabled until the templates land. The editor
-                                  captures its text in `useState` on mount, so
-                                  opening it early captures an EMPTY body it
-                                  can never recover from — and saving that is
-                                  refused with "a template needs something to
-                                  say", about wording the user can see. */}
+                              {/* Disabled until the templates AND the settings
+                                  land. The editor captures its text in
+                                  `useState` on mount, so opening it early
+                                  captures what it can never recover from: an
+                                  EMPTY body before the templates arrive, or the
+                                  SHIPPED wording before `rebook_config` says
+                                  which of the facility's own templates this
+                                  service uses — and saving that overwrites the
+                                  facility's words with the shipped ones. */}
                               {/* One button per channel this service actually
                                   sends on. A service set to `both` sends two
                                   different messages, and a single button left
@@ -725,7 +728,9 @@ export function RebookRemindersCard() {
                                   key={c}
                                   variant="outline"
                                   size="sm"
-                                  disabled={templates.isLoading}
+                                  disabled={
+                                    templates.isLoading || settingsPending
+                                  }
                                   onClick={() =>
                                     openTemplateEditor(def.service, c)
                                   }
