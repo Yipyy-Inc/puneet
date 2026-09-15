@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,1443 +12,199 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  Save,
-  RotateCcw,
-  Users,
-  ClipboardList,
-  AlertTriangle,
-} from "lucide-react";
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { weekdayNames } from "@/lib/dates/calendar-names";
+import { settingsHref } from "@/lib/settings/nav";
+import type { SchedulingRules } from "@/lib/settings/scheduling-rules";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
-import { usePermission } from "@/hooks/use-facility-rbac";
+// ============================================================================
+// The schedule's rules, saved for the facility.
+//
+// This page offered about seventy options held in `useState`, and Save was
+// `// TODO: Save to backend`: a manager could change every one of them and lose
+// them all on reload. Nothing read them either — the schedule's warnings came
+// from a constant in ScheduleView. It now edits the two rules the schedule
+// actually applies, stored in `scheduling_rules`, and SHOWS the overtime rule
+// the warnings read from Payroll rather than keeping a second copy of it.
+//
+// The rest — swaps, sick call-ins, breaks, coverage minimums, notifications,
+// policies, the "admin only" cards — were switches for features that do not
+// exist. Each returns with its feature. See lib/settings/scheduling-rules.ts.
+// ============================================================================
+
+interface Draft {
+  rest: string;
+  days: string;
+}
+
+function draftFrom(rules: SchedulingRules): Draft {
+  return {
+    rest: String(rules.minRestHours),
+    days: String(rules.maxConsecutiveDays),
+  };
+}
 
 export default function SchedulingSettings() {
-  // ── WHO MAY SEE THE ADMIN PANEL ─────────────────────────────────────────
-  //
-  // This sniffed `document.cookie` for `user_role` and unlocked the "System
-  // Configuration" heading and the "Roles & Departments (Admin Only)" card when
-  // it said super_admin or facility_admin. A cookie any browser can write,
-  // deciding which admin controls to draw.
-  //
-  // It answers from the permission cascade now — the same resolution RLS uses,
-  // seeded from the session. `manage_roles` because that is literally what the
-  // gated card configures; a facility that grants it to somebody has decided
-  // they may configure roles, and this screen should agree with that decision
-  // rather than take its own view from a cookie.
-  const isAdmin = usePermission("manage_roles");
+  const { t, fill, locale } = useStaffText("schedulingRules");
+  const { settings, isPending, error } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const stored = settings.scheduling_rules;
+  const payroll = settings.payroll_config.value;
 
-  const [settings, setSettings] = useState({
-    // General Settings
-    enabled: true,
-    allowSelfScheduling: true,
-    requireManagerApproval: false,
-    autoApproveSwaps: false,
+  // The server's value is the truth; state holds only what was edited since it
+  // arrived. Seeding `useState` from it would latch the defaults shown while
+  // the request was still in flight.
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const form = draft ?? draftFrom(stored.value);
+  const patch = (changes: Partial<Draft>) =>
+    setDraft((prev) => ({ ...(prev ?? draftFrom(stored.value)), ...changes }));
 
-    // Shift Settings
-    defaultShiftDuration: 8,
-    minShiftDuration: 4,
-    maxShiftDuration: 12,
-    minTimeBetweenShifts: 8,
-    maxHoursPerWeek: 40,
-    maxConsecutiveDays: 6,
+  const rest = Number(form.rest);
+  const days = Number(form.days);
+  const restInvalid =
+    form.rest.trim() === "" || !Number.isFinite(rest) || rest < 0 || rest > 24;
+  const daysInvalid =
+    form.days.trim() === "" || !Number.isInteger(days) || days < 0 || days > 14;
 
-    // Coverage Rules
-    // Daycare
-    daycareStaffPerDogs: 10, // 1 staff per X dogs
-    daycareMinStaff: 1, // Minimum staff required for daycare
-
-    // Boarding
-    boardingMinStaffPerShift: 1, // Minimum attendants per shift block
-    boardingMorningMinStaff: 1, // Morning shift minimum
-    boardingAfternoonMinStaff: 1, // Afternoon shift minimum
-    boardingEveningMinStaff: 1, // Evening shift minimum
-
-    // Front Desk
-    frontDeskCoverageWindows: [
-      { start: "08:00", end: "10:00", minStaff: 1 },
-      { start: "16:00", end: "18:00", minStaff: 1 },
-    ], // Coverage windows for front desk
-
-    // Grooming
-    showGroomingSchedule: true, // Show grooming schedule in main view
-
-    // Custom Modules — coverage rules per active module
-    customModuleCoverage: [
-      {
-        moduleId: "yodas-splash",
-        moduleName: "Yoda's Splash",
-        minStaffPerSession: 1,
-        maxSimultaneousSessions: 4,
-        requiredRole: "pool_staff",
-      },
-      {
-        moduleId: "paws-express",
-        moduleName: "Paws Express",
-        minStaffPerSession: 1,
-        maxSimultaneousSessions: 3,
-        requiredRole: "driver",
-      },
-    ],
-
-    // Coverage Thresholds (for heatmap)
-    understaffedThreshold: 0.7, // Below 70% of required staff = understaffed
-    overstaffedThreshold: 1.3, // Above 130% of required staff = overstaffed
-
-    // Payroll & Tips
-    defaultTipSplitMethod: "by_service" as
-      | "by_service"
-      | "equal"
-      | "custom_percent"
-      | "custom_amount",
-    tipPoolingEnabled: false,
-    tipReportingEnabled: true,
-
-    // Overtime Settings
-    enableOvertimeTracking: true,
-    overtimeThresholdDaily: 8,
-    overtimeThresholdWeekly: 40,
-    requireOvertimeApproval: true,
-
-    // Break Settings
-    enableBreakTracking: true,
-    breakDurationMinutes: 30,
-    breakRequiredAfterHours: 5,
-    paidBreaks: false,
-
-    // Time Off
-    enableTimeOffRequests: true,
-    minAdvanceNoticeForTimeOff: 14,
-    maxPendingTimeOffRequests: 3,
-    allowPartialDayTimeOff: true,
-
-    // Shift Swaps
-    enableShiftSwaps: true,
-    requireSwapApproval: true,
-    swapRequestDeadlineHours: 24,
-    allowCrossRoleSwaps: false,
-
-    // Sick Call-Ins
-    enableSickCallIns: true,
-    sickCallDeadlineMinutes: 60,
-    requireSickNote: false,
-    autoFindCoverage: true,
-
-    // Notifications
-    sendSchedulePublishedNotification: true,
-    sendShiftReminderNotification: true,
-    shiftReminderHoursBefore: 24,
-    sendSwapRequestNotification: true,
-    sendTimeOffApprovalNotification: true,
-
-    // Display Settings
-    weekStartsOn: "sunday",
-    defaultCalendarView: "week",
-    showStaffPhotos: true,
-    colorCodeByRole: true,
-
-    // Policies
-    schedulingPolicy:
-      "Schedules are published every Friday for the following week. Please review and report any conflicts within 24 hours.",
-    timeOffPolicy:
-      "Time off requests must be submitted at least 2 weeks in advance. Requests during blackout periods may be denied.",
-    swapPolicy:
-      "Shift swaps must be approved by a manager. Both parties must agree to the swap before submission.",
-  });
-
-  const [isEditing, setIsEditing] = useState(false);
-
-  const handleSave = () => {
-    // TODO: Save to backend
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (restInvalid || daysInvalid) return;
+    try {
+      await saveSetting.mutateAsync({
+        domain: "scheduling_rules",
+        value: {
+          minRestHours: rest,
+          maxConsecutiveDays: days,
+        } satisfies SchedulingRules,
+      });
+      setDraft(null);
+      toast.success(t("saved"));
+    } catch (cause) {
+      toast.error(t("saveFailed"), {
+        description: cause instanceof Error ? cause.message : undefined,
+      });
+    }
   };
 
-  const handleReset = () => {
-    // TODO: Reset to saved values
-    setIsEditing(false);
-  };
+  if (isPending) {
+    return (
+      <div className="max-w-3xl space-y-4">
+        <Skeleton className="h-56 w-full" />
+        <Skeleton className="h-28 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="max-w-3xl">
+        <CardContent className="text-destructive p-6 text-sm">
+          {t("loadFailed")}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const overtime = payroll.overtime;
+  const firstDay = weekdayNames(locale, "long")[payroll.weekStartsOn] ?? "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {isAdmin ? "System Configuration" : "Scheduling Settings"}
-          </h2>
-          <p className="text-muted-foreground">
-            {isAdmin
-              ? "System-level scheduling configuration and controls"
-              : "Configure staff scheduling preferences and policies"}
-          </p>
-          {isAdmin && (
-            <Badge
-              variant="secondary"
-              className="mt-2 bg-blue-100 text-blue-800"
-            >
-              Admin Configuration Panel
-            </Badge>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="mr-2 size-4" />
-                Cancel
-              </Button>
-              <Button onClick={handleSave}>
-                <Save className="mr-2 size-4" />
-                Save Changes
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
-          )}
-        </div>
-      </div>
+    <div className="max-w-3xl space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {!stored.configured ? (
+            <p className="text-muted-foreground text-sm">
+              {t("notConfigured")}
+            </p>
+          ) : null}
 
-      <div className="grid gap-6">
-        {/* General Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>Basic scheduling configuration</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Staff Scheduling</Label>
-                <p className="text-muted-foreground text-sm">
-                  Allow scheduling functionality for staff
-                </p>
-              </div>
-              <Switch
-                checked={settings.enabled}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enabled: checked })
-                }
-                disabled={!isEditing}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="scheduling-min-rest">{t("restLabel")}</Label>
+              <Input
+                id="scheduling-min-rest"
+                inputMode="decimal"
+                value={form.rest}
+                aria-invalid={restInvalid}
+                aria-describedby="scheduling-min-rest-help"
+                onChange={(event) => patch({ rest: event.target.value })}
               />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Allow Self-Scheduling</Label>
-                <p className="text-muted-foreground text-sm">
-                  Staff can pick up open shifts
-                </p>
-              </div>
-              <Switch
-                checked={settings.allowSelfScheduling}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, allowSelfScheduling: checked })
+              <p
+                id="scheduling-min-rest-help"
+                className={
+                  restInvalid
+                    ? "text-destructive text-sm"
+                    : "text-muted-foreground text-sm"
                 }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Require Manager Approval</Label>
-                <p className="text-muted-foreground text-sm">
-                  All schedule changes require manager approval
-                </p>
-              </div>
-              <Switch
-                checked={settings.requireManagerApproval}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, requireManagerApproval: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Shift Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Shift Settings</CardTitle>
-            <CardDescription>
-              Configure shift duration and limits
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Default Shift Duration (hours)</Label>
-                <Input
-                  type="number"
-                  value={settings.defaultShiftDuration}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      defaultShiftDuration: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Minimum Shift Duration (hours)</Label>
-                <Input
-                  type="number"
-                  value={settings.minShiftDuration}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      minShiftDuration: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Maximum Shift Duration (hours)</Label>
-                <Input
-                  type="number"
-                  value={settings.maxShiftDuration}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      maxShiftDuration: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Min Time Between Shifts (hours)</Label>
-                <Input
-                  type="number"
-                  value={settings.minTimeBetweenShifts}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      minTimeBetweenShifts: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Max Hours Per Week</Label>
-                <Input
-                  type="number"
-                  value={settings.maxHoursPerWeek}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      maxHoursPerWeek: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Max Consecutive Days</Label>
-                <Input
-                  type="number"
-                  value={settings.maxConsecutiveDays}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      maxConsecutiveDays: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Overtime Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Overtime Settings</CardTitle>
-            <CardDescription>
-              Configure overtime tracking and thresholds
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Overtime Tracking</Label>
-                <p className="text-muted-foreground text-sm">
-                  Track overtime hours automatically
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableOvertimeTracking}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableOvertimeTracking: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.enableOvertimeTracking && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Daily Overtime Threshold (hours)</Label>
-                    <Input
-                      type="number"
-                      value={settings.overtimeThresholdDaily}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          overtimeThresholdDaily: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Weekly Overtime Threshold (hours)</Label>
-                    <Input
-                      type="number"
-                      value={settings.overtimeThresholdWeekly}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          overtimeThresholdWeekly:
-                            parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Require Overtime Approval</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Manager must approve overtime scheduling
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.requireOvertimeApproval}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        requireOvertimeApproval: checked,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Break Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Break Settings</CardTitle>
-            <CardDescription>Configure break requirements</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Break Tracking</Label>
-                <p className="text-muted-foreground text-sm">
-                  Track staff breaks during shifts
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableBreakTracking}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableBreakTracking: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.enableBreakTracking && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Break Duration (minutes)</Label>
-                    <Input
-                      type="number"
-                      value={settings.breakDurationMinutes}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          breakDurationMinutes: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Break Required After (hours)</Label>
-                    <Input
-                      type="number"
-                      value={settings.breakRequiredAfterHours}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          breakRequiredAfterHours:
-                            parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Paid Breaks</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Breaks are included in paid time
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.paidBreaks}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, paidBreaks: checked })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Time Off */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Time Off</CardTitle>
-            <CardDescription>
-              Configure time off request settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Time Off Requests</Label>
-                <p className="text-muted-foreground text-sm">
-                  Staff can submit time off requests
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableTimeOffRequests}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableTimeOffRequests: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.enableTimeOffRequests && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Minimum Advance Notice (days)</Label>
-                    <Input
-                      type="number"
-                      value={settings.minAdvanceNoticeForTimeOff}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          minAdvanceNoticeForTimeOff:
-                            parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Max Pending Requests</Label>
-                    <Input
-                      type="number"
-                      value={settings.maxPendingTimeOffRequests}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          maxPendingTimeOffRequests:
-                            parseInt(e.target.value) || 0,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Allow Partial Day Time Off</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Staff can request time off for part of a day
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.allowPartialDayTimeOff}
-                    onCheckedChange={(checked) =>
-                      setSettings({
-                        ...settings,
-                        allowPartialDayTimeOff: checked,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Shift Swaps */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Shift Swaps</CardTitle>
-            <CardDescription>Configure shift swap settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Shift Swaps</Label>
-                <p className="text-muted-foreground text-sm">
-                  Staff can swap shifts with each other
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableShiftSwaps}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableShiftSwaps: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.enableShiftSwaps && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Require Swap Approval</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Manager must approve shift swaps
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.requireSwapApproval}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, requireSwapApproval: checked })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Swap Request Deadline (hours before shift)</Label>
-                  <Input
-                    type="number"
-                    value={settings.swapRequestDeadlineHours}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        swapRequestDeadlineHours: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-32"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Allow Cross-Role Swaps</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Allow swaps between staff of different roles
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.allowCrossRoleSwaps}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, allowCrossRoleSwaps: checked })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sick Call-Ins */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sick Call-Ins</CardTitle>
-            <CardDescription>Configure sick call-in settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Enable Sick Call-Ins</Label>
-                <p className="text-muted-foreground text-sm">
-                  Staff can report sick through the system
-                </p>
-              </div>
-              <Switch
-                checked={settings.enableSickCallIns}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableSickCallIns: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.enableSickCallIns && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Sick Call Deadline (minutes before shift)</Label>
-                  <Input
-                    type="number"
-                    value={settings.sickCallDeadlineMinutes}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        sickCallDeadlineMinutes: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    disabled={!isEditing}
-                    className="w-32"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Require Sick Note</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Require doctor&apos;s note for sick leave
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.requireSickNote}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, requireSickNote: checked })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Auto-Find Coverage</Label>
-                    <p className="text-muted-foreground text-sm">
-                      Automatically suggest available staff for coverage
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.autoFindCoverage}
-                    onCheckedChange={(checked) =>
-                      setSettings({ ...settings, autoFindCoverage: checked })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Configure scheduling notifications
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Schedule Published Notification</Label>
-                <p className="text-muted-foreground text-sm">
-                  Notify staff when new schedule is published
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendSchedulePublishedNotification}
-                onCheckedChange={(checked) =>
-                  setSettings({
-                    ...settings,
-                    sendSchedulePublishedNotification: checked,
-                  })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Shift Reminder Notification</Label>
-                <p className="text-muted-foreground text-sm">
-                  Send reminder before scheduled shifts
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendShiftReminderNotification}
-                onCheckedChange={(checked) =>
-                  setSettings({
-                    ...settings,
-                    sendShiftReminderNotification: checked,
-                  })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            {settings.sendShiftReminderNotification && (
-              <div className="space-y-2">
-                <Label>Reminder Time (hours before shift)</Label>
-                <Input
-                  type="number"
-                  value={settings.shiftReminderHoursBefore}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      shiftReminderHoursBefore: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  disabled={!isEditing}
-                  className="w-32"
-                />
-              </div>
-            )}
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Swap Request Notification</Label>
-                <p className="text-muted-foreground text-sm">
-                  Notify when swap requests are submitted
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendSwapRequestNotification}
-                onCheckedChange={(checked) =>
-                  setSettings({
-                    ...settings,
-                    sendSwapRequestNotification: checked,
-                  })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Time Off Approval Notification</Label>
-                <p className="text-muted-foreground text-sm">
-                  Notify when time off is approved/denied
-                </p>
-              </div>
-              <Switch
-                checked={settings.sendTimeOffApprovalNotification}
-                onCheckedChange={(checked) =>
-                  setSettings({
-                    ...settings,
-                    sendTimeOffApprovalNotification: checked,
-                  })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Display Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Display Settings</CardTitle>
-            <CardDescription>
-              Configure calendar display options
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Week Starts On</Label>
-                <Select
-                  value={settings.weekStartsOn}
-                  onValueChange={(value) =>
-                    setSettings({ ...settings, weekStartsOn: value })
-                  }
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sunday">Sunday</SelectItem>
-                    <SelectItem value="monday">Monday</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Default Calendar View</Label>
-                <Select
-                  value={settings.defaultCalendarView}
-                  onValueChange={(value) =>
-                    setSettings({ ...settings, defaultCalendarView: value })
-                  }
-                  disabled={!isEditing}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Day</SelectItem>
-                    <SelectItem value="week">Week</SelectItem>
-                    <SelectItem value="month">Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Show Staff Photos</Label>
-                <p className="text-muted-foreground text-sm">
-                  Display staff profile photos in calendar
-                </p>
-              </div>
-              <Switch
-                checked={settings.showStaffPhotos}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, showStaffPhotos: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Color Code by Role</Label>
-                <p className="text-muted-foreground text-sm">
-                  Use different colors for different staff roles
-                </p>
-              </div>
-              <Switch
-                checked={settings.colorCodeByRole}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, colorCodeByRole: checked })
-                }
-                disabled={!isEditing}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Coverage Rules */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Coverage Rules</CardTitle>
-            <CardDescription>
-              Define minimum staffing requirements by role and workload
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Daycare Coverage */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold">Daycare Coverage</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Staff per Dogs Ratio</Label>
-                  <p className="text-muted-foreground text-xs">
-                    1 staff member per X dogs
-                  </p>
-                  <Input
-                    type="number"
-                    value={settings.daycareStaffPerDogs}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        daycareStaffPerDogs: parseInt(e.target.value) || 10,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Minimum Staff Required</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Always have at least this many staff for daycare
-                  </p>
-                  <Input
-                    type="number"
-                    value={settings.daycareMinStaff}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        daycareMinStaff: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Boarding Coverage */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold">Boarding Coverage</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Morning Shift Minimum</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Minimum staff for morning shift (e.g., 06:00-14:00)
-                  </p>
-                  <Input
-                    type="number"
-                    value={settings.boardingMorningMinStaff}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        boardingMorningMinStaff: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Afternoon Shift Minimum</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Minimum staff for afternoon shift (e.g., 14:00-22:00)
-                  </p>
-                  <Input
-                    type="number"
-                    value={settings.boardingAfternoonMinStaff}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        boardingAfternoonMinStaff:
-                          parseInt(e.target.value) || 1,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Evening Shift Minimum</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Minimum staff for evening shift (e.g., 22:00-06:00)
-                  </p>
-                  <Input
-                    type="number"
-                    value={settings.boardingEveningMinStaff}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        boardingEveningMinStaff: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Front Desk Coverage */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold">
-                Front Desk Coverage Windows
-              </h4>
-              <p className="text-muted-foreground text-xs">
-                Define time windows when front desk must be staffed
+              >
+                {restInvalid ? t("restInvalid") : t("restHelp")}
               </p>
-              <div className="space-y-2">
-                {settings.frontDeskCoverageWindows.map((window, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      value={window.start}
-                      onChange={(e) => {
-                        const newWindows = [
-                          ...settings.frontDeskCoverageWindows,
-                        ];
-                        newWindows[index].start = e.target.value;
-                        setSettings({
-                          ...settings,
-                          frontDeskCoverageWindows: newWindows,
-                        });
-                      }}
-                      disabled={!isEditing}
-                      className="w-32"
-                    />
-                    <span className="text-sm">to</span>
-                    <Input
-                      type="time"
-                      value={window.end}
-                      onChange={(e) => {
-                        const newWindows = [
-                          ...settings.frontDeskCoverageWindows,
-                        ];
-                        newWindows[index].end = e.target.value;
-                        setSettings({
-                          ...settings,
-                          frontDeskCoverageWindows: newWindows,
-                        });
-                      }}
-                      disabled={!isEditing}
-                      className="w-32"
-                    />
-                    <span className="text-sm">Min staff:</span>
-                    <Input
-                      type="number"
-                      value={window.minStaff}
-                      onChange={(e) => {
-                        const newWindows = [
-                          ...settings.frontDeskCoverageWindows,
-                        ];
-                        newWindows[index].minStaff =
-                          parseInt(e.target.value) || 1;
-                        setSettings({
-                          ...settings,
-                          frontDeskCoverageWindows: newWindows,
-                        });
-                      }}
-                      disabled={!isEditing}
-                      className="w-20"
-                    />
-                    {isEditing && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const newWindows =
-                            settings.frontDeskCoverageWindows.filter(
-                              (_, i) => i !== index,
-                            );
-                          setSettings({
-                            ...settings,
-                            frontDeskCoverageWindows: newWindows,
-                          });
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {isEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newWindows = [
-                        ...settings.frontDeskCoverageWindows,
-                        { start: "09:00", end: "17:00", minStaff: 1 },
-                      ];
-                      setSettings({
-                        ...settings,
-                        frontDeskCoverageWindows: newWindows,
-                      });
-                    }}
-                  >
-                    Add Coverage Window
-                  </Button>
-                )}
-              </div>
             </div>
 
-            <Separator />
-
-            {/* Grooming */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Show Grooming Schedule</Label>
-                <p className="text-muted-foreground text-sm">
-                  Display grooming appointments in the main schedule view
-                </p>
-              </div>
-              <Switch
-                checked={settings.showGroomingSchedule}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, showGroomingSchedule: checked })
-                }
-                disabled={!isEditing}
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="scheduling-max-days">{t("daysLabel")}</Label>
+              <Input
+                id="scheduling-max-days"
+                inputMode="numeric"
+                value={form.days}
+                aria-invalid={daysInvalid}
+                aria-describedby="scheduling-max-days-help"
+                onChange={(event) => patch({ days: event.target.value })}
               />
-            </div>
-
-            <Separator />
-
-            {/* Coverage Thresholds */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold">
-                Coverage Heatmap Thresholds
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Understaffed Threshold</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Below this percentage of required staff = understaffed
-                    (0.0-1.0)
-                  </p>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="1"
-                    value={settings.understaffedThreshold}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        understaffedThreshold:
-                          parseFloat(e.target.value) || 0.7,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Overstaffed Threshold</Label>
-                  <p className="text-muted-foreground text-xs">
-                    Above this percentage of required staff = overstaffed (1.0+)
-                  </p>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    value={settings.overstaffedThreshold}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        overstaffedThreshold: parseFloat(e.target.value) || 1.3,
-                      })
-                    }
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Policies */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Policies</CardTitle>
-            <CardDescription>
-              Define scheduling policies displayed to staff
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Scheduling Policy</Label>
-              <Textarea
-                value={settings.schedulingPolicy}
-                onChange={(e) =>
-                  setSettings({ ...settings, schedulingPolicy: e.target.value })
+              <p
+                id="scheduling-max-days-help"
+                className={
+                  daysInvalid
+                    ? "text-destructive text-sm"
+                    : "text-muted-foreground text-sm"
                 }
-                disabled={!isEditing}
-                rows={3}
-              />
+              >
+                {daysInvalid ? t("daysInvalid") : t("daysHelp")}
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Time Off Policy</Label>
-              <Textarea
-                value={settings.timeOffPolicy}
-                onChange={(e) =>
-                  setSettings({ ...settings, timeOffPolicy: e.target.value })
-                }
-                disabled={!isEditing}
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Shift Swap Policy</Label>
-              <Textarea
-                value={settings.swapPolicy}
-                onChange={(e) =>
-                  setSettings({ ...settings, swapPolicy: e.target.value })
-                }
-                disabled={!isEditing}
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Admin-Only Settings */}
-        {isAdmin && (
-          <>
-            {/* Roles & Departments Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="size-5" />
-                  Roles & Departments (Admin Only)
-                </CardTitle>
-                <CardDescription>
-                  Configure roles, departments, and staff permissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                  <p className="text-sm text-blue-900">
-                    <strong>Admin Configuration:</strong> Define roles,
-                    departments, and assign permissions to staff members.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Available Roles</Label>
-                  <p className="text-muted-foreground text-sm">
-                    Boarding, Daycare, Grooming, Front Desk, Training, Admin,
-                    Manager
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Staff Permissions</Label>
-                  <p className="text-muted-foreground text-sm">
-                    Configure who can be employee vs manager vs admin
-                  </p>
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Employee can view own schedule
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Manager can edit schedules
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Admin can override locked schedules
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={restInvalid || daysInvalid || saveSetting.isPending}
+            >
+              {saveSetting.isPending ? t("saving") : t("save")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Conflict Detection Rules */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="size-5" />
-                  Conflict Detection Rules (Admin Only)
-                </CardTitle>
-                <CardDescription>
-                  Configure rules for detecting scheduling conflicts
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Enable Conflict Detection</Label>
-                  <Switch defaultChecked disabled={!isEditing} />
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Conflict Types to Detect</Label>
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">Double-booked staff</span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">Overlapping shifts</span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Scheduling during approved time off
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">Role mismatch</span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Max hours per day exceeded
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                    <div className="flex items-center justify-between rounded-sm border p-2">
-                      <span className="text-sm">
-                        Min rest between shifts violated
-                      </span>
-                      <Switch defaultChecked disabled={!isEditing} />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Task Templates */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="size-5" />
-                  Task Templates (Admin Only)
-                </CardTitle>
-                <CardDescription>
-                  Create reusable task templates for opening/closing/med rounds
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Task Template Categories</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <div className="rounded-sm border p-2">
-                      <p className="text-sm font-medium">Opening Tasks</p>
-                      <p className="text-muted-foreground text-xs">
-                        Morning setup, feeding rounds
-                      </p>
-                    </div>
-                    <div className="rounded-sm border p-2">
-                      <p className="text-sm font-medium">Closing Tasks</p>
-                      <p className="text-muted-foreground text-xs">
-                        Evening cleanup, final checks
-                      </p>
-                    </div>
-                    <div className="rounded-sm border p-2">
-                      <p className="text-sm font-medium">Medication Rounds</p>
-                      <p className="text-muted-foreground text-xs">
-                        Scheduled medication administration
-                      </p>
-                    </div>
-                    <div className="rounded-sm border p-2">
-                      <p className="text-sm font-medium">Cleaning Tasks</p>
-                      <p className="text-muted-foreground text-xs">
-                        Sanitization, deep cleaning
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <Button variant="outline" disabled={!isEditing}>
-                  Manage Task Templates
-                </Button>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("overtimeTitle")}</CardTitle>
+          <CardDescription>
+            {overtime.enabled
+              ? fill("overtimeOn", {
+                  hours: new Intl.NumberFormat(locale).format(
+                    overtime.weeklyThresholdHours,
+                  ),
+                  day: firstDay,
+                })
+              : t("overtimeOff")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href={settingsHref("payroll-rules")}>{t("openPayroll")}</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

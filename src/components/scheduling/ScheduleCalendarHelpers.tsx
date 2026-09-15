@@ -179,7 +179,11 @@ export function HoursBadge({
   threshold: number;
 }) {
   const isOverMax = totalHours > maxHours;
-  const { overtime } = computeOvertimeHours(totalHours, threshold);
+  // A threshold of 0 means payroll has no overtime rule: no hour is overtime.
+  const { overtime } =
+    threshold > 0
+      ? computeOvertimeHours(totalHours, threshold)
+      : { overtime: 0 };
   const hasOT = overtime > 0;
   const regular = totalHours - overtime;
 

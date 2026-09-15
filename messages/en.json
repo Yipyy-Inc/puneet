@@ -2757,6 +2757,26 @@
         "noteSaved": "Note saved",
         "noteFailed": "The note was not saved",
         "saving": "Saving…"
+      },
+      "schedulingRules": {
+        "title": "Scheduling rules",
+        "description": "The schedule warns when a shift breaks one of these rules. A warning never stops a shift from being saved.",
+        "notConfigured": "These are the standard rules. Nobody at this facility has changed them yet.",
+        "restLabel": "Minimum rest between shifts (hours)",
+        "restHelp": "Warn when someone gets less rest than this between two shifts. Enter 0 to turn this warning off.",
+        "restInvalid": "Enter a number of hours from 0 to 24.",
+        "daysLabel": "Maximum days in a row",
+        "daysHelp": "Warn when someone would work more days in a row than this. Enter 0 to turn this warning off.",
+        "daysInvalid": "Enter a whole number of days from 0 to 14.",
+        "overtimeTitle": "Overtime",
+        "overtimeOn": "The schedule warns past {hours} hours a week, starting {day}. These come from Payroll, which pays overtime from the same rule.",
+        "overtimeOff": "Payroll has no overtime rule, so the schedule shows no overtime warnings.",
+        "openPayroll": "Open payroll rules",
+        "save": "Save scheduling rules",
+        "saving": "Saving…",
+        "saved": "Scheduling rules saved",
+        "saveFailed": "The scheduling rules were not saved",
+        "loadFailed": "The scheduling rules could not be loaded. Reload the page to try again."
       }
     }
   },

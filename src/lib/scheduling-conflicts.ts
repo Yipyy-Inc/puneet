@@ -51,11 +51,15 @@ function toDateTime(date: string, time: string): Date {
   return new Date(`${date}T${time}:00`);
 }
 
-function weekKey(dateStr: string): string {
+/**
+ * The first day of the week `dateStr` falls in. `weekStartsOn` is payroll's
+ * (0 = Sunday): overtime is paid per week from that day, so a warning bucketed
+ * from Monday could flag hours the pay run splits across two weeks.
+ */
+function weekKey(dateStr: string, weekStartsOn = 1): string {
   const d = new Date(`${dateStr}T12:00:00`);
-  const day = d.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + mondayOffset);
+  const offset = (d.getDay() - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - offset);
   return d.toISOString().split("T")[0];
 }
 
@@ -259,15 +263,17 @@ function checkWeeklyHours(
   shift: Omit<ScheduleShift, "id"> & { id?: string },
   employee: ScheduleEmployee,
   allShifts: ScheduleShift[],
-  settings: Pick<SchedulingSettings, "overtimeThresholdWeekly">,
+  settings: Pick<SchedulingSettings, "overtimeThresholdWeekly"> & {
+    weekStartsOn?: number;
+  },
 ): Conflict[] {
-  const week = weekKey(shift.date);
+  const week = weekKey(shift.date, settings.weekStartsOn);
   const weekShifts = allShifts.filter(
     (s) =>
       s.employeeId === employee.id &&
       s.status !== "cancelled" &&
       s.id !== (shift as ScheduleShift).id &&
-      weekKey(s.date) === week,
+      weekKey(s.date, settings.weekStartsOn) === week,
   );
   const existingHours = weekShifts.reduce(
     (sum, s) => sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
@@ -353,7 +359,10 @@ export interface ConflictCheckInput {
   settings: Pick<
     SchedulingSettings,
     "overtimeThresholdWeekly" | "minTimeBetweenShifts" | "maxConsecutiveDays"
-  >;
+  > & {
+    /** Payroll's first day of the week (0 = Sunday). Monday when absent. */
+    weekStartsOn?: number;
+  };
 }
 
 /**

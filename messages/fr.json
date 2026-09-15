@@ -2757,6 +2757,26 @@
         "noteSaved": "Note enregistrée",
         "noteFailed": "La note n’a pas été enregistrée",
         "saving": "Enregistrement…"
+      },
+      "schedulingRules": {
+        "title": "Règles d’horaire",
+        "description": "L’horaire affiche un avertissement lorsqu’un quart ne respecte pas une de ces règles. Un avertissement n’empêche jamais d’enregistrer un quart.",
+        "notConfigured": "Ce sont les règles standard. Personne dans cet établissement ne les a encore modifiées.",
+        "restLabel": "Repos minimal entre deux quarts (heures)",
+        "restHelp": "Avertir lorsqu’une personne a moins de repos que ceci entre deux quarts. Entrez 0 pour désactiver cet avertissement.",
+        "restInvalid": "Entrez un nombre d’heures entre 0 et 24.",
+        "daysLabel": "Nombre maximal de jours consécutifs",
+        "daysHelp": "Avertir lorsqu’une personne travaillerait plus de jours consécutifs que ceci. Entrez 0 pour désactiver cet avertissement.",
+        "daysInvalid": "Entrez un nombre entier de jours entre 0 et 14.",
+        "overtimeTitle": "Heures supplémentaires",
+        "overtimeOn": "L’horaire avertit au-delà de {hours} heures par semaine, à partir du {day}. Ces valeurs viennent de la paie, qui paie les heures supplémentaires selon la même règle.",
+        "overtimeOff": "La paie n’a aucune règle d’heures supplémentaires : l’horaire n’affiche donc aucun avertissement d’heures supplémentaires.",
+        "openPayroll": "Ouvrir les règles de paie",
+        "save": "Enregistrer les règles d’horaire",
+        "saving": "Enregistrement…",
+        "saved": "Règles d’horaire enregistrées",
+        "saveFailed": "Les règles d’horaire n’ont pas été enregistrées",
+        "loadFailed": "Les règles d’horaire n’ont pas pu être chargées. Rechargez la page pour réessayer."
       }
     }
   },

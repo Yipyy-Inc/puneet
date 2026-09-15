@@ -14545,13 +14545,29 @@ real `facility_departments`. The dialog now explains departments and links to
 that screen, and `DepartmentSettings.tsx` is deleted (with its success-claims
 and control-heights baseline entries).
 
-**Still debt: scheduling settings save nothing, and most of them decide
-nothing.** `SchedulingSettings.tsx` (about 70 options) keeps its values in
-`useState` and `handleSave` is a TODO. Only three values reach a feature —
-weekly overtime threshold, minimum rest between shifts and maximum consecutive
-days — and those come from a constant in `ScheduleView.tsx`, not from this
-page. Storing all seventy would be switches that decide nothing; the fix is a
-settings domain for the values something reads, and the page trimmed to them.
+**Fixed 2026-09-15: scheduling settings are the rules the schedule applies,
+and they are saved.** `SchedulingSettings.tsx` held about 70 options in
+`useState` with a TODO for Save, and the schedule's conflict warnings read a
+constant in `ScheduleView.tsx` instead (40 hours, 8 hours' rest, 6 days). The
+page now edits the new `scheduling_rules` domain — minimum rest between shifts
+and maximum days in a row, 0 turning a warning off — and shows the overtime rule
+with a link to Payroll. The warnings read `scheduling_rules` for rest and days,
+and `payroll_config` for the weekly threshold and the first day of the week, so
+the schedule and the pay run cannot disagree; with no overtime rule in payroll
+there is no overtime warning and the hours badge shows no overtime. The other
+options (swaps, sick call-ins, breaks, coverage minimums, notifications,
+policies, display, and the "admin only" cards) were removed: nothing read them,
+and each returns with its feature. Unit: `scheduling-rules.test.ts`; e2e:
+`scheduling-rules.spec.ts` (full suite). Its French baseline entry (154) is
+removed.
+
+**Still debt.** The conflict messages in `scheduling-conflicts.ts` and the
+draft review summary are English only, and the calendar's own week view still
+starts on Monday whatever payroll's first day is. `schedulingSettingsSchema` in
+`src/types/scheduling.ts` still describes the old option set and is used only
+as a type for the three conflict inputs. Running the spec leaves one
+`scheduling_rules` row on a facility that had none (no DELETE on the settings
+route), as `payroll-overtime` does.
 
 **Fixed 2026-09-15: the operations calendar no longer seeds fixture notes.**
 When a booking was selected, the calendar filled its note sections from
