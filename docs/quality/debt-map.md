@@ -14537,6 +14537,22 @@ stay open. Its words are in the `saveTemplate` staff area in both languages.
 No spec drives the dialog; the templates route is covered by the scheduling
 specs.
 
+**Fixed 2026-09-15: the staff directory's Departments dialog no longer edits a
+fixture.** It held `DepartmentSettings`, a second department editor over the
+`departments` array in `src/data/shifts` that saved by rewriting that array —
+while the scheduling Departments screen already creates, edits and removes
+real `facility_departments`. The dialog now explains departments and links to
+that screen, and `DepartmentSettings.tsx` is deleted (with its success-claims
+and control-heights baseline entries).
+
+**Still debt: scheduling settings save nothing, and most of them decide
+nothing.** `SchedulingSettings.tsx` (about 70 options) keeps its values in
+`useState` and `handleSave` is a TODO. Only three values reach a feature —
+weekly overtime threshold, minimum rest between shifts and maximum consecutive
+days — and those come from a constant in `ScheduleView.tsx`, not from this
+page. Storing all seventy would be switches that decide nothing; the fix is a
+settings domain for the values something reads, and the page trimmed to them.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over
