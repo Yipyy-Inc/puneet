@@ -4335,7 +4335,10 @@
         "waitingForDevice": "Waiting for your device…",
         "addPasskey": "Add a passkey",
         "passkeyAdded": "Passkey added.",
-        "passkeyRemoved": "Passkey removed."
+        "passkeyRemoved": "Passkey removed.",
+        "saving": "Saving…",
+        "saveFailed": "Your profile was not saved",
+        "emailHelp": "This is the email you sign in with, so it can’t be changed here."
       },
       "offboarding-templates": {
         "intro": "Task checklists run when a staff member leaves. The template matching the departure reason is applied; a universal template covers all reasons.",
@@ -4886,7 +4889,10 @@
         "livePreview": "Live preview",
         "sampleData": "Sample data",
         "previewTitle": "Invoice preview",
-        "fullPreviewTitle": "Invoice full preview"
+        "fullPreviewTitle": "Invoice full preview",
+        "logoFromProfile": "Your invoices show the logo from your business profile.",
+        "saving": "Saving…",
+        "saveFailed": "The invoice template was not saved"
       },
       "tips": {
         "title": "Tip settings",

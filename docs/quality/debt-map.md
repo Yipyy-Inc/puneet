@@ -14585,6 +14585,28 @@ intake (mood tags, before photos, session notes) or after photos the prefill
 reads. It needs those on the appointment response, or read from the grooming
 photos and notes routes.
 
+**Fixed 2026-09-15: the invoice template is the facility's, not the browser's.**
+`src/data/invoice-template.ts` kept it in localStorage, and the settings page's
+Save went through `invoiceTemplateMutations.save`, which wrote only there — so
+`check:settings-persistence` saw a mutation and passed a section whose save
+never left the computer. It is now the `invoice_template` settings domain
+(`lib/settings/invoice-template.ts`, no fixture identity in its default); the
+page loads and saves it through the facility-settings hooks, and
+`useInvoiceTemplate` reads it. The logo upload is gone from the template:
+invoices take the logo from the business profile, and a data-URL logo in a
+settings row would travel with every settings read. A customer's copy uses the
+default design with the facility's identity, because `invoice_template` is not
+a customer-visible domain. `lib/api/invoice-template.ts` is deleted.
+
+**Also fixed that day:** Deposit rules compared the refund window with a
+fixture's 24-hour cancellation policy; it reads `booking_rules.cancelPolicyHours`.
+
+**Still debt.** Estimate emails (`lib/estimates/email-sends.ts`) put the
+fixture's "Example Pet Care Facility" in the subject line as the business name,
+which is why `src/data/invoice-template.ts` still exists. And
+`check:settings-persistence` treats any mutation as a write; it should follow
+the mutation to a network call, or it will pass the next localStorage save too.
+
 ## 2026-09-14 — grooming inventory and training waiver settings stop reading fixtures
 
 **Fixed.** The grooming Inventory tab was a 1,700-line page over

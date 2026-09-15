@@ -4335,7 +4335,10 @@
         "waitingForDevice": "En attente de votre appareil…",
         "addPasskey": "Ajouter une clé d’accès",
         "passkeyAdded": "Clé d’accès ajoutée.",
-        "passkeyRemoved": "Clé d’accès retirée."
+        "passkeyRemoved": "Clé d’accès retirée.",
+        "saving": "Enregistrement…",
+        "saveFailed": "Votre profil n’a pas été enregistré",
+        "emailHelp": "C’est le courriel avec lequel vous vous connectez : il ne peut pas être modifié ici."
       },
       "offboarding-templates": {
         "intro": "Listes de tâches exécutées au départ d’un membre du personnel. Le modèle correspondant au motif de départ est appliqué; un modèle universel couvre tous les motifs.",
@@ -4886,7 +4889,10 @@
         "livePreview": "Aperçu en direct",
         "sampleData": "Données d’exemple",
         "previewTitle": "Aperçu de la facture",
-        "fullPreviewTitle": "Aperçu complet de la facture"
+        "fullPreviewTitle": "Aperçu complet de la facture",
+        "logoFromProfile": "Vos factures affichent le logo de votre profil d’entreprise.",
+        "saving": "Enregistrement…",
+        "saveFailed": "Le modèle de facture n’a pas été enregistré"
       },
       "tips": {
         "title": "Paramètres de pourboire",

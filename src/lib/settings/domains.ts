@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
+  DEFAULT_INVOICE_TEMPLATE,
+  invoiceTemplateSchema,
+} from "@/lib/settings/invoice-template";
+import {
   abandonmentRecoverySchema,
   SHIPPED_ABANDONMENT_RECOVERY,
 } from "@/lib/settings/abandonment-recovery";
@@ -876,6 +880,15 @@ export const SETTING_DOMAINS = {
       statuses: z.record(z.string(), z.string()),
     }),
     fallback: { services: {}, statuses: {} },
+  },
+
+  // How invoices and receipts look: accent colour, footer, thank-you line,
+  // signature block, numbering, payment terms. It lived in localStorage, so the
+  // layout was per-browser and "Save" never left the computer. Identity is not
+  // stored here — see lib/settings/invoice-template.ts.
+  invoice_template: {
+    schema: invoiceTemplateSchema,
+    fallback: DEFAULT_INVOICE_TEMPLATE,
   },
 } as const;
 
