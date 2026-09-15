@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/select";
 import { ImagePlus, Eye, FileText, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { DEFAULT_INVOICE_TEMPLATE } from "@/lib/settings/invoice-template";
 import {
-  defaultInvoiceTemplate,
-  loadInvoiceTemplate,
-} from "@/data/invoice-template";
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import type {
   InvoiceTemplate,
   TaxRegistration,
@@ -35,7 +36,6 @@ import {
   type InvoiceDocumentData,
 } from "@/lib/invoice-document";
 import { buildRetailTaxLines, retailQueries } from "@/lib/api/retail";
-import { invoiceTemplateMutations } from "@/lib/api/invoice-template";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { formatDateLong } from "@/lib/i18n/format";
 import type { AppLocale } from "@/lib/language-settings";
@@ -149,21 +149,26 @@ export function InvoiceTemplateSettings() {
   const { locale, section } = useSettingsText();
   const t = section("invoice-template");
   const [template, setTemplate] = useState<InvoiceTemplate>(
-    defaultInvoiceTemplate,
+    DEFAULT_INVOICE_TEMPLATE,
   );
   const [hasMounted, setHasMounted] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
+  const { settings, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
 
   // Tax rates come from Retail/POS Settings — the single source of truth.
   const { data: taxConfig } = useQuery(retailQueries.taxConfig());
 
-  useEffect(() => {
-    setTemplate(loadInvoiceTemplate());
+  // Seeded once, from what the facility stored — not before it has loaded, or
+  // the editor would start from the default and a save would overwrite the
+  // facility's real template with it.
+  // Adjusted during render rather than in an effect, the way React documents
+  // deriving state from a value that arrives later.
+  if (!isPending && !hasMounted) {
+    setTemplate(settings.invoice_template.value);
     setHasMounted(true);
-  }, []);
+  }
 
   const update = <K extends keyof InvoiceTemplate>(
     key: K,
@@ -211,34 +216,29 @@ export function InvoiceTemplateSettings() {
     update("paymentTerms", { ...template.paymentTerms, ...patch });
   };
 
-  const handleLogoUpload = (file: File) => {
-    if (file.size > 1024 * 1024) {
-      toast.error(t("logoTooLarge"));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      update("logoUrl", reader.result as string);
-      toast.success(t("logoUploaded"));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const saveTemplate = useMutation({
-    ...invoiceTemplateMutations.save(template),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoice-template"] });
-      setDirty(false);
-      toast.success(t("savedToast"));
-    },
-  });
-
+  // Stored as the facility's `invoice_template` domain. The logo is not part of
+  // it: invoices take the logo from the business profile (useInvoiceTemplate),
+  // and a data-URL logo in a settings row would ride along on every settings
+  // read.
   const handleSave = () => {
-    saveTemplate.mutate();
+    const { logoUrl: _logo, ...design } = template;
+    saveSetting.mutate(
+      { domain: "invoice_template", value: design },
+      {
+        onSuccess: () => {
+          setDirty(false);
+          toast.success(t("savedToast"));
+        },
+        onError: (error) =>
+          toast.error(t("saveFailed"), {
+            description: error instanceof Error ? error.message : undefined,
+          }),
+      },
+    );
   };
 
   const handleReset = () => {
-    setTemplate(defaultInvoiceTemplate);
+    setTemplate(DEFAULT_INVOICE_TEMPLATE);
     setDirty(true);
   };
 
@@ -275,8 +275,14 @@ export function InvoiceTemplateSettings() {
             <Eye className="size-3.5" />
             {t("fullPreview")}
           </Button>
-          <Button onClick={handleSave} disabled={!dirty}>
-            {t(dirty ? "saveChanges" : "saved")}
+          <Button
+            onClick={handleSave}
+            disabled={!dirty || saveSetting.isPending}
+            aria-busy={saveSetting.isPending}
+          >
+            {saveSetting.isPending
+              ? t("saving")
+              : t(dirty ? "saveChanges" : "saved")}
           </Button>
         </div>
       </div>
@@ -292,52 +298,9 @@ export function InvoiceTemplateSettings() {
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-xs">{t("logo")}</Label>
-                <div className="mt-1.5 flex items-center gap-3">
-                  <div className="bg-muted/30 flex size-20 items-center justify-center rounded-lg border border-dashed">
-                    {template.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={template.logoUrl}
-                        alt="Logo"
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <ImagePlus className="text-muted-foreground size-6" />
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleLogoUpload(file);
-                      }}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {t("uploadLogo")}
-                    </Button>
-                    {template.logoUrl && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10 h-8"
-                        onClick={() => update("logoUrl", "")}
-                      >
-                        <Trash2 className="size-3.5" />
-                        {t("remove")}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <p className="text-muted-foreground mt-1.5 text-[11px]">
-                  {t("logoHelp")}
+                <p className="text-muted-foreground mt-1.5 flex items-center gap-2 text-sm">
+                  <ImagePlus className="size-4 shrink-0" aria-hidden="true" />
+                  {t("logoFromProfile")}
                 </p>
               </div>
               <div>

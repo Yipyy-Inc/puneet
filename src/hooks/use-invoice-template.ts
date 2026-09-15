@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { CustomerFacility } from "@/app/api/customer/facility/route";
-import { loadInvoiceTemplate } from "@/data/invoice-template";
+import { DEFAULT_INVOICE_TEMPLATE } from "@/lib/settings/invoice-template";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import type { TaxConfig } from "@/lib/settings/tax";
@@ -90,7 +90,8 @@ export function useInvoiceTemplate(): InvoiceTemplate {
   const settings = useFacilitySettings();
   const tax = settings.settings.tax_config.value as TaxConfig;
 
-  const stored = loadInvoiceTemplate();
+  // The facility's own template, stored as the `invoice_template` domain.
+  const stored = settings.settings.invoice_template.value;
   const address = profile.address;
 
   return withIdentity(stored, {
@@ -142,5 +143,9 @@ export function useCustomerInvoiceTemplate(): InvoiceTemplate {
   // `data` is undefined while it loads, and withIdentity returns the stored
   // template untouched for null. The fixture header shows for a moment rather
   // than an empty one — the same trade the facility side makes.
-  return withIdentity(loadInvoiceTemplate(), data ?? null);
+  // A customer cannot read the facility's `invoice_template` domain (it is not
+  // in `private.customer_visible_setting_domains`), so their copy uses the
+  // default design with the facility's own identity. It read the CUSTOMER's
+  // browser storage before, which was always the fixture.
+  return withIdentity(DEFAULT_INVOICE_TEMPLATE, data ?? null);
 }

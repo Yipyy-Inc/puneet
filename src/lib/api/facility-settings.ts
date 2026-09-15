@@ -9,6 +9,7 @@ import type { RetailConfig } from "@/data/retail-config";
 import type { GroomingServiceChargesConfig } from "@/lib/settings/grooming-service-charges";
 import type { TrainingProgramsConfig } from "@/lib/settings/training-programs";
 import type { IvrSettings } from "@/lib/settings/ivr";
+import type { InvoiceTemplate } from "@/types/invoice-template";
 import type { CustomServiceModule, FacilityResource } from "@/types/facility";
 import type { MobileGroomingSettings } from "@/lib/settings/mobile-grooming";
 import type {
@@ -282,6 +283,8 @@ export interface FacilitySettings {
    * lib/settings/mobile-grooming.ts).
    */
   mobile_grooming: SettingState<MobileGroomingSettings>;
+  /** How invoices and receipts look. Identity comes from the profile. */
+  invoice_template: SettingState<InvoiceTemplate>;
 }
 
 /**
