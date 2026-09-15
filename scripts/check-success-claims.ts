@@ -172,7 +172,6 @@ const BASELINE = new Set<string>([
   "src/components/dashboard/facilities/AgreementsTab.tsx",
   "src/components/dashboard/facilities/BillingTab.tsx",
   "src/components/dashboard/facilities/LocationsTab.tsx",
-  "src/components/estimates/EstimateFollowUpSettings.tsx",
   // TagNotesSettings.tsx left on 2026-09-06, and it is the clearest example of
   // this gate being a HEURISTIC rather than a proof. Its note policy moved to
   // the `tag_note_settings` domain, so the file now imports

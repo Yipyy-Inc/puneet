@@ -1,12 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { Bell, CheckCircle, Eye } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -14,749 +21,359 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Bell,
-  CalendarClock,
-  CheckCircle,
-  Eye,
-  Pencil,
-  Save,
-} from "lucide-react";
-import { toast } from "sonner";
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import {
+  FOLLOW_UP_MERGE_TAGS,
+  type EstimateFollowUps,
+  type FollowUpChannel,
+  type FollowUpRule,
+} from "@/lib/settings/estimate-follow-ups";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
-// Sample data used to render the merge-tag preview (same idea as the Report
-// Card Builder's preview mode).
-const SAMPLE_MERGE_DATA: Record<string, string> = {
-  customer_name: "Sarah Johnson",
-  pet_name: "Bella",
-  service_name: "Full Groom",
-  estimate_total: "$85.00",
-  estimate_link: "https://yipyy.co/e/AB12CD",
-};
+// ============================================================================
+// Estimate follow-up reminders, saved for the facility and sent.
+//
+// This card kept its settings in localStorage and nothing sent them. It now
+// edits the `estimate_follow_ups` domain, and the messaging tick queues what
+// it asks for (lib/estimates/follow-up-tick.ts). Off until a facility turns it
+// on and saves.
+//
+// Gone from the old card, each for a reason:
+// - its own expiry block, a second copy of the defaults card's expiry days,
+//   whose "expired estimate action" nothing ever read;
+// - "stop following up when", because every reminder now stops when the
+//   estimate is accepted, declined, converted or expires, or the customer books
+//   anything since — a reminder after any of those was never a choice;
+// - the preview, which filled the message with an invented customer.
+// ============================================================================
 
-/** Replace {{tag}} / {tag} merge tags with sample data for the preview. */
-function renderMergePreview(message: string): string {
-  return message
-    .replace(
-      /\{\{\s*(\w+)\s*\}\}/g,
-      (match, key) => SAMPLE_MERGE_DATA[key] ?? match,
-    )
-    .replace(
-      /\{\s*(\w+)\s*\}/g,
-      (match, key) => SAMPLE_MERGE_DATA[key] ?? match,
-    );
-}
+type RuleKey = "notViewed" | "viewed";
 
-type FollowUpChannel = "email" | "sms" | "both";
-type StopCondition = "accepted" | "declined" | "expires" | "books_different";
-type ExpiryAction = "declined" | "archive" | "none";
-
-interface EstimateExpiryConfig {
-  /** Days after which an estimate expires and can no longer be booked. */
-  days: number;
-  /** What happens to the estimate when it expires. */
-  action: ExpiryAction;
-}
-
-const EXPIRY_ACTION_OPTIONS: { value: ExpiryAction; labelKey: string }[] = [
-  { value: "declined", labelKey: "actionDeclined" },
-  { value: "archive", labelKey: "actionArchive" },
-  { value: "none", labelKey: "actionNone" },
-];
-
-interface ReminderRule {
+interface RuleDraft {
   enabled: boolean;
-  delayDays: number;
+  delayDays: string;
   channel: FollowUpChannel;
-  message: string;
-  /** Shorter template used when the channel includes SMS. */
+  maxFollowUps: string;
+  emailMessage: string;
   smsMessage: string;
-  /** Send at most this many follow-ups for this rule, then stop. */
-  maxFollowUps: number;
-  /** Condition that halts follow-ups early, before the max is reached. */
-  stopCondition: StopCondition;
 }
 
-interface FollowUpConfig {
+interface Draft {
   enabled: boolean;
-  expiry: EstimateExpiryConfig;
-  notViewedReminder: ReminderRule;
-  viewedNotBooked: ReminderRule;
+  notViewed: RuleDraft;
+  viewed: RuleDraft;
 }
 
-const STOP_CONDITION_OPTIONS: { value: StopCondition; labelKey: string }[] = [
-  { value: "accepted", labelKey: "stopAccepted" },
-  { value: "declined", labelKey: "stopDeclined" },
-  { value: "expires", labelKey: "stopExpires" },
-  { value: "books_different", labelKey: "stopBooksDifferent" },
-];
-
-// Merge tags — the {{...}} syntax matches what's used in the message templates.
-const MERGE_TAGS = [
-  "{{customer_name}}",
-  "{{pet_name}}",
-  "{{service_name}}",
-  "{{estimate_total}}",
-  "{{estimate_link}}",
-];
-
-/** The shipped config, with its four message bodies in the viewer's language. */
-function defaultConfig(t: (key: string) => string): FollowUpConfig {
+function ruleDraft(rule: FollowUpRule): RuleDraft {
   return {
-    enabled: true,
-    expiry: {
-      days: 30,
-      action: "declined",
-    },
-    notViewedReminder: {
-      enabled: true,
-      delayDays: 3,
-      channel: "email",
-      message: t("defaultNotViewedEmail"),
-      smsMessage: t("defaultNotViewedSms"),
-      maxFollowUps: 2,
-      stopCondition: "accepted",
-    },
-    viewedNotBooked: {
-      enabled: true,
-      delayDays: 2,
-      channel: "email",
-      message: t("defaultViewedEmail"),
-      smsMessage: t("defaultViewedSms"),
-      maxFollowUps: 1,
-      stopCondition: "accepted",
-    },
+    ...rule,
+    delayDays: String(rule.delayDays),
+    maxFollowUps: String(rule.maxFollowUps),
+  };
+}
+
+function draftFrom(value: EstimateFollowUps): Draft {
+  return {
+    enabled: value.enabled,
+    notViewed: ruleDraft(value.notViewed),
+    viewed: ruleDraft(value.viewed),
+  };
+}
+
+function wholeIn(raw: string, min: number, max: number): boolean {
+  const value = Number(raw);
+  return (
+    raw.trim() !== "" && Number.isInteger(value) && value >= min && value <= max
+  );
+}
+
+/** The catalogue key of each problem with a rule, or none. */
+function ruleProblems(rule: RuleDraft) {
+  return {
+    delay: wholeIn(rule.delayDays, 1, 14) ? null : "delayInvalid",
+    max: wholeIn(rule.maxFollowUps, 1, 10) ? null : "maxInvalid",
+    email: rule.emailMessage.length > 2000 ? "emailTooLong" : null,
+    sms: rule.smsMessage.length > 320 ? "smsTooLong" : null,
+  };
+}
+
+function toRule(rule: RuleDraft): FollowUpRule {
+  return {
+    enabled: rule.enabled,
+    delayDays: Number(rule.delayDays),
+    channel: rule.channel,
+    maxFollowUps: Number(rule.maxFollowUps),
+    emailMessage: rule.emailMessage,
+    smsMessage: rule.smsMessage,
   };
 }
 
 export function EstimateFollowUpSettings() {
   const t = useSettingsText().section("estimate-settings");
-  const DEFAULT_CONFIG = defaultConfig(t);
-  const [config, setConfig] = useState<FollowUpConfig>(() => {
-    if (typeof window === "undefined") return DEFAULT_CONFIG;
+  const { settings, isPending, error } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const stored = settings.estimate_follow_ups;
+
+  // The server's value is the truth; state holds only what was edited since it
+  // arrived, so the disabled fallback shown while loading is never latched.
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const form = draft ?? draftFrom(stored.value);
+  const update = (changes: Partial<Draft>) =>
+    setDraft((prev) => ({ ...(prev ?? draftFrom(stored.value)), ...changes }));
+  const updateRule = (key: RuleKey, changes: Partial<RuleDraft>) =>
+    update({ [key]: { ...form[key], ...changes } });
+
+  // Checked whether or not a rule is on: the stored value must parse either way.
+  const blocked = [form.notViewed, form.viewed].some((rule) =>
+    Object.values(ruleProblems(rule)).some(Boolean),
+  );
+
+  const handleSave = async () => {
+    if (blocked) return;
     try {
-      const stored = localStorage.getItem("estimate-followup-config");
-      if (stored) {
-        // Merge with defaults so configs saved before max/stop fields existed
-        // still get sensible values.
-        const parsed = JSON.parse(stored) as Partial<FollowUpConfig>;
-        return {
-          ...DEFAULT_CONFIG,
-          ...parsed,
-          expiry: { ...DEFAULT_CONFIG.expiry, ...parsed.expiry },
-          notViewedReminder: {
-            ...DEFAULT_CONFIG.notViewedReminder,
-            ...parsed.notViewedReminder,
-          },
-          viewedNotBooked: {
-            ...DEFAULT_CONFIG.viewedNotBooked,
-            ...parsed.viewedNotBooked,
-          },
-        };
-      }
-    } catch {
-      /* ignore */
+      await saveSetting.mutateAsync({
+        domain: "estimate_follow_ups",
+        value: {
+          enabled: form.enabled,
+          notViewed: toRule(form.notViewed),
+          viewed: toRule(form.viewed),
+        } satisfies EstimateFollowUps,
+      });
+      setDraft(null);
+      toast.success(t("followUpsSaved"));
+    } catch (cause) {
+      toast.error(t("followUpsFailed"), {
+        description: cause instanceof Error ? cause.message : undefined,
+      });
     }
-    return DEFAULT_CONFIG;
-  });
-
-  const [previewNotViewed, setPreviewNotViewed] = useState(false);
-  const [previewNotViewedSms, setPreviewNotViewedSms] = useState(false);
-  const [previewViewed, setPreviewViewed] = useState(false);
-  const [previewViewedSms, setPreviewViewedSms] = useState(false);
-
-  const handleSave = () => {
-    localStorage.setItem("estimate-followup-config", JSON.stringify(config));
-    toast.success(t("followUpsSaved"));
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Estimate Expiry */}
+  if (isPending) return <Skeleton className="h-96 w-full rounded-xl" />;
+  if (error) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarClock className="size-4" />
-            {t("expiryTitle")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("expiresAfter")}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={config.expiry.days}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      expiry: {
-                        ...config.expiry,
-                        days: Number(e.target.value),
-                      },
-                    })
-                  }
-                  className="h-8 w-20 text-sm"
-                />
-                <span className="text-muted-foreground text-xs">
-                  {t("days")}
-                </span>
-              </div>
+        <CardContent className="text-destructive p-6 text-sm">
+          {t("followUpsFailed")}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const tags = FOLLOW_UP_MERGE_TAGS.map((tag) => `{{${tag}}}`).join(", ");
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="size-5" />
+              {t("followUpTitle")}
+            </CardTitle>
+            <CardDescription>{t("followUpHelp")}</CardDescription>
+          </div>
+          <Switch
+            id="follow-ups-enabled"
+            aria-label={t("enableFollowUps")}
+            checked={form.enabled}
+            onCheckedChange={(enabled) => update({ enabled })}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {form.enabled ? (
+          <>
+            <RuleEditor
+              id="not_viewed"
+              icon={<Eye className="size-4" />}
+              title={t("notViewedTitle")}
+              help={t("notViewedHelp")}
+              delayLabel={t("delayNotViewed")}
+              standardEmail={t("defaultNotViewedEmail")}
+              standardSms={t("defaultNotViewedSms")}
+              rule={form.notViewed}
+              onChange={(changes) => updateRule("notViewed", changes)}
+              t={t}
+            />
+            <RuleEditor
+              id="viewed"
+              icon={<CheckCircle className="size-4" />}
+              title={t("viewedTitle")}
+              help={t("viewedHelp")}
+              delayLabel={t("delayViewed")}
+              standardEmail={t("defaultViewedEmail")}
+              standardSms={t("defaultViewedSms")}
+              rule={form.viewed}
+              onChange={(changes) => updateRule("viewed", changes)}
+              t={t}
+            />
+            <p className="text-muted-foreground text-sm">
+              {t("mergeTags").replace("{tags}", tags)}
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">{t("followUpsOff")}</p>
+        )}
+
+        <div className="flex justify-end">
+          <Button
+            onClick={handleSave}
+            disabled={blocked || saveSetting.isPending}
+          >
+            {saveSetting.isPending ? t("saving") : t("saveFollowUps")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RuleEditor({
+  id,
+  icon,
+  title,
+  help,
+  delayLabel,
+  standardEmail,
+  standardSms,
+  rule,
+  onChange,
+  t,
+}: {
+  id: "not_viewed" | "viewed";
+  icon: React.ReactNode;
+  title: string;
+  help: string;
+  delayLabel: string;
+  standardEmail: string;
+  standardSms: string;
+  rule: RuleDraft;
+  onChange: (changes: Partial<RuleDraft>) => void;
+  t: (key: string) => string;
+}) {
+  const problems = ruleProblems(rule);
+  const field = (name: string) => `follow-up-${id}-${name}`;
+
+  return (
+    <section className="space-y-4 rounded-2xl border p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <p className="flex items-center gap-2 font-semibold">
+            {icon}
+            {title}
+          </p>
+          <p className="text-muted-foreground text-sm">{help}</p>
+        </div>
+        <Switch
+          id={field("enabled")}
+          aria-label={title}
+          checked={rule.enabled}
+          onCheckedChange={(enabled) => onChange({ enabled })}
+        />
+      </div>
+
+      {rule.enabled ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor={field("delay")}>{delayLabel}</Label>
+              <Input
+                id={field("delay")}
+                inputMode="numeric"
+                value={rule.delayDays}
+                aria-invalid={Boolean(problems.delay)}
+                onChange={(event) =>
+                  onChange({ delayDays: event.target.value })
+                }
+              />
+              {problems.delay ? (
+                <p className="text-destructive text-sm">{t(problems.delay)}</p>
+              ) : null}
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("expiredAction")}</Label>
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor={field("channel")}>{t("channel")}</Label>
               <Select
-                value={config.expiry.action}
-                onValueChange={(v) =>
-                  setConfig({
-                    ...config,
-                    expiry: { ...config.expiry, action: v as ExpiryAction },
-                  })
+                value={rule.channel}
+                onValueChange={(channel) =>
+                  onChange({ channel: channel as FollowUpChannel })
                 }
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger id={field("channel")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXPIRY_ACTION_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {t(o.labelKey)}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="email">{t("channelEmail")}</SelectItem>
+                  <SelectItem value="sms">{t("channelSms")}</SelectItem>
+                  <SelectItem value="both">{t("channelBoth")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <p className="text-muted-foreground text-xs">{t("expiryHelp")}</p>
-        </CardContent>
-      </Card>
-
-      {/* Auto Follow-Up Reminders */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="size-4" />
-              {t("followUpTitle")}
-            </CardTitle>
-            <Switch
-              checked={config.enabled}
-              onCheckedChange={(v) => setConfig({ ...config, enabled: v })}
-            />
-          </div>
-        </CardHeader>
-        {config.enabled && (
-          <CardContent className="space-y-6">
-            {/* Reminder 1: Not viewed */}
-            <div className="space-y-3 rounded-xl border p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Eye className="size-4 text-amber-500" />
-                  <p className="text-sm font-semibold">{t("notViewedTitle")}</p>
-                </div>
-                <Switch
-                  checked={config.notViewedReminder.enabled}
-                  onCheckedChange={(v) =>
-                    setConfig({
-                      ...config,
-                      notViewedReminder: {
-                        ...config.notViewedReminder,
-                        enabled: v,
-                      },
-                    })
-                  }
-                />
-              </div>
-              <p className="text-muted-foreground text-xs">
-                {t("notViewedHelp")}
-              </p>
-              {config.notViewedReminder.enabled && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("sendAfter")}</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={config.notViewedReminder.delayDays}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            notViewedReminder: {
-                              ...config.notViewedReminder,
-                              delayDays: Number(e.target.value),
-                            },
-                          })
-                        }
-                        className="h-8 w-20 text-sm"
-                        min={1}
-                        max={14}
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {t("days")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("channel")}</Label>
-                    <Select
-                      value={config.notViewedReminder.channel}
-                      onValueChange={(v) =>
-                        setConfig({
-                          ...config,
-                          notViewedReminder: {
-                            ...config.notViewedReminder,
-                            channel: v as "email" | "sms" | "both",
-                          },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">
-                          {t("channelEmail")}
-                        </SelectItem>
-                        <SelectItem value="sms">{t("channelSms")}</SelectItem>
-                        <SelectItem value="both">{t("channelBoth")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("maxFollowUps")}</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
-                        {t("sendUpTo")}
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={config.notViewedReminder.maxFollowUps}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            notViewedReminder: {
-                              ...config.notViewedReminder,
-                              maxFollowUps: Number(e.target.value),
-                            },
-                          })
-                        }
-                        className="h-8 w-16 text-sm"
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {t("timesThenStop")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("stopWhen")}</Label>
-                    <Select
-                      value={config.notViewedReminder.stopCondition}
-                      onValueChange={(v) =>
-                        setConfig({
-                          ...config,
-                          notViewedReminder: {
-                            ...config.notViewedReminder,
-                            stopCondition: v as StopCondition,
-                          },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STOP_CONDITION_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {t(o.labelKey)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-3 md:col-span-2">
-                    {/* Email template — when the channel includes email */}
-                    {(config.notViewedReminder.channel === "email" ||
-                      config.notViewedReminder.channel === "both") && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs">
-                            {config.notViewedReminder.channel === "both"
-                              ? t("emailMessage")
-                              : t("messageTemplate")}
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 gap-1.5 px-2 text-xs"
-                            onClick={() => setPreviewNotViewed((v) => !v)}
-                          >
-                            {previewNotViewed ? (
-                              <>
-                                <Pencil className="size-3" />
-                                {t("edit")}
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-3" />
-                                {t("preview")}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {previewNotViewed ? (
-                          <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
-                            {renderMergePreview(
-                              config.notViewedReminder.message,
-                            )}
-                          </div>
-                        ) : (
-                          <Textarea
-                            value={config.notViewedReminder.message}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                notViewedReminder: {
-                                  ...config.notViewedReminder,
-                                  message: e.target.value,
-                                },
-                              })
-                            }
-                            rows={3}
-                            className="text-xs"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Shorter SMS template — when the channel includes SMS */}
-                    {(config.notViewedReminder.channel === "sms" ||
-                      config.notViewedReminder.channel === "both") && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs">{t("smsMessage")}</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 gap-1.5 px-2 text-xs"
-                            onClick={() => setPreviewNotViewedSms((v) => !v)}
-                          >
-                            {previewNotViewedSms ? (
-                              <>
-                                <Pencil className="size-3" />
-                                {t("edit")}
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-3" />
-                                {t("preview")}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {previewNotViewedSms ? (
-                          <div className="bg-muted/30 text-foreground rounded-lg border p-3 text-xs whitespace-pre-line">
-                            {renderMergePreview(
-                              config.notViewedReminder.smsMessage,
-                            )}
-                          </div>
-                        ) : (
-                          <Textarea
-                            value={config.notViewedReminder.smsMessage}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                notViewedReminder: {
-                                  ...config.notViewedReminder,
-                                  smsMessage: e.target.value,
-                                },
-                              })
-                            }
-                            rows={2}
-                            className="text-xs"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-1">
-                      {MERGE_TAGS.map((v) => (
-                        <Badge
-                          key={v}
-                          variant="outline"
-                          className="cursor-default text-[9px]"
-                        >
-                          {v}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor={field("max")}>{t("maxFollowUps")}</Label>
+              <Input
+                id={field("max")}
+                inputMode="numeric"
+                value={rule.maxFollowUps}
+                aria-invalid={Boolean(problems.max)}
+                onChange={(event) =>
+                  onChange({ maxFollowUps: event.target.value })
+                }
+              />
+              {problems.max ? (
+                <p className="text-destructive text-sm">{t(problems.max)}</p>
+              ) : null}
             </div>
+          </div>
 
-            {/* Reminder 2: Viewed but not booked */}
-            <div className="space-y-3 rounded-xl border p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="size-4 text-blue-500" />
-                  <p className="text-sm font-semibold">{t("viewedTitle")}</p>
-                </div>
-                <Switch
-                  checked={config.viewedNotBooked.enabled}
-                  onCheckedChange={(v) =>
-                    setConfig({
-                      ...config,
-                      viewedNotBooked: {
-                        ...config.viewedNotBooked,
-                        enabled: v,
-                      },
-                    })
-                  }
-                />
-              </div>
-              <p className="text-muted-foreground text-xs">{t("viewedHelp")}</p>
-              {config.viewedNotBooked.enabled && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("sendAfterViewing")}</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={config.viewedNotBooked.delayDays}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            viewedNotBooked: {
-                              ...config.viewedNotBooked,
-                              delayDays: Number(e.target.value),
-                            },
-                          })
-                        }
-                        className="h-8 w-20 text-sm"
-                        min={1}
-                        max={14}
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {t("days")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("channel")}</Label>
-                    <Select
-                      value={config.viewedNotBooked.channel}
-                      onValueChange={(v) =>
-                        setConfig({
-                          ...config,
-                          viewedNotBooked: {
-                            ...config.viewedNotBooked,
-                            channel: v as "email" | "sms" | "both",
-                          },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">
-                          {t("channelEmail")}
-                        </SelectItem>
-                        <SelectItem value="sms">{t("channelSms")}</SelectItem>
-                        <SelectItem value="both">{t("channelBoth")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("maxFollowUps")}</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">
-                        {t("sendUpTo")}
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={config.viewedNotBooked.maxFollowUps}
-                        onChange={(e) =>
-                          setConfig({
-                            ...config,
-                            viewedNotBooked: {
-                              ...config.viewedNotBooked,
-                              maxFollowUps: Number(e.target.value),
-                            },
-                          })
-                        }
-                        className="h-8 w-16 text-sm"
-                      />
-                      <span className="text-muted-foreground text-xs">
-                        {t("timesThenStop")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{t("stopWhen")}</Label>
-                    <Select
-                      value={config.viewedNotBooked.stopCondition}
-                      onValueChange={(v) =>
-                        setConfig({
-                          ...config,
-                          viewedNotBooked: {
-                            ...config.viewedNotBooked,
-                            stopCondition: v as StopCondition,
-                          },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STOP_CONDITION_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {t(o.labelKey)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-3 md:col-span-2">
-                    {/* Email template — when the channel includes email */}
-                    {(config.viewedNotBooked.channel === "email" ||
-                      config.viewedNotBooked.channel === "both") && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs">
-                            {config.viewedNotBooked.channel === "both"
-                              ? t("emailMessage")
-                              : t("messageTemplate")}
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 gap-1.5 px-2 text-xs"
-                            onClick={() => setPreviewViewed((v) => !v)}
-                          >
-                            {previewViewed ? (
-                              <>
-                                <Pencil className="size-3" />
-                                {t("edit")}
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-3" />
-                                {t("preview")}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {previewViewed ? (
-                          <div className="bg-muted/30 text-foreground min-h-[76px] rounded-lg border p-3 text-xs whitespace-pre-line">
-                            {renderMergePreview(config.viewedNotBooked.message)}
-                          </div>
-                        ) : (
-                          <Textarea
-                            value={config.viewedNotBooked.message}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                viewedNotBooked: {
-                                  ...config.viewedNotBooked,
-                                  message: e.target.value,
-                                },
-                              })
-                            }
-                            rows={3}
-                            className="text-xs"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    {/* Shorter SMS template — when the channel includes SMS */}
-                    {(config.viewedNotBooked.channel === "sms" ||
-                      config.viewedNotBooked.channel === "both") && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs">{t("smsMessage")}</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 gap-1.5 px-2 text-xs"
-                            onClick={() => setPreviewViewedSms((v) => !v)}
-                          >
-                            {previewViewedSms ? (
-                              <>
-                                <Pencil className="size-3" />
-                                {t("edit")}
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="size-3" />
-                                {t("preview")}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        {previewViewedSms ? (
-                          <div className="bg-muted/30 text-foreground rounded-lg border p-3 text-xs whitespace-pre-line">
-                            {renderMergePreview(
-                              config.viewedNotBooked.smsMessage,
-                            )}
-                          </div>
-                        ) : (
-                          <Textarea
-                            value={config.viewedNotBooked.smsMessage}
-                            onChange={(e) =>
-                              setConfig({
-                                ...config,
-                                viewedNotBooked: {
-                                  ...config.viewedNotBooked,
-                                  smsMessage: e.target.value,
-                                },
-                              })
-                            }
-                            rows={2}
-                            className="text-xs"
-                          />
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-1">
-                      {MERGE_TAGS.map((v) => (
-                        <Badge
-                          key={v}
-                          variant="outline"
-                          className="cursor-default text-[9px]"
-                        >
-                          {v}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+          {rule.channel !== "sms" ? (
+            <div className="space-y-2">
+              <Label htmlFor={field("email")}>{t("emailMessage")}</Label>
+              <Textarea
+                id={field("email")}
+                rows={4}
+                value={rule.emailMessage}
+                placeholder={standardEmail}
+                aria-invalid={Boolean(problems.email)}
+                onChange={(event) =>
+                  onChange({ emailMessage: event.target.value })
+                }
+              />
+              {problems.email ? (
+                <p className="text-destructive text-sm">{t(problems.email)}</p>
+              ) : null}
             </div>
-          </CardContent>
-        )}
-      </Card>
+          ) : null}
 
-      <Button onClick={handleSave} className="w-full gap-2">
-        <Save className="size-4" />
-        {t("saveFollowUps")}
-      </Button>
-    </div>
+          {rule.channel !== "email" ? (
+            <div className="space-y-2">
+              <Label htmlFor={field("sms")}>{t("smsMessage")}</Label>
+              <Textarea
+                id={field("sms")}
+                rows={2}
+                value={rule.smsMessage}
+                placeholder={standardSms}
+                aria-invalid={Boolean(problems.sms)}
+                onChange={(event) =>
+                  onChange({ smsMessage: event.target.value })
+                }
+              />
+              {problems.sms ? (
+                <p className="text-destructive text-sm">{t(problems.sms)}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <p className="text-muted-foreground text-sm">
+            {t("standardMessageHelp")}
+          </p>
+        </>
+      ) : null}
+    </section>
   );
 }
