@@ -126,7 +126,6 @@ import { NO_ITEMS } from "@/lib/no-items";
 // The booking mapper still stamps every booking with this legacy id, and the
 // calendar's builders filter on it — so it stays until that mapper does. It
 // no longer names where anything is kept.
-const FACILITY_ID = 11;
 
 // ── A VIEWER'S CALENDAR, PER FACILITY ───────────────────────────────────────
 //
@@ -975,7 +974,6 @@ export function OperationsCalendar() {
       tasks: taskRecords,
       transactions: NO_TRANSACTIONS,
       customModules: activeModules,
-      facilityId: FACILITY_ID,
       view,
       addOnDisplayMode: visualConfig.addOnDisplayMode,
       manualFacilityEvents,

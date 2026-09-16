@@ -28,7 +28,6 @@ import type { DailyCareStep } from "@/types/boarding";
 
 type Props = {
   date: string;
-  facilityId: number;
   facilityName: string;
   guests: CareGuest[];
   executions: TaskExecution[];
@@ -55,7 +54,6 @@ function prettyDate(date: string): string {
  */
 export function DaySummaryView({
   date,
-  facilityId,
   facilityName,
   guests,
   executions,
@@ -112,11 +110,11 @@ export function DaySummaryView({
     const headCounts = sortedSteps
       .filter((s) => s.requiresHeadCount)
       .flatMap((s) => {
-        const record = headCountStore.getSnapshot(facilityId, date, s.id);
+        const record = headCountStore.getSnapshot(date, s.id);
         return record ? [{ stepName: s.name, record }] : [];
       });
 
-    const notes = shiftNotesStore.getSnapshot(facilityId, date);
+    const notes = shiftNotesStore.getSnapshot(date);
 
     // Guest Journals updated that day = any pet with at least one log.
     const updatedIds = new Set(executions.map((e) => e.guestId));
@@ -140,7 +138,6 @@ export function DaySummaryView({
     };
   }, [
     date,
-    facilityId,
     guests,
     executions,
     sortedSteps,

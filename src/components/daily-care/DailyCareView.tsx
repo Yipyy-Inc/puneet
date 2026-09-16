@@ -74,7 +74,6 @@ import type { DailyCareStep } from "@/types/boarding";
 
 // Single-facility mock — boarding/daily-care data isn't facility-scoped yet, so
 // shift notes are keyed under the demo facility.
-const FACILITY_ID = 11;
 const FACILITY_NAME = "Yipyy";
 
 // Roles that oversee the whole floor — they default to the All Tasks view.
@@ -166,8 +165,8 @@ export function DailyCareView() {
   // note saved from the dialog appears in the banner immediately.
   const shiftNotes = useSyncExternalStore(
     shiftNotesStore.subscribe,
-    () => shiftNotesStore.getSnapshot(FACILITY_ID, date),
-    () => shiftNotesStore.getSnapshot(FACILITY_ID, date),
+    () => shiftNotesStore.getSnapshot(date),
+    () => shiftNotesStore.getSnapshot(date),
   );
 
   const [modalState, setModalState] = useState<{
@@ -203,8 +202,8 @@ export function DailyCareView() {
   // mutations, so it's a safe useSyncExternalStore snapshot.
   const headCountDoneStepIds = useSyncExternalStore(
     headCountStore.subscribe,
-    () => headCountStore.getCompletedStepIds(FACILITY_ID, date),
-    () => headCountStore.getCompletedStepIds(FACILITY_ID, date),
+    () => headCountStore.getCompletedStepIds(date),
+    () => headCountStore.getCompletedStepIds(date),
   );
 
   // The step whose head-count overlay is open, if any.
@@ -732,7 +731,7 @@ export function DailyCareView() {
       total: number;
     },
   ) => {
-    headCountStore.complete(FACILITY_ID, date, step.id, {
+    headCountStore.complete(date, step.id, {
       stepId: step.id,
       date,
       staffName: user.name,
@@ -843,7 +842,7 @@ export function DailyCareView() {
               <Printer className="mr-2 size-4" />
               Print
             </Button>
-            <ShiftNotes facilityId={FACILITY_ID} date={date} />
+            <ShiftNotes date={date} />
           </div>
         </div>
 
@@ -965,7 +964,6 @@ export function DailyCareView() {
         {summaryOpen && (
           <DaySummaryView
             date={date}
-            facilityId={FACILITY_ID}
             facilityName={FACILITY_NAME}
             guests={guests}
             executions={executions}
