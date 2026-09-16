@@ -171,13 +171,24 @@ export const bookingQueries = {
    * The bookings still going on or after `from` and starting by `to`, each a
    * YYYY-MM-DD day. A superset: the route pads a day each side, so keep the
    * screen's exact day filter.
+   *
+   * `statuses` narrows the same way, and a screen that filters the answer by
+   * status should pass it — the route filters in SQL, which is the difference
+   * between 977 rows and 5 on the occupancy board. It is part of the query KEY
+   * so two screens asking for different slices of one window do not share a
+   * cache entry and read each other's shorter answer.
    */
-  window: (range: { from?: string; to?: string }) => ({
+  window: (range: {
+    from?: string;
+    to?: string;
+    statuses?: readonly string[];
+  }) => ({
     queryKey: [
       "bookings",
       "window",
       range.from ?? null,
       range.to ?? null,
+      [...(range.statuses ?? [])].sort().join(",") || null,
     ] as const,
     queryFn: async () => fetchBookings(range),
   }),

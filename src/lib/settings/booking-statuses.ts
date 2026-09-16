@@ -43,6 +43,41 @@ export function isBookingStatus(
   return (BOOKING_STATUS_IDS as readonly string[]).includes(value);
 }
 
+/**
+ * A booking nobody is waiting for any more.
+ *
+ * Four endings, not one: cancelled and declined never happened, no_show was
+ * expected and did not arrive, completed is done. A board draws none of them.
+ */
+export const CLOSED_BOOKING_STATUSES = [
+  "cancelled",
+  "declined",
+  "no_show",
+  "completed",
+] as const satisfies readonly (typeof BOOKING_STATUS_IDS)[number][];
+
+/**
+ * Everything else — a booking still ahead of somebody.
+ *
+ * DERIVED from the two lists above rather than typed out, because the two
+ * places this is used are a QUERY and a filter over that query's answer, and a
+ * screen that asks for one set then filters by a slightly different one drops
+ * rows without ever looking wrong. Add a status to the enum and it lands here
+ * on its own; leaving it out of both lists is the only way to lose it.
+ *
+ * ── WHY A SCREEN SHOULD SAY THIS OUT LOUD ─────────────────────────────────
+ *
+ * MEASURED 2026-09-16 against the e2e facility: the occupancy board asked
+ * GET /api/bookings for everything from today forward — 977 rows, 11.3 s warm,
+ * 18.5 s cold — and then dropped every closed one in the browser, leaving 5.
+ * Naming the statuses in the request is not a SMALLER answer, it is the same
+ * answer fetched: 5 rows in 2.3 s. And a list with no `to` only grows, so the
+ * gap between what is sent and what is used widens by itself.
+ */
+export const OPEN_BOOKING_STATUSES = BOOKING_STATUS_IDS.filter(
+  (id) => !(CLOSED_BOOKING_STATUSES as readonly string[]).includes(id),
+);
+
 const transitionAction = z.enum([
   "onDepositPaid",
   "onCheckIn",
