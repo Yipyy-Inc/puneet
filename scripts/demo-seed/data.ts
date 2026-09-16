@@ -3082,3 +3082,62 @@ export const FACILITY_TASKS: {
     dueTime: "09:00",
   },
 ];
+
+/**
+ * The settings rows the facility should own rather than inherit.
+ *
+ * Keyed by domain, written verbatim into `facility_settings.value`. Only the
+ * two whose FALLBACK is wrong for a real business appear here — see the block
+ * in run.ts for why the other twenty-odd are deliberately left to their
+ * defaults.
+ */
+export const FACILITY_SETTINGS: Record<string, unknown> = {
+  // Open early for drop-off before work, closed Sunday. Saturday is a shorter
+  // day: grooming and pick-ups, no new boarding intake.
+  business_hours: {
+    monday: { isOpen: true, openTime: "07:00", closeTime: "19:00" },
+    tuesday: { isOpen: true, openTime: "07:00", closeTime: "19:00" },
+    wednesday: { isOpen: true, openTime: "07:00", closeTime: "19:00" },
+    thursday: { isOpen: true, openTime: "07:00", closeTime: "19:00" },
+    friday: { isOpen: true, openTime: "07:00", closeTime: "19:00" },
+    saturday: { isOpen: true, openTime: "08:00", closeTime: "17:00" },
+    sunday: { isOpen: false, openTime: "09:00", closeTime: "17:00" },
+  },
+
+  // Québec: GST 5% + QST 9.975% = the 14.975% TAX_RATE the seed already prices
+  // with. `rate` is a FRACTION. Neither compounds — QST is charged on the
+  // selling price rather than on GST, and has been since 2013.
+  //
+  // The registration numbers are the reserved-for-fiction pattern, not real
+  // ones: a demo invoice must not carry a number belonging to somebody.
+  tax_config: {
+    country: "CA",
+    province: "QC",
+    taxes: [
+      {
+        id: "gst",
+        name: "GST",
+        rate: 0.05,
+        appliesTo: "all",
+        registrationNumber: "00000 0000 RT0001",
+        description: "Goods and Services Tax",
+        isCompound: false,
+        enabled: true,
+      },
+      {
+        id: "qst",
+        name: "QST",
+        rate: 0.09975,
+        appliesTo: "all",
+        registrationNumber: "0000000000 TQ0001",
+        description: "Québec Sales Tax",
+        isCompound: false,
+        enabled: true,
+      },
+    ],
+    pricesIncludeTax: false,
+    showTaxesSeparately: true,
+    showRegistrationOnInvoice: true,
+    exemptions: { tips: true, giftCards: true, storeCredit: true },
+  },
+};

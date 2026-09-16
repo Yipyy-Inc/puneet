@@ -15457,24 +15457,40 @@ the screens asking for every booking are the next thing to narrow (see the
 bookings-list entry above). Do not treat a growing tombstone count as a mess to
 delete.
 
-### 🟡 An unidentified intermittent in `test:unit` (2026-09-16)
+### 🟡 `test:unit` went red twice, and the culprit was a 5-second timeout (2026-09-16)
 
-`bun run test:unit` reported **1 failure** twice in one afternoon, out of 548,
-and the run took 28–31 s instead of its usual ~1.1 s. Both times it was chained
-behind another heavy command. It did NOT reproduce in five subsequent runs,
-including one launched deliberately while a lint and a build were competing for
-CPU.
+**Found, after being written up here as unidentified.** `bun run test:unit`
+reported 1 failure of 548 twice in one afternoon, taking 28–31 s against its
+usual ~1.1 s, and did not reproduce in five runs — including one launched
+deliberately under a competing lint and build. Two diagnoses were offered and
+both were wrong (it is not real DNS: `calling-provider.test.ts` stubs
+`globalThis.fetch` and throws `getaddrinfo ENOTFOUND` on purpose).
 
-**Which test failed is not known, because the output was not captured** — the
-re-run passed and took the evidence with it. Two diagnoses were offered and both
-were wrong: it is not real DNS (`tests/unit/calling-provider.test.ts` stubs
-`globalThis.fetch` and throws `getaddrinfo ENOTFOUND` on purpose, so that log
-line is expected output), and no timing assertion was found in the suite.
+It fell out the moment the output was CAPTURED instead of re-run:
 
-**Do instead:** if `test:unit` ever reports a failure, capture the full output
-BEFORE re-running — `bun run test:unit > /tmp/unit.log 2>&1`. One failing name
-settles this in a minute; without it, a green re-run proves nothing except that
-it is intermittent. CI has not gone red on it.
+```
+(fail) source files > carry no invisible character [29683.13ms]
+  ^ this test timed out after 5000ms.
+```
+
+`tests/unit/no-control-characters.test.ts` walks `src`, `tests`, `scripts` and
+`messages` and used to `.split("\n").forEach()` EVERY file, running the regex
+per line — a lines array allocated for `database.ts` (14k lines),
+`messages/en.json` (11k) and a few thousand neighbours, to find nothing.
+**643 ms idle; 29.7 s with a build competing for the CPU**, against a 5 s
+timeout. CI runners are shared, so this was a random red waiting to happen.
+
+**Fixed by scanning once per file** — the regex has no `/g`, so `.test()`
+short-circuits and only a file that actually offends pays for line numbers —
+plus `readdirSync(withFileTypes)` instead of a `statSync` per entry.
+**521 ms under the same contention that produced 29.7 s.** Both controls run: a
+real U+200B planted in `scripts/` still fails the test and still reports
+`file:line U+200B`, and removing it passes.
+
+**The transferable part is the method, not the fix.** A failure that vanishes on
+re-run is not "flaky", it is unmeasured — and a green re-run destroys the only
+evidence. `bun run test:unit > /tmp/unit.log 2>&1` first, read second. One
+captured failing name settled in a minute what five clean re-runs could not.
 
 ### The hardcoded facility 11, classified to the end (2026-09-16)
 
