@@ -45,9 +45,9 @@ let idsCacheKey = "";
 let idsCache: ReadonlySet<string> = EMPTY_IDS;
 
 // A CACHE of `daily_care_records` (kind head_count), keyed by day and step.
-// The facility is the session's, on the server; `facilityId` is kept for the
-// callers and decides nothing.
-function keyFor(_facilityId: number, date: string, stepId: string): string {
+// The facility is the session's, on the server, so no caller passes one — the
+// id they used to pass was the fixture's 11.
+function keyFor(date: string, stepId: string): string {
   return `${date}::${stepId}`;
 }
 
@@ -74,18 +74,13 @@ function notify(): void {
 
 export const headCountStore = {
   /** The completed record for a step on a day, or null. */
-  getSnapshot(
-    facilityId: number,
-    date: string,
-    stepId: string,
-  ): HeadCountRecord | null {
-    return recordsByKey.get(keyFor(facilityId, date, stepId)) ?? null;
+  getSnapshot(date: string, stepId: string): HeadCountRecord | null {
+    return recordsByKey.get(keyFor(date, stepId)) ?? null;
   },
 
-  /** Step ids with a completed head count for a (facility, date). Stable
-   *  reference between mutations — safe for useSyncExternalStore. */
-  getCompletedStepIds(facilityId: number, date: string): ReadonlySet<string> {
-    void facilityId;
+  /** Step ids with a completed head count for a day. Stable reference between
+   *  mutations — safe for useSyncExternalStore. */
+  getCompletedStepIds(date: string): ReadonlySet<string> {
     const key = date;
     if (key !== idsCacheKey) {
       const ids = new Set<string>();
@@ -109,13 +104,8 @@ export const headCountStore = {
   },
 
   /** Persist a completed head count and mark the step done. */
-  complete(
-    facilityId: number,
-    date: string,
-    stepId: string,
-    record: HeadCountRecord,
-  ): void {
-    const key = keyFor(facilityId, date, stepId);
+  complete(date: string, stepId: string, record: HeadCountRecord): void {
+    const key = keyFor(date, stepId);
     recordsByKey.set(key, record);
     notify();
     // The safety record goes to the server; the step is undone if refused.

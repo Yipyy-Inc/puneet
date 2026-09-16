@@ -383,7 +383,6 @@ interface BuildUnifiedEventsInput {
   tasks: FacilityTask[];
   transactions: Transaction[];
   customModules: CustomServiceModule[];
-  facilityId: number;
   view: OperationsCalendarView;
   addOnDisplayMode: CalendarAddOnDisplayMode;
   manualFacilityEvents?: ManualFacilityEvent[];
@@ -1220,107 +1219,106 @@ function makeTagNameLookup(
       : (byEntity.get(`${entityType}:${entityId}`) ?? []);
 }
 
+// No facility filter: `/api/bookings` scopes staff reads to the session's
+// facility already (`activeFacilityIdForStaff` + `inFacility`). The filter that
+// stood here compared the mapper's fixture `facilityId: 11` against the
+// calendar's own `FACILITY_ID = 11`, so it passed only because both sides told
+// the same untruth, and would have hidden every booking the moment either was
+// made real.
 function buildBookingEvents(
   inputBookings: Booking[],
   clients: Client[],
-  facilityId: number,
   decorationContext: DecorationContext,
   groomingMenu: GroomingPackage[],
   buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
-  return inputBookings
-    .filter((booking) => booking.facilityId === facilityId)
-    .map((booking) => {
-      const primaryPetId = getPrimaryBookingPetId(booking.petId);
-      const petContext =
-        primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
-      const serviceLabel = normalizeServiceLabel(booking.service);
-      const bookingStatus = toStatusLabel(booking.status, "Confirmed");
-      const start = makeDateTime(
-        booking.startDate,
-        booking.checkInTime ?? "09:00",
-      );
-      const rawEnd = makeDateTime(
-        booking.endDate ?? booking.startDate,
-        booking.checkOutTime ?? booking.checkInTime ?? "10:00",
-      );
-      const end = rawEnd <= start ? addMinutes(start, 60) : rawEnd;
-      const staff =
-        booking.stylistPreference ?? booking.trainerId ?? "Unassigned";
-      const staffRole = resolveStaffRole(staff);
-      const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
-      const addOns = extractBookingAddOns(booking);
-      const resourceType = inferBookingResourceType(booking);
-      const rateColor = getRateColor(
-        booking.service,
-        booking.basePrice,
-        groomingMenu,
-      );
+  return inputBookings.map((booking) => {
+    const primaryPetId = getPrimaryBookingPetId(booking.petId);
+    const petContext =
+      primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
+    const serviceLabel = normalizeServiceLabel(booking.service);
+    const bookingStatus = toStatusLabel(booking.status, "Confirmed");
+    const start = makeDateTime(
+      booking.startDate,
+      booking.checkInTime ?? "09:00",
+    );
+    const rawEnd = makeDateTime(
+      booking.endDate ?? booking.startDate,
+      booking.checkOutTime ?? booking.checkInTime ?? "10:00",
+    );
+    const end = rawEnd <= start ? addMinutes(start, 60) : rawEnd;
+    const staff =
+      booking.stylistPreference ?? booking.trainerId ?? "Unassigned";
+    const staffRole = resolveStaffRole(staff);
+    const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
+    const addOns = extractBookingAddOns(booking);
+    const resourceType = inferBookingResourceType(booking);
+    const rateColor = getRateColor(
+      booking.service,
+      booking.basePrice,
+      groomingMenu,
+    );
 
-      return {
-        id: `booking-${booking.id}`,
-        sourceId: String(booking.id),
-        type: "booking" as const,
-        subtype: mapBookingSubtype(booking),
-        title: `${serviceLabel} - ${petContext?.petName ?? "Pet"}`,
+    return {
+      id: `booking-${booking.id}`,
+      sourceId: String(booking.id),
+      type: "booking" as const,
+      subtype: mapBookingSubtype(booking),
+      title: `${serviceLabel} - ${petContext?.petName ?? "Pet"}`,
+      start,
+      end,
+      allDay: false,
+      status: bookingStatus,
+      service: serviceLabel,
+      module: serviceLabel,
+      staff,
+      staffRole,
+      roleGroup,
+      location: booking.kennel ?? "Front Desk",
+      resource: booking.kennel ?? "Front Desk",
+      resourceType,
+      unassigned: staff === "Unassigned",
+      petId: primaryPetId,
+      clientId: booking.clientId,
+      bookingRawStatus: booking.status,
+      bookingSource: deriveBookingSource(String(booking.id)),
+      petNames: petContext?.petName ? [petContext.petName] : [],
+      customerName: petContext?.ownerName,
+      bookingId: booking.id,
+      confirmationNumber: booking.invoice?.id,
+      decorations: computeEventDecorations(
+        decorationContext,
         start,
-        end,
-        allDay: false,
-        status: bookingStatus,
-        service: serviceLabel,
-        module: serviceLabel,
-        staff,
-        staffRole,
-        roleGroup,
-        location: booking.kennel ?? "Front Desk",
-        resource: booking.kennel ?? "Front Desk",
-        resourceType,
-        unassigned: staff === "Unassigned",
-        petId: primaryPetId,
-        clientId: booking.clientId,
-        bookingRawStatus: booking.status,
-        bookingSource: deriveBookingSource(String(booking.id)),
-        petNames: petContext?.petName ? [petContext.petName] : [],
-        customerName: petContext?.ownerName,
-        bookingId: booking.id,
-        confirmationNumber: booking.invoice?.id,
-        decorations: computeEventDecorations(
-          decorationContext,
-          start,
-          primaryPetId,
-          booking.clientId,
-        ),
-        petTags: buildTagNames("pet", primaryPetId),
-        customerTags: buildTagNames("customer", booking.clientId),
-        bookingTags: buildTagNames("booking", booking.id),
-        addOns,
-        rateColor,
-        allowsAddOns: true,
-        requiresCheckInOut: ["boarding", "daycare", "grooming"].includes(
-          booking.service.toLowerCase(),
-        ),
-        affectsCapacityHeatmap: true,
-        href: `/facility/dashboard/bookings?bookingId=${booking.id}`,
-      };
-    });
+        primaryPetId,
+        booking.clientId,
+      ),
+      petTags: buildTagNames("pet", primaryPetId),
+      customerTags: buildTagNames("customer", booking.clientId),
+      bookingTags: buildTagNames("booking", booking.id),
+      addOns,
+      rateColor,
+      allowsAddOns: true,
+      requiresCheckInOut: ["boarding", "daycare", "grooming"].includes(
+        booking.service.toLowerCase(),
+      ),
+      affectsCapacityHeatmap: true,
+      href: `/facility/dashboard/bookings?bookingId=${booking.id}`,
+    };
+  });
 }
 
 function buildEvaluationEvents(
   inputBookings: Booking[],
   clients: Client[],
-  facilityId: number,
   decorationContext: DecorationContext,
   buildTagNames: TagNameLookup,
 ): OperationsCalendarEvent[] {
   const { petLookup } = buildClientLookups(clients);
 
   return inputBookings
-    .filter(
-      (booking) =>
-        booking.facilityId === facilityId && booking.includesEvaluation,
-    )
+    .filter((booking) => booking.includesEvaluation)
     .map((booking) => {
       const primaryPetId = getPrimaryBookingPetId(booking.petId);
       const petContext =
@@ -1753,7 +1751,6 @@ const STAY_SERVICES = new Set(["boarding", "daycare"]);
 function buildStayAddOnCalendarEvents(
   stayBookings: Booking[],
   clients: Client[],
-  facilityId: number,
   buildTagNames: TagNameLookup,
   completedAddOns?: CompletedAddOnEntry[],
 ): OperationsCalendarEvent[] {
@@ -1765,92 +1762,90 @@ function buildStayAddOnCalendarEvents(
   );
   const { petLookup } = buildClientLookups(clients);
 
-  return stayBookings
-    .filter((booking) => booking.facilityId === facilityId)
-    .flatMap((booking) => {
-      const primaryPetId = getPrimaryBookingPetId(booking.petId);
-      const petContext =
-        primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
-      const serviceLabel = normalizeServiceLabel(booking.service);
-      const bookingStart = makeDateTime(
-        booking.startDate,
-        booking.checkInTime ?? "09:00",
+  return stayBookings.flatMap((booking) => {
+    const primaryPetId = getPrimaryBookingPetId(booking.petId);
+    const petContext =
+      primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
+    const serviceLabel = normalizeServiceLabel(booking.service);
+    const bookingStart = makeDateTime(
+      booking.startDate,
+      booking.checkInTime ?? "09:00",
+    );
+
+    const addOnItems = [
+      ...(booking.invoice?.items ?? []),
+      ...(booking.invoice?.fees ?? []),
+    ].filter((item) => item.type === "addon");
+
+    if (addOnItems.length === 0) return [];
+
+    return addOnItems.map((item, index) => {
+      const scheduledAt =
+        inferAddOnScheduledAt(booking, item.name, index) ??
+        addMinutes(bookingStart, (index + 1) * 60);
+      const end = addMinutes(scheduledAt, 30);
+
+      // Use the add-on's assigned staff if present; fall back to "Unassigned".
+      // Facilities can set item.staffName when creating scheduled add-ons.
+      const assignedStaff = item.staffName ?? "Unassigned";
+      const staffRole = resolveStaffRole(assignedStaff);
+      const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
+
+      const addOnEntry: CalendarAddOn = {
+        id: `stay-addon-item-${booking.id}-${index}`,
+        name: item.name,
+        iconKey: getAddOnIconKey(item.name),
+        scheduledAt,
+        colorCode: getAddOnColor(item.name),
+      };
+
+      // Check if this add-on has been marked completed
+      const addOnEventId = `stay-addon-${booking.id}-${index}`;
+      const completionEntry = completedLookup.get(
+        `${booking.id}-${item.name.toLowerCase()}`,
       );
+      const isCompleted = !!completionEntry;
 
-      const addOnItems = [
-        ...(booking.invoice?.items ?? []),
-        ...(booking.invoice?.fees ?? []),
-      ].filter((item) => item.type === "addon");
-
-      if (addOnItems.length === 0) return [];
-
-      return addOnItems.map((item, index) => {
-        const scheduledAt =
-          inferAddOnScheduledAt(booking, item.name, index) ??
-          addMinutes(bookingStart, (index + 1) * 60);
-        const end = addMinutes(scheduledAt, 30);
-
-        // Use the add-on's assigned staff if present; fall back to "Unassigned".
-        // Facilities can set item.staffName when creating scheduled add-ons.
-        const assignedStaff = item.staffName ?? "Unassigned";
-        const staffRole = resolveStaffRole(assignedStaff);
-        const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
-
-        const addOnEntry: CalendarAddOn = {
-          id: `stay-addon-item-${booking.id}-${index}`,
-          name: item.name,
-          iconKey: getAddOnIconKey(item.name),
-          scheduledAt,
-          colorCode: getAddOnColor(item.name),
-        };
-
-        // Check if this add-on has been marked completed
-        const addOnEventId = `stay-addon-${booking.id}-${index}`;
-        const completionEntry = completedLookup.get(
-          `${booking.id}-${item.name.toLowerCase()}`,
-        );
-        const isCompleted = !!completionEntry;
-
-        return {
-          id: addOnEventId,
-          sourceId: String(booking.id),
-          type: "add-on" as const,
-          subtype: getAddOnIconKey(item.name),
-          title: `${item.name} — ${petContext?.petName ?? "Pet"}`,
-          start: scheduledAt,
-          end,
-          allDay: false,
-          status: isCompleted ? "Completed" : "Scheduled",
-          completedAt: completionEntry?.completedAt,
-          completedByName: completionEntry?.completedByName,
-          completedByStaffId: completionEntry?.completedByStaffId,
-          service: serviceLabel,
-          module: serviceLabel,
-          staff: assignedStaff,
-          staffRole,
-          roleGroup,
-          location: booking.kennel ?? "Front Desk",
-          resource: booking.kennel ?? "Front Desk",
-          resourceType: undefined,
-          unassigned: assignedStaff === "Unassigned",
-          petId: primaryPetId,
-          clientId: booking.clientId,
-          bookingRawStatus: booking.status,
-          bookingSource: deriveBookingSource(String(booking.id)),
-          petNames: petContext?.petName ? [petContext.petName] : [],
-          customerName: petContext?.ownerName,
-          bookingId: booking.id,
-          confirmationNumber: booking.invoice?.id,
-          parentEventId: `booking-${booking.id}`,
-          isSubEvent: true,
-          petTags: buildTagNames("pet", primaryPetId),
-          customerTags: buildTagNames("customer", booking.clientId),
-          bookingTags: buildTagNames("booking", booking.id),
-          addOns: [addOnEntry],
-          href: `/facility/dashboard/bookings?bookingId=${booking.id}`,
-        } satisfies OperationsCalendarEvent;
-      });
+      return {
+        id: addOnEventId,
+        sourceId: String(booking.id),
+        type: "add-on" as const,
+        subtype: getAddOnIconKey(item.name),
+        title: `${item.name} — ${petContext?.petName ?? "Pet"}`,
+        start: scheduledAt,
+        end,
+        allDay: false,
+        status: isCompleted ? "Completed" : "Scheduled",
+        completedAt: completionEntry?.completedAt,
+        completedByName: completionEntry?.completedByName,
+        completedByStaffId: completionEntry?.completedByStaffId,
+        service: serviceLabel,
+        module: serviceLabel,
+        staff: assignedStaff,
+        staffRole,
+        roleGroup,
+        location: booking.kennel ?? "Front Desk",
+        resource: booking.kennel ?? "Front Desk",
+        resourceType: undefined,
+        unassigned: assignedStaff === "Unassigned",
+        petId: primaryPetId,
+        clientId: booking.clientId,
+        bookingRawStatus: booking.status,
+        bookingSource: deriveBookingSource(String(booking.id)),
+        petNames: petContext?.petName ? [petContext.petName] : [],
+        customerName: petContext?.ownerName,
+        bookingId: booking.id,
+        confirmationNumber: booking.invoice?.id,
+        parentEventId: `booking-${booking.id}`,
+        isSubEvent: true,
+        petTags: buildTagNames("pet", primaryPetId),
+        customerTags: buildTagNames("customer", booking.clientId),
+        bookingTags: buildTagNames("booking", booking.id),
+        addOns: [addOnEntry],
+        href: `/facility/dashboard/bookings?bookingId=${booking.id}`,
+      } satisfies OperationsCalendarEvent;
     });
+  });
 }
 
 /** True when a group / capacity-limited slot is at (or over) capacity. */
@@ -1892,7 +1887,6 @@ export function buildUnifiedEvents(
     ...buildBookingEvents(
       schedulableBookings,
       input.clients,
-      input.facilityId,
       decorationContext,
       input.groomingMenu ?? [],
       buildTagNames,
@@ -1901,7 +1895,6 @@ export function buildUnifiedEvents(
     ...buildEvaluationEvents(
       input.bookings,
       input.clients,
-      input.facilityId,
       decorationContext,
       buildTagNames,
     ),
@@ -1924,7 +1917,6 @@ export function buildUnifiedEvents(
   const stayAddOnEvents = buildStayAddOnCalendarEvents(
     stayBookings,
     input.clients,
-    input.facilityId,
     buildTagNames,
     input.completedAddOns,
   );

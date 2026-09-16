@@ -7,8 +7,9 @@ import {
 // ============================================================================
 // Shift-handoff notes — a CACHE of `daily_care_records` (kind shift_note),
 // keyed by date. It was the whole truth, in one browser tab, under a
-// hard-coded facility id; the server now scopes by the session's facility, so
-// `facilityId` below is kept for the callers and no longer decides anything.
+// hard-coded facility id. The server scopes by the session's facility, so the
+// callers no longer pass one: `petFlagsStore` never did, and the id they were
+// passing was the fixture's 11.
 // Components subscribe via useSyncExternalStore, so a note left from the
 // dialog shows up in the banner (and any other subscriber) at once.
 // ============================================================================
@@ -32,7 +33,7 @@ const EMPTY: ShiftNote[] = [];
 
 let seq = 0;
 
-function keyFor(_facilityId: number, date: string): string {
+function keyFor(date: string): string {
   return date;
 }
 
@@ -57,8 +58,8 @@ function notify(): void {
 }
 
 export const shiftNotesStore = {
-  getSnapshot(facilityId: number, date: string): ShiftNote[] {
-    return notesByKey.get(keyFor(facilityId, date)) ?? EMPTY;
+  getSnapshot(date: string): ShiftNote[] {
+    return notesByKey.get(keyFor(date)) ?? EMPTY;
   },
 
   subscribe(listener: Listener): () => void {
@@ -69,14 +70,13 @@ export const shiftNotesStore = {
   },
 
   add(
-    facilityId: number,
     date: string,
     note: { author: string; text: string; createdAt: string },
   ): void {
-    const key = keyFor(facilityId, date);
+    const key = keyFor(date);
     seq += 1;
     const entry: ShiftNote = {
-      id: `shift-note-${facilityId}-${date}-${seq}`,
+      id: `shift-note-${date}-${seq}`,
       author: note.author,
       createdAt: note.createdAt,
       text: note.text,

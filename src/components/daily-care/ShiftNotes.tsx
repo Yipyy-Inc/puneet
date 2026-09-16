@@ -18,12 +18,11 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { shiftNotesStore } from "@/data/shift-notes-store";
 
 type Props = {
-  facilityId: number;
   /** ISO date "YYYY-MM-DD" the note belongs to (the day being viewed). */
   date: string;
 };
 
-export function ShiftNotes({ facilityId, date }: Props) {
+export function ShiftNotes({ date }: Props) {
   // Author comes from the single current-staff source (F2).
   const { user } = useCurrentUser();
   const [open, setOpen] = useState(false);
@@ -33,7 +32,7 @@ export function ShiftNotes({ facilityId, date }: Props) {
     const trimmed = text.trim();
     if (!trimmed) return;
     // Stamp author + time on submit, then persist to the store.
-    shiftNotesStore.add(facilityId, date, {
+    shiftNotesStore.add(date, {
       author: user.name,
       text: trimmed,
       createdAt: new Date().toISOString(),

@@ -14593,6 +14593,30 @@ records on file" is never dressed up as up to date. Its words are the
 `bookingReadiness` staff area; a document's type reads in the client file's own
 words. The rest of the drawer is still English.
 
+**Fixed 2026-09-16: the calendar and Daily Care stop passing fixture facility
+11 around.** The operations calendar declared `FACILITY_ID = 11` and handed it
+to `buildUnifiedEvents`, where three builders filtered
+`booking.facilityId === facilityId` — and the booking mapper stamps every real
+booking `facilityId: 11`. The filter passed only because both sides told the
+same untruth, and would have hidden every booking the moment either was made
+real. It is gone: `/api/bookings` already scopes staff reads to the session's
+facility (`activeFacilityIdForStaff` + `inFacility`), which is the boundary a
+client-side filter never was. Daily Care's `FACILITY_ID = 11` went the same way
+— `shiftNotesStore` and `headCountStore` write through `/api/daily-care/records`,
+which takes the facility from the session, so the id they were handed decided
+nothing; `petFlagsStore` never took one. The parameter is off both stores and
+their six call sites, including the `ShiftNotes` and `DaySummaryView` props.
+
+**Still debt, deliberately.** `Booking.facilityId` is still `z.number()` and the
+mapper still stamps 11: the number is what twenty-eight fixture-backed screens
+filter by through `selectedFacility.id` (see the note in
+`use-customer-facility.tsx` and the entry above), so making it the real uuid
+would empty all of them silently. It changes when those screens read Postgres.
+The customer portal's three `b.facilityId === selectedFacility.id` filters are
+part of that same knot. And `DailyCareView` still prints `FACILITY_NAME =
+"Yipyy"` as the facility's name on the day summary and its PDF, where the
+business's own name belongs.
+
 **Fixed 2026-09-16: an estimate quotes the facility's own training programs.**
 `EstimateWizard` listed `trainingClasses` from `src/data/training` and priced a
 session from that fixture, so an estimate offered a program the business does
