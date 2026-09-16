@@ -15332,3 +15332,55 @@ facility and are reachable from the customer sidebar; `lib/api/financial-report.
 choosing a **tax jurisdiction** with `if (facilityId === 11)`; and
 `BookingModal`/`new-appointment-dialog` scoping a QuickBooks $0 receipt to
 `{ facilityId: "11" }`.
+
+### 🔴 The local e2e server dies mid-suite, and Playwright does not notice (2026-09-16)
+
+`bun run start --port 3111` exited with **code 9** THREE times in one afternoon
+— 11, 20 and 15 minutes into a `test:e2e:ci` run. So it reproduces on roughly a
+quarter-hour of suite load and is not tied to one spec. Twice it logged nothing
+at all; once it logged, immediately before exiting:
+
+```
+⨯ Error: The destination stream closed early.
+    at ignore-listed frames { digest: '3947148457' }
+error: script "start" exited with code 9
+```
+
+**The expensive part is not the crash, it is that nothing reports it.**
+Playwright keeps driving the dead port, every remaining spec fails with
+`net::ERR_CONNECTION_REFUSED`, each one retries and fails again, and the run
+ends looking like a catastrophic regression in the code under test. The first
+run produced ~180 retry directories and no signal whatsoever. Twenty-five
+minutes, then another twenty.
+
+It is NOT the documented 2026-08-29 cause (a zombie holding the port): the port
+was confirmed free before start and the listener's pid was confirmed after.
+Memory was not the constraint either — 15.6 GB free at the second death. The
+built server is otherwise described as "stable for hours", so treat this as
+open and unexplained rather than understood.
+
+**Do instead**, until somebody finds the cause:
+
+1. Run the server under `scratchpad/serve.ps1`-style supervision — a loop that
+   restarts it on exit and timestamps each restart to its own log. A crash then
+   costs one retried spec instead of the whole run.
+2. Watch it independently of Playwright. A health poll every 45-60 s turns a
+   25-minute loss into a one-minute one.
+3. **Never read a mass of e2e failures as a regression without checking the
+   server first.** `curl /api/health` and the artifact timestamps answer it in
+   seconds; the failure text says `ERR_CONNECTION_REFUSED`, which is the tell —
+   a real failure names a selector or an assertion.
+
+**The supervisor was measured, not assumed.** On the third crash it restarted
+within ONE second (`[12:22:18] EXITED code=9` / `[12:22:19] start #2`, health
+200 immediately after). The cost was three `client-file-records` specs that
+happened to be mid-flight, two of which retried on their own. Compare the
+unsupervised runs: ~180 retry directories and no signal at all.
+
+**A hypothesis, offered as one.** The single logged death came with
+`The destination stream closed early`, which is what Next throws when a response
+stream is aborted while React is still writing it — and a browser driven by
+Playwright cancels navigations constantly. That would make this a streaming
+abort escaping to the top level rather than anything in this app's code. It is
+NOT confirmed: two of the three deaths logged nothing, and nobody has reproduced
+it away from the suite.

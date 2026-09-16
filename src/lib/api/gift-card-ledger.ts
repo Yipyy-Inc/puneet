@@ -165,3 +165,48 @@ export async function ledgersForFacility(
   }
   return grouped;
 }
+
+/**
+ * The entries for a NAMED SET of cards, grouped by card.
+ *
+ * The customer portal's sibling of `ledgersForFacility`: an owner asking about
+ * their own cards has no facility to scope by — they may hold a record at more
+ * than one — and must not be handed a facility-wide read to filter afterwards.
+ * `gift_card_transactions_read` admits the buyer to exactly these rows
+ * (`gift_card_id in (… where purchased_by_client_id in own_client_ids())`), so
+ * the policy and the query ask the same question.
+ *
+ * Throws rather than shrugging, for the reason spelled out above
+ * `ledgersForFacility`: a history that could not be read is not a card with no
+ * history, and the balance shown beside it came from a trigger over these very
+ * rows.
+ */
+export async function ledgersForCards(
+  supabase: Client,
+  giftCardIds: string[],
+): Promise<Map<string, GiftCardTransactionRow[]>> {
+  const grouped = new Map<string, GiftCardTransactionRow[]>();
+  if (giftCardIds.length === 0) return grouped;
+
+  const { data, error } = await supabase
+    .from("gift_card_transactions")
+    .select(LEDGER_SELECT)
+    .in("gift_card_id", giftCardIds)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`Gift-card ledger unavailable: ${error.message}`);
+
+  const rows = (data ?? []) as unknown as LedgerRecord[];
+  const refs = await refsForBookings(
+    supabase,
+    rows.map((row) => row.booking_id).filter((v): v is string => Boolean(v)),
+  );
+
+  for (const row of rows) {
+    const entry = toRow(row, refs);
+    const existing = grouped.get(entry.giftCardId);
+    if (existing) existing.push(entry);
+    else grouped.set(entry.giftCardId, [entry]);
+  }
+  return grouped;
+}
