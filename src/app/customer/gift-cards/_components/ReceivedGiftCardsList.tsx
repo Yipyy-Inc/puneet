@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Wallet, CheckCircle2, Loader2, ArrowRight } from "lucide-react";
 import { giftCards, customerWallets } from "@/data/gift-cards";
-import { clients } from "@/data/clients";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
 import type { GiftCard } from "@/types/payments";
 import { EmptyState, Thumb, fmtDate } from "./gift-card-list-shared";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
@@ -40,14 +40,21 @@ export function ReceivedGiftCardsList({
   customerId,
 }: ReceivedGiftCardsListProps) {
   const { t, fill, locale } = useCustomerText("giftCards");
-  const customer = clients.find((c) => c.id === customerId);
-  const customerEmail = customer?.email.toLowerCase() ?? "";
+  // The viewer's own address, from the session. This looked the id up in the
+  // `clients` FIXTURE, which only worked because the id handed down was the
+  // fixture's own client 15 — so the address a card was matched against was
+  // Alice Johnson's, whoever was signed in.
+  const { client } = useCurrentCustomer();
+  const customerEmail = client?.email?.trim().toLowerCase() ?? "";
 
-  const received = giftCards.filter(
-    (gc) =>
-      gc.facilityId === facilityId &&
-      gc.recipientEmail?.toLowerCase() === customerEmail,
-  );
+  // An empty address matches nothing, rather than every card with no recipient.
+  const received = customerEmail
+    ? giftCards.filter(
+        (gc) =>
+          gc.facilityId === facilityId &&
+          gc.recipientEmail?.trim().toLowerCase() === customerEmail,
+      )
+    : [];
 
   const initialWallet =
     customerWallets.find((w) => w.clientId === customerId)?.balance ?? 0;
