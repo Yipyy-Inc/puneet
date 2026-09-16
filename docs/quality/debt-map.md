@@ -15608,3 +15608,53 @@ table only grows, page it. Never raise a cap — the next thousand arrives too.
 And when you fix one, COUNT THE OTHER TABLES the same day; the grep for
 unbounded selects missed `ledgersForFacility` entirely, because it lives in a
 lib rather than a route. Rows found it; reading code did not.
+
+## 2026-09-16 — the occupancy board fetched 977 bookings to draw 5
+
+**Paging the unbounded reads made them correct and left one of them slow.**
+`GET /api/bookings` with `from=<today>` and nothing else — what the kennel /
+occupancy board asked for — answered **977 rows in 11.3 s warm and 18.5 s
+cold**, measured against a built server on the e2e facility.
+
+**The rows were never used.** The board's one query feeds two readers and both
+drop closed bookings before anything reaches the screen:
+
+| reader                | keeps                                                     |
+| --------------------- | --------------------------------------------------------- |
+| `buildDaycareKennels` | anything not `cancelled / declined / no_show / completed` |
+| `petServicesMap`      | `pending / confirmed / checked_in / in_progress / ready`  |
+
+So of 977 rows, **5** survived. The other 972 crossed the wire, went through
+`enrichBookingRows` — two view reads per batch of 150, each planning against
+the whole `bookings` table — and were discarded in the browser.
+
+```
+from=<today>                         977 rows   11.3 s
+from=<today>&statuses=<the 8 open>     5 rows    2.3 s
+```
+
+**This is not a smaller answer. It is the same answer, fetched.** The route has
+had a `statuses` filter since the booking-list-params split; the board simply
+never passed one, and filtered afterwards instead.
+
+**Why this read and not the other windows.** Every other `bookingQueries.window`
+caller is bounded — `−30 days … today`, or one day. This one has no `to` **on
+purpose**: the board shows what is coming, and a horizon would quietly turn a
+far-off reservation into a vacant run. A window that only grows forward is the
+one that needs its statuses named, and the gap between sent and used widens on
+its own.
+
+**The two lists are now derived, not typed twice.**
+`OPEN_BOOKING_STATUSES` in `src/lib/settings/booking-statuses.ts` is
+`BOOKING_STATUS_IDS` minus `CLOSED_BOOKING_STATUSES`, and the board's own filter
+reads the same `CLOSED` constant. Asking the server for one set and filtering
+the answer by a slightly different one drops rows without ever looking wrong —
+which is the whole reason a screen that filters by status must not hand-write
+the list it requests. `tests/unit/booking-open-statuses.test.ts` pins the
+partition: a status in NEITHER list is a booking every board stops drawing at
+once, so the test asserts both flags rather than `open === !closed`.
+
+**Do instead:** if a screen filters a query's answer by a field the route can
+filter on, pass it. And measure the read before deciding it is fine — 977 rows
+of 213 kB raw looked harmless in SQL (`explain` put both views under 50 ms);
+the cost was in fetching, enriching and mapping rows nobody wanted.
