@@ -15568,3 +15568,43 @@ unchanged data:
    DURING the run.
 3. Remember that an interrupted run's `afterAll` never executes — so the cost
    of stopping a suite is paid by the next one, not by the one you stopped.
+
+### The 1000-row cap had a tail, and it was money (2026-09-16, later)
+
+Fixing `/api/bookings` fixed ONE instance. Counting rows found four more, and
+the worst was not a list — it was a total.
+
+| table                    | rows, one facility | read unbounded by                                     |
+| ------------------------ | ------------------ | ----------------------------------------------------- |
+| `gift_card_transactions` | 12,973             | `ledgersForFacility`                                  |
+| `gift_cards`             | 5,975              | `GET /api/gift-cards`                                 |
+| `bookings`               | 1,325              | `bookings/assigned`, `clients/assigned`, `daily-care` |
+
+**The gift-cards reports tab summed the first thousand and called it revenue:**
+
+```
+the ledger's true sum    $31,875.00
+what the screen showed    $3,025.00
+```
+
+**$28,850 missing — 90.5% — and nothing on screen said it was partial.** That
+is the difference between this and the bookings list: a short LIST looks short,
+so somebody eventually asks where a booking went. A short TOTAL looks like a
+total, and the only way to catch it is to sum the table yourself.
+
+Two of the others are not display at all. `bookings/assigned` and
+`clients/assigned` decide what an assigned-scope viewer may see, so a short read
+does not show a groomer less — it hides work that is theirs.
+
+**Fixed with one helper, `src/lib/api/read-all-pages.ts`, not five loops.** The
+loop has exactly one subtle case and five copies is five chances to miss it: a
+page EXACTLY equal to the page size must ask AGAIN, because a full page is
+indistinguishable from a full page that happens to be the last. `<= PAGE` drops
+the tail; `>= PAGE` on an empty answer never terminates. Seven unit tests pin
+it, exactly-1000 among them.
+
+**Do instead**, and this is the whole rule: when a read has no limit and its
+table only grows, page it. Never raise a cap — the next thousand arrives too.
+And when you fix one, COUNT THE OTHER TABLES the same day; the grep for
+unbounded selects missed `ledgersForFacility` entirely, because it lives in a
+lib rather than a route. Rows found it; reading code did not.
