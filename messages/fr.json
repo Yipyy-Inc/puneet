@@ -10784,6 +10784,8 @@
         "txAddOn": "Supplément",
         "txRefund": "Remboursement",
         "txAdjustment": "Ajustement",
+        "txAdded": "Crédit ajouté",
+        "txSpent": "Dépensé",
         "usePackages": "Forfaits",
         "useAddOns": "Suppléments",
         "noWalletYet": "Aucun portefeuille pour l’instant",

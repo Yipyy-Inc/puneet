@@ -13316,6 +13316,28 @@ export type Database = {
         Returns: number;
       };
       my_client_at: { Args: { p_facility_slug: string }; Returns: string };
+      my_store_credit: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          balance: number;
+          entry_count: number;
+          facility_id: string;
+          facility_name: string;
+          last_activity_at: string;
+          total_in: number;
+          total_out: number;
+        }[];
+      };
+      my_store_credit_entries: {
+        Args: { p_facility_id?: string; p_limit?: number };
+        Returns: {
+          amount: number;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          reason: string;
+        }[];
+      };
       my_notification_preferences: {
         Args: { p_facility_id: string };
         Returns: {
