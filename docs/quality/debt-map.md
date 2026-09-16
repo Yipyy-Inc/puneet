@@ -14593,6 +14593,14 @@ records on file" is never dressed up as up to date. Its words are the
 `bookingReadiness` staff area; a document's type reads in the client file's own
 words. The rest of the drawer is still English.
 
+**Not debt after all: there is no "shift checklist" (checked 2026-09-16).** The
+plan carried one as an unconverted surface. Nothing in `src/` mentions the
+phrase — the only matches were inside `.next`'s build cache. What exists is
+Daily Care's step list (`daily_care_records`, real since the care-log work) and
+the employee portal's **My tasks** (`facility_tasks` through `/api/tasks`,
+2026-09-15). Both are real, so the item is closed by evidence rather than by a
+change. Recorded because the next person will search for it too.
+
 **Fixed 2026-09-16: four settings that saved in a browser, or read a fixture,
 now belong to the facility.**
 
@@ -14671,13 +14679,18 @@ lets an assignee change. A task row has no photo, so the photo button is gone
 and "Photo required" is shown as what the task asks for. Words are in the
 `myTasks` staff area in both languages.
 
-**Still debt: a grooming report card's prefill never fills.**
-`ReportCardsModule.tsx` looks the picked visit up in the `groomingAppointments`
-fixture to prefill mood, notes and photos. The visit is now a real booking, so
-the lookup finds nothing, and `/api/grooming/appointments` does not return the
-intake (mood tags, before photos, session notes) or after photos the prefill
-reads. It needs those on the appointment response, or read from the grooming
-photos and notes routes.
+**Fixed 2026-09-16: a grooming report card's prefill fills.** The note that
+stood here was wrong in its diagnosis, which is worth keeping: it said
+`/api/grooming/appointments` does not return the intake or the after photos.
+It does — `APPOINTMENT_SELECT` has fetched `grooming_intake` (mood tags,
+session notes, drop-off observations) and `grooming_photos` all along. The real
+fault was an ID MISMATCH, and it predates the visits becoming real:
+`ReportCardsModule` looked the picked visit up in the `groomingAppointments`
+fixture by `id`, where a fixture appointment's id is a grooming row id, while
+the picker's option id is the BOOKING REF. The two could never meet. A mapped
+appointment's `id` is `String(row.ref)` — the booking ref — so the module reads
+`groomingQueries.appointments()` now and the lookup lands. The fixture import
+is gone.
 
 **Fixed 2026-09-15: the invoice template is the facility's, not the browser's.**
 `src/data/invoice-template.ts` kept it in localStorage, and the settings page's
