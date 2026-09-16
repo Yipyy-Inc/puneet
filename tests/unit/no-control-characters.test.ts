@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // ============================================================================
@@ -45,11 +45,14 @@ const FORBIDDEN = new RegExp(
 );
 
 function* walk(dir: string): Generator<string> {
-  for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".next") continue;
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) yield* walk(path);
-    else if (TEXT.test(entry)) yield path;
+  // `withFileTypes` rather than a `statSync` per entry: the directory read
+  // already knows what each entry is, and this walk crosses several thousand
+  // of them.
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === ".next") continue;
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walk(path);
+    else if (TEXT.test(entry.name)) yield path;
   }
 }
 
@@ -58,19 +61,35 @@ describe("source files", () => {
     const offenders: string[] = [];
     for (const root of ROOTS) {
       for (const file of walk(root)) {
-        readFileSync(file, "utf8")
-          .split("\n")
-          .forEach((line, i) => {
-            const hit = FORBIDDEN.exec(line);
-            if (hit)
-              offenders.push(
-                `${file}:${i + 1} U+${hit[0]
-                  .charCodeAt(0)
-                  .toString(16)
-                  .toUpperCase()
-                  .padStart(4, "0")}`,
-              );
-          });
+        const text = readFileSync(file, "utf8");
+
+        // ── ONE PASS PER FILE, NOT ONE PER LINE ────────────────────────────
+        //
+        // This used to `.split("\n").forEach()` every file and run the regex
+        // on each line — an array of lines allocated for `database.ts` (14k
+        // lines) and `messages/en.json` (11k) and a few thousand neighbours,
+        // to find nothing. 643 ms idle, but **29.7 s** when a build or a lint
+        // was competing for the CPU, against this test's 5 s timeout. It went
+        // red twice in one afternoon and reproduced neither time, because a
+        // green re-run on an idle machine takes the evidence with it.
+        //
+        // The regex has no /g, so `.test()` keeps no state and short-circuits
+        // at the first hit. The vast majority of files have none, so they cost
+        // one scan and no allocation; only a file that actually offends pays
+        // for line numbers.
+        if (!FORBIDDEN.test(text)) continue;
+
+        text.split("\n").forEach((line, i) => {
+          const hit = FORBIDDEN.exec(line);
+          if (hit)
+            offenders.push(
+              `${file}:${i + 1} U+${hit[0]
+                .charCodeAt(0)
+                .toString(16)
+                .toUpperCase()
+                .padStart(4, "0")}`,
+            );
+        });
       }
     }
     expect(offenders).toEqual([]);
