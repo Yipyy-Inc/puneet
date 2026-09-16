@@ -15384,3 +15384,41 @@ Playwright cancels navigations constantly. That would make this a streaming
 abort escaping to the top level rather than anything in this app's code. It is
 NOT confirmed: two of the three deaths logged nothing, and nobody has reproduced
 it away from the suite.
+
+### 🔴 PostgREST answers at most 1000 rows, and says so by saying nothing (2026-09-16)
+
+**Measured, not inferred:** an unlimited `select` against this project returns
+**exactly 1000 rows** — no error, no header a caller reads, nothing to
+distinguish "that is all of them" from "that is the first thousand".
+
+`GET /api/bookings` had no limit of its own: the all-time readers ask for every
+booking. Ordered `start_at` DESC, so once a facility passes its thousandth
+booking it is its own HISTORY that silently disappears from its list.
+
+The e2e tenant crossed that line while nobody was looking — **1,459 bookings,
+1,072 of them starting after yesterday, 1,024 after this morning.** So a spec
+that created a booking and read the list back could not find the row it had just
+written. `dashboard-live-board` ("checking out from the dashboard records the
+payment") and `gift-card-payment` ("a part payment moves the booking and the
+card together") both failed that way, on the first attempt AND the retry.
+
+**Two things worth taking from it.**
+
+The failure reads as the opposite of its cause. `paymentStatus: undefined` and
+`amountPaid: NaN` say "the write did not happen"; the write happened perfectly
+and the READ was short. An hour went into treating those as a regression in the
+change under test.
+
+And `gift-card-payment` is in the CI gate, so this had broken CI for everybody —
+nothing to do with whatever was being pushed at the time.
+
+**Fixed** by paging the unbounded read with `.range()` until a short page
+arrives; a caller that named its own `limit` is still answered exactly as asked.
+`GET /api/bookings/page` already ranged properly and was never affected.
+
+**Still open:** any other unbounded `.select()` on a table that grows has the
+same defect, silently. `bookings` is the one that has crossed 1000 so far;
+`gift_cards` (5,373 rows on the e2e tenant, per the RLS-performance entry above)
+is read through filtered queries today but is the obvious next one. **Do
+instead:** when a read has no limit and its table only grows, page it — do not
+raise a cap, because the next thousand arrives too.
