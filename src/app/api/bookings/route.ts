@@ -121,10 +121,46 @@ export async function GET(request: NextRequest) {
     query = query.limit(params.limit);
   }
 
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // ── PostgREST ANSWERS AT MOST 1000 ROWS, AND SAID SO BY SAYING NOTHING ───
+  //
+  // Measured 2026-09-16: an unlimited select against this project returns
+  // exactly 1000 rows, with no error and no marker that anything was left out.
+  // This list has no limit of its own — the all-time readers ask for every
+  // booking — so a facility past its thousandth booking had the REST of them
+  // silently dropped. Newest first, so what disappears is its own history.
+  //
+  // The e2e tenant crossed that line: 1,459 bookings, 1,072 of them starting
+  // after yesterday. `dashboard-live-board` and `gift-card-payment` both
+  // created a booking, read the list back, and could not find the row they had
+  // just made — the failure reads as "the booking was not written", which is
+  // the most misleading answer available and why this is paged rather than
+  // capped with a bigger number.
+  //
+  // A caller that named its own `limit` is answered exactly as asked; only the
+  // unbounded read pages.
+  type BookingListRow = NonNullable<Awaited<typeof query>["data"]>[number];
+  const rows: BookingListRow[] = [];
+  if (params.limit) {
+    const { data, error } = await query;
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    rows.push(...(data ?? []));
+  } else {
+    const PAGE = 1000;
+    for (let offset = 0; ; offset += PAGE) {
+      const { data, error } = await query.range(offset, offset + PAGE - 1);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      const page = data ?? [];
+      rows.push(...page);
+      // A short page is the last page. Equal-to-PAGE asks again, so the one
+      // case that must not be guessed — exactly 1000 — is not guessed.
+      if (page.length < PAGE) break;
+    }
   }
+  const data = rows;
 
   // Mapped, with where the pet is and where its pre-arrival form stands:
   // lib/api/booking-enrich.ts, shared with GET /api/bookings/page.

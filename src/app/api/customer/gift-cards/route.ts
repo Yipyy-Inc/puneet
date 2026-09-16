@@ -8,6 +8,10 @@ import {
   type CardRecord,
 } from "@/lib/api/mappers/gift-card";
 import { ledgersForCards } from "@/lib/api/gift-card-ledger";
+import {
+  activeFacilityIdForStaff,
+  inFacility,
+} from "@/lib/api/facility-context";
 
 // ============================================================================
 // The gift cards the signed-in OWNER bought.
@@ -56,10 +60,19 @@ export async function GET() {
   // Which facility's record of this person, named by the subdomain exactly as
   // /api/clients/me resolves it. With no facility named (the apex) every record
   // they hold counts, because there is no one facility to mean.
+  //
+  // `activeFacilityIdForStaff()` is null for a customer, so `inFacility(null)`
+  // is a no-op and they read through RLS exactly as before. It is not a no-op
+  // for STAFF, who are also signed-in people and are also admitted by this
+  // table's other policy arm — it pins them to the facility on screen instead
+  // of every facility RLS would merge. That is the same reason
+  // check:facility-scoped-reads exists.
+  const scope = await activeFacilityIdForStaff();
   const slug = (await headers()).get("x-facility-slug");
   let clientQuery = supabase
     .from("clients")
     .select("id, facilities!inner(slug)")
+    .match(inFacility(scope))
     .eq("profile_id", user.id);
   if (slug) clientQuery = clientQuery.eq("facilities.slug", slug);
 
@@ -78,6 +91,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("gift_cards")
     .select(CARD_SELECT)
+    .match(inFacility(scope))
     .in("purchased_by_client_id", clientIds)
     .order("issued_at", { ascending: false });
 
