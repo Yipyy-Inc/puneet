@@ -693,11 +693,7 @@ export default function EstimatesPage() {
       )}
 
       {/* Canonical create flow */}
-      <EstimateWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        facilityId={11}
-      />
+      <EstimateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   );
 }

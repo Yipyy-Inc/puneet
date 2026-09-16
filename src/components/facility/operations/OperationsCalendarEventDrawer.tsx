@@ -122,6 +122,7 @@ import {
   formatLocalDateTime,
   type NoteSectionState,
 } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
+import { BookingReadinessSection } from "@/components/facility/operations/BookingReadinessSection";
 
 export type BookingDrawerTab =
   | "summary"
@@ -567,6 +568,8 @@ export function OperationsCalendarEventDrawer({
         {effectiveTab === "summary" && (
           <DetailsTab
             event={event}
+            petRef={pet?.id ?? 0}
+            clientRef={client?.id ?? 0}
             petName={petName}
             ownerName={ownerName}
             petHref={petHref}
@@ -1693,6 +1696,8 @@ const UNASSIGNED = "Unassigned";
 
 function DetailsTab({
   event,
+  petRef,
+  clientRef,
   petName,
   ownerName,
   petHref,
@@ -1715,6 +1720,8 @@ function DetailsTab({
   onMarkComplete,
 }: {
   event: OperationsCalendarEvent;
+  petRef: number;
+  clientRef: number;
   petName: string;
   ownerName: string;
   petHref?: string;
@@ -1830,6 +1837,18 @@ function DetailsTab({
           <FieldValue value={bookingSourceLabel} />
         </Field>
       </div>
+
+      {/* The pet's real vaccinations and the owner's real documents. The
+          drawer showed neither: its fixture lookups were deleted rather than
+          replaced, so the desk had to open the pet's file to find out whether
+          the dog could be admitted. */}
+      {hasBooking && (petRef > 0 || clientRef > 0) && (
+        <BookingReadinessSection
+          petRef={petRef}
+          clientRef={clientRef}
+          petName={petName}
+        />
+      )}
 
       {event.isWaitlist && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">

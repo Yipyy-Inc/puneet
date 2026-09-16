@@ -14582,6 +14582,24 @@ signed-agreement and visit-history lookups over `src/data/pet-data`,
 note state only (`OperationsCalendar.tsx`), and the drawer's `formatCurrency`
 and `formatLocalDateTime` still name `en-US` and `USD`.
 
+**Fixed 2026-09-16: the calendar drawer says what the pet has on file.** The
+lookups deleted above were never replaced, so the desk had to open the pet's
+file to learn whether a dog could be admitted. `BookingReadinessSection`
+(rendered in the Details tab) reads the same rows the pet profile and the
+client file read — `pet_vaccinations` through `vaccinationQueries` and
+`client_documents` through `useClientDocuments` — and states only what it
+knows: expired, expiring within 30 days, no expiry on file, or on file. "No
+records on file" is never dressed up as up to date. Its words are the
+`bookingReadiness` staff area; a document's type reads in the client file's own
+words. The rest of the drawer is still English.
+
+**Fixed 2026-09-16: an estimate quotes the facility's own training programs.**
+`EstimateWizard` listed `trainingClasses` from `src/data/training` and priced a
+session from that fixture, so an estimate offered a program the business does
+not run at a price it never set. It reads the `training_programs` settings
+domain (`trainingQueries.packages()`), offers only active programs, and says so
+when a facility has none instead of showing another facility's timetable.
+
 **Fixed 2026-09-15: an employee's "My tasks" is their real task list.** The
 employee portal's `my-tasks-view.tsx` listed `staffTasks` from
 `src/data/staff-tasks` and kept Complete, notes and photos in component state,

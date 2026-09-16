@@ -2072,7 +2072,8 @@
         "reasonOptedOut": "the customer has opted out of messages",
         "reasonNotConfigured": "email sending is not set up",
         "reasonFailed": "the email service did not accept it",
-        "clientAttached": "{name} was added as a client, so they can open it after signing in."
+        "clientAttached": "{name} was added as a client, so they can open it after signing in.",
+        "noPrograms": "This facility has no training programs yet. Add them under Training → Rates, then quote one here."
       },
       "formBuilder": {
         "savedToast": "“{name}” is saved",
@@ -2864,6 +2865,17 @@
         "retail": "Retail",
         "accountant": "Accountant",
         "sanitation": "Sanitation"
+      },
+      "bookingReadiness": {
+        "vaccinations": "Vaccinations",
+        "documents": "Documents",
+        "loading": "Loading…",
+        "noVaccinations": "No vaccination records on file for {pet}.",
+        "noDocuments": "No documents on the owner’s record.",
+        "onFile": "On file",
+        "expired": "Expired",
+        "expiringSoon": "Expires soon",
+        "noExpiry": "No expiry on file"
       }
     }
   },

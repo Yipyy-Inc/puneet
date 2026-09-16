@@ -2072,7 +2072,8 @@
         "reasonOptedOut": "le client s’est désabonné des messages",
         "reasonNotConfigured": "l’envoi de courriels n’est pas configuré",
         "reasonFailed": "le service de courriel ne l’a pas acceptée",
-        "clientAttached": "{name} a été ajouté comme client, pour pouvoir l’ouvrir après s’être connecté."
+        "clientAttached": "{name} a été ajouté comme client, pour pouvoir l’ouvrir après s’être connecté.",
+        "noPrograms": "Cet établissement n’a pas encore de programmes de dressage. Ajoutez-les sous Dressage → Tarifs, puis proposez-en un ici."
       },
       "formBuilder": {
         "savedToast": "« {name} » est enregistré",
@@ -2864,6 +2865,17 @@
         "retail": "Vente au détail",
         "accountant": "Comptable",
         "sanitation": "Entretien"
+      },
+      "bookingReadiness": {
+        "vaccinations": "Vaccins",
+        "documents": "Documents",
+        "loading": "Chargement…",
+        "noVaccinations": "Aucun dossier de vaccination pour {pet}.",
+        "noDocuments": "Aucun document au dossier du propriétaire.",
+        "onFile": "Au dossier",
+        "expired": "Expiré",
+        "expiringSoon": "Expire bientôt",
+        "noExpiry": "Aucune date d’expiration au dossier"
       }
     }
   },

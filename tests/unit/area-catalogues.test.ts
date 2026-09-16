@@ -163,6 +163,7 @@ const SAME_IN_BOTH = new Set([
   "staff.notificationCentre.kind_booking_detail", // {service} · {date}
   "staff.notificationCentre.kind_vaccination_detail", // {vaccine}
   "staff.notificationCentre.kind_date_detail", // {date}
+  "staff.bookingReadiness.documents", // Documents / Documents
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
