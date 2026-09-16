@@ -31,8 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Send, Search, MoreHorizontal, Eye, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { giftCards } from "@/data/gift-cards";
-import type { GiftCard } from "@/types/payments";
+import { useMyGiftCards, type MyGiftCard } from "@/lib/api/customer-gift-cards";
 import {
   EmptyState,
   STATUS_META,
@@ -52,39 +51,32 @@ const SORT_OPTIONS: { value: SortKey; labelKey: string }[] = [
   { value: "lowest", labelKey: "sortLowest" },
 ];
 
-// A transaction's type, by CATALOGUE KEY.
+// A movement's kind, by CATALOGUE KEY. These are the LEDGER's own words
+// (`gift_card_transactions.kind`), not the fixture's: `issued` is the opening
+// entry a card is created with, and `adjusted` is a correction — which the
+// fixture had no name for at all, so it fell through to "Other".
 const TXN_TYPE_KEY: Record<string, string> = {
-  purchase: "txnPurchase",
-  redemption: "txnRedemption",
-  refund: "txnRefund",
+  issued: "txnPurchase",
+  redeemed: "txnRedemption",
+  refunded: "txnRefund",
 };
 
 interface SentGiftCardsListProps {
-  facilityId: number;
-  customerId: number;
   onSendFirst?: () => void;
 }
 
-export function SentGiftCardsList({
-  facilityId,
-  customerId,
-  onSendFirst,
-}: SentGiftCardsListProps) {
+export function SentGiftCardsList({ onSendFirst }: SentGiftCardsListProps) {
   const { t, fill, locale } = useCustomerText("giftCards");
-  const sent = useMemo(
-    () =>
-      giftCards.filter(
-        (gc) =>
-          gc.facilityId === facilityId && gc.purchasedByClientId === customerId,
-      ),
-    [facilityId, customerId],
-  );
+  // The cards this person actually bought, from `gift_cards`. This filtered the
+  // fixture by a facility and a client handed down from the page — 11 and 15 —
+  // so it listed Alice Johnson's cards to whoever was signed in.
+  const { cards: sent, isPending } = useMyGiftCards();
 
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("newest");
   const [resentIds, setResentIds] = useState<Set<string>>(new Set());
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
-  const [detailCard, setDetailCard] = useState<GiftCard | null>(null);
+  const [detailCard, setDetailCard] = useState<MyGiftCard | null>(null);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,7 +87,7 @@ export function SentGiftCardsList({
             (gc.recipientEmail ?? "").toLowerCase().includes(q),
         )
       : sent;
-    const byDate = (gc: GiftCard) => new Date(gc.purchaseDate).getTime();
+    const byDate = (gc: MyGiftCard) => new Date(gc.issuedAt).getTime();
     return [...filtered].sort((a, b) => {
       switch (sort) {
         case "oldest":
@@ -118,7 +110,7 @@ export function SentGiftCardsList({
       return next;
     });
 
-  const handleResend = (gc: GiftCard) => {
+  const handleResend = (gc: MyGiftCard) => {
     setResentIds((prev) => new Set(prev).add(gc.id));
     toast.success(
       fill("giftCardResentTo", {
@@ -126,6 +118,20 @@ export function SentGiftCardsList({
       }),
     );
   };
+
+  // Waiting is not the same as none, and this screen now WAITS — the fixture
+  // answered instantly, so "You haven't sent any gift cards yet" beside a
+  // Send-your-first button was safe to render immediately. Over a request, that
+  // is a claim about somebody's cards made before they have been read (§5s).
+  if (isPending) {
+    return (
+      <div className="space-y-2" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="bg-muted h-20 animate-pulse rounded-xl" />
+        ))}
+      </div>
+    );
+  }
 
   // True empty (nothing ever sent) → CTA to Tab 1.
   if (sent.length === 0) {
@@ -180,7 +186,7 @@ export function SentGiftCardsList({
         <div className="space-y-2">
           {visible.map((gc) => {
             const checked = checkedIds.has(gc.id);
-            const isPhysical = gc.type === "physical";
+            const isPhysical = gc.kind === "physical";
             return (
               <div key={gc.id} className="rounded-xl border p-3">
                 <div className="flex items-center gap-3">
@@ -196,15 +202,15 @@ export function SentGiftCardsList({
                     </p>
                     <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
                       {fill("sentOn", {
-                        date: fmtDate(locale, gc.purchaseDate),
+                        date: fmtDate(locale, gc.issuedAt),
                       })}
                       <Badge
                         className={cn(
                           "text-[10px]",
-                          STATUS_META[gc.status].className,
+                          STATUS_META[gc.effectiveStatus].className,
                         )}
                       >
-                        {t(STATUS_META[gc.status].labelKey)}
+                        {t(STATUS_META[gc.effectiveStatus].labelKey)}
                       </Badge>
                     </p>
                   </div>
@@ -214,7 +220,7 @@ export function SentGiftCardsList({
                     </p>
                     <p className="text-muted-foreground text-xs">
                       {fill("amountLeft", {
-                        amount: formatMoney(gc.currentBalance, locale),
+                        amount: formatMoney(gc.balance, locale),
                       })}
                     </p>
                   </div>
@@ -278,7 +284,7 @@ export function SentGiftCardsList({
                   <p className="text-muted-foreground mt-2 pl-15 text-xs">
                     {t("currentBalanceLabel")}{" "}
                     <span className="text-foreground font-medium">
-                      {formatMoney(gc.currentBalance, locale)}
+                      {formatMoney(gc.balance, locale)}
                     </span>
                   </p>
                 )}
@@ -313,7 +319,7 @@ export function SentGiftCardsList({
                 <Detail label={t("code")} value={detailCard.code} mono />
                 <Detail
                   label={t("status")}
-                  value={t(STATUS_META[detailCard.status].labelKey)}
+                  value={t(STATUS_META[detailCard.effectiveStatus].labelKey)}
                 />
                 <Detail
                   label={t("originalAmount")}
@@ -321,52 +327,56 @@ export function SentGiftCardsList({
                 />
                 <Detail
                   label={t("remaining")}
-                  value={`${formatMoney(detailCard.currentBalance, locale)}`}
+                  value={`${formatMoney(detailCard.balance, locale)}`}
                 />
                 <Detail
                   label={t("sent")}
-                  value={fmtDate(locale, detailCard.purchaseDate)}
+                  value={fmtDate(locale, detailCard.issuedAt)}
                 />
                 <Detail
                   label={t("expires")}
+                  // A card with no `expires_at` never expires — one nullable
+                  // column instead of the fixture's `neverExpires` boolean
+                  // beside an `expiryDate`, which could disagree with itself.
+                  // "Never" was the one English word left in this dialog.
                   value={
-                    detailCard.neverExpires
-                      ? "Never"
-                      : fmtDate(locale, detailCard.expiryDate)
+                    detailCard.expiresAt
+                      ? fmtDate(locale, detailCard.expiresAt)
+                      : t("noExpiry")
                   }
                 />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium">{t("transactionHistory")}</p>
-                {detailCard.transactionHistory.length === 0 ? (
+                {detailCard.transactions.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
                     {t("noTransactionsYet")}
                   </p>
                 ) : (
                   <div className="space-y-1.5">
-                    {detailCard.transactionHistory.map((txn) => (
+                    {detailCard.transactions.map((txn) => (
                       <div
                         key={txn.id}
                         className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
                       >
                         <div>
                           <p className="font-medium">
-                            {t(TXN_TYPE_KEY[txn.type] ?? "txnOther")}
+                            {t(TXN_TYPE_KEY[txn.kind] ?? "txnOther")}
                           </p>
                           <p className="text-muted-foreground">
-                            {fmtDate(locale, txn.timestamp)}
+                            {fmtDate(locale, txn.createdAt)}
                           </p>
                         </div>
                         <div className="text-right">
                           <p
                             className={cn(
                               "font-semibold",
-                              txn.type === "redemption"
+                              txn.kind === "redeemed"
                                 ? "text-red-600"
                                 : "text-green-600",
                             )}
                           >
-                            {txn.type === "redemption" ? "−" : "+"}
+                            {txn.kind === "redeemed" ? "−" : "+"}
                             {formatMoney(Math.abs(txn.amount), locale)}
                           </p>
                           <p className="text-muted-foreground">

@@ -61,11 +61,9 @@ export function GiftCardsTabs({ initialTab = "send" }: GiftCardsTabsProps) {
       </TabsContent>
 
       <TabsContent value="sent" className="mt-6">
-        <SentGiftCardsList
-          facilityId={facilityId}
-          customerId={customerId}
-          onSendFirst={() => setTab("send")}
-        />
+        {/* Reads `/api/customer/gift-cards` as the signed-in person — it needs
+            neither the viewer nor the facility handed to it. */}
+        <SentGiftCardsList onSendFirst={() => setTab("send")} />
       </TabsContent>
 
       <TabsContent value="received" className="mt-6">
