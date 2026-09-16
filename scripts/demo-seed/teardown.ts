@@ -32,6 +32,7 @@ import {
   POSITIONS,
   RETAIL_PURCHASE_ORDER,
   TRAINING_SERIES,
+  FACILITY_SETTINGS,
 } from "./data";
 
 const ROLLBACK = process.argv.includes("--rollback");
@@ -556,6 +557,29 @@ try {
             removed["public.facility_settings"] = reqGone.count;
         } else {
           kept.push("form requirements naming a form the client made");
+        }
+      }
+
+      // The hours and taxes the seed wrote, removed only while they are still
+      // EXACTLY what it wrote. The moment the client changes his opening time
+      // or his registration number, the row is his and the seed has no business
+      // deleting it — the same rule `form_requirements` follows above.
+      for (const [domain, seeded] of Object.entries(FACILITY_SETTINGS)) {
+        const [row] = await tx`
+          select value from public.facility_settings
+           where facility_id = ${DEMO_FACILITY_ID} and domain = ${domain}`;
+        if (!row) continue;
+        const unchanged = JSON.stringify(row.value) === JSON.stringify(seeded);
+        if (!unchanged) {
+          kept.push(`${domain} the client has since edited`);
+          continue;
+        }
+        const gone = await tx`
+          delete from public.facility_settings
+           where facility_id = ${DEMO_FACILITY_ID} and domain = ${domain}`;
+        if (gone.count) {
+          removed["public.facility_settings"] =
+            (removed["public.facility_settings"] ?? 0) + gone.count;
         }
       }
 

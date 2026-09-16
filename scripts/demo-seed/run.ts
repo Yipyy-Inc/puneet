@@ -59,6 +59,7 @@ import {
   VACCINATIONS,
   FACILITY_PROFILE,
   GROOMING_ADD_ONS,
+  FACILITY_SETTINGS,
   GROOMING_SERVICE_CHARGES,
   GROOMING_SERVICES,
   GROOMING_STATIONS,
@@ -262,6 +263,40 @@ try {
              true, ${u}, ${c.capacity})`;
         count("rooms");
       }
+    }
+    // ── The facility's own hours and taxes ────────────────────────────────
+    //
+    // Every settings domain has a fallback, so an unwritten one renders a
+    // sensible default rather than breaking — which is why the seed got this
+    // far without them. Two are worth writing anyway, because their defaults
+    // are deliberately WRONG for a real business:
+    //
+    //   `business_hours` falls back to the fixture's hours, which describe
+    //   nobody, and the booking flow reads them to decide what it can offer.
+    //
+    //   `tax_config` falls back to NO_TAX, on purpose — a default that changes
+    //   what a customer is charged is not a default (CLAUDE.md §5q). So an
+    //   invoice here showed no GST and no QST, in Québec.
+    //
+    // The rate is not invented: TAX_RATE in config.ts already declares 14.975%
+    // and every seeded price was built on it. This splits that one number into
+    // the two lines a Québec receipt must actually show, with `rate` as a
+    // FRACTION and neither compounding — QST has been charged on the selling
+    // price, not on GST, since 2013.
+    //
+    // The other twenty-odd domains are left unwritten deliberately: their
+    // defaults are what an unconfigured facility should show, and inventing a
+    // deposit policy or a tip preset for somebody else's business is not
+    // seeding, it is deciding.
+    for (const [domain, value] of Object.entries(FACILITY_SETTINGS)) {
+      const [have] = await tx`
+        select 1 from public.facility_settings
+         where facility_id = ${DEMO_FACILITY_ID} and domain = ${domain}`;
+      if (have) continue;
+      await tx`
+        insert into public.facility_settings (facility_id, domain, value)
+        values (${DEMO_FACILITY_ID}, ${domain}, ${value}::jsonb)`;
+      count(`settings: ${domain}`);
     }
 
     // ── Daycare price, per location ───────────────────────────────────────
