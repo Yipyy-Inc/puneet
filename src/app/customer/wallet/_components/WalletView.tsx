@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { customerWallets, giftCards } from "@/data/gift-cards";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
 import {
@@ -29,8 +31,19 @@ import {
   formatTime,
 } from "@/lib/i18n/format";
 
-const MOCK_CLIENT_ID = 15;
-const FACILITY_ID = 11;
+// WHO is asking comes from the session. This file named Alice Johnson —
+// `MOCK_CLIENT_ID = 15` at fixture facility 11 — and /customer/wallet is in the
+// customer sidebar, so every signed-in owner opening My Wallet was shown HER
+// balance, HER history and HER gift cards as their own. The last of the three
+// screens still doing that, after `useCurrentCustomer()` took the other
+// thirty-two off it.
+//
+// The wallet itself is still `src/data/gift-cards`, and the selected facility
+// matches none of those rows, so it answers with the empty state. That is the
+// honest output: the real ledger is `store_credit_entries`, whose read policy
+// has NO owner arm — the person whose money it is cannot read it yet. A
+// `my_store_credit()` projection is drafted for that; until it lands, an empty
+// wallet beats somebody else's. Debt map.
 
 // A transaction type's words by CATALOGUE KEY in
 // `customerPages.areas.wallet`.
@@ -107,20 +120,34 @@ const USES: { icon: typeof Wallet; service?: string; key?: string }[] = [
 
 export function WalletView() {
   const { t, fill, locale } = useCustomerText("wallet");
+  const { client } = useCurrentCustomer();
+  // `-1` matches no client and no facility — nothing, rather than somebody
+  // else, while the session resolves.
+  const clientId = client?.id ?? -1;
+  const clientEmail = client?.email?.trim().toLowerCase();
+  const { selectedFacility } = useCustomerFacility();
+  const facilityId = selectedFacility?.id ?? -1;
+
   const wallet = customerWallets.find(
-    (w) => w.clientId === MOCK_CLIENT_ID && w.facilityId === FACILITY_ID,
+    (w) => w.clientId === clientId && w.facilityId === facilityId,
   );
 
+  // A card is yours if you BOUGHT it or it was SENT to your address. The second
+  // arm was `recipientEmail?.includes("alice")` — a match on a substring of a
+  // first name, so any card sent to any Alice, Alicia or alice@ anywhere was
+  // counted as this viewer's. The third of these wildcards found today; the
+  // other two were in the billing tabs.
   const myGiftCards = useMemo(
     () =>
       giftCards.filter(
         (gc) =>
-          gc.facilityId === FACILITY_ID &&
-          (gc.purchasedByClientId === MOCK_CLIENT_ID ||
-            gc.recipientEmail?.includes("alice")) &&
+          gc.facilityId === facilityId &&
+          (gc.purchasedByClientId === clientId ||
+            (Boolean(clientEmail) &&
+              gc.recipientEmail?.trim().toLowerCase() === clientEmail)) &&
           gc.status === "active",
       ),
-    [],
+    [facilityId, clientId, clientEmail],
   );
 
   const totalIn = useMemo(

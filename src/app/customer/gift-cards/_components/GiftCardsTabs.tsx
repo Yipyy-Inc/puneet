@@ -7,23 +7,34 @@ import { BuyGiftCardFlow } from "./BuyGiftCardFlow";
 import { SentGiftCardsList } from "./SentGiftCardsList";
 import { ReceivedGiftCardsList } from "./ReceivedGiftCardsList";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
 
 type GiftCardsTab = "send" | "sent" | "received";
 
 interface GiftCardsTabsProps {
-  facilityId: number;
-  customerId: number;
   /** Initial active tab — email "check balance" links land on "received". */
   initialTab?: GiftCardsTab;
 }
 
-export function GiftCardsTabs({
-  facilityId,
-  customerId,
-  initialTab = "send",
-}: GiftCardsTabsProps) {
+export function GiftCardsTabs({ initialTab = "send" }: GiftCardsTabsProps) {
   const { t } = useCustomerText("giftCards");
   const [tab, setTab] = useState<GiftCardsTab>(initialTab);
+
+  // WHO is asking comes from the session, not from the page. The page used to
+  // hand down `customerId={15}` — Alice Johnson — so every owner read her
+  // cards. `-1` matches no client, which is the right answer for the moment
+  // before the session resolves: nothing, rather than somebody.
+  const { client } = useCurrentCustomer();
+  const customerId = client?.id ?? -1;
+
+  // WHICH facility stays the fixture's selection, as on the billing tabs: these
+  // lists filter `src/data/gift-cards`, and the selected id matches none of
+  // those rows — see the block in use-customer-facility.tsx for why that
+  // mismatch must NOT be "corrected" while a real client ref can collide with a
+  // fixture client id. Empty is the correct output until this reads Postgres.
+  const { selectedFacility } = useCustomerFacility();
+  const facilityId = selectedFacility?.id ?? -1;
 
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as GiftCardsTab)}>

@@ -23,9 +23,19 @@ import Link from "next/link";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { formatMoney } from "@/lib/i18n/format";
 import { rich } from "@/lib/i18n/rich";
+import { useCurrentCustomer } from "@/lib/api/current-customer";
+import { useCustomerFacility } from "@/hooks/use-customer-facility";
 
-const MOCK_CLIENT_ID = 15;
-const FACILITY_ID = 11;
+// WHO and WHICH facility come from the session and the switcher, not from two
+// constants. This file named Alice Johnson (client 15) at fixture facility 11,
+// so every signed-in owner redeeming a card was shown HER wallet balance
+// before and after — one of the last three screens still doing that.
+//
+// The card lookup and the wallet are still `src/data/gift-cards`, and the
+// selected facility matches none of those rows, so both answer empty. That is
+// correct until this reads Postgres: see use-customer-facility.tsx for why the
+// two facility numbers must NOT be reconciled while a real client ref can
+// collide with a fixture client id.
 
 type Step = "lookup" | "amount" | "pin" | "confirm" | "done";
 
@@ -39,6 +49,12 @@ const NOT_REDEEMABLE_KEY: Record<string, string> = {
 
 export function RedeemFlow() {
   const { t, fill, locale } = useCustomerText("giftCardRedeem");
+  const { client } = useCurrentCustomer();
+  // `-1` matches no client and no facility, which is the right answer while the
+  // session resolves: nothing, rather than somebody else.
+  const clientId = client?.id ?? -1;
+  const { selectedFacility } = useCustomerFacility();
+  const facilityId = selectedFacility?.id ?? -1;
   const [cardCode, setCardCode] = useState("");
   const [lookupState, setLookupState] = useState<
     "idle" | "searching" | "found" | "error"
@@ -55,7 +71,7 @@ export function RedeemFlow() {
   const [newWalletBalance, setNewWalletBalance] = useState(0);
 
   const wallet = customerWallets.find(
-    (w) => w.clientId === MOCK_CLIENT_ID && w.facilityId === FACILITY_ID,
+    (w) => w.clientId === clientId && w.facilityId === facilityId,
   );
 
   const requiresPin = (foundCard?.currentBalance ?? 0) >= 200;
@@ -68,7 +84,7 @@ export function RedeemFlow() {
 
     const card = giftCards.find(
       (gc) =>
-        gc.facilityId === FACILITY_ID &&
+        gc.facilityId === facilityId &&
         gc.code.toLowerCase() === cardCode.trim().toLowerCase(),
     );
 
