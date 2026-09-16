@@ -60,8 +60,10 @@ import {
 import { bookingQueries } from "@/lib/api/booking";
 import { shiftDay } from "@/lib/api/booking-list-params";
 import { clientQueries } from "@/lib/api/client";
-import { groomingAppointments } from "@/data/grooming";
-import { getReportCardPrefillFromAppointment } from "@/lib/api/grooming";
+import {
+  getReportCardPrefillFromAppointment,
+  groomingQueries,
+} from "@/lib/api/grooming";
 import { useSettings } from "@/hooks/use-settings";
 import type { ReportCardTheme, ReportCardSectionId } from "@/types/facility";
 import { cn } from "@/lib/utils";
@@ -480,6 +482,14 @@ export function ReportCardsModule({
     bookingQueries.window({ from: shiftDay(visitToday, -30), to: visitToday }),
   );
   const { data: allClients = [] } = useQuery(clientQueries.all());
+  // The facility's REAL grooming appointments, for the prefill below. A mapped
+  // appointment's `id` is its booking ref (mappers/grooming-appointment.ts),
+  // which is what the visit picker puts in each option's id — so the two meet
+  // without a second lookup.
+  const { data: groomingAppointments = [] } = useQuery({
+    ...groomingQueries.appointments(),
+    enabled: serviceType === "grooming",
+  });
 
   const visitOptions = useMemo(() => {
     const service = serviceType === "hotel" ? "boarding" : serviceType;
@@ -529,6 +539,11 @@ export function ReportCardsModule({
   // before sending the card.
   useEffect(() => {
     if (serviceType !== "grooming" || !selectedVisitId) return;
+    // This looked the visit up in `@/data/grooming`, so it never filled for a
+    // real booking: the fixture's ids are grooming row ids, and the picker's
+    // are booking refs. Both sides are the ref now, and the intake the prefill
+    // reads (mood tags, session notes, before photos) is already on
+    // /api/grooming/appointments.
     const apt = groomingAppointments.find((a) => a.id === selectedVisitId);
     if (!apt) return;
     const prefill = getReportCardPrefillFromAppointment(apt);
