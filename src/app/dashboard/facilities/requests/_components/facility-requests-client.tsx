@@ -12,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { facilityQueries } from "@/lib/api/facility";
 import type { FacilityRequest } from "@/types/facility";
-import { BUSINESS_TYPES } from "@/components/admin/facility-onboarding/wizard-config";
+import {
+  BUSINESS_TYPES,
+  countryOptionFor,
+} from "@/components/admin/facility-onboarding/wizard-config";
 import type { FacilityDraft } from "@/components/admin/facility-onboarding/wizard-types";
 
 import {
@@ -39,7 +42,7 @@ function requestToPrefill(r: FacilityRequest): Partial<FacilityDraft> {
   const last = parts.join(" ");
   const businessTypeId = (r.businessType ?? "").toLowerCase();
   const planId = (r.requestedPlan ?? r.plan ?? "").toLowerCase();
-  const country = (r.country ?? "").toUpperCase().includes("US") ? "US" : "CA";
+  const country = countryOptionFor(r.country);
 
   return {
     legalName: r.facilityName,
