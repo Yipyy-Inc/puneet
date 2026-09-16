@@ -261,6 +261,32 @@ export default function FacilityGiftCardsPage() {
     [cardsQuery.data],
   );
 
+  // ── THE OUTSTANDING SET, ASKED FOR SEPARATELY ───────────────────────────
+  //
+  // What the Reports tab needs as a LIST: active cards still holding money.
+  // Its numbers come from `gift_card_totals` now, so this is the only list it
+  // reads, and it is the one gift-card list bounded by something other than
+  // time — a card leaves it when it is spent, cancelled or expires.
+  //
+  // On the e2e facility that is 3 rows against 6,022, because a voided card is
+  // still a row forever (there is no DELETE policy on `gift_cards`, and that is
+  // deliberate: a bearer instrument is voided, not erased).
+  //
+  // `transactions: []` is not a shortcut — this tab shows balances and dates,
+  // never a card's history. Attaching 12,973 movements to answer "what do we
+  // still owe" is the habit this whole change is about.
+  const outstandingQuery = useQuery(giftCardQueries.byStatus("active"));
+  const outstandingCards = useMemo(
+    () =>
+      (outstandingQuery.data ?? [])
+        .map((row) => toLegacyGiftCard({ ...row, transactions: [] }))
+        // `active` already implies a balance — the ledger trigger flips a card
+        // to `redeemed` the moment it reaches zero — but a liability report is
+        // the wrong place to rely on that holding.
+        .filter((card) => card.currentBalance > 0),
+    [outstandingQuery.data],
+  );
+
   const updateCard = useUpdateGiftCard();
 
   // ── THE LEDGER THE MONEY IS ACTUALLY ON ─────────────────────────────────
@@ -1924,7 +1950,7 @@ export default function FacilityGiftCardsPage() {
 
         {/* ── Reports ── */}
         <TabsContent value="reports">
-          <GiftCardReportsTab cards={facilityCards} />
+          <GiftCardReportsTab outstanding={outstandingCards} />
         </TabsContent>
 
         {/* ── Settings ── */}

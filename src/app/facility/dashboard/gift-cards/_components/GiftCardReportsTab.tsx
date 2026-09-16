@@ -12,11 +12,17 @@ import {
   CheckCircle2,
   Mail,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
 import type { GiftCard } from "@/types/payments";
+import { giftCardQueries } from "@/lib/api/gift-cards";
+import { totalsWindow } from "../_lib/totals-range";
+// No `isWithinRange` any more: the ranges are handed to the database, which
+// does the filtering it was always going to do better than a reduce over every
+// card the facility ever issued.
 import {
   GiftCardDateRangeFilter,
   presetRange,
-  isWithinRange,
   type DateRange,
 } from "./GiftCardDateRangeFilter";
 
@@ -31,19 +37,42 @@ const fmtDate = (s?: string) =>
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
-// Redemptions don't carry a service category in the mock, so derive a stable one.
-const SERVICE_CATEGORIES = [
-  "Grooming",
-  "Boarding",
-  "Daycare",
-  "Retail",
-  "Training",
-];
-const categoryFor = (id: string) => {
-  let h = 0;
-  for (const ch of id) h = (h + ch.charCodeAt(0)) % SERVICE_CATEGORIES.length;
-  return SERVICE_CATEGORIES[h];
+// ── WHAT USED TO BE HERE ───────────────────────────────────────────────────
+//
+//   // Redemptions don't carry a service category in the mock, so derive a
+//   // stable one.
+//   const categoryFor = (id: string) => {
+//     let h = 0;
+//     for (const ch of id) h = (h + ch.charCodeAt(0)) % SERVICE_CATEGORIES.length;
+//     return SERVICE_CATEGORIES[h];
+//   };
+//
+// A CHECKSUM OF THE CARD'S UUID, filed under Grooming, Boarding, Daycare,
+// Retail or Training. The comment was true when it was written — the data was a
+// fixture — and the derivation outlived the fixture, so a facility owner read a
+// confident five-way split of their own gift-card revenue that was decided by
+// arithmetic on an id.
+//
+// A redemption that paid for a booking carries `booking_id`, and the booking
+// knows its service. `gift_card_totals` does that join; one with no booking
+// behind it is `unattributed`, which is a fact rather than a guess.
+
+/** The service names are the database's own; these are what a person reads. */
+const SERVICE_LABELS: Record<string, string> = {
+  grooming: "Grooming",
+  boarding: "Boarding",
+  daycare: "Daycare",
+  training: "Training",
+  evaluation: "Evaluation",
+  retail: "Retail",
+  unattributed: "Not tied to a booking",
 };
+
+const serviceLabel = (service: string) =>
+  SERVICE_LABELS[service] ??
+  // A custom service the facility named itself. Shown as it is, capitalised,
+  // rather than dropped — a bucket nobody can see is money nobody can find.
+  service.charAt(0).toUpperCase() + service.slice(1);
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
@@ -55,10 +84,21 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 interface GiftCardReportsTabProps {
-  cards: GiftCard[];
+  /**
+   * The OUTSTANDING cards — active, and still holding money.
+   *
+   * The only list this tab needs, and the only one of the gift-card lists that
+   * is bounded by something other than time: a card leaves it when it is spent,
+   * cancelled or expires. Every NUMBER on this tab comes from the database
+   * instead (`gift_card_totals`), because the tab used to reduce them out of
+   * every card the facility had ever issued with every movement attached —
+   * 6,022 cards and 3.46 MB on the e2e facility, for four figures and two
+   * charts.
+   */
+  outstanding: GiftCard[];
 }
 
-export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
+export function GiftCardReportsTab({ outstanding }: GiftCardReportsTabProps) {
   const [salesRange, setSalesRange] = useState<DateRange>(() =>
     presetRange("year"),
   );
@@ -68,15 +108,27 @@ export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
   const [expiryWindow, setExpiryWindow] = useState<30 | 60 | 90>(30);
   const [remindedIds, setRemindedIds] = useState<Set<string>>(new Set());
 
+  // The two windows are separate questions and the route takes them separately:
+  // this tab has a range picker for sales and another for redemptions, and
+  // liability answers to neither — money owed is owed today.
+  const sales = totalsWindow(salesRange);
+  const redeem = totalsWindow(redeemRange);
+  const { data: totals } = useQuery(
+    giftCardQueries.totals({
+      salesFrom: sales.from,
+      salesTo: sales.to,
+      redeemFrom: redeem.from,
+      redeemTo: redeem.to,
+    }),
+  );
+
   // ── Outstanding liability ────────────────────────────────────────────────
-  const liabilityCards = useMemo(
-    () => cards.filter((c) => c.status === "active" && c.currentBalance > 0),
-    [cards],
-  );
-  const totalLiability = liabilityCards.reduce(
-    (sum, c) => sum + c.currentBalance,
-    0,
-  );
+  //
+  // The rows are the ones passed in; the TOTAL is the database's. They agree,
+  // and where they could not — a facility with more outstanding cards than one
+  // read returns — the total is the half that stays right.
+  const liabilityCards = outstanding;
+  const totalLiability = totals?.liability.total ?? 0;
 
   const exportLiability = () => {
     const headers = [
@@ -104,49 +156,34 @@ export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
   };
 
   // ── Sales summary ──────────────────────────────────────────────────────────
-  const soldCards = useMemo(
+  const soldCount = totals?.sales.count ?? 0;
+  const salesValue = totals?.sales.value ?? 0;
+  const avgDenom = soldCount ? salesValue / soldCount : 0;
+  const digitalCount = totals?.sales.digital ?? 0;
+  const physicalCount = totals?.sales.physical ?? 0;
+  // `YYYY-MM` from SQL, already ordered. Kept as pairs because that is what the
+  // bars below read, and the month key sorts as a string by construction.
+  const salesByMonth = useMemo(
     () =>
-      cards.filter((c) =>
-        isWithinRange(c.createdAt ?? c.purchaseDate, salesRange),
+      (totals?.salesByMonth ?? []).map(
+        ({ month, value }) => [month, value] as const,
       ),
-    [cards, salesRange],
+    [totals],
   );
-  const salesValue = soldCards.reduce((s, c) => s + c.initialAmount, 0);
-  const avgDenom = soldCards.length ? salesValue / soldCards.length : 0;
-  const digitalCount = soldCards.filter((c) => c.type !== "physical").length;
-  const physicalCount = soldCards.length - digitalCount;
-  const salesByMonth = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const c of soldCards) {
-      const d = new Date(c.createdAt ?? c.purchaseDate);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      map.set(key, (map.get(key) ?? 0) + c.initialAmount);
-    }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [soldCards]);
   const maxMonth = Math.max(1, ...salesByMonth.map(([, v]) => v));
 
   // ── Redemptions ──────────────────────────────────────────────────────────
-  const redemptions = useMemo(() => {
-    return cards.flatMap((c) =>
-      c.transactionHistory
-        .filter(
-          (t) =>
-            t.type === "redemption" && isWithinRange(t.timestamp, redeemRange),
-        )
-        .map((t) => ({ amount: t.amount, category: categoryFor(c.id) })),
-    );
-  }, [cards, redeemRange]);
-  const totalRedeemed = redemptions.reduce((s, r) => s + r.amount, 0);
-  const redeemByCategory = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of redemptions)
-      map.set(r.category, (map.get(r.category) ?? 0) + r.amount);
-    return SERVICE_CATEGORIES.map((cat) => ({
-      category: cat,
-      value: map.get(cat) ?? 0,
-    })).filter((c) => c.value > 0);
-  }, [redemptions]);
+  const redemptionCount = totals?.redemptions.count ?? 0;
+  const totalRedeemed = totals?.redemptions.total ?? 0;
+  // Not memoised, deliberately. `serviceLabel` is a lookup today, but a memo
+  // that closes over a label function and does not depend on it serves whatever
+  // that function returned on the first render forever — which is the defect
+  // `check:frozen-translator` exists for, and it flagged this line when it WAS
+  // a memo. There are at most a handful of services; recomputing is free, and
+  // it stays correct if these labels ever come from the catalogue.
+  const redeemByCategory = (totals?.redemptionsByService ?? []).map(
+    ({ service, value }) => ({ category: serviceLabel(service), value }),
+  );
 
   // ── Expiry alerts ──────────────────────────────────────────────────────────
   const expiringCards = useMemo(() => {
@@ -157,20 +194,16 @@ export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
     const cutoff = new Date(startOfToday);
     cutoff.setDate(startOfToday.getDate() + expiryWindow);
     cutoff.setHours(23, 59, 59, 999);
-    return cards
+    // Already the active, still-funded set — `outstanding` is exactly the
+    // cards this used to filter for, so what is left is the expiry window.
+    return outstanding
       .filter((c) => {
-        if (
-          c.status !== "active" ||
-          c.currentBalance <= 0 ||
-          c.neverExpires ||
-          !c.expiryDate
-        )
-          return false;
+        if (c.neverExpires || !c.expiryDate) return false;
         const exp = new Date(`${c.expiryDate}T00:00:00`);
         return exp >= startOfToday && exp <= cutoff;
       })
       .sort((a, b) => (a.expiryDate ?? "").localeCompare(b.expiryDate ?? ""));
-  }, [cards, expiryWindow]);
+  }, [outstanding, expiryWindow]);
 
   const sendAllReminders = () =>
     setRemindedIds(
@@ -273,7 +306,7 @@ export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
           />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Cards sold" value={String(soldCards.length)} />
+          <StatTile label="Cards sold" value={String(soldCount)} />
           <StatTile label="Total value" value={money(salesValue)} />
           <StatTile label="Avg. denomination" value={money(avgDenom)} />
           <StatTile
@@ -337,7 +370,7 @@ export function GiftCardReportsTab({ cards }: GiftCardReportsTabProps) {
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Redemptions" value={String(redemptions.length)} />
+          <StatTile label="Redemptions" value={String(redemptionCount)} />
           <StatTile label="Total redeemed" value={money(totalRedeemed)} />
         </div>
         <div className="rounded-xl border p-4">
