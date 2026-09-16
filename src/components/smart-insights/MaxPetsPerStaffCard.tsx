@@ -13,64 +13,74 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+
+// ============================================================================
+// How many pets one staff member can hold, for one service.
+//
+// ── WHAT IT WAS ───────────────────────────────────────────────────────────
+//
+// `localStorage["yipyy:max-pets-per-staff:11:daycare"]` — the fixture facility
+// 11, in one browser. Every facility shared one number, no facility had its
+// own, and the manager who typed it was the only person who could see it. It
+// is the `staffing_ratios` settings domain now, so it belongs to the facility
+// and reaches whoever opens the screen next.
+//
+// ── IT IS STILL READ BY NOTHING ───────────────────────────────────────────
+//
+// Smart Insights is the intended consumer (Understaffing Risk compares the
+// confirmed pet count against staff × this number) and is fixture data, so
+// today this stores a policy nobody acts on. Saying so is the point: a number
+// that is kept is not the same as a number that decides something. Debt map.
+// ============================================================================
 
 interface Props {
-  facilityId: number;
   service: "daycare" | "boarding";
-  defaultValue?: number;
 }
 
 const DEFAULT_MAX_PETS = 12;
 
-function storageKey(facilityId: number, service: string): string {
-  return `yipyy:max-pets-per-staff:${facilityId}:${service}`;
-}
+export function MaxPetsPerStaffCard({ service }: Props) {
+  const { t, fill } = useStaffText("staffingRatios");
+  // `isPending` is load-bearing: useState captures ONCE, and seeding from the
+  // documented default before the row lands would write that default over the
+  // facility's own number the moment somebody pressed Save.
+  const { settings, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const ratios = settings.staffing_ratios.value;
+  const stored = ratios[service];
 
-export function getMaxPetsPerStaff(
-  facilityId: number,
-  service: "daycare" | "boarding",
-): number {
-  if (typeof window === "undefined") return DEFAULT_MAX_PETS;
-  try {
-    const raw = window.localStorage.getItem(storageKey(facilityId, service));
-    if (!raw) return DEFAULT_MAX_PETS;
-    const num = parseFloat(raw);
-    return Number.isFinite(num) && num > 0 ? num : DEFAULT_MAX_PETS;
-  } catch {
-    return DEFAULT_MAX_PETS;
-  }
-}
-
-/**
- * Spec § Insight 3.1 dependency — a per-facility, per-service `Max pets per
- * staff member` field. Insight 3.1 (Understaffing Risk) uses this to compute
- * capacity (staff_count × max_pets_per_staff) and detect shortfalls.
- */
-export function MaxPetsPerStaffCard({
-  facilityId,
-  service,
-  defaultValue,
-}: Props) {
-  const [value, setValue] = useState<number>(defaultValue ?? DEFAULT_MAX_PETS);
+  const [value, setValue] = useState<number>(DEFAULT_MAX_PETS);
   const [initial, setInitial] = useState<number>(DEFAULT_MAX_PETS);
 
   useEffect(() => {
-    const stored = getMaxPetsPerStaff(facilityId, service);
-    setValue(stored);
-    setInitial(stored);
-  }, [facilityId, service]);
+    if (isPending) return;
+    const next = stored ?? DEFAULT_MAX_PETS;
+    setValue(next);
+    setInitial(next);
+  }, [isPending, stored]);
 
   const dirty = value !== initial;
 
   const handleSave = () => {
-    if (typeof window === "undefined") return;
     if (!Number.isFinite(value) || value <= 0) {
-      toast.error("Enter a positive number");
+      toast.error(t("positiveNumber"));
       return;
     }
-    window.localStorage.setItem(storageKey(facilityId, service), String(value));
-    setInitial(value);
-    toast.success(`Max pets per staff updated`);
+    saveSetting.mutate(
+      { domain: "staffing_ratios", value: { ...ratios, [service]: value } },
+      {
+        onSuccess: () => {
+          setInitial(value);
+          toast.success(t("saved"));
+        },
+        onError: (error: Error) => toast.error(error.message),
+      },
+    );
   };
 
   const handleReset = () => {
@@ -82,23 +92,20 @@ export function MaxPetsPerStaffCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="size-5 text-purple-500" />
-          Max pets per staff member
+          {t("title")}
         </CardTitle>
-        <CardDescription>
-          Smart Insights uses this to detect understaffed days — when the
-          confirmed pet count exceeds (scheduled staff × this number), an
-          Understaffing Risk insight fires.
-        </CardDescription>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-end gap-3">
           <div className="flex-1 space-y-2">
-            <Label htmlFor={`mpps-${service}`}>Max pets per staff</Label>
+            <Label htmlFor={`mpps-${service}`}>{t("label")}</Label>
             <Input
               id={`mpps-${service}`}
               type="number"
               min={1}
               step={1}
+              disabled={isPending}
               value={Number.isFinite(value) ? value : ""}
               onChange={(e) => setValue(parseInt(e.target.value, 10))}
               className="w-32"
@@ -112,23 +119,21 @@ export function MaxPetsPerStaffCard({
                 size="sm"
                 onClick={handleReset}
               >
-                Cancel
+                {t("cancel")}
               </Button>
             )}
             <Button
               type="button"
               size="sm"
               onClick={handleSave}
-              disabled={!dirty}
+              disabled={!dirty || isPending || saveSetting.isPending}
             >
-              Save
+              {saveSetting.isPending ? t("saving") : t("save")}
             </Button>
           </div>
         </div>
         <p className="text-muted-foreground text-xs">
-          Default: {DEFAULT_MAX_PETS}. Industry guidance varies — many
-          facilities run 10–15 dogs per staff member for daycare and slightly
-          higher for boarding (where pets are kennelled overnight).
+          {fill("defaultHint", { n: DEFAULT_MAX_PETS })}
         </p>
       </CardContent>
     </Card>

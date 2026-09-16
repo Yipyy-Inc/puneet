@@ -2012,3 +2012,31 @@ export const weatherWarningRuleSchema = z.object({
   createdAt: z.string(),
 });
 export type WeatherWarningRule = z.infer<typeof weatherWarningRuleSchema>;
+
+/**
+ * An area a facility added itself — "Back paddock", "Puppy lawn" — beside the
+ * shipped ones a weather rule can apply to.
+ *
+ * These were a localStorage list, so a rule written on the manager's laptop
+ * named an area nobody else's browser had ever heard of, and the rule read as
+ * applying to nothing at all on the floor's screen.
+ */
+export const weatherAreaSchema = z.object({
+  value: z.string().min(1).max(60),
+  label: z.string().min(1).max(60),
+});
+export type WeatherArea = z.infer<typeof weatherAreaSchema>;
+
+/**
+ * How many pets one staff member can hold, per service.
+ *
+ * A staffing policy, so it belongs to the facility rather than to whoever
+ * happened to type it: it was a localStorage key built from the fixture
+ * facility 11, which meant every facility shared one browser's number and no
+ * facility had its own.
+ */
+export const staffingRatiosSchema = z.object({
+  daycare: z.number().int().min(1).max(100).optional(),
+  boarding: z.number().int().min(1).max(100).optional(),
+});
+export type StaffingRatios = z.infer<typeof staffingRatiosSchema>;

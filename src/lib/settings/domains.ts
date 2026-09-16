@@ -149,7 +149,9 @@ import {
   scheduleTimeOverrideSchema,
   serviceDateBlockSchema,
   serviceNotificationDefaultSchema,
+  weatherAreaSchema,
   weatherWarningRuleSchema,
+  staffingRatiosSchema,
   evaluationConfigSchema,
   evaluationReportCardConfigSchema,
   facilityBookingFlowConfigSchema,
@@ -198,7 +200,9 @@ import type {
   ScheduleTimeOverride,
   ServiceDateBlock,
   ServiceNotificationDefault,
+  WeatherArea,
   WeatherWarningRule,
+  StaffingRatios,
   BusinessHours,
   EvaluationConfig,
   EvaluationReportCardConfig,
@@ -756,6 +760,21 @@ export const SETTING_DOMAINS = {
   weather_rules: {
     schema: z.array(weatherWarningRuleSchema),
     fallback: weatherWarningRules as WeatherWarningRule[],
+  },
+
+  // The areas a facility added itself, beside the shipped ones a weather rule
+  // can name. Empty by default: these are the facility's own words, and
+  // inheriting another browser's list is exactly the bug this replaces.
+  weather_areas: {
+    schema: z.array(weatherAreaSchema),
+    fallback: [] as WeatherArea[],
+  },
+
+  // How many pets one staff member can hold, per service. Empty until a
+  // facility says: a borrowed ratio decides who is called in on a busy day.
+  staffing_ratios: {
+    schema: staffingRatiosSchema,
+    fallback: {} as StaffingRatios,
   },
   // ── WHAT A FACILITY PAYS ABOVE THE BASE RATE ───────────────────────────
   //

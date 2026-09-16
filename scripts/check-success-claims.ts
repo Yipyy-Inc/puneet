@@ -197,7 +197,6 @@ const BASELINE = new Set<string>([
   "src/components/scheduling/ShiftOpportunityBoard.tsx",
   "src/components/scheduling/ShiftOpportunityNotificationSettingsDialog.tsx",
   "src/components/security-compliance/compliance/retention-edit-drawer.tsx",
-  "src/components/smart-insights/MaxPetsPerStaffCard.tsx",
   "src/components/system-admin/DataManagement.tsx",
   "src/components/system-admin/data-management/backup-schedule-card.tsx",
   "src/components/system-health/notification-recipients-card.tsx",

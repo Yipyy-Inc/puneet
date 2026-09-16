@@ -384,7 +384,7 @@ export default function DaycareSettingsPage() {
           </CardContent>
         </Card>
 
-        <MaxPetsPerStaffCard facilityId={11} service="daycare" />
+        <MaxPetsPerStaffCard service="daycare" />
       </div>
     </div>
   );

@@ -51,6 +51,8 @@ import type {
   GroomingScheduling,
   AccountingStructure,
   NetworkPolicy,
+  WeatherArea,
+  StaffingRatios,
 } from "@/types/facility";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type {
@@ -294,6 +296,10 @@ export interface FacilitySettings {
   estimate_follow_ups: SettingState<EstimateFollowUps>;
   /** Which notification categories each staff role hears about by default. */
   notification_role_defaults: SettingState<NotificationRoleDefaults>;
+  /** Areas the facility added itself, for a weather rule to apply to. */
+  weather_areas: SettingState<WeatherArea[]>;
+  /** How many pets one staff member can hold, per service. */
+  staffing_ratios: SettingState<StaffingRatios>;
 }
 
 /**

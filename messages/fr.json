@@ -2876,6 +2876,17 @@
         "expired": "Expiré",
         "expiringSoon": "Expire bientôt",
         "noExpiry": "Aucune date d’expiration au dossier"
+      },
+      "staffingRatios": {
+        "title": "Nombre maximal d’animaux par employé",
+        "description": "Les analyses intelligentes s’en servent pour repérer les journées en manque de personnel : lorsque le nombre d’animaux confirmés dépasse (employés à l’horaire × ce nombre), une alerte de risque de sous-effectif se déclenche.",
+        "label": "Animaux par employé",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "saved": "Nombre maximal d’animaux par employé enregistré pour cet établissement.",
+        "positiveNumber": "Entrez un nombre positif.",
+        "defaultHint": "Par défaut : {n}. Les recommandations varient — beaucoup d’établissements comptent de 10 à 15 chiens par employé en garderie, et un peu plus en pension (les animaux passent la nuit en enclos)."
       }
     }
   },
@@ -3727,7 +3738,14 @@
         "perMonth": "par mois",
         "perYear": "par an",
         "nextBilling": "Prochaine facturation le {date}",
-        "pricePerMonth": "{amount} par mois"
+        "pricePerMonth": "{amount} par mois",
+        "loading": "Chargement…",
+        "noSubscription": "Cet établissement n’est pas encore associé à un forfait.",
+        "status_trialing": "Essai",
+        "status_active": "Actif",
+        "status_past_due": "Paiement en retard",
+        "status_suspended": "Suspendu",
+        "status_cancelled": "Annulé"
       },
       "retail": {
         "denied": "Les paramètres de vente au détail sont réservés aux propriétaires et aux gestionnaires de l’établissement.",

@@ -606,7 +606,7 @@ export default function BoardingSettingsPage() {
           </CardContent>
         </Card>
 
-        <MaxPetsPerStaffCard facilityId={11} service="boarding" />
+        <MaxPetsPerStaffCard service="boarding" />
       </div>
     </div>
   );
