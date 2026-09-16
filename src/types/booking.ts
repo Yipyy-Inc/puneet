@@ -186,7 +186,27 @@ export type BookingPart = z.infer<typeof bookingPartSchema>;
 export const newBookingSchema = z.object({
   clientId: z.number(),
   petId: z.union([z.number(), z.array(z.number())]),
-  facilityId: z.number(),
+  /**
+   * The FIXTURE's facility key, and nothing else — absent on a real booking.
+   *
+   * `facilities.id` is a uuid and the table has no numeric ref, so there is no
+   * number a booking read from Postgres could honestly carry. `rowToBooking`
+   * stamped `11` anyway until 2026-09-16, which made every
+   * `b.facilityId === facility.id` comparison in the customer portal test a
+   * hardcoded 11 against the fixture list's first active facility, 1 — false
+   * for every booking that has ever existed. The screens behind those filters
+   * were not scoped, they were EMPTY, and the fallbacks around some of them
+   * hid it.
+   *
+   * Optional because nothing may require a caller to invent one: the create
+   * route ignores whatever is sent and takes the facility from the session or
+   * the parent client row, as `check:facility-from-session` requires.
+   *
+   * Never filter a real booking by it. A customer's own bookings are already
+   * theirs (RLS) and already this facility's (the portal is served per
+   * hostname); there is nothing left for a facility filter to do.
+   */
+  facilityId: z.number().optional(),
   /** Which branch this booking belongs to. Ignored at creation -- the
    * session resolves it, same as `facilityId` -- and only takes effect on an
    * existing booking, moving it to another of the facility's own locations. */
@@ -801,7 +821,13 @@ export const bookingRequestServiceEnum = z.enum([
 
 export const bookingRequestSchema = z.object({
   id: z.string(),
-  facilityId: z.number(),
+  /**
+   * Fixture-only, like `Booking.facilityId` above and for the same reason: a
+   * real facility is a uuid. The online-booking page adapts REAL bookings into
+   * this shape for display, and has no number to put here — so this must not
+   * oblige it to invent one.
+   */
+  facilityId: z.number().optional(),
   createdAt: z.string(),
   appointmentAt: z.string(),
   clientId: z.number(),

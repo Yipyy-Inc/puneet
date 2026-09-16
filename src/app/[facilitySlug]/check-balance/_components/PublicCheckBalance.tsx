@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, AlertCircle, Loader2, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { giftCards, physicalCardBatches } from "@/data/gift-cards";
+import { FIXTURE_DATA_FACILITY_ID } from "@/data/facilities";
 import type { GiftCard } from "@/types/payments";
 
 const STATUS_META: Record<
@@ -32,14 +33,12 @@ const fmtDate = (s?: string) =>
 type LookupState = "idle" | "searching" | "found" | "not_found";
 
 interface PublicCheckBalanceProps {
-  facilityId: number;
   brandName: string;
   logoUrl?: string;
   primaryColor: string;
 }
 
 export function PublicCheckBalance({
-  facilityId,
   brandName,
   logoUrl,
   primaryColor,
@@ -54,17 +53,23 @@ export function PublicCheckBalance({
     await new Promise((r) => setTimeout(r, 700));
     const q = cardCode.trim().toLowerCase();
 
+    // Fixture cards only — see the page's header. The facility is no longer a
+    // number here (it is a uuid resolved from the slug), so a real facility's
+    // cards are not in this array and the search answers "not found". That is
+    // the designed answer, not a gap being papered over: a code belonging to
+    // another facility and a code nobody has must look identical, or the page
+    // becomes a way to hunt for live cards.
     let card =
       giftCards.find(
         (gc) =>
-          gc.facilityId === facilityId &&
+          gc.facilityId === FIXTURE_DATA_FACILITY_ID &&
           (gc.code.toLowerCase() === q || gc.cardNumber?.toLowerCase() === q),
       ) ?? null;
 
     // Resolve a printed physical card number/barcode to its activated gift card.
     if (!card) {
       const physical = physicalCardBatches
-        .filter((b) => b.facilityId === facilityId)
+        .filter((b) => b.facilityId === FIXTURE_DATA_FACILITY_ID)
         .flatMap((b) => b.cards)
         .find(
           (c) =>

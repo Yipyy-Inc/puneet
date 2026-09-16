@@ -49,11 +49,21 @@ export function BalancesTab() {
     return filtered.filter((c) => c.status === "active");
   }, [customerId, selectedFacility]);
 
+  // A card is yours if you BOUGHT it or it was SENT to your address.
+  //
+  // The second arm used to be `recipientEmail?.includes("@example.com")` — a
+  // "simplified check" that matched a whole domain rather than a person, so
+  // every signed-in owner was shown the fixture card addressed to
+  // jane@example.com as one of their balances. It stayed invisible only
+  // because the facility filter beneath it never matched anything; fixing that
+  // filter is what made this reachable, so it is fixed in the same change.
+  const customerEmail = customer?.email?.trim().toLowerCase();
   const customerGiftCards = useMemo(() => {
     let filtered = giftCards.filter(
       (gc) =>
         gc.purchasedByClientId === customerId ||
-        gc.recipientEmail?.includes("@example.com"), // Simplified check
+        (Boolean(customerEmail) &&
+          gc.recipientEmail?.trim().toLowerCase() === customerEmail),
     );
 
     if (selectedFacility) {
@@ -61,7 +71,7 @@ export function BalancesTab() {
     }
 
     return filtered.filter((gc) => gc.status === "active");
-  }, [customerId, selectedFacility]);
+  }, [customerId, customerEmail, selectedFacility]);
 
   const customerOutstandingInvoices = useMemo(() => {
     return invoices.filter(

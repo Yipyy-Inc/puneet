@@ -119,10 +119,16 @@ export function CustomerSidebar() {
       training: "training",
     };
 
+    // `myBookings` are REAL rows, and they carry no facility number — see
+    // types/booking.ts. They are already this owner's (RLS) and already this
+    // facility's (the portal is served per hostname), so the facility filter
+    // that used to sit here had nothing left to narrow: it compared a
+    // hardcoded 11 against the fixture list's first facility and hid every
+    // stay, which is why a dog could be boarding and the Cameras item still
+    // never appeared.
     const activeStayServices: CameraServiceType[] = myBookings
       .filter(
         (b) =>
-          b.facilityId === selectedFacility.id &&
           b.status === "confirmed" &&
           b.startDate <= today &&
           b.endDate >= today,
@@ -147,10 +153,7 @@ export function CustomerSidebar() {
     const customerServiceTypes: CameraServiceType[] = [
       ...new Set(
         myBookings
-          .filter(
-            (b) =>
-              b.facilityId === selectedFacility.id && b.status === "confirmed",
-          )
+          .filter((b) => b.status === "confirmed")
           .map((b) => serviceMap[b.service])
           .filter((s): s is CameraServiceType => Boolean(s)),
       ),

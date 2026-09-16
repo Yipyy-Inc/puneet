@@ -22,10 +22,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { facilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
 import { users } from "@/data/users";
+import { FIXTURE_DATA_FACILITY_ID } from "@/data/facilities";
 
 // facility-staff.ts holds facility 11's multi-location staff (keyed by
 // loc-mtl-* locations); other facilities draw staff from users.ts by name.
-const FACILITY_STAFF_FACILITY_ID = 11;
+const FACILITY_STAFF_FACILITY_ID = FIXTURE_DATA_FACILITY_ID;
 
 const STANDARD_HOURS: { day: string; hours: string }[] = [
   { day: "Monday", hours: "8:00 AM – 6:00 PM" },

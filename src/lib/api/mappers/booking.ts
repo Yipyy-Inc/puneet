@@ -62,7 +62,9 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     // Single pet stays a number: `petId` is `number | number[]` and plenty of
     // callers assume the scalar form when there is only one.
     petId: petRefs.length === 1 ? petRefs[0] : petRefs,
-    facilityId: 11,
+    // No `facilityId`. A facility is a uuid; there is no number to put here,
+    // and the 11 that used to sit in this spot was the fixture's. `facility_id`
+    // is on the row for anything that needs the real one. See types/booking.ts.
 
     service: row.service,
     serviceType: row.service_type ?? undefined,

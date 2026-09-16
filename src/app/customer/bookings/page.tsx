@@ -98,13 +98,14 @@ export default function CustomerBookingsPage() {
     }
   }, [searchParams]);
 
-  const customerBookings = useMemo(() => {
-    if (!selectedFacility) return allBookings;
-    const filtered = allBookings.filter(
-      (b) => b.facilityId === selectedFacility.id,
-    );
-    return filtered.length > 0 ? filtered : allBookings;
-  }, [allBookings, selectedFacility]);
+  // These are the owner's REAL bookings, which carry no facility number (see
+  // types/booking.ts) and need no facility filter: RLS already admits only
+  // their own, and the portal is already served per facility hostname. What
+  // stood here filtered on `b.facilityId === selectedFacility.id` — always
+  // false — and then fell back to the unfiltered list when the result came
+  // back empty, so it never changed what anybody saw. Removing it removes a
+  // step that only looked like scoping.
+  const customerBookings = allBookings;
 
   // Apply search + service filter before splitting upcoming/past
   const filteredBookings = useMemo(() => {

@@ -18,7 +18,9 @@ import type { Client } from "@/types/client";
 
 interface BookingModalConfig {
   clients: Client[];
-  facilityId: number;
+  /** Optional for the same reason as `BookingModal`'s own prop — a caller
+   *  opening this from a real booking has no facility number to pass. */
+  facilityId?: number;
   facilityName: string;
   preSelectedClientId?: number;
   preSelectedPetId?: number;

@@ -12,6 +12,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
+import { FIXTURE_DATA_FACILITY_ID } from "@/data/facilities";
 
 import { facilityBillingQueries } from "@/lib/api/facility-billing";
 import { usePlanChangeRequests } from "@/lib/plan-change-requests-store";
@@ -28,7 +29,17 @@ import type {
   SubscriptionInvoice,
 } from "@/types/facility-billing";
 
-const FACILITY_ID = 11;
+// PLATFORM billing — what this facility pays YIPYY, not what its clients pay
+// it. Every read below goes to the `facility-billing` FIXTURE, which is keyed
+// by number, so this names the facility that fixture describes.
+//
+// It is a placeholder, and an unusually misleading one: the real plan lives in
+// `facility_subscriptions` and is already served, session-scoped, by
+// `useFacilitySubscription()` — so Settings -> Subscription shows this
+// facility own plan while this screen shows the fixture facility. Converting
+// these four screens is the platform-billing work; until then the number has
+// one home so the conversion has one place to start. Debt map.
+const FACILITY_ID = FIXTURE_DATA_FACILITY_ID;
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
   monthly: "Monthly",

@@ -338,10 +338,9 @@ const STATION_TYPES: StationType[] = [
   },
 ];
 
-function blank(facilityId: number): GroomingStation {
+function blank(): GroomingStation {
   return {
     id: `gs-${Date.now()}`,
-    facilityId,
     type: "table",
     name: "",
     active: true,
@@ -351,22 +350,21 @@ function blank(facilityId: number): GroomingStation {
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
-interface Props {
-  facilityId?: number;
-}
-
 // ── Client ─────────────────────────────────────────────────────────────────────
 
-export function GroomingStationsClient({ facilityId = 11 }: Props) {
+export function GroomingStationsClient() {
   const {
-    stations: allStations,
+    stations,
     addStation,
     updateStation,
     deleteStation,
     toggleStation,
     setStationStatus,
   } = useGroomingStations();
-  const stations = allStations.filter((s) => s.facilityId === facilityId);
+  // No facility filter: `/api/grooming/stations` already answers with this
+  // facility's stations and nobody else's. What stood here compared each row
+  // against a hardcoded 11, which only ever matched because the route wrote
+  // that same 11 onto every row it returned.
   const { hasActiveVans } = useMobileGrooming();
   // Mobile-only when the facility runs vans but has no station equipment —
   // the empty state then explains the situation instead of nudging the
@@ -377,7 +375,7 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
     open: boolean;
     editing: GroomingStation | null;
   }>({ open: false, editing: null });
-  const [form, setForm] = useState<GroomingStation>(() => blank(facilityId));
+  const [form, setForm] = useState<GroomingStation>(() => blank());
   const [view, setView] = useState<"board" | "manage">("board");
   const [statusFilter, setStatusFilter] =
     useState<GroomingStationStatus | null>(null);
@@ -387,7 +385,7 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
   }
 
   const openDialog = (s?: GroomingStation) => {
-    setForm(s ? { ...s } : blank(facilityId));
+    setForm(s ? { ...s } : blank());
     setDialog({ open: true, editing: s ?? null });
   };
   const closeDialog = () => setDialog({ open: false, editing: null });

@@ -15227,3 +15227,108 @@ timeout, with an equivalence assertion like P1.
 
 **Do instead** for a new policy: put a permission check on a growing table
 through `permitted_facility_ids`, never `has_permission(facility_id, …)`.
+
+---
+
+## 2026-09-16 — The fixture facility number, and why one half of it must stay wrong
+
+Wave 1's last open item was the hardcoded fixture facility `11`. Going through
+it changed what the item IS, twice, so both are written down here.
+
+### 🔴 A REAL row must never carry the fixture's facility number — three did
+
+`facilities.id` is a **uuid** and the table has no numeric ref, so there is no
+number a row read from Postgres can honestly carry. Three places invented one:
+
+- `mappers/booking.ts` stamped `facilityId: 11` on every booking it mapped.
+- `/api/grooming/stations` reported `facilityId: 11` on every real station,
+  **because** `GroomingStationsClient` then filtered `s.facilityId === 11`. The
+  route was reporting a false facility to satisfy a client-side check that
+  re-tested what the query had already guaranteed (`activeFacilityIdForStaff()`
+  - RLS). Both halves are gone, and the page no longer passes a facility at all.
+- `BookingRequest.facilityId` obliged the online-booking page, which adapts real
+  bookings for display, to supply a number it does not have.
+
+`Booking.facilityId`, `BookingRequest.facilityId` and `GroomingStation.facilityId`
+are now **optional and documented as fixture-only**. `newBookingSchema` carries
+the optional one, because the create route has always ignored whatever the
+caller sent (`check:facility-from-session`), so nothing may force a call site to
+invent one. `BookingModal`'s prop and `BookingModalConfig` follow.
+
+**Do instead:** if you need the real facility, it is `context.facilityId` (a
+uuid) on the server. Never add a numeric facility to a type that models a real
+row.
+
+### 🔴 The customer portal's fixture/real facility mismatch is LOAD-BEARING. Do not "fix" it
+
+`useCustomerFacility` defaults to `availableFacilities[0]` — facility **1**.
+Every fixture row the customer screens filter (all 26 bookings, all 15
+documents, all 32 gift cards) carries facility **11**. So
+`row.facilityId === selectedFacility.id` is `11 === 1` everywhere: the cameras
+page, the documents list, the gift-card and balance tabs and the pet profile's
+stay history are not scoped, they are **EMPTY**.
+
+That reads exactly like a bug, and the obvious repair — default to 11 so the
+fixture agrees with itself — **would expose one customer's data to another.**
+These screens pair the facility filter with `clientId === customerId`, where
+`customerId` is the REAL client's `ref`. Measured against the database on
+2026-09-16: real refs start at 15 and run 15, 16, 17, 18, 19, 20, 21, 22, 28,
+29 — straight through the fixture's own id range, and the wallet's
+`MOCK_CLIENT_ID` is literally **15**. Make the facility halves agree and the
+signed-in owner whose ref is 15 is shown fixture client 15's credits, gift
+cards and stays as their own.
+
+The mismatch is an accident, not a design, and it is the only thing holding
+that apart. It is recorded here rather than relied on silently.
+
+**Do instead:** the fix is for those screens to read Postgres. Until then,
+empty is the correct output, and the two numbers must not be reconciled.
+
+### 🔴 A wildcard "simplified check" was one facility filter away from leaking
+
+`BalancesTab` and `BalanceSummaryCards` treated a gift card as yours if
+`recipientEmail?.includes("@example.com")` — a whole DOMAIN, not a person. It
+matched fixture card `gc-001` (facility 11, active), so every signed-in owner
+would have been shown it as a balance, and `BalanceSummaryCards` would have
+**added its value to their headline total**. Invisible only because the facility
+filter above it never matched. Found while changing that filter; fixed in the
+same change to compare the signed-in customer's own address.
+
+**Do instead:** never let a "simplified check" match a domain, a prefix or a
+substring where identity is meant. It is dormant, not absent.
+
+### 🟡 What was real, what stays fixture
+
+Fixed, real: the public `/[facilitySlug]/check-balance` page resolved branding
+for facility 11 **regardless of slug**, naming "Example Pet Care Facility" to
+every visitor on a page asking for a gift-card number. It resolves the slug now,
+like the reviews wall beside it. Its card LOOKUP is still the fixture — the real
+`/api/gift-cards?code=` requires a viewer, and a signed-out balance lookup on a
+bearer instrument is a rate-limiting and enumeration design, not a mapping
+change.
+
+Correct as fixture, now reading one shared `FIXTURE_DATA_FACILITY_ID` instead of
+private copies of `11`: `lib/employee/register-context.ts` (the cash drawer has
+no backend — `cash-register-store.ts` is browser-local over
+`mockRegisterSessions`, so the till MUST name the same facility they do or the
+open-gate, the store and the Daily Register page stop agreeing on which drawer
+is open), `LocationDetailSheet`, and the four platform-billing screens.
+
+**Platform billing is still fixture, and now says so.** `/facility/settings/billing`,
+`/facility/account/subscription`, `.../change-plan` and `/facility/account/payment-method`
+all read `facilityBillingQueries` over `src/data/facility-billing` at facility
+11 — so a facility admin opening Settings → Billing sees another business's
+plan, invoices, card and credit, and "cancel" toasts that the Yipyy team was
+notified while `recordBillingSelfServiceAction` only writes a browser-local
+array. The real plan is `facility_subscriptions`, already served session-scoped
+by `useFacilitySubscription()`. **A comment added on 2026-09-15 in
+`settings/_sections/subscription.tsx` claimed those account routes were "real
+routes over the real subscription" — that was wrong and has been corrected.**
+
+**Still open (Wave 2):** ~40 remaining `= 11` sites on fixture-backed screens
+(retail, smart insights, audit trails, rooms, notes, tasks); the customer wallet
+and gift-card pages, which hardcode `MOCK_CLIENT_ID = 15` as well as the
+facility and are reachable from the customer sidebar; `lib/api/financial-report.ts`
+choosing a **tax jurisdiction** with `if (facilityId === 11)`; and
+`BookingModal`/`new-appointment-dialog` scoping a QuickBooks $0 receipt to
+`{ facilityId: "11" }`.
