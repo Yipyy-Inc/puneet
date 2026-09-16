@@ -167,7 +167,6 @@ const BASELINE = new Set([
 
   // ── Marketing.
   "marketing_create_campaigns",
-  "marketing_manage_referrals",
   "send_marketing",
 
   // ── Staff & facility administration.

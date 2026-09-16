@@ -2876,6 +2876,17 @@
         "expired": "Expired",
         "expiringSoon": "Expires soon",
         "noExpiry": "No expiry on file"
+      },
+      "staffingRatios": {
+        "title": "Max pets per staff member",
+        "description": "Smart Insights uses this to detect understaffed days — when the confirmed pet count exceeds (scheduled staff × this number), an Understaffing Risk insight fires.",
+        "label": "Max pets per staff",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Max pets per staff saved for this facility.",
+        "positiveNumber": "Enter a positive number.",
+        "defaultHint": "Default: {n}. Industry guidance varies — many facilities run 10–15 dogs per staff member for daycare and slightly higher for boarding (where pets are kennelled overnight)."
       }
     }
   },
@@ -3727,7 +3738,14 @@
         "perMonth": "per month",
         "perYear": "per year",
         "nextBilling": "Next billing on {date}",
-        "pricePerMonth": "{amount} per month"
+        "pricePerMonth": "{amount} per month",
+        "loading": "Loading…",
+        "noSubscription": "This facility is not on a plan yet.",
+        "status_trialing": "Trial",
+        "status_active": "Active",
+        "status_past_due": "Past due",
+        "status_suspended": "Suspended",
+        "status_cancelled": "Cancelled"
       },
       "retail": {
         "denied": "Retail settings are open to facility owners and managers only.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
+import {
+  useFacilitySettings,
+  useSaveFacilitySetting,
+} from "@/lib/api/facility-settings";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import type {
   WeatherWarningRule,
@@ -104,20 +108,10 @@ const DEFAULT_AREAS = [
 const WEATHER_TYPE_KEY = (type: string) =>
   `weather${type[0].toUpperCase()}${type.slice(1)}`;
 
-function getStoredCustomAreas(): Array<{ value: string; label: string }> {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = localStorage.getItem("yipyy-forecast-custom-areas");
-    if (stored) return JSON.parse(stored);
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function saveCustomAreas(areas: Array<{ value: string; label: string }>) {
-  localStorage.setItem("yipyy-forecast-custom-areas", JSON.stringify(areas));
-}
+// The areas a facility adds itself are the `weather_areas` settings domain.
+// They were `localStorage["yipyy-forecast-custom-areas"]`, so a rule written on
+// one laptop applied to an area no other browser had heard of — and read, on
+// the floor's screen, as applying to nothing at all.
 
 function makeId() {
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -172,7 +166,26 @@ export function WeatherWarningSettings() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WeatherWarningRule | null>(null);
   const [form, setForm] = useState<RuleForm>(emptyForm);
-  const [customAreas, setCustomAreas] = useState(getStoredCustomAreas);
+  // `isPending` matters: useState captures once, and seeding from the empty
+  // default before the row lands would write that emptiness back over the
+  // facility's own areas the moment somebody added one.
+  const { settings, isPending } = useFacilitySettings();
+  const saveSetting = useSaveFacilitySetting();
+  const storedAreas = settings.weather_areas.value;
+  const [customAreas, setCustomAreas] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+
+  useEffect(() => {
+    if (isPending) return;
+    setCustomAreas(storedAreas);
+  }, [isPending, storedAreas]);
+
+  const saveCustomAreas = (areas: Array<{ value: string; label: string }>) =>
+    saveSetting.mutate(
+      { domain: "weather_areas", value: areas },
+      { onError: (error: Error) => toast.error(error.message) },
+    );
   const [newAreaName, setNewAreaName] = useState("");
   const AREA_OPTIONS: Array<{ value: string; key?: string; label?: string }> = [
     ...DEFAULT_AREAS,

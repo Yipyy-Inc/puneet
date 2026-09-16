@@ -10,6 +10,8 @@
 
 import { useMemo } from "react";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { usePermission } from "@/hooks/use-facility-rbac";
 import { isReferralProgramEnabled } from "@/lib/loyalty/referral-program";
 import type { FacilityLoyaltyConfig, RewardTypeConfig } from "@/types/loyalty";
 
@@ -59,19 +61,26 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
     () => ({ id: 1 }),
     [],
   ); // Mock
-  const userRole = "facility_admin"; // Mock
 
-  // Get facility loyalty config
+  // ── WHETHER THE PROGRAMME IS ON IS THE FACILITY'S ANSWER ────────────────
+  //
+  // `enabled` comes from the `loyalty_config` settings domain — the same row
+  // the Loyalty settings screen writes. It used to come from
+  // getFacilityLoyaltyConfig(1): the fixture for facility 1, so a facility that
+  // had switched loyalty OFF still saw every loyalty screen, and one that had
+  // switched it on saw whatever the fixture said.
+  //
+  // `config` below is still the fixture shape. No consumer reads it (they read
+  // isEnabled, the feature flags and the permissions), and the stored
+  // programme is a different type — swapping it is the rest of making loyalty
+  // real, not the switch. Debt map.
+  const { settings } = useFacilitySettings();
+  const isEnabled = settings.loyalty_config.value.enabled === true;
+
   const config = useMemo(() => {
     if (!selectedFacility) return null;
     return getFacilityLoyaltyConfig(selectedFacility.id);
   }, [selectedFacility]);
-
-  // Check if loyalty is enabled at facility level
-  const isEnabled = useMemo(() => {
-    if (!config) return false;
-    return config.enabled === true;
-  }, [config]);
 
   // Check if enabled for specific location
   const isEnabledForLocation = useMemo(() => {
@@ -87,56 +96,28 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
     };
   }, [isEnabled, config, locationId]);
 
-  // Permission checks
-  const permissions = useMemo(() => {
-    // Default permissions based on role
-    const rolePermissions: Record<
-      string,
-      {
-        canViewLoyalty: boolean;
-        canManageLoyalty: boolean;
-        canViewReports: boolean;
-        canManageRewards: boolean;
-        canManageReferrals: boolean;
-      }
-    > = {
-      facility_admin: {
-        canViewLoyalty: true,
-        canManageLoyalty: true,
-        canViewReports: true,
-        canManageRewards: true,
-        canManageReferrals: true,
-      },
-      manager: {
-        canViewLoyalty: true,
-        canManageLoyalty: true,
-        canViewReports: true,
-        canManageRewards: true,
-        canManageReferrals: true,
-      },
-      staff: {
-        canViewLoyalty: true,
-        canManageLoyalty: false,
-        canViewReports: true,
-        canManageRewards: false,
-        canManageReferrals: false,
-      },
-      front_desk: {
-        canViewLoyalty: true,
-        canManageLoyalty: false,
-        canViewReports: false,
-        canManageRewards: false,
-        canManageReferrals: false,
-      },
-    };
+  // ── THE VIEWER'S OWN GRANTS, NOT A ROLE THIS HOOK INVENTED ──────────────
+  //
+  // This was a table keyed on `userRole = "facility_admin"`, hard-coded two
+  // lines above it — so every caller, whatever their role, was handed the full
+  // set. `usePermission` is the same check the sidebar and the route guards
+  // make, and the keys are the marketing catalogue's own.
+  const canManageLoyalty = usePermission("marketing_manage_loyalty");
+  const canViewAnalytics = usePermission("marketing_view_analytics");
+  const canViewMarketing = usePermission("marketing_view");
+  const canManageReferrals = usePermission("marketing_manage_referrals");
 
-    const defaultPermissions =
-      rolePermissions[userRole || "staff"] || rolePermissions.staff;
-
-    // In production, check actual permissions from userPermissions
-    // For now, use role-based defaults
-    return defaultPermissions;
-  }, [userRole]);
+  const permissions = useMemo(
+    () => ({
+      // Whoever may manage the programme may obviously see it.
+      canViewLoyalty: canViewMarketing || canManageLoyalty,
+      canManageLoyalty,
+      canViewReports: canViewAnalytics || canManageLoyalty,
+      canManageRewards: canManageLoyalty,
+      canManageReferrals,
+    }),
+    [canViewMarketing, canManageLoyalty, canViewAnalytics, canManageReferrals],
+  );
 
   // Feature flags from config
   const features = useMemo(() => {

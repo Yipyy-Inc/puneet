@@ -14593,6 +14593,42 @@ records on file" is never dressed up as up to date. Its words are the
 `bookingReadiness` staff area; a document's type reads in the client file's own
 words. The rest of the drawer is still English.
 
+**Fixed 2026-09-16: four settings that saved in a browser, or read a fixture,
+now belong to the facility.**
+
+- **Weather areas.** The areas a facility adds beside the shipped ones
+  ("Back paddock") were `localStorage["yipyy-forecast-custom-areas"]`, so a rule
+  written on the manager's laptop named an area no other browser had heard of,
+  and read on the floor's screen as applying to nothing. They are the
+  `weather_areas` domain now, seeded behind `isPending` so an empty default
+  cannot be written back over a facility's own list.
+- **Max pets per staff.** `localStorage["yipyy:max-pets-per-staff:11:daycare"]`
+  — the fixture facility, in one browser, shared by every facility and owned by
+  none. It is the `staffing_ratios` domain, and the card no longer takes a
+  facility prop. **It is still read by nothing**: Smart Insights is the intended
+  consumer and is fixture data, so this stores a policy nobody acts on yet.
+- **Loyalty's on/off switch.** `useLoyaltyConfig` read
+  `getFacilityLoyaltyConfig(1)` — the fixture for facility 1 — so a facility
+  that had switched loyalty off still saw every loyalty screen. `isEnabled` is
+  `loyalty_config.enabled` now, the row the Loyalty settings screen writes. Its
+  permissions were a table keyed on a hard-coded `userRole = "facility_admin"`,
+  handing every caller the full set; they are `usePermission` against the
+  marketing catalogue's own keys now.
+- **The subscription card.** Settings → Subscription rendered one invented plan
+  from `src/data/settings`: the same name, price and renewal date for every
+  facility. It reads `facility_subscriptions` through
+  `/api/facility/subscription` (RLS already answers
+  `private.is_facility_admin`), and a facility nobody has put on a plan says so
+  instead of being shown a plan it is not on.
+
+**Still debt here.** `useLoyaltyConfig`'s `config` object is still the fixture's
+shape — no consumer reads it (they read `isEnabled`, the feature flags and the
+permissions) and the stored programme is a different type, so swapping it
+belongs with making loyalty real. The account-side billing screens
+(`/facility/account/subscription`, `payment-method`, `change-plan`) still read
+the `facility-billing` fixtures with a hard-coded facility; that is the
+platform-billing work.
+
 **Fixed 2026-09-16: the calendar and Daily Care stop passing fixture facility
 11 around.** The operations calendar declared `FACILITY_ID = 11` and handed it
 to `buildUnifiedEvents`, where three builders filtered
