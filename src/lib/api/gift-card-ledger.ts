@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { createServerClient } from "@/lib/supabase/server";
+import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
 
 // ============================================================================
 // Reading a gift card's ledger, once, for both routes that need it.
@@ -142,15 +143,29 @@ export async function ledgersForFacility(
   supabase: Client,
   facilityId: string,
 ): Promise<Map<string, GiftCardTransactionRow[]>> {
-  const { data, error } = await supabase
-    .from("gift_card_transactions")
-    .select(LEDGER_SELECT)
-    .eq("facility_id", facilityId)
-    .order("created_at", { ascending: true });
+  // ── PAGED, BECAUSE THIS TABLE IS THE BIGGEST ONE THERE IS ───────────────
+  //
+  // PostgREST answers at most 1000 rows to an unbounded select, silently, and
+  // `gift_card_transactions` stands at 12,940 for one facility — a ledger is
+  // append-only, so it only grows. Unpaged, this returned the first thousand
+  // and the screen above it summed them into a revenue tile: a money figure
+  // that was wrong, with nothing on screen saying it was partial.
+  //
+  // Worse than the list it feeds, because a short LIST looks short. A total
+  // computed from a short list looks like a total.
+  const { rows: data, error } = await readAllPages<LedgerRecord>(
+    supabase
+      .from("gift_card_transactions")
+      .select(LEDGER_SELECT)
+      .eq("facility_id", facilityId)
+      .order("created_at", {
+        ascending: true,
+      }) as unknown as RangeableQuery<LedgerRecord>,
+  );
 
   if (error) throw new Error(`Gift-card ledger unavailable: ${error.message}`);
 
-  const rows = (data ?? []) as unknown as LedgerRecord[];
+  const rows = data;
   const refs = await refsForBookings(
     supabase,
     rows.map((row) => row.booking_id).filter((v): v is string => Boolean(v)),

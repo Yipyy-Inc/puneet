@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
+import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
 import {
   careGuestFromBooking,
   type BookingCareDetails,
@@ -118,14 +119,21 @@ export async function GET(request: NextRequest) {
   // ended before it began — a range check rather than "today", because the
   // board's date arrows step backwards and forwards and a journal that only
   // works for today is not a journal.
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(SELECT)
-    .match(inFacility(scope))
-    .eq("service", "boarding")
-    .lte("start_at", `${date}T23:59:59Z`)
-    .gte("end_at", `${date}T00:00:00Z`)
-    .order("ref", { ascending: true });
+  // Paged, though this one is already narrowed to a single day and is the least
+  // likely of the three to reach a thousand. It is paged anyway because the
+  // rule is about the READ, not about today's row count: an unbounded select
+  // stops at 1000 without saying so, and a boarding board that silently omits
+  // guests is the worst possible place to find that out.
+  const { rows: data, error } = await readAllPages<Row>(
+    supabase
+      .from("bookings")
+      .select(SELECT)
+      .match(inFacility(scope))
+      .eq("service", "boarding")
+      .lte("start_at", `${date}T23:59:59Z`)
+      .gte("end_at", `${date}T00:00:00Z`)
+      .order("ref", { ascending: true }) as unknown as RangeableQuery<Row>,
+  );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

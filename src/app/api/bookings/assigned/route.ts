@@ -4,6 +4,7 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 import { ownStaffId } from "@/lib/api/own-staff";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
+import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
 
 // ============================================================================
 // What is assigned to the caller: which bookings, and which pets through them.
@@ -76,13 +77,26 @@ export async function GET() {
   // would make the screen show a failure instead of a fact.
   if (!staffId) return NextResponse.json({ refs: [], petIds: [] });
 
-  const { data, error } = await supabase
-    .from("bookings")
-    // A booking covers one pet or several, through the booking_pets join —
-    // there is no pet column on `bookings` itself.
-    .select("ref, booking_pets ( pets:pet_id ( ref ) )")
-    .eq("facility_id", context.facilityId)
-    .eq("assigned_staff_id", staffId);
+  // Paged: an unbounded select stops at 1000 rows in silence, and this facility
+  // holds 1,325 bookings. This answer decides what an assigned-scope viewer may
+  // see at all, so a short read does not show them less — it hides work that is
+  // theirs.
+  type AssignedBooking = {
+    ref: number;
+    booking_pets: { pets: { ref: number } | null }[] | null;
+  };
+  const { rows: data, error } = await readAllPages<AssignedBooking>(
+    supabase
+      .from("bookings")
+      // A booking covers one pet or several, through the booking_pets join —
+      // there is no pet column on `bookings` itself.
+      .select("ref, booking_pets ( pets:pet_id ( ref ) )")
+      .eq("facility_id", context.facilityId)
+      .eq(
+        "assigned_staff_id",
+        staffId,
+      ) as unknown as RangeableQuery<AssignedBooking>,
+  );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

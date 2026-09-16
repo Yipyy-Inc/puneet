@@ -10,6 +10,7 @@ import {
   type CardRecord,
 } from "@/lib/api/mappers/gift-card";
 import { createServerClient } from "@/lib/supabase/server";
+import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
 
 // ============================================================================
 // Gift cards: what the facility has issued, and what it still owes on them.
@@ -91,13 +92,20 @@ export async function GET(request: NextRequest) {
   const status = params.get("status");
   if (status && status !== "all") query = query.eq("status", status);
 
-  const { data, error } = await query;
+  // Paged: PostgREST answers at most 1000 rows to an unbounded select, in
+  // silence, and this facility holds 5,975 cards. Unpaged, the screen's reports
+  // tab summed the first thousand and called it the facility's gift-card
+  // revenue. A code LOOKUP is unaffected either way — it matches one row — but
+  // the list behind the totals was short.
+  const { rows: data, error } = await readAllPages<CardRecord>(
+    query as unknown as RangeableQuery<CardRecord>,
+  );
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
   const now = Date.now();
-  const cards = ((data ?? []) as unknown as CardRecord[]).map((row) =>
+  const cards = (data as unknown as CardRecord[]).map((row) =>
     toCardRow(row, now),
   );
 
