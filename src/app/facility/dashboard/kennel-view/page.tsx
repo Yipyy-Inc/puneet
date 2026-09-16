@@ -497,7 +497,6 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
       if (!target || target.status === "maintenance") return;
       openBookingModal({
         clients: liveClients,
-        facilityId: 11,
         facilityName: profile.businessName,
         preSelectedService: "boarding",
         preSelectedRoomId: kennelId,
@@ -524,7 +523,6 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
       if (!target || target.status === "maintenance") return;
       openBookingModal({
         clients: liveClients,
-        facilityId: 11,
         facilityName: profile.businessName,
         preSelectedService: "daycare",
         preSelectedDaycareSectionId: sectionId,

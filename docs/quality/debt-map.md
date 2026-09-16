@@ -15475,3 +15475,80 @@ line is expected output), and no timing assertion was found in the suite.
 BEFORE re-running — `bun run test:unit > /tmp/unit.log 2>&1`. One failing name
 settles this in a minute; without it, a green re-run proves nothing except that
 it is intermittent. CI has not gone red on it.
+
+### The hardcoded facility 11, classified to the end (2026-09-16)
+
+Every remaining `= 11` in `src/` outside `src/data/` was read and put in one of
+three boxes, so the next person does not have to re-derive this.
+
+**BOX 1 — real rows filtered or labelled by a fake facility. All fixed.**
+These are the ones that matter: a real user, on a screen that makes a claim
+about their own data.
+
+- `mappers/booking.ts` stamped `facilityId: 11` on every booking.
+- `/api/grooming/stations` reported 11 on every real station, because the client
+  filtered `s.facilityId === 11` afterwards.
+- **Boarding rooms and daycare play areas** — `/api/rooms` was already fixed to
+  stamp each facility's OWN `legacy_id` (0 for one created since the mock era),
+  but both screens still filtered against a hardcoded 11 handed down by their
+  pages. Measured: `yipyy-demo-facility` has `legacy_id = 11` and worked;
+  **`doggieville-mtl` and `paws-co-demo` each have 4 room categories and showed
+  NOTHING** on Rooms & Suites and Play Areas. `paws-co-demo` is the client's own
+  demo account.
+- The customer wallet, gift cards and redeem flow (also hardcoded to client 15).
+- The public `/[facilitySlug]/check-balance` page's branding.
+- Four booking-modal call sites that invented a facility for a prop whose only
+  use is a browser-local storage key.
+
+**BOX 2 — fixture-consistent, and correct as they are.** The screen reads a
+fixture whose rows ARE facility 11's, so the number matches its data and
+changing it would empty the screen. These convert when their data does, not
+before: the audit trails (`@/data/tenant-logs`), notes (`@/data/tags-notes`),
+smart insights (`@/data/smart-insights`), retail, announcements, check-in
+requirements, `agreements-store`, `ContactList`, the support inbox,
+`form-audit` (18 rows), the cash drawer's `register-context` (no backend at all,
+so it MUST match its seeded sessions), `LocationDetailSheet`, and the four
+platform-billing screens. The synthetic platform reports
+(`financial-report`, `facilities-report`) assign a jurisdiction by hash and
+never touch a real transaction.
+
+**BOX 3 — not a facility at all.** `digits.length === 11` (a phone number),
+`month === 11` (a month), `DEFAULT_ZOOM = 11` (a map zoom). A grep for `11`
+finds these; a reader has to not act on them.
+
+**The rule that separates box 1 from box 2**, and the one to apply to the next
+one of these: _is the row real?_ A fixture filtered by its own fixture key is
+consistent. A row from Postgres compared against any number at all is a bug
+waiting for a second facility, because a facility is a uuid and has no number.
+
+### An interrupted e2e run frames the NEXT run for its own mess (2026-09-16)
+
+A targeted run of the rooms specs came back **2 failed, 16 passed**:
+`boarding-occupancy` counted 32 rooms where the seed has 29, and
+`boarding-kennel-board` got a 422 where the exclusion constraint should say 409.
+Both had passed in the full suite hours earlier, on the same data, so it read
+exactly like a regression in the change under test.
+
+It was not. The run's own log said so, four lines from the end:
+
+```
+cleanup (before): 3 room(s), 1 category(ies)
+```
+
+`rooms-admin` sweeps orphans at its START, and it ran LAST in that file order —
+so the three rooms an INTERRUPTED earlier run had left behind were still present
+while `boarding-occupancy` counted, and were gone by the time anyone looked at
+the database. 29 + 3 = 32. Re-running the two specs with the residue cleared:
+**14 passed**.
+
+**Do instead** when a spec that passed this morning fails this afternoon on
+unchanged data:
+
+1. Read the run's own cleanup lines before blaming the diff — `grep -i cleanup`.
+   A `cleanup (before)` that removes anything means the previous run did not
+   finish.
+2. Count the rows in the database and compare with what the spec expects. Here
+   the table held exactly the seeded 29, which proves the extra 3 existed only
+   DURING the run.
+3. Remember that an interrupted run's `afterAll` never executes — so the cost
+   of stopping a suite is paid by the next one, not by the one you stopped.

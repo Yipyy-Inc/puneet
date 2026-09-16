@@ -1323,7 +1323,6 @@ export default function PetDetailPage({
           open={bookingModalOpen}
           onOpenChange={setBookingModalOpen}
           clients={allClients}
-          facilityId={11}
           facilityName={facilityProfile.businessName}
           onCreateBooking={handleCreateBooking}
           preSelectedClientId={Number(id)}
