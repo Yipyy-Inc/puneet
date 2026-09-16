@@ -150,9 +150,11 @@ export default function DaycareLayout({
                 onClick={() =>
                   openBookingModal({
                     clients,
-                    // The modal still keys fixture-era lookups (tax, add-on
-                    // storage) by this number; the header passes the same 11.
-                    facilityId: 11,
+                    // No `facilityId`. The modal's only use for it is the
+                    // browser-local add-on store's scope key, and it has no
+                    // number to be given — a facility is a uuid. Absent, that
+                    // store falls back to its unscoped key, which the modal
+                    // already watches.
                     facilityName: profile.businessName,
                     preSelectedService: "daycare",
                     onCreateBooking: handleCreateBooking,

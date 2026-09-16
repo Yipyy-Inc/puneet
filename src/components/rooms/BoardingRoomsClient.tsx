@@ -10,11 +10,7 @@ import { CategoryFormDialog } from "@/components/rooms/CategoryFormDialog";
 import { RoomUnitFormDialog } from "@/components/rooms/RoomUnitFormDialog";
 import { useRooms } from "@/hooks/use-rooms";
 
-interface Props {
-  facilityId?: number;
-}
-
-export function BoardingRoomsClient({ facilityId = 11 }: Props) {
+export function BoardingRoomsClient() {
   const {
     categories: allCategories,
     rooms: allRooms,
@@ -36,14 +32,18 @@ export function BoardingRoomsClient({ facilityId = 11 }: Props) {
     if (writeError) toast.error(writeError);
   }, [writeError]);
 
-  // Scope to this facility + boarding service
-  const categories = allCategories.filter(
-    (c) => c.facilityId === facilityId && c.service === "boarding",
-  );
+  // Scope to the BOARDING service, and to nothing else.
+  //
+  // There was a `c.facilityId === facilityId` here too, against a hardcoded 11
+  // handed down by the page. `/api/rooms` already answers with this facility's
+  // rooms — `activeFacilityIdForStaff()` plus RLS — and stamps each row with
+  // the facility's OWN `legacyRef`, 0 for anything created since the mock era.
+  // So the filter did not narrow the list, it emptied it: every facility whose
+  // legacy ref is not 11 saw no boarding rooms at all, on the screen that
+  // exists to manage them.
+  const categories = allCategories.filter((c) => c.service === "boarding");
   const categoryIds = new Set(categories.map((c) => c.id));
-  const rooms = allRooms.filter(
-    (r) => r.facilityId === facilityId && categoryIds.has(r.categoryId),
-  );
+  const rooms = allRooms.filter((r) => categoryIds.has(r.categoryId));
 
   const [catDialog, setCatDialog] = useState<{
     open: boolean;
@@ -200,7 +200,6 @@ export function BoardingRoomsClient({ facilityId = 11 }: Props) {
       <CategoryFormDialog
         open={catDialog.open}
         editing={catDialog.editing}
-        facilityId={facilityId}
         onClose={() => setCatDialog({ open: false, editing: null })}
         onSave={saveCategory}
       />
@@ -212,7 +211,6 @@ export function BoardingRoomsClient({ facilityId = 11 }: Props) {
         categoryName={
           categories.find((c) => c.id === unitDialog.categoryId)?.name
         }
-        facilityId={facilityId}
         onClose={() =>
           setUnitDialog({ open: false, editing: null, categoryId: "" })
         }

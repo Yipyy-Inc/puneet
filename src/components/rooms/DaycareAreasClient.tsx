@@ -52,16 +52,11 @@ const NO_BOOKINGS: Booking[] = [];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
-interface Props {
-  facilityId?: number;
-}
-
 // ── Blank templates ────────────────────────────────────────────────────────────
 
-function blankArea(facilityId: number, sortOrder: number): DaycarePlayArea {
+function blankArea(sortOrder: number): DaycarePlayArea {
   return {
     id: `area-${Date.now()}`,
-    facilityId,
     name: "",
     description: "",
     isActive: true,
@@ -69,15 +64,10 @@ function blankArea(facilityId: number, sortOrder: number): DaycarePlayArea {
   };
 }
 
-function blankSection(
-  facilityId: number,
-  playAreaId: string,
-  sortOrder: number,
-): DaycareSection {
+function blankSection(playAreaId: string, sortOrder: number): DaycareSection {
   return {
     id: `sec-${Date.now()}`,
     playAreaId,
-    facilityId,
     name: "",
     capacity: 20,
     description: "",
@@ -90,7 +80,7 @@ function blankSection(
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function DaycareAreasClient({ facilityId = 11 }: Props) {
+export function DaycareAreasClient() {
   const {
     areas: allAreas,
     sections: allSections,
@@ -104,11 +94,13 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
     toggleSection: toggleSectionInHook,
   } = useDaycareAreas();
 
-  const areas = allAreas.filter((a) => a.facilityId === facilityId);
+  // No facility filter. These come from `/api/rooms`, already scoped to the
+  // session facility, and each row is stamped with that facility's OWN legacy
+  // ref (0 for one created since the mock era) — so comparing against the
+  // hardcoded 11 this page used to pass did not narrow the list, it emptied it.
+  const areas = allAreas;
   const areaIds = new Set(areas.map((a) => a.id));
-  const sections = allSections.filter(
-    (s) => s.facilityId === facilityId && areaIds.has(s.playAreaId),
-  );
+  const sections = allSections.filter((s) => areaIds.has(s.playAreaId));
 
   // Area dialog
   const [areaDialog, setAreaDialog] = useState<{
@@ -155,7 +147,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
   const openAreaDialog = (area?: DaycarePlayArea) => {
     setAreaDialog({
       open: true,
-      data: area ?? blankArea(facilityId, areas.length + 1),
+      data: area ?? blankArea(areas.length + 1),
     });
   };
 
@@ -190,9 +182,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
     const existingForArea = sections.filter((s) => s.playAreaId === playAreaId);
     setSectionDialog({
       open: true,
-      data:
-        section ??
-        blankSection(facilityId, playAreaId, existingForArea.length + 1),
+      data: section ?? blankSection(playAreaId, existingForArea.length + 1),
       isNew: !section,
     });
   };

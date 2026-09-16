@@ -34,7 +34,13 @@ export type RoomCategoryColor =
 
 export interface RoomCategory {
   id: string;
-  facilityId: number;
+  /**
+   * A LABEL, not a scope — `/api/rooms` stamps the facility's own `legacyRef`
+   * here (0 for one created since the mock era), and the rows key on a uuid.
+   * Optional because a caller building a draft has no number to invent: the
+   * write derives the facility from the session. Never filter by it.
+   */
+  facilityId?: number;
   service: FacilityRoomService;
   name: string;
   description?: string;
@@ -67,7 +73,8 @@ export interface RoomCategory {
 export interface FacilityRoom {
   id: string;
   categoryId: string;
-  facilityId: number;
+  /** A LABEL, not a scope — see `RoomCategory.facilityId`. */
+  facilityId?: number;
   name: string;
   active: boolean;
   /** Overrides category defaultCapacity when set */
@@ -97,7 +104,8 @@ export interface FacilityRoom {
  */
 export interface DaycarePlayArea {
   id: string;
-  facilityId: number;
+  /** A LABEL, not a scope — derived from the room category it reads. */
+  facilityId?: number;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -112,7 +120,8 @@ export interface DaycarePlayArea {
 export interface DaycareSection {
   id: string;
   playAreaId: string;
-  facilityId: number;
+  /** A LABEL, not a scope — see `DaycarePlayArea.facilityId`. */
+  facilityId?: number;
   name: string;
   /** Maximum number of pets per day */
   capacity: number;
