@@ -182,3 +182,59 @@ export function createDefaultDraft(): FacilityDraft {
     adminEmail: "",
   };
 }
+
+// ============================================================================
+// An application's country, as one of the four options above.
+//
+// A facility application carries whatever the applicant typed — "USA",
+// "United States", "us", "U.S.A.", "Canada". The approve-and-prefill path read
+// it as `country.toUpperCase().includes("US") ? "US" : "CA"`, which is wrong in
+// BOTH directions and silently:
+//
+//   "UNITED STATES" does not contain "US"  → the commonest American spelling
+//                                            was prefilled as Canada
+//   "AUSTRALIA"     does contain "US"      → an Australian applicant was
+//                                            prefilled as the United States
+//
+// and it could never produce GB or AU at all, though the wizard offers both.
+//
+// Country decides the currency and the tax regime of the facility that gets
+// provisioned — CA takes GST/HST/QST and Canadian dollars — so a wrong guess
+// is money, not a cosmetic default.
+//
+// Unrecognised input still falls back to CA, exactly as before. The value is a
+// PREFILL: the wizard shows it and a person confirms it before a facility
+// exists, so the honest failure is "we did not recognise this", not a guess
+// dressed up as a match.
+// ============================================================================
+
+const COUNTRY_ALIASES: Record<string, string> = {
+  US: "US",
+  USA: "US",
+  UNITEDSTATES: "US",
+  UNITEDSTATESOFAMERICA: "US",
+  AMERICA: "US",
+  CA: "CA",
+  CAN: "CA",
+  CANADA: "CA",
+  GB: "GB",
+  GBR: "GB",
+  UK: "GB",
+  UNITEDKINGDOM: "GB",
+  GREATBRITAIN: "GB",
+  ENGLAND: "GB",
+  SCOTLAND: "GB",
+  WALES: "GB",
+  NORTHERNIRELAND: "GB",
+  AU: "AU",
+  AUS: "AU",
+  AUSTRALIA: "AU",
+};
+
+/** The wizard option matching `raw`, or "CA" when nothing does. */
+export function countryOptionFor(raw: string | null | undefined): string {
+  // Letters only, so "U.S.A.", "u s a" and "USA" are one key.
+  const key = (raw ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+  if (!key) return "CA";
+  return COUNTRY_ALIASES[key] ?? "CA";
+}
