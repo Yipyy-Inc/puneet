@@ -24,6 +24,10 @@ import {
   useBoardingStayUpdate,
 } from "@/lib/api/boarding-attendance";
 import { bookingQueries } from "@/lib/api/booking";
+import {
+  CLOSED_BOOKING_STATUSES,
+  OPEN_BOOKING_STATUSES,
+} from "@/lib/settings/booking-statuses";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { formatDateShort } from "@/lib/i18n/format";
 import type { Booking } from "@/types/booking";
@@ -174,7 +178,9 @@ function toDaycareCategories(areas: DaycarePlayArea[]): RoomCategory[] {
 // A daycare section holds many dogs and this board draws ONE guest per row,
 // so it cannot show a busy yard; the daycare check-in board is where the day's
 // dogs are. See the debt map.
-const CLOSED = ["cancelled", "declined", "no_show", "completed"];
+// Shared with the QUERY below, deliberately: this filter and that request must
+// name the same set, and two hand-written lists are two chances to disagree.
+const CLOSED: readonly string[] = CLOSED_BOOKING_STATUSES;
 const NO_BOOKINGS: Booking[] = [];
 
 function daycareDay(b: Booking): string {
@@ -289,8 +295,22 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   // occupancy-calendar spec as "We couldn't load your board".
   const [today] = useState(() => new Date().toISOString().slice(0, 10));
   // From today on: the board shows what is here and what is coming.
+  //
+  // ── THE STATUSES ARE NAMED BECAUSE BOTH READERS DROP THE REST ───────────
+  //
+  // This one query feeds `buildDaycareKennels` (skips CLOSED) and
+  // `petServicesMap` (keeps LIVE_STATUSES, a subset), so a closed booking has
+  // never reached the screen. It reached the BROWSER, though: measured against
+  // the e2e facility, `{ from: today }` answered 977 rows in 11.3 s warm and
+  // 18.5 s cold, of which 5 survived both filters. Named, the same 5 arrive in
+  // 2.3 s. Nothing is lost — see OPEN_BOOKING_STATUSES, derived from the same
+  // CLOSED list the filter below uses so the two cannot drift.
+  //
+  // This window has no `to` on purpose — the board shows what is coming, and a
+  // horizon would quietly turn a far-off reservation into a vacant run — which
+  // is why it is the read that grows without bound and the one worth narrowing.
   const { data: bookingsData } = useQuery(
-    bookingQueries.window({ from: today }),
+    bookingQueries.window({ from: today, statuses: OPEN_BOOKING_STATUSES }),
   );
   const allBookings = bookingsData ?? NO_BOOKINGS;
   const [daycareKennels, setDaycareKennels] = useState<Kennel[]>([]);
