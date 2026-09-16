@@ -4,6 +4,7 @@ import { getFacilityContext } from "@/lib/api/facility-context";
 import { ownStaffId } from "@/lib/api/own-staff";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
+import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
 
 // ============================================================================
 // Which clients are assigned to one staff member.
@@ -86,11 +87,20 @@ export async function GET() {
   // and a 404 would make the screen show a failure instead of a fact.
   if (!staffId) return NextResponse.json({ refs: [] });
 
-  const { data, error } = await supabase
-    .from("bookings")
-    .select("clients:client_id ( ref )")
-    .eq("facility_id", context.facilityId)
-    .eq("assigned_staff_id", staffId);
+  // Paged: an unbounded select stops at 1000 rows and says nothing, and this
+  // facility holds 1,325 bookings. Short, this drops clients out of a groomer's
+  // own list — and the list is what decides whose file they can open.
+  type AssignedRow = { clients: { ref: number } | null };
+  const { rows: data, error } = await readAllPages<AssignedRow>(
+    supabase
+      .from("bookings")
+      .select("clients:client_id ( ref )")
+      .eq("facility_id", context.facilityId)
+      .eq(
+        "assigned_staff_id",
+        staffId,
+      ) as unknown as RangeableQuery<AssignedRow>,
+  );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
