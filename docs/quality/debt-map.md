@@ -15423,26 +15423,36 @@ is read through filtered queries today but is the obvious next one. **Do
 instead:** when a read has no limit and its table only grows, page it — do not
 raise a cap, because the next thousand arrives too.
 
-**Where the thousand rows came from, measured the same day.** 1,282 of the e2e
-tenant's 1,459 bookings — **88%** — are test residue, carrying an `[e2e …]`
-marker in `special_requests` and dating back to **2026-08-04**. Six weeks of it:
+**Where the thousand rows came from, measured the same day — and a wrong
+diagnosis, corrected.** 1,114 of the e2e tenant's 1,459 bookings carry an
+`[e2e …]` marker in `special_requests` and date back to **2026-08-04**:
 `payment-ledger` 271, `dashboard-board` 215, `checkout-truth` 201,
-`payment-screens` 178, `booking-form` 120, `gift-card-payment` 93, and a long
-tail.
+`payment-screens` 178, `booking-form` 120, `gift-card-payment` 93, and a tail.
 
-So the cap was not crossed by the product. Specs are required to clean up after
-themselves and these have been leaking for weeks — some by a known route (the
-`booking-checkout-truth` afterAll whose refund answers 500 on a cancelled GST
-booking, already recorded above), some not yet traced, and any run killed
-part-way never runs its `afterAll` at all.
+**This was first written up here as a six-week LEAK — specs failing to clean up
+after themselves. That was wrong, and the correction matters more than the
+original claim.** Measured immediately after: **1,108 of those rows are
+`cancelled`, and 1,098 of them have `payments` rows attached.** The cleanup ran
+and did exactly what it is supposed to do. `booking-payment-ledger`'s own
+teardown says why it cancels rather than deletes:
 
-**Two separate jobs, and they should not be confused.** The pagination fix means
-the leak no longer BREAKS anything. It does not stop the leak, and a table that
-grows 1,282 rows in six weeks will find the next limit on its own — the
-`/api/bookings` read already takes ~12 s at this size.
+> The payment row cannot be removed, so the only honest cleanup is the one a
+> business would do.
 
-**Do instead:** treat a spec's cleanup as part of the spec. Assert the remaining
-count is zero in `afterAll`, and when a teardown call can fail (a refund, a
-cancel), fail the teardown loudly rather than leaving the row. Deleting the
-existing 1,282 is a separate, deliberate call on a SHARED PRODUCTION database
-and has not been done here.
+So these are not residue. They are **cancellation tombstones on an append-only
+ledger**, and they persist BY DESIGN. There is no leak to fix at source, and
+deleting them would mean destroying append-only financial records — the one
+thing the ledger exists to prevent. Do not "tidy" them.
+
+**What is actually true:** running money specs against a shared database grows
+the bookings table permanently, about a thousand rows per six weeks, and nothing
+about that is a defect. The consequence was the 1000-row cap above, and that is
+fixed by paging the read — correctly, because the row count was never going to
+come back down.
+
+**Do instead:** when a spec's subject cannot be deleted, say so in the teardown
+the way that one does, and expect the table to grow. The thing to watch is any
+UNBOUNDED read over it — `/api/bookings` already takes ~12 s at this size, and
+the screens asking for every booking are the next thing to narrow (see the
+bookings-list entry above). Do not treat a growing tombstone count as a mess to
+delete.
