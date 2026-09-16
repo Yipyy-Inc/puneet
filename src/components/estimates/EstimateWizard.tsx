@@ -40,7 +40,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { trainingClasses } from "@/data/training";
+import { trainingQueries } from "@/lib/api/training";
+import type { TrainingPackage } from "@/types/training";
 import { clientQueries, useCreateClient, useCreatePet } from "@/lib/api/client";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
@@ -70,7 +71,6 @@ import type { EstimateLineItem } from "@/types/booking";
 interface EstimateWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  facilityId: number;
 }
 
 const STEPS = [
@@ -108,6 +108,9 @@ function computeDefaultExpiry(defaultExpiryDays: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Stable empty list: a new array each render would restart the memos below. */
+const NO_PROGRAMS: TrainingPackage[] = [];
+
 export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // The facility's deposit terms, so an estimate quotes what the booking would
   // actually ask for.
@@ -121,6 +124,14 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // The roster. This was `clients` from `@/data/clients` filtered by an
   // invented facility name, so a real client could not be quoted at all.
   const { data: rosterData } = useQuery(clientQueries.all());
+  // The FACILITY's training programs (the `training_programs` domain), not the
+  // shipped `trainingClasses` fixture: an estimate quoted a program this
+  // business does not run, at a price it never set, and the sessions it offered
+  // were another facility's timetable.
+  const { data: trainingProgramData } = useQuery(trainingQueries.packages());
+  const trainingPrograms: TrainingPackage[] =
+    trainingProgramData ?? NO_PROGRAMS;
+  const offeredPrograms = trainingPrograms.filter((p) => p.isActive);
   const { create: createEstimate, act: actOnEstimate } = useEstimateMutations();
   const createClientMutation = useCreateClient();
   const createPetMutation = useCreatePet();
@@ -334,10 +345,10 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         total: price * days,
       });
     } else if (selectedService === "training") {
-      const program = trainingClasses.find((c) => c.id === trainingProgramId);
+      const program = trainingPrograms.find((p) => p.id === trainingProgramId);
       const perSession =
-        program && program.totalSessions > 0
-          ? Math.round(program.price / program.totalSessions)
+        program && program.sessions > 0
+          ? Math.round(program.price / program.sessions)
           : price;
       const sessions = Math.max(1, trainingSessions);
       items.push({
@@ -435,8 +446,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
 
   const handleSelectProgram = (id: string) => {
     setTrainingProgramId(id);
-    const program = trainingClasses.find((c) => c.id === id);
-    if (program) setTrainingSessions(program.totalSessions);
+    const program = trainingPrograms.find((p) => p.id === id);
+    if (program) setTrainingSessions(program.sessions);
   };
 
   // Whether the service-conditional inputs for the chosen service are complete.
@@ -1649,13 +1660,18 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                           <SelectValue placeholder="Select a training program" />
                         </SelectTrigger>
                         <SelectContent>
-                          {trainingClasses.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name} · {c.totalSessions} sessions
+                          {offeredPrograms.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name} · {p.sessions} sessions
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {offeredPrograms.length === 0 && (
+                        <p className="text-ink-tertiary text-[13.5px]">
+                          {wizT("noPrograms")}
+                        </p>
+                      )}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
