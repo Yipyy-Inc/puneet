@@ -152,7 +152,15 @@ export interface NewBookingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clients: Client[];
-  facilityId: number;
+  /**
+   * The FIXTURE's facility key, used for one thing: scoping the browser-local
+   * service add-ons store. Optional because a caller opening the modal from a
+   * REAL booking has no number to give — a facility is a uuid (see
+   * types/booking.ts) — and must not be made to invent one. Absent, the
+   * add-ons store falls back to its unscoped key, which this component already
+   * watches alongside the scoped one.
+   */
+  facilityId?: number;
   facilityName: string;
   /**
    * Saves the booking. The form WAITS for it: answer `false` (or throw) when

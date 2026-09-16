@@ -125,11 +125,10 @@ export async function GET() {
       const petName = occ?.booking?.booking_pets?.[0]?.pets?.name;
       return {
         id: appId(row),
-        // The screens still pass `facilityId: 11`. Reported as the legacy
-        // number rather than the uuid so the existing filters keep matching;
-        // this is display plumbing, never a security boundary — RLS already
-        // decided which rows are here.
-        facilityId: 11,
+        // No `facilityId`. These rows are already this facility's — the query
+        // is scoped by `activeFacilityIdForStaff()` above, and RLS beneath
+        // that — so the `11` that used to be reported here existed only to
+        // satisfy a client-side filter that re-checked what was already true.
         name: row.name,
         type: row.type as GroomingStation["type"],
         active: row.active,

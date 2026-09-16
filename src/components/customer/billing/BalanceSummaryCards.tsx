@@ -41,17 +41,23 @@ export function BalanceSummaryCards() {
     return filtered.reduce((sum, c) => sum + c.remainingAmount, 0);
   }, [customerId, selectedFacility]);
 
+  // Bought by you, or sent to your address — see BalancesTab for why matching a
+  // whole email DOMAIN here was showing one owner's card to everybody. This is
+  // the headline number on the billing page, so the wildcard did not just list
+  // a card that was not theirs, it added its balance to their total.
+  const customerEmail = customer?.email?.trim().toLowerCase();
   const totalGiftCardBalance = useMemo(() => {
     let filtered = giftCards.filter(
       (gc) =>
         (gc.purchasedByClientId === customerId ||
-          gc.recipientEmail?.includes("@example.com")) &&
+          (Boolean(customerEmail) &&
+            gc.recipientEmail?.trim().toLowerCase() === customerEmail)) &&
         gc.status === "active",
     );
     if (selectedFacility)
       filtered = filtered.filter((gc) => gc.facilityId === selectedFacility.id);
     return filtered.reduce((sum, gc) => sum + gc.currentBalance, 0);
-  }, [customerId, selectedFacility]);
+  }, [customerId, customerEmail, selectedFacility]);
 
   const totalOutstanding = useMemo(
     () =>

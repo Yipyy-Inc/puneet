@@ -107,9 +107,15 @@ export function SubscriptionSection() {
             </div>
           )}
           {/* Both of these were alert() describing a screen that already
-              exists. /facility/account/subscription and .../change-plan are
-              real routes over the real subscription — this card was the only
-              place in the product that did not know. */}
+              exists — /facility/account/subscription and .../change-plan are
+              real routes, and this card was the only place in the product that
+              did not know.
+
+              They are NOT yet over the real subscription, though: both still
+              read `facilityBillingQueries` over the `facility-billing`
+              fixture. So the plan named ABOVE is this facility's and the plan
+              named THROUGH these links is not, until the platform-billing work
+              converts them. Debt map. */}
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
               <Link href="/facility/account/subscription/change-plan">

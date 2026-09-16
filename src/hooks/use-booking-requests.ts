@@ -21,7 +21,7 @@ function isBookingRequest(value: unknown): value is BookingRequest {
   const v = value as Record<string, unknown>;
   return (
     typeof v.id === "string" &&
-    typeof v.facilityId === "number" &&
+    (v.facilityId === undefined || typeof v.facilityId === "number") &&
     typeof v.createdAt === "string" &&
     typeof v.appointmentAt === "string" &&
     typeof v.clientId === "number" &&

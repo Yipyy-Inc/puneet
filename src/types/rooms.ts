@@ -143,7 +143,17 @@ export type GroomingStationPetSize = "small" | "medium" | "large" | "giant";
 
 export interface GroomingStation {
   id: string;
-  facilityId: number;
+  /**
+   * Fixture-only; absent on a station read from Postgres.
+   *
+   * `/api/grooming/stations` used to stamp `11` onto every real row it
+   * returned, for one reason: the client filtered `s.facilityId === 11`
+   * afterwards, so the route had to report the number the filter expected. The
+   * filter was redundant — the query is already scoped by
+   * `activeFacilityIdForStaff()` and RLS — so a route was reporting a false
+   * facility to satisfy a check that could not fail. Both are gone.
+   */
+  facilityId?: number;
   type: GroomingStationType;
   name: string;
   active: boolean;

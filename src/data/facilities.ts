@@ -969,3 +969,17 @@ export const facilities = [
     ],
   },
 ];
+
+/**
+ * The facility every fixture row belongs to — "Example Pet Care Facility".
+ *
+ * All 26 fixture bookings, all 15 documents and all 32 gift cards carry this
+ * id, so a fixture screen that filters by facility has to compare against THIS
+ * and not against `facilities[0]`, which is a different business entirely.
+ * Comparing against the wrong one is not a narrower list, it is an empty one.
+ *
+ * It exists so the number lives once, next to the data it describes, instead
+ * of being copied into each screen. A screen that has moved to Postgres does
+ * not need it: a real facility is a uuid and has no number at all.
+ */
+export const FIXTURE_DATA_FACILITY_ID = 11;
