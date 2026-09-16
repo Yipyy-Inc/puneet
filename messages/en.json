@@ -10784,6 +10784,8 @@
         "txAddOn": "Add-on",
         "txRefund": "Refund",
         "txAdjustment": "Adjustment",
+        "txAdded": "Credit added",
+        "txSpent": "Spent",
         "usePackages": "Packages",
         "useAddOns": "Add-ons",
         "noWalletYet": "No wallet yet",

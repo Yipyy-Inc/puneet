@@ -17,6 +17,7 @@
 --    p_facility_id narrows to one.
 -- S6 Signed out is an empty answer, not an error and not everybody's.
 -- S7 anon can execute neither; authenticated can execute both.
+-- S8 total_in and total_out are summed over every entry and reconcile.
 -- ============================================================================
 
 begin;
@@ -100,6 +101,19 @@ begin
   select count(*) into v_rows from public.my_store_credit();
   perform pg_temp.t('S5 one row per facility she holds a record at',
     v_rows = 2, format('rows=%s', v_rows));
+
+  -- The totals are the POINT of putting them here: the wallet used to sum a
+  -- 200-row window and present it as the lot.
+  declare
+    v_in  numeric;
+    v_out numeric;
+  begin
+    select total_in, total_out into v_in, v_out from public.my_store_credit()
+     where facility_id = '00000000-0000-0000-0000-0000002ac020';
+    perform pg_temp.t('S8 in and out are summed over every entry, and reconcile',
+      v_in = 50 and v_out = 20 and (v_in - v_out) = v_north,
+      format('in=%s out=%s balance=%s', v_in, v_out, v_north));
+  end;
 
   select count(*) into v_narrowed
     from public.my_store_credit_entries('00000000-0000-0000-0000-0000002ac020', 100);

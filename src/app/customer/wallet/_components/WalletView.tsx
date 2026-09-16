@@ -19,9 +19,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { customerWallets, giftCards } from "@/data/gift-cards";
-import { useCurrentCustomer } from "@/lib/api/current-customer";
-import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useMyStoreCredit } from "@/lib/api/customer-store-credit";
+import { useMyGiftCards } from "@/lib/api/customer-gift-cards";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
 import {
@@ -31,69 +30,56 @@ import {
   formatTime,
 } from "@/lib/i18n/format";
 
-// WHO is asking comes from the session. This file named Alice Johnson —
-// `MOCK_CLIENT_ID = 15` at fixture facility 11 — and /customer/wallet is in the
-// customer sidebar, so every signed-in owner opening My Wallet was shown HER
-// balance, HER history and HER gift cards as their own. The last of the three
-// screens still doing that, after `useCurrentCustomer()` took the other
-// thirty-two off it.
+// ============================================================================
+// The owner's own wallet — their store credit, and the gift cards they hold.
 //
-// The wallet itself is still `src/data/gift-cards`, and the selected facility
-// matches none of those rows, so it answers with the empty state. That is the
-// honest output: the real ledger is `store_credit_entries`, whose read policy
-// has NO owner arm — the person whose money it is cannot read it yet. A
-// `my_store_credit()` projection is drafted for that; until it lands, an empty
-// wallet beats somebody else's. Debt map.
+// This file named Alice Johnson: `MOCK_CLIENT_ID = 15` at fixture facility 11,
+// over `src/data/gift-cards`. /customer/wallet is in the customer sidebar, so
+// every signed-in owner opening My Wallet was shown HER balance, HER history
+// and HER cards as their own.
+//
+// Both halves are real now. The credit comes from `store_credit_entries`
+// through `my_store_credit()`, which is keyed on the caller's own JWT and takes
+// no argument through which anyone could ask about somebody else; the cards
+// come from `/api/customer/gift-cards`.
+//
+// The ledger deliberately withholds `note` and `author_name` — staff write
+// those about a customer, to other staff — so this screen shows what moved and
+// when, and not the commentary beside it.
+// ============================================================================
 
-// A transaction type's words by CATALOGUE KEY in
-// `customerPages.areas.wallet`.
-const txTypeConfig: Record<
+// A movement's words by CATALOGUE KEY, keyed on the LEDGER's own `reason`.
+//
+// The fixture invented nine types (`service_payment`, `deposit_payment`,
+// `tip_payment`, `addon_payment` …) describing what the money was FOR.
+// `store_credit_entries.reason` has five and describes what happened to the
+// CREDIT: added, redeemed, refund, gift_card, adjustment. Three of the old
+// words fit exactly; `added` and `spent` are new, because the ledger draws the
+// line in a different place and pretending otherwise would put a label on a row
+// that does not mean it.
+const REASON_CONFIG: Record<
   string,
   { icon: typeof Wallet; color: string; labelKey: string; bg: string }
 > = {
-  gift_card_redeem: {
+  added: {
+    icon: Plus,
+    color: "text-green-600",
+    bg: "bg-green-100 dark:bg-green-900/30",
+    labelKey: "txAdded",
+  },
+  gift_card: {
     icon: Gift,
     color: "text-green-600",
     bg: "bg-green-100 dark:bg-green-900/30",
     labelKey: "txGiftCardRedeemed",
   },
-  service_payment: {
+  redeemed: {
     icon: DollarSign,
     color: "text-blue-600",
     bg: "bg-blue-100 dark:bg-blue-900/30",
-    labelKey: "txServicePayment",
+    labelKey: "txSpent",
   },
-  deposit_payment: {
-    icon: Home,
-    color: "text-violet-600",
-    bg: "bg-violet-100 dark:bg-violet-900/30",
-    labelKey: "txDeposit",
-  },
-  package_payment: {
-    icon: Package,
-    color: "text-purple-600",
-    bg: "bg-purple-100 dark:bg-purple-900/30",
-    labelKey: "txPackagePayment",
-  },
-  retail_payment: {
-    icon: ShoppingBag,
-    color: "text-amber-600",
-    bg: "bg-amber-100 dark:bg-amber-900/30",
-    labelKey: "txRetailPurchase",
-  },
-  tip_payment: {
-    icon: Sparkles,
-    color: "text-pink-600",
-    bg: "bg-pink-100 dark:bg-pink-900/30",
-    labelKey: "txTip",
-  },
-  addon_payment: {
-    icon: Plus,
-    color: "text-orange-600",
-    bg: "bg-orange-100 dark:bg-orange-900/30",
-    labelKey: "txAddOn",
-  },
-  refund_in: {
+  refund: {
     icon: ArrowUpRight,
     color: "text-teal-600",
     bg: "bg-teal-100 dark:bg-teal-900/30",
@@ -120,58 +106,54 @@ const USES: { icon: typeof Wallet; service?: string; key?: string }[] = [
 
 export function WalletView() {
   const { t, fill, locale } = useCustomerText("wallet");
-  const { client } = useCurrentCustomer();
-  // `-1` matches no client and no facility — nothing, rather than somebody
-  // else, while the session resolves.
-  const clientId = client?.id ?? -1;
-  const clientEmail = client?.email?.trim().toLowerCase();
-  const { selectedFacility } = useCustomerFacility();
-  const facilityId = selectedFacility?.id ?? -1;
+  const { accounts, entries, isPending } = useMyStoreCredit();
+  const { cards } = useMyGiftCards();
 
-  const wallet = customerWallets.find(
-    (w) => w.clientId === clientId && w.facilityId === facilityId,
+  // The BALANCE is the sum of the accounts, and an account is itself the sum of
+  // a facility's ledger. A person can hold credit at more than one facility —
+  // the row name says which — so the hero is their total and the list below
+  // names the facility whenever there is more than one to tell apart.
+  const balance = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const facilityNames = useMemo(
+    () => new Map(accounts.map((a) => [a.facilityId, a.facilityName])),
+    [accounts],
   );
+  const showFacility = accounts.length > 1;
 
-  // A card is yours if you BOUGHT it or it was SENT to your address. The second
-  // arm was `recipientEmail?.includes("alice")` — a match on a substring of a
-  // first name, so any card sent to any Alice, Alicia or alice@ anywhere was
-  // counted as this viewer's. The third of these wildcards found today; the
-  // other two were in the billing tabs.
   const myGiftCards = useMemo(
-    () =>
-      giftCards.filter(
-        (gc) =>
-          gc.facilityId === facilityId &&
-          (gc.purchasedByClientId === clientId ||
-            (Boolean(clientEmail) &&
-              gc.recipientEmail?.trim().toLowerCase() === clientEmail)) &&
-          gc.status === "active",
-      ),
-    [facilityId, clientId, clientEmail],
+    () => cards.filter((gc) => gc.effectiveStatus === "active"),
+    [cards],
   );
 
-  const totalIn = useMemo(
-    () =>
-      (wallet?.transactions ?? [])
-        .filter((tx) => tx.amount > 0)
-        .reduce((s, tx) => s + tx.amount, 0),
-    [wallet],
-  );
-
-  const totalOut = useMemo(
-    () =>
-      (wallet?.transactions ?? [])
-        .filter((tx) => tx.amount < 0)
-        .reduce((s, tx) => s + Math.abs(tx.amount), 0),
-    [wallet],
-  );
+  // From the ACCOUNTS, not from `entries`. `entries` is the most recent 200 and
+  // the e2e client has 465, so summing the list on screen would have shown a
+  // "Total received" far below the real $20,116.27 — understated, with nothing
+  // saying it was a partial view. A total is an aggregate fact, so it is
+  // computed where the balance is.
+  const totalIn = accounts.reduce((sum, a) => sum + a.totalIn, 0);
+  const totalOut = accounts.reduce((sum, a) => sum + a.totalOut, 0);
 
   const formatDate = (s: string) => formatDateLong(s, locale);
 
   const formatDateTime = (s: string) =>
     `${formatDateShort(s, locale)} · ${formatTime(s, locale)}`;
 
-  if (!wallet) {
+  // Waiting is not "no wallet yet". The fixture answered instantly, so that
+  // empty state was safe to render immediately; over a request it tells
+  // somebody they have no credit before anyone has looked (§5s).
+  if (isPending) {
+    return (
+      <div className="space-y-5" aria-busy="true">
+        <div className="bg-muted h-44 animate-pulse rounded-2xl" />
+        <div className="bg-muted h-20 animate-pulse rounded-xl" />
+        <div className="bg-muted h-20 animate-pulse rounded-xl" />
+      </div>
+    );
+  }
+
+  // No account anywhere AND nothing ever moved. An account that has been
+  // emptied still has a history worth showing, so both have to be absent.
+  if (accounts.length === 0 && entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="bg-muted flex size-16 items-center justify-center rounded-full">
@@ -207,7 +189,7 @@ export function WalletView() {
                 </span>
               </div>
               <p className="mt-2 text-5xl font-bold tracking-tight">
-                {formatMoney(wallet.balance, locale)}
+                {formatMoney(balance, locale)}
               </p>
               <p className="mt-1 text-sm opacity-70">{t("availableBalance")}</p>
             </div>
@@ -278,24 +260,22 @@ export function WalletView() {
                       ****{gc.code.slice(-6)}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {fill("issuedOn", { date: formatDate(gc.purchaseDate) })}{" "}
-                      ·{" "}
-                      {gc.neverExpires
-                        ? t("neverExpires")
-                        : gc.expiryDate
-                          ? fill("expiresOn", {
-                              date: formatDate(gc.expiryDate),
-                            })
-                          : ""}
+                      {fill("issuedOn", { date: formatDate(gc.issuedAt) })} ·{" "}
+                      {/* One nullable column instead of the fixture's
+                          `neverExpires` boolean beside an `expiryDate` that
+                          could disagree with it. */}
+                      {gc.expiresAt
+                        ? fill("expiresOn", { date: formatDate(gc.expiresAt) })
+                        : t("neverExpires")}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-green-600">
-                    {formatMoney(gc.currentBalance, locale)}
+                    {formatMoney(gc.balance, locale)}
                   </p>
                   <Badge variant="outline" className="mt-0.5 text-xs">
-                    {gc.type === "physical"
+                    {gc.kind === "physical"
                       ? t("cardPhysical")
                       : t("cardOnline")}
                   </Badge>
@@ -319,7 +299,7 @@ export function WalletView() {
       {/* Transaction history */}
       <div>
         <h3 className="mb-3 font-semibold">{t("transactionHistory")}</h3>
-        {wallet.transactions.length === 0 ? (
+        {entries.length === 0 ? (
           <div className="rounded-xl border py-8 text-center">
             <Wallet className="text-muted-foreground mx-auto mb-2 size-8 opacity-40" />
             <p className="text-muted-foreground text-sm">
@@ -328,62 +308,68 @@ export function WalletView() {
           </div>
         ) : (
           <div className="space-y-2">
-            {[...wallet.transactions]
-              .sort(
-                (a, b) =>
-                  new Date(b.createdAt).getTime() -
-                  new Date(a.createdAt).getTime(),
-              )
-              .map((tx) => {
-                const cfg = txTypeConfig[tx.type] ?? {
-                  icon: Wallet,
-                  color: "text-muted-foreground",
-                  bg: "bg-muted",
-                  labelKey: "",
-                };
-                const Icon = cfg.icon;
-                const isCredit = tx.amount > 0;
-                return (
+            {/* Already newest-first from the database; sorting again here would
+                be a second opinion about the same fact. */}
+            {entries.map((tx) => {
+              const cfg = REASON_CONFIG[tx.reason] ?? {
+                icon: Wallet,
+                color: "text-muted-foreground",
+                bg: "bg-muted",
+                labelKey: "",
+              };
+              const Icon = cfg.icon;
+              const isCredit = tx.amount > 0;
+              return (
+                <div
+                  key={tx.id}
+                  className="flex items-center gap-3 rounded-xl border p-3"
+                >
                   <div
-                    key={tx.id}
-                    className="flex items-center gap-3 rounded-xl border p-3"
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-full",
+                      cfg.bg,
+                    )}
                   >
-                    <div
+                    <Icon className={cn("size-4", cfg.color)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {cfg.labelKey ? t(cfg.labelKey) : tx.reason}
+                    </p>
+                    {/* The fixture carried a free-text `description` here. The
+                        ledger's equivalent is `note`, which the projection
+                        withholds on purpose: staff write it about a customer,
+                        to other staff. Where the person holds credit at more
+                        than one business, the facility is the useful line. */}
+                    {showFacility && (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {facilityNames.get(tx.facilityId) ?? ""}
+                      </p>
+                    )}
+                    <p className="text-muted-foreground text-xs">
+                      {formatDateTime(tx.createdAt)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p
                       className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-full",
-                        cfg.bg,
+                        "price-value font-semibold",
+                        isCredit ? "text-green-600" : "text-foreground",
                       )}
                     >
-                      <Icon className={cn("size-4", cfg.color)} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {cfg.labelKey ? t(cfg.labelKey) : tx.type}
-                      </p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {tx.description}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatDateTime(tx.createdAt)}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p
-                        className={cn(
-                          "price-value font-semibold",
-                          isCredit ? "text-green-600" : "text-foreground",
-                        )}
-                      >
-                        {isCredit ? "+" : ""}
-                        {formatMoney(Math.abs(tx.amount), locale)}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatMoney(tx.balanceAfter, locale)}
-                      </p>
-                    </div>
+                      {isCredit ? "+" : ""}
+                      {formatMoney(Math.abs(tx.amount), locale)}
+                    </p>
+                    {/* No running balance. The fixture stored `balanceAfter` on
+                        every row; the ledger does not, and this list is the
+                        most recent 200 — so a total computed here would be the
+                        sum of a WINDOW presented as the balance after that
+                        movement. A number that is wrong for the oldest rows on
+                        screen is worse than no number. */}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

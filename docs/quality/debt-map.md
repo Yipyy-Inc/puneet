@@ -15456,3 +15456,22 @@ UNBOUNDED read over it — `/api/bookings` already takes ~12 s at this size, and
 the screens asking for every booking are the next thing to narrow (see the
 bookings-list entry above). Do not treat a growing tombstone count as a mess to
 delete.
+
+### 🟡 An unidentified intermittent in `test:unit` (2026-09-16)
+
+`bun run test:unit` reported **1 failure** twice in one afternoon, out of 548,
+and the run took 28–31 s instead of its usual ~1.1 s. Both times it was chained
+behind another heavy command. It did NOT reproduce in five subsequent runs,
+including one launched deliberately while a lint and a build were competing for
+CPU.
+
+**Which test failed is not known, because the output was not captured** — the
+re-run passed and took the evidence with it. Two diagnoses were offered and both
+were wrong: it is not real DNS (`tests/unit/calling-provider.test.ts` stubs
+`globalThis.fetch` and throws `getaddrinfo ENOTFOUND` on purpose, so that log
+line is expected output), and no timing assertion was found in the suite.
+
+**Do instead:** if `test:unit` ever reports a failure, capture the full output
+BEFORE re-running — `bun run test:unit > /tmp/unit.log 2>&1`. One failing name
+settles this in a minute; without it, a green re-run proves nothing except that
+it is intermittent. CI has not gone red on it.
