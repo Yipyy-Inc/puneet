@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
+import type { GiftCardTotals } from "@/app/api/gift-cards/totals/route";
 import type { GiftCardRow } from "@/lib/api/mappers/gift-card";
 import type { GiftCardDetailPayload } from "@/app/api/gift-cards/[id]/route";
 import type { GiftCardTransactionRow } from "@/lib/api/gift-card-ledger";
@@ -31,6 +32,11 @@ import type { ToCreditResult } from "@/app/api/gift-cards/to-credit/route";
 
 export type { GiftCardRow, GiftCardTransactionRow, GiftCardDetailPayload };
 export type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
+export type {
+  GiftCardTotals,
+  GiftCardSalesMonth,
+  GiftCardRedemptionService,
+} from "@/app/api/gift-cards/totals/route";
 
 /** A card with its movements, as `allWithLedger` returns it. */
 export interface GiftCardWithLedger extends GiftCardRow {
@@ -68,11 +74,72 @@ async function send<T>(
 }
 
 export const giftCardQueries = {
+  /**
+   * Liability, sales and redemptions, aggregated in SQL.
+   *
+   * The screen used to reduce these out of `allWithLedger()` — every card the
+   * facility had ever issued, with every movement attached. That answer is
+   * correct and costs 3.46 MB and 24 s on a facility with 6,022 cards, and
+   * cards are never deleted, so it only gets worse. The numbers come from
+   * `gift_card_totals` now; the LIST is a separate question.
+   *
+   * The two windows are independent on purpose: the Reports tab has a range
+   * picker for sales and another for redemptions, and liability answers to
+   * neither — money owed is owed today.
+   */
+  totals: (range: {
+    salesFrom?: string;
+    salesTo?: string;
+    redeemFrom?: string;
+    redeemTo?: string;
+  }) => ({
+    queryKey: [
+      "gift-cards",
+      "totals",
+      range.salesFrom ?? null,
+      range.salesTo ?? null,
+      range.redeemFrom ?? null,
+      range.redeemTo ?? null,
+    ] as const,
+    queryFn: async () => {
+      const search = new URLSearchParams();
+      for (const [key, value] of Object.entries(range)) {
+        if (value) search.set(key, value);
+      }
+      const query = search.toString();
+      return get<GiftCardTotals>(
+        `/api/gift-cards/totals${query ? `?${query}` : ""}`,
+      );
+    },
+  }),
+
   /** Every card this facility has issued, newest first. */
   all: () => ({
     queryKey: ["gift-cards", "list"] as const,
     queryFn: async () =>
       (await get<{ cards: GiftCardRow[] }>("/api/gift-cards")).cards,
+  }),
+
+  /**
+   * The cards in one status — `active` being the outstanding set.
+   *
+   * The set a liability report has to LIST rather than count, and the only one
+   * of these lists that is bounded by something other than time: a card leaves
+   * it when it is spent, cancelled or expires. On the e2e facility it is 3 of
+   * 6,022, because a voided card is still a row forever.
+   *
+   * No ledger. A report about what is still owed reads balances and dates, not
+   * histories, and attaching 12,973 movements to answer that is the habit this
+   * whole change is about.
+   */
+  byStatus: (status: string) => ({
+    queryKey: ["gift-cards", "list", "status", status] as const,
+    queryFn: async () =>
+      (
+        await get<{ cards: GiftCardRow[] }>(
+          `/api/gift-cards?status=${encodeURIComponent(status)}`,
+        )
+      ).cards,
   }),
 
   /**
