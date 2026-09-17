@@ -44,7 +44,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      # `tsc` ran out of heap here on 2026-09-17, twice in a row, on a project
+      # that had typechecked green the same morning:
+      #
+      #   FATAL ERROR: Ineffective mark-compacts near heap limit
+      #   Allocation failed - JavaScript heap out of memory
+      #   error: script "typecheck" was terminated by signal SIGABRT
+      #
+      # That is the gate running out of memory, NOT the gate finding a fault —
+      # and it is expensive to misread, because `build`, `image` and `deploy`
+      # all sit behind typecheck in `needs:`. Two pushes reached `main` and
+      # deployed nothing, silently, with the code itself perfectly sound.
+      #
+      # More heap, same check: nothing is skipped, no diagnostic is suppressed,
+      # no file is excluded. `node_modules/.bin/tsc` carries a `#!/usr/bin/env
+      # node` shebang, so it runs under node even when bun starts it, and
+      # NODE_OPTIONS reaches it.
+      #
+      # If this OOMs again at 8 GB, the answer is not 16: it is that something
+      # has made the type graph pathological — a deeply generic helper, a huge
+      # union — and the next step is `tsc --noEmit --generateTrace`.
       - run: bun run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
 
   lint:
     runs-on: ubuntu-latest
@@ -220,7 +242,15 @@ jobs:
           restore-keys: |
             nextjs-${{ runner.os }}-
 
+      # Precautionary, and said so plainly: this job has NOT failed. But it is
+      # strictly heavier than typecheck — it typechecks AND bundles — and
+      # typecheck OOMed twice on 2026-09-17 having been green that morning, so
+      # build is sitting on the same edge with no reason to think it is the far
+      # side of it. Finding out by letting a push deploy nothing costs a cycle;
+      # the flag costs nothing. Next spawns workers, which inherit NODE_OPTIONS.
       - run: bun run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
 
   # ── THE DATABASE TESTS ────────────────────────────────────────────────────
   #
