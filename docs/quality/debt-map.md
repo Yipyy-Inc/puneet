@@ -16003,10 +16003,20 @@ _all_ of the extra 15–19 s is row volume: the route pages PostgREST in 1000-ro
 chunks, so 1,499 rows is two sequential round trips plus the mapping of every
 row.
 
-**This is very likely the portal-wide 9–16 s that the entry above records as
-UNDIAGNOSED.** Not claimed as proven for every screen — but any screen that
-reads the booking list without naming a slice pays this, and that was never
-measured before today.
+**IT IS NOT THE PORTAL-WIDE 9–16 s, and the first version of this entry said
+it probably was.** Checked immediately afterwards: NO screen makes this call.
+`bookingQueries.all` has no caller left in `src/` — the one hit is a stale
+COMMENT in `lib/facility-permissions.ts` naming a signature that no longer
+exists. The 15 `byClient` readers send `clientRef`, and `clients!inner` in
+`BOOKING_SELECT` means that filter really does restrict the parent rows rather
+than just emptying the embed; the 10 `window` readers send `from`/`to`; the
+bookings list screen goes through `/api/bookings/page` with server paging. The
+only `"/api/bookings"` in `src/` outside the route itself is the POST.
+
+So this 16–20 s is paid by the E2E SUITE and by nothing a user touches, and the
+portal's 9–16 s stays UNDIAGNOSED. Recorded this way round on purpose: a wrong
+lead in this file is worse than an open question, because the next person spends
+a day on it.
 
 **It is also why the e2e suite is slow AND flaky.** 28 spec files call
 `page.request.get("/api/bookings")` with no parameters, many inside
@@ -16077,3 +16087,56 @@ one second later. Six `daily-care-board` failures follow within two minutes of
 that line and nothing else in the run failed after it. Diagnosing that took one
 `grep` of the supervisor's stderr — the exact thing it was built for. Note its
 lines go to **stderr**, so they are in the `.err` file, not the stdout log.
+
+### 🔴 A whole-client booking read is cancelled by Postgres, not merely slow
+
+The entry above measured the unbounded list. Narrowing the three money specs to
+a slice found something sharper underneath it:
+
+```
+GET /api/bookings?clientRef=15 -> 500
+{"error":"canceling statement due to statement timeout"}
+```
+
+Not the link, not PostgREST's row cap — **Postgres cancelling the statement.**
+Client ref 15 (Alice Johnson, the shared e2e client) holds **1,056** bookings;
+ref 16 (Bob) holds 395 and answers fine. So the ceiling sits somewhere between
+them, and the suite walks toward it every run.
+
+**It hid behind a cast.** Every call site did `(await res.json()) as
+BookingPayload[]` and then `.find(...)` on the result, so a 500 arrived as
+`TypeError: all.find is not a function` — naming neither the request, nor the
+status, nor the message. Three separate failures in two files were that same
+cast. `readBooking` now reads the body, warns with the status and the first 300
+characters, and returns `undefined` so a poll can retry.
+
+**Do instead:** when a spec or a screen casts a response to an array, check
+`res.ok()` first. A type assertion is not a parse, and the failure it produces
+names the wrong thing.
+
+### The three money specs now name their slice (2026-09-17)
+
+`booking-checkout-truth`, `booking-form-saves` and `booking-payment-screens` had
+**zero** unbounded reads left after this change, and went from _3 failed, 6
+never ran_ to **12 passed**. Two of those tests — `a settled booking stops
+offering to be paid` and `a part-paid booking offers the balance, not the
+price` — had never once executed: serial mode skipped them because the test
+before them always failed. `booking-payment-screens:176`, red in CI's own
+nightly, is green.
+
+What each read became, and why:
+
+- a poll for a booking it just created → `?ref=<n>` (it was holding the ref)
+- a read of three bookings it just created → `?refs=a,b,c`
+- `marked()` → the CALLER names the slice, because this file books for **two**
+  clients: the API tests are Bob's, the form test is Alice's. Scoping the
+  helper to one of them silently found none of the other's — that mistake was
+  made here first and cost a run.
+- Alice's reads carry a DATE WINDOW as well as `clientRef`, because her list
+  alone is over the statement-timeout ceiling.
+- both teardown sweeps read both clients. A sweep scoped to one leaves the
+  other's paid bookings behind, which is the accumulation the sweep exists to
+  prevent — and it did leak four rows before it was fixed.
+
+**25 spec files still read the list unbounded.** Same treatment, same order:
+name the slice the test already knows.

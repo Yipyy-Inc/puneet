@@ -60,11 +60,39 @@ function bookingBody() {
 }
 
 /** This client's bookings, not the facility's ~1,000: a full read can outlast a poll. */
+/**
+ * ONE booking, by its ref.
+ *
+ * This asked for the whole client's bookings and searched them, which is
+ * narrower than asking for ALL bookings but still not the one row it is
+ * holding a ref for — and this client is the one every money spec uses, so its
+ * list is the fastest-growing in the facility.
+ *
+ * MEASURED 2026-09-17: an unbounded `GET /api/bookings` is 16,215-20,484 ms
+ * over 1,499 rows against `?ref=<n>` at 1,194-1,367 ms. The poll below has a
+ * 30-second budget and calls this repeatedly.
+ */
 async function readBooking(page: Page, ref: number) {
-  const all = (await (
-    await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
-  ).json()) as BookingPayload[];
-  return all.find((b) => b.id === ref);
+  const res = await page.request.get(`/api/bookings?ref=${ref}`);
+  const body = await res.text();
+  let rows: unknown = null;
+  try {
+    rows = JSON.parse(body) as unknown;
+  } catch {
+    // Not JSON — the warning below carries the text.
+  }
+  if (!res.ok() || !Array.isArray(rows)) {
+    // `undefined` rather than a throw, because the callers poll and a single
+    // bad answer should be retried. But it is SAID: every call site used to
+    // cast the body to an array and then `.find` on it, so a 500 arrived as
+    // "TypeError: all.find is not a function" — naming neither the request nor
+    // the status nor the message. That is how a statement timeout hid.
+    console.warn(
+      `GET /api/bookings?ref=${ref} -> ${res.status()} ${body.slice(0, 300)}`,
+    );
+    return undefined;
+  }
+  return (rows as BookingPayload[]).find((b) => b.id === ref);
 }
 
 /**
@@ -99,17 +127,42 @@ async function openCheckout(page: Page, ref: number, clientId: number) {
 
 test.describe.configure({ mode: "serial" });
 
+/**
+ * The booking the settling test settled, for the two tests that follow it.
+ *
+ * They ran in serial mode and depended on it already — "the booking settled by
+ * the previous test" was in the assertion message — but expressed that by
+ * re-finding it: `GET /api/bookings?clientRef=${CLIENT_REF}`, then a `.find`
+ * over the answer. That client is the one every money spec uses and it is up to
+ * 1,049 bookings, so the read took long enough for POSTGRES to cancel it:
+ *
+ *   GET /api/bookings?clientRef=15 -> 500
+ *   {"error":"canceling statement due to statement timeout"}
+ *
+ * which the old naked cast then reported as `TypeError: all.find is not a
+ * function`. Carrying the ref makes the dependency explicit and turns a
+ * thousand-row scan into a single-row read.
+ */
+let settledRef: number | null = null;
+
 test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[] | null;
+    // Scoped to the client this spec uses, not every booking in the facility:
+    // every row it creates is BOB's, and the unbounded read is the 16-20s one.
+    //
+    // The shape is checked rather than asserted. A 500 here answers with an
+    // `{error}` OBJECT, and `for (const b of bookings ?? [])` on an object
+    // throws "object is not iterable" — which is how this teardown turned a
+    // reporting failure into a crash that left the run's paid bookings behind.
+    const res = await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`);
+    const body = res.ok() ? ((await res.json()) as unknown) : null;
+    const bookings = Array.isArray(body) ? (body as BookingPayload[]) : [];
 
     let reversed = 0;
     let cancelled = 0;
-    for (const b of bookings ?? []) {
+    for (const b of bookings) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
 
@@ -222,18 +275,18 @@ test.describe("the payment button reaches the ledger", () => {
         { timeout: 30_000, message: "the booking settles from the ledger" },
       )
       .toBe(`paid/${AMOUNT}`);
+
+    // The next test is about THIS booking. Saying so is what lets it ask for
+    // one row instead of searching a client's entire history for it.
+    settledRef = created.id;
   });
 
   test("a settled booking stops offering to be paid", async ({ page }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const all = (await (
-      await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
-    ).json()) as BookingPayload[];
-    const paid = all.find(
-      (b) => b.specialRequests?.includes(MARKER) && b.paymentStatus === "paid",
-    );
-    expect(paid, "the booking settled by the previous test").toBeTruthy();
+    expect(settledRef, "the previous test settled a booking").toBeTruthy();
+    const paid = await readBooking(page, settledRef!);
+    expect(paid?.paymentStatus, "that booking is settled").toBe("paid");
 
     await page.goto(
       `/facility/dashboard/clients/${paid!.clientId}/bookings/${paid!.id}`,
