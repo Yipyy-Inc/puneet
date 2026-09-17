@@ -16271,3 +16271,54 @@ will read by its old label there. Converting them is a scoped refactor.
 than it looks — restricted breeds live in `localStorage` AND nothing anywhere
 enforces them, so it is an inert switch as well as an unsaved one; and
 `InventoryClient`, blocked on the ops-vs-retail decision.
+
+### The demo facility has onboarding checklists now (2026-09-17)
+
+`onboarding_templates` was the only table on the plan's Phase 5 list still
+empty — for EVERY facility, which is why the hire dialog's last button was
+greyed out product-wide. Three templates are in the seed
+(`scripts/demo-seed/`), with their tasks, and a matching teardown:
+
+```
+Floor team onboarding        reception caretaker daycare_attendant
+                             boarding_attendant sanitation retail   7 emp / 5 mgr
+Groomer and trainer          groomer trainer                        7 emp / 4 mgr
+Management onboarding        manager supervisor admin               5 emp / 3 mgr
+```
+
+**The role sets MUST stay disjoint, and this is the trap.** The invite route
+resolves a template with
+`.eq("status","active").contains("applies_to_roles",[role]).maybeSingle()`, and
+`maybeSingle()` FAILS on two matches — so two active templates both claiming
+`groomer` break the invite for a groomer, at hire time rather than seed time.
+Proved by query after seeding: every one of the thirteen roles matches at most
+one, and `owner`/`accountant` match none and take the no-template fallback.
+
+### 🟡 A "universal" onboarding template can never be found by the invite route
+
+The schema has `onboarding_templates_one_universal_active` — a unique index
+allowing at most one active template with **empty** `applies_to_roles` — so a
+catch-all is clearly intended. But the route matches with
+`contains(applies_to_roles, [role])`, and an empty array contains nothing, so
+such a template is never selected. The index guards a shape the reader cannot
+use. Not worked around in the seed (every template names its roles); either the
+route should fall back to the universal one, or the index should go.
+
+### 🟢 A dropped seed connection leaves a lock that looks like a timeout
+
+Worth knowing before retrying a failed seed. The first run died with
+`ERR_POSTGRES_CONNECTION_CLOSED`; the transaction rolled back (verified: 0 rows
+committed), but the backend stayed **`idle in transaction`** on `ClientRead`
+holding the uncommitted `onboarding_templates` tuple. Both retries then failed
+with
+
+```
+canceling statement due to statement timeout
+where: while inserting index tuple (1,1) in relation "onboarding_templates_legacy_key"
+```
+
+— a single-row insert blocking on the unique index behind the orphan, which
+reads as "the database is slow" rather than "something is holding your key". The
+tell is the tuple number moving between attempts, and the fix is
+`pg_terminate_backend` on the idle-in-transaction pid, found in
+`pg_stat_activity` by `xact_start`.

@@ -237,6 +237,30 @@ try {
          and detail->>'demoSeedKey' like ${`${SEED_PREFIX}-%`}`;
     if (productsGone.count)
       removed["public.retail_products"] = productsGone.count;
+    // The seeded onboarding checklists. Their tasks carry the template's
+    // legacy id as a prefix, and the FKs cascade from the template anyway —
+    // the task deletes are here so the count is honest about what went, and so
+    // a task orphaned by an earlier partial run is still swept.
+    const onbEmpGone = await tx`
+      delete from public.onboarding_employee_tasks
+       where facility_id = ${DEMO_FACILITY_ID}
+         and legacy_id like ${`${SEED_PREFIX}-onb-%`}`;
+    if (onbEmpGone.count)
+      removed["public.onboarding_employee_tasks"] = onbEmpGone.count;
+    const onbMgrGone = await tx`
+      delete from public.onboarding_manager_tasks
+       where facility_id = ${DEMO_FACILITY_ID}
+         and legacy_id like ${`${SEED_PREFIX}-onb-%`}`;
+    if (onbMgrGone.count)
+      removed["public.onboarding_manager_tasks"] = onbMgrGone.count;
+    // An instance points at a template, so a hire mid-onboarding would block
+    // this delete. That is the right way round: losing a template somebody is
+    // being onboarded against would leave their checklist meaningless.
+    const onbGone = await tx`
+      delete from public.onboarding_templates
+       where facility_id = ${DEMO_FACILITY_ID}
+         and legacy_id like ${`${SEED_PREFIX}-onb-%`}`;
+    if (onbGone.count) removed["public.onboarding_templates"] = onbGone.count;
 
     // ── Packages the seed sold, and the bundles it created ─────────────────
     // A seeded sale by its legacy id, with its pool and pass entries (neither

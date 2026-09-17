@@ -59,6 +59,7 @@ import {
   VACCINATIONS,
   FACILITY_PROFILE,
   GROOMING_ADD_ONS,
+  ONBOARDING_TEMPLATES,
   FACILITY_SETTINGS,
   GROOMING_SERVICE_CHARGES,
   GROOMING_SERVICES,
@@ -372,6 +373,65 @@ try {
         values
           (${DEMO_FACILITY_ID}, ${a.legacyId}, ${a.name}, ${a.price}, ${a.duration}, true, ${i + 1})`;
       count("grooming add-ons");
+    }
+
+    // ── Onboarding templates ──────────────────────────────────────────────
+    //
+    // The only table on the plan's Phase 5 list that was still EMPTY. It is
+    // also why the hire dialog's last button could not be pressed: it was
+    // gated on having a template, and no facility in the database had one.
+    //
+    // Each template's tasks go in with it, so a half-inserted template — a
+    // checklist with no steps — is not reachable; the whole seed runs in one
+    // transaction anyway, but the ordering keeps that true statement by
+    // statement.
+    for (const t of ONBOARDING_TEMPLATES) {
+      const [exists] = await tx`
+        select 1 from public.onboarding_templates
+         where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${t.legacyId}`;
+      if (exists) continue;
+
+      const [template] = await tx`
+        insert into public.onboarding_templates
+          (facility_id, legacy_id, name, status, applies_to_roles,
+           invite_expiry_days, completion_deadline_days, welcome_message)
+        values
+          (${DEMO_FACILITY_ID}, ${t.legacyId}, ${t.name}, 'active',
+           ${pgTextArray(t.appliesToRoles)}::text[], ${t.inviteExpiryDays},
+           ${t.completionDeadlineDays}, ${t.welcomeMessage})
+        returning id`;
+      count("onboarding templates");
+
+      for (const [i, task] of t.employeeTasks.entries()) {
+        await tx`
+          insert into public.onboarding_employee_tasks
+            (template_id, facility_id, legacy_id, position, task_type, name,
+             description, required, document_name, config)
+          values
+            (${template.id}, ${DEMO_FACILITY_ID},
+             ${`${t.legacyId}-emp-${i + 1}`}, ${i + 1}, ${task.type},
+             ${task.name}, ${"description" in task ? task.description : null},
+             ${task.required},
+             ${"documentName" in task ? task.documentName : null},
+             ${{}}::jsonb)`;
+        count("onboarding employee tasks");
+      }
+
+      for (const [i, task] of t.managerTasks.entries()) {
+        await tx`
+          insert into public.onboarding_manager_tasks
+            (template_id, facility_id, legacy_id, position, task_type, name,
+             description, requires_manager, required, when_due, when_days,
+             assigned_to)
+          values
+            (${template.id}, ${DEMO_FACILITY_ID},
+             ${`${t.legacyId}-mgr-${i + 1}`}, ${i + 1}, ${task.type},
+             ${task.name}, ${task.description}, true, ${task.required},
+             ${task.when},
+             ${"whenDays" in task ? task.whenDays : null},
+             ${task.assignedTo})`;
+        count("onboarding manager tasks");
+      }
     }
     for (const [i, s] of GROOMING_STATIONS.entries()) {
       const [exists] = await tx`
