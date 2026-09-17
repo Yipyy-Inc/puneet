@@ -103,10 +103,13 @@ async function writeTax(page: Page, value: unknown) {
  * load surfaced as "all.find is not a function" — and in the cleanup, as a
  * crash that left the run's paid bookings behind.
  */
-async function listBookings(page: Page): Promise<BookingPayload[]> {
+async function listBookings(
+  page: Page,
+  search = "",
+): Promise<BookingPayload[]> {
   let last = "";
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await page.request.get("/api/bookings");
+    const res = await page.request.get(`/api/bookings${search}`);
     const body = await res.text();
     if (res.ok()) {
       const parsed = JSON.parse(body) as unknown;
@@ -118,8 +121,27 @@ async function listBookings(page: Page): Promise<BookingPayload[]> {
   throw new Error(`GET /api/bookings did not return a list: ${last}`);
 }
 
+/**
+ * ONE booking, asked for by ref — not found by reading every booking there is.
+ *
+ * MEASURED 2026-09-17, as the owner against the e2e facility: an unbounded
+ * `GET /api/bookings` takes 16,215-20,484 ms and returns 1,499 rows, while the
+ * same read as `?ref=<n>` takes 1,194-1,367 ms. Fifteen times. The route pages
+ * PostgREST in 1000-row chunks, so the unbounded read is two sequential round
+ * trips plus the mapping of every row, and the suite's own cleanup CANCELS its
+ * bookings rather than deleting them, so that number grows with every run.
+ *
+ * It matters most here because this is called inside `expect.poll(...)` with a
+ * 20-second budget: one iteration of the poll cost MORE than the whole budget,
+ * so the poll could not reliably complete a single cycle. That is why this
+ * spec failed intermittently and read as a regression in whatever change
+ * happened to be in the tree.
+ *
+ * The assertion is unchanged — it still asks the API what the booking looks
+ * like now. It just stops asking about 1,498 other bookings first.
+ */
 async function findBooking(page: Page, id: number) {
-  return (await listBookings(page)).find((b) => b.id === id);
+  return (await listBookings(page, `?ref=${id}`)).find((b) => b.id === id);
 }
 
 async function openCheckout(page: Page, booking: BookingPayload) {
@@ -142,7 +164,11 @@ test.afterAll(async ({ browser }) => {
     await signIn(page, ACCOUNTS.owner);
     if (originalTax) await writeTax(page, originalTax);
 
-    const bookings = await listBookings(page);
+    // Every booking this file creates is CLIENT_REF's, and the unbounded read
+    // is the 16-20s one that Postgres kills for a busier client (see the note
+    // on findBooking). Teardown is not exempt: listBookings asserts res.ok(),
+    // so a 500 here fails the run after the assertions all passed.
+    const bookings = await listBookings(page, `?clientRef=${CLIENT_REF}`);
     // A refused refund used to be ignored, and every paid booking it left
     // behind was walked again on the next run — 88 of them by 2026-09-14.
     // Each answer is read now, and the run fails naming what it left.

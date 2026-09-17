@@ -60,19 +60,71 @@ function nextMonthTuesdayAndWednesday(): [number, number] {
   return [2, 3];
 }
 
+/** The first and last day of next month, as YYYY-MM-DD. */
+function nextMonthWindow(): { from: string; to: string } {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  return { from: iso(first), to: iso(last) };
+}
+
 function isoDaysAhead(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 }
 
-async function allBookings(page: Page): Promise<BookingPayload[]> {
-  const res = await page.request.get("/api/bookings");
+async function allBookings(page: Page, search = ""): Promise<BookingPayload[]> {
+  const res = await page.request.get(`/api/bookings${search}`);
   expect(res.ok(), await res.text()).toBe(true);
   return (await res.json()) as BookingPayload[];
 }
 
-/** This run's live bookings with the tag — earlier runs' are cancelled. */
-async function marked(page: Page, tag: string) {
-  return (await allBookings(page)).filter(
+/**
+ * ONE booking, asked for by ref — not found by reading every booking there is.
+ *
+ * MEASURED 2026-09-17, as the owner against the e2e facility: an unbounded
+ * `GET /api/bookings` takes 16,215-20,484 ms and returns 1,499 rows, while the
+ * same read as `?ref=<n>` takes 1,194-1,367 ms. Fifteen times. The route pages
+ * PostgREST in 1000-row chunks, so the unbounded read is two sequential round
+ * trips plus the mapping of every row, and the suite's own cleanup CANCELS its
+ * bookings rather than deleting them, so that number grows with every run.
+ *
+ * It matters most here because this is called inside `expect.poll(...)` with a
+ * 20-second budget: one iteration of the poll cost MORE than the whole budget,
+ * so the poll could not reliably complete a single cycle. That is why this
+ * spec failed intermittently and read as a regression in whatever change
+ * happened to be in the tree.
+ *
+ * The assertion is unchanged — it still asks the API what the booking looks
+ * like now. It just stops asking about 1,498 other bookings first.
+ */
+async function bookingByRef(page: Page, ref: number) {
+  return (await allBookings(page, `?ref=${ref}`)).find((b) => b.id === ref);
+}
+
+/**
+ * This run's live bookings with the tag — earlier runs' are cancelled.
+ *
+ * The CALLER names the slice, because this file books for two different
+ * people: the API tests are BOB's, and the one that drives the form books
+ * ALICE's Buddy. Scoping this helper to one of them found none of the other's.
+ *
+ * Why it is scoped at all — measured 2026-09-17: the facility holds 1,499
+ * bookings and an unbounded `GET /api/bookings` takes 16-20 seconds. Worse,
+ * a whole-client read is not always enough either. Bob has 395 and comes back
+ * fine; ALICE is up to 1,056 and `?clientRef=15` answers
+ *
+ *   500 {"error":"canceling statement due to statement timeout"}
+ *
+ * — Postgres cancelling the statement, not the network. So Alice is asked for
+ * with a DATE WINDOW as well. The suite's cleanup cancels rather than deletes,
+ * so both numbers only ever go up.
+ */
+async function marked(page: Page, tag: string, search: string) {
+  return (await allBookings(page, search)).filter(
     (b) =>
       b.status !== "cancelled" &&
       b.specialRequests?.includes(`${MARKER} ${tag}`),
@@ -89,7 +141,19 @@ test.afterAll(async ({ browser }) => {
     // behind was walked again on the next run — 88 of them by 2026-09-14.
     // Each answer is read now, and the run fails naming what it left.
     const refused: string[] = [];
-    for (const b of await allBookings(page)) {
+    // BOTH clients: the API tests book Bob, the form test books Alice, and a
+    // sweep that reads one of them leaves the other's paid bookings behind —
+    // which is the exact debt the counter below exists to stop accumulating.
+    // Alice is windowed because her whole list times out.
+    const month = nextMonthWindow();
+    const toSweep = [
+      ...(await allBookings(page, `?clientRef=${BOB.client}`)),
+      ...(await allBookings(
+        page,
+        `?clientRef=${ALICE.client}&from=${month.from}&to=${month.to}`,
+      )),
+    ];
+    for (const b of toSweep) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
       const paid = Number(b.amountPaid ?? 0);
@@ -164,8 +228,11 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     const first = (await res.json()) as BookingPayload;
     expect(first.groupRefs).toHaveLength(3);
 
-    const made = (await allBookings(page)).filter((b) =>
-      first.groupRefs?.includes(b.id),
+    // The three refs are in hand — `refs` is what the route takes for exactly
+    // this, so ask for those and nothing else.
+    const made = await allBookings(
+      page,
+      `?refs=${(first.groupRefs ?? []).join(",")}`,
     );
     expect(made.map((b) => b.startDate).sort()).toEqual(days);
     // Each day claims only itself, and knows its place in the request.
@@ -183,7 +250,8 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await signIn(page, ACCOUNTS.owner);
     const start = isoDaysAhead(410);
     const end = isoDaysAhead(413);
-    const before = (await marked(page, "clash")).length;
+    const before = (await marked(page, "clash", `?clientRef=${BOB.client}`))
+      .length;
     const res = await page.request.post("/api/bookings", {
       data: {
         clientId: ALICE.client,
@@ -214,7 +282,9 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     });
     expect(res.status(), await res.text()).toBe(409);
     // The first stay — written before the second was refused — is not there.
-    expect((await marked(page, "clash")).length).toBe(before);
+    expect(
+      (await marked(page, "clash", `?clientRef=${BOB.client}`)).length,
+    ).toBe(before);
   });
 
   test("a cash deposit taken with the booking is a payment on it", async ({
@@ -247,9 +317,7 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     // The booking counts the deposit as paid supply, and the ledger has it.
     await expect
       .poll(async () => {
-        const after = (await allBookings(page)).find(
-          (b) => b.id === created.id,
-        );
+        const after = await bookingByRef(page, created.id);
         return Number(after?.amountPaid ?? -1);
       })
       .toBe(20);
@@ -314,7 +382,14 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
       timeout: 30_000,
     });
     await expect(dialog).toBeHidden();
-    const made = await marked(page, "form");
+    // Alice, and only next month: her list alone is big enough to be cancelled
+    // by the statement timeout (see the note on `marked`).
+    const month = nextMonthWindow();
+    const made = await marked(
+      page,
+      "form",
+      `?clientRef=${ALICE.client}&from=${month.from}&to=${month.to}`,
+    );
     expect(made).toHaveLength(2);
     expect(made.every((b) => b.service === "daycare")).toBe(true);
     expect(new Set(made.map((b) => b.startDate)).size).toBe(2);
