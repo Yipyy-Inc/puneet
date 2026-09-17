@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -189,6 +191,11 @@ type ActivityFilter = (typeof ACTIVITY_FILTERS)[number]["key"];
 const UNRECORDED_ACTIVITY = new Set<ActivityFilter>(["voided", "expired"]);
 
 export default function FacilityGiftCardsPage() {
+  // Called `text`, not `t` — this file already uses `t` for setTimeout
+  // handles in two effects, and a translator by the same name would be shadowed
+  // inside those callbacks. Money goes through `formatMoney`: it was
+  // `${n.toFixed(2)}`, a hardcoded symbol and no locale at all.
+  const { t: text, locale } = useStaffText("giftCards");
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
   const [sellMode, setSellMode] = useState<"digital" | "physical" | null>(null);
@@ -1142,7 +1149,7 @@ export default function FacilityGiftCardsPage() {
             className="gap-1.5"
           >
             <Search className="size-4" />
-            Check Balance
+            {text("checkBalance")}
           </Button>
           <Button
             variant="outline"
@@ -1182,18 +1189,26 @@ export default function FacilityGiftCardsPage() {
             live: false,
           },
           {
-            label: "Total Wallet Balance",
-            value: `$${totalWalletBalance.toFixed(2)}`,
-            sub: `${facilityWallets.length} ${facilityWallets.length === 1 ? "wallet" : "wallets"}`,
+            label: text("tileWalletBalance"),
+            value: formatMoney(totalWalletBalance, locale),
+            sub: `${facilityWallets.length} ${
+              facilityWallets.length === 1
+                ? text("walletOne")
+                : text("walletMany")
+            }`,
             icon: Wallet,
             color: "text-blue-600",
             bg: "bg-blue-50 dark:bg-blue-950/20",
             live: true,
           },
           {
-            label: "Total Revenue Sold",
-            value: `$${totalSold.toFixed(2)}`,
-            sub: `${periodCardCount} card${periodCardCount === 1 ? "" : "s"} sold`,
+            label: text("tileRevenueSold"),
+            value: formatMoney(totalSold, locale),
+            sub: `${periodCardCount} ${
+              periodCardCount === 1
+                ? text("cardsSoldOne")
+                : text("cardsSoldMany")
+            }`,
             icon: BarChart3,
             color: "text-green-600",
             bg: "bg-green-50 dark:bg-green-950/20",
@@ -1243,15 +1258,15 @@ export default function FacilityGiftCardsPage() {
         {/* Scroll horizontally on phones (7 tabs crammed into a grid-cols-7
             mashed the labels together); fill the width as a grid from lg up. */}
         <TabsList className="lg:grid lg:w-full lg:grid-cols-7">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="cards">All Cards</TabsTrigger>
-          <TabsTrigger value="wallets">Wallets</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="overview">{text("tabOverview")}</TabsTrigger>
+          <TabsTrigger value="cards">{text("tabCards")}</TabsTrigger>
+          <TabsTrigger value="wallets">{text("tabWallets")}</TabsTrigger>
+          <TabsTrigger value="inventory">{text("tabInventory")}</TabsTrigger>
+          <TabsTrigger value="activity">{text("tabActivity")}</TabsTrigger>
+          <TabsTrigger value="reports">{text("tabReports")}</TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5">
             <Settings className="size-3.5" />
-            Settings
+            {text("tabSettings")}
           </TabsTrigger>
         </TabsList>
 
@@ -1505,8 +1520,8 @@ export default function FacilityGiftCardsPage() {
               },
               {
                 icon: Download,
-                label: "Export CSV",
-                desc: "Download card list",
+                label: text("exportCsv"),
+                desc: text("exportCsvDesc"),
                 action: exportCardsCSV,
                 color: "text-amber-600",
               },

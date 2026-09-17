@@ -2911,6 +2911,24 @@
         "saved": "Max pets per staff saved for this facility.",
         "positiveNumber": "Enter a positive number.",
         "defaultHint": "Default: {n}. Industry guidance varies — many facilities run 10–15 dogs per staff member for daycare and slightly higher for boarding (where pets are kennelled overnight)."
+      },
+      "giftCards": {
+        "checkBalance": "Check balance",
+        "tabOverview": "Overview",
+        "tabCards": "All cards",
+        "tabWallets": "Wallets",
+        "tabInventory": "Inventory",
+        "tabActivity": "Activity",
+        "tabReports": "Reports",
+        "tabSettings": "Settings",
+        "tileWalletBalance": "Total wallet balance",
+        "tileRevenueSold": "Total revenue sold",
+        "walletOne": "wallet",
+        "walletMany": "wallets",
+        "cardsSoldOne": "card sold",
+        "cardsSoldMany": "cards sold",
+        "exportCsv": "Export CSV",
+        "exportCsvDesc": "Download card list"
       }
     }
   },
