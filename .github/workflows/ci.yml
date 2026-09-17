@@ -9,10 +9,26 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  # The full 59-spec suite, nightly. 03:00 UTC is after the working day in both
-  # timezones this is developed in and before the Clover sweep's busiest window.
-  schedule:
-    - cron: "0 3 * * *"
+  # ── THE NIGHTLY IS PAUSED, 2026-09-17 ──────────────────────────────────
+  #
+  # It ran the full suite at 03:00 UTC every night. Restore it by uncommenting
+  # the two lines below; nothing else has to change.
+  #
+  # WHY: the org went 302% over Supabase's 5 GB egress quota and into a grace
+  # period. Measured over fourteen hours by `x_client_info`, the bill is this
+  # suite: GitHub runners made ~562,000 database requests in one day, this
+  # machine ~146,000, and the production VPS ~3,300 — 239 an hour, flat. The
+  # suite is 99.5% of the traffic and production is a rounding error.
+  #
+  # It costs nothing to pause, because THIS JOB GATES NOTHING: `image`'s
+  # `needs:` is [typecheck, lint, format, unit, checks, sql, build] and e2e is
+  # not in it. A nightly run reports on code that already deployed.
+  #
+  # The 33-spec gate below still runs on every push — the authorisation
+  # boundary and money — and `workflow_dispatch` still runs all 129 on demand,
+  # which is what to use before a push that touches auth, bookings or payments.
+  # schedule:
+  #   - cron: "0 3 * * *"
   # And on demand, for the push you want the whole suite to see before it lands.
   workflow_dispatch:
 
@@ -409,9 +425,84 @@ jobs:
   # a push over: the authorisation boundary, and money. The other 47 still run,
   # nightly and on demand, in the e2e-full job below — the coverage is not
   # dropped, it is rescheduled.
+  # ── WHAT CHANGED, SO A MARKDOWN COMMIT DOES NOT COST A SUITE RUN ────────
+  #
+  # Every push ran the 33-spec gate, whatever it touched. A one-line fix to a
+  # doc spent a real browser run against the one shared production Postgres —
+  # roughly 40,000 Supabase requests to publish a paragraph, which is what
+  # pushed the egress investigation into looking at this at all.
+  #
+  # This gates ONLY the e2e job. typecheck, lint, format, unit, checks, sql and
+  # build still run on a docs push, deliberately: `check:doc-counts` reads
+  # AGENTS.md and CLAUDE.md and fails when a spec or SQL count drifts, so a
+  # documentation change is exactly when it needs to run. Skipping the whole
+  # workflow would have made that gate unreachable from the commits most likely
+  # to break it.
+  #
+  # Anything that is not `docs/` or a root `*.md` counts as code, so the
+  # default on anything unrecognised is to RUN the suite.
+  scope:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.check.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          # A schedule or a manual dispatch is always asking for the real thing.
+          if [ "$EVENT" != "push" ] && [ "$EVENT" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "$EVENT: running the suite."
+            exit 0
+          fi
+
+          if [ "$EVENT" = "pull_request" ]; then
+            base="$PR_BASE"
+          else
+            base="$BEFORE"
+          fi
+
+          # A new branch reports an all-zero "before" and has no diff to take.
+          case "$base" in
+            "" | 0000000000000000000000000000000000000000)
+              echo "code=true" >> "$GITHUB_OUTPUT"
+              echo "No usable base sha - running the suite."
+              exit 0
+              ;;
+          esac
+
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Base $base is not in this clone - running the suite."
+            exit 0
+          fi
+
+          changed=$(git diff --name-only "$base" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$changed" | sed 's/^/  /'
+
+          # Succeeds when at least one changed path is NOT documentation.
+          if echo "$changed" | grep -qvE '^(docs/|[^/]+[.]md$)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Code changed - running the suite."
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Documentation only - skipping the browser suite."
+          fi
+
   e2e:
     name: e2e (access & money; full suite nightly)
     runs-on: ubuntu-latest
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     # 21 specs now, not 10. Measured locally: auth ~4 min, operations ~8 min,
     # plus install and a build. 30 left no room for a slow runner.
     #
