@@ -33,6 +33,10 @@ import {
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { FormStatusChip } from "@/components/yipyygo/form-status-chip";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
+import { formatMoney } from "@/lib/i18n/format";
 import { TagList } from "@/components/shared/TagList";
 import { noteQueries } from "@/lib/api/notes";
 import { useTagCatalogue } from "@/lib/api/tags";
@@ -189,6 +193,17 @@ export default function FacilityBookingsPage() {
   // The pre-arrival form column reads each booking’s own status, derived in
   // SQL (booking_yipyy_go, through /api/bookings), in the viewer’s language.
   const { t: formText } = useStaffText("yipyyGo");
+  // The list's own copy. `shell.booking` already carries 594 keys at full
+  // French parity, so this screen joins the catalogue the booking wizard and
+  // the customer's own pages read rather than starting a fourth one.
+  const t = useShellText("booking");
+  // Statuses and service names come from the SHARED label helpers
+  // (lib/i18n/labels.ts), the same ones the customer portal's four booking
+  // screens use. Adding `status_pending` here would have been a second
+  // spelling of an answer that already exists — and `serviceTypeLabel` also
+  // knows to return a service the FACILITY named itself exactly as typed
+  // (§5q), which a catalogue lookup cannot.
+  const locale = useAppLocale();
 
   const { data: clientList = [] } = useQuery(clientQueries.all());
   const { data: bookingNoteCounts } = useQuery(noteQueries.counts("booking"));
@@ -669,42 +684,41 @@ export default function FacilityBookingsPage() {
   const filters: FilterDef[] = [
     {
       key: "status",
-      label: "Status",
+      label: t("filterStatus"),
       options: [
-        { value: "all", label: "All Status" },
-        { value: "pending", label: "Pending" },
-        { value: "confirmed", label: "Confirmed" },
-        { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" },
+        { value: "all", label: t("filterAllStatuses") },
+        ...["pending", "confirmed", "completed", "cancelled"].map((id) => ({
+          value: id,
+          label: statusLabel(locale, id),
+        })),
       ],
     },
     {
       key: "service",
-      label: "Service",
+      label: t("service"),
       options: [
-        { value: "all", label: "All Services" },
-        { value: "daycare", label: "Daycare" },
-        { value: "boarding", label: "Boarding" },
-        { value: "grooming", label: "Grooming" },
-        { value: "evaluation", label: "Evaluation" },
-        { value: "vet", label: "Vet" },
+        { value: "all", label: t("filterAllServices") },
+        ...["daycare", "boarding", "grooming", "evaluation", "vet"].map(
+          (id) => ({ value: id, label: serviceTypeLabel(locale, id) }),
+        ),
       ],
     },
     {
       key: "paymentStatus",
-      label: "Payment",
+      label: t("filterPayment"),
       options: [
-        { value: "all", label: "All Payments" },
-        { value: "paid", label: "Paid" },
-        { value: "pending", label: "Pending" },
-        { value: "refunded", label: "Refunded" },
+        { value: "all", label: t("filterAllPayments") },
+        ...["paid", "pending", "refunded"].map((id) => ({
+          value: id,
+          label: statusLabel(locale, id),
+        })),
       ],
     },
     {
       key: "tag",
-      label: "Tag",
+      label: t("filterTag"),
       options: [
-        { value: "all", label: "All tags" },
+        { value: "all", label: t("filterAllTags") },
         ...tagCatalogue
           .filter((t) => t.type === "booking" && t.isActive)
           .map((t) => ({ value: t.id, label: t.name })),
@@ -773,12 +787,12 @@ export default function FacilityBookingsPage() {
             control: this header has no primary action, and §1 allows exactly
             one prominent control per screen, not at least one. */}
         <PageHeader
-          title="Bookings"
+          title={t("pageTitle")}
           description={profile.businessName}
           secondary={
             <Button variant="outline" onClick={() => void exportAll()}>
               <Download />
-              Export bookings
+              {t("exportBookings")}
             </Button>
           }
         />
@@ -788,42 +802,45 @@ export default function FacilityBookingsPage() {
       {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiTile
-          label="All Bookings"
+          label={t("tileAll")}
           value={totalBookings}
-          hint="Total on record"
+          hint={t("tileAllHint")}
           icon={Calendar}
           tone="indigo"
           active={activeTab === "all"}
           onClick={() => selectTab("all")}
         />
         <KpiTile
-          label="Today"
+          label={t("tileToday")}
           value={todayCount}
-          hint="Active today"
+          hint={t("tileTodayHint")}
           icon={CalendarDays}
           tone="amber"
           active={activeTab === "today"}
           onClick={() => selectTab(activeTab === "today" ? "all" : "today")}
         />
         <KpiTile
-          label="Upcoming"
+          label={t("tileUpcoming")}
           value={upcomingCount}
-          hint="Scheduled ahead"
+          hint={t("tileUpcomingHint")}
           icon={Hourglass}
           tone="violet"
         />
         <KpiTile
-          label="Pending"
+          label={t("tilePending")}
           value={pendingCount}
-          hint="Awaiting action"
+          hint={t("tilePendingHint")}
           icon={Clock}
           tone="rose"
         />
         {canSeeRevenue && (
           <KpiTile
-            label="Revenue"
-            value={`$${totalRevenue.toLocaleString()}`}
-            hint={`$${pendingRevenue.toFixed(0)} pending`}
+            label={t("tileRevenue")}
+            value={formatMoney(totalRevenue, locale, { whole: true })}
+            hint={t("tileRevenueHint").replace(
+              "{amount}",
+              formatMoney(pendingRevenue, locale, { whole: true }),
+            )}
             icon={TrendingUp}
             tone="emerald"
           />
@@ -843,8 +860,8 @@ export default function FacilityBookingsPage() {
         <div className="flex items-center gap-4 overflow-x-auto pb-1">
           <SavedViews
             views={[
-              { key: "all", label: "All bookings", count: totalBookings },
-              { key: "today", label: "Today", count: todayCount },
+              { key: "all", label: t("viewAll"), count: totalBookings },
+              { key: "today", label: t("tileToday"), count: todayCount },
             ]}
             activeKey={activeTab}
             onSelect={selectTab}

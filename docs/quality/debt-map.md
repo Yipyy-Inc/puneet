@@ -16403,3 +16403,75 @@ So the SCREEN defects above are found and the DATA pass is not: whether the
 seeded 40 clients, 60 pets, 159 bookings, three onboarding checklists and the
 rest read correctly on his own facility is still unverified, and needs either
 his login or permission to add a staff one.
+
+### The bookings list reads French now (2026-09-17)
+
+First of the nine screens the walkthrough found English on. `check:ui-french`
+for `bookings/page.tsx`: **56 → 23**, baseline lowered in both surfaces it
+appears in (`pages:facility` and `pages:employee` — employee re-renders facility
+pages). Verified by eye through the app, not by the gate: the French `h1` is
+**"Réservations"**, French markers present, and of the seven English strings the
+walkthrough caught, six are gone.
+
+**Statuses and service names went to the SHARED helpers, not to new keys.**
+`statusLabel(locale, id)` and `serviceTypeLabel(locale, id)` in
+`lib/i18n/labels.ts` already answer this, and the customer portal's four booking
+screens already read them. Adding `status_pending` to a catalogue would have
+been a second spelling of an existing answer — and `serviceTypeLabel` also knows
+to return a service the FACILITY named itself exactly as typed (§5q), which a
+plain lookup cannot. The twenty new keys are the page's own copy only, added to
+`shell.booking` (594 keys, French already at parity) rather than starting a
+fourth catalogue for one screen.
+
+Money went through `formatMoney(…, locale)`; it was `` `$${n.toLocaleString()}` ``,
+which is both a hardcoded symbol and the machine's locale.
+
+### 🟡 `StatusBadge` owns 52 screens' status labels in English — the next high-leverage fix
+
+The one English string left on the bookings list is the row's status chip, and
+it is not that screen's: `src/components/ui/StatusBadge.tsx` holds a `CHIPS`
+map of id → `{variant, icon, label}` with the label as an English literal, and
+**52 files import it**. Translating it would reach status chips across the whole
+product in one change.
+
+**Two traps, which is why it was not done in passing.**
+
+1. A blanket switch to `statusLabel(locale, id)` would silently CHANGE some
+   English labels, because that helper falls back to `humanise(id)`: today's
+   `"No-show"` becomes `"No show"`, and the chip table was deliberately
+   sentence-cased against §3/§5r. The right shape is an optional third argument
+   — `statusLabel(locale, id, CHIPS[id].label)` — so every current English label
+   is preserved exactly and French is added on top. That argument is backwards
+   compatible with its eight existing call sites.
+2. `StatusBadge.tsx` carries **no `"use client"`**, and neither do four of its
+   consumers (`facility-billing.tsx`, `FacilityModal.tsx`, `UserModal.tsx`,
+   `badge.tsx`). A hook added to it errors in any of those that is genuinely a
+   server component. Either add the directive and let `bun run build` prove the
+   four are reached from client trees, or pass the locale as an optional prop
+   and accept that 52 call sites must opt in.
+
+Worth doing, and worth doing on its own with a build and an eye check.
+
+### The other eight screens, with their strings located
+
+The walkthrough gave words; a second pass gave positions and full strings, which
+corrected two mistakes: `Add` was matching **"Add-ons"** (a noun, not a verb),
+and `Bookings` on its own page was the **page title**, not a nav item. The nav
+is French. Remaining, by screen:
+
+- **clients** — "Export"
+- **kennel view** — "Occupancy" (h1), "Upcoming bookings", "Today"/"Week"
+  buttons, "Export", "Add booking", "Pending"
+- **gift cards** — "Check Balance", "Total Wallet Balance", "Today"/"This
+  Week"/"This Month", "Settings" tab, "Export CSV", "Download card list"
+- **calendar** — "Today's Overview", "Bookings", "Completed", "Revenue Today",
+  "+ Add Task", "Today"/"Week"/"Month"/"Staff View", and three table headers
+  ("Owner", "Add-Ons", "Staff")
+- **daily care** — "Today's Care" and "Schedule Settings" (in-page nav links),
+  "Today's progress", "Afternoon Add-Ons"
+- **care tasks** — "Owner provide", "Kennel" badges
+- **dashboard** — "Today's Check-Ins", "Today's Arrivals", "Going Home Today",
+  "Missed Calls Up 100% This Week"
+
+"Daycare", "Boarding" and "Kennel" want reading before converting: §5q says a
+service a facility named itself never passes through the locale layer.
