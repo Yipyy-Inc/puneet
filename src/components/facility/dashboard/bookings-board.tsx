@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type CSSProperties } from "react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { PawPrint, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-f
 import { BookingCard } from "@/components/facility/dashboard/booking-card";
 
 export function BookingsBoard() {
+  const t = useShellText("dashboard");
   const { bookings, isLoading } = useUnifiedBookings();
   const { tab, serviceFilter, query, setQuery } = useDashboardFilters();
 
@@ -66,18 +68,22 @@ export function BookingsBoard() {
     }
   }, [queryScoped, tab]);
 
+  // `t` IS a dependency. A memo that calls a translator without depending on
+  // it serves the pre-hydration English for the life of the component —
+  // check:frozen-translator exists for exactly this, and an empty state is
+  // where a French reader would notice it.
   const emptyText = useMemo(() => {
     switch (tab) {
       case "scheduled":
-        return "No scheduled arrivals match your filters";
+        return t("emptyScheduled");
       case "checked-in":
-        return "No pets currently checked in";
+        return t("emptyCheckedIn");
       case "going-home":
-        return "No departures expected today";
+        return t("emptyGoingHome");
       case "checked-out":
-        return "No checked-out reservations today";
+        return t("emptyCheckedOut");
     }
-  }, [tab]);
+  }, [tab, t]);
 
   const primaryAction = useMemo(() => {
     switch (tab) {
@@ -105,10 +111,10 @@ export function BookingsBoard() {
             </span>
             <div>
               <h3 className="text-lg font-semibold tracking-tight">
-                Live Activity Board
+                {t("liveBoard")}
               </h3>
               <p className="text-muted-foreground text-xs">
-                Track arrivals, current guests, and departures in real time.
+                {t("liveBoardHint")}
               </p>
             </div>
           </div>

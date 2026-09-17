@@ -8689,6 +8689,28 @@
       "depositRequired": "Dépôt requis",
       "expiresOn": "Cette estimation expire le {date}",
       "poweredByYipyy": "Propulsé par Yipyy"
+    },
+    "dashboard": {
+      "loadingToday": "Chargement des chiffres du jour",
+      "arrivals": "Arrivées du jour",
+      "arrivalsHint": "Arrivées prévues",
+      "currentGuests": "Pensionnaires sur place",
+      "currentGuestsHint": "Animaux présents en ce moment",
+      "goingHome": "Départs du jour",
+      "goingHomeHint": "Départs prévus",
+      "checkedOut": "Départs effectués",
+      "checkedOutHint": "Déjà repartis aujourd’hui",
+      "currentlyIn": "Présents",
+      "searchBoard": "Rechercher un numéro de réservation, un animal, un propriétaire ou un téléphone…",
+      "liveBoard": "Tableau d’activité en direct",
+      "liveBoardHint": "Suivez les arrivées, les pensionnaires présents et les départs en temps réel.",
+      "emptyScheduled": "Aucune arrivée prévue ne correspond à vos filtres",
+      "emptyCheckedIn": "Aucun animal présent en ce moment",
+      "emptyGoingHome": "Aucun départ prévu aujourd’hui",
+      "emptyCheckedOut": "Aucun départ effectué aujourd’hui",
+      "checkInsToday": "Arrivées du jour",
+      "acrossServices": "sur {count} services",
+      "allServices": "Tous"
     }
   },
   "customerPages": {

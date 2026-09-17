@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { Home, LogIn, LogOut, PawPrint, Search } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,10 @@ function BoardInner({
   title,
   description,
 }: ServiceCheckInBoardProps) {
+  // Shared by the training and custom-service check-in pages, so its labels
+  // were English on both. Same keys as the dashboard row above it — the wrapper
+  // only provides context, so the hook belongs here, beside the strings.
+  const t = useShellText("dashboard");
   const { bookings } = useUnifiedBookings();
   const [tab, setTab] = useState<BoardTab>("scheduled");
   const [query, setQuery] = useState("");
@@ -118,36 +123,36 @@ function BoardInner({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile
-          label="Today's Arrivals"
+          label={t("arrivals")}
           value={counts.todaysArrivals}
-          hint="Scheduled check-ins"
+          hint={t("arrivalsHint")}
           icon={LogIn}
           tone="amber"
           active={tab === "scheduled"}
           onClick={() => setTab("scheduled")}
         />
         <KpiTile
-          label="Currently In"
+          label={t("currentlyIn")}
           value={counts.currentGuests}
-          hint="Pets currently on-site"
+          hint={t("currentGuestsHint")}
           icon={PawPrint}
           tone="indigo"
           active={tab === "checked-in"}
           onClick={() => setTab("checked-in")}
         />
         <KpiTile
-          label="Going Home Today"
+          label={t("goingHome")}
           value={counts.goingHomeToday}
-          hint="Departures expected"
+          hint={t("goingHomeHint")}
           icon={Home}
           tone="violet"
           active={tab === "going-home"}
           onClick={() => setTab("going-home")}
         />
         <KpiTile
-          label="Checked Out"
+          label={t("checkedOut")}
           value={counts.checkedOutToday}
-          hint="Already departed today"
+          hint={t("checkedOutHint")}
           icon={LogOut}
           tone="emerald"
           active={tab === "checked-out"}
@@ -162,7 +167,7 @@ function BoardInner({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search reservation ID, pet, owner, or phone…"
+              placeholder={t("searchBoard")}
               className="h-9 w-full pl-9 text-sm"
             />
           </div>

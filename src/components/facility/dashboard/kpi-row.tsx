@@ -10,8 +10,12 @@ import {
 } from "@/components/facility/dashboard/kpi-tile";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
 import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 export function KpiRow() {
+  // The first screen anybody opens, and it read English for a French
+  // member of staff — four tile labels and their four hints.
+  const t = useShellText("dashboard");
   const { bookings, isLoading } = useUnifiedBookings();
   const { tab, setTab, serviceFilter } = useDashboardFilters();
 
@@ -58,7 +62,7 @@ export function KpiRow() {
   if (isLoading) {
     return (
       <div className={grid} aria-busy="true" aria-live="polite">
-        <span className="sr-only">Loading today&apos;s numbers</span>
+        <span className="sr-only">{t("loadingToday")}</span>
         <KpiTileSkeleton />
         <KpiTileSkeleton />
         <KpiTileSkeleton />
@@ -82,9 +86,9 @@ export function KpiRow() {
       )}
     >
       <KpiTile
-        label="Today's Arrivals"
+        label={t("arrivals")}
         value={counts.todaysArrivals}
-        hint="Scheduled check-ins"
+        hint={t("arrivalsHint")}
         icon={LogIn}
         tone="amber"
         active={tab === "scheduled"}
@@ -104,27 +108,27 @@ export function KpiRow() {
           holding: arrivals, departures and check-outs are STATES of a record,
           which orange may never mean. One orange idea on this screen. */}
       <KpiTile
-        label="Current Guests"
+        label={t("currentGuests")}
         value={counts.currentGuests}
-        hint="Pets currently on-site"
+        hint={t("currentGuestsHint")}
         icon={PawPrint}
         tone="brand"
         active={tab === "checked-in"}
         onClick={() => setTab("checked-in")}
       />
       <KpiTile
-        label="Going Home Today"
+        label={t("goingHome")}
         value={counts.goingHomeToday}
-        hint="Departures expected"
+        hint={t("goingHomeHint")}
         icon={Home}
         tone="violet"
         active={tab === "going-home"}
         onClick={() => setTab("going-home")}
       />
       <KpiTile
-        label="Checked Out"
+        label={t("checkedOut")}
         value={counts.checkedOutToday}
-        hint="Already departed today"
+        hint={t("checkedOutHint")}
         icon={LogOut}
         tone="emerald"
         active={tab === "checked-out"}

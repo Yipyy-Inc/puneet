@@ -16521,3 +16521,46 @@ under CSS `capitalize`, which made "daycare" look like a deliberate English word
 rather than a missing lookup. It goes through `serviceTypeLabel` now, and the
 `capitalize` went with it — a service the facility named itself is already its
 own spelling (§5q). 23 → 22.
+
+### The facility dashboard reads French (2026-09-17)
+
+The first screen anybody opens. A new `shell.dashboard` group (its own group
+because none of the other eighteen owns the dashboard, and it is the screen a
+new facility sees first), and four components moved onto it:
+
+| file                         | check:ui-french          |
+| ---------------------------- | ------------------------ |
+| `kpi-row.tsx`                | 9 → **0**, entry removed |
+| `service-check-in-board.tsx` | 9 → **0**, entry removed |
+| `service-breakdown.tsx`      | 5 → 1                    |
+| `bookings-board.tsx`         | 4 → 2                    |
+
+`service-check-in-board.tsx` was a bonus: it is shared by the training and
+custom-service check-in pages, so the same nine keys cleared three screens.
+
+Verified through the app, both languages, with a case-INSENSITIVE match —
+`KpiTile` uppercases its label in CSS (§1's micro style) and `innerText` returns
+the uppercased text, so a case-sensitive probe reported "(none)" for labels that
+were rendering perfectly. 9/9 English strings in English with no French
+leaking; 8/8 French in French with no English leaking.
+
+**Two things worth keeping.**
+
+`bookings-board`'s empty state is a `useMemo` over the tab, and `t` had to go in
+its dependency array — `check:frozen-translator` exists for exactly that, and an
+empty state is where a French reader would notice a memo serving the
+pre-hydration English forever. The gate is still at zero.
+
+**`ServiceCheckInBoard`'s hook belongs in `BoardInner`, not the wrapper.** The
+exported component only provides context; every label lives in the inner one.
+Putting the hook in the wrapper typechecked as five "Cannot find name 't'"
+errors, which is the cheap version of that mistake.
+
+### Still English on the dashboard, and it is not chrome
+
+The Smart Insights widget: "Dismiss", "Take Action", "View all insights",
+"operations high", and its generated sentences — "Missed Calls Up 100% This
+Week", "4 retail products at or below reorder point", "Calls Arriving Outside
+Staffed Hours". The buttons are chrome and convertible; the sentences are
+COMPOSED from data and would need the generator to produce French, which is a
+different job from a catalogue lookup. Left whole rather than half-done.
