@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { statusLabel } from "@/lib/i18n/labels";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   CalendarDays,
@@ -87,6 +89,9 @@ export function OperationsCalendarSidePanel({
   onCompleteTask,
   onAddTask,
 }: OperationsCalendarSidePanelProps) {
+  // Two of the four overview tiles are booking STATUSES and take the shared
+  // helper; only the panel's own words are keys here.
+  const { t, locale } = useStaffText("opsCalendar");
   // The facility's own extras, so the add-on revenue this panel reports is
   // priced off what the business sells rather than off the seed file.
   const { addOns: facilityAddOns } = useServiceAddOns();
@@ -250,7 +255,7 @@ export function OperationsCalendarSidePanel({
   }> = [
     {
       kind: "all",
-      label: "Bookings",
+      label: t("tileBookings"),
       value: bookingCount,
       icon: CalendarDays,
       textColor: "text-sky-600",
@@ -261,7 +266,7 @@ export function OperationsCalendarSidePanel({
     },
     {
       kind: "confirmed",
-      label: "Confirmed",
+      label: statusLabel(locale, "confirmed"),
       value: confirmedCount,
       icon: CheckCircle2,
       textColor: "text-emerald-600",
@@ -272,7 +277,7 @@ export function OperationsCalendarSidePanel({
     },
     {
       kind: "completed",
-      label: "Completed",
+      label: statusLabel(locale, "completed"),
       value: completedCount,
       icon: TrendingUp,
       textColor: "text-indigo-600",
@@ -283,7 +288,7 @@ export function OperationsCalendarSidePanel({
     },
     {
       kind: "tasks",
-      label: "Tasks",
+      label: t("tileTasks"),
       value: taskCount,
       icon: Clock,
       textColor: "text-amber-600",
@@ -354,7 +359,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={() => shiftAnchorDay(-1)}
-            title="Previous day"
+            title={t("prevDay")}
             className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronUp className="size-4" />
@@ -362,7 +367,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={() => onDateChange(formatDateKey(new Date()))}
-            title="Jump to today"
+            title={t("jumpToday")}
             className="flex size-7 items-center justify-center rounded-lg text-sky-600 transition-colors hover:bg-sky-50"
           >
             <CalendarDays className="size-4" />
@@ -370,7 +375,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={() => shiftAnchorDay(1)}
-            title="Next day"
+            title={t("nextDay")}
             className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronDown className="size-4" />
@@ -578,7 +583,7 @@ export function OperationsCalendarSidePanel({
               <DollarSign className={cn("size-3.5", revenueTone.icon)} />
             </div>
             <span className="text-[10px] font-medium text-slate-500">
-              Revenue Today
+              {t("revenueToday")}
             </span>
           </div>
           <span
@@ -616,9 +621,15 @@ export function OperationsCalendarSidePanel({
                   ev.status === "Checked-in";
                 const overdue = !checkedIn && ev.start < today;
                 const statusDot = checkedIn
-                  ? { color: "bg-emerald-500", label: "Checked in" }
+                  ? {
+                      color: "bg-emerald-500",
+                      label: statusLabel(locale, "checked_in"),
+                    }
                   : overdue
-                    ? { color: "bg-red-500", label: "Overdue — not checked in" }
+                    ? {
+                        color: "bg-red-500",
+                        label: t("overdueNotCheckedIn"),
+                      }
                     : { color: "bg-sky-500", label: "Confirmed" };
                 return (
                   <button
@@ -681,7 +692,7 @@ export function OperationsCalendarSidePanel({
                 onClick={onAddTask}
                 className="text-[10px] font-semibold text-sky-600 hover:underline"
               >
-                + Add Task
+                {t("addTask")}
               </button>
             </div>
             <div className="space-y-1.5">

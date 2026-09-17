@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { Filter, FileDown, Gauge, Printer, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,13 +59,14 @@ export function OperationsCalendarToolbar({
   onPrintDay,
   onExportDayPdf,
 }: OperationsCalendarToolbarProps) {
+  const { t } = useStaffText("opsCalendar");
   const simplifiedViews: Array<{
     value: OperationsCalendarView;
     label: string;
   }> = [
-    { value: "day", label: "Day" },
-    { value: "week", label: "Week" },
-    { value: "month", label: "Month" },
+    { value: "day", label: t("viewDay") },
+    { value: "week", label: t("viewWeek") },
+    { value: "month", label: t("viewMonth") },
   ];
 
   return (
@@ -157,7 +159,7 @@ export function OperationsCalendarToolbar({
             }`}
           >
             <Users className="size-4" />
-            Staff View
+            {t("staffView")}
           </Button>
 
           {/* Staff filter (only in Staff View) */}

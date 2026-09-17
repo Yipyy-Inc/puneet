@@ -1895,7 +1895,19 @@
         "eventNotSaved": "The event was not saved",
         "rescheduled": "Rescheduled",
         "ownerNotMessaged": "The owner has not been messaged — Yipyy does not send reschedule notices yet.",
-        "taskNotSaved": "The task was not saved"
+        "taskNotSaved": "The task was not saved",
+        "viewDay": "Day",
+        "viewWeek": "Week",
+        "viewMonth": "Month",
+        "staffView": "Staff view",
+        "tileBookings": "Bookings",
+        "tileTasks": "Tasks",
+        "revenueToday": "Revenue today",
+        "addTask": "Add task",
+        "prevDay": "Previous day",
+        "jumpToday": "Jump to today",
+        "nextDay": "Next day",
+        "overdueNotCheckedIn": "Overdue — not checked in"
       },
       "dailyCareBoard": {
         "flaggedHealth": "{pet} is flagged for attention — health concern",

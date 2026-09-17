@@ -1895,7 +1895,19 @@
         "eventNotSaved": "L’événement n’a pas été enregistré",
         "rescheduled": "Déplacé",
         "ownerNotMessaged": "Le propriétaire n’a pas été prévenu : Yipyy n’envoie pas encore d’avis de changement d’horaire.",
-        "taskNotSaved": "La tâche n’a pas été enregistrée"
+        "taskNotSaved": "La tâche n’a pas été enregistrée",
+        "viewDay": "Jour",
+        "viewWeek": "Semaine",
+        "viewMonth": "Mois",
+        "staffView": "Vue par personnel",
+        "tileBookings": "Réservations",
+        "tileTasks": "Tâches",
+        "revenueToday": "Revenus du jour",
+        "addTask": "Ajouter une tâche",
+        "prevDay": "Jour précédent",
+        "jumpToday": "Aller à aujourd’hui",
+        "nextDay": "Jour suivant",
+        "overdueNotCheckedIn": "En retard — pas encore arrivé"
       },
       "dailyCareBoard": {
         "flaggedHealth": "Signalement pour {pet} : problème de santé",
