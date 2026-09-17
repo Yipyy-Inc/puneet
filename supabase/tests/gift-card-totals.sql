@@ -26,6 +26,9 @@
 -- G8 A member WITHOUT financial_manage_gift_cards aggregates nothing. The
 --    function is security invoker, so gift_cards RLS is the whole boundary.
 -- G9 anon cannot execute it; authenticated can.
+-- G10 The overview tiles: sales.outstanding, sales.active and faceValue.
+-- G11 sales.outstanding and liability COME APART once a window excludes a card
+--     — the reason both exist rather than one being repointed at the other.
 -- ============================================================================
 
 begin;
@@ -236,8 +239,12 @@ begin
   perform pg_temp.t(
     'G7 the other facility''s 500 is not in it',
     (v->>'cardCount')::int = 4
-      and (v->'byStatus'->>'active')::int = 3
-      and (v->'byStatus'->>'cancelled')::int = 1,
+      and (v->'byStatus'->'active'->>'count')::int = 3
+      and (v->'byStatus'->'cancelled'->>'count')::int = 1
+      -- The BALANCE per status, not just the count: c3 is voided and still
+      -- holds 99, which is the money a breakdown exists to surface.
+      and (v->'byStatus'->'cancelled'->>'balance')::numeric = 99
+      and (v->'byStatus'->'active'->>'balance')::numeric = 59,
     format('cardCount=%s byStatus=%s', v->>'cardCount', v->'byStatus'));
 
   perform pg_temp.t(
@@ -247,6 +254,22 @@ begin
       and (v->'sales'->>'physical')::int = 1
       and (v->'sales'->>'digital')::int = 3,
     format('sales=%s', v->'sales'));
+
+  -- ── G10 the overview's period-scoped pair ────────────────────────────────
+  --
+  -- `sales.outstanding` is NOT `liability`, and the difference is the reason
+  -- both exist. Over the whole year every card is in the window, so the two
+  -- agree here at 59 — G11 below is the one that separates them.
+  perform pg_temp.t(
+    'G10 sales.outstanding is what is left on cards sold in the window',
+    (v->'sales'->>'outstanding')::numeric = 59
+      and (v->'sales'->>'active')::int = 3,
+    format('sales=%s', v->'sales'));
+
+  perform pg_temp.t(
+    'G10 faceValue is every card ever, at issue price, window or not',
+    (v->>'faceValue')::numeric = 179,
+    format('faceValue=%s', v->>'faceValue'));
 
   v_month := v->'salesByMonth';
   perform pg_temp.t(
@@ -309,6 +332,24 @@ begin
     'G2 liability ignores the window - money owed is owed today',
     (v->'liability'->>'total')::numeric = 59,
     format('liability=%s', v->'liability'));
+
+  -- ── G11 the two liabilities come apart, which is why there are two ───────
+  --
+  -- April sold c3 (cancelled, so not outstanding) and c4 (10 left). So the
+  -- window's outstanding is 10 while the facility still owes 59 in total. A
+  -- tile that used the wrong one would read plausibly and be wrong by 49.
+  perform pg_temp.t(
+    'G11 sales.outstanding is 10 in April while liability is 59',
+    (v->'sales'->>'outstanding')::numeric = 10
+      and (v->'sales'->>'active')::int = 1
+      and (v->'liability'->>'total')::numeric = 59,
+    format('outstanding=%s liability=%s',
+           v->'sales'->>'outstanding', v->'liability'->>'total'));
+
+  perform pg_temp.t(
+    'G11 faceValue answers to no window at all',
+    (v->>'faceValue')::numeric = 179,
+    format('faceValue=%s', v->>'faceValue'));
 
   perform pg_temp.t(
     'G2 the redemption window is its own, and excludes the earlier two',

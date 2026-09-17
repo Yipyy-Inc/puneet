@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { giftCardQueries } from "@/lib/api/gift-cards";
+import { toLegacyTransaction } from "../_lib/to-legacy-card";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -268,6 +272,26 @@ export function GiftCardDetailSheet({
     return () => clearTimeout(t);
   }, [revealedCardId]);
 
+  // ── THIS CARD'S LEDGER, FETCHED FOR THIS CARD ───────────────────────────
+  //
+  // It used to arrive on the `card` prop, which meant the PAGE asked for every
+  // card's whole history to fill a drawer that shows one — 12,973 movements to
+  // draw the handful on screen. `detail` is one card and its ledger in a single
+  // request, which is also what keeps the balance and the history explaining it
+  // from disagreeing.
+  //
+  // ABOVE the `if (!card)` below, deliberately: a hook after an early return is
+  // a hook that runs on some renders and not others, and this drawer's whole
+  // job is to open and close. `enabled` lives in the factory (`Boolean(id)`),
+  // so a closed drawer with no card asks for nothing.
+  const detail = useQuery(giftCardQueries.detail(card?.id));
+  // The prop's history stays as the fallback, so a caller that already holds a
+  // ledger keeps working and the timeline has rows on the first frame rather
+  // than appearing empty and filling in.
+  const history = detail.data?.transactions.length
+    ? detail.data.transactions.map(toLegacyTransaction)
+    : (card?.transactionHistory ?? []);
+
   if (!card) return null;
 
   const revealed = revealedCardId === card.id;
@@ -509,7 +533,7 @@ export function GiftCardDetailSheet({
 
   // Transaction history merged with staff-action audit entries, newest first.
   const timeline = [
-    ...card.transactionHistory.map((tx) => ({
+    ...history.map((tx) => ({
       kind: "tx" as const,
       key: tx.id,
       timestamp: tx.timestamp,

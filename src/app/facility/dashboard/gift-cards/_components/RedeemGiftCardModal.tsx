@@ -34,7 +34,12 @@ import { cn } from "@/lib/utils";
 import { physicalCardBatches } from "@/data/gift-cards";
 import { clientQueries } from "@/lib/api/client";
 import { useStoreCredit } from "@/lib/api/store-credit";
-import { useRedeemGiftCardToCredit } from "@/lib/api/gift-cards";
+import {
+  useRedeemGiftCardToCredit,
+  type GiftCardRow,
+  type GiftCardTransactionRow,
+} from "@/lib/api/gift-cards";
+import { toLegacyGiftCard } from "../_lib/to-legacy-card";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { canRedeemGiftCard } from "@/lib/hq/redemption";
 import type { GiftCard } from "@/types/payments";
@@ -59,10 +64,10 @@ interface RedeemGiftCardModalProps {
   onOpenChange: (open: boolean) => void;
   facilityId: number;
   onSuccess?: (result: RedeemToWalletResult) => void;
-  /** The facility's real cards, from `giftCardQueries.allWithLedger()`. Empty
-   *  by default: this modal MOVES MONEY, and defaulting to a fixture is how it
-   *  would look like it worked against cards nobody had sold. */
-  cards?: GiftCard[];
+  // No `cards` prop any more. It was the facility's whole card list, handed
+  // down so this modal could scan it for a code — which meant the page fetched
+  // 6,022 cards before a counter could look one up. It asks the server for the
+  // one card instead.
 }
 
 type LookupState = "idle" | "searching" | "found" | "not_found" | "invalid";
@@ -74,7 +79,6 @@ export function RedeemGiftCardModal({
   onOpenChange,
   facilityId,
   onSuccess,
-  cards = [],
 }: RedeemGiftCardModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Step 1 — destination customer
@@ -175,25 +179,67 @@ export function RedeemGiftCardModal({
         })
       : { allowed: true, reason: null };
 
+  /**
+   * One card, by the code on it. `null` for anything this facility does not
+   * have — including a real code belonging to somebody else.
+   */
+  const lookUpByCode = async (code: string): Promise<GiftCard | null> => {
+    const res = await fetch(
+      `/api/gift-cards?code=${encodeURIComponent(code)}`,
+    ).catch(() => null);
+    if (!res?.ok) return null;
+    const { cards: found } = (await res.json()) as { cards: GiftCardRow[] };
+    // No ledger: this screen reads a status and a balance, never a history.
+    return found[0]
+      ? toLegacyGiftCard({ ...found[0], transactions: [] })
+      : null;
+  };
+
+  /** One card by its id — the printed-card path, which resolves to an id. */
+  const lookUpById = async (id: string): Promise<GiftCard | null> => {
+    const res = await fetch(`/api/gift-cards/${encodeURIComponent(id)}`).catch(
+      () => null,
+    );
+    if (!res?.ok) return null;
+    const payload = (await res.json()) as {
+      card: GiftCardRow;
+      transactions: GiftCardTransactionRow[];
+    };
+    return payload.card
+      ? toLegacyGiftCard({ ...payload.card, transactions: [] })
+      : null;
+  };
+
   const handleSearch = async () => {
     if (!cardCode.trim()) return;
     setLookupState("searching");
-    await new Promise((r) => setTimeout(r, 800));
-    const q = cardCode.trim().toLowerCase();
+    // `typed` keeps the case the counter entered; `q` is folded for the
+    // fixture comparisons below. They are NOT interchangeable: the server
+    // matches `code` EXACTLY, so sending the folded string finds nothing and
+    // every real card reads "not found" — which is what happened the first
+    // time this lookup moved off the in-memory list, where `===` was applied
+    // to two lowercased strings and folding was free.
+    const typed = cardCode.trim();
+    const q = typed.toLowerCase();
 
-    // Match a digital code / POS card number, else resolve a printed physical
-    // card number or barcode to its activated gift card.
-    // NO `gc.facilityId === facilityId` here, deliberately. `cards` arrives
-    // already scoped to this facility by the SESSION, and a Postgres card
-    // carries a uuid facility - the shim sets that legacy number to a sentinel
-    // that matches nothing, so this filter would find no card at all and every
-    // lookup would read "not found".
-    let card =
-      cards.find(
-        (gc) =>
-          gc.code.toLowerCase() === q || gc.cardNumber?.toLowerCase() === q,
-      ) ?? null;
+    // ── THE CARD IS LOOKED UP BY THE SERVER, NOT SCANNED FOR HERE ─────────
+    //
+    // This used to be `cards.find(...)` over every card the facility had ever
+    // issued, which the PAGE had to fetch and hand down — 6,022 of them on the
+    // e2e facility, 3.46 MB, and a counter waiting for all of it before a scan
+    // could match. `/api/gift-cards?code=` answers the same question with one
+    // row, and it is the endpoint the check-balance counter already uses.
+    //
+    // NO facility filter here, deliberately, and none is sent: the route takes
+    // the facility from the SESSION. A code belonging to another facility comes
+    // back as nothing, which is the same answer a code nobody has gets — that
+    // indistinguishability is on purpose, because a gift card code is a bearer
+    // instrument and an answer separating "real, but not yours" from "not real"
+    // is a way to search for real ones.
+    let card = await lookUpByCode(typed);
     if (!card) {
+      // A printed physical card: its number or barcode maps to a gift card id
+      // in the batch fixture, and that id is fetched directly.
       const physical = physicalCardBatches
         .filter((b) => b.facilityId === facilityId)
         .flatMap((b) => b.cards)
@@ -201,9 +247,7 @@ export function RedeemGiftCardModal({
           (c) =>
             c.cardNumber.toLowerCase() === q || c.barcode.toLowerCase() === q,
         );
-      if (physical?.giftCardId) {
-        card = cards.find((gc) => gc.id === physical.giftCardId) ?? null;
-      }
+      if (physical?.giftCardId) card = await lookUpById(physical.giftCardId);
     }
 
     if (!card) {
