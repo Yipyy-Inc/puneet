@@ -192,6 +192,55 @@ const CLAIMS: Claim[] = [
     label: "check:* scripts in the checks job",
     actual: checkScriptCount(),
   },
+  // ── ci.yml's OWN prose about the split, which drifted twice unnoticed ────
+  //
+  // Added 2026-09-17. The e2e job's comments and the two lines it ECHOES into
+  // every run's log said 12, then 27, then 47, then 83 — none of them true.
+  // The log line is the worst of them, because it is what a person reads when
+  // they open a run to see what was covered: it announced "Gate (27 specs)"
+  // while the command beneath it listed 33, and "The full suite runs nightly"
+  // for hours after the nightly had been switched off.
+  //
+  // None of the patterns above matched those sentences, which is the very
+  // failure this script's header describes — a count nothing derives is a
+  // count that goes stale, and sitting inside the CI file buys no immunity.
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /# So this job now runs the (\d+) specs that guard/,
+    label: "specs in test:e2e:gate (e2e job comment)",
+    actual: gateSpecCount(),
+  },
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /money\. The other (\d+) still run,/,
+    label: "full-suite specs NOT in the gate (e2e job comment)",
+    actual: ciSpecCount() - gateSpecCount(),
+  },
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /# A push or a PR runs the (\d+)-spec gate/,
+    label: "specs in test:e2e:gate (suite-choice comment)",
+    actual: gateSpecCount(),
+  },
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /# A manual workflow_dispatch runs all (\d+)\./,
+    label: "specs in test:e2e:ci (suite-choice comment)",
+    actual: ciSpecCount(),
+  },
+  {
+    // The two lines CI prints into the log of every single run.
+    file: ".github/workflows/ci.yml",
+    pattern: /echo "Full suite \((\d+) specs\)\."/,
+    label: "specs in test:e2e:ci (the log line CI prints)",
+    actual: ciSpecCount(),
+  },
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /echo "Gate \((\d+) specs: access & money\)/,
+    label: "specs in test:e2e:gate (the log line CI prints)",
+    actual: gateSpecCount(),
+  },
 ];
 
 /**
