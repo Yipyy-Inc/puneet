@@ -8092,6 +8092,8 @@
       "addAStaffOnlyNote": "Add a staff-only note (not visible to the client)…",
       "deleteNote": "Delete note",
       "internalNoteAdded": "Internal note added",
+      "smsReEnabled": "Re-enabled SMS for this client",
+      "smsReEnableFailed": "Could not re-enable SMS for this client",
       "noteRemoved": "Note removed",
       "unpin": "Unpin",
       "pin": "Pin",
