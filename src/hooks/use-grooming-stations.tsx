@@ -135,7 +135,12 @@ export function GroomingStationsProvider({
     // The board shows who is on which table RIGHT NOW, and that answer changes
     // as staff check pets in from other screens. Thirty seconds is the same
     // cadence the board's own clock already re-renders on.
-    refetchInterval: 30_000,
+    // 30s was 2,880 polls a day per open tab, and each one costs the server an
+    // auth-chain round trip to Supabase. Measured 2026-09-17: that traffic put
+    // the org 302% over its 5 GB egress quota. A grooming station board that is
+    // two minutes stale has never mattered; the bill did.
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 

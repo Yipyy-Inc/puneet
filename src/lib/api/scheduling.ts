@@ -553,7 +553,10 @@ export const clockQueries = {
       );
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    // Lengthened from 30s on 2026-09-17: see lib/auth/viewer.ts for the
+    // measurement. Still short enough to be the live view it is meant to be.
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
   }),
 };
 

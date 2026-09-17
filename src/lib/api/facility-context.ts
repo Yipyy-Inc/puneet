@@ -1,3 +1,4 @@
+import { cache } from "react";
 import "server-only";
 
 import { cookies, headers } from "next/headers";
@@ -116,7 +117,18 @@ export type FacilityContext = {
   legacyRef: number | null;
 };
 
-export async function getFacilityContext(
+/**
+ * Request-scoped for the reason spelled out on `getViewer`: this ran 7,634
+ * times an hour on the live project, and every one of those also resolved the
+ * viewer and queried `locations`. Callers ask it freely — `inFacility(scope)`
+ * is meant to sit anywhere in a chain — so the deduplication has to be here
+ * rather than in a discipline about call sites.
+ *
+ * `preferFacilityId` is part of the cache key, which is what makes this safe:
+ * a multi-facility admin asking for two different facilities in one request
+ * gets two answers, not the first one twice.
+ */
+export const getFacilityContext = cache(async function getFacilityContext(
   /**
    * The facility this particular request names, when it knows.
    *
@@ -159,7 +171,7 @@ export async function getFacilityContext(
     slug: facility.slug ?? "",
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
-}
+});
 
 /**
  * Which of this facility's own locations a write should land on.

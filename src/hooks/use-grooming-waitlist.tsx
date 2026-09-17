@@ -230,7 +230,9 @@ export function GroomingWaitlistProvider({
     queryFn: fetchWaitlist,
     // The queue changes when anyone at the facility books, cancels or offers.
     // Same cadence as the stations query, which the same board renders beside.
-    refetchInterval: 30_000,
+    // See use-grooming-stations: 30s polling was the egress bill, not latency.
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
 

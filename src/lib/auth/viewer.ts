@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
 import type {
@@ -172,9 +174,37 @@ async function viewerFromSession(): Promise<Viewer | null> {
   };
 }
 
-export async function getViewer(): Promise<Viewer> {
+/**
+ * Who is asking — resolved ONCE per request.
+ *
+ * ── WHY `cache()` IS LOAD-BEARING, NOT AN OPTIMISATION ────────────────────
+ *
+ * Measured on the live project, 2026-09-17, one hour of edge logs:
+ *
+ *   /rest/v1/facility_memberships  13,004
+ *   /rest/v1/profiles              12,975
+ *   /rest/v1/facilities             7,634
+ *   /rest/v1/locations              6,803
+ *
+ * — about 40,000 Supabase requests an hour whose entire job is answering "who
+ * is this and which facility are they in", against 1,484 booking reads and 799
+ * client reads in the same hour. Two thirds of ALL database traffic was the
+ * auth chain, and `profiles` ran at roughly TWICE the rate of `facilities`
+ * because nothing deduplicated it: `activeFacilityIdForStaff()` resolves the
+ * viewer itself and then calls `getFacilityContext()`, which resolves it
+ * again, and a route that also calls `getViewer()` directly makes three.
+ *
+ * That put the organisation 302% over a 5 GB egress quota and started a grace
+ * period. It is not a latency footnote; it was the bill.
+ *
+ * React's `cache()` is request-scoped: every call inside one request returns
+ * the same promise, and the next request starts clean. So this cannot serve one
+ * person's identity to another — the cache lives and dies with the request, and
+ * there is no key to get wrong.
+ */
+export const getViewer = cache(async function getViewer(): Promise<Viewer> {
   return (await viewerFromSession()) ?? ANONYMOUS;
-}
+});
 
 /** True when the viewer holds any active membership at `facilityId`. */
 export function belongsToFacility(viewer: Viewer, facilityId: string): boolean {
