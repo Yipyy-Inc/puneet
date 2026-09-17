@@ -16669,3 +16669,69 @@ possibilities, both plausible: they were facility DATA rather than labels, or
 the walkthrough predated the `CareTaskSettings` rewrite earlier the same day,
 which replaced that screen's body. Not chased; recorded so nobody assumes it was
 converted.
+
+---
+
+## 2026-09-17 — 302% over the egress quota, and where it actually goes
+
+Supabase put the org in a grace period ending **20 Sep 2026**: egress 15.117 GB
+against a 5 GB free quota, after which requests return 402. Measured rather
+than guessed, and the shape was a surprise.
+
+**It is not payload size.** The whole database is 83 MB; the largest table is
+`audit_log` at 4.9 MB. Egress is REQUEST VOLUME.
+
+**One hour of `edge_logs`:**
+
+```
+/rest/v1/facility_memberships  13,004      /rest/v1/staff          1,870
+/rest/v1/profiles              12,975      /rest/v1/bookings       1,484
+/rest/v1/facilities             7,634      /rpc/my_permissions     1,443
+/rest/v1/locations              6,803      /rest/v1/clients          799
+```
+
+**Two thirds of every database request is the auth chain** — answering "who is
+this, and which facility" — against 1,484 booking reads in the same hour. And
+`profiles` ran at **1.7×** `facilities`, because nothing deduplicated it:
+`activeFacilityIdForStaff()` resolves the viewer, then calls
+`getFacilityContext()`, which resolves it again; a route that also calls
+`getViewer()` directly makes three.
+
+**Rate, sampled per minute:** a sustained **1,000–2,300 Supabase requests per
+minute**, flat, not bursty. `pg_stat_statements` holds 12.4M `set_config` calls
+over a 53-day window — an average of 232k/day — so at the current 2.6M/day the
+load is roughly **ten times its own 53-day average, and started about four or
+five days ago.** That matches Supabase's "usage has continued to increase
+significantly" and the shortened grace period.
+
+**97% of it is production.** By `x_client_info`: `runtime-version=22.23.2`
+(the VPS container) 53,791 hits in an hour; this machine's Node 24 only 1,661.
+
+### Fixed here
+
+- **`getViewer` and `getFacilityContext` are wrapped in React `cache()`** —
+  request-scoped, so every caller in one request shares one resolution and the
+  next request starts clean. `preferFacilityId` is part of the key, so a
+  multi-facility admin asking about two facilities in one request still gets two
+  answers.
+- **Polling lengthened**: grooming stations, grooming waitlist and the
+  scheduling read 30s → 120s; staff notifications 60s → 180s; all four now set
+  `refetchIntervalInBackground: false` explicitly. Each poll costs the server an
+  auth-chain round trip, so per open tab this was ~2,880 polls a day, each
+  multiplied.
+
+### 🔴 STILL UNEXPLAINED: what makes ~216 app requests a minute in production
+
+Ruled out from here: the `messaging-tick` and `clover-sweep` systemd timers
+(5-minute and spread), the `uptime` workflow (15-minute cron), ISR (no
+`export const revalidate` anywhere), a server-side `setInterval` (every one in
+`src/` is inside a client component), the proxy/middleware (runs WorkOS
+`authkit()` but never touches Supabase), and the container healthcheck (30s, and
+`/api/health` makes no database call).
+
+What remains is one or more browser sessions with the app open, which the
+polling above would multiply — but 216 requests a minute is high for that.
+
+**The next step is on the box and was not taken from here:** the app's own
+access log, or Caddy's, grouped by path for the last minute, names the route
+being hammered in one command. Recorded rather than guessed at.

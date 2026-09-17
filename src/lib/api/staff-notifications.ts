@@ -44,7 +44,10 @@ export const staffNotificationQueries = {
       if (response.status === 401) return EMPTY;
       return readJson(response, "Could not load your notifications.");
     },
-    refetchInterval: 60_000,
+    // 60s was 1,440 polls a day per open tab. The bell can be three minutes
+    // late; the egress quota could not (see lib/auth/viewer.ts).
+    refetchInterval: 180_000,
+    refetchIntervalInBackground: false,
   }),
   settings: () => ({
     queryKey: ["staff-notifications", "settings"] as const,
