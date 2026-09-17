@@ -68,7 +68,8 @@
     "check:edge-accents": "bun scripts/check-edge-accents.ts",
     "check:control-heights": "bun scripts/check-control-heights.ts",
     "check:frozen-translator": "bun scripts/check-frozen-translator.ts",
-    "check:all": "bun scripts/check-all.ts"
+    "check:all": "bun scripts/check-all.ts",
+    "check:unbounded-booking-reads": "bun scripts/check-unbounded-booking-reads.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",

@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+import { SWEEPABLE_STATUSES } from "./_sweep";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -189,7 +192,9 @@ test.describe("the operations calendar", () => {
 
     // And there is still ONE booking, not the original plus a copy.
     const all = (await (
-      await page.request.get("/api/bookings")
+      await page.request.get(
+        `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+      )
     ).json()) as BookingPayload[];
     const mine = all.filter(
       (b) => b.specialRequests?.includes(MARKER) && b.status !== "cancelled",

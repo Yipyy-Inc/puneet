@@ -1,5 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+import { SWEEPABLE_STATUSES } from "./_sweep";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -84,7 +87,9 @@ test.afterAll(async ({ browser }) => {
       });
     }
     const all = (await (
-      await page.request.get("/api/bookings")
+      await page.request.get(
+        `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+      )
     ).json()) as BookingPayload[];
     for (const b of all) {
       if (!b.specialRequests?.includes(MARKER) || b.status === "cancelled") {

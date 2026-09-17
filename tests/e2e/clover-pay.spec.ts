@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+import { SWEEPABLE_STATUSES } from "./_sweep";
+
 import { signIn } from "./_auth";
 import { deployedFixture } from "./_fixtures";
 
@@ -203,7 +206,11 @@ test.describe("paying a booking by card", () => {
     const page = await context.newPage();
     try {
       await signIn(page, STAFF);
-      const all = (await (await page.request.get("/api/bookings")).json()) as
+      const all = (await (
+        await page.request.get(
+          `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+        )
+      ).json()) as
         | { id: number; specialRequests?: string | null; status: string }[]
         | null;
       const mine = (all ?? []).filter(
