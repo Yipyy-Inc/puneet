@@ -16475,3 +16475,49 @@ is French. Remaining, by screen:
 
 "Daycare", "Boarding" and "Kennel" want reading before converting: §5q says a
 service a facility named itself never passes through the locale layer.
+
+### Status chips read the viewer's language (2026-09-17)
+
+`StatusBadge` held 56 chip labels as English literals and is imported by **15
+files** (not 52 — an earlier count in this file matched the string anywhere,
+including comments, and is corrected here). So a French member of staff read
+"Cancelled", "Pending" and "Checked in" on nearly every table in the product,
+and `check:ui-french` could not see any of it: the gate reads source files, and
+this was one shared map.
+
+Verified through the app: the bookings list's chip is **"Annulé"** in French and
+"Cancelled" in English.
+
+**The chip keeps its shape; the catalogue supplies the word.** The table owns the
+VARIANT and the GLYPH, which are §3 decisions and identical in every language.
+`messages.status` has carried correct French for these since before the
+redesign — 20 of the 56 ids are in it.
+
+**`statusLabel` took an optional third argument, and that is the whole safety
+of it.** Without a fallback, the 36 ids the catalogue does not know would come
+back `humanise`d: "No-show" → "No show", against a table deliberately
+sentence-cased for §3/§5r. Passing the chip's own label keeps every one of those
+exactly as it is.
+
+**One English string did change, deliberately:** `request_submitted` was
+"Requested" on the chip and "Request submitted" in the catalogue. The catalogue
+won, so one state has one word everywhere rather than two spellings. No spec
+asserts on chip text — checked — so nothing in the suite depended on the old
+one.
+
+**Only `type === "status"` is looked up.** `plan`, `role`, `adminRole`,
+`inventory`, `accessLevel` and `severity` are different vocabularies sharing
+this component, and `messages.status` is keyed by status enums — a plan called
+"active" must not pick up the status word for it.
+
+`StatusBadge` gained `"use client"`. It had none, and nor did three of its
+importers (`facility-billing.tsx`, `UserModal.tsx`, and `FacilityModal.tsx`,
+which has **no importers at all** and is dead). `bun run build` is what proved
+all fifteen are reached from client trees; its props are strings, so nothing
+non-serializable crosses the boundary.
+
+Also on the bookings list: the service cell rendered `{booking.service}` raw
+under CSS `capitalize`, which made "daycare" look like a deliberate English word
+rather than a missing lookup. It goes through `serviceTypeLabel` now, and the
+`capitalize` went with it — a service the facility named itself is already its
+own spelling (§5q). 23 → 22.

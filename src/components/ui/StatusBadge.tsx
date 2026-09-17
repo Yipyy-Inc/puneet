@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CircleAlert,
   CircleCheck,
@@ -14,6 +16,9 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { statusLabel } from "@/lib/i18n/labels";
 
 // ============================================================================
 // Status chips. docs/design-system/design-system.md §3, §5b1, §5r.
@@ -255,12 +260,40 @@ export function StatusBadge({
   size = "default",
   className,
 }: StatusBadgeProps) {
+  // ── THE CHIP DECIDES SHAPE; THE CATALOGUE DECIDES THE WORD ─────────────
+  //
+  // The table below owns the VARIANT and the GLYPH, which are §3 decisions and
+  // are the same in every language. It also carried the English word, so a
+  // French member of staff read "Cancelled", "Pending" and "Checked in" on
+  // every table in the product — fifteen screens' worth, and invisible to
+  // check:ui-french, which reads source files rather than a shared map.
+  //
+  // `messages.status` has carried correct French for these since before the
+  // redesign (lib/i18n/labels.ts says so, and 20 of these 56 ids are in it).
+  // The chip's own label goes in as the FALLBACK, so the 36 ids the catalogue
+  // does not know keep the exact English they have today rather than being
+  // humanised into a near-miss.
+  //
+  // `hydrated ? locale : "en"` is the same rule useShellText applies, and for
+  // the same reason: the locale is a cookie the client reads, so rendering
+  // French on the server and English on the client is a hydration mismatch —
+  // here on a chip that appears in almost every table.
+  const hydrated = useHydrated();
+  const appLocale = useAppLocale();
+  const locale = hydrated ? appLocale : "en";
+
   const key = value.toLowerCase();
   const chip =
     (type === "severity" ? SEVERITY_CHIPS[key] : undefined) ??
     CHIPS[key] ??
     unknownChip(value);
   const Icon = chip.icon;
+  // Only a STATUS is looked up. `plan`, `role`, `adminRole`, `inventory`,
+  // `accessLevel` and `severity` are different vocabularies that happen to
+  // share this component, and `messages.status` is keyed by status enums — so
+  // a plan called "active" must not pick up the status word for it.
+  const label =
+    type === "status" ? statusLabel(locale, key, chip.label) : chip.label;
 
   return (
     <Badge
@@ -271,7 +304,7 @@ export function StatusBadge({
           status, so a screen reader that read the glyph too would say it
           twice (§3, §5b1). */}
       <Icon aria-hidden />
-      {chip.label}
+      {label}
     </Badge>
   );
 }

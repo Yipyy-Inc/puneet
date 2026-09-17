@@ -478,13 +478,18 @@ export default function FacilityBookingsPage() {
     },
     {
       key: "service",
-      label: "Service",
+      label: t("service"),
       icon: CalendarDays,
       defaultVisible: true,
       sortable: false,
+      // The enum was rendered raw under CSS `capitalize`, which made "daycare"
+      // look like a deliberate English word instead of a missing lookup — and
+      // left it English for a French reader. `serviceTypeLabel` also returns a
+      // service the FACILITY named itself exactly as typed (§5q), so the
+      // `capitalize` goes with it: "Yoda’s Splash" is already its own spelling.
       render: (booking) => (
-        <Badge variant="outline" className="capitalize">
-          {booking.service}
+        <Badge variant="outline">
+          {serviceTypeLabel(locale, booking.service)}
         </Badge>
       ),
     },
