@@ -826,6 +826,14 @@ export const giftCardAuditLogSchema = z.object({
   id: z.string(),
   facilityId: z.number(),
   giftCardId: z.string().optional(),
+  /**
+   * The code on the card this entry is about.
+   *
+   * Carried on the entry so a row can name the card — "Gift Card ****1278" —
+   * without the screen holding every card the facility has ever issued just to
+   * look one up by id. Optional: the fixture logs predate it.
+   */
+  giftCardCode: z.string().optional(),
   walletId: z.string().optional(),
   batchId: z.string().optional(),
   action: giftCardAuditActionEnum,

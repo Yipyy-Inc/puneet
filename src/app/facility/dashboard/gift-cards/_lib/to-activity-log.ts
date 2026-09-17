@@ -88,6 +88,7 @@ export function toActivityLog(
         id: tx.id,
         facilityId,
         giftCardId: tx.giftCardId,
+        giftCardCode: tx.cardCode ?? undefined,
         action,
         // `amount` is SIGNED in the ledger — negative takes money off — and the
         // column renders it as a bare `$x.xx`. The action already says the

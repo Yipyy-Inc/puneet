@@ -53,7 +53,7 @@ const MAX_LIMIT = 500;
 const ACTIVITY_SELECT = `
   id, gift_card_id, kind, amount, balance_after, note, created_at,
   gift_cards!inner (
-    kind, recipient_name,
+    kind, code, recipient_name,
     clients:purchased_by_client_id ( ref, name )
   )
 `;
@@ -68,6 +68,7 @@ interface ActivityRecord {
   created_at: string;
   gift_cards: {
     kind: string;
+    code: string;
     recipient_name: string | null;
     // PostgREST gives a to-one embed as an object, but has answered with a
     // one-element array before now — reading it as one shape only is how an
@@ -91,6 +92,11 @@ export interface GiftCardActivityRow {
   createdAt: string;
   /** "online" or "physical" — what the card is, needed to name an issue. */
   cardKind: string | null;
+  /**
+   * The code on the card, so a row can name it without the screen holding
+   * every card the facility has ever issued just to look one up.
+   */
+  cardCode: string | null;
   clientRef: number | null;
   clientName: string | null;
 }
@@ -140,6 +146,7 @@ export async function GET(request: NextRequest) {
       note: row.note,
       createdAt: row.created_at,
       cardKind: row.gift_cards?.kind ?? null,
+      cardCode: row.gift_cards?.code ?? null,
       clientRef: buyer?.ref ?? null,
       clientName: buyer?.name ?? row.gift_cards?.recipient_name ?? null,
     };

@@ -47,10 +47,14 @@ import {
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
-import type { GiftCard, PhysicalCardBatch } from "@/types/payments";
+import type { PhysicalCardBatch } from "@/types/payments";
 import { physicalCardBatches, giftCardSettings } from "@/data/gift-cards";
 import { clientQueries } from "@/lib/api/client";
-import { useIssueGiftCard, type GiftCardRow } from "@/lib/api/gift-cards";
+import {
+  giftCardQueries,
+  useIssueGiftCard,
+  type GiftCardRow,
+} from "@/lib/api/gift-cards";
 
 const CameraScanner = dynamic(
   () =>
@@ -178,8 +182,10 @@ interface SellGiftCardModalProps {
   prefillAmount?: number;
   /** Batches used to resolve a scanned physical card's fixed denomination. */
   physicalBatches?: PhysicalCardBatch[];
-  /** Cards this facility has already issued, for the "already activated" hint. */
-  issuedCards?: GiftCard[];
+  // No `issuedCards`. It was every card the facility had ever issued, handed
+  // down so one line could look up a scanned batch card by id for a hint —
+  // which meant the page fetched 6,022 cards before this modal could open.
+  // The card is fetched by that id instead, and only when there is one.
   /** Whether a POS cart is open; defaults payment to "POS Transaction". */
   hasActivePosSession?: boolean;
 }
@@ -192,7 +198,6 @@ export function SellGiftCardModal({
   onSuccess,
   prefillAmount,
   physicalBatches = physicalCardBatches,
-  issuedCards = [],
   hasActivePosSession = true,
 }: SellGiftCardModalProps) {
   const issueCard = useIssueGiftCard();
@@ -365,9 +370,15 @@ export function SellGiftCardModal({
   // fixture. The batches above are still hand-authored, so a fixture batch
   // pointing at `gc-001` now resolves to nothing and the sentence below simply
   // drops its balance clause — which is right: there is no such card.
-  const activatedGiftCard = matchedCard?.giftCardId
-    ? issuedCards.find((g) => g.id === matchedCard.giftCardId)
-    : undefined;
+  //
+  // Fetched by that id rather than searched for in a list of every card the
+  // facility ever issued, which the page had to hold just for this line.
+  // `enabled` is inside the factory (`Boolean(id)`), so no batch card means no
+  // request at all — which is every card, until a batch carries a real uuid.
+  const activatedQuery = useQuery(
+    giftCardQueries.detail(matchedCard?.giftCardId),
+  );
+  const activatedGiftCard = activatedQuery.data?.card;
   const activatedDate = matchedCard?.activatedAt ?? matchedCard?.soldAt;
   const activatedDateLabel = activatedDate
     ? new Date(activatedDate).toLocaleDateString("en-US", {
@@ -790,8 +801,10 @@ export function SellGiftCardModal({
           <span>
             This card was already activated
             {activatedDateLabel ? ` on ${activatedDateLabel}` : ""}
+            {/* `balance` is the row's own name for it; the legacy shape called
+                the same number `currentBalance`. */}
             {activatedGiftCard
-              ? ` with a balance of $${activatedGiftCard.currentBalance.toFixed(2)}`
+              ? ` with a balance of $${activatedGiftCard.balance.toFixed(2)}`
               : ""}
             .
           </span>
