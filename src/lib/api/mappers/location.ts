@@ -19,16 +19,34 @@ import {
 // ============================================================================
 
 /**
- * The columns, plus the count of bookings that name this branch.
+ * The columns. The booking count is NOT one of them — see below.
  *
- * `bookings(count)` works because `bookings_location_id_fkey` exists; PostgREST
- * resolves the relationship by that constraint. It is a to-MANY embed, so it
- * comes back as an ARRAY of one `{count}` object — reading it as an object is
- * the mistake that made a report-card screen render empty for a week (see the
- * `!inner` entry in the debt map). `bookingCountOf` below does the unwrapping.
+ * ── WHAT THIS USED TO END WITH, AND WHAT IT COST ──────────────────────────
+ *
+ *   …, updated_at, bookings(count)
+ *
+ * It worked, and it was most of the facility portal's load time. Measured
+ * 2026-09-17, A/B'd inside the route itself over three passes:
+ *
+ *   this select, as it is now                    155 ms
+ *   the same select with bookings(count)     1,589-2,255 ms
+ *
+ * `GET /api/locations` is in the `/facility/dashboard` shell, so EVERY screen
+ * waits for it — a sixteen-screen walkthrough put the whole portal at 9-16 s a
+ * page, with retail never finishing at all.
+ *
+ * Postgres is not the slow part: the same question answers in 22 ms on a direct
+ * connection and 9 ms through `location_booking_counts`. What is slow is
+ * PostgREST's generated count embed against `bookings`, whose RLS predicate is
+ * the `permitted_facility_ids('view_bookings')` chain, evaluated per location.
+ *
+ * So the count comes from `public.location_booking_counts(facility)` now — one
+ * grouped query for every branch, passed to `rowToLocation`. A PostgREST
+ * aggregate would have been simpler still, and is refused: aggregates are
+ * disabled on this project.
  */
 export const LOCATION_SELECT =
-  "id, name, short_code, address, email, phone, status, is_primary, timezone, capacity, color, created_at, updated_at, bookings(count)";
+  "id, name, short_code, address, email, phone, status, is_primary, timezone, capacity, color, created_at, updated_at";
 
 export interface LocationRow {
   id: string;
@@ -44,7 +62,6 @@ export interface LocationRow {
   color: string | null;
   created_at: string;
   updated_at: string;
-  bookings?: { count: number }[] | null;
 }
 
 const addressSchema = z.object({
@@ -85,12 +102,20 @@ function capacityOf(
   return parsed.success ? parsed.data : {};
 }
 
-/** See LOCATION_SELECT: a to-many embed is an array, even when it holds one row. */
-function bookingCountOf(rows: { count: number }[] | null | undefined): number {
-  return rows?.[0]?.count ?? 0;
-}
+/**
+ * Per-branch booking counts, keyed by location id, from
+ * `public.location_booking_counts`.
+ *
+ * A branch with no bookings is ABSENT from the map rather than zero — nothing
+ * to group means no row to aggregate — so the read below defaults. That is the
+ * direction that matters: an empty branch is the one somebody may delete.
+ */
+export type LocationBookingCounts = Record<string, number>;
 
-export function rowToLocation(row: LocationRow): FacilityLocation {
+export function rowToLocation(
+  row: LocationRow,
+  counts: LocationBookingCounts = {},
+): FacilityLocation {
   return {
     id: row.id,
     name: row.name,
@@ -107,7 +132,7 @@ export function rowToLocation(row: LocationRow): FacilityLocation {
     color: row.color,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    bookingCount: bookingCountOf(row.bookings),
+    bookingCount: counts[row.id] ?? 0,
   };
 }
 

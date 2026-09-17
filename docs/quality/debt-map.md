@@ -15862,3 +15862,62 @@ That makes the fix above — `bookings(count)` off `LOCATION_SELECT`, and the
 duplicated `getViewer()` in the `activeFacilityIdForStaff` → `getFacilityContext`
 chain — the thing standing between a client and a usable demo, rather than a
 tidy-up. It needs one migration.
+
+### 2026-09-17, later the same day — I OVERCLAIMED THAT EMBED, and here is the correction
+
+The entry above says the `bookings(count)` embed "is most of the facility
+shell's load time". **That is not established, and the fix built on it did not
+deliver the win it predicted.**
+
+Replacing the embed with `location_booking_counts`, then A/B'ing BOTH shapes in
+the same request under identical conditions:
+
+```
+A: select WITH the embed        2,093 / 2,859 / 1,956 ms
+B: select + the counts RPC      2,480 / 1,815 / 2,629 ms
+```
+
+A wash. And the full sixteen-screen walkthrough after the change was unmoved:
+still 9-16 s a page, retail still timing out.
+
+**Two measurement errors made the first diagnosis look stronger than it was.**
+
+**One: the 9 ms figure for the new function bypassed RLS.** It was run as the
+owning role through the MCP connection, so the `bookings` policy never
+evaluated. With RLS actually on it is 137-259 ms — still fast, but not the
+number quoted, and the difference is the whole predicate being skipped. The same
+mistake shape as the SQL test that had to `set local role authenticated`: if a
+measurement does not run as the caller, it is not measuring the caller's query.
+
+**Two: the before and after were taken hours apart, and the link changed under
+them.** Round trip to Supabase was 66-98 ms in the morning and 625-875 ms by
+afternoon — about 8x. Every "after" number is inflated by that, and any
+comparison spanning the two is worthless. Only same-request A/B survives it,
+which is what the table above is.
+
+**What IS established**, because both halves were measured in one request:
+
+```
+the plain locations select     155-180 ms
+the same select with the embed   1,589-2,859 ms
+activeFacilityIdForStaff         1,280-3,659 ms
+anything touching `bookings` via PostgREST  ~2 s
+the same work on a DIRECT connection, RLS on   137-259 ms
+```
+
+So the cost is **PostgREST round trips that touch `bookings`, plus the auth
+chain** — not one embed. `activeFacilityIdForStaff` alone rivals it, and it
+resolves `getViewer()` TWICE per call (once itself, once inside
+`getFacilityContext`), which is duplicate work needing no migration to fix.
+
+**The change was kept anyway, and the reasoning is explicit so it can be
+checked.** Under the morning's fast link the embed cost +1,434 ms of SERVER-side
+work in a single round trip, while the function does the same work in 137-259 ms
+plus one round trip. That should be a win in production, where the VPS sits
+close to the database. It could not be confirmed from here today, and it is not
+claimed as confirmed.
+
+**Do instead:** never compare a before from one hour with an after from another
+— re-measure the baseline, or A/B both shapes in one request. And when timing a
+query that RLS governs, assume the role first; the fast number is the one to
+distrust.

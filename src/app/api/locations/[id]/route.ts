@@ -86,9 +86,26 @@ export async function PATCH(
   );
   if (denied) return denied;
 
-  return NextResponse.json(
-    rowToLocation((data as unknown as LocationRow[])[0]),
-  );
+  // The count is no longer embedded in the row (see LOCATION_SELECT), so it is
+  // fetched for this branch rather than defaulted. Defaulting would put
+  // `bookingCount: 0` on a branch that has bookings — nothing reads it on this
+  // path today, because the mutation invalidates and refetches the list rather
+  // than patching the cache from this response, and the delete guard that
+  // matters is the 409 the DATABASE raises. A number that is wrong only while
+  // nobody looks is still wrong, and this is one RPC on a write.
+  // This route has no facility context — it scopes by RLS on the id alone — so
+  // the count is asked for this ONE branch rather than through
+  // `location_booking_counts`, which takes a facility. `head: true` returns the
+  // number without the rows. It is not the shape that was slow: what cost
+  // 1.6-2.2 s was PostgREST evaluating a count EMBED per location inside a
+  // joined select, not a standalone count of one.
+  const row = (data as unknown as LocationRow[])[0];
+  const { count } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("location_id", row.id);
+
+  return NextResponse.json(rowToLocation(row, { [row.id]: count ?? 0 }));
 }
 
 export async function DELETE(
