@@ -15834,3 +15834,31 @@ were wrong before the A/B settled it.
 **Do instead:** when a route is slow, A/B the query INSIDE the route before
 theorising about auth, caching or network. Every dependency here was under
 200 ms; the cost was one line of a select string.
+
+### The walkthrough that measured it — 2026-09-17
+
+Sixteen facility screens, signed in, read-only, against a built server:
+
+```
+bookings 11.9s · clients 9.5s · calendar 13.2s · kennel-view 12.9s
+boarding 12.3s · daycare 10.0s · grooming 16.1s · training 14.7s
+gift-cards 12.9s · online-booking 11.4s · reports 9.8s · staff 10.9s
+marketing 9.4s · loyalty 12.8s · dashboard 13.2s
+retail 62s — NEVER reached networkidle
+```
+
+**Nothing renders wrong.** No `Invalid Date`, no `NaN`, no untranslated `{hole}`,
+no error surface, on any of the sixteen. Two console errors both turned out to
+be correct behaviour: `/api/payments/clover/checkout-config` 503s because the
+facility has no payment account and the page handles it (`if (!response.ok)
+return null`), and `/api/clients/me` 404s because staff have no client record —
+the route's own header says "404 IS A REAL ANSWER".
+
+**So the product is correct and slow, and it is ONE defect, not sixteen.** Retail
+is not separately broken; it has the most reads (seven `useQuery` on top of the
+shell's seven), so it is simply where slow crosses into does-not-finish.
+
+That makes the fix above — `bookings(count)` off `LOCATION_SELECT`, and the
+duplicated `getViewer()` in the `activeFacilityIdForStaff` → `getFacilityContext`
+chain — the thing standing between a client and a usable demo, rather than a
+tidy-up. It needs one migration.
