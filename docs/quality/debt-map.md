@@ -16169,3 +16169,62 @@ Expected: 200   Received: 400
 A 400, not a cancelled statement, and it reads no booking list. Not diagnosed —
 recorded so the next person does not fold it into the timeout story, which is
 what a single "3 failed" summary invites.
+
+---
+
+## 2026-09-17 — the success-claims baseline is not a to-do list
+
+Re-derived the facility-side entries by following each component to its parent
+and each store to its backing table. Of the **15** in the plan's four areas:
+
+| verdict                      | n     | what they are                                            |
+| ---------------------------- | ----- | -------------------------------------------------------- |
+| already real                 | 6     | the writer is a PROP, or the store writes through        |
+| dead code                    | 4     | Knip: zero importers                                     |
+| real, pending a timing check | 2     | parent writes; claim may precede it                      |
+| **genuinely fake and live**  | **3** | `CareTaskSettings`, `BreedManagement`, `InventoryClient` |
+
+**Three, not thirty-nine.** The count in `check:success-claims` is a ratchet
+against regression, and it was read here as a backlog. It is not one.
+
+### Two shapes the gate cannot see, and both fooled this session repeatedly
+
+**(a) The writer arrives as a prop.** `MedicationSection`'s `onAdd` is
+`bookingMutations.update` in the booking detail page;
+`UnfinishedBookingDetailSheet`'s `onAddNote` is `followUp.mutateAsync`;
+`PlanBuilderDialog` and `CancelSubscriptionDialog` both `await onSave()` and
+toast only on success. The gate looks ONE import away and the mutation is two.
+
+**(b) `src/data/` holds real write-through caches, not only fixtures.** This is
+the one that cost the most. `petFlagsStore` and `shiftNotesStore` live under
+`@/data/` and both say so in their own headers — _"A CACHE of
+`daily_care_records` … every change written through"_. Pet flags and shift
+handoff notes PERSIST. Judging by the import path called both of them fake.
+
+The path is not the evidence. `@/data/facility-config.ts` is a plain object
+literal with no server (so `CareTaskSettings` really is fake);
+`@/data/pet-flags-store.ts` is a cache in front of a table. Same folder,
+opposite answers. **Open the file and look for the write.**
+
+### What is actually left in the four areas
+
+1. **`CareTaskSettings`** — feeding and medication option lists live in
+   `@/data/facility-config`, a literal. The plan already names the fix: a
+   `facility_settings` domain.
+2. **`BreedManagement`** — `lib/api/breeds.ts` wraps `@/data/breeds` and reaches
+   no server, so the breed catalogue and the customer-facing restriction message
+   reset on reload. The gate's own note called this out and it is still true.
+3. **`InventoryClient`** — `@/data/ops-inventory` plus `FACILITY_ID = 11` in its
+   page, so every facility sees the fixture facility's supplies. Needs a product
+   decision first (see the retail entry above): ops consumables are not
+   `retail_products` — no sale price, no tax, a supplier FK and a `unit` /
+   `daily_usage` / `reorder_point` the retail table does not have.
+
+Plus **four dead files** needing a delete-or-build decision — `RouteView`,
+`TrainingSection`, `GroomingIntakeForm`, `PriceAdjustmentForm` — of which the
+last two were recorded earlier as unbuilt features rather than superseded
+duplicates.
+
+**Do instead:** before treating a baselined file as work, trace it. One hop up
+for the prop, and into the store for the table. Six of fifteen were already
+done, and proposing finished work as a plan is worse than missing it.
