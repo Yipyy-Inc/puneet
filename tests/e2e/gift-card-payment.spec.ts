@@ -76,8 +76,19 @@ async function cardBalance(page: Page, code: string): Promise<number> {
   return cards[0]?.balance ?? NaN;
 }
 
+/**
+ * What the ledger says this booking has been paid — asked for BY REF.
+ *
+ * This read the whole facility to find one row whose ref it was holding.
+ * Measured 2026-09-17: unbounded is 16-20s over 1,499 rows against ~1.2s for
+ * `?ref=<n>`, and this spec is IN THE GATE, so that cost lands on every push.
+ *
+ * Narrowing to the client would not have been enough here: CLIENT_REF is 15,
+ * who holds 1,056 bookings, and `?clientRef=15` answers
+ * 500 {"error":"canceling statement due to statement timeout"}.
+ */
 async function amountPaid(page: Page, ref: number): Promise<number> {
-  const res = await page.request.get("/api/bookings");
+  const res = await page.request.get(`/api/bookings?ref=${ref}`);
   expect(res.ok(), await res.text()).toBe(true);
   const all = (await res.json()) as BookingPayload[];
   return Number(all.find((b) => b.id === ref)?.amountPaid ?? NaN);
