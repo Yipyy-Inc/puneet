@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FacilityDailyCareConfig } from "@/types/boarding";
+import type { CareTaskFeedback } from "@/lib/settings/care-task-feedback";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type { DaycareRatesConfig } from "@/lib/settings/daycare-rates";
@@ -154,6 +155,12 @@ export interface FacilitySettings {
    * routine, because an empty one is an empty board.
    */
   daily_care_config: SettingState<FacilityDailyCareConfig>;
+  /**
+   * The choices the feeding and medication log modals offer. Falls back to
+   * what the board shows today, so a facility that never opens the screen sees
+   * no change.
+   */
+  care_task_feedback: SettingState<CareTaskFeedback>;
   incident_follow_up_protocols: SettingState<IncidentProtocols>;
   form_requirements: SettingState<FormRequirements>;
   form_notifications: SettingState<FormNotifications>;

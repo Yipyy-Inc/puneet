@@ -4925,7 +4925,8 @@
         "atLeastOne": "Gardez au moins une option",
         "unsavedChanges": "Vous avez des modifications non enregistrées",
         "saveChanges": "Enregistrer les modifications",
-        "feedbackSaved": "Options de retour sur les soins enregistrées"
+        "feedbackSaved": "Options de retour sur les soins enregistrées",
+        "feedbackNotSaved": "Ces options n’ont pas été enregistrées. Vos modifications sont toujours là — réessayez."
       },
       "tags-notes": {
         "builderTitle": "Créateur d’étiquettes",

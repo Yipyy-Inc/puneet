@@ -183,7 +183,6 @@ const BASELINE = new Set<string>([
   // the rest is the copy: those toasts carry "the tag list is not stored yet,
   // so it resets when this page reloads", which is true and is the thing a
   // person actually reads.
-  "src/components/facility/CareTaskSettings.tsx",
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",
   "src/components/facility/add-ons/AddOnCategorySheet.tsx",

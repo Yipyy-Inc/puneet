@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Pill } from "lucide-react";
-import { OUTCOME_OPTIONS, outcomeBadgeClass } from "./outcome-meta";
+import { useCareTaskFeedback } from "@/hooks/use-care-task-feedback";
+import { outcomeBadgeClass } from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
@@ -109,11 +110,16 @@ export function MedicationLogModal({
   }, [open, existing]);
 
   const current = tasks[index] ?? null;
+  // The facility's own choices, not the shipped table. Read ABOVE the early
+  // return below — a hook after one is the rules-of-hooks bug that has already
+  // cost this repo a gift-card sheet.
+  const { feedback } = useCareTaskFeedback();
+
   if (!current) return null;
 
   const meta = metaFor(current.taskType, current.subType);
   const Icon = meta.Icon;
-  const options = OUTCOME_OPTIONS.medication;
+  const options = feedback.medication;
   const total = tasks.length;
   const isLast = index >= total - 1;
   const requiresPhoto = current.requiresPhotoProof === true;

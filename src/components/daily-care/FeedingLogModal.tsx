@@ -14,11 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, UtensilsCrossed, Pill } from "lucide-react";
-import {
-  OUTCOME_OPTIONS,
-  outcomeBadgeClass,
-  FEEDING_SERVED,
-} from "./outcome-meta";
+import { useCareTaskFeedback } from "@/hooks/use-care-task-feedback";
+import { outcomeBadgeClass, FEEDING_SERVED } from "./outcome-meta";
 import { metaFor } from "./task-type-meta";
 import { format12h } from "@/lib/care-log-scheduler";
 import { LogMeta } from "./LogMeta";
@@ -51,13 +48,6 @@ type Props = {
     medOutcomes?: Record<string, MedicationOutcome>;
   }) => void;
 };
-
-// Reuses the facility's own medication outcomes so a dose logged with a meal
-// reads identically to one logged from the dedicated med modal. "Vomited" is
-// left out: at serve time the dose has only just gone down.
-const MED_CHOICES = OUTCOME_OPTIONS.medication.filter((o) =>
-  ["given", "refused", "skipped"].includes(o.value),
-);
 
 /**
  * Dedicated Feeding log modal with two zones:
@@ -121,6 +111,11 @@ export function FeedingLogModal({
     );
   }, [open, task?.id, task?.withMeds, existing]);
 
+  // The facility's own choices, not the shipped table. Read ABOVE the early
+  // return below — a hook after one is the rules-of-hooks bug that has already
+  // cost this repo a gift-card sheet.
+  const { feedback } = useCareTaskFeedback();
+
   if (!task) return null;
 
   // Two-step feeding: serve the food first, then log how much was eaten a few
@@ -130,7 +125,15 @@ export function FeedingLogModal({
 
   const meta = metaFor(task.taskType, task.subType);
   const Icon = meta.Icon;
-  const options = OUTCOME_OPTIONS.feeding;
+  const options = feedback.feeding;
+  // Reuses the facility's own medication outcomes so a dose logged with a meal
+  // reads identically to one logged from the dedicated med modal. "Vomited" is
+  // left out: at serve time the dose has only just gone down. Not memoised —
+  // it is a filter over at most 24 entries, and a stale memo here would serve
+  // the previous facility's list.
+  const medChoices = feedback.medication.filter((o) =>
+    ["given", "refused", "skipped"].includes(o.value),
+  );
   const requiresPhoto = task.requiresPhotoProof === true;
 
   // Plan instructions come from the task's subDetails (A4.4). A booking with no
@@ -319,7 +322,7 @@ export function FeedingLogModal({
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {MED_CHOICES.map((choice) => {
+                        {medChoices.map((choice) => {
                           const selected =
                             medOutcomes[med.taskId] === choice.value;
                           return (
