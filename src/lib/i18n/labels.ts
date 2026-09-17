@@ -52,8 +52,22 @@ export function serviceTypeLabel(locale: AppLocale, service: string): string {
   return SERVICE[locale]?.[id] ?? SERVICE.en[id] ?? service;
 }
 
-/** A record's status by its enum — `pending` → "Pending" · "En attente". */
-export function statusLabel(locale: AppLocale, status: string): string {
+/**
+ * A record's status by its enum — `pending` → "Pending" · "En attente".
+ *
+ * `fallback` is for a caller that already HAS an English word for this id and
+ * only wants the translation — `StatusBadge`, whose chip table carries 56
+ * labels deliberately sentence-cased against §3/§5r. Without it, an id the
+ * catalogue does not know would come back `humanise`d, quietly replacing
+ * "No-show" with "No show" and "Out of stock" with "Out of stock" on 15
+ * screens. Passing the caller's own label keeps every current English string
+ * exactly as it is and adds French only where the catalogue has it.
+ */
+export function statusLabel(
+  locale: AppLocale,
+  status: string,
+  fallback?: string,
+): string {
   const id = status.trim().toLowerCase();
-  return STATUS[locale]?.[id] ?? STATUS.en[id] ?? humanise(id);
+  return STATUS[locale]?.[id] ?? fallback ?? STATUS.en[id] ?? humanise(id);
 }
