@@ -34,7 +34,13 @@ import type { GiftCard, GiftCardTransaction } from "@/types/payments";
 /** See the header — 0 means "ask the session", not "facility zero". */
 export const NO_LEGACY_FACILITY_ID = 0;
 
-function toLegacyTransaction(
+/**
+ * One ledger movement in the legacy shape.
+ *
+ * Exported because the detail drawer fetches its own cards ledger now — the
+ * page no longer carries every cards history just so a drawer can show one.
+ */
+export function toLegacyTransaction(
   entry: GiftCardWithLedger["transactions"][number],
 ): GiftCardTransaction {
   // The legacy type knows three kinds and the ledger has four. `adjusted` is

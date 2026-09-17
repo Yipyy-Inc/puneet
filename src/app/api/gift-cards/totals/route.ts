@@ -48,14 +48,33 @@ export interface GiftCardTotals {
   liability: { count: number; total: number };
   /** Every card the facility has issued, ever — including the voided ones. */
   cardCount: number;
-  /** How many cards sit in each status. */
-  byStatus: Record<string, number>;
+  /** Face value of every card ever issued. Answers to no window. */
+  faceValue: number;
+  /**
+   * Per status: how many cards, and how much is still on them.
+   *
+   * The balance matters as much as the count — on the e2e facility $31,990
+   * sits on VOIDED cards, money nobody can spend, which is exactly what a
+   * breakdown exists to surface.
+   */
+  byStatus: Record<string, { count: number; balance: number }>;
   /** Cards ISSUED inside the sales window. */
   sales: {
     count: number;
     value: number;
     physical: number;
     digital: number;
+    /** How many of those are still active. */
+    active: number;
+    /**
+     * What is still held on the cards sold in this window.
+     *
+     * NOT `liability` above, and the difference is why both exist: that one is
+     * what the facility owes today on every card ever sold, this one is scoped
+     * to the period the overview's picker names. A tile using the wrong one
+     * reads perfectly plausibly and is wrong.
+     */
+    outstanding: number;
   };
   salesByMonth: GiftCardSalesMonth[];
   /** Movements that took money OFF, inside the redemption window. */
@@ -66,8 +85,16 @@ export interface GiftCardTotals {
 const ZERO: GiftCardTotals = {
   liability: { count: 0, total: 0 },
   cardCount: 0,
+  faceValue: 0,
   byStatus: {},
-  sales: { count: 0, value: 0, physical: 0, digital: 0 },
+  sales: {
+    count: 0,
+    value: 0,
+    physical: 0,
+    digital: 0,
+    active: 0,
+    outstanding: 0,
+  },
   salesByMonth: [],
   redemptions: { count: 0, total: 0 },
   redemptionsByService: [],
@@ -128,12 +155,15 @@ export async function GET(request: NextRequest) {
   const row = (data ?? {}) as {
     liability?: { count?: unknown; total?: unknown };
     cardCount?: unknown;
-    byStatus?: Record<string, unknown>;
+    faceValue?: unknown;
+    byStatus?: Record<string, { count?: unknown; balance?: unknown }>;
     sales?: {
       count?: unknown;
       value?: unknown;
       physical?: unknown;
       digital?: unknown;
+      active?: unknown;
+      outstanding?: unknown;
     };
     salesByMonth?: { month?: unknown; value?: unknown }[];
     redemptions?: { count?: unknown; total?: unknown };
@@ -146,14 +176,20 @@ export async function GET(request: NextRequest) {
       total: money(row.liability?.total),
     },
     cardCount: count(row.cardCount),
+    faceValue: money(row.faceValue),
     byStatus: Object.fromEntries(
-      Object.entries(row.byStatus ?? {}).map(([k, v]) => [k, count(v)]),
+      Object.entries(row.byStatus ?? {}).map(([status, v]) => [
+        status,
+        { count: count(v?.count), balance: money(v?.balance) },
+      ]),
     ),
     sales: {
       count: count(row.sales?.count),
       value: money(row.sales?.value),
       physical: count(row.sales?.physical),
       digital: count(row.sales?.digital),
+      active: count(row.sales?.active),
+      outstanding: money(row.sales?.outstanding),
     },
     salesByMonth: (row.salesByMonth ?? []).map((m) => ({
       month: String(m.month ?? ""),

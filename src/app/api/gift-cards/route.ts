@@ -86,7 +86,27 @@ export async function GET(request: NextRequest) {
   if (code !== null) {
     const trimmed = code.trim();
     if (trimmed === "") return NextResponse.json({ cards: [] });
-    query = query.eq("code", trimmed);
+    // ── CASE-INSENSITIVE, BECAUSE THE CODE ON THE CARD IS ────────────────
+    //
+    // This was `.eq("code", trimmed)`. MEASURED 2026-09-17: 5,526 of this
+    // project's 6,092 codes contain a lowercase letter, and the redeem modal
+    // UPPERCASES what the counter types — so an exact match could not find
+    // roughly nine cards in ten. It went unnoticed while the modal scanned an
+    // in-memory list with `gc.code.toLowerCase() === q`, which was already
+    // case-insensitive; this restores that, it does not loosen it.
+    //
+    // Safe to fold: zero codes in the table collide case-insensitively, and
+    // `code` is unique per facility.
+    //
+    // `ilike` is a PATTERN match, so `%` and `_` from a caller would be
+    // wildcards — a way to fish for real codes one character at a time. They
+    // are escaped, which leaves an exact match that ignores case and nothing
+    // else. The backslash goes first, or it re-escapes the escapes.
+    const exact = trimmed
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_");
+    query = query.ilike("code", exact);
   }
 
   const status = params.get("status");

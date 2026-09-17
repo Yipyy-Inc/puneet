@@ -94,6 +94,7 @@ import { giftCardQueries, useUpdateGiftCard } from "@/lib/api/gift-cards";
 import { toLegacyGiftCard } from "./_lib/to-legacy-card";
 import { toActivityLog } from "./_lib/to-activity-log";
 import { toWallets } from "./_lib/to-wallets";
+import { totalsWindow } from "./_lib/totals-range";
 import { SellGiftCardModal } from "./_components/SellGiftCardModal";
 import { RedeemGiftCardModal } from "./_components/RedeemGiftCardModal";
 import { GiftCardDetailSheet } from "./_components/GiftCardDetailSheet";
@@ -107,10 +108,11 @@ import {
   GenerateBatchModal,
   type GenerateBatchConfig,
 } from "./_components/GenerateBatchModal";
+// No `isWithinRange`: the overview's window goes to the database as days now,
+// so nothing here filters a list of cards by date any more.
 import {
   GiftCardDateRangeFilter,
   presetRange,
-  isWithinRange,
   type DateRange,
 } from "./_components/GiftCardDateRangeFilter";
 import type {
@@ -255,9 +257,24 @@ export default function FacilityGiftCardsPage() {
   // What this replaced kept a session `cardBalances` override map beside the
   // fixture, which is how the number on screen and the transactions under it
   // were maintained separately in the first place.
-  const cardsQuery = useQuery(giftCardQueries.allWithLedger());
+  // ── NO LEDGER ON THE LIST ───────────────────────────────────────────────
+  //
+  // This was `allWithLedger()`: every card the facility had ever issued WITH
+  // every movement attached, so the drawer could show one card's history and
+  // the Reports tab could add up the rest. Measured on the e2e facility, that
+  // was 12,973 movements behind 6,022 cards.
+  //
+  // Both readers were answered better elsewhere — the drawer fetches its own
+  // card's ledger (`giftCardQueries.detail`), the numbers come from
+  // `gift_card_totals` — so the list is just the cards now. `transactions: []`
+  // is honest rather than lossy: nothing left on this page reads a history off
+  // a row in the list.
+  const cardsQuery = useQuery(giftCardQueries.all());
   const facilityCards = useMemo(
-    () => (cardsQuery.data ?? []).map(toLegacyGiftCard),
+    () =>
+      (cardsQuery.data ?? []).map((row) =>
+        toLegacyGiftCard({ ...row, transactions: [] }),
+      ),
     [cardsQuery.data],
   );
 
@@ -331,33 +348,36 @@ export default function FacilityGiftCardsPage() {
     return activityLog.filter((l) => cfg.actions!.includes(l.action));
   }, [activityLog, activityFilter]);
 
-  // Cards sold within the selected date range — drives the period-scoped KPIs.
-  const periodCards = useMemo(
-    () => facilityCards.filter((gc) => isWithinRange(gc.purchaseDate, range)),
-    [facilityCards, range],
+  // ── THE TILES ARE THE DATABASE'S ARITHMETIC NOW ─────────────────────────
+  //
+  // They were reduced out of every card the facility had ever issued. The
+  // window is the overview's own picker, and the route takes it as days, so
+  // `totalsWindow` converts the picked range: its end is INCLUSIVE and the
+  // route compares `< to`, so `to` is the day after — see totals-range.ts.
+  //
+  // `sales.outstanding` and NOT `liability`: the comment this replaced was
+  // explicit that two of these tiles are period-scoped ("cards sold in range"),
+  // which is a different question from what the facility owes today. The SQL
+  // answers both, separately, because a tile using the wrong one reads
+  // perfectly plausibly and is wrong — measured on the fixture, 10 against 59.
+  const overviewWindow = totalsWindow(range);
+  const { data: totals } = useQuery(
+    giftCardQueries.totals({
+      salesFrom: overviewWindow.from,
+      salesTo: overviewWindow.to,
+    }),
   );
 
-  // KPIs — Liability & Revenue Sold are period-scoped (cards sold in range);
-  // Wallet Balance & Physical Inventory are point-in-time snapshots.
-  const totalLiability = useMemo(
-    () =>
-      periodCards
-        .filter((gc) => gc.status === "active")
-        .reduce((sum, gc) => sum + gc.currentBalance, 0),
-    [periodCards],
-  );
+  const totalLiability = totals?.sales.outstanding ?? 0;
 
   const totalWalletBalance = useMemo(
     () => facilityWallets.reduce((sum, w) => sum + w.balance, 0),
     [facilityWallets],
   );
 
-  const totalSold = useMemo(
-    () => periodCards.reduce((sum, gc) => sum + gc.initialAmount, 0),
-    [periodCards],
-  );
-
-  const activeCards = periodCards.filter((gc) => gc.status === "active").length;
+  const totalSold = totals?.sales.value ?? 0;
+  const periodCardCount = totals?.sales.count ?? 0;
+  const activeCards = totals?.sales.active ?? 0;
 
   // Seed + session-generated batches; archived ones drop out of the active view.
   const allBatches = useMemo(
@@ -1097,7 +1117,7 @@ export default function FacilityGiftCardsPage() {
           {
             label: "Total Revenue Sold",
             value: `$${totalSold.toFixed(2)}`,
-            sub: `${periodCards.length} card${periodCards.length === 1 ? "" : "s"} sold`,
+            sub: `${periodCardCount} card${periodCardCount === 1 ? "" : "s"} sold`,
             icon: BarChart3,
             color: "text-green-600",
             bg: "bg-green-50 dark:bg-green-950/20",
@@ -1329,18 +1349,14 @@ export default function FacilityGiftCardsPage() {
                     },
                   ] as const
                 ).map(({ status, label, color, hint }) => {
-                  const cardsInStatus = facilityCards.filter(
-                    (gc) => gc.status === status,
-                  );
-                  const count = cardsInStatus.length;
-                  const balance = cardsInStatus.reduce(
-                    (sum, gc) => sum + gc.currentBalance,
-                    0,
-                  );
-                  const pct =
-                    facilityCards.length > 0
-                      ? (count / facilityCards.length) * 100
-                      : 0;
+                  // Counted in SQL over every card the facility has issued,
+                  // rather than by filtering a list of them in the browser —
+                  // and the balance matters as much as the count, because it
+                  // is where "$31,990 is sitting on voided cards" shows up.
+                  const count = totals?.byStatus[status]?.count ?? 0;
+                  const balance = totals?.byStatus[status]?.balance ?? 0;
+                  const allCards = totals?.cardCount ?? 0;
+                  const pct = allCards > 0 ? (count / allCards) * 100 : 0;
                   return (
                     <div key={status} className="space-y-1">
                       <div className="flex items-baseline justify-between gap-2 text-sm">
@@ -1373,14 +1389,13 @@ export default function FacilityGiftCardsPage() {
                 <div className="mt-3 border-t pt-3 text-sm">
                   <span className="font-medium">Total issued:</span>{" "}
                   <span className="tabular-nums">
-                    {facilityCards.length} cards
+                    {totals?.cardCount ?? 0} cards
                   </span>
                   <span className="text-muted-foreground"> / </span>
+                  {/* All-time, so it answers to no date picker — `faceValue`
+                      rather than the window-scoped `sales.value` above. */}
                   <span className="tabular-nums">
-                    $
-                    {facilityCards
-                      .reduce((sum, gc) => sum + gc.initialAmount, 0)
-                      .toFixed(2)}
+                    ${(totals?.faceValue ?? 0).toFixed(2)}
                   </span>
                   <span className="text-muted-foreground"> face value</span>
                 </div>
@@ -1991,7 +2006,6 @@ export default function FacilityGiftCardsPage() {
         open={showRedeem}
         onOpenChange={setShowRedeem}
         facilityId={FACILITY_ID}
-        cards={facilityCards}
         onSuccess={(r) => {
           toast.success(`$${r.amount.toFixed(2)} moved off ${r.cardCode}.`, {
             description: `Account credit is now $${r.creditBalance.toFixed(2)}.`,
