@@ -125,6 +125,7 @@ import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { formatDateISO, formatTime } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatMoney } from "@/lib/i18n/format";
 import { NO_ITEMS } from "@/lib/no-items";
 import { hasPermission, getCurrentUserId } from "@/lib/role-utils";
 import { useFacilityRole } from "@/hooks/use-facility-role";
@@ -196,7 +197,7 @@ export default function POSPage() {
   // array. Every sale is `record_retail_sale` now (20260911180840): the sale,
   // each line off the shelf, and the money, in one transaction; a Clover card
   // charged first is linked by its payment id. See `recordSale` below.
-  const { t: tR, locale: tLocale } = useStaffText("retailStore");
+  const { t: tR, fill: fillR, locale: tLocale } = useStaffText("retailStore");
   // Categories (and which are tax-exempt) and the receipt, as Settings →
   // Retail saved them — not the module object that section used to write.
   const retailConfig = useRetailConfig().config;
@@ -1906,16 +1907,16 @@ export default function POSPage() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Today&apos;s Sales
+                {tR("todaysSales")}
               </CardTitle>
               <DollarSign className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${stats.todayRevenue.toFixed(2)}
+                {formatMoney(stats.todayRevenue, tLocale)}
               </div>
               <p className="text-muted-foreground text-xs">
-                {stats.todayTransactions} transactions
+                {fillR("transactionsCount", { n: stats.todayTransactions })}
               </p>
             </CardContent>
           </Card>
@@ -1927,12 +1928,14 @@ export default function POSPage() {
             }}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {tR("itemsSold")}
+              </CardTitle>
               <ShoppingCart className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.todayItems}</div>
-              <p className="text-muted-foreground text-xs">Today</p>
+              <p className="text-muted-foreground text-xs">{tR("today")}</p>
             </CardContent>
           </Card>
           <Card
@@ -1943,7 +1946,9 @@ export default function POSPage() {
             }}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {tR("lowStock")}
+              </CardTitle>
               <Badge
                 variant={stats.lowStockCount > 0 ? "destructive" : "secondary"}
               >
@@ -1953,7 +1958,7 @@ export default function POSPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.lowStockCount}</div>
               <p className="text-muted-foreground text-xs">
-                Items need restock
+                {tR("itemsNeedRestock")}
               </p>
             </CardContent>
           </Card>
@@ -1966,7 +1971,7 @@ export default function POSPage() {
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Pending Alerts
+                {tR("pendingAlerts")}
               </CardTitle>
               <Badge
                 variant={stats.pendingAlerts > 0 ? "destructive" : "secondary"}
@@ -1976,7 +1981,9 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendingAlerts}</div>
-              <p className="text-muted-foreground text-xs">Unacknowledged</p>
+              <p className="text-muted-foreground text-xs">
+                {tR("unacknowledged")}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -1996,7 +2003,7 @@ export default function POSPage() {
                     <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       ref={searchInputRef}
-                      placeholder="Scan barcode, search product name, or enter SKU..."
+                      placeholder={tR("searchOrScan")}
                       value={barcodeInput}
                       onChange={(e) => setBarcodeInput(e.target.value)}
                       className="h-11 pl-10 text-sm"
@@ -2010,7 +2017,9 @@ export default function POSPage() {
                     onClick={() => setCameraOpen(true)}
                   >
                     <Camera className="size-4" />
-                    <span className="hidden text-xs sm:inline">Scan</span>
+                    <span className="hidden text-xs sm:inline">
+                      {tR("scan")}
+                    </span>
                   </Button>
                 </div>
               </form>
@@ -2036,7 +2045,7 @@ export default function POSPage() {
                       return (
                         <div className="p-4 text-center">
                           <p className="text-muted-foreground text-sm">
-                            No products found
+                            {tR("noProductsFound")}
                           </p>
                           {looksLikeBarcode && (
                             <Button
@@ -2327,11 +2336,13 @@ export default function POSPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
                 <ShoppingCart className="size-3.5" />
-                Cart
+                {tR("cart")}
                 {cart.length > 0 && (
                   <span className="text-muted-foreground font-normal normal-case">
-                    — {cart.reduce((s, i) => s + i.quantity, 0)} item
-                    {cart.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""}
+                    — {cart.reduce((s, i) => s + i.quantity, 0)}{" "}
+                    {cart.reduce((s, i) => s + i.quantity, 0) === 1
+                      ? tR("itemOne")
+                      : tR("itemMany")}
                   </span>
                 )}
               </CardTitle>
@@ -2371,11 +2382,11 @@ export default function POSPage() {
                           },
                         ]);
                         setCart([]);
-                        toast.success("Sale parked — start a new one");
+                        toast.success(tR("saleParked"));
                       }}
                     >
                       <Pause className="size-3" />
-                      Hold
+                      {tR("hold")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -2383,7 +2394,7 @@ export default function POSPage() {
                       onClick={() => setCart([])}
                       className="text-destructive h-7 text-[11px]"
                     >
-                      Clear
+                      {tR("clearCart")}
                     </Button>
                   </>
                 )}
@@ -2395,7 +2406,7 @@ export default function POSPage() {
             <div className="bg-muted/10 mb-4 shrink-0 space-y-2 rounded-lg border border-dashed p-3">
               <Label className="flex items-center gap-1.5 text-xs font-medium">
                 <LinkIcon className="size-3.5" />
-                Customer
+                {tR("customer")}
               </Label>
 
               {/* Selected Customer */}
@@ -2502,10 +2513,10 @@ export default function POSPage() {
                       }
                     >
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Link to pet (optional)" />
+                        <SelectValue placeholder={tR("linkToPet")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">No pet</SelectItem>
+                        <SelectItem value="__none__">{tR("noPet")}</SelectItem>
                         {clientPets.map((pet) => (
                           <SelectItem key={pet.id} value={pet.id.toString()}>
                             {pet.name} ({pet.type})
@@ -2527,10 +2538,12 @@ export default function POSPage() {
                       }
                     >
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Apply to booking/stay (optional)" />
+                        <SelectValue placeholder={tR("applyToBooking")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">No booking</SelectItem>
+                        <SelectItem value="__none__">
+                          {tR("noBooking")}
+                        </SelectItem>
                         {clientBookings.map((booking) => (
                           <SelectItem
                             key={booking.id}
@@ -2557,7 +2570,7 @@ export default function POSPage() {
                 <div className="relative">
                   <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                   <Input
-                    placeholder="Search customer by name or email..."
+                    placeholder={tR("searchCustomer")}
                     className="h-8 pl-8 text-xs"
                     onClick={() => setIsLinkModalOpen(true)}
                     readOnly
@@ -2567,7 +2580,7 @@ export default function POSPage() {
 
               {selectedClientId && selectedClientId !== "__walk_in__" && (
                 <p className="text-muted-foreground text-xs">
-                  Purchase will appear in customer file and invoice correctly
+                  {tR("purchaseWillAppear")}
                 </p>
               )}
             </div>
@@ -2579,10 +2592,10 @@ export default function POSPage() {
               <div className="flex flex-col items-center justify-center py-10">
                 <ShoppingCart className="text-muted-foreground/20 size-10" />
                 <p className="text-muted-foreground mt-2 text-sm">
-                  Cart is empty
+                  {tR("cartEmpty")}
                 </p>
                 <p className="text-muted-foreground/60 text-xs">
-                  Scan a barcode or search to add items
+                  {tR("scanToAdd")}
                 </p>
               </div>
             ) : (
@@ -2734,16 +2747,16 @@ export default function POSPage() {
             {/* Invoice Summary */}
             <div className="mt-4 shrink-0 space-y-1.5 border-t pt-3">
               <div className="flex justify-between py-0.5 text-sm">
-                <span className="font-semibold">Subtotal</span>
+                <span className="font-semibold">{tR("subtotal")}</span>
                 <span className="font-semibold tabular-nums">
-                  ${subtotal.toFixed(2)}
+                  {formatMoney(subtotal, tLocale)}
                 </span>
               </div>
               {discountTotal > 0 && (
                 <div className="flex justify-between py-0.5 text-sm text-emerald-600">
-                  <span>Discount</span>
+                  <span>{tR("discountLabel")}</span>
                   <span className="tabular-nums">
-                    -${discountTotal.toFixed(2)}
+                    {formatMoney(-discountTotal, tLocale)}
                   </span>
                 </div>
               )}
@@ -2765,7 +2778,9 @@ export default function POSPage() {
                   <Separator />
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium">Tip</Label>
+                      <Label className="text-xs font-medium">
+                        {tR("tipLabel")}
+                      </Label>
                       {calculatedTipAmount > 0 && (
                         <span className="text-sm font-medium">
                           ${calculatedTipAmount.toFixed(2)}
@@ -2829,9 +2844,9 @@ export default function POSPage() {
 
               <Separator className="my-2" />
               <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
-                <span className="text-base font-bold">Total</span>
+                <span className="text-base font-bold">{tR("totalLabel")}</span>
                 <span className="text-base font-bold tabular-nums">
-                  ${grandTotal.toFixed(2)}
+                  {formatMoney(grandTotal, tLocale)}
                 </span>
               </div>
 
