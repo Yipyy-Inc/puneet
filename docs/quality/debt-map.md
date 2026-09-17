@@ -16639,3 +16639,33 @@ locale — and now goes through `formatMoney(…, locale)`.
 **Do instead, now written as a habit:** before adding a text hook, grep the
 file for `const t` AND for an existing `use*Text`. One tells you the name is
 taken; the other tells you the catalogue is already chosen.
+
+### The operations calendar's toolbar and side panel read French (2026-09-17)
+
+`OperationsCalendarSidePanel.tsx` **26 → 16**, `OperationsCalendarToolbar.tsx`
+**15 → 11**. Verified 6/6 in both languages, case-sensitively, with a check for
+camelCase keys on screen.
+
+The keys went into `staff.areas.opsCalendar` — which already existed with four
+of them, because `OperationsCalendar` holds `useStaffText("opsCalendar")` as
+`calT`. That is the pre-flight grep working as intended: the catalogue was
+already chosen, so there was nothing to decide.
+
+Two of the four overview tiles ("Confirmed", "Completed") and the "Checked in"
+dot are booking STATUSES and take `statusLabel`, so there is still one French
+word per state.
+
+**The calendar is FIVE files**, and only two are done:
+`OperationsCalendar.tsx` (its own `calT`, and a `"Owner"` column header at
+2655), `OperationsCalendarEventDrawer.tsx` (`"Add-Ons"`, two `"Owner"` fields)
+and `OperationsCalendarFiltersPanel.tsx` (`"Add-Ons"`) still hold English.
+
+### Two walkthrough findings could not be reproduced, and that is the honest note
+
+The care-tasks screen was recorded as showing `"Owner provide"` and `"Kennel"`
+badges. Neither string exists in `src` — `"Owner provide"` is nowhere at all and
+`"Kennel"` only appears in an unrelated custom-service wizard step. Two
+possibilities, both plausible: they were facility DATA rather than labels, or
+the walkthrough predated the `CareTaskSettings` rewrite earlier the same day,
+which replaced that screen's body. Not chased; recorded so nobody assumes it was
+converted.
