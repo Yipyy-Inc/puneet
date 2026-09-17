@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -89,8 +91,16 @@ async function readBooking(
   page: import("@playwright/test").Page,
   ref: number,
 ): Promise<BookingPayload | undefined> {
+  // ONE booking, asked for by ref. This read used to be the whole list --
+  // 1,499 rows and 16-20 s against the e2e facility, two sequential PostgREST
+  // round trips because the route pages at 1000 -- in order to keep a single
+  // row. Measured 2026-09-17: the same read as `?ref=` is 1,194-1,367 ms.
+  //
+  // The `.find` stays as a belt: the route filters server-side now, so this
+  // runs over one row, but if the param were ever dropped the helper would
+  // still answer with the right booking rather than the newest one.
   const all = (await (
-    await page.request.get("/api/bookings")
+    await page.request.get(`/api/bookings${bookingListSearch({ ref })}`)
   ).json()) as BookingPayload[];
   return all.find((b) => b.id === ref);
 }

@@ -1,5 +1,8 @@
 import type { Browser } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+import { BOOKING_STATUS_IDS } from "@/lib/settings/booking-statuses";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -30,12 +33,42 @@ import { ACCOUNTS, signIn } from "./_auth";
 // run is repaired by the next one rather than accumulating until somebody
 // notices from a screenshot.
 //
+// ── IT ASKS FOR WHAT IT FILTERS FOR ───────────────────────────────────────
+//
+// The read below used to be an unbounded `GET /api/bookings`, and then this
+// helper threw away every cancelled row in the browser. Measured 2026-09-17:
+// the table holds 1,700 bookings of which 1,497 are cancelled — 88.1% — so the
+// sweep was fetching 1,700 rows to act on at most 203, in TWO sequential
+// PostgREST round trips, because the route pages at 1000.
+//
+// Naming the statuses is not a smaller answer, it is the same answer fetched:
+// 203 rows, one round trip. The status list is DERIVED from the database enum
+// minus `cancelled`, which is exactly the predicate `mine` applies below, so
+// the request and the filter cannot drift — add a status to the enum and it
+// appears in both. Spelling the list out by hand is how a sweep silently stops
+// seeing a new status and leaves rows behind.
+//
+// Why this and not `clientRef`: the marker is the identity here, and different
+// specs book different clients. `?clientRef=15` is also the read that returns
+// 500 "canceling statement due to statement timeout" — that client carries
+// 1,073 bookings, 1,060 of them cancelled e2e debris.
+//
 // ── IT NEVER THROWS ───────────────────────────────────────────────────────
 //
 // A sweep that fails must not fail the suite: in `beforeAll` it would mask the
 // real tests, and in `afterAll` it would turn a green run red over tidying. It
 // logs what it could not do and returns.
 // ============================================================================
+
+/**
+ * Every status except `cancelled` — the rows this sweep can still act on.
+ *
+ * Derived, not typed out: see the note above. A booking already cancelled is
+ * what the sweep is trying to produce, so asking for it is pure cost.
+ */
+export const SWEEPABLE_STATUSES = BOOKING_STATUS_IDS.filter(
+  (id) => id !== "cancelled",
+);
 
 interface SweepableBooking {
   id: number;
@@ -58,7 +91,9 @@ export async function cancelBookingsMarked(
   try {
     await signIn(page, ACCOUNTS.owner);
 
-    const response = await page.request.get("/api/bookings");
+    const response = await page.request.get(
+      `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+    );
     if (!response.ok()) {
       console.log(`sweep(${phase}): could not read bookings, skipping`);
       return 0;

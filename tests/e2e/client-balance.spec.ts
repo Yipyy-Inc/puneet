@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -231,7 +233,9 @@ test.describe("what a client owes", () => {
     await signIn(page, ACCOUNTS.owner);
 
     const all = (await (
-      await page.request.get("/api/bookings")
+      await page.request.get(
+        `/api/bookings${bookingListSearch({ statuses: ["completed"] })}`,
+      )
     ).json()) as BookingPayload[];
     const delivered = all.find(
       (b) =>

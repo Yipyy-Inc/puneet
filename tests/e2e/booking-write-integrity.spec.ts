@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+import { SWEEPABLE_STATUSES } from "./_sweep";
 import { signIn } from "./_auth";
 
 // ============================================================================
@@ -90,7 +93,9 @@ test.afterAll(async ({ browser }) => {
     // app's Booking shape. Reading the wrong field sent PATCH /api/bookings/
     // undefined, which answers 400, which the loop above now surfaces.
     const bookings = (await (
-      await page.request.get("/api/bookings")
+      await page.request.get(
+        `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+      )
     ).json()) as { id: number; specialRequests?: string; status: string }[];
 
     const mine = bookings.filter(

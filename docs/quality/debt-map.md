@@ -16789,3 +16789,130 @@ nightly 129-spec cron, which gates nothing — `image`'s `needs:` is
 round trips each. **The 33-spec gate is not on that list and should not be** —
 it is the authorisation boundary and money, and it is the cheapest insurance
 here.
+
+## 2026-09-17 — the unbounded booking read, and the debris underneath it
+
+Continuing the egress work above. `GET /api/bookings` with no narrowing param
+answers with the facility's whole history: **1,499 rows, 16,215–20,484 ms**, in
+TWO sequential PostgREST round trips because the route pages at 1000. The same
+read as `?ref=<n>` is **1,194–1,367 ms**.
+
+### What the table actually holds
+
+Measured 2026-09-17:
+
+|                                                        | count                         |
+| ------------------------------------------------------ | ----------------------------- |
+| `bookings` total                                       | 1,700                         |
+| e2e debris (`special_requests ilike '%e2e%'`)          | **1,494 — 88%**               |
+| …cancelled                                             | 1,493                         |
+| …no payment rows (the existing purge can delete these) | 178                           |
+| …paid then fully refunded, net $0                      | 735                           |
+| …**non-zero net**                                      | **581, totalling $49,769.60** |
+
+**The slow read is a symptom; the debris is the disease.** Teardown CANCELS
+rather than deletes — `bookings` has no DELETE policy, by design — and
+`payments` is `ON DELETE RESTRICT`, so 1,316 of those bookings are pinned in
+place permanently by their own payment rows. Every run adds more, so every
+unbounded read gets slower every night.
+
+**That is why `?clientRef=15` returns `500 canceling statement due to statement
+timeout`.** Client 15 carries **1,073 bookings, of which 1,060 are cancelled
+and 1,059 are e2e debris — 886 of them carrying a payment.** Only **13** of
+that client's bookings are the facility's own. So the narrowing that fixed the
+money specs (`?clientRef=`) is unavailable to most of the specs that need it,
+and a date window does not help either: 809 of the 1,073 fall in the last
+seven days, because the debris is dated near whenever it was created.
+
+**~$49,769.60 of test payments is sitting in the production money ledger.**
+Recorded, not touched: deleting it means deleting payment rows, which is
+exactly what `ON DELETE RESTRICT` exists to prevent. That is a decision for the
+owner, not a cleanup to perform quietly.
+
+### Narrowed here — 13 of 36 reads
+
+- **`tests/e2e/_sweep.ts`** — the SHARED sweep, and the highest-leverage one.
+  It read every booking and then discarded every cancelled row in the browser.
+  It now asks for `statuses` = the database enum minus `cancelled`, **derived**
+  from `BOOKING_STATUS_IDS` rather than typed out, so the request and the
+  filter beneath it cannot drift. 1,700 rows → 203, and one round trip instead
+  of two. The predicate is identical to what the helper already applied, so
+  this changes no behaviour.
+- **Five `readBooking(page, ref)` helpers** — `booking-line-items`,
+  `booking-payment-ledger`, `booking-presence`, `dashboard-live-board`,
+  `training-attendance` — each read the whole list to keep one row. Now
+  `?ref=`. The `.find` stays as a belt: if the param were ever dropped the
+  helper still answers with the right booking rather than the newest one.
+- **Six reads whose own filter names a status** — `booking-actions-truth`,
+  `booking-write-integrity`, `clover-pay`, `form-requirements`,
+  `operations-calendar` by `statuses` = all but cancelled, and `client-balance`
+  by `statuses: ["completed"]`, which is tighter still. In every case the
+  request now mirrors the filter directly beneath it.
+
+All of them go through **`bookingListSearch()`**, the typed builder the browser
+and the route already share, rather than a hand-written query string. That is
+load-bearing: **the route ignores an unknown param**, so a typo like
+`?bookingRef=` reads all 1,499 rows and the spec still passes. The typed helper
+makes that a compile error.
+
+### 🔴 The 23 that remain, and why they are not an oversight
+
+They are marker-based teardown sweeps that must see CANCELLED rows too, in
+order to refund a booking the run paid for — the bug `booking-checkout-truth`
+records as "88 of them by 2026-09-14". Narrowing them by status would leave
+paid cancelled bookings behind, and `?clientRef=` is the read that times out
+for the client they use. **They are waiting on the debris decision, not on
+somebody noticing them.**
+
+And `?refs=` is the wrong answer for them, which is worth writing down because
+it looks like the obvious one. `_sweep.ts` explains that the sweep runs in
+`beforeAll` as well as `afterAll` precisely so a crashed run is healed by the
+next one. A refs-based sweep cannot do that: **the next run has different
+refs.** It would trade a slow self-healing sweep for a fast leaky one.
+
+### `bun run check:unbounded-booking-reads` — new gate, ratcheted at 23
+
+Per file, in `scripts/check-unbounded-booking-reads.ts`, with no command that
+writes the baseline — the only direction it moves by hand is down. It counts a
+read as narrowed only for a param the route actually applies, so the
+`?bookingRef=` trap fails the gate rather than passing it.
+
+**Three negative controls were run**, because a gate that has not been seen to
+fail is a gate nobody should trust: a new unbounded `.get` fails it; a
+`?bookingRef=7` read fails it; a `bookingListSearch({ ref: 7 })` read passes.
+Its own stale-baseline arm also caught a real error while being written — the
+first baseline claimed two reads in `loyalty-earning.spec.ts`, which had
+already narrowed itself with `?limit=200`.
+
+### 🔴 Three of the specs edited here are in NO suite
+
+`booking-line-items`, `clover-pay` and `client-balance` are in neither
+`test:e2e:gate` nor `test:e2e:ci`. AGENTS.md already states the rule — "a spec
+in no suite is not coverage, it is a file" — and these are three more. Not
+added here: putting them in a suite raises what the suite costs, which is the
+open question above and not one to answer in passing.
+
+**So of the twelve files touched, exactly one (`booking-write-integrity`) is
+verified by the push that changed it.** Eight more need a `workflow_dispatch`
+full-suite run, and three are unverifiable by any suite as things stand. The
+changes are verified by typecheck, lint, the 37 checks, and by reading each
+request against the filter it feeds — not by having been run.
+
+### A trap found in passing: `lint:fix` edits files your task never touched
+
+Running `bun run lint:fix` during the work above modified **11 unrelated
+files** in `src/` — Tailwind v4 class renames the plugin can autofix:
+`break-words` → `wrap-break-word`, `z-[var(--z-sticky)]` → `z-(--z-sticky)`,
+in `save-bar.tsx`, `notification-row.tsx`, `BrandingSettings.tsx`,
+`YipyyPayLanding.tsx` and seven more.
+
+They are plausibly correct and they are **interface changes**, which under the
+standing rules need a § citation in their own commit and a look by eye at 599px
+— neither of which a commit about test queries provides. Reverted with
+`git checkout -- src/` rather than carried along.
+
+**So `git status` is part of the green sequence, not a formality.** `lint:fix`
+and `format` both write beyond the files you edited, and the 242 remaining lint
+WARNINGS are what makes this invisible: nothing fails, so nothing announces it.
+Check what you are about to commit before you stage it — this is how an
+unreviewed visual change reaches `main` inside an unrelated commit.
