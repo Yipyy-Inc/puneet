@@ -15774,3 +15774,63 @@ chain of awaits, or a permission resolution running per row.
 read. `requestfinished` with `timing().responseEnd` over one page load named
 this in a single run, after two commits had been spent making a read smaller
 that was never the thing being waited on.
+
+## 2026-09-17 — one PostgREST embed is most of the facility shell's load time
+
+**Measured, not inferred, and the guesses along the way are worth recording
+because each was wrong.**
+
+`GET /api/locations` takes **2.3–3.4 s** for a facility with SIX locations. It
+sits in the `/facility/dashboard` shell, so every screen in the portal waits for
+it.
+
+**What it is not.** Round trip to Supabase is 80 ms. Round trip to WorkOS is
+~100 ms warm. `getCurrentUser()` is 1 ms and `createServerClient()` is 7 ms, so
+the session cookie is not being re-unsealed expensively. The same `locations`
+SELECT on a DIRECT Postgres connection, with RLS applied as that owner, is
+**125 ms** — and 147 ms with a hand-written per-location booking count. The
+tables are tiny and fully indexed: 6 locations, 61 clients, an index on every
+column the RLS helpers touch.
+
+**What it is.** One embed in `LOCATION_SELECT`:
+
+```
+select=…,bookings(count)
+
+plain locations select through PostgREST     155 ms
+the same select with bookings(count)       1,589–2,255 ms
+```
+
+A/B'd inside the real route, three passes, both queries in the same request. The
+embed is **ten to fifteen times** the cost of everything else the route does.
+Postgres can answer the same question in 22 ms; what is slow is PostgREST's
+generated count embed against `bookings`, whose RLS predicate is the
+`permitted_facility_ids('view_bookings')` chain.
+
+**The count cannot simply be dropped.** Its one consumer is
+`LocationDetailView`, where it shows "N bookings" AND **disables the delete
+button while a location has any**. That is a safety guard, not decoration.
+
+**The grouped-query fix is not available either:** PostgREST aggregates are
+disabled on this project — `select("location_id, count()")` is refused with
+_"Use of aggregate functions is not allowed"_. So the replacement is a SQL
+function returning a location→count map, in the shape of `booking_facility_totals`
+and `gift_card_totals`, security invoker so RLS still decides what is counted.
+
+**Not yet fixed**, and the reason is worth knowing: the Supabase MCP server —
+the way this repo applies migrations (docs/PROJECT-STATE.md §2) — disconnected
+mid-session. Applying DDL to the production-shared database through a
+hand-rolled connection, and hand-writing the row in
+`supabase_migrations.schema_migrations` that `apply_migration` would have
+written, is not a process to improvise at the end of a long session.
+
+**The other six shell requests are unmeasured.** `/roles/overrides` 3.6 s,
+`/staff` 3.3 s, `/roles/custom` 3.2 s, `/rooms` 3.2 s, `/grooming/stylists`
+2.6 s, `/grooming/stations` 2.6 s. Four of seven are permissions and roles,
+which suggests one cause rather than six — but that is a hypothesis, and the
+whole point of this entry is that four plausible hypotheses about `/locations`
+were wrong before the A/B settled it.
+
+**Do instead:** when a route is slow, A/B the query INSIDE the route before
+theorising about auth, caching or network. Every dependency here was under
+200 ms; the cost was one line of a select string.
