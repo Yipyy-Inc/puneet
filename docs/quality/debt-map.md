@@ -15741,3 +15741,36 @@ correct and slow is a different defect from wrong and fast, not a fix for it.
 The **All Cards table still fetches every card** (3,467 KB). Server-side paging
 is the last piece and it goes through `DataTable`, which is shared by ~88
 screens — see its own entry above before touching it.
+
+## 2026-09-17 — the facility dashboard shell is the slow part now, not the screen
+
+**Found by finishing the gift-cards screen and measuring what was left.** Its
+own reads are a page of twelve in 1.4 s and two totals; the screen still takes
+**6.6 s**, and none of that is gift cards:
+
+```
+/locations            4,725 ms
+/roles/overrides      3,607 ms
+/staff                3,294 ms
+/roles/custom         3,239 ms
+/rooms                3,167 ms
+/grooming/stylists    2,599 ms
+/grooming/stations    2,576 ms
+```
+
+**Every screen in `/facility/dashboard` pays this**, because it is the shell
+around them, not anything the gift-cards page asked for. Optimising a single
+screen's data cannot move it — the gift-cards work took its own reads from
+24.3 s to under 2 s and the wall clock stopped at 6.6 s both before and after
+the last commit, because the critical path had moved.
+
+**Not investigated yet**, and worth doing before any more per-screen work: four
+of these seven are permissions and roles, which suggests one cause rather than
+seven. `/locations` at 4.7 s on a facility with a handful of locations is the
+one to open first — that is not a row count, so it is a query plan, a serial
+chain of awaits, or a permission resolution running per row.
+
+**Do instead:** when a screen is slow, time the REQUESTS before narrowing a
+read. `requestfinished` with `timing().responseEnd` over one page load named
+this in a single run, after two commits had been spent making a read smaller
+that was never the thing being waited on.
