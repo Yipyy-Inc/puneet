@@ -16783,7 +16783,7 @@ to filter `edge_logs` on `runtime-version=22.23.2` alone. Read production on
 
 **What actually reduces the bill**, in order of size: don't run the full suite
 locally while CI runs it too (20% of today was this machine, and avoidable); the
-nightly 129-spec cron, which gates nothing — `image`'s `needs:` is
+nightly 119-spec cron, which gates nothing — `image`'s `needs:` is
 `[typecheck, lint, format, unit, checks, sql, build]`, e2e is not in it; and the
 25 spec files still reading the booking list unbounded, which pay two 1000-row
 round trips each. **The 33-spec gate is not on that list and should not be** —
