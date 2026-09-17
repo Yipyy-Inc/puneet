@@ -83,6 +83,10 @@ import {
   logInvitationSent,
 } from "@/lib/staff-audit";
 import { useFacilityRbac, usePermission } from "@/hooks/use-facility-rbac";
+import {
+  readInviteOutcome,
+  type StaffInviteResponse,
+} from "@/lib/staff/invite-outcome";
 import { runOnboardingNotificationSweep } from "@/lib/staff-notifications";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -207,52 +211,62 @@ export default function FacilityStaffPage() {
     return { total, active, invited, onLeave, terminated, roles, services };
   }, [staff]);
 
-  function handleSave(next: StaffProfile) {
+  // ── IT RESOLVES WITH THE SAVED ROW NOW, AND THAT IS THE POINT ───────────
+  //
+  // This used to be fire-and-forget: `void (async () => …)()`, with the caller
+  // carrying on immediately. Fine for an EDIT, where the only thing that
+  // follows is closing the dialog — and wrong for a HIRE, where the very next
+  // step is inviting the person. /api/staff mints its OWN `fs-*` legacy id and
+  // ignores the draft's, so the id that invitation has to be addressed to does
+  // not exist until this resolves.
+  //
+  // It still reports its own failure, because both callers want the same
+  // sentence; it also RETHROWS, so a caller with a second step can stop rather
+  // than go on to claim something about a record that was never written.
+  async function handleSave(next: StaffProfile): Promise<StaffProfile> {
     const actor = {
       actorId: viewer.id,
       actorName: `${viewer.firstName} ${viewer.lastName}`.trim(),
       actorRole: viewer.primaryRole,
     };
-    const subject = {
-      subjectId: next.id,
-      subjectName: `${next.firstName} ${next.lastName}`.trim(),
-    };
 
     const existing = staff.find((s) => s.id === next.id);
 
-    // Fire-and-report rather than fire-and-forget. The database silently
-    // reverts fields this caller may not set, so the SAVED record is what gets
-    // logged and shown — logging `next` would record a raise that never
-    // happened.
-    void (async () => {
-      try {
-        const saved = existing
-          ? await updateStaff({ staffId: next.id, patch: next })
-          : await createStaff(next);
-
-        if (existing) {
-          const changes = diffProfile(existing, saved);
-          if (changes.length > 0) logStaffUpdated(subject, actor, changes);
-        } else {
-          logStaffCreated(subject, actor, saved.primaryRole);
-          // Auto-populate a role-appropriate onboarding checklist (spec F1).
-          initOnboarding(
-            saved.id,
-            saved.primaryRole,
-            saved.employment.hireDate,
-          );
-        }
-        upsertFacilityStaff(saved);
-      } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : t("couldNotSaveProfile"),
-        );
-      }
-    })();
-    // Write through to the shared directory so RBAC, the permission editors,
-    // Preview, and the /employee portal all resolve this profile by id.
+    // Write through to the shared directory first so RBAC, the permission
+    // editors, Preview and the /employee portal all resolve this profile by id
+    // while the round trip is still in flight.
     upsertFacilityStaff(next);
     setViewing(null);
+
+    try {
+      // The database silently reverts fields this caller may not set, so the
+      // SAVED record is what gets logged and shown — logging `next` would
+      // record a raise that never happened.
+      const saved = existing
+        ? await updateStaff({ staffId: next.id, patch: next })
+        : await createStaff(next);
+
+      const subject = {
+        subjectId: saved.id,
+        subjectName: `${saved.firstName} ${saved.lastName}`.trim(),
+      };
+
+      if (existing) {
+        const changes = diffProfile(existing, saved);
+        if (changes.length > 0) logStaffUpdated(subject, actor, changes);
+      } else {
+        logStaffCreated(subject, actor, saved.primaryRole);
+        // Auto-populate a role-appropriate onboarding checklist (spec F1).
+        initOnboarding(saved.id, saved.primaryRole, saved.employment.hireDate);
+      }
+      upsertFacilityStaff(saved);
+      return saved;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t("couldNotSaveProfile"),
+      );
+      throw error;
+    }
   }
 
   // Held HERE so it is warm long before the dialog opens — see the note on
@@ -289,23 +303,26 @@ export default function FacilityStaffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const result = (await response.json().catch(() => null)) as {
-        sent?: boolean;
-        reason?: string;
-        message?: string;
-        onboardingUrl?: string;
-      } | null;
+      // Same three outcomes as the hire dialog, read by the same function —
+      // the words differ because the moments do, but "was this a send?" must
+      // not have two answers in one screen's worth of code.
+      const outcome = readInviteOutcome(
+        (await response.json().catch(() => null)) as StaffInviteResponse | null,
+      );
 
-      if (result?.sent) {
-        toast.success(fill("reminderSent", { email: p.email }));
-      } else if (result?.reason === "not_configured") {
-        toast.warning(result.message ?? t("reminderNotConfigured"), {
-          description: result.onboardingUrl ? t("reminderCopyLink") : undefined,
+      if (outcome.kind === "failed") {
+        toast.error(outcome.message ?? t("reminderFailed"));
+        return;
+      }
+      if (outcome.kind === "not_configured") {
+        toast.warning(t("reminderNotConfigured"), {
+          description: outcome.onboardingUrl
+            ? t("reminderCopyLink")
+            : undefined,
           duration: 8000,
         });
       } else {
-        toast.error(result?.message ?? t("reminderFailed"));
-        return;
+        toast.success(fill("reminderSent", { email: p.email }));
       }
 
       void queryClient.invalidateQueries({ queryKey: instanceKeys.all });
