@@ -15658,3 +15658,86 @@ once, so the test asserts both flags rather than `open === !closed`.
 filter on, pass it. And measure the read before deciding it is fine — 977 rows
 of 213 kB raw looked harmless in SQL (`explain` put both views under 50 ms);
 the cost was in fetching, enriching and mapping rows nobody wanted.
+
+## 2026-09-17 — the gift-cards screen, and two values that were never measured
+
+**Fixing yesterday's silent truncation made this screen slow enough to fail its
+own specs**, which is the honest summary. `GET /api/gift-cards` used to stop at
+the first 1,000 rows — the reports tab called $3,025 of revenue what was really
+$31,875 — so it was paged. Complete, and then 6,022 cards at 3.46 MB, plus
+12,973 ledger movements attached, and **24.3 s for the screen to settle**. Three
+`gift-cards` specs failed on a 15 s timeout, correctly.
+
+```
+                              before      after
+screen settles                24.3 s      6.6-7.5 s
+list payload (withLedger)     7,324 KB    3,467 KB
+the numbers                   3.46 MB     0.4 KB
+```
+
+**Cards are never deleted, and that is deliberate.** There is no DELETE policy
+on `gift_cards`: a bearer instrument is VOIDED, not erased. 6,019 of those
+6,022 are `cancelled` and still rows. So the specs' cleanup is working — it
+drains and cancels every `E2E-GC-` card — and the table still only grows, at
+every facility, forever. **Do not read row growth here as a leak and do not
+delete the rows.** The first diagnosis on the day was exactly that, and it was
+wrong: the fix is that no screen may download the whole table, not that the
+table should be smaller.
+
+### The two values nobody had measured
+
+**A chart drawn from a checksum of the card's uuid.** The Reports tab split
+gift-card revenue five ways — Grooming, Boarding, Daycare, Retail, Training —
+using `categoryFor`, which summed the characters of the id modulo five. Its own
+comment said why: _"redemptions don't carry a service category in the mock, so
+derive a stable one."_ **That comment was true when it was written.** The data
+stopped being a mock; the derivation stayed. A facility owner has been reading a
+confident five-way split of their own money decided by arithmetic on an id. The
+real answer was one join: a redemption that paid for a booking carries
+`booking_id`. Measured, the truth is **$196,810 unattributed and $2,060
+daycare** — one bucket, not five.
+
+**A counter could not look up nine gift cards in ten.** The redeem modal
+UPPERCASES what is typed, and compared it against an in-memory list with
+`gc.code.toLowerCase() === q` — case-insensitive on both sides, so it worked and
+nobody looked. Moving the lookup to `/api/gift-cards?code=`, which matched
+exactly, found nothing: **5,526 of 6,092 codes contain a lowercase letter.** The
+route folds case now, which RESTORES the old behaviour rather than loosening it
+— zero codes collide case-insensitively and `code` is unique per facility — and
+escapes `%` and `_`, because `ilike` is a pattern match and a wildcard on a
+bearer instrument is a way to fish for real codes one character at a time.
+
+**Both had the same shape:** a value that was correct against a fixture, left in
+place when the fixture went away, and never measured afterwards. Neither was
+found by reading the code — the chart was found by asking what `categoryFor`
+actually returned, the lookup by a spec that had been failing and was right.
+
+### Two liabilities, and why the screen needs both
+
+`liability` is point in time: what the facility owes today on every card ever
+sold. `sales.outstanding` is what is left on the cards sold inside the picked
+window. The overview's tiles are period-scoped and its comment said so; the
+Reports tab's is not. They diverge — 10 against 59 on the fixture — so a tile
+reading the wrong one is plausible and wrong. The SQL answers both, separately,
+and `supabase/tests/gift-card-totals.sql` G11 pins the divergence rather than
+the agreement.
+
+### What this cost, and the rule
+
+**Three `create or replace` of one function in a sitting**, each adding a number
+some tile on the screen already displayed. The audit — every use of the card
+list on the PAGE, not just the tab in front of me — belonged before the first
+migration. It stayed cheap only because the function returns `jsonb`: no drop,
+no grants restated, no callers to coordinate. An OUT-parameter signature would
+have made each one a drop-and-recreate, which is what `my_store_credit` needed
+the day before.
+
+**Do instead:** grep every consumer of the thing you are replacing before
+designing its replacement. And when a read is made complete, measure it again —
+correct and slow is a different defect from wrong and fast, not a fix for it.
+
+### Still open
+
+The **All Cards table still fetches every card** (3,467 KB). Server-side paging
+is the last piece and it goes through `DataTable`, which is shared by ~88
+screens — see its own entry above before touching it.
