@@ -17003,3 +17003,64 @@ fingerprint was read from one hour and assumed, and the slow read was blamed on
 row count without ever asking the database how long it took. `EXPLAIN ANALYZE`
 and `pg_stat_statements` were available the whole time and settled both in
 minutes. Measure the layer you are about to change.
+
+### 2026-09-17, later still — I ALMOST BUILT A VIEW FOR NOTHING. Do not build it
+
+The entry above recommends replacing `clients!inner ( ref )` and
+`facilities!inner ( timezone )` with a `security_invoker` view exposing flat
+columns, on the strength of a measurement that said PostgREST's lateral shape
+took 413 ms against 72 ms for flat joins. **That measurement was an artefact of
+running the lateral version first, on a cold cache.** Repeated with a discarded
+warmup round and minimum-of-four, interleaved so no variant gets a colder
+cache:
+
+| variant (min of 4, 1,000 rows)         | time                  |
+| -------------------------------------- | --------------------- |
+| `json_agg` only, no embeds             | 37.2 ms               |
+| + `clients` lateral                    | 39.6 ms — **+2.4 ms** |
+| + `facilities` lateral                 | 38.7 ms — **+1.5 ms** |
+| + `booking_pets → pets` nested lateral | 73.6 ms — +36.4 ms    |
+| PostgREST verbatim, all three laterals | **75.3 ms**           |
+| the flat-view shape                    | **76.2 ms**           |
+
+**The view would have saved −0.9 ms.** The two laterals it was meant to remove
+cost about two milliseconds each. The only embed with a real cost is the nested
+to-many, which a flat view cannot remove anyway.
+
+So: **no migration, no view, no change to `BOOKING_SELECT`.** The plan was
+wrong and measuring it before building it is the only reason nothing shipped.
+
+### Where the 4,128 ms actually goes: contention, not the query
+
+Every structural explanation is now eliminated by measurement:
+
+- **Not the row count.** 1,069 rows in 37 ms.
+- **Not RLS.** 5.4×, and 30 ms in absolute terms.
+- **Not the embeds.** ~4 ms for the two scalars; the view saves nothing.
+- **Not a missing index.** All index scans, with a Memoize node hitting 1,068/1,069.
+- **Not TOAST or a cold cache.** `bookings` is **1,160 kB in total** — 504 kB
+  heap, 56 kB toast, 520 kB indexes. `details` averages **48 bytes** and
+  exactly ONE row is big enough to TOAST. Cache hit ratio is **100.00% on both
+  heap and toast**, against 224 MB of `shared_buffers`: the table fits in
+  memory two hundred times over and never leaves it.
+
+What remains is **CPU contention**. `pg_stat_statements` counts **9,311 calls**
+of this query shape across its three variants, each serialising up to 1,000
+wide rows into one JSON document with `json_agg` — pure CPU — on a shared-CPU
+free-tier instance. A 75 ms query becomes a 4 s query when enough of them run
+at once, and that is also why `?clientRef=15` trips the 8 s
+`statement_timeout`: it does not need to be slow, it needs to be unlucky.
+
+**Which means the narrowing in 4b2c1f88 is not just the best available lever,
+it is the only one that addresses the actual cause** — fewer calls, and fewer
+rows to serialise in each. Nothing about the schema, the indexes, the policies
+or the embed shape needs to change, and three separate attempts to change them
+would each have been wasted work.
+
+**Three wrong hypotheses in one afternoon, all from the same error:** measuring
+one sample and generalising. The debris, the RLS policy, and the embed shape
+each looked like the answer and each died to a repeated, interleaved,
+warmed-up measurement. The rule earned here is narrower than "measure first":
+**a single timing is not a measurement.** Run it four times, discard the first,
+interleave the variants, and take the minimum — otherwise cache order decides
+the conclusion, and it will decide it differently each time.
