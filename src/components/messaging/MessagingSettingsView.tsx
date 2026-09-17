@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,9 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSavedReplies } from "./saved-replies-context";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
+import { formatDateShort } from "@/lib/i18n/format";
+import type { SuppressionRow } from "@/app/api/messaging/suppressions/route";
 import {
   SAVED_REPLY_CATEGORY_COLORS,
   SAVED_REPLY_CATEGORY_LABELS,
@@ -74,6 +78,10 @@ const DEFAULT_HOURS: Record<
 };
 
 const STOP_KEYWORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "QUIT", "END"];
+
+// A STABLE empty list: `= []` would be a new array each render, and anything
+// depending on it would loop (check:query-default-loops).
+const NO_SUPPRESSIONS: SuppressionRow[] = [];
 
 // ── Saved-reply editor ───────────────────────────────────────────────
 
@@ -193,6 +201,8 @@ function SavedReplyEditor({
 
 export function MessagingSettingsView() {
   const savedRepliesCtx = useSavedReplies();
+  const locale = useShellLocale();
+  const t = useShellText("messaging");
 
   // Business identity
   const [businessPhone, setBusinessPhone] = useState("(514) 555-0100");
@@ -214,24 +224,46 @@ export function MessagingSettingsView() {
   const [stopConfirmation, setStopConfirmation] = useState(
     "You have been unsubscribed from Yipyy messages. Reply START to re-subscribe.",
   );
-  const [optedOutNumbers, setOptedOutNumbers] = useState<
-    Array<{ name: string; phone: string; optedOutAt: string }>
-  >([
-    {
-      name: "Marie Tremblay",
-      phone: "(514) 555-0182",
-      optedOutAt: "2026-04-12T14:22:00Z",
+  // ── WHO HAS ACTUALLY TOLD THIS FACILITY TO STOP ─────────────────────────
+  //
+  // This was two invented people — "Marie Tremblay (514) 555-0182" and "Daniel
+  // Roy" — held in `useState`, and "Re-enable" filtered one out of the array
+  // and toasted success. Wrong in both directions on a CONSENT surface:
+  // somebody who really texted STOP never appeared here, so the screen said
+  // nobody had opted out; and the two who "had" could be re-enabled by a click
+  // that reached nothing.
+  //
+  // `message_suppressions` has held the truth since 20260827111420, keyed by
+  // ADDRESS because under CASL a withdrawal attaches to the address rather than
+  // to our row for a person.
+  const optedOutQuery = useQuery({
+    queryKey: ["message-suppressions", "sms"],
+    queryFn: async () => {
+      const response = await fetch("/api/messaging/suppressions?channel=sms");
+      if (!response.ok) throw new Error(String(response.status));
+      return ((await response.json()) as { suppressions: SuppressionRow[] })
+        .suppressions;
     },
-    {
-      name: "Daniel Roy",
-      phone: "(450) 555-0917",
-      optedOutAt: "2026-03-28T09:05:00Z",
-    },
-  ]);
+  });
+  const optedOutNumbers = optedOutQuery.data ?? NO_SUPPRESSIONS;
 
-  const removeOptOut = (phone: string) => {
-    setOptedOutNumbers((prev) => prev.filter((o) => o.phone !== phone));
-    toast.success("Re-enabled SMS for this client");
+  const removeOptOut = async (address: string) => {
+    const response = await fetch("/api/messaging/suppressions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: "sms", address }),
+    });
+    if (!response.ok) {
+      const detail = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      // Said, not swallowed: somebody who thinks they re-enabled a customer
+      // and did not will keep waiting for a reply that cannot arrive.
+      toast.error(detail?.error ?? t("smsReEnableFailed"));
+      return;
+    }
+    await optedOutQuery.refetch();
+    toast.success(t("smsReEnabled"));
   };
 
   // Saved replies UI state
@@ -662,20 +694,18 @@ export function MessagingSettingsView() {
               ) : (
                 optedOutNumbers.map((o) => (
                   <div
-                    key={o.phone}
+                    key={o.id}
                     className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-700">
-                        {o.name}
+                        {/* The address is the record; a name only exists when
+                            the opt-out could be matched to a client. */}
+                        {o.clientName ?? o.address}
                       </p>
                       <p className="font-mono text-[11px] text-slate-500">
-                        {o.phone} · opted out{" "}
-                        {new Date(o.optedOutAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {o.address} · opted out{" "}
+                        {formatDateShort(o.createdAt, locale)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -689,7 +719,7 @@ export function MessagingSettingsView() {
                         size="sm"
                         variant="outline"
                         className="h-7 gap-1 text-[11px]"
-                        onClick={() => removeOptOut(o.phone)}
+                        onClick={() => void removeOptOut(o.address)}
                       >
                         <RefreshCw className="size-3" />
                         Re-enable

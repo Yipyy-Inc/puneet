@@ -8092,6 +8092,8 @@
       "addAStaffOnlyNote": "Ajoutez une note réservée au personnel (invisible pour le client)…",
       "deleteNote": "Supprimer la note",
       "internalNoteAdded": "Note interne ajoutée",
+      "smsReEnabled": "SMS réactivés pour ce client",
+      "smsReEnableFailed": "Impossible de réactiver les SMS pour ce client",
       "noteRemoved": "Note supprimée",
       "unpin": "Désépingler",
       "pin": "Épingler",
