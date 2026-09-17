@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,7 @@ import { toLegacyGiftCard } from "./_lib/to-legacy-card";
 import { toActivityLog } from "./_lib/to-activity-log";
 import { toWallets } from "./_lib/to-wallets";
 import { totalsWindow } from "./_lib/totals-range";
+import type { GiftCardPageSort } from "@/lib/api/gift-card-page-params";
 import { SellGiftCardModal } from "./_components/SellGiftCardModal";
 import { RedeemGiftCardModal } from "./_components/RedeemGiftCardModal";
 import { GiftCardDetailSheet } from "./_components/GiftCardDetailSheet";
@@ -198,7 +199,16 @@ export default function FacilityGiftCardsPage() {
   const [showRedeem, setShowRedeem] = useState(false);
   const [showCheckBalance, setShowCheckBalance] = useState(false);
   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
+  const queryClient = useQueryClient();
   const [cardSearchQuery, setCardSearchQuery] = useState("");
+  // The All Cards table pages on the server. A dozen rows is the §5m budget
+  // this table already drew; what changed is that the other 6,010 stay put.
+  const CARDS_PER_PAGE = 12;
+  const [cardPage, setCardPage] = useState(1);
+  const [cardSort, setCardSort] = useState<{
+    key: GiftCardPageSort | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "desc" });
   const [cardFilterValues, setCardFilterValues] = useState<
     Record<string, string>
   >({ status: "all", type: "all" });
@@ -257,26 +267,25 @@ export default function FacilityGiftCardsPage() {
   // What this replaced kept a session `cardBalances` override map beside the
   // fixture, which is how the number on screen and the transactions under it
   // were maintained separately in the first place.
-  // ── NO LEDGER ON THE LIST ───────────────────────────────────────────────
+  // ── THIS PAGE NO LONGER HOLDS EVERY CARD ────────────────────────────────
   //
-  // This was `allWithLedger()`: every card the facility had ever issued WITH
-  // every movement attached, so the drawer could show one card's history and
-  // the Reports tab could add up the rest. Measured on the e2e facility, that
-  // was 12,973 movements behind 6,022 cards.
+  // It read `allWithLedger()`: every card the facility had ever issued, with
+  // every movement attached. On the e2e facility, 6,022 cards and 12,973
+  // movements — 7,324 KB, 15.4 s, and 24.3 s before the screen settled. Cards
+  // are never deleted (no DELETE policy on `gift_cards`, deliberately: a bearer
+  // instrument is voided, not erased), so that list only ever grows.
   //
-  // Both readers were answered better elsewhere — the drawer fetches its own
-  // card's ledger (`giftCardQueries.detail`), the numbers come from
-  // `gift_card_totals` — so the list is just the cards now. `transactions: []`
-  // is honest rather than lossy: nothing left on this page reads a history off
-  // a row in the list.
-  const cardsQuery = useQuery(giftCardQueries.all());
-  const facilityCards = useMemo(
-    () =>
-      (cardsQuery.data ?? []).map((row) =>
-        toLegacyGiftCard({ ...row, transactions: [] }),
-      ),
-    [cardsQuery.data],
-  );
+  // Five things wanted it, and every one of them wanted something smaller:
+  //
+  //   the table            one PAGE          /api/gift-cards/page
+  //   the tiles + reports  the NUMBERS       gift_card_totals
+  //   the liability report the OUTSTANDING   ?status=active
+  //   the drawer           ONE card's ledger giftCardQueries.detail
+  //   two by-id lookups    ONE card          giftCardQueries.detail
+  //
+  // The sixth, the activity feed's card labels, needed four digits of a code —
+  // so the code rides on the entry now rather than the page holding 6,022 rows
+  // to look one up per line.
 
   // ── THE OUTSTANDING SET, ASKED FOR SEPARATELY ───────────────────────────
   //
@@ -431,11 +440,16 @@ export default function FacilityGiftCardsPage() {
 
   const resolveAuditTarget = (log: GiftCardAuditLog): AuditTarget => {
     if (log.giftCardId) {
-      const card = facilityCards.find((c) => c.id === log.giftCardId);
+      // The code rides on the ENTRY now (`/api/gift-cards/activity` carries
+      // it). This used to search every card the facility had ever issued, per
+      // row, to put four digits in a label — which is why the page had to hold
+      // all 6,022 of them before this feed could render.
       return {
         kind: "card",
         id: log.giftCardId,
-        label: card ? `Gift Card ****${card.code.slice(-4)}` : "Gift Card",
+        label: log.giftCardCode
+          ? `Gift Card ****${log.giftCardCode.slice(-4)}`
+          : "Gift Card",
       };
     }
     if (log.walletId) {
@@ -467,12 +481,24 @@ export default function FacilityGiftCardsPage() {
     return null;
   };
 
-  const traceAuditLog = (log: GiftCardAuditLog) => {
+  const traceAuditLog = async (log: GiftCardAuditLog) => {
     const target = resolveAuditTarget(log);
     if (!target) return;
     if (target.kind === "card") {
-      const card = facilityCards.find((c) => c.id === target.id);
-      if (card) setSelectedCard(card);
+      // Fetched on the click rather than found in a list the page was holding
+      // for this one purpose. `detail` is the card and its ledger in a single
+      // request, which is what the drawer wants anyway.
+      const detail = await queryClient
+        .fetchQuery(giftCardQueries.detail(String(target.id)))
+        .catch(() => null);
+      if (detail?.card) {
+        setSelectedCard(
+          toLegacyGiftCard({
+            ...detail.card,
+            transactions: detail.transactions,
+          }),
+        );
+      }
       return;
     }
     if (target.kind === "wallet") {
@@ -513,39 +539,49 @@ export default function FacilityGiftCardsPage() {
     cardSearchQuery.trim() !== "" ||
     Object.values(cardFilterValues).some((v) => v !== "all");
 
-  const filteredCards = useMemo(() => {
-    const q = cardSearchQuery.trim().toLowerCase();
-    return facilityCards.filter((gc) => {
-      if (
-        q &&
-        !(
-          gc.code.toLowerCase().includes(q) ||
-          gc.purchasedBy?.toLowerCase().includes(q) ||
-          gc.recipientName?.toLowerCase().includes(q) ||
-          gc.recipientEmail?.toLowerCase().includes(q)
-        )
-      ) {
-        return false;
-      }
-      if (
-        cardFilterValues.status !== "all" &&
-        gc.status !== cardFilterValues.status
-      ) {
-        return false;
-      }
-      if (
-        cardFilterValues.type !== "all" &&
-        gc.type !== cardFilterValues.type
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [facilityCards, cardSearchQuery, cardFilterValues]);
+  // ── THE TABLE IS ONE PAGE, ANSWERED BY SQL ──────────────────────────────
+  //
+  // Search, status, type, sort and paging all happen in Postgres now. The
+  // browser used to do every one of them over the facility's whole history —
+  // 6,022 cards and 3,467 KB on the e2e facility, and cards are never deleted,
+  // so that list only grows.
+  //
+  // `total` is every card MATCHING the filters, not the page, so the count in
+  // the header and the page buttons both stay honest.
+  const cardPageQuery = useQuery(
+    giftCardQueries.page({
+      page: cardPage,
+      pageSize: CARDS_PER_PAGE,
+      q: cardSearchQuery,
+      status:
+        cardFilterValues.status === "all" ? undefined : cardFilterValues.status,
+      // The screen says "digital"; the column says `online`.
+      kind:
+        cardFilterValues.type === "all"
+          ? undefined
+          : cardFilterValues.type === "physical"
+            ? "physical"
+            : "online",
+      sort: cardSort.key ?? undefined,
+      dir: cardSort.dir,
+    }),
+  );
+  const pageCards = useMemo(
+    () =>
+      (cardPageQuery.data?.cards ?? []).map((row) =>
+        toLegacyGiftCard({ ...row, transactions: [] }),
+      ),
+    [cardPageQuery.data],
+  );
+  const matchingCardCount = cardPageQuery.data?.total ?? 0;
 
+  // Selection is what is ON SCREEN, which is now one page rather than the
+  // facility's whole history. A card the viewer has not seen cannot be in a
+  // bulk void, and a "select all" that silently reached 6,022 cards — most of
+  // them voided years earlier — would be the more dangerous of the two.
   const selectedCards = useMemo(
-    () => facilityCards.filter((gc) => selectedCardIds.has(gc.id)),
-    [facilityCards, selectedCardIds],
+    () => pageCards.filter((gc) => selectedCardIds.has(gc.id)),
+    [pageCards, selectedCardIds],
   );
 
   // Wallets tab: resolve client + effective balance, filter by name/email, then sort.
@@ -981,7 +1017,47 @@ export default function FacilityGiftCardsPage() {
     a.click();
   };
 
-  const exportCardsCSV = () => exportCards(filteredCards);
+  /**
+   * Export what the filters match — ALL of it, not the page on screen.
+   *
+   * The table shows a dozen rows now, so `pageCards` would export a dozen. A
+   * CSV called "Export Filtered (1,204)" that contained twelve would be the
+   * worst kind of wrong: complete-looking and short. It pages the same endpoint
+   * to exhaustion instead, which is a deliberate action the user just asked
+   * for rather than something every page load pays for.
+   */
+  const exportCardsCSV = async () => {
+    const PAGE = 500;
+    const rows: GiftCard[] = [];
+    for (let page = 1; ; page++) {
+      const batch = await queryClient.fetchQuery(
+        giftCardQueries.page({
+          page,
+          pageSize: PAGE,
+          q: cardSearchQuery,
+          status:
+            cardFilterValues.status === "all"
+              ? undefined
+              : cardFilterValues.status,
+          kind:
+            cardFilterValues.type === "all"
+              ? undefined
+              : cardFilterValues.type === "physical"
+                ? "physical"
+                : "online",
+        }),
+      );
+      rows.push(
+        ...batch.cards.map((row) =>
+          toLegacyGiftCard({ ...row, transactions: [] }),
+        ),
+      );
+      // A short page is the last page; a FULL one asks again, because a full
+      // page is indistinguishable from a full page that happens to be last.
+      if (batch.cards.length < PAGE || rows.length >= batch.total) break;
+    }
+    exportCards(rows);
+  };
 
   const handleResendEmail = (gc: GiftCard) => {
     alert(
@@ -1490,7 +1566,7 @@ export default function FacilityGiftCardsPage() {
             >
               <FileDown className="size-4" />
               {cardFiltersActive
-                ? `Export Filtered (${filteredCards.length})`
+                ? `Export Filtered (${matchingCardCount})`
                 : "Export All"}
             </Button>
           </div>
@@ -1533,9 +1609,28 @@ export default function FacilityGiftCardsPage() {
           )}
 
           <DataTable
-            data={filteredCards}
+            data={pageCards}
             columns={cardColumns}
-            itemsPerPage={12}
+            itemsPerPage={CARDS_PER_PAGE}
+            // The server pages, searches, filters and sorts; this table draws
+            // the page it is given and nothing here slices it again.
+            serverPaging={{
+              total: matchingCardCount,
+              page: cardPage,
+              onPageChange: setCardPage,
+              onSearchChange: (term) => {
+                setCardSearchQuery(term);
+                // Back to page 1, or a search from page 9 lands on page 9 of a
+                // shorter result and reads as "no cards".
+                setCardPage(1);
+              },
+              onFilterChange: (values) => {
+                setCardFilterValues((prev) => ({ ...prev, ...values }));
+                setCardPage(1);
+              },
+              onSortChange: (key, dir) =>
+                setCardSort({ key: (key as GiftCardPageSort) ?? null, dir }),
+            }}
             selectable
             getItemId={(gc) => gc.id}
             selectedIds={selectedCardIds}
@@ -1988,7 +2083,6 @@ export default function FacilityGiftCardsPage() {
         mode={sellMode ?? "digital"}
         prefillAmount={replacementAmount ?? undefined}
         physicalBatches={allBatches}
-        issuedCards={facilityCards}
         onSuccess={(card) => {
           toast.success(`Gift card ${card.code} issued.`, {
             description: `$${card.balance.toFixed(2)} is now recorded against this facility.`,

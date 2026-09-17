@@ -4,6 +4,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
 import type { GiftCardTotals } from "@/app/api/gift-cards/totals/route";
+import type { GiftCardPagePayload } from "@/app/api/gift-cards/page/route";
+import {
+  giftCardPageSearch,
+  type GiftCardPageParams,
+} from "@/lib/api/gift-card-page-params";
 import type { GiftCardRow } from "@/lib/api/mappers/gift-card";
 import type { GiftCardDetailPayload } from "@/app/api/gift-cards/[id]/route";
 import type { GiftCardTransactionRow } from "@/lib/api/gift-card-ledger";
@@ -32,6 +37,7 @@ import type { ToCreditResult } from "@/app/api/gift-cards/to-credit/route";
 
 export type { GiftCardRow, GiftCardTransactionRow, GiftCardDetailPayload };
 export type { GiftCardActivityRow } from "@/app/api/gift-cards/activity/route";
+export type { GiftCardPagePayload } from "@/app/api/gift-cards/page/route";
 export type {
   GiftCardTotals,
   GiftCardSalesMonth,
@@ -111,6 +117,27 @@ export const giftCardQueries = {
         `/api/gift-cards/totals${query ? `?${query}` : ""}`,
       );
     },
+  }),
+
+  /**
+   * ONE PAGE of the facility's cards, searched, filtered and sorted by SQL.
+   *
+   * What the All Cards table reads. `all()` below fetches every card the
+   * facility has ever issued — 6,022 of them and 3,467 KB on the e2e facility
+   * — and cards are never deleted, so that only grows.
+   *
+   * `placeholderData` keeps the previous page on screen while the next one
+   * loads: a table that empties and refills on every keystroke reads as
+   * "no results" for a moment, which is the one answer a search must not give
+   * by accident.
+   */
+  page: (params: GiftCardPageParams) => ({
+    queryKey: ["gift-cards", "page", giftCardPageSearch(params)] as const,
+    queryFn: async () =>
+      get<GiftCardPagePayload>(
+        `/api/gift-cards/page${giftCardPageSearch(params)}`,
+      ),
+    placeholderData: (previous: GiftCardPagePayload | undefined) => previous,
   }),
 
   /** Every card this facility has issued, newest first. */
