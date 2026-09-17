@@ -15982,3 +15982,98 @@ and an `<Input>` with no `id`, so `getByLabel(/first name/i)` matches nothing
 and a screen reader announces the field unlabelled. Found while writing the
 probe for the above. Not fixed — it is the whole staff form family, and a
 drive-by would be the wrong shape.
+
+---
+
+## 2026-09-17 — the unbounded booking list, measured at last
+
+### 🔴 `GET /api/bookings` with no slice costs 16–20 SECONDS
+
+Measured through the app, signed in as the owner, three runs against the e2e
+facility:
+
+```
+unbounded GET /api/bookings    16,215 / 20,484 / 16,215 ms   (1,499 rows)
+the same read as ?ref=<n>       1,194 /  1,232 /  1,367 ms
+```
+
+**15×.** And the ~1.2 s floor on the narrow read is the auth chain already
+recorded above (`activeFacilityIdForStaff` 1,280–3,659 ms), so essentially
+_all_ of the extra 15–19 s is row volume: the route pages PostgREST in 1000-row
+chunks, so 1,499 rows is two sequential round trips plus the mapping of every
+row.
+
+**This is very likely the portal-wide 9–16 s that the entry above records as
+UNDIAGNOSED.** Not claimed as proven for every screen — but any screen that
+reads the booking list without naming a slice pays this, and that was never
+measured before today.
+
+**It is also why the e2e suite is slow AND flaky.** 28 spec files call
+`page.request.get("/api/bookings")` with no parameters, many inside
+`expect.poll(...)` with a 20-second budget — so a single iteration of the poll
+costs more than the whole budget. `booking-form-saves:220` polls for a booking
+whose `ref` it is holding; `booking-checkout-truth:188` and
+`booking-payment-screens:176` do the same shape. They fail non-deterministically
+depending on where the link is that minute, which reads as a regression in
+whatever change happens to be in the tree.
+
+**And the route sometimes answers with a non-array.** One probe run got an error
+body where a list was expected — which is what produces
+`TypeError: object is not iterable` in `booking-payment-screens`' teardown. The
+callers do `(await res.json()) as Booking[]` without checking `res.ok()`.
+
+**Do instead:** name the slice. The route already supports `ref`, `refs`,
+`clientRef`, `from`, `to`, `statuses` and `limit` — a caller that knows the
+booking it just made should ask for that one (`?ref=`), and a caller that knows
+the day should pass `from`/`to`. Fixing the 28 spec files is a scoped task, not
+a drive-by; the screens are the bigger half and should be measured the same way
+before and after.
+
+### 🟡 The suite's own cleanup makes every future run more expensive
+
+`afterAll` CANCELS its bookings rather than deleting them — `booking-form-saves`
+says so outright: _"This run's live bookings with the tag — earlier runs' are
+cancelled."_ So the rows accumulate by design. Measured 2026-09-17: **1,465 of
+1,671 bookings (88%) are `[e2e …]` debris**, and every unbounded list read pays
+for all of them.
+
+**A prune script was considered and rejected**, and the numbers are why: of the
+1,465, only **201** can be deleted safely. `payments`, `package_pass_entries`
+and `store_credit_entries` are `ON DELETE RESTRICT` — deliberate ledger
+protection — and **1,221 of the e2e bookings carry a payment**. Removing the
+201 takes the table to 1,470, which is still over PostgREST's 1000-row page
+boundary, so it would not even remove the second round trip. The palliative
+cannot reach the thing that hurts.
+
+**Do instead:** fix the reads, not the data. And if a prune is ever written, it
+must skip anything carrying money rather than force past the RESTRICT.
+
+### 🟡 Two specs are red on `main` and were not caused by any recent change
+
+Both verified by running them on a clean tree, twice each, 2026-09-17:
+
+- **`staff-screen-live.spec.ts:62`** — "a groomer sees the roster but not the
+  payroll tab". Fails 2/2 on a clean build and 2/2 with an unrelated change:
+  `getByText('Dominic')` never appears within 30 s. Pre-existing.
+- **`staff-write-path.spec.ts:88`** — "a groomer cannot promote themselves". The
+  **refusal is correct** — 403, and `perms.manage_roles` stays `none`. What
+  fails is the message assertion: the spec expects `/role/i` and the trigger
+  `private.enforce_hire_access_level` answers _"Only a facility admin may hire
+  an admin. manage_staff is not enough."_ A security control working, and an
+  assertion that does not know this refusal path exists.
+- **`booking-payment-screens.spec.ts:176`** — red in CI's own nightly on clean
+  `main` (615 passed, 2 failed, 2026-09-17 08:14).
+
+**Do instead — and this is the cheap lesson of the day:** read the last
+nightly's failure list BEFORE running anything locally. It runs the full suite
+on clean `main` every night and prints the failing spec names. Checking it costs
+one `gh run view --log-failed`; not checking it cost a 90-minute local run that
+answered nothing, because known-red specs were being read as new breakage.
+
+### 🟢 `next start` still dies mid-run, and the supervisor earned itself
+
+`scripts/e2e-server.ts` logged `next start exited 9 after 2668s` and restarted
+one second later. Six `daily-care-board` failures follow within two minutes of
+that line and nothing else in the run failed after it. Diagnosing that took one
+`grep` of the supervisor's stderr — the exact thing it was built for. Note its
+lines go to **stderr**, so they are in the `.err` file, not the stdout log.
