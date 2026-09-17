@@ -250,7 +250,6 @@ const BASELINE = new Set<string>([
   "src/components/dashboard/facilities/OverviewTab.tsx",
   "src/components/employee/RegisterCloseReminder.tsx",
   "src/components/facility/BreedManagement.tsx",
-  "src/components/grooming/GroomingCheckInButton.tsx",
   "src/components/guest-journal/ReservationJournalPanel.tsx",
   "src/components/support/support-chat-tab.tsx",
   "src/components/system-admin/data-management/restore-approval-modal.tsx",

@@ -40,6 +40,10 @@ const WORDS: Record<
     subject: `Pre-arrival form for ${value(p, "pet", "a pet")}`,
     line: `${value(p, "client", "A customer")} submitted the pre-arrival form for ${value(p, "pet", "their pet")}.`,
   }),
+  customer_arrived: (p) => ({
+    subject: `${value(p, "client", "A customer")} has arrived`,
+    line: `${value(p, "client", "A customer")} says they are here for ${value(p, "service", "their appointment")}${p.pet ? ` with ${value(p, "pet")}` : ""}.`,
+  }),
   vaccination_uploaded: (p) => ({
     subject: `Vaccination record to review for ${value(p, "pet", "a pet")}`,
     line: `A ${value(p, "vaccine", "vaccination")} record for ${value(p, "pet", "a pet")} is waiting for review.`,

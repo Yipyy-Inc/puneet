@@ -561,10 +561,7 @@ export default function BookingDetailPage({
             <Card className="animate-in fade-in border-primary/30 bg-primary/5 duration-400">
               <CardContent className="p-5">
                 <p className="mb-2 font-semibold">{t("readyToCheckIn")}</p>
-                <GroomingCheckInButton
-                  bookingId={String(booking.id)}
-                  clientId={customerId ?? 0}
-                />
+                <GroomingCheckInButton bookingId={String(booking.id)} />
               </CardContent>
             </Card>
           )}

@@ -46,6 +46,10 @@ function keysFor(n: StaffNotification): { title: string; detail?: string } {
     case "form_submitted":
     case "pre_arrival_submitted":
       return { title: `kind_${n.kind}`, detail: "kind_form_detail" };
+    case "customer_arrived":
+      // The same detail line as a booking: who, and for what. The urgency is
+      // carried by the notice itself (catalog: urgent), not by the wording.
+      return { title: "kind_customer_arrived", detail: "kind_booking_detail" };
     case "vaccination_uploaded":
       return {
         title: "kind_vaccination_uploaded",
