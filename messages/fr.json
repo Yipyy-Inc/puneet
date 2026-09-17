@@ -2911,6 +2911,24 @@
         "saved": "Nombre maximal d’animaux par employé enregistré pour cet établissement.",
         "positiveNumber": "Entrez un nombre positif.",
         "defaultHint": "Par défaut : {n}. Les recommandations varient — beaucoup d’établissements comptent de 10 à 15 chiens par employé en garderie, et un peu plus en pension (les animaux passent la nuit en enclos)."
+      },
+      "giftCards": {
+        "checkBalance": "Vérifier le solde",
+        "tabOverview": "Aperçu",
+        "tabCards": "Toutes les cartes",
+        "tabWallets": "Portefeuilles",
+        "tabInventory": "Inventaire",
+        "tabActivity": "Activité",
+        "tabReports": "Rapports",
+        "tabSettings": "Réglages",
+        "tileWalletBalance": "Solde total des portefeuilles",
+        "tileRevenueSold": "Revenus totaux des ventes",
+        "walletOne": "portefeuille",
+        "walletMany": "portefeuilles",
+        "cardsSoldOne": "carte vendue",
+        "cardsSoldMany": "cartes vendues",
+        "exportCsv": "Exporter en CSV",
+        "exportCsvDesc": "Télécharger la liste des cartes"
       }
     }
   },

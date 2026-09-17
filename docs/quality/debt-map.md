@@ -16613,3 +16613,29 @@ component was already looking.
 **And do not trust a French probe that only matches case-insensitively.** It
 cannot tell a raw lowercase enum from a translated label, and on this screen the
 difference was the whole bug.
+
+### Gift cards: the visible chrome reads French (2026-09-17)
+
+`gift-cards/page.tsx` **180 → 168** — the header button, the seven tabs, two
+money tiles and the export action. Verified 7/7 in both languages with a
+CASE-SENSITIVE probe that also looks for the camelCase keys on screen, which is
+the check the occupancy board needed and did not have.
+
+**168 strings remain in that one file**, so this is the visible chrome and not
+the screen. Said plainly rather than implied by a green gate.
+
+**Two collisions the pre-flight grep caught**, and both would have compiled:
+
+- `gift-cards/page.tsx` already uses **`t` as the name of a `setTimeout`
+  handle** in two effects. A translator called `t` would be shadowed inside
+  those callbacks. It is destructured as `{ t: text }` instead.
+- `OperationsCalendar` already holds `useStaffText("opsCalendar")` as `calT`,
+  so the calendar screen must use that rather than gain a second hook — the
+  mistake that broke the occupancy board.
+
+Money on this screen was `` `$${n.toFixed(2)}` `` — a hardcoded symbol and no
+locale — and now goes through `formatMoney(…, locale)`.
+
+**Do instead, now written as a habit:** before adding a text hook, grep the
+file for `const t` AND for an existing `use*Text`. One tells you the name is
+taken; the other tells you the catalogue is already chosen.
