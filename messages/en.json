@@ -8689,6 +8689,28 @@
       "depositRequired": "Deposit required",
       "expiresOn": "This estimate expires on {date}",
       "poweredByYipyy": "Powered by Yipyy"
+    },
+    "dashboard": {
+      "loadingToday": "Loading today’s numbers",
+      "arrivals": "Today’s arrivals",
+      "arrivalsHint": "Scheduled check-ins",
+      "currentGuests": "Current guests",
+      "currentGuestsHint": "Pets currently on site",
+      "goingHome": "Going home today",
+      "goingHomeHint": "Departures expected",
+      "checkedOut": "Checked out",
+      "checkedOutHint": "Already departed today",
+      "currentlyIn": "Currently in",
+      "searchBoard": "Search reservation ID, pet, owner, or phone…",
+      "liveBoard": "Live activity board",
+      "liveBoardHint": "Track arrivals, current guests, and departures in real time.",
+      "emptyScheduled": "No scheduled arrivals match your filters",
+      "emptyCheckedIn": "No pets currently checked in",
+      "emptyGoingHome": "No departures expected today",
+      "emptyCheckedOut": "No checked-out reservations today",
+      "checkInsToday": "Today’s check-ins",
+      "acrossServices": "across {count} services",
+      "allServices": "All"
     }
   },
   "customerPages": {

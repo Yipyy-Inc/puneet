@@ -1,6 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
 import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
@@ -8,6 +9,7 @@ import { CalendarDays, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ServiceBreakdown() {
+  const t = useShellText("dashboard");
   const { services, counts, isLoading } = useUnifiedBookings();
   const { serviceFilter, setServiceFilter, setTab } = useDashboardFilters();
 
@@ -64,12 +66,15 @@ export function ServiceBreakdown() {
           </div>
           <div>
             <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-              Today&apos;s Check-Ins
+              {t("checkInsToday")}
             </p>
             <p className="text-lg/tight font-semibold tabular-nums">
               {total}
               <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                across {boardServices.length} services
+                {t("acrossServices").replace(
+                  "{count}",
+                  String(boardServices.length),
+                )}
               </span>
             </p>
           </div>
@@ -77,7 +82,7 @@ export function ServiceBreakdown() {
         <div className="flex flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap gap-1.5">
             <ServicePill
-              label="All"
+              label={t("allServices")}
               value={total}
               color="#0ea5e9"
               icon="LayoutGrid"

@@ -83,6 +83,10 @@ type ShellCatalogue = {
   /** `components/estimates` — the printable estimate, opened from the
    *  facility's estimate drawer and from the customer's estimate pages. */
   estimates: Record<string, string>;
+  /** `components/facility/dashboard` — the numbers a facility opens on, and
+   *  the check-in boards the service pages share. Its own group because it is
+   *  the FIRST screen anybody sees and none of the others owns it. */
+  dashboard: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */
