@@ -17064,3 +17064,70 @@ warmed-up measurement. The rule earned here is narrower than "measure first":
 **a single timing is not a measurement.** Run it four times, discard the first,
 interleave the variants, and take the minimum — otherwise cache order decides
 the conclusion, and it will decide it differently each time.
+
+## 2026-09-17 — 🔴 SEVEN FAKE MONEY BUTTONS ON THE LIVE TILL
+
+Found while converting the retail POS to French, which is the only reason it
+was found at all: translating a string means reading what happens when the
+button under it is pressed.
+
+`src/app/facility/dashboard/services/retail/page.tsx` has **seven controls
+whose entire handler is a success toast.** This is the till that charges real
+cards through Clover.
+
+| line | what it tells the user                           | what it does |
+| ---- | ------------------------------------------------ | ------------ |
+| 2862 | "Package credit applied — deducted from balance" | nothing      |
+| 2883 | "Membership discount auto-applied — 15% off"     | nothing      |
+| 2947 | "Discount applied"                               | nothing      |
+| 2958 | "Fee added to cart"                              | nothing      |
+| 2987 | "$5/$10/$15/$20 tip added"                       | nothing      |
+| 3020 | "Store credit applied"                           | nothing      |
+| 3030 | "Membership discount applied — 15% off"          | nothing      |
+
+**The discount one is the worst.** Its two `Input`s — amount/percent and reason
+— have **no `value` and no `onChange`**. They are decorative. A member of staff
+types "10%", types "Loyalty", presses Apply, reads "Discount applied", and
+charges the customer the full price. The 15% in both membership toasts is a
+string literal; no membership is consulted.
+
+**The money on this screen is otherwise real**, which is exactly what makes
+these dangerous — they sit among working controls:
+
+```
+subtotal            = cart.reduce(...)                                   real
+discountTotal       = lineItemDiscountTotal + cartDiscountAmount         real
+calculatedTipAmount = tipPercentage / tipCustomAmount                    real
+grandTotal          = subtotal - discountTotal + taxTotal + tip          real
+```
+
+None of the seven writes to any of those.
+
+### Why `check:success-claims` does not catch them
+
+The gate asks whether the file, or one import away, contains anything that
+could perform the action. This file is 5,078 lines and full of genuine write
+code — `record_retail_sale`, the Clover charge, `setCartDiscount`. So the file
+passes on its own contents while seven buttons inside it do nothing. The
+ratchet's known blind spot was the opposite case (a writer arriving as a prop);
+this is the same blind spot from the other side: **a file rich in writers hides
+a control that reaches none of them.**
+
+### What each one would cost to fix
+
+- **Discount popover and Add Tip popover are DUPLICATES of working controls.**
+  `cartDiscount` / `setCartDiscount` (line 836) and the real tip control both
+  exist elsewhere on this screen and both feed `grandTotal`. Deleting these two
+  loses no capability at all.
+- **Add Fee, Use Store Credit, Redeem Membership, Package Credit, Membership
+  Discount have no real equivalent.** Store credit has a real ledger
+  (`store_credit_entries`) and packages have `redeem_package_pass`, so these
+  are buildable; but deleting them removes a feature the screen currently
+  promises, which is a product decision rather than a cleanup.
+
+### NOT translated, deliberately
+
+The French pass stopped at this block rather than going through it. A false
+claim translated is a false claim in two languages, and lowering the
+`check:ui-french` baseline over these strings would record them as finished
+work. They stay in English until they are either removed or made real.
