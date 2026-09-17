@@ -96,6 +96,23 @@ export const NOTIFICATION_KINDS = {
     mandatory: false,
     urgent: false,
   },
+  /**
+   * A customer has arrived and said so from their phone.
+   *
+   * URGENT, which almost nothing else here is: somebody is standing at the
+   * door with an animal. The whole point of the button they pressed is that
+   * the desk finds out NOW, and a notice that waits behind the day's other
+   * fifteen is the same as no notice.
+   *
+   * `check_in_out` rather than `view_bookings` — the people who need to know
+   * are the ones who can actually receive the guest.
+   */
+  customer_arrived: {
+    category: "bookings",
+    permission: "check_in_out",
+    mandatory: false,
+    urgent: true,
+  },
   vaccination_uploaded: {
     category: "forms",
     // A vaccination record is medical: only whoever may read those hears of one.

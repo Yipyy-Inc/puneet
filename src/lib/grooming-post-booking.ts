@@ -438,46 +438,6 @@ export async function scheduleAppointmentReminders(
 /**
  * Handle day-of check-in (Salon)
  */
-export async function handleSalonCheckIn(
-  bookingId: string,
-  clientId: number,
-): Promise<void> {
-  // TODO: Notify front desk
-  // In production, this would send notification to facility staff
-
-  const notification = {
-    type: "check_in",
-    bookingId,
-    clientId,
-    message: "I'm here",
-    timestamp: new Date().toISOString(),
-  };
-
-  console.log("Salon check-in notification:", notification);
-}
-
-/**
- * Handle mobile groomer arrival notification
- */
-export async function handleMobileGroomerArrival(
-  bookingId: string,
-  clientId: number,
-  estimatedArrival: Date,
-): Promise<void> {
-  // TODO: Send notification to client
-  // Triggered when previous appointment is marked complete
-
-  const notification = {
-    type: "groomer_arrival",
-    bookingId,
-    clientId,
-    message: "Groomer is 10 minutes away",
-    estimatedArrival: estimatedArrival.toISOString(),
-    timestamp: new Date().toISOString(),
-  };
-
-  console.log("Mobile groomer arrival notification:", notification);
-}
 
 /**
  * Schedule abandoned booking recovery email
