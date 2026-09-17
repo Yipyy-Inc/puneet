@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { Button } from "@/components/ui/button";
@@ -319,6 +320,11 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
   useEffect(() => {
     setDaycareKennels(buildDaycareKennels(daycareSections, allBookings, today));
   }, [daycareSections, allBookings, today]);
+  // THE HOOK LIVES HERE, not in KennelViewPage above. The exported page only
+  // resolves the rooms query and renders this component; every label on the
+  // screen is in here. A hook added to the wrapper typechecks — `t` is still
+  // in scope from THIS line — and silently returns the key for anything the
+  // staff catalogue does not have, which renders as an uppercased "vacant".
   const { t, fill, locale } = useStaffText("occupancy");
   const assignRoom = useAssignBoardingRoom();
   const boardingCheckIn = useBoardingCheckIn();
@@ -632,13 +638,13 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
       <PageHeader
-        title="Occupancy"
+        title={t("pageTitle")}
         description={
           serviceType === "boarding"
-            ? "Manage kennel occupancy and bookings"
+            ? t("descBoarding")
             : serviceType === "daycare"
-              ? "Manage daycare play areas and reservations"
-              : "Manage kennel occupancy and daycare reservations"
+              ? t("descDaycare")
+              : t("descBoth")
         }
         secondary={
           <div className="flex items-center gap-2">
@@ -651,7 +657,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
                 onClick={() => setServiceType("boarding")}
               >
                 <Moon className="size-4" />
-                Boarding
+                {serviceTypeLabel(locale, "boarding")}
               </Button>
               <Button
                 variant={serviceType === "daycare" ? "secondary" : "ghost"}
@@ -660,7 +666,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
                 onClick={() => setServiceType("daycare")}
               >
                 <Sun className="size-4" />
-                Daycare
+                {serviceTypeLabel(locale, "daycare")}
               </Button>
               <Button
                 variant={serviceType === "both" ? "secondary" : "ghost"}
@@ -710,18 +716,18 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               label={
                 statusCounts.vacant > 0
                   ? `${statusCounts.vacant} ${statusCounts.vacant === 1 ? "room" : "rooms"} free`
-                  : "Full"
+                  : t("full")
               }
-              sublabel="Rooms occupied right now"
+              sublabel={t("occupiedNow")}
             />
           </div>
 
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
             <KpiTile
-              label="Vacant"
+              label={t("vacant")}
               value={statusCounts.vacant}
-              hint="Rooms available now"
+              hint={t("vacantHint")}
               icon={CheckCircle}
               tone="emerald"
               active={filterStatus === "vacant"}
@@ -730,9 +736,9 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Occupied"
+              label={t("occupied")}
               value={statusCounts.occupied}
-              hint="Pets currently checked-in"
+              hint={t("occupiedHint")}
               icon={PawPrint}
               tone="indigo"
               active={filterStatus === "occupied"}
@@ -743,9 +749,9 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Reserved"
+              label={t("reserved")}
               value={statusCounts.reserved}
-              hint="Upcoming bookings"
+              hint={t("reservedHint")}
               icon={Calendar}
               tone="amber"
               active={filterStatus === "reserved"}
@@ -756,9 +762,9 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Maintenance"
+              label={t("maintenance")}
               value={statusCounts.maintenance}
-              hint="Out of service"
+              hint={t("maintenanceHint")}
               icon={Wrench}
               tone="rose"
               active={filterStatus === "maintenance"}
@@ -795,7 +801,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
           {/* Status Summary */}
           <div className="grid gap-4 md:grid-cols-4">
             <KpiTile
-              label="Vacant"
+              label={t("vacant")}
               value={daycareStatusCounts.vacant}
               hint="Sections open today"
               icon={CheckCircle}
@@ -808,7 +814,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Occupied"
+              label={t("occupied")}
               value={daycareStatusCounts.occupied}
               hint="Pets in play areas"
               icon={PawPrint}
@@ -821,7 +827,7 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Reserved"
+              label={t("reserved")}
               value={daycareStatusCounts.reserved}
               hint="Upcoming reservations"
               icon={Calendar}
@@ -834,9 +840,9 @@ function KennelViewBoard({ rooms }: { rooms: BoardingRoomsPayload }) {
               }
             />
             <KpiTile
-              label="Maintenance"
+              label={t("maintenance")}
               value={daycareStatusCounts.maintenance}
-              hint="Out of service"
+              hint={t("maintenanceHint")}
               icon={Wrench}
               tone="rose"
               active={daycareFilterStatus === "maintenance"}

@@ -1870,7 +1870,26 @@
         "checkedIn": "{pet} is checked in",
         "checkedOut": "{pet} is checked out",
         "notSaved": "That was not saved",
-        "guest": "This guest"
+        "guest": "This guest",
+        "pageTitle": "Occupancy",
+        "descBoarding": "Manage kennel occupancy and bookings",
+        "descDaycare": "Manage daycare play areas and reservations",
+        "descBoth": "Manage kennel occupancy and daycare reservations",
+        "full": "Full",
+        "occupiedNow": "Rooms occupied right now",
+        "vacant": "Vacant",
+        "vacantHint": "Rooms available now",
+        "occupied": "Occupied",
+        "occupiedHint": "Pets currently checked in",
+        "reserved": "Reserved",
+        "reservedHint": "Upcoming bookings",
+        "maintenance": "Maintenance",
+        "maintenanceHint": "Out of service",
+        "occupancyLabel": "Occupancy",
+        "legendMaintenance": "Maintenance",
+        "legendBlocked": "Blocked",
+        "roomOne": "room",
+        "roomMany": "rooms"
       },
       "opsCalendar": {
         "eventNotSaved": "The event was not saved",
@@ -3010,7 +3029,8 @@
     "in_progress": "In progress",
     "ready": "Ready for pickup",
     "no_show": "No-show",
-    "declined": "Declined"
+    "declined": "Declined",
+    "checked_out": "Checked out"
   },
   "plans": {
     "free": "Free",
@@ -8710,7 +8730,8 @@
       "emptyCheckedOut": "No checked-out reservations today",
       "checkInsToday": "Today’s check-ins",
       "acrossServices": "across {count} services",
-      "allServices": "All"
+      "allServices": "All",
+      "exportCsv": "Export"
     }
   },
   "customerPages": {

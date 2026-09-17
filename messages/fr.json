@@ -1870,7 +1870,26 @@
         "checkedIn": "Arrivée de {pet} enregistrée",
         "checkedOut": "Départ de {pet} enregistré",
         "notSaved": "Ce changement n’a pas été enregistré",
-        "guest": "Ce pensionnaire"
+        "guest": "Ce pensionnaire",
+        "pageTitle": "Occupation",
+        "descBoarding": "Gérez l’occupation des chenils et les réservations",
+        "descDaycare": "Gérez les aires de jeu de la garderie et les réservations",
+        "descBoth": "Gérez l’occupation des chenils et les réservations de garderie",
+        "full": "Complet",
+        "occupiedNow": "Chambres occupées en ce moment",
+        "vacant": "Libres",
+        "vacantHint": "Chambres disponibles maintenant",
+        "occupied": "Occupées",
+        "occupiedHint": "Animaux présents en ce moment",
+        "reserved": "Réservées",
+        "reservedHint": "Réservations à venir",
+        "maintenance": "Entretien",
+        "maintenanceHint": "Hors service",
+        "occupancyLabel": "Occupation",
+        "legendMaintenance": "Entretien",
+        "legendBlocked": "Bloqué",
+        "roomOne": "chambre",
+        "roomMany": "chambres"
       },
       "opsCalendar": {
         "eventNotSaved": "L’événement n’a pas été enregistré",
@@ -3010,7 +3029,8 @@
     "in_progress": "En cours",
     "ready": "Prêt à partir",
     "no_show": "Absent",
-    "declined": "Refusé"
+    "declined": "Refusé",
+    "checked_out": "Départ effectué"
   },
   "plans": {
     "free": "Gratuit",
@@ -8710,7 +8730,8 @@
       "emptyCheckedOut": "Aucun départ effectué aujourd’hui",
       "checkInsToday": "Arrivées du jour",
       "acrossServices": "sur {count} services",
-      "allServices": "Tous"
+      "allServices": "Tous",
+      "exportCsv": "Exporter"
     }
   },
   "customerPages": {

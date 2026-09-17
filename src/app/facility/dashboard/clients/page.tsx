@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -174,6 +175,7 @@ const exportClientsToCSV = (clientsData: Client[], canSeeContact: boolean) => {
 };
 
 export default function FacilityClientsPage() {
+  const t = useShellText("dashboard");
   const router = useRouter();
   // Section 5C: this table is shared by both portals. In the employee portal the
   // row must open the profile INSIDE the /employee shell so the RBAC provider
@@ -575,7 +577,7 @@ export default function FacilityClientsPage() {
               }
             >
               <Download className="mr-2 size-4" />
-              Export
+              {t("exportCsv")}
             </Button>
             <Button
               size="sm"

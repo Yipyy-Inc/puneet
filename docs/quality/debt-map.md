@@ -16564,3 +16564,52 @@ Week", "4 retail products at or below reorder point", "Calls Arriving Outside
 Staffed Hours". The buttons are chrome and convertible; the sentences are
 COMPOSED from data and would need the generator to produce French, which is a
 different job from a catalogue lookup. Left whole rather than half-done.
+
+### Occupancy and clients read French (2026-09-17)
+
+`kennel-view/page.tsx` **24 → 6**, `kennel-calendar.tsx` **27 → 22**,
+`clients/page.tsx` 48 → 47. Verified through the app: 8/8 French strings in
+French, 8/8 English in English, and **no raw enums left on screen**. The only
+remaining English on the occupancy board is the fake announcement banner
+recorded above, which is not a label.
+
+The calendar legend's first four entries are booking STATUSES and go through
+`statusLabel`, not new keys — two French spellings of "Confirmed" is the drift
+`StatusBadge` was just fixed to stop. `checked_out` was missing from
+`messages.status` and was added there, beside `checked_in`, which is its proper
+home rather than a screen's own catalogue.
+
+### 🔴 A HOOK IN THE WRAPPER TYPECHECKS AND RENDERS THE KEY — twice in one hour
+
+This is the lesson of the session and it caught the same hands twice.
+
+`ServiceCheckInBoard` exports a wrapper that only provides context; every label
+is in an inner `BoardInner`. A hook added to the wrapper failed loudly — five
+`Cannot find name 't'` errors — and was easy to fix.
+
+`KennelViewPage` is the same shape and failed SILENTLY. `KennelViewBoard`
+already had `const { t, fill, locale } = useStaffText("occupancy")`, so adding
+`const t = useShellText("occupancy")` to the exported page:
+
+- typechecked, because a valid `t` was still in scope from the inner hook;
+- rendered every converted label as its KEY, because the staff catalogue has no
+  `vacant`; and
+- the keys are lowercase and `KpiTile` uppercases in CSS, so `vacant` appeared
+  on screen as **"VACANT"** — indistinguishable from a correct English label,
+  and it passed `check:ui-french` because the source no longer holds a literal.
+
+It was only caught by printing the exact text node and its computed
+`text-transform`: `"vacant" transform=uppercase`. A case-insensitive probe had
+reported it as "English still present", which was true and useless; the
+case-SENSITIVE reading was the diagnosis.
+
+**Do instead:** before adding a text hook to a component, grep the file for an
+existing `t`. If the exported component is a provider wrapper, the hook belongs
+in the inner one — and use the catalogue that is already there rather than a
+second one. A parallel `shell.occupancy` group was created and then removed for
+exactly that reason; the 28 keys live in `staff.areas.occupancy`, where the
+component was already looking.
+
+**And do not trust a French probe that only matches case-insensitively.** It
+cannot tell a raw lowercase enum from a translated label, and on this screen the
+difference was the whole bug.

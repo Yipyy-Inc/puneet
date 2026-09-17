@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { statusLabel } from "@/lib/i18n/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,6 +119,10 @@ export function KennelCalendarView({
   moduleColorMap,
   showCustomServices,
 }: KennelCalendarViewProps) {
+  // The legend's first four are booking STATUSES and go through the shared
+  // helper; only the calendar's own words (maintenance, blocked, the occupancy
+  // caption and the room plural) are its own keys.
+  const { t, locale } = useStaffText("occupancy");
   const [startDate, setStartDate] = useState(() => startOfWeek(new Date()));
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("2weeks");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
@@ -702,10 +708,13 @@ export function KennelCalendarView({
                       {category.name}
                     </span>
                     <span className="text-muted-foreground text-xs font-medium">
-                      {rooms.length} {rooms.length === 1 ? "room" : "rooms"}
+                      {rooms.length}{" "}
+                      {rooms.length === 1 ? t("roomOne") : t("roomMany")}
                     </span>
                     <span className="ml-auto flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Occupancy</span>
+                      <span className="text-muted-foreground">
+                        {t("occupancyLabel")}
+                      </span>
                       <span
                         className={cn(
                           "font-semibold",
@@ -1004,27 +1013,37 @@ export function KennelCalendarView({
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm border border-amber-500 bg-amber-50" />
-          <span className="text-muted-foreground">Pending</span>
+          <span className="text-muted-foreground">
+            {statusLabel(locale, "pending")}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm border border-blue-500 bg-blue-50" />
-          <span className="text-muted-foreground">Confirmed</span>
+          <span className="text-muted-foreground">
+            {statusLabel(locale, "confirmed")}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm border border-emerald-500 bg-emerald-50" />
-          <span className="text-muted-foreground">Checked-in</span>
+          <span className="text-muted-foreground">
+            {statusLabel(locale, "checked_in")}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm border border-slate-400 bg-slate-100" />
-          <span className="text-muted-foreground">Checked-out</span>
+          <span className="text-muted-foreground">
+            {statusLabel(locale, "checked_out")}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20" />
-          <span className="text-muted-foreground">Maintenance</span>
+          <span className="text-muted-foreground">
+            {t("legendMaintenance")}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-4 rounded-sm bg-[repeating-linear-gradient(45deg,rgba(239,68,68,0.3)_0,rgba(239,68,68,0.3)_3px,transparent_3px,transparent_6px)]" />
-          <span className="text-muted-foreground">Blocked</span>
+          <span className="text-muted-foreground">{t("legendBlocked")}</span>
         </div>
       </div>
 
