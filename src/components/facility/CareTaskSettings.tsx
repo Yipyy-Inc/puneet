@@ -12,31 +12,73 @@ import {
   GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
-import { facilityConfig } from "@/data/facility-config";
+import { useCareTaskFeedback } from "@/hooks/use-care-task-feedback";
+import type { CareTaskFeedbackOption } from "@/lib/settings/care-task-feedback";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { InterpolatedText } from "@/components/ui/interpolated-text";
 
-interface FeedbackOption {
-  value: string;
-  label: string;
+// The domain's option type, not a local one: an option carries an optional
+// `tone` the badge is coloured from, and a local `{value,label}` would have
+// STRIPPED it on the first save — quietly turning every coloured chip grey.
+type FeedbackOption = CareTaskFeedbackOption;
+
+/**
+ * Waits for the facility's own options before seeding anything.
+ *
+ * `useFacilitySettings` answers with the documented defaults while the request
+ * is in flight, and `useState` captures ONCE — so seeding before the row lands
+ * holds the SHIPPED list, and the first Save writes it over whatever the
+ * facility had. A load delay becomes data loss (check:settings-seeding, which
+ * exists because this happened three times in one day).
+ */
+export function CareTaskSettings() {
+  const { feedback, save, isPending } = useCareTaskFeedback();
+  const t = useSettingsText().section("care-tasks");
+
+  if (isPending) {
+    return (
+      <div className="space-y-6" aria-busy>
+        <div>
+          <h2 className="text-lg font-semibold">{t("feedbackTitle")}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t("feedbackHelp")}
+          </p>
+        </div>
+        <div className="bg-muted/40 h-40 animate-pulse rounded-2xl motion-reduce:animate-none" />
+        <div className="bg-muted/40 h-40 animate-pulse rounded-2xl motion-reduce:animate-none" />
+      </div>
+    );
+  }
+
+  return <CareTaskFeedbackForm initial={feedback} save={save} />;
 }
 
-export function CareTaskSettings() {
+function CareTaskFeedbackForm({
+  initial,
+  save,
+}: {
+  initial: { feeding: FeedbackOption[]; medication: FeedbackOption[] };
+  save: (next: {
+    feeding: FeedbackOption[];
+    medication: FeedbackOption[];
+  }) => Promise<boolean>;
+}) {
   const t = useSettingsText().section("care-tasks");
   const [feedingOptions, setFeedingOptions] = useState<FeedbackOption[]>(
-    facilityConfig.careTaskFeedback.feeding,
+    initial.feeding,
   );
   const [medOptions, setMedOptions] = useState<FeedbackOption[]>(
-    facilityConfig.careTaskFeedback.medication,
+    initial.medication,
   );
   const [newFeeding, setNewFeeding] = useState("");
   const [newMed, setNewMed] = useState("");
+  const [saving, setSaving] = useState(false);
   // Snapshot of the last-saved state; dirty is derived by comparing to it, so
   // every edit (add/rename/delete) flips the sticky banner automatically.
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
     JSON.stringify({
-      feeding: facilityConfig.careTaskFeedback.feeding,
-      medication: facilityConfig.careTaskFeedback.medication,
+      feeding: initial.feeding,
+      medication: initial.medication,
     }),
   );
   const dirty =
@@ -67,21 +109,31 @@ export function CareTaskSettings() {
     toast.success(t("medicationOptionAdded"));
   };
 
-  const handleSave = () => {
-    // ── THIS ASSIGNED TO THE IMPORTED FIXTURE, AND REACHED NOBODY ─────────
-    //
-    // It was `facilityConfig.careTaskFeedback.feeding = feedingOptions`, which
-    // the React Compiler refuses (react-hooks/immutability) now that this scope
-    // is analysed. Removing it costs nothing measurable: all three consumers —
-    // CareTasks.tsx:95-96 and FeedingSection.tsx:58 — capture the list in a
-    // MODULE-LEVEL const, so they read it once when their module is first
-    // evaluated and never see a later mutation. Editing a feedback option here
-    // has never changed the dropdown a staff member sees, in this session or
-    // any other.
-    //
-    // The screen still needs a `care_task_feedback` settings domain and those
-    // three reads moved onto it. Recorded in the debt map; this file is
-    // already in check:success-claims' baseline for the toast below.
+  // ── IT REACHES THE DATABASE NOW ───────────────────────────────────────
+  //
+  // This used to be `facilityConfig.careTaskFeedback.feeding = feedingOptions`
+  // — an assignment into an imported object literal, which the React Compiler
+  // later refused, so it was deleted and the screen was left flashing
+  // "Feedback options saved" over nothing at all.
+  //
+  // It would not have worked before that either: every reader captured the
+  // list in a MODULE-LEVEL const, read once when its module was first
+  // evaluated. An edit here had never changed a dropdown a staff member sees.
+  //
+  // `care_task_feedback` is a facility_settings domain now, and the two screens
+  // that OFFER the choice — FeedingLogModal and MedicationLogModal — read it
+  // through `useCareTaskFeedback`. The toast waits for the row.
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    const ok = await save({ feeding: feedingOptions, medication: medOptions });
+    setSaving(false);
+    if (!ok) {
+      // The options on screen are left exactly as typed: the edit is not lost
+      // because the save was refused, and the banner stays up to say so.
+      toast.error(t("feedbackNotSaved"));
+      return;
+    }
     setSavedSnapshot(
       JSON.stringify({ feeding: feedingOptions, medication: medOptions }),
     );
@@ -257,7 +309,7 @@ export function CareTaskSettings() {
           <span className="text-muted-foreground mr-auto text-sm">
             {t("unsavedChanges")}
           </span>
-          <Button onClick={handleSave} className="gap-1.5">
+          <Button onClick={handleSave} loading={saving} className="gap-1.5">
             {t("saveChanges")}
           </Button>
         </div>

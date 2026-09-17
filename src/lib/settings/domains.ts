@@ -30,6 +30,10 @@ import {
   NO_FORM_REQUIREMENTS,
 } from "@/lib/settings/form-settings";
 import {
+  careTaskFeedbackSchema,
+  SHIPPED_CARE_TASK_FEEDBACK,
+} from "@/lib/settings/care-task-feedback";
+import {
   daycareRatesSchema,
   NO_DAYCARE_RATES,
 } from "@/lib/settings/daycare-rates";
@@ -511,6 +515,17 @@ export const SETTING_DOMAINS = {
   daily_care_config: {
     schema: dailyCareConfigSchema,
     fallback: SHIPPED_DAILY_CARE_ROUTINE,
+  },
+  // How a meal and a dose went — the choices the log modals offer. It was a
+  // literal in `data/facility-config.ts` that the settings screen ASSIGNED
+  // into, and every reader captured in a module-level const, so an edit never
+  // reached a dropdown. The fallback is what the board shows today, taken from
+  // outcome-meta rather than from the literal, because those were two copies of
+  // one list and the one staff see is the one that counts — see the banner in
+  // lib/settings/care-task-feedback.ts.
+  care_task_feedback: {
+    schema: careTaskFeedbackSchema,
+    fallback: SHIPPED_CARE_TASK_FEEDBACK,
   },
   // The follow-up protocols an incident can start. A useState seeded from the
   // fixture until 2026-09-14; the fallback is the shipped set — see the banner

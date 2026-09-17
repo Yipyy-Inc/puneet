@@ -4925,7 +4925,8 @@
         "atLeastOne": "Keep at least one option",
         "unsavedChanges": "You have unsaved changes",
         "saveChanges": "Save changes",
-        "feedbackSaved": "Care task feedback options saved"
+        "feedbackSaved": "Care task feedback options saved",
+        "feedbackNotSaved": "Those options were not saved. Your changes are still here — try again."
       },
       "tags-notes": {
         "builderTitle": "Tag builder",

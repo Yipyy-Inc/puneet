@@ -16228,3 +16228,46 @@ duplicates.
 **Do instead:** before treating a baselined file as work, trace it. One hop up
 for the prop, and into the store for the table. Six of fifteen were already
 done, and proposing finished work as a plan is worse than missing it.
+
+### Care task feedback options are a settings domain now (2026-09-17)
+
+`CareTaskSettings` was one of the three genuinely-fake in-area screens. Its
+"Care task feedback options saved" went over an assignment into an imported
+object literal — `facilityConfig.careTaskFeedback.feeding = feedingOptions` —
+which the React Compiler later refused, so the assignment was deleted and the
+toast was left claiming a save over nothing at all.
+
+It could not have worked before that either, and the note left in the file said
+so: every reader captured the list in a MODULE-LEVEL const, read once when its
+module was first evaluated.
+
+`care_task_feedback` is a `facility_settings` domain, and the two screens that
+OFFER the choice — `FeedingLogModal` and `MedicationLogModal` — read it through
+`useCareTaskFeedback`. Verified end to end as the owner: PATCH 200, the option
+present after a **reload**, tones intact.
+
+Three things worth keeping:
+
+- **The shipped default comes from `outcome-meta`, not `facility-config`.**
+  There were two copies of this list — the "configurable" one nothing read, and
+  the one staff actually see, which carries the `tone` its badge is coloured
+  from. A comment claimed they "match", which is the arrangement that lets them
+  drift. The one staff see won, so a facility that never opens the screen sees
+  no change at all.
+- **The option type is the DOMAIN's, not a local `{value,label}`.** A local one
+  would have stripped `tone` on the first save and quietly turned every coloured
+  chip grey.
+- **`tone` is optional, and `outcomeBadgeClass` defaults it to `neutral`.** The
+  default lives in the function that interprets a tone rather than at three call
+  sites, so a facility adding "Ate half" gets an existing token instead of an
+  invented colour (§5v).
+
+**Still open:** `getOutcomeOption` serves the static table to eleven files that
+only look a label up to DISPLAY a past entry. Those are not wrong — a facility's
+later edit does not change what a stored value meant — but a renamed option
+will read by its old label there. Converting them is a scoped refactor.
+
+**And the other two of the three remain:** `BreedManagement`, which is worse
+than it looks — restricted breeds live in `localStorage` AND nothing anywhere
+enforces them, so it is an inert switch as well as an unsaved one; and
+`InventoryClient`, blocked on the ops-vs-retail decision.

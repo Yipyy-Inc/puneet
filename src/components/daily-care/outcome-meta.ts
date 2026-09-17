@@ -56,8 +56,17 @@ export const OUTCOME_OPTIONS: Record<CareTaskType, OutcomeOption[]> = {
  */
 export const FEEDING_SERVED = "served";
 
-export function outcomeBadgeClass(tone: OutcomeOption["tone"]): string {
-  switch (tone) {
+/**
+ * The badge classes for a tone. ABSENT means neutral, and the default lives
+ * here rather than at each call site: a facility can add its own feedback
+ * option (`care_task_feedback`), and an option it wrote has no tone. Neutral
+ * is one of the four the badge already understands, so this invents nothing
+ * (§5v) and no caller has to remember the rule.
+ */
+export function outcomeBadgeClass(
+  tone: OutcomeOption["tone"] | undefined,
+): string {
+  switch (tone ?? "neutral") {
     case "success":
       return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
     case "warning":
