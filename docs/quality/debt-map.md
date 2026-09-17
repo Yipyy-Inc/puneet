@@ -16735,3 +16735,57 @@ polling above would multiply — but 216 requests a minute is high for that.
 **The next step is on the box and was not taken from here:** the app's own
 access log, or Caddy's, grouped by path for the last minute, names the route
 being hammered in one command. Recorded rather than guessed at.
+
+### 2026-09-17, later — I MIS-ASSIGNED THE FINGERPRINT, AND THE ENTRY ABOVE IS WRONG
+
+Everything above about WHERE the traffic comes from is wrong, and the two
+remedies it points at — "close the tabs", "find the server loop" — chase
+something that does not exist. The correction, measured over fourteen hours
+instead of one:
+
+| client (`x_client_info`)  | what it is         | requests today | share |
+| ------------------------- | ------------------ | -------------- | ----- |
+| `runtime-version=22.23.2` | **GitHub Actions** | ~562,000       | 79%   |
+| `runtime-version=24.15.0` | **this machine**   | ~146,000       | 20%   |
+| `runtime-version=24.21.0` | **the VPS**        | ~3,300         | 0.5%  |
+
+**The VPS is 239 requests an hour — about four a minute — and it is flat all
+day.** It was never 216 a minute and there is no runaway loop. Production is
+healthy and always was.
+
+**How the mistake was made, because it is worth not repeating.** I read ONE
+hour of `edge_logs`, saw the biggest client, and assumed it was production
+because production is the thing that runs all the time. I never checked the
+Node version against anything. The check takes one command: the container is
+`node:24-bookworm-slim` (→ 24.21.0), this machine is `node -v` (→ 24.15.0), and
+**22.23.2 is neither** — it is the version ubuntu runners ship. A fingerprint
+is not an identity until it has been matched against something known.
+
+**The tell I had and ignored: an hourly histogram.** 01:00–07:00 UTC ran
+190–194 requests an hour, TOTAL, across every client. A server-side loop does
+not sleep overnight. One `toStartOfHour` group-by would have killed the
+"sustained and flat" claim on sight — I sampled per minute inside a busy window
+instead, which is exactly how a burst reads as a plateau.
+
+### So the egress bill is the test suite
+
+`assign_boarding_room` ran **335 times in one hour** on 22.23.2. Production does
+not assign 335 boarding rooms an hour; the e2e suite does. The suite's own
+traffic has the same shape as everything else here — in its peak hour,
+memberships 23,027 + profiles 22,995 + facilities 13,755 + locations 12,257 =
+**74% of it is re-resolving identity** — so the `cache()` landed in the entry
+above is aimed correctly, and **CI is its largest beneficiary, not production.**
+
+That gives a prediction worth checking rather than trusting: the next full-suite
+run should cost materially less than 562k requests, and the way to measure it is
+to filter `edge_logs` on `runtime-version=22.23.2` alone. Read production on
+24.21.0, and never add the three together again.
+
+**What actually reduces the bill**, in order of size: don't run the full suite
+locally while CI runs it too (20% of today was this machine, and avoidable); the
+nightly 129-spec cron, which gates nothing — `image`'s `needs:` is
+`[typecheck, lint, format, unit, checks, sql, build]`, e2e is not in it; and the
+25 spec files still reading the booking list unbounded, which pay two 1000-row
+round trips each. **The 33-spec gate is not on that list and should not be** —
+it is the authorisation boundary and money, and it is the cheapest insurance
+here.
