@@ -16916,3 +16916,90 @@ and `format` both write beyond the files you edited, and the 242 remaining lint
 WARNINGS are what makes this invisible: nothing fails, so nothing announces it.
 Check what you are about to commit before you stage it — this is how an
 unreviewed visual change reaches `main` inside an unrelated commit.
+
+### 2026-09-17, later — THE DEBRIS IS NOT THE CAUSE. PostgREST's own query is
+
+I wrote above that the debris was the disease and the slow read its symptom.
+**That is wrong, and the remedy it implied — deleting ~$50k of ledger rows —
+would not have fixed the read.** Measured properly, from inside the database.
+
+**The data is fast.** The same rows the API takes 16–20 s to return come back
+in milliseconds as a plain join:
+
+| what was measured                                           | rows  | time        |
+| ----------------------------------------------------------- | ----- | ----------- |
+| flat join, service role (no RLS)                            | 1,069 | **6.9 ms**  |
+| flat join, authenticated owner, `bookings_read` RLS applied | 1,069 | **37.2 ms** |
+| the same, plus the `booking_pets → pets` nested to-many     | 1,069 | **15.4 ms** |
+
+All index scans — `clients_ref_key`, `bookings_client_idx`, `facilities_pkey`
+behind a Memoize node with 1,068 hits. Nothing is missing an index.
+
+**Two hypotheses died here, and both are worth recording as dead.** RLS costs
+5.4× (6.9 ms → 37.2 ms) and is therefore _not_ the cause: the per-row
+`private.has_permission(facility_id, 'view_bookings')` looked like the classic
+per-row-function trap, but all four helpers are correctly `STABLE` and the
+absolute cost is 30 ms, not 16 s. The nested embed is not the cause either — it
+made the query FASTER on the second pass, which is cache order, not a finding.
+
+**What it actually is — `pg_stat_statements`, PostgREST's generated SQL:**
+
+| mean           | max        | calls | total DB time  |
+| -------------- | ---------- | ----- | -------------- |
+| **4,128.6 ms** | 7,976.2 ms | 4,035 | **16,658.8 s** |
+| 3,589.4 ms     | 7,984.2 ms | 2,091 | 7,505.4 s      |
+| 1,991.7 ms     | 7,533.7 ms | 3,185 | 6,343.6 s      |
+
+Those five statements alone hold **~8.5 hours of cumulative database time.**
+PostgREST does not write the join above. It writes
+
+```
+WITH pgrst_source AS (
+  SELECT "public"."bookings".*,
+         row_to_json("bookings_clients_1".*)::jsonb    AS "clients",
+         row_to_json("bookings_facilities_1".*)::jsonb AS "facilities",
+         COALESCE("bookings_booking_pets_1"...)        AS "booking_pets"
+  FROM "public"."bookings" INNER JOIN LATERAL ...
+```
+
+— a lateral join per embed and a **`row_to_json(...)::jsonb` construction per
+row, per embed**. That is what turns a 37 ms read into a 4.1 s one: roughly
+**110×**, and it is a per-row constant, which is why it scales with the row
+count and why naming the slice helps so much.
+
+**And that is the statement timeout, exactly.** `authenticated` and
+`authenticator` carry `statement_timeout = 8s` (`anon` 3s; `postgres` and
+`service_role` inherit 2min). The `max_exec_time` values of 7,976 ms and
+7,984 ms are queries being cancelled at that ceiling. So
+`?clientRef=15` returning `500 canceling statement due to statement timeout` is
+not a mystery and not about 1,073 rows being many — it is a 4 s query pushed
+past 8 s.
+
+### What this changes
+
+- **The narrowing in the commit above is the right lever, and for a better
+  reason than I gave.** Fewer rows does not merely mean less JSON over the
+  wire; it avoids a per-row jsonb construction that costs ~100× the row read.
+- **Do not delete the debris to fix performance.** It would work only by
+  reducing the number of times a bad per-row constant is paid. The $49,769.60
+  of test payments in the ledger is still worth a decision on its own merits —
+  a revenue report over that facility is inflated by it — but it is a
+  bookkeeping question, not this performance question.
+- **The real fix is the shape of `BOOKING_SELECT`** (`src/lib/api/mappers/booking.ts`):
+  `clients!inner ( ref )` and `facilities!inner ( timezone )` exist to fetch
+  exactly two scalars, and cost two lateral joins and two jsonb objects per
+  row. A `security_invoker` view exposing `client_ref` and `facility_timezone`
+  as plain columns would let PostgREST select flat columns with no lateral and
+  no `row_to_json` — the 37 ms shape. **Not attempted here:** it touches the
+  view/RLS boundary and the mapper every booking screen reads, so it is its own
+  change with its own SQL tests, not a drive-by.
+- The existing entry "one PostgREST embed is most of the facility shell's load
+  time" is the same finding on a different table. This is a PATTERN in this
+  codebase, not a one-off.
+
+**Method note, since I got this wrong twice in one day.** Both wrong answers
+came from measuring the wrong layer and generalising: the egress client
+fingerprint was read from one hour and assumed, and the slow read was blamed on
+row count without ever asking the database how long it took. `EXPLAIN ANALYZE`
+and `pg_stat_statements` were available the whole time and settled both in
+minutes. Measure the layer you are about to change.
