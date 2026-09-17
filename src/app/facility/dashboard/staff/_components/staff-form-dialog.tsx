@@ -30,10 +30,7 @@ import {
   type StaffProfile,
 } from "@/types/facility-staff";
 import { useStaffLocations } from "./use-staff-locations";
-import {
-  createOnboardingInstance,
-  type OnboardingTemplate,
-} from "@/data/staff-onboarding";
+import { type OnboardingTemplate } from "@/data/staff-onboarding";
 import {
   STAFF_SECTIONS,
   type StaffSectionId,
@@ -50,13 +47,22 @@ import { OnboardingInviteEmail } from "@/components/facility/staff-hr/onboarding
 import { resolveTemplateForRole } from "@/lib/api/staff-onboarding";
 import { toast } from "sonner";
 import { usePermission } from "@/hooks/use-facility-rbac";
-import { notifyStaffLifecycle } from "@/lib/staff-notifications";
+import {
+  readInviteOutcome,
+  type StaffInviteResponse,
+} from "@/lib/staff/invite-outcome";
 
 interface StaffFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: StaffProfile | null;
-  onSave: (profile: StaffProfile) => void;
+  /**
+   * Persists the draft and resolves with what the DATABASE stored — which is
+   * not the draft: /api/staff mints its own `fs-*` legacy id, and the hire
+   * flow below has to address an invitation to that one. Rejects when the save
+   * failed, having already said so.
+   */
+  onSave: (profile: StaffProfile) => Promise<StaffProfile>;
   /**
    * Resolved by the PAGE, not fetched here.
    *
@@ -142,6 +148,9 @@ function StaffFormDialogBody({
   const isHire = !editing;
   const [section, setSection] = useState<StaffSectionId>("profile");
   const [reviewing, setReviewing] = useState(false);
+  const [sending, setSending] = useState(false);
+  /** The row the database wrote, once it has. See createAndSend. */
+  const [created, setCreated] = useState<StaffProfile | null>(null);
   const { t, fill } = useStaffText("form");
   // The six section labels live in `staff-form-sections`, so they are in that
   // area rather than this one — the array is shared with the profile tabs.
@@ -183,43 +192,99 @@ function StaffFormDialogBody({
     setDraft((d) => ({ ...d, [key]: value }));
   }
 
-  // One action: create the staff record (status "invited", account locked) AND
-  // send the onboarding invite (Phase 6) — no separate send step. Mock "send" =
-  // a stored tokenised instance + a toast exposing the testable /onboard link.
-  function createAndSend() {
-    onSave(draft);
-    const instance = effectiveTemplateId
-      ? createOnboardingInstance(draft.id, effectiveTemplateId)
-      : null;
-    if (instance) {
-      // Table 5 — invite email to the new hire (configurable, on by default).
-      notifyStaffLifecycle("staff_invited", {
-        email: {
-          kind: "invite",
-          staffId: draft.id,
-          staffName: `${draft.firstName} ${draft.lastName}`.trim(),
-          to: draft.email,
-          // french-ok: addressed to the NEW HIRE, in their language, not the
-          // manager's. Composed server-side is the fix; see the debt map.
-          subject: "Welcome to the team — complete your onboarding",
-          // french-ok: same message, same reason
-          body: `Hi , welcome aboard! Complete your onboarding here: /onboard/`,
+  // ── ONE ACTION, AND BOTH HALVES OF IT ARE REAL NOW ─────────────────────
+  //
+  // What this did before: minted an onboarding token in a browser-local object
+  // (`createOnboardingInstance`), recorded a MOCK email
+  // (`notifyStaffLifecycle` → `recordOnboardingEmail`), and said "Onboarding
+  // email sent to dana@…" — offering a Copy link button for an `/onboard/…`
+  // URL that resolves against a token HASH in Postgres and therefore opened
+  // nothing. No email was sent, no membership was granted, and the new hire
+  // waited for a message that did not exist while the manager had every reason
+  // to believe it had gone.
+  //
+  // `POST /api/staff/<id>/invite` is the real one, and it has been there all
+  // along: the roster's own "Remind" button calls it. It records the membership
+  // grant against the hire's address, mints a token whose HASH the database
+  // holds, and hands the email to the provider — reporting three outcomes,
+  // because a provider that is NOT CONFIGURED is not a send, and saying so is
+  // the whole reason that branch exists.
+  //
+  // ORDER MATTERS. The route finds the person by `legacy_id`, and /api/staff
+  // mints that id itself rather than taking the draft's — so the create is
+  // AWAITED, and the invitation is addressed to the row that now exists.
+  async function createAndSend() {
+    setSending(true);
+    try {
+      // A failed SEND must not create a SECOND staff row when the manager
+      // presses again. The account exists and only the email did not go, which
+      // is exactly what the route says; remembering it makes a retry a retry of
+      // the invitation alone.
+      let saved = created;
+      if (!saved) {
+        try {
+          saved = await onSave(draft);
+        } catch {
+          // onSave has already said what went wrong. What matters here is that
+          // no invitation gets claimed and the review screen stays open.
+          return;
+        }
+        setCreated(saved);
+      }
+
+      const response = await fetch(
+        `/api/staff/${encodeURIComponent(saved.id)}/invite`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            templateId: effectiveTemplateId || undefined,
+          }),
         },
-      });
-      toast.success(fill("sentTo", { email: draft.email }), {
-        description: fill("linkIs", { link: `/onboard/${instance.token}` }),
-        action: {
-          label: t("copyLink"),
-          onClick: () =>
-            navigator.clipboard?.writeText(
-              `${window.location.origin}/onboard/${instance.token}`,
-            ),
-        },
-      });
-    } else {
-      toast.success(fill("createdInvited", { email: draft.email }));
+      );
+      const outcome = readInviteOutcome(
+        (await response.json().catch(() => null)) as StaffInviteResponse | null,
+      );
+
+      if (outcome.kind === "failed") {
+        // Left open on purpose: closing would hide the one fact that matters,
+        // which is that this person has NOT been invited.
+        toast.error(outcome.message ?? t("inviteFailed"));
+        return;
+      }
+
+      // The link the SERVER minted, never one composed here — the database
+      // holds its hash, and a locally invented token is the bug this replaces.
+      const link = outcome.onboardingUrl;
+      const copyLink = link
+        ? {
+            label: t("copyLink"),
+            onClick: () => navigator.clipboard?.writeText(link),
+          }
+        : undefined;
+      const description = link ? fill("linkIs", { link }) : undefined;
+
+      if (outcome.kind === "sent") {
+        toast.success(fill("sentTo", { email: saved.email }), {
+          description,
+          action: copyLink,
+        });
+      } else {
+        // The GRANT is real and the link works — only the delivery did not
+        // happen, and the manager can hand it over themselves. A warning, not
+        // an error, and on no account the word "sent".
+        toast.warning(t("inviteNotConfigured"), {
+          description,
+          action: copyLink,
+          duration: 8000,
+        });
+      }
+      onOpenChange(false);
+    } catch {
+      toast.error(t("inviteNetworkFailed"));
+    } finally {
+      setSending(false);
     }
-    onOpenChange(false);
   }
 
   function onRoleChange(role: FacilityStaffRole) {
@@ -355,7 +420,10 @@ function StaffFormDialogBody({
             </Button>
             <Button
               onClick={() => {
-                onSave(draft);
+                // Deliberately not awaited: an edit has no second step, and
+                // handleSave reports its own failure. The `.catch` only keeps
+                // the rejection from surfacing as an unhandled one.
+                onSave(draft).catch(() => {});
                 onOpenChange(false);
               }}
             >
@@ -372,13 +440,33 @@ function StaffFormDialogBody({
               <ArrowLeft className="size-4" />
               {t("back")}
             </Button>
+            {/* Three things changed on this one button.
+
+                §1 — there is no second action colour, and this carried a solid
+                `--success` fill (`bg-emerald-600`) on the one primary CTA of
+                the screen.
+
+                §6 rule 9 — a button with no loading state double-submits,
+                which here would mean two staff rows for one person.
+
+                AND IT WAS NOT PRESSABLE. `onboarding_templates` is empty for
+                every facility in the database (measured 2026-09-17), so
+                `effectiveTemplateId` was "" everywhere and the last step of
+                hiring anybody was greyed out product-wide with nothing saying
+                why. It is not the server's rule either: /api/staff/[id]/invite
+                takes `templateId` as OPTIONAL and falls back to the
+                role-matched active template, then to none — no checklist, a
+                7-day expiry, `template_id: null`. Hiring a person and writing
+                them a checklist are two different jobs, and a facility that
+                has not done the second must still be able to do the first. */}
             <Button
-              className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-              disabled={!profileValid || !effectiveTemplateId}
+              className="gap-1.5"
+              loading={sending}
+              disabled={!profileValid}
               onClick={createAndSend}
             >
               <Send className="size-4" />
-              {t("createAndSend")}
+              {created ? t("retrySend") : t("createAndSend")}
             </Button>
           </>
         ) : (
@@ -460,24 +548,34 @@ function ReviewScreen({
 
       <div className="space-y-1.5">
         <Label className="text-xs">{t("onboardingTemplate")}</Label>
-        <Select value={templateId} onValueChange={onTemplateChange}>
-          <SelectTrigger>
-            <SelectValue placeholder={t("selectTemplate")} />
-          </SelectTrigger>
-          <SelectContent>
-            {templates.map((tpl) => (
-              <SelectItem key={tpl.id} value={tpl.id}>
-                {tpl.name}
-                {tpl.status === "draft" ? t("draftSuffix") : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-muted-foreground text-[11px]">
-          {fill(stepCount === 1 ? "autoSelectedOne" : "autoSelectedOther", {
-            count: stepCount,
-          })}
-        </p>
+        {templates.length === 0 ? (
+          // §5c: an empty select with a placeholder is not an empty state, it
+          // is a control that looks broken. This facility has built no
+          // checklists, the invitation goes out regardless, and saying so is
+          // the difference between a missing feature and a stuck screen.
+          <p className="text-muted-foreground text-xs">{t("noTemplates")}</p>
+        ) : (
+          <>
+            <Select value={templateId} onValueChange={onTemplateChange}>
+              <SelectTrigger>
+                <SelectValue placeholder={t("selectTemplate")} />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((tpl) => (
+                  <SelectItem key={tpl.id} value={tpl.id}>
+                    {tpl.name}
+                    {tpl.status === "draft" ? t("draftSuffix") : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-[11px]">
+              {fill(stepCount === 1 ? "autoSelectedOne" : "autoSelectedOther", {
+                count: stepCount,
+              })}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="space-y-2">

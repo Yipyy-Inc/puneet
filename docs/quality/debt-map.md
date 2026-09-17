@@ -15921,3 +15921,64 @@ claimed as confirmed.
 — re-measure the baseline, or A/B both shapes in one request. And when timing a
 query that RLS governs, assume the role first; the fast number is the one to
 distrust.
+
+---
+
+## 2026-09-17 — hiring somebody did nothing, and it could not be pressed either
+
+### 🔴 The hire dialog's "Create & send onboarding" reached no server — FIXED
+
+`staff-form-dialog.tsx`'s `createAndSend` minted an onboarding token in a
+browser-local object (`createOnboardingInstance`, `src/data/staff-onboarding.ts`),
+recorded a MOCK email (`notifyStaffLifecycle` → `recordOnboardingEmail`) and
+said **"Onboarding email sent to …"** — offering a Copy link button for an
+`/onboard/<token>` URL that resolves against a token HASH in Postgres and so
+opened nothing. No email, no membership grant, no onboarding row. The new hire
+waited for a message that did not exist.
+
+`POST /api/staff/[id]/invite` had been the real one all along; the roster's own
+"Remind" button calls it. It now runs the create through and waits for it —
+`/api/staff` mints its OWN `fs-*` legacy id and ignores the draft's, so the id
+the invitation has to be addressed to does not exist until the POST resolves,
+which is the other half of why the old claim was a guess.
+
+**The shared reading is `src/lib/staff/invite-outcome.ts`** (`readInviteOutcome`,
+8 unit tests). Two screens ask the same question and both got it wrong in their
+own way; the one rule is that **nothing except `sent: true` is a send** — an
+unparseable body is a failure, and `not_configured` (no `RESEND_API_KEY`) means
+the grant is real and the link works but nothing was delivered.
+
+**Do instead:** when a screen reports the result of a request, read the body
+through one named function per route, not an `if` chain per call site.
+
+### 🟡 `onboarding_templates` is empty for EVERY facility, and the button was gated on it
+
+Measured on the live project, 2026-09-17: all four facilities —
+`doggieville-mtl`, `pawradise`, `paws-co-demo`, `yipyy-demo-facility` — have
+**zero** onboarding templates. `effectiveTemplateId` was therefore `""`
+everywhere, and the dialog's final button carried
+`disabled={!profileValid || !effectiveTemplateId}` — so the last step of hiring
+anybody was greyed out in the whole product, with nothing on screen saying why.
+Found only because a probe run could not click it.
+
+It is not the server's rule: `/api/staff/[id]/invite` takes `templateId` as
+OPTIONAL, falls back to the role-matched active template and then to none — no
+checklist, a 7-day expiry, `template_id: null`. The gate is gone and the review
+screen now says what a hire with no checklist gets, in both languages.
+
+**Still open:** nothing seeds or builds an onboarding template, so every hire
+gets `template_id: null` and the welcome copy/expiry fall back to constants. The
+settings screen that would create one is out of scope here. The demo facility
+will need at least one before the hire flow reads as finished.
+
+**Do instead:** before gating a control on a value, check the table it comes
+from is non-empty for a real facility — a `disabled` with no explanation is
+indistinguishable from a broken screen.
+
+### 🟢 `FieldRow` labels are not associated with their inputs
+
+`staff-form-sections.tsx`'s `FieldRow` renders a `<Label>` with no `htmlFor`
+and an `<Input>` with no `id`, so `getByLabel(/first name/i)` matches nothing
+and a screen reader announces the field unlabelled. Found while writing the
+probe for the above. Not fixed — it is the whole staff form family, and a
+drive-by would be the wrong shape.
