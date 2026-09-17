@@ -16110,6 +16110,21 @@ status, nor the message. Three separate failures in two files were that same
 cast. `readBooking` now reads the body, warns with the status and the first 300
 characters, and returns `undefined` so a poll can retry.
 
+**IT FIRES IN CI TOO, so it is not a slow-link artifact.** The gate run on
+55ef1d94 (2026-09-17, `206 passed, 3 failed`) is full of
+
+```
+Error: {"error":"canceling statement due to statement timeout"}
+> 69 |   expect(res.ok(), await res.text()).toBe(true);
+```
+
+from a runner sitting next to the database. The unbounded read is merely SLOW
+in CI — all four `booking-checkout-truth` tests passed there while failing
+locally — but the timeout is the DATABASE's ceiling and it is reached from
+either side. It is also intermittent, because the client sits right at the
+ceiling: the very next run passed those same specs untouched. That is the worst
+shape for a gate, because a red push looks like the push's fault.
+
 **Do instead:** when a spec or a screen casts a response to an array, check
 `res.ok()` first. A type assertion is not a parse, and the failure it produces
 names the wrong thing.
@@ -16140,3 +16155,17 @@ What each read became, and why:
 
 **25 spec files still read the list unbounded.** Same treatment, same order:
 name the slice the test already knows.
+
+### 🟡 `automation-send-boundary:179` — a 400, and NOT the timeout
+
+Red in the same CI gate run, and worth separating from the rest: its sibling
+`:138` failed and then **passed on retry**, and `:179` failed with
+
+```
+> 185 |     expect(before.status()).toBe(200);
+Expected: 200   Received: 400
+```
+
+A 400, not a cancelled statement, and it reads no booking list. Not diagnosed —
+recorded so the next person does not fold it into the timeout story, which is
+what a single "3 failed" summary invites.
