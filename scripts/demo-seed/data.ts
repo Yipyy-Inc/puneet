@@ -3141,3 +3141,230 @@ export const FACILITY_SETTINGS: Record<string, unknown> = {
     exemptions: { tips: true, giftCards: true, storeCredit: true },
   },
 };
+
+// ============================================================================
+// Onboarding templates — the checklist a new hire is invited against.
+//
+// Measured 2026-09-17: `onboarding_templates` was EMPTY for every facility in
+// the database, which is why the hire dialog's "Create & send onboarding"
+// button was greyed out product-wide (it was gated on having one) and why every
+// invite that did go out carried `template_id: null` and fell back to constants
+// for its welcome copy and expiry.
+//
+// ── THE ROLE SETS MUST NOT OVERLAP ────────────────────────────────────────
+//
+// `/api/staff/[id]/invite` resolves a template with
+//
+//   .eq("status","active").contains("applies_to_roles",[role]).maybeSingle()
+//
+// and `maybeSingle()` FAILS when two rows match. So two active templates that
+// both claim `groomer` would break the invite for a groomer — not at seed time,
+// at hire time. The three below are disjoint, and `owner` and `accountant` are
+// deliberately left to the no-template fallback.
+//
+// A catch-all is not the answer either, even though the schema has an index for
+// one (`onboarding_templates_one_universal_active`, at most one active template
+// with empty `applies_to_roles`): an EMPTY array contains nothing, so
+// `contains(…, [role])` never matches it and the route would not find it. That
+// mismatch is recorded in the debt map rather than worked around here.
+// ============================================================================
+
+export const ONBOARDING_TEMPLATES = [
+  {
+    legacyId: `${SEED_PREFIX}-onb-floor`,
+    name: "Floor team onboarding",
+    appliesToRoles: [
+      "reception",
+      "caretaker",
+      "daycare_attendant",
+      "boarding_attendant",
+      "sanitation",
+      "retail",
+    ],
+    inviteExpiryDays: 7,
+    completionDeadlineDays: 5,
+    welcomeMessage:
+      "Welcome to Paws & Co! Before your first shift, please finish the steps below — they take about fifteen minutes. Your manager will walk you through the building and introduce you to the team on your first day.",
+    employeeTasks: [
+      { type: "personal_info", name: "Your details", required: true },
+      { type: "contact_details", name: "Address and phone", required: true },
+      {
+        type: "emergency_contact",
+        name: "Emergency contact",
+        required: true,
+        description: "Someone we can reach if something happens on shift.",
+      },
+      { type: "banking", name: "Direct deposit", required: true },
+      {
+        type: "document_sign",
+        name: "Employee handbook",
+        required: true,
+        documentName: "Paws & Co Employee Handbook",
+      },
+      {
+        type: "availability",
+        name: "Weekly availability",
+        required: true,
+        description: "The days and hours you can work.",
+      },
+      { type: "uniform_prefs", name: "Uniform size", required: false },
+    ],
+    managerTasks: [
+      {
+        type: "facility_tour",
+        name: "Building tour",
+        description: "Runs, play areas, laundry, the meds fridge, fire exits.",
+        when: "on_hire",
+        assignedTo: "manager",
+        required: true,
+      },
+      {
+        type: "meet_the_team",
+        name: "Introduce to the shift",
+        description: "Whoever they will be working alongside this week.",
+        when: "on_hire",
+        assignedTo: "manager",
+        required: true,
+      },
+      {
+        type: "equipment_issue",
+        name: "Issue uniform and door fob",
+        description: "Two shirts, a fob, and a name badge.",
+        when: "on_hire",
+        assignedTo: "manager",
+        required: true,
+      },
+      {
+        type: "shadow_shift",
+        name: "Shadow a full shift",
+        description: "Paired with an experienced attendant, start to finish.",
+        when: "by_first_shift",
+        assignedTo: "supervisor",
+        required: true,
+      },
+      {
+        type: "system_access_verify",
+        name: "Check they can sign in and clock in",
+        description: "On the floor tablet, not somebody else's login.",
+        when: "within_days",
+        whenDays: 2,
+        assignedTo: "manager",
+        required: true,
+      },
+    ],
+  },
+  {
+    legacyId: `${SEED_PREFIX}-onb-groom`,
+    name: "Groomer and trainer onboarding",
+    appliesToRoles: ["groomer", "trainer"],
+    inviteExpiryDays: 10,
+    completionDeadlineDays: 7,
+    welcomeMessage:
+      "Welcome to Paws & Co! Alongside the usual paperwork we need a copy of your certification and insurance before you take your first appointment. Your first week is shadowed — nothing is booked solo until you say you are ready.",
+    employeeTasks: [
+      { type: "personal_info", name: "Your details", required: true },
+      { type: "contact_details", name: "Address and phone", required: true },
+      { type: "emergency_contact", name: "Emergency contact", required: true },
+      { type: "banking", name: "Direct deposit", required: true },
+      {
+        type: "document_upload",
+        name: "Certification and insurance",
+        required: true,
+        description: "A photo or PDF of each is fine.",
+      },
+      {
+        type: "document_sign",
+        name: "Handling and safety policy",
+        required: true,
+        documentName: "Paws & Co Animal Handling Policy",
+      },
+      { type: "availability", name: "Weekly availability", required: true },
+    ],
+    managerTasks: [
+      {
+        type: "facility_tour",
+        name: "Salon tour",
+        description: "Stations, dryers, the kennel-free waiting area.",
+        when: "on_hire",
+        assignedTo: "manager",
+        required: true,
+      },
+      {
+        type: "equipment_issue",
+        name: "Assign a station",
+        description: "Table, dryer, clippers, and the key to the supply press.",
+        when: "on_hire",
+        assignedTo: "manager",
+        required: true,
+      },
+      {
+        type: "shadow_shift",
+        name: "Shadow a full grooming day",
+        description: "Including two check-ins and a difficult dog.",
+        when: "by_first_shift",
+        assignedTo: "groomer",
+        required: true,
+      },
+      {
+        type: "training_module",
+        name: "Incident and injury reporting",
+        description: "What to log, when, and who to tell first.",
+        when: "within_days",
+        whenDays: 7,
+        assignedTo: "manager",
+        required: true,
+      },
+    ],
+  },
+  {
+    legacyId: `${SEED_PREFIX}-onb-mgmt`,
+    name: "Management onboarding",
+    appliesToRoles: ["manager", "supervisor", "admin"],
+    inviteExpiryDays: 14,
+    completionDeadlineDays: 14,
+    welcomeMessage:
+      "Welcome to Paws & Co. Your first two weeks cover the floor before the back office: you will run shifts alongside the team, then pick up the schedule, the roster and the reports.",
+    employeeTasks: [
+      { type: "personal_info", name: "Your details", required: true },
+      { type: "contact_details", name: "Address and phone", required: true },
+      { type: "emergency_contact", name: "Emergency contact", required: true },
+      { type: "banking", name: "Direct deposit", required: true },
+      {
+        type: "document_sign",
+        name: "Manager handbook and confidentiality",
+        required: true,
+        documentName: "Paws & Co Manager Handbook",
+      },
+    ],
+    managerTasks: [
+      {
+        type: "meet_the_team",
+        name: "Meet every shift",
+        description: "Mornings, evenings and the weekend crew — all of them.",
+        when: "within_days",
+        whenDays: 7,
+        assignedTo: "owner",
+        required: true,
+      },
+      {
+        type: "system_access_verify",
+        name: "Confirm their permissions are right",
+        description:
+          "Check what they can see against what the role should see, on their own login.",
+        when: "within_days",
+        whenDays: 1,
+        assignedTo: "owner",
+        required: true,
+      },
+      {
+        type: "training_module",
+        name: "Schedule, payroll and reports",
+        description: "Building a week, approving hours, reading the numbers.",
+        when: "within_days",
+        whenDays: 14,
+        assignedTo: "owner",
+        required: true,
+      },
+    ],
+  },
+];
