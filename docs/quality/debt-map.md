@@ -16322,3 +16322,84 @@ reads as "the database is slow" rather than "something is holding your key". The
 tell is the tuple number moving between attempts, and the fix is
 `pg_terminate_backend` on the idle-in-transaction pid, found in
 `pg_stat_activity` by `xact_start`.
+
+---
+
+## 2026-09-17 — the facility walkthrough, four ways
+
+Nine screens × English/French × 1440/599 = **36 page loads**, driven as the
+owner against a built server. Phase 5's acceptance test had never been run.
+
+**Controls first, because a clean sweep usually means a broken detector.** Every
+screen was checked to have landed on its own path (a silent redirect to
+`/sign-in` passes every content check trivially), to hold more than 400
+characters of text, and — separately — to be showing REAL DATA rather than a
+skeleton: `rows=15` on bookings, `rows=10` on clients, `skeletons=0`, and text
+identical at `networkidle` and +20s. The French passes were confirmed French by
+their own chrome ("Afficher ou masquer la barre latérale", "Nouveau").
+
+**Clean, and these results are worth having:** no sideways scroll at 599px on
+any screen (§6 rule 6), no raw catalogue keys, no unfilled `{placeholders}`, no
+`Invalid Date`, no `NaN`, no `undefined` on screen, no console errors.
+
+### 🟡 English on the French surface, on all nine screens
+
+`check:ui-french` already ratchets ~15,152 English strings across 604 facility
+page files, so the NUMBER is not news. WHICH ones reach the screens a client
+actually opens is, and this is that list:
+
+| screen      | English a French reader sees                                              |
+| ----------- | ------------------------------------------------------------------------- |
+| all nine    | Scheduled, maintenance, weekend _(the announcement banner — see below)_   |
+| dashboard   | Daycare, Boarding, Week                                                   |
+| bookings    | Bookings, Export, Today, Filter, Daycare, Cancelled                       |
+| clients     | Export                                                                    |
+| calendar    | Bookings, Completed, Today, Add, Week, Month, Staff                       |
+| daily care  | Today, Settings, Add                                                      |
+| kennel view | Occupancy, Boarding, Daycare, Add, Upcoming, Today, Week, Export, Pending |
+| staff       | _(only the banner)_                                                       |
+| care tasks  | Owner, Kennel                                                             |
+| gift cards  | Balance, Today, Week, Month, Settings, Export, Download                   |
+
+Identical at both widths, so these are the strings themselves rather than a
+responsive variant. **Read with care:** "Daycare", "Boarding" and possibly
+"Kennel" may be a facility's own service names, which §5q says never pass
+through the locale layer. `Export`, `Today`, `Filter`, `Week`, `Month`, `Add`,
+`Settings`, `Download` and `Balance` are chrome and are not defensible.
+
+### 🔴 Every facility sees a FAKE urgent platform announcement
+
+The most visible fake thing on a facility screen, and it is on all nine:
+
+> **Urgent** · Scheduled maintenance window this weekend
+> "We'll be performing scheduled maintenance on **Saturday from 2–4 AM ET**…"
+
+It is a seed in `src/data/enhanced-announcements.ts`, and
+`lib/announcement-delivery-store.ts` says so outright — _"the published,
+in-platform ones are also what facilities see by default"_. There is no
+`announcements` table; the feature is fixture end to end.
+
+So the client's demo facility currently warns them about downtime that is not
+happening, in English, above every screen. It carries no success claim, so
+`check:success-claims` never saw it, and it is data rather than a label, so
+`check:ui-french` cannot see it either.
+
+**Needs a decision, not a drive-by:** empty the seed (the banner disappears —
+right for a handover, and it also clears nine of the eighteen findings above),
+or build announcements against a real table. Emptying it would also blank the
+platform super-admin announcements screen, which is outside the plan's four
+areas and reads the same fixture.
+
+### What this walkthrough could NOT cover
+
+It ran against `yipyy-demo-facility`, not `paws-co-demo`. `admin@yipyy.dev` is a
+platform superadmin but holds **no facility membership**, and
+`getFacilityContext()` falls back to `DEMO_FACILITY_LEGACY_ID` for a viewer with
+none — so it lands on the e2e facility, not the client's. Only
+`admin@yipyy.com` and `info@yipyy.com` are members of `paws-co-demo`, and both
+are the client's own accounts.
+
+So the SCREEN defects above are found and the DATA pass is not: whether the
+seeded 40 clients, 60 pets, 159 bookings, three onboarding checklists and the
+rest read correctly on his own facility is still unverified, and needs either
+his login or permission to add a staff one.
