@@ -9,26 +9,15 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  # ── THE NIGHTLY IS PAUSED, 2026-09-17 ──────────────────────────────────
+  # ── THE NIGHTLY, 03:00 UTC ─────────────────────────────────────────────
   #
-  # It ran the full suite at 03:00 UTC every night. Restore it by uncommenting
-  # the two lines below; nothing else has to change.
-  #
-  # WHY: the org went 302% over Supabase's 5 GB egress quota and into a grace
-  # period. Measured over fourteen hours by `x_client_info`, the bill is this
-  # suite: GitHub runners made ~562,000 database requests in one day, this
-  # machine ~146,000, and the production VPS ~3,300 — 239 an hour, flat. The
-  # suite is 99.5% of the traffic and production is a rounding error.
-  #
-  # It costs nothing to pause, because THIS JOB GATES NOTHING: `image`'s
-  # `needs:` is [typecheck, lint, format, unit, checks, sql, build] and e2e is
-  # not in it. A nightly run reports on code that already deployed.
-  #
-  # The 33-spec gate below still runs on every push — the authorisation
-  # boundary and money — and `workflow_dispatch` still runs all 119 on demand,
-  # which is what to use before a push that touches auth, bookings or payments.
-  # schedule:
-  #   - cron: "0 3 * * *"
+  # The full suite, every night. Paused 2026-09-17 → 18 when the org went 302%
+  # over Supabase's 5 GB free egress quota: measured by `x_client_info`, the
+  # suite was ~99.5% of the database traffic (GitHub runners ~562,000 requests
+  # a day, production ~3,300). Restored on the Pro plan (250 GB). It gates
+  # nothing — e2e is not in `image`'s `needs:` — it reports on what deployed.
+  schedule:
+    - cron: "0 3 * * *"
   # And on demand, for the push you want the whole suite to see before it lands.
   workflow_dispatch:
 
@@ -403,8 +392,8 @@ jobs:
   #
   # So this job now runs the 33 specs that guard the two things worth blocking
   # a push over: the authorisation boundary, and money. The other 86 still run,
-  # on demand, in this same job below — the coverage is not dropped, it is
-  # rescheduled. (It ran nightly until 2026-09-17; see the `on:` block.)
+  # nightly and on demand, in this same job below — the coverage is not
+  # dropped, it is rescheduled. (Paused 2026-09-17 → 18 for egress; see `on:`.)
   # ── WHAT CHANGED, SO A MARKDOWN COMMIT DOES NOT COST A SUITE RUN ────────
   #
   # Every push ran the 33-spec gate, whatever it touched. A one-line fix to a
@@ -479,7 +468,7 @@ jobs:
           fi
 
   e2e:
-    name: e2e (access & money; full suite on demand)
+    name: e2e (access & money; full suite nightly)
     runs-on: ubuntu-latest
     needs: scope
     if: needs.scope.outputs.code == 'true'
@@ -639,7 +628,7 @@ jobs:
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # A manual workflow_dispatch runs all 119. The
+        # A manual workflow_dispatch runs all 119. So does the nightly. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
         # is still the command to run by hand before anything that matters.
         #
@@ -650,7 +639,7 @@ jobs:
             echo "Full suite (119 specs)."
             bun run test:e2e:ci
           else
-            echo "Gate (33 specs: access & money). The full suite runs on demand."
+            echo "Gate (33 specs: access & money). The full suite runs nightly."
             bun run test:e2e:gate
           fi
 
