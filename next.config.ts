@@ -27,6 +27,17 @@ const supabaseHost = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // ── NEXT DOES NOT WRITE OUR AGENT FILES ─────────────────────────────────
+  //
+  // `next dev` appends a managed "This is NOT the Next.js you know" block to
+  // AGENTS.md (and generates CLAUDE.md) whenever it detects an AI agent, and
+  // re-adds it on every start - so reverting it only recreates the diff.
+  // Both files here are curated by hand and CLAUDE.md is checked by
+  // check:doc-counts, so neither is Next's to edit. Found 2026-09-17 when a
+  // dev run left a 10-line diff in AGENTS.md. Top-level key, default true -
+  // node_modules/next/dist/server/config-shared.d.ts.
+  agentRules: false,
+
   // ── SELF-HOSTED: A SERVER THAT CARRIES ITS OWN DEPENDENCIES ─────────────
   //
   // Emits `.next/standalone` — a `server.js` plus only the traced subset of
