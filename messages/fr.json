@@ -3056,7 +3056,8 @@
         "failNeedsKennel": "Attribuez un chenil avant d’enregistrer l’arrivée de {pet}.",
         "failNotAllowed": "Vous n’avez pas la permission d’enregistrer l’arrivée ou le départ pour cette réservation.",
         "failCannotNow": "Cette réservation ne peut pas être enregistrée à l’arrivée ou au départ dans son état actuel.",
-        "failFailed": "L’opération n’a pas abouti. Réessayez."
+        "failFailed": "L’opération n’a pas abouti. Réessayez.",
+        "changeStatus": "Changer le statut"
       }
     }
   },

@@ -3056,7 +3056,8 @@
         "failNeedsKennel": "Assign a kennel before checking {pet} in.",
         "failNotAllowed": "You do not have permission to move this booking in or out.",
         "failCannotNow": "This booking cannot be checked in or out in its current state.",
-        "failFailed": "That did not go through. Try again."
+        "failFailed": "That did not go through. Try again.",
+        "changeStatus": "Change the status"
       }
     }
   },
