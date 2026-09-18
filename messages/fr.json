@@ -2502,7 +2502,17 @@
         "discountLabel": "Rabais",
         "tipLabel": "Pourboire",
         "totalLabel": "Total",
-        "applyCartDiscount": "Appliquer un rabais"
+        "applyCartDiscount": "Appliquer un rabais",
+        "useStoreCredit": "Utiliser le crédit en magasin",
+        "storeCreditNothingApplied": "Aucun crédit en magasin n’est appliqué. Entrez un montant jusqu’au solde du client ou choisissez un autre mode de paiement.",
+        "addFee": "Ajouter des frais",
+        "feeTitle": "Ajouter des frais",
+        "feeDescription": "Les frais sont ajoutés à cette vente comme une ligne distincte et taxés comme un produit.",
+        "feeLabel": "Motif des frais",
+        "feeLabelPlaceholder": "p. ex. Commande spéciale",
+        "feeAmount": "Montant",
+        "feeCancel": "Annuler",
+        "feeAdd": "Ajouter les frais au panier"
       },
       "kiosk": {
         "title": "Arrivées",

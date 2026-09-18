@@ -2502,7 +2502,17 @@
         "discountLabel": "Discount",
         "tipLabel": "Tip",
         "totalLabel": "Total",
-        "applyCartDiscount": "Apply a discount"
+        "applyCartDiscount": "Apply a discount",
+        "useStoreCredit": "Use store credit",
+        "storeCreditNothingApplied": "No store credit is being applied. Enter an amount up to the client’s balance, or choose another way to pay.",
+        "addFee": "Add a fee",
+        "feeTitle": "Add a fee",
+        "feeDescription": "The fee is added to this sale as its own line and taxed like a product.",
+        "feeLabel": "What the fee is for",
+        "feeLabelPlaceholder": "e.g. Special order",
+        "feeAmount": "Amount",
+        "feeCancel": "Cancel",
+        "feeAdd": "Add fee to cart"
       },
       "kiosk": {
         "title": "Check-in",
