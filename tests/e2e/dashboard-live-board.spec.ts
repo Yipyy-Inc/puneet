@@ -395,7 +395,9 @@ test.describe("the facility home board", () => {
 
     // The Check In button only exists on the "Today's Arrivals" tab — the board
     // derives `primaryAction` from the selected tile.
-    await selectTile(page, /today's arrivals/i);
+    // The tile reads “Today’s arrivals” with a typographic apostrophe since
+    // the dashboard was translated (633fff80); either is accepted.
+    await selectTile(page, /today[’']s arrivals/i);
 
     const card = await cardFor(page, created.id);
     await card
