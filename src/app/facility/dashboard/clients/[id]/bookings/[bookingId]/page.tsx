@@ -33,7 +33,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BookingDetailActionBar } from "@/components/bookings/BookingDetailActionBar";
+import {
+  BookingActionBar,
+  type BookingActionHandlers,
+} from "@/components/bookings/booking-actions/BookingActionBar";
+import { useBookingActions } from "@/components/bookings/booking-actions/use-booking-actions";
+import { useBookingArrival } from "@/lib/api/booking-arrival";
+import { arrivalFailure } from "@/lib/bookings/arrival-failure";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import { printBookingInvoice } from "./_lib/print-invoice";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
@@ -92,7 +100,6 @@ import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
 import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWarning";
 import { getPendingCareItems, careSectionDomIds } from "@/lib/care-completion";
-import { buildInvoiceDocumentHtml } from "@/lib/invoice-document";
 import {
   findApplicableDepositRule,
   computeDepositAmount,
@@ -121,6 +128,7 @@ import {
   useRefundBooking,
   useRefundBookingToCard,
   useSendPayLink,
+  useMarkBookingNoShow,
   type Tender,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
@@ -434,45 +442,9 @@ export default function ClientBookingDetailPage({
     };
   };
 
-  /**
-   * Apply the facility's configured transition for an action.
-   *
-   * This used to resolve the target status from the rules and then only
-   * ANNOUNCE it — "Status auto-updated to Checked In (default rule)" — with no
-   * request behind the sentence. It writes now, and reports a refusal.
-   *
-   * Returns the new status so a caller can await the write before doing
-   * anything that depends on it.
-   */
-  const autoTransition = async (action: AutoTransitionAction) => {
-    const { target, sourceLabel } = resolveAutoTransition(action);
-    if (!target || !booking) return null;
-    // Already there: the rules can name the status a booking is in, and a
-    // no-op PATCH would announce a change that did not happen.
-    if (target === booking.status) return target;
-
-    const label = target
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-
-    try {
-      await updateStatus.mutateAsync({
-        id: booking.id,
-        status: target as Booking["status"],
-      });
-      toast.success(`Status updated to ${label} (${sourceLabel})`);
-      return target;
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : `${label} could not be applied.`,
-      );
-      return null;
-    }
-  };
-
   const [editOpen, setEditOpen] = useState(false);
+  // "Review and approve" opens the same wizard; saving it confirms the request.
+  const [approveOnSave, setApproveOnSave] = useState(false);
   const saveEdit = useSaveBookingEdit(booking);
   const {
     t: detailT,
@@ -696,6 +668,28 @@ export default function ClientBookingDetailPage({
   // which apply and the generator filters on it.
   const { data: allTaskTemplates = [] } = useQuery(taskTemplateQueries.all());
 
+  // ── WHAT CAN HAPPEN NEXT ────────────────────────────────────────────────
+  //
+  // The lifecycle's answer for this viewer (src/lib/bookings/booking-
+  // lifecycle.ts), and the one write path for arriving and leaving. Above the
+  // early returns: hooks.
+  const arrival = useBookingArrival();
+  const markNoShow = useMarkBookingNoShow();
+  const canTakePayment = usePermission("take_payment");
+  const { t: actT, fill: actFill } = useStaffText("bookingActions");
+  const bookingActions = useBookingActions(booking, {
+    depositRuleApplies: Boolean(
+      booking &&
+      !depositRulesPending &&
+      findApplicableDepositRule(
+        booking.service,
+        booking.totalCost,
+        depositRules,
+      ),
+    ),
+    multiLocation: locations.length > 1,
+  });
+
   // ── THREE ANSWERS, NOT ONE ─────────────────────────────────────────────
   //
   // "Not found" is a conclusion, and it needs the answers back before it can be
@@ -763,30 +757,6 @@ export default function ClientBookingDetailPage({
   }
 
   /**
-   * Check the booking in.
-   *
-   * Prefers the facility's configured rule so a facility that checks in to
-   * something other than `checked_in` is honoured, and falls back to the system
-   * status when they have configured none — the old code called
-   * `autoTransition` alone, which did nothing at all when no rule matched.
-   */
-  const checkIn = async () => {
-    const moved = await autoTransition("onCheckIn");
-    if (moved) return;
-    if (booking.status === "checked_in") return;
-    try {
-      await updateStatus.mutateAsync({ id: booking.id, status: "checked_in" });
-      toast.success("Checked in — service in progress");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "That booking could not be checked in.",
-      );
-    }
-  };
-
-  /**
    * Reverse a step, or mark a no-show, by writing the status back.
    *
    * These four were confirmation dialogs that ended in a success toast and
@@ -831,6 +801,222 @@ export default function ClientBookingDetailPage({
   };
 
   const invoice = booking.invoice;
+
+  // ── THE ACTIONS, BY LIFECYCLE ID ─────────────────────────────────────────
+  //
+  // Checking in and out goes through the service's own write
+  // (useBookingArrival), so the required forms and the kennel rule apply and
+  // the boards agree; the database mirrors it into the status. Everything
+  // that is reversible is confirmed first (§5j) and says what it did (§5s).
+  const petLabel =
+    pets.length === 0
+      ? null
+      : pets.length <= 2
+        ? pets.map((p) => p.name).join(" & ")
+        : `${pets[0].name} +${pets.length - 1}`;
+  const petName = petLabel ?? bookingRef;
+  const owed = balanceOf(booking);
+
+  const arrivalProblem = (error: unknown) => {
+    const failure = arrivalFailure(error);
+    const key =
+      failure === "needs_kennel"
+        ? "failNeedsKennel"
+        : failure === "not_allowed"
+          ? "failNotAllowed"
+          : failure === "cannot_now"
+            ? "failCannotNow"
+            : "failFailed";
+    toast.error(actFill(key, { pet: petName }), {
+      description: error instanceof Error ? error.message : undefined,
+    });
+  };
+
+  const confirmThen = (
+    title: string,
+    description: string,
+    confirmLabel: string,
+    onConfirm: () => void,
+  ) => setDestructiveConfirm({ title, description, confirmLabel, onConfirm });
+
+  const setStatus = async (status: Booking["status"], doneKey: string) => {
+    try {
+      await updateStatus.mutateAsync({ id: booking.id, status });
+      toast.success(actFill(doneKey, { ref: bookingRef, pet: petName }));
+    } catch (error) {
+      toast.error(detailFill("statusNotChanged", { ref: bookingRef }), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  const undoCheckIn = async () => {
+    try {
+      await arrival.undoCheckIn(booking);
+      toast.success(actFill("checkInUndone", { pet: petName }));
+    } catch (error) {
+      arrivalProblem(error);
+    }
+  };
+
+  const checkIn = async () => {
+    try {
+      await arrival.checkIn(booking);
+      toast.success(actFill("checkedIn", { pet: petName }), {
+        action: { label: actT("undo"), onClick: () => void undoCheckIn() },
+      });
+    } catch (error) {
+      arrivalProblem(error);
+      return;
+    }
+    // A facility's own rule may take a check-in further than checked_in —
+    // straight to in progress, say. The arrival is recorded either way.
+    const { target } = resolveAutoTransition("onCheckIn");
+    if (target && target !== "checked_in") {
+      await updateStatus
+        .mutateAsync({ id: booking.id, status: target as Booking["status"] })
+        .catch(() => undefined);
+    }
+  };
+
+  const departWithoutTill = async () => {
+    try {
+      await arrival.checkOut(booking);
+      toast.success(actFill("checkedOut", { pet: petName }));
+    } catch (error) {
+      arrivalProblem(error);
+    }
+  };
+
+  const reopenCheckout = async () => {
+    try {
+      await arrival.reopen(booking);
+      toast.success(actFill("checkoutUndone", { pet: petName }));
+    } catch (error) {
+      arrivalProblem(error);
+    }
+  };
+
+  // The till, behind the care gate: unlogged meals and doses are raised
+  // before the money moves, whichever button reached it.
+  const toTill = () => {
+    if (careStatus.pending.length > 0) {
+      setCareGateOpen(true);
+      return;
+    }
+    openCheckout();
+  };
+
+  const handlers: BookingActionHandlers = {
+    review_request: () => {
+      setApproveOnSave(true);
+      setEditOpen(true);
+    },
+    waitlist_request: () => void setStatus("waitlisted", "waitlistedDone"),
+    decline_request: () =>
+      confirmThen(
+        actT("declineTitle"),
+        actT("declineBody"),
+        actT("declineRequest"),
+        () => void setStatus("declined", "declinedDone"),
+      ),
+    confirm: () => void setStatus("confirmed", "confirmedDone"),
+    undo_confirm: () =>
+      confirmThen(
+        detailT("undoConfirmTitle"),
+        detailT("undoConfirmBody"),
+        detailT("undoConfirmConfirm"),
+        () => void revertTo("pending", "confirmUndone"),
+      ),
+    charge_deposit: () => setDepositOpen(true),
+    take_prepayment: () => setPrepaymentOpen(true),
+    check_in: () => void checkIn(),
+    no_show: () =>
+      confirmThen(
+        detailT("noShowTitle"),
+        detailT("noShowBody"),
+        detailT("noShowConfirm"),
+        () =>
+          markNoShow.mutate(booking.id, {
+            onSuccess: () =>
+              toast.success(detailFill("noShowRecorded", { ref: bookingRef })),
+            onError: (error) =>
+              toast.error(detailFill("statusNotChanged", { ref: bookingRef }), {
+                description: error.message,
+              }),
+          }),
+      ),
+    // With money owed and a person who can take it, checking out IS the till;
+    // otherwise it records the departure and the balance stays on the booking.
+    check_out: () =>
+      owed > 0 && canTakePayment ? toTill() : void departWithoutTill(),
+    check_out_unpaid: () =>
+      confirmThen(
+        actFill("checkOutUnpaidTitle", { pet: petName }),
+        actFill("checkOutUnpaidBody", {
+          pet: petName,
+          amount: formatMoneyIn(owed, detailLocale),
+        }),
+        actT("checkOutUnpaid"),
+        () => void departWithoutTill(),
+      ),
+    mark_in_progress: () => void setStatus("in_progress", "inProgressDone"),
+    mark_ready: () => void setStatus("ready", "readyDone"),
+    undo_check_in: () =>
+      confirmThen(
+        detailT("undoCheckInTitle"),
+        detailT("undoCheckInBody"),
+        detailT("undoCheckInConfirm"),
+        () => void undoCheckIn(),
+      ),
+    finish: () => void setStatus("completed", "finishedDone"),
+    take_payment: toTill,
+    split_tips: () => setTipSplitOpen(true),
+    refund: () => setRefundOpen(true),
+    undo_checkout: () =>
+      confirmThen(
+        actT("undoCheckoutTitle"),
+        actFill("undoCheckoutBody", { pet: petName }),
+        detailT("undoCheckoutConfirm"),
+        () => void reopenCheckout(),
+      ),
+    undo_no_show: () =>
+      confirmThen(
+        actT("undoNoShowTitle"),
+        actT("undoNoShowBody"),
+        actT("undoNoShow"),
+        () => void setStatus("confirmed", "undoNoShowDone"),
+      ),
+    reinstate: () =>
+      confirmThen(
+        actT("reinstateTitle"),
+        actT("reinstateBody"),
+        actT("reinstate"),
+        () => void setStatus("confirmed", "reinstatedDone"),
+      ),
+    edit: () => setEditOpen(true),
+    add_item: () => setRetailOpen(true),
+    transfer: () => setTransferOpen(true),
+    report_incident: () => setIncidentOpen(true),
+    // One step: the cancel dialog IS the confirmation — reason, refund, and
+    // "the customer is not messaged from here".
+    cancel: () => setCancelOpen(true),
+    onPayLink: (channel) => void sendPayLinkBy(channel),
+    onPrintInvoice: () =>
+      printBookingInvoice({
+        booking,
+        bookingRef,
+        clientName: client.name,
+        clientEmail: client.email,
+        clientPhone: client.phone,
+        petName: pet?.name,
+        lineItems: bookingLineItems,
+        taxConfig: facilityTaxConfig,
+        template: invoiceTemplate,
+        tipCollected: tips?.tipCollected ?? 0,
+        locale: detailLocale,
+      }),
+  };
   const addedSubtotal = booking.extrasTotal ?? 0;
 
   // "Aug 19, 2026, 8:00 AM - 6:00 PM". A receipt for a day of daycare that does
@@ -1134,17 +1320,6 @@ export default function ClientBookingDetailPage({
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-              {booking.status !== "confirmed" && (
-                <Button
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void checkIn()}
-                >
-                  Continue to Check In
-                </Button>
-              )}
-            </div>
           </div>
         )}
 
@@ -1248,220 +1423,11 @@ export default function ClientBookingDetailPage({
             )}
           </div>
 
-          {/* Action bar — primary / secondary / more / destructive */}
-          <BookingDetailActionBar
-            booking={booking}
-            invoice={invoice}
-            isPaid={isPaid}
-            isCancelled={isCancelled}
-            isEstimateSent={isEstimateSent}
-            multiLocation={locations.length > 1}
-            // The toast used to fire FIRST and unconditionally, so a refusal
-            // still read as a success. The write decides now.
-            onCheckIn={() => void checkIn()}
-            onProceedToCheckout={() => {
-              if (careStatus.pending.length > 0) {
-                setCareGateOpen(true);
-                return;
-              }
-              openCheckout();
-            }}
-            onTakePayment={() => {
-              if (careStatus.pending.length > 0) {
-                setCareGateOpen(true);
-                return;
-              }
-              openCheckout();
-            }}
-            onConfirmBooking={async () => {
-              try {
-                await updateStatus.mutateAsync({
-                  id: booking.id,
-                  status: "confirmed",
-                });
-                toast.success("Booking confirmed");
-              } catch (error) {
-                toast.error(
-                  error instanceof Error
-                    ? error.message
-                    : "That booking could not be confirmed.",
-                );
-              }
-            }}
-            onEdit={() => setEditOpen(true)}
-            onAddItem={() => setRetailOpen(true)}
-            onChargeDeposit={() => setDepositOpen(true)}
-            onTakePrepayment={() => setPrepaymentOpen(true)}
-            onPrintInvoice={() => {
-              const inv = invoice;
-              const w = window.open("", "_blank", "width=720,height=900");
-              if (!w) return;
-              const formatDate = (d: string) =>
-                new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                });
-              const dateRange =
-                booking.startDate &&
-                booking.endDate &&
-                booking.startDate !== booking.endDate
-                  ? `${formatDate(booking.startDate)} – ${formatDate(booking.endDate)}`
-                  : booking.startDate
-                    ? formatDate(booking.startDate)
-                    : undefined;
-
-              // ── THE SAME LINES THE REST OF THE APP CHARGES ──────────────
-              //
-              // This used to read `booking.invoice` — the fixture blob that
-              // exists on 26 of 259 bookings — and fall back to ONE line for
-              // every booking without one. So the formal document a customer
-              // keeps showed a single "daycare $45.00" while the counter, the
-              // terminal and the emailed receipt all said $80.00 plus tax.
-              // "full_day" is a stored key, not a word. It reached the paper
-              // raw, next to hand-typed item names like "Treat pack".
-              const humaniseLabel = (raw: string) => {
-                const words = raw.replace(/[_-]+/g, " ").trim();
-                return words
-                  ? words.charAt(0).toUpperCase() + words.slice(1)
-                  : raw;
-              };
-              const printedItems = [
-                {
-                  name: humaniseLabel(booking.serviceType || booking.service),
-                  unitPrice: booking.basePrice,
-                  quantity: 1,
-                  price: booking.basePrice,
-                },
-                ...bookingLineItems
-                  .filter((item) => item.kind !== "fee")
-                  .map((item) => ({
-                    name: item.name,
-                    unitPrice: item.unitPrice,
-                    quantity: item.quantity,
-                    price: item.price,
-                  })),
-              ];
-              const printedFees = bookingLineItems
-                .filter((item) => item.kind === "fee")
-                .map((item) => ({
-                  name: item.name,
-                  unitPrice: item.unitPrice,
-                  quantity: item.quantity,
-                  price: item.price,
-                }));
-
-              // Tax on what is owed, from the facility's own setting — the same
-              // call the terminal makes, so the printed document and the card
-              // cannot disagree.
-              const printedSubtotal = booking.amountDue ?? booking.totalCost;
-              const printedTax = computeTax(
-                Math.round(printedSubtotal * 100),
-                facilityTaxConfig,
-              );
-              const tipTotal = booking.tipAmount ?? 0;
-              const printedTotal = facilityTaxConfig.pricesIncludeTax
-                ? printedSubtotal + tipTotal
-                : printedSubtotal + printedTax.totalCents / 100 + tipTotal;
-              const paid = booking.amountPaid ?? 0;
-
-              const html = buildInvoiceDocumentHtml(invoiceTemplate, {
-                // The BOOKING's ref, so a printed document can be traced back
-                // from a counter. It was `inv?.id ?? String(booking.id)`, which
-                // for a booking with no fixture invoice printed a bare number
-                // nobody could search for.
-                invoiceNumber: inv?.id ?? bookingRef,
-                invoiceStatus: inv?.status,
-                issuedDate: new Date().toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                }),
-                bookingDateRange: dateRange,
-                clientName: client.name,
-                clientEmail: client.email,
-                clientPhone: client.phone,
-                petName: pet?.name,
-                serviceLabel: booking.service,
-                items: printedItems,
-                fees: printedFees.length > 0 ? printedFees : undefined,
-                subtotal: printedSubtotal,
-                discount: booking.discount || undefined,
-                discountLabel: booking.discountReason,
-                taxes: printedTax.lines.map(
-                  (line: {
-                    name: string;
-                    rate: number;
-                    amountCents: number;
-                  }) => ({
-                    name: line.name,
-                    rate: line.rate,
-                    amount: line.amountCents / 100,
-                  }),
-                ),
-                taxAmount: printedTax.totalCents / 100,
-                tipTotal: tipTotal || undefined,
-                total: printedTotal,
-                depositCollected: inv?.depositCollected,
-                // The total counts the booking's tip, and `amountPaid` never
-                // includes a tip, so a tip the ledger collected is taken off
-                // here too or the document asks for it again.
-                remainingDue: Math.max(
-                  0,
-                  printedTotal - paid - (tips?.tipCollected ?? 0),
-                ),
-                payments: inv?.payments,
-                variant:
-                  paid + (tips?.tipCollected ?? 0) >= printedTotal
-                    ? "receipt"
-                    : "invoice",
-              });
-              w.document.write(html);
-              w.document.close();
-              w.print();
-            }}
-            // A care sheet exists for a boarding guest. For anything else this
-            // said "Care sheet printed" and printed nothing, so it is offered
-            // only where there is a sheet to print.
-            onPrintCareSheet={
-              isBoarding && boardingGuestForPrint
-                ? () => setBoardingSheetOpen(true)
-                : undefined
-            }
-            // Both were a success toast and nothing else. They send the link
-            // to /pay/{ref} now, and say whether it went.
-            onEmailInvoice={() => void sendPayLinkBy("email")}
-            onSmsLink={() => void sendPayLinkBy("sms")}
-            onReportIncident={() => setIncidentOpen(true)}
-            onTransfer={() => setTransferOpen(true)}
-            // It ran the CHECK-IN rule — on a booking already checked in, so
-            // it changed nothing — and said "Marked as ready". It writes the
-            // `ready` status the database has for exactly this.
-            onMarkAsReady={() => void revertTo("ready", "markedReady")}
-            onEarlyCheckout={() => setEarlyCheckoutOpen(true)}
-            // With no checkout rule configured this did nothing and said
-            // nothing. It falls back to `completed`, as check-in falls back
-            // to `checked_in`.
-            onFinishWithoutPayment={() => {
-              void (async () => {
-                const moved = await autoTransition("onCheckout");
-                if (moved) {
-                  toast.success(detailT("finishedUnpaid"));
-                  return;
-                }
-                await revertTo("completed", "finishedUnpaid");
-              })();
-            }}
-            onSplitTips={() => setTipSplitOpen(true)}
-            onIssueRefund={() => setRefundOpen(true)}
-            onUndoCheckIn={() => void revertTo("confirmed", "checkInUndone")}
-            onUndoConfirm={() => void revertTo("pending", "confirmUndone")}
-            onUndoCheckout={() => void revertTo("confirmed", "checkoutUndone")}
-            onNoShow={() => void revertTo("no_show", "noShowRecorded")}
-            requestDestructiveConfirm={(payload) =>
-              setDestructiveConfirm(payload)
-            }
-            onCancelBooking={() => setCancelOpen(true)}
+          {/* The lifecycle's actions for this viewer — see the handlers. */}
+          <BookingActionBar
+            actions={bookingActions}
+            handlers={handlers}
+            petLabel={petLabel}
           />
         </div>
 
@@ -1994,7 +1960,10 @@ export default function ClientBookingDetailPage({
         {/* Edit Booking Wizard — pre-filled with current booking details */}
         <BookingModal
           open={editOpen}
-          onOpenChange={setEditOpen}
+          onOpenChange={(open) => {
+            setEditOpen(open);
+            if (!open) setApproveOnSave(false);
+          }}
           clients={[client]}
           facilityId={booking.facilityId}
           facilityName={facilityProfile.businessName}
@@ -2024,6 +1993,16 @@ export default function ClientBookingDetailPage({
             // waits for this answer now, and stays open on `false`.
             try {
               const changed = await saveEdit.mutateAsync(edited);
+              if (approveOnSave) {
+                // Priced by the wizard just now; approving is the second step.
+                await updateStatus.mutateAsync({
+                  id: booking.id,
+                  status: "confirmed",
+                });
+                setApproveOnSave(false);
+                toast.success(actFill("confirmedDone", { ref: bookingRef }));
+                return true;
+              }
               toast.success(
                 changed
                   ? detailFill("bookingUpdated", { ref: bookingRef })
@@ -2466,7 +2445,7 @@ export default function ClientBookingDetailPage({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Keep as is</AlertDialogCancel>
+              <AlertDialogCancel>{actT("keepAsIs")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   destructiveConfirm?.onConfirm();

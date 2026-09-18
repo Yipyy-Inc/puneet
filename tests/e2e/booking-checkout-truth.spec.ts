@@ -317,18 +317,16 @@ test.describe("the booking checkout tells the truth", () => {
     await page.goto(
       `/facility/dashboard/clients/${created.clientId}/bookings/${created.id}`,
     );
+    // One step since 2026-09-18: the cancel dialog IS the confirmation — it
+    // asks for the reason and the refund, and says what it will not do.
     await page
       .getByRole("button", { name: /^cancel booking$/i })
       .first()
       .click({ timeout: 30_000 });
-    // The confirmation no longer promises a message nobody sends.
-    await expect(page.getByText(/not messaged from here/i)).toBeVisible();
-    await page
-      .getByRole("button", { name: /^cancel booking$/i })
-      .last()
-      .click();
 
     const dialog = page.getByRole("dialog");
+    // It no longer promises a message nobody sends.
+    await expect(dialog.getByText(/not messaged from here/i)).toBeVisible();
     await dialog.getByLabel(/reason for cancelling/i).fill(MARKER);
     await dialog.locator("#refund-cash").click();
     await dialog

@@ -96,19 +96,18 @@ async function readBooking(page: Page, ref: number) {
 }
 
 /**
- * Open checkout the way staff reach it now: check the booking in, then press
- * Proceed to Checkout, through the care gate when care is unlogged. "Accept
- * payment" belonged to an action bar the page no longer renders.
+ * Open checkout the way staff reach it now: check the pet in on the daycare
+ * floor (the attendance write — a direct status PATCH is refused for a
+ * service that tracks arrival), then press "Check {pet} out", which is the till
+ * while money is owed, through the care gate when care is unlogged.
  */
 async function openCheckout(page: Page, ref: number, clientId: number) {
-  const checkedIn = await page.request.patch(`/api/bookings/${ref}`, {
-    data: { status: "checked_in" },
+  const checkedIn = await page.request.post("/api/daycare/attendance", {
+    data: { bookingRef: ref },
   });
   expect(checkedIn.ok(), await checkedIn.text()).toBe(true);
   await page.goto(`/facility/dashboard/clients/${clientId}/bookings/${ref}`);
-  const proceed = page
-    .getByRole("button", { name: /proceed to checkout/i })
-    .first();
+  const proceed = page.getByRole("button", { name: /^check .+ out$/i }).first();
   await expect(proceed).toBeVisible({ timeout: 30_000 });
   await proceed.click();
   const gate = page.getByRole("alertdialog");
@@ -300,7 +299,7 @@ test.describe("the payment button reaches the ledger", () => {
     // A settled booking offers no checkout: the action bar has no primary action
     // once the ledger says paid, and Pay by card needs a balance.
     await expect(
-      page.getByRole("button", { name: /proceed to checkout|take payment/i }),
+      page.getByRole("button", { name: /^check .+ out$|^take payment$/i }),
     ).toHaveCount(0);
     await expect(page.getByRole("link", { name: /pay by card/i })).toHaveCount(
       0,
