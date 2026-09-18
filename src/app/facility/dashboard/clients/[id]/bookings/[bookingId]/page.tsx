@@ -74,6 +74,7 @@ import {
 import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
@@ -1232,8 +1233,13 @@ export default function ClientBookingDetailPage({
             {canSeeBookingAmounts && (
               <div className="text-right">
                 <p className="text-2xl font-bold tabular-nums">
+                  {/* The Payment Summary's own total — price, added items,
+                      tax and tip — not the bare price it used to show. */}
                   {maskAmount(
-                    `$${(booking.invoice?.total ?? booking.totalCost).toFixed(2)}`,
+                    formatMoneyIn(
+                      bookingTotals(booking, facilityTaxConfig).total,
+                      detailLocale,
+                    ),
                     "booking_financials",
                   )}
                 </p>
