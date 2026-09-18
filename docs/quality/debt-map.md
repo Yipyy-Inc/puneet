@@ -17467,8 +17467,10 @@ check locally AND reached production through a green CI run.
 - **CI never runs three checks.** The `checks` job loops over a hand-kept list
   of 34 names; `package.json` has 37. `query-default-loops`,
   `facility-scoped-reads` and `frozen-translator` run under `check:all` and
-  nowhere in CI — which is how this reached production. Proposed separately:
-  derive CI's list from `package.json` the way `check:all` does.
+  nowhere in CI — which is how this reached production. **Fixed the same day,
+  as its own commit:** the job reads its list from `package.json` the way
+  `check:all` does, and `check:doc-counts` fails (actual -1) if `ci.yml` goes
+  back to a hand-kept list — negative control run.
 
 The route itself is the platform console and reads every announcement, tier and
 facility by design; it is exempted with that reason, like

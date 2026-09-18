@@ -145,7 +145,7 @@ jobs:
 
   # ── THE PROJECT'S OWN RULES ────────────────────────────────────────────────
   #
-  # 34 `check:*` scripts run here. Each one exists because a
+  # 37 `check:*` scripts run here, read from package.json. Each one exists because a
   # specific mistake was made and cost something: a route that took its facility
   # from the request body, an update that could not tell an RLS refusal from a
   # no-op, a screen that said "Saved" with nothing behind it, a dialog with a
@@ -186,42 +186,21 @@ jobs:
 
       - name: Run every check:* script
         run: |
+          # The list is READ from package.json, exactly as `bun run check:all`
+          # reads it. It was a hand-kept list of 34 until 2026-09-18, when
+          # package.json had 37: query-default-loops, facility-scoped-reads and
+          # frozen-translator ran on developers' machines and never here, and a
+          # route that facility-scoped-reads flags reached production through a
+          # green run. A check added tomorrow runs here tomorrow.
+          # check:doc-counts fails if this goes back to a list.
+          scripts=$(bun -e 'const p = JSON.parse(require("fs").readFileSync("package.json", "utf8")); console.log(Object.keys(p.scripts).filter((s) => s.startsWith("check:") && s !== "check:all").map((s) => s.slice(6)).sort().join(" "))')
+          if [ -z "$scripts" ]; then
+            echo "::error::no check:* scripts found in package.json"
+            exit 1
+          fi
+          echo "Running: $scripts"
           failed=""
-          for script in \
-            pricing \
-            rls-writes \
-            grooming-menu \
-            settings-wiring \
-            settings-seeding \
-            settings-fixture \
-            settings-routes \
-            settings-persistence \
-            ui-french \
-            quickbooks \
-            dialog-widths \
-            nav-parity \
-            customer-identity \
-            facility-from-session \
-            link-origin \
-            redirect-origin \
-            success-claims \
-            passkey-email-verified \
-            migration-versions \
-            automation-triggers \
-            no-review-gating \
-            vendor-strings \
-            derived-location \
-            inert-permissions \
-            no-dark-mode \
-            badge-glyph \
-            hover-actions \
-            edge-accents \
-            control-heights \
-            nav-icons \
-            hardcoded-locale \
-            domain-server-safe \
-            unbounded-booking-reads \
-            doc-counts
+          for script in $scripts
           do
             echo "::group::check:$script"
             if bun run "check:$script"; then
