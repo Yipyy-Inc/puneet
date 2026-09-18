@@ -2512,7 +2512,9 @@
         "feeLabelPlaceholder": "p. ex. Commande spéciale",
         "feeAmount": "Montant",
         "feeCancel": "Annuler",
-        "feeAdd": "Ajouter les frais au panier"
+        "feeAdd": "Ajouter les frais au panier",
+        "store_credit_insufficient": "Ce client n’a pas assez de crédit en magasin. Appliquez moins, ou encaissez le reste autrement.",
+        "discount_not_permitted": "Votre rôle ne permet pas d’accorder de rabais. Demandez à un gestionnaire de l’appliquer."
       },
       "kiosk": {
         "title": "Arrivées",

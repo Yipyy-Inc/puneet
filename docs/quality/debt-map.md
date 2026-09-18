@@ -17255,3 +17255,66 @@ Ratchets lowered by hand again: `check:ui-french` 225 → 211 on this file and
 `check:control-heights` 11 → 10 — and the second one was caught by the derived
 `check:doc-counts` claim added earlier the same day, which failed until
 AGENTS.md's headline total moved from 532 to 531. First real win, first catch.
+
+### ✅ The two gaps where the database trusted the till — closed (2026-09-18)
+
+Migration `20260918083126_the_database_stops_trusting_the_till`, tested by
+`supabase/tests/till-trust-guards.sql` (13 assertions).
+
+**The test was run BEFORE the migration existed, as a negative control, and it
+failed 7 of 13 against the live database:** a store-credit spend one cent over
+the balance was accepted (balance −$0.01), `record_payment` then spent $10 the
+client did not have (−$40.01), the service role overdrew too, and a cashier with
+`retail_apply_discount` removed recorded a manual discount — alone, and smuggled
+in beside a promo code. After the migration: 13 of 13, and the full suite 115
+files / 1,273 assertions, 0 failed.
+
+**Both guards are on the TABLES, and that was the decision that mattered.**
+`record_payment` and `record_retail_sale` are both SECURITY INVOKER, and
+`authenticated` can INSERT into `store_credit_entries` and `retail_sales`
+directly. A check inside either function would have been a fence with a gate
+beside it.
+
+- **`store_credit_entries`** — a BEFORE INSERT trigger sums the client's ledger
+  (SECURITY DEFINER, so the sum is not limited to what the caller may read)
+  under a per-client advisory lock, so two tills cannot both spend the same
+  $20, and refuses a spend that would go below zero with hint
+  `store_credit_insufficient`. **No service-role exemption**: a balance does not
+  depend on who is asking.
+- **`retail_sales`** — a DEFERRED constraint trigger, checked at COMMIT. A promo
+  code's discount is legitimately not "manual", but `record_retail_sale` writes
+  the server-quoted promo amount to `promo_code_redemptions` AFTER the sale row,
+  so an insert-time check cannot tell the two apart; at commit it can: manual =
+  `discount_total` − what the redemptions account for. Hint
+  `discount_not_permitted`. The service role is exempt (no staff identity to
+  check), the idiom of `private.unfinished_booking_guard`.
+
+**Testing a deferred check inside a file that rolls back** needs
+`SET CONSTRAINTS ALL IMMEDIATE` — otherwise it never fires and every test of it
+passes vacuously. The D tests do this.
+
+**No built-in role can take a sale without also being able to discount** —
+measured in a rolled-back probe: owner, admin, manager, supervisor, reception
+and retail all hold both. So the discount guard changes nothing for default
+roles; it bites only where a facility has REMOVED `retail_apply_discount`
+through the role editor, which is the only reason that permission exists. The
+test builds that cashier with a `membership_permissions` override.
+
+**Neither guard touched existing data** — measured before applying: three
+clients hold store credit, none negative (lowest $25.00), and no retail sale has
+ever carried a discount. The overspend was possible but had not happened.
+
+**The till says why.** The sales route passes the function's HINT through as
+`reason`, and the till translates it only if the catalogue has it — otherwise it
+shows the raw Postgres sentence, English-only, money unformatted. So
+`store_credit_insufficient` and `discount_not_permitted` are catalogue entries
+in both languages, like the `promo_*` reasons beside them.
+
+### 🔴 A third trust gap, found and NOT fixed
+
+`payments.store_credit_applied` is a column a caller can write directly. A
+payments row can claim "$20 of this was store credit" with no matching debit in
+`store_credit_entries` — `record_payment` writes both, but nothing requires the
+two to agree, and `authenticated` may insert into `payments`. Fixing it means
+deciding which of the two is the truth and deriving the other, which is a design
+decision about the ledger, not a guard.

@@ -2512,7 +2512,9 @@
         "feeLabelPlaceholder": "e.g. Special order",
         "feeAmount": "Amount",
         "feeCancel": "Cancel",
-        "feeAdd": "Add fee to cart"
+        "feeAdd": "Add fee to cart",
+        "store_credit_insufficient": "This client doesn’t have enough store credit for that. Apply less, or take the rest another way.",
+        "discount_not_permitted": "Your role can’t give discounts. Ask a manager to apply this one."
       },
       "kiosk": {
         "title": "Check-in",
