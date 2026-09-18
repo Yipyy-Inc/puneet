@@ -32,7 +32,8 @@ import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
-import { formatMoney } from "@/lib/i18n/format";
+import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
+import { escapeHtml } from "@/lib/email/shell";
 import { useResolvedTerminal } from "@/lib/api/terminals";
 import { useSavedCards } from "@/lib/api/saved-cards";
 import {
@@ -150,6 +151,20 @@ interface PaymentCheckoutFlowProps {
   ) => void | CheckoutResult | Promise<void | CheckoutResult>;
 }
 
+/** Each tender's name in the `checkout` area; gift cards have their own. */
+const METHOD_KEYS: Record<string, string> = {
+  card_on_file: "methodCardOnFile",
+  cash: "methodCash",
+  terminal: "methodTerminal",
+  e_transfer: "methodETransfer",
+  store_credit: "storeCredit",
+};
+
+// The printed receipt: ink only, since on paper every colour drops out except
+// the mark (§6 rule 10).
+const RECEIPT_CSS =
+  "body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}h1{font-size:18px;margin:0}h2{font-size:12px;color:#444;margin:4px 0 20px;font-weight:400}.row{display:flex;justify-content:space-between;gap:16px;padding:5px 0;font-size:13px;border-bottom:1px solid #ccc}.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}.row.sub{color:#444}.badge{border:1px solid #111;padding:8px 16px;text-align:center;margin-top:16px;font-weight:700;font-size:13px}.footer{margin-top:24px;text-align:center;font-size:10px;color:#444}@media print{body{padding:20px}}";
+
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   CreditCard,
   Banknote,
@@ -185,6 +200,18 @@ export function PaymentCheckoutFlow({
   const { t: gcT, locale: gcLocale } = useStaffText("checkoutGiftCard");
   const { t: coT, fill: coFill } = useStaffText("checkout");
   const coMoney = (n: number) => formatMoney(n, gcLocale);
+  const methodName = (value: string) =>
+    value === "gift_card"
+      ? gcT("tender")
+      : METHOD_KEYS[value]
+        ? coT(METHOD_KEYS[value])
+        : value;
+  // A tax rate as the facility set it: "5 %", "9,975 %".
+  const taxRate = (rate: number) => {
+    const pct = Number((rate * 100).toFixed(3));
+    const digits = Number.isInteger(pct) ? 0 : String(pct).split(".")[1].length;
+    return formatPercent(pct, gcLocale, digits);
+  };
   const isGiftCard = method === "gift_card";
   const [cashCollected, setCashCollected] = useState("");
   // The tip starts at the pledge until staff choose otherwise. Derived rather
@@ -341,11 +368,7 @@ export function PaymentCheckoutFlow({
         ...(paymentNote.trim() ? { note: paymentNote.trim() } : {}),
       });
     } catch (error) {
-      setProblem(
-        error instanceof Error
-          ? error.message
-          : "That payment did not go through.",
-      );
+      setProblem(error instanceof Error ? error.message : coT("notTaken"));
       return;
     } finally {
       setBusy(false);
@@ -372,20 +395,22 @@ export function PaymentCheckoutFlow({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Payment Checkout</DialogTitle>
+          <DialogTitle>{coT("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           {/* Amount */}
-          <div className="bg-muted/30 rounded-lg border p-4 text-center">
-            <p className="text-muted-foreground text-xs">Amount Due</p>
-            <p className="text-3xl font-bold tabular-nums">
-              ${netAmountDue.toFixed(2)}
+          <div className="border-line rounded-2xl border p-4 text-center">
+            <p className="text-ink-secondary text-xs">{coT("amountDue")}</p>
+            <p className="text-body-ink text-3xl font-bold tabular-nums">
+              {coMoney(netAmountDue)}
             </p>
             {loyaltyDiscount && loyaltyDiscountAmount > 0 && (
-              <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                {loyaltyDiscount.label}: −${loyaltyDiscountAmount.toFixed(2)}{" "}
-                applied
+              <p className="text-success mt-1 text-xs font-semibold tabular-nums">
+                {coFill("discountApplied", {
+                  label: loyaltyDiscount.label,
+                  amount: coMoney(loyaltyDiscountAmount),
+                })}
               </p>
             )}
             {membershipDiscount && membershipDiscountAmount > 0 && (
@@ -395,15 +420,17 @@ export function PaymentCheckoutFlow({
               </p>
             )}
             {depositPaid > 0 && (
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="text-ink-secondary mt-1 text-xs tabular-nums">
                 {/* "Already paid", not "Deposit paid". This figure is
                     `bookings.amount_paid` — everything the customer has handed
                     over on this booking, which is a deposit only sometimes. It
                     used to read the fixture invoice's `depositCollected`, and
                     calling a part payment a deposit is the kind of small lie
                     that makes somebody reconcile two numbers by hand. */}
-                Already paid: ${depositPaid.toFixed(2)} · Invoice total: $
-                {invoiceTotal.toFixed(2)}
+                {coFill("alreadyPaidLine", {
+                  paid: coMoney(depositPaid),
+                  total: coMoney(invoiceTotal),
+                })}
               </p>
             )}
           </div>
@@ -419,8 +446,8 @@ export function PaymentCheckoutFlow({
 
           {/* Payment Method */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-              Payment Method
+            <p className="text-ink-tertiary mb-2 text-xs font-bold tracking-[.06em] uppercase">
+              {coT("method")}
             </p>
             <div className="grid grid-cols-3 gap-2">
               {PAYMENT_METHODS.filter(
@@ -439,17 +466,20 @@ export function PaymentCheckoutFlow({
                 return (
                   <button
                     key={m.value}
+                    type="button"
+                    aria-pressed={method === m.value}
                     onClick={() => setMethod(m.value)}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all",
+                      // Chosen is a 2px ring, never a tint (§6 rules 1 and 2).
+                      "flex min-h-12 flex-col items-center justify-center gap-1.5 rounded-2xl border p-3",
                       method === m.value
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "hover:bg-muted/50",
+                        ? "border-primary text-primary shadow-[inset_0_0_0_2px_var(--primary)]"
+                        : "text-body-ink",
                     )}
                   >
                     <Icon className="size-5" />
-                    <span className="text-[11px] font-medium">
-                      {m.value === "gift_card" ? gcT("tender") : m.label}
+                    <span className="text-center text-xs font-semibold">
+                      {methodName(m.value)}
                     </span>
                   </button>
                 );
@@ -484,7 +514,9 @@ export function PaymentCheckoutFlow({
                 <option value="">{coT("chooseCard")}</option>
                 {chargeableCards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {(c.brand ?? "Card") + " ···" + (c.last4 ?? "")}
+                    {(c.brand ?? coT("cardFallback")) +
+                      " ···" +
+                      (c.last4 ?? "")}
                   </option>
                 ))}
               </select>
@@ -513,23 +545,26 @@ export function PaymentCheckoutFlow({
                   },
                 ]);
               }}
-              className="text-primary text-xs font-medium hover:underline"
+              className="text-primary min-h-10 text-sm font-semibold hover:underline"
             >
-              Split Payment →
+              {coT("splitStart")}
             </button>
           ) : (
-            <div className="animate-in fade-in space-y-3 rounded-lg border p-3 duration-150">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium">Split Payment</p>
-                <button
+            <div className="border-line space-y-3 rounded-2xl border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-body-ink text-sm font-semibold">
+                  {coT("splitTitle")}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setSplitMode(false);
                     setSplitPayments([]);
                   }}
-                  className="text-muted-foreground text-xs hover:underline"
                 >
-                  Cancel Split
-                </button>
+                  {coT("splitCancel")}
+                </Button>
               </div>
               {splitPayments.map((sp, idx) => (
                 <div key={idx} className="flex items-center gap-2">
@@ -544,10 +579,11 @@ export function PaymentCheckoutFlow({
                         ),
                       );
                     }}
-                    className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                    aria-label={coT("method")}
+                    className="border-input bg-background min-h-10 rounded-full border px-3 text-sm"
                   >
-                    <option value="cash">Cash</option>
-                    <option value="e_transfer">E-Transfer</option>
+                    <option value="cash">{coT("methodCash")}</option>
+                    <option value="e_transfer">{coT("methodETransfer")}</option>
                     {clientStoreCreditBalance > 0 && (
                       <option value="store_credit">{coT("storeCredit")}</option>
                     )}
@@ -559,7 +595,7 @@ export function PaymentCheckoutFlow({
                     )}
                   </select>
                   {TAKES_THE_REST.has(sp.method) ? (
-                    <span className="text-muted-foreground flex-1 text-xs tabular-nums">
+                    <span className="text-ink-secondary flex-1 text-sm tabular-nums">
                       {coFill("theRest", {
                         amount: coMoney(Math.max(0, splitLeftToPay)),
                       })}
@@ -575,23 +611,26 @@ export function PaymentCheckoutFlow({
                           ),
                         );
                       }}
-                      placeholder="Amount"
-                      className="h-8 flex-1 text-xs tabular-nums"
+                      placeholder={coT("splitAmount")}
+                      aria-label={coT("splitAmount")}
+                      className="flex-1 text-sm tabular-nums"
                       min={0}
                       step={0.01}
                     />
                   )}
                   {splitPayments.length > 1 && (
-                    <button
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={coT("splitRemove")}
                       onClick={() =>
                         setSplitPayments((prev) =>
                           prev.filter((_, i) => i !== idx),
                         )
                       }
-                      className="text-muted-foreground hover:text-destructive text-xs"
                     >
                       ×
-                    </button>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -603,9 +642,9 @@ export function PaymentCheckoutFlow({
                       { method: "cash", amount: "" },
                     ])
                   }
-                  className="text-primary text-xs font-medium hover:underline"
+                  className="text-primary min-h-10 text-sm font-semibold hover:underline"
                 >
-                  + Add Method
+                  {coT("splitAdd")}
                 </button>
                 <span
                   className={cn(
@@ -623,8 +662,9 @@ export function PaymentCheckoutFlow({
           <Input
             value={paymentNote}
             onChange={(e) => setPaymentNote(e.target.value)}
-            placeholder="Payment note (optional)"
-            className="h-8 text-xs"
+            placeholder={coT("notePlaceholder")}
+            aria-label={coT("notePlaceholder")}
+            className="text-sm"
           />
 
           {/* Gift card: the code to charge. */}
@@ -647,19 +687,22 @@ export function PaymentCheckoutFlow({
 
           {/* Store credit info */}
           {method === "store_credit" && (
-            <div className="animate-in fade-in rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 duration-150">
-              <p className="font-medium">
-                Store Credit Balance: ${clientStoreCreditBalance.toFixed(2)}
+            <div className="border-line rounded-2xl border p-3 text-sm">
+              <p className="text-body-ink font-semibold tabular-nums">
+                {coFill("creditBalance", {
+                  amount: coMoney(clientStoreCreditBalance),
+                })}
               </p>
               {clientStoreCreditBalance >= remaining ? (
-                <p className="mt-1 text-xs">
-                  Full amount will be covered by store credit.
+                <p className="text-ink-secondary mt-1 text-xs">
+                  {coT("creditCovers")}
                 </p>
               ) : (
-                <p className="mt-1 text-xs">
-                  ${clientStoreCreditBalance.toFixed(2)} will be applied.
-                  Remaining ${(remaining - clientStoreCreditBalance).toFixed(2)}{" "}
-                  due by another method.
+                <p className="text-ink-secondary mt-1 text-xs tabular-nums">
+                  {coFill("creditPartial", {
+                    applied: coMoney(clientStoreCreditBalance),
+                    rest: coMoney(remaining - clientStoreCreditBalance),
+                  })}
                 </p>
               )}
             </div>
@@ -667,7 +710,7 @@ export function PaymentCheckoutFlow({
 
           {/* Cash payment */}
           {isCash && (
-            <div className="animate-in fade-in space-y-3 rounded-lg border p-3 duration-150">
+            <div className="border-line space-y-3 rounded-2xl border p-3">
               {/* Cash never adds the pledge: the change is the client's to
                   leave, so it is a reminder, not a charge. */}
               {pledgedTip > 0 && (
@@ -676,8 +719,14 @@ export function PaymentCheckoutFlow({
                 </p>
               )}
               <div className="grid gap-1.5">
-                <label className="text-xs font-medium">Amount Collected</label>
+                <label
+                  htmlFor="cash-collected"
+                  className="text-xs font-semibold"
+                >
+                  {coT("cashCollected")}
+                </label>
                 <Input
+                  id="cash-collected"
                   type="number"
                   value={cashCollected}
                   onChange={(e) => setCashCollected(e.target.value)}
@@ -690,29 +739,31 @@ export function PaymentCheckoutFlow({
               {cashNum > 0 && change > 0 && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Change Due</span>
+                    <span className="text-ink-secondary">
+                      {coT("changeDue")}
+                    </span>
                     <span className="font-semibold tabular-nums">
-                      ${change.toFixed(2)}
+                      {coMoney(change)}
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs">
+                    <label className="border-line flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm">
                       <input
                         type="radio"
                         checked={!changeAsCredit}
                         onChange={() => setChangeAsCredit(false)}
                         className="accent-primary"
                       />
-                      Return change to client
+                      {coT("changeReturn")}
                     </label>
-                    <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs">
+                    <label className="border-line flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm">
                       <input
                         type="radio"
                         checked={changeAsCredit}
                         onChange={() => setChangeAsCredit(true)}
                         className="accent-primary"
                       />
-                      Keep as store credit (${change.toFixed(2)})
+                      {coFill("changeAsCredit", { amount: coMoney(change) })}
                     </label>
                   </div>
                 </div>
@@ -727,8 +778,8 @@ export function PaymentCheckoutFlow({
               staff select 20%, watch the customer choose nothing, and be handed
               a total that matches neither. */}
           {isTerminal && (
-            <div className="text-muted-foreground space-y-2 rounded-md border border-dashed p-3 text-xs">
-              <p>The customer is asked for a tip on the terminal.</p>
+            <div className="border-line text-ink-secondary space-y-2 rounded-2xl border p-3 text-sm">
+              <p>{coT("terminalAsksTip")}</p>
               {pledgedTip > 0 && (
                 <p>
                   {coFill("pledgedTipTerminal", {
@@ -767,7 +818,7 @@ export function PaymentCheckoutFlow({
                   }}
                   disabled={stopping}
                 >
-                  {stopping ? "Stopping…" : "Stop asking on the terminal"}
+                  {stopping ? coT("stopping") : coT("stopTerminal")}
                 </Button>
               )}
             </div>
@@ -781,8 +832,8 @@ export function PaymentCheckoutFlow({
           {(splitMode ? !splitHasTerminal : !isTerminal && method !== "cash") &&
             tipConfig.enabled && (
               <div>
-                <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                  Add Tip (optional)
+                <p className="text-ink-tertiary mb-2 text-xs font-bold tracking-[.06em] uppercase">
+                  {coT("addTip")}
                 </p>
                 {pledgedTip > 0 && chosenTip === null && (
                   <p className="text-ink-secondary mb-2 text-xs">
@@ -801,45 +852,39 @@ export function PaymentCheckoutFlow({
             )}
 
           {/* Summary */}
-          <div className="bg-muted/20 rounded-lg border p-3">
+          <div className="border-line rounded-2xl border p-3">
             <div className="space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  Services & Products
-                </span>
-                <span className="tabular-nums">${invoiceTotal.toFixed(2)}</span>
+              <div className="flex justify-between gap-4">
+                <span className="text-ink-secondary">{coT("sumServices")}</span>
+                <span className="tabular-nums">{coMoney(invoiceTotal)}</span>
               </div>
               {depositPaid > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>Already paid</span>
-                  <span className="tabular-nums">
-                    -${depositPaid.toFixed(2)}
-                  </span>
+                <div className="text-success flex justify-between gap-4">
+                  <span>{coT("sumPaid")}</span>
+                  <span className="tabular-nums">−{coMoney(depositPaid)}</span>
                 </div>
               )}
               {taxDue > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{coT("tax")}</span>
-                  <span className="tabular-nums">${taxDue.toFixed(2)}</span>
+                <div className="flex justify-between gap-4">
+                  <span className="text-ink-secondary">{coT("tax")}</span>
+                  <span className="tabular-nums">{coMoney(taxDue)}</span>
                 </div>
               )}
               {tipToCharge > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tip</span>
-                  <span className="tabular-nums">
-                    ${tipToCharge.toFixed(2)}
-                  </span>
+                <div className="flex justify-between gap-4">
+                  <span className="text-ink-secondary">{coT("sumTip")}</span>
+                  <span className="tabular-nums">{coMoney(tipToCharge)}</span>
                 </div>
               )}
               <Separator />
-              <div className="flex justify-between font-semibold">
-                <span>Amount to charge</span>
-                <span className="tabular-nums">${remaining.toFixed(2)}</span>
+              <div className="flex justify-between gap-4 font-semibold">
+                <span>{coT("sumCharge")}</span>
+                <span className="tabular-nums">{coMoney(remaining)}</span>
               </div>
               {isCash && !splitMode && change > 0 && changeAsCredit && (
-                <div className="flex justify-between text-xs text-emerald-600">
-                  <span>→ Store credit added</span>
-                  <span className="tabular-nums">+${change.toFixed(2)}</span>
+                <div className="text-success flex justify-between gap-4 text-xs">
+                  <span>{coT("sumCreditAdded")}</span>
+                  <span className="tabular-nums">+{coMoney(change)}</span>
                 </div>
               )}
             </div>
@@ -858,17 +903,16 @@ export function PaymentCheckoutFlow({
           )}
 
         {step === "pay" && confirming && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Please review all details — date, time, staff, services, discounts,
-            and tips — before confirming payment.
-          </div>
+          <p className="border-warning text-body-ink rounded-2xl border px-3 py-2 text-sm">
+            {coT("reviewFirst")}
+          </p>
         )}
 
         {/* Receipt step — shown after successful payment */}
         {step === "receipt" && (
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 py-4 text-center duration-300">
-            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-100">
-              <Check className="size-7 text-emerald-600" />
+            <div className="bg-success mx-auto flex size-12 items-center justify-center rounded-full text-white">
+              <Check className="size-6" />
             </div>
             <div>
               <p className="text-lg font-semibold">
@@ -878,7 +922,7 @@ export function PaymentCheckoutFlow({
                     ? coT("paymentRecorded")
                     : coT("paymentComplete")}
               </p>
-              <p className="text-muted-foreground mt-1 text-sm">
+              <p className="text-ink-secondary mt-1 text-sm">
                 {result?.message ??
                   (result?.stillOwed && result.stillOwed > 0.005
                     ? coFill("takenOwed", {
@@ -903,9 +947,7 @@ export function PaymentCheckoutFlow({
                 channel on the device. What is missing is an API route that
                 lets a NON-terminal tender reach them. Until that exists this
                 dialog offers Print, which really prints. */}
-            <p className="text-muted-foreground text-xs">
-              Print a receipt for the client?
-            </p>
+            <p className="text-ink-secondary text-sm">{coT("printAsk")}</p>
             <div className="flex justify-center gap-2">
               <Button
                 variant="outline"
@@ -917,60 +959,75 @@ export function PaymentCheckoutFlow({
                   const methodLabel =
                     splitMode && split?.ok
                       ? split.parts
-                          .map(
-                            (p) =>
-                              `${p.method.replace("_", " ")}: $${p.total.toFixed(2)}`,
+                          .map((part) =>
+                            coFill("receiptSplitPart", {
+                              method: methodName(part.method),
+                              amount: coMoney(part.total),
+                            }),
                           )
                           .join(", ")
-                      : method.replace("_", " ");
-                  w.document
-                    .write(`<!DOCTYPE html><html><head><title>Receipt</title>
-<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
-h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
-.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
-.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
-.row.sub{color:#666}
-.badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
-.footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
-@media print{body{padding:20px}}</style></head><body>
-${invoiceHeaderHtml(receiptFacility)}
-<h1>Payment Receipt</h1>
-<h2>${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
-${receiptReference ? `<div class="row sub"><span>Reference</span><span>${receiptReference}</span></div>` : ""}
-${receiptServiceWindow ? `<div class="row sub"><span>Service</span><span>${receiptServiceWindow}</span></div>` : ""}
-${
-  receiptLines && receiptLines.length > 0
-    ? receiptLines
-        .map(
-          (l) =>
-            `<div class="row"><span>${l.label}</span><span>$${l.amount.toFixed(2)}</span></div>`,
-        )
-        .join("")
-    : `<div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>`
-}
-<div class="row"><span>Subtotal</span><span>$${amountDue.toFixed(2)}</span></div>
-${taxOnDue.lines
-  .map(
-    (t) =>
-      `<div class="row sub"><span>${t.name} ${Number((t.rate * 100).toFixed(4))}%</span><span>$${(t.amountCents / 100).toFixed(2)}</span></div>`,
-  )
-  .join("")}
-${depositPaid > 0 ? `<div class="row sub"><span>Already Paid</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
-${tipToCharge > 0 ? `<div class="row sub"><span>Tip</span><span>$${tipToCharge.toFixed(2)}</span></div>` : ""}
-<div class="row total"><span>Total Charged</span><span>$${(result?.taken ?? remaining).toFixed(2)}</span></div>
-${result?.stillOwed && result.stillOwed > 0.005 ? `<div class="row sub"><span>${coT("stillOwed")}</span><span>$${result.stillOwed.toFixed(2)}</span></div>` : ""}
-<div class="row sub"><span>Payment Method</span><span>${methodLabel}</span></div>
-${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</span></div>` : ""}
-<div class="badge">${coT("paymentRecordedBadge")}</div>
-<div class="footer">Thank you for your business!<br>${receiptFacility?.name ?? ""}</div>
-</body></html>`);
+                      : methodName(method);
+                  const row = (label: string, value: string, sub = false) =>
+                    `<div class="row${sub ? " sub" : ""}"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
+                  // Every value the facility, the client or staff typed is
+                  // escaped rather than written into the page as markup.
+                  w.document.write(
+                    [
+                      `<!DOCTYPE html><html lang="${gcLocale}"><head><title>${escapeHtml(coT("receiptTitle"))}</title><style>${RECEIPT_CSS}</style></head><body>`,
+                      invoiceHeaderHtml(receiptFacility),
+                      `<h1>${escapeHtml(coT("receiptTitle"))}</h1>`,
+                      `<h2>${escapeHtml(formatDateLong(new Date(), gcLocale))}</h2>`,
+                      receiptReference
+                        ? row(coT("receiptReference"), receiptReference, true)
+                        : "",
+                      receiptServiceWindow
+                        ? row(coT("receiptService"), receiptServiceWindow, true)
+                        : "",
+                      receiptLines && receiptLines.length > 0
+                        ? receiptLines
+                            .map((l) => row(l.label, coMoney(l.amount)))
+                            .join("")
+                        : row(coT("receiptAmount"), coMoney(amountDue)),
+                      row(coT("receiptSubtotal"), coMoney(amountDue)),
+                      taxOnDue.lines
+                        .map((line) =>
+                          row(
+                            `${line.name} ${taxRate(line.rate)}`,
+                            coMoney(line.amountCents / 100),
+                            true,
+                          ),
+                        )
+                        .join(""),
+                      depositPaid > 0
+                        ? row(
+                            coT("receiptPaid"),
+                            `−${coMoney(depositPaid)}`,
+                            true,
+                          )
+                        : "",
+                      tipToCharge > 0
+                        ? row(coT("sumTip"), coMoney(tipToCharge), true)
+                        : "",
+                      `<div class="row total"><span>${escapeHtml(coT("receiptCharged"))}</span><span>${escapeHtml(coMoney(result?.taken ?? remaining))}</span></div>`,
+                      result?.stillOwed && result.stillOwed > 0.005
+                        ? row(coT("stillOwed"), coMoney(result.stillOwed), true)
+                        : "",
+                      row(coT("receiptMethod"), methodLabel, true),
+                      paymentNote
+                        ? row(coT("receiptNote"), paymentNote, true)
+                        : "",
+                      `<div class="badge">${escapeHtml(coT("paymentRecordedBadge"))}</div>`,
+                      `<div class="footer">${escapeHtml(coT("receiptThanks"))}<br>${escapeHtml(receiptFacility?.name ?? "")}</div>`,
+                      "</body></html>",
+                    ].join("\n"),
+                  );
                   w.document.close();
                   w.print();
                   // success-claim-ok: w.print() above is the send — a printer, not a message
-                  toast.success("Receipt sent to printer");
+                  toast.success(coT("receiptPrinted"));
                 }}
               >
-                Print
+                {coT("print")}
               </Button>
             </div>
           </div>
@@ -989,7 +1046,7 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                   }
                 }}
               >
-                {confirming ? "Go Back" : "Back to Invoice"}
+                {confirming ? coT("back") : coT("backToBill")}
               </Button>
               <Button
                 onClick={() => void handleConfirm()}
@@ -1007,19 +1064,15 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                   ((isSavedCard || (splitMode && splitHasSavedCard)) &&
                     !savedCardId)
                 }
-                className={cn(
-                  "gap-1.5",
-                  confirming && "bg-emerald-600 hover:bg-emerald-700",
-                )}
               >
                 <Check className="size-4" />
                 {busy
                   ? isTerminal
-                    ? "Waiting for the card…"
-                    : "Taking payment…"
-                  : confirming
-                    ? `Confirm & Charge $${remaining.toFixed(2)}`
-                    : `Checkout & Charge $${remaining.toFixed(2)}`}
+                    ? coT("waitingCard")
+                    : coT("taking")
+                  : coFill(confirming ? "confirmCharge" : "charge", {
+                      amount: coMoney(remaining),
+                    })}
               </Button>
             </>
           )}
@@ -1032,7 +1085,7 @@ ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</spa
                 setResult(null);
               }}
             >
-              Done
+              {coT("done")}
             </Button>
           )}
         </DialogFooter>

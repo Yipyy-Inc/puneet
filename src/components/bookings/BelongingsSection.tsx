@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   Plus,
   Camera,
-  Upload,
   AlertTriangle,
   PackageCheck,
   Expand,
@@ -28,36 +27,31 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { BelongingEntry } from "@/types/booking";
+import { formatDateShort, formatTime } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+
+// ============================================================================
+// What the pet came in with, and whether it went home.
+//
+// Translated as it was touched. The booking page always saves the list
+// (`onSave`), so the branches that kept an item or a photo in this
+// component's state alone are gone; a returned item reads in a quieter ink
+// rather than at half opacity, which rewrote every contrast ratio in the row
+// (§6 rule 4); and a saved item now says WHEN it was checked in and handed
+// back — it said so only beside a name, which a saved list never records.
+//
+// Photos are shown and can be removed, but not added: an image read as a data
+// URL would be stored in the booking's JSON and sent with every booking list.
+// They wait for file storage (debt map, 2026-09-12).
+// ============================================================================
 
 interface BelongingsSectionProps {
   entries: BelongingEntry[];
   isCompleted?: boolean;
   required?: boolean;
-  /**
-   * Saves the list on the booking. Every change here — an item added, an
-   * item handed back — was component state with a success toast, gone on
-   * reload, which is the one record a facility needs when an owner asks
-   * where the blanket went. With `onSave` each change is written first and
-   * rolled back on screen if it was refused.
-   *
-   * Photos are not offered when saving: an image read as a data URL would
-   * be stored in the booking's JSON and sent with every booking list. They
-   * wait for file storage (debt map, 2026-09-12).
-   */
-  onSave?: (entries: BelongingEntry[]) => Promise<void>;
+  /** Saves the list on the booking; a refusal puts the screen back. */
+  onSave: (entries: BelongingEntry[]) => Promise<void>;
 }
-
-function fmtTimestamp(ts: string) {
-  return new Date(ts).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-let _belId = 300;
 
 export function BelongingsSection({
   entries,
@@ -65,19 +59,23 @@ export function BelongingsSection({
   required,
   onSave,
 }: BelongingsSectionProps) {
-  const { t } = useStaffText("bookingDetail");
+  const { t, fill, locale } = useStaffText("bookingDetail");
   const [items, setItems] = useState(entries);
   const [saving, setSaving] = useState(false);
-  const persists = Boolean(onSave);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ name: "", description: "" });
+
+  const stamp = (ts: string) =>
+    fill("stampAt", {
+      date: formatDateShort(ts, locale),
+      time: formatTime(ts, locale),
+    });
 
   /** Show the change, write it, and put it back if the write is refused. */
   const commit = async (next: BelongingEntry[], done?: string) => {
     const before = items;
     setItems(next);
-    if (!onSave) {
-      if (done) toast.success(done);
-      return true;
-    }
     setSaving(true);
     try {
       await onSave(next);
@@ -93,22 +91,10 @@ export function BelongingsSection({
       setSaving(false);
     }
   };
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const [newItem, setNewItem] = useState({
-    name: "",
-    description: "",
-    photoUrl: "",
-  });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const totalItems = items.length;
   const returnedCount = items.filter((i) => i.returned).length;
   const unreturnedCount = totalItems - returnedCount;
-
-  // "You" is only true on the screen that wrote it, so a saved list records
-  // WHEN, not a pronoun every other reader would take for themselves.
-  const who = persists ? undefined : "You";
 
   const handleReturn = (id: string, checked: boolean) => {
     void commit(
@@ -118,11 +104,11 @@ export function BelongingsSection({
               ...e,
               returned: checked,
               returnedAt: checked ? new Date().toISOString() : undefined,
-              returnedBy: checked ? who : undefined,
+              returnedBy: undefined,
             }
           : e,
       ),
-      checked ? "Item marked as returned" : undefined,
+      checked ? t("belongingsReturnedToast") : undefined,
     );
   };
 
@@ -130,48 +116,33 @@ export function BelongingsSection({
     const now = new Date().toISOString();
     void commit(
       items.map((e) =>
-        e.returned
-          ? e
-          : { ...e, returned: true, returnedAt: now, returnedBy: who },
+        e.returned ? e : { ...e, returned: true, returnedAt: now },
       ),
-      `All ${unreturnedCount} items marked as returned`,
+      fill("belongingsAllReturnedToast", { n: unreturnedCount }),
     );
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setNewItem((prev) => ({ ...prev, photoUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleAdd = () => {
     if (!newItem.name.trim()) {
-      toast.error("Item name is required");
+      toast.error(t("belongingsNameRequired"));
       return;
     }
-    _belId += 1;
     void commit(
       [
         ...items,
         {
-          id: persists ? `bel-${crypto.randomUUID()}` : `bel-new-${_belId}`,
-          name: newItem.name,
-          description: newItem.description || undefined,
-          photoUrl: persists ? undefined : newItem.photoUrl || undefined,
+          id: `bel-${crypto.randomUUID()}`,
+          name: newItem.name.trim(),
+          description: newItem.description.trim() || undefined,
           condition: "Good",
           checkedInAt: new Date().toISOString(),
-          checkedInBy: who,
           returned: false,
         },
       ],
-      "Belonging added",
+      t("belongingsAddedToast"),
     ).then((saved) => {
       if (!saved) return;
-      setNewItem({ name: "", description: "", photoUrl: "" });
+      setNewItem({ name: "", description: "" });
       setAddOpen(false);
     });
   };
@@ -179,22 +150,22 @@ export function BelongingsSection({
   return (
     <>
       <Card className="overflow-hidden">
-        <CardHeader className="bg-muted/30 pb-3">
+        <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-              <Backpack className="size-3.5" />
-              Belongings
+            <CardTitle className="text-ink-tertiary flex flex-wrap items-center gap-2 text-xs font-bold tracking-[.06em] uppercase">
+              <Backpack className="size-4" />
+              {t("belongingsTitle")}
               {required && (
-                <Badge
-                  variant="destructive"
-                  className="text-[10px] normal-case"
-                >
-                  Required
+                <Badge variant="destructive" className="normal-case">
+                  {t("taskRequired")}
                 </Badge>
               )}
               {totalItems > 0 && (
-                <span className="text-muted-foreground font-normal normal-case">
-                  — {returnedCount} of {totalItems} returned
+                <span className="text-ink-secondary font-normal tracking-normal normal-case">
+                  {fill("belongingsReturnedOf", {
+                    returned: returnedCount,
+                    total: totalItems,
+                  })}
                 </span>
               )}
             </CardTitle>
@@ -203,38 +174,40 @@ export function BelongingsSection({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 gap-1 text-[11px]"
                   onClick={handleReturnAll}
+                  disabled={saving}
                 >
-                  <PackageCheck className="size-3" />
-                  Return All
+                  <PackageCheck className="size-4" />
+                  {t("belongingsReturnAll")}
                 </Button>
               )}
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 gap-1 text-[11px]"
                 onClick={() => setAddOpen(!addOpen)}
               >
-                <Plus className="size-3" />
-                Add Item
+                <Plus className="size-4" />
+                {t("belongingsAdd")}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          {/* Unreturned items alert — on completed bookings */}
+          {/* Unreturned items — on completed bookings */}
           {isCompleted && unreturnedCount > 0 && (
-            <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <div className="border-warning mt-4 flex items-start gap-2.5 rounded-2xl border px-3.5 py-3">
+              <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">
-                  {unreturnedCount} item{unreturnedCount !== 1 ? "s" : ""} not
-                  returned
+                <p className="text-body-ink text-sm font-semibold">
+                  {fill(
+                    unreturnedCount === 1
+                      ? "belongingsNotReturnedOne"
+                      : "belongingsNotReturnedMany",
+                    { n: unreturnedCount },
+                  )}
                 </p>
-                <p className="mt-0.5 text-xs text-amber-700">
-                  Please verify all belongings have been returned to the client
-                  before closing out this booking.
+                <p className="text-ink-secondary mt-0.5 text-sm">
+                  {t("belongingsNotReturnedBody")}
                 </p>
               </div>
             </div>
@@ -243,22 +216,28 @@ export function BelongingsSection({
           {/* Inline add form */}
           <Collapsible open={addOpen} onOpenChange={setAddOpen}>
             <CollapsibleContent>
-              <div className="space-y-3 border-b py-4">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="border-line space-y-3 border-b py-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <Label className="text-[11px]">Item Name</Label>
+                    <Label htmlFor="belonging-name" className="text-xs">
+                      {t("belongingsName")}
+                    </Label>
                     <Input
+                      id="belonging-name"
                       value={newItem.name}
                       onChange={(e) =>
                         setNewItem((p) => ({ ...p, name: e.target.value }))
                       }
-                      placeholder="e.g. Blue fleece blanket"
-                      className="mt-1 h-8 text-xs"
+                      placeholder={t("belongingsNamePlaceholder")}
+                      className="mt-1 text-sm"
                     />
                   </div>
                   <div>
-                    <Label className="text-[11px]">Description</Label>
+                    <Label htmlFor="belonging-description" className="text-xs">
+                      {t("belongingsDescription")}
+                    </Label>
                     <Input
+                      id="belonging-description"
                       value={newItem.description}
                       onChange={(e) =>
                         setNewItem((p) => ({
@@ -266,89 +245,22 @@ export function BelongingsSection({
                           description: e.target.value,
                         }))
                       }
-                      placeholder="Color, features..."
-                      className="mt-1 h-8 text-xs"
+                      placeholder={t("belongingsDescriptionPlaceholder")}
+                      className="mt-1 text-sm"
                     />
                   </div>
                 </div>
 
-                {/* Photo upload */}
-                {!persists && (
-                  <div>
-                    <Label className="text-[11px]">
-                      Photo (optional — documents condition at check-in)
-                    </Label>
-                    <div className="mt-1 flex items-center gap-2">
-                      {newItem.photoUrl ? (
-                        <div className="relative">
-                          <img
-                            src={newItem.photoUrl}
-                            alt="Preview"
-                            className="ring-border size-16 rounded-lg object-cover ring-1"
-                          />
-                          <button
-                            className="bg-destructive absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-[10px] text-white"
-                            onClick={() =>
-                              setNewItem((p) => ({ ...p, photoUrl: "" }))
-                            }
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <Upload className="size-3.5" />
-                            Upload
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs"
-                            onClick={() => {
-                              // In production: use navigator.mediaDevices.getUserMedia
-                              fileInputRef.current?.click();
-                            }}
-                          >
-                            <Camera className="size-3.5" />
-                            Camera
-                          </Button>
-                        </div>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={handlePhotoUpload}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-[11px]"
                     onClick={() => setAddOpen(false)}
                   >
-                    Cancel
+                    {t("notNow")}
                   </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 text-[11px]"
-                    onClick={handleAdd}
-                    disabled={saving}
-                    aria-busy={saving}
-                  >
-                    Add Item
+                  <Button size="sm" onClick={handleAdd} loading={saving}>
+                    {t("belongingsAddConfirm")}
                   </Button>
                 </div>
               </div>
@@ -358,101 +270,53 @@ export function BelongingsSection({
           {/* Items list */}
           {items.length === 0 ? (
             <div className="py-6 text-center">
-              <Backpack className="text-muted-foreground/20 mx-auto size-8" />
-              <p className="text-muted-foreground mt-2 text-xs">
-                No belongings checked in — click &quot;Add Item&quot; at
-                check-in
+              <Backpack className="text-ink-disabled mx-auto size-6" />
+              <p className="text-ink-secondary mt-2 text-sm">
+                {t("belongingsNone")}
               </p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-line divide-y">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={cn(
-                    "flex items-start gap-3 py-4 transition-opacity first:pt-4",
-                    item.returned && "opacity-50",
-                  )}
+                  className="flex items-start gap-3 py-4 first:pt-4"
                 >
-                  {/* Photo thumbnail with action menu */}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="group relative shrink-0 overflow-hidden rounded-lg">
-                        {item.photoUrl ? (
-                          <>
-                            <img
-                              src={item.photoUrl}
-                              alt={item.name}
-                              className="size-16 object-cover transition-transform group-hover:scale-105"
-                            />
-                            {/* Pointer feedback only — the photo itself is the
-                                trigger, so nothing is hidden behind the mouse
-                                (§6 rule 11), and inert keeps it from eating
-                                the trigger's clicks. */}
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                              <Camera className="size-4 text-white" />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="bg-muted/50 group-hover:bg-muted flex size-16 items-center justify-center transition-colors">
-                            <Camera className="text-muted-foreground/30 group-hover:text-muted-foreground/60 size-5 transition-colors" />
-                          </div>
-                        )}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="start"
-                      className="w-auto p-1.5"
-                      onOpenAutoFocus={(e) => e.preventDefault()}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        {item.photoUrl && (
-                          <button
-                            className="hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
+                  {/* Photo, when an item has one */}
+                  {item.photoUrl ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={t("belongingsPhoto")}
+                          className="relative shrink-0 overflow-hidden rounded-2xl"
+                        >
+                          <img
+                            src={item.photoUrl}
+                            alt=""
+                            className="size-16 object-cover"
+                          />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="w-auto p-1.5"
+                        onOpenAutoFocus={(e) => e.preventDefault()}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
                             onClick={() => setLightboxUrl(item.photoUrl!)}
                           >
-                            <Expand className="size-3.5" />
-                            View Full Photo
-                          </button>
-                        )}
-                        {!persists && (
-                          <button
-                            className="hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
-                            onClick={() => {
-                              const input = document.createElement("input");
-                              input.type = "file";
-                              input.accept = "image/*";
-                              input.capture = "environment";
-                              input.onchange = (e) => {
-                                const file = (e.target as HTMLInputElement)
-                                  .files?.[0];
-                                if (!file) return;
-                                const reader = new FileReader();
-                                reader.onload = () => {
-                                  setItems((prev) =>
-                                    prev.map((b) =>
-                                      b.id === item.id
-                                        ? {
-                                            ...b,
-                                            photoUrl: reader.result as string,
-                                          }
-                                        : b,
-                                    ),
-                                  );
-                                  toast.success("Photo updated");
-                                };
-                                reader.readAsDataURL(file);
-                              };
-                              input.click();
-                            }}
-                          >
-                            <Upload className="size-3.5" />
-                            {item.photoUrl ? "Replace Photo" : "Upload Photo"}
-                          </button>
-                        )}
-                        {item.photoUrl && (
-                          <button
-                            className="hover:bg-destructive/10 text-destructive flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors"
+                            <Expand className="size-4" />
+                            {t("belongingsViewPhoto")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive justify-start"
                             onClick={() =>
                               void commit(
                                 items.map((b) =>
@@ -460,54 +324,69 @@ export function BelongingsSection({
                                     ? { ...b, photoUrl: undefined }
                                     : b,
                                 ),
-                                "Photo removed",
+                                t("belongingsPhotoRemoved"),
                               )
                             }
                           >
-                            <Trash2 className="size-3.5" />
-                            Remove Photo
-                          </button>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Details */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "text-sm font-semibold",
-                          item.returned && "line-through",
-                        )}
-                      >
-                        {item.name}
-                      </span>
+                            <Trash2 className="size-4" />
+                            {t("belongingsRemovePhoto")}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div className="border-line flex size-16 shrink-0 items-center justify-center rounded-2xl border">
+                      <Camera className="text-ink-disabled size-5" />
                     </div>
+                  )}
+
+                  {/* Details — a returned item in a quieter ink, not at half
+                      opacity (§6 rule 4). */}
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        "text-sm font-semibold",
+                        item.returned
+                          ? "text-ink-tertiary line-through"
+                          : "text-body-ink",
+                      )}
+                    >
+                      {item.name}
+                    </span>
                     {item.description && (
-                      <p className="text-muted-foreground mt-0.5 text-xs">
+                      <p className="text-ink-secondary mt-0.5 text-xs">
                         {item.description}
                       </p>
                     )}
-                    {item.checkedInBy && (
-                      <p className="text-muted-foreground mt-0.5 text-[10px]">
-                        Checked in by {item.checkedInBy}
-                        {item.checkedInAt &&
-                          ` · ${fmtTimestamp(item.checkedInAt)}`}
+                    {item.checkedInAt && (
+                      <p className="text-ink-tertiary mt-0.5 text-xs">
+                        {item.checkedInBy
+                          ? fill("belongingsInBy", {
+                              name: item.checkedInBy,
+                              at: stamp(item.checkedInAt),
+                            })
+                          : fill("belongingsInAt", {
+                              at: stamp(item.checkedInAt),
+                            })}
                       </p>
                     )}
-                    {item.returned && item.returnedBy && (
-                      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-emerald-600">
-                        <CheckCircle2 className="size-3" />
-                        Returned by {item.returnedBy}
-                        {item.returnedAt &&
-                          ` · ${fmtTimestamp(item.returnedAt)}`}
+                    {item.returned && item.returnedAt && (
+                      <p className="text-success mt-0.5 flex items-center gap-1 text-xs">
+                        <CheckCircle2 className="size-4" />
+                        {item.returnedBy
+                          ? fill("belongingsOutBy", {
+                              name: item.returnedBy,
+                              at: stamp(item.returnedAt),
+                            })
+                          : fill("belongingsOutAt", {
+                              at: stamp(item.returnedAt),
+                            })}
                       </p>
                     )}
                   </div>
 
                   {/* Return checkbox */}
-                  <div className="flex shrink-0 items-center gap-1.5 pt-1">
+                  <div className="flex min-h-10 shrink-0 items-center gap-2">
                     <Checkbox
                       id={`return-${item.id}`}
                       checked={item.returned}
@@ -516,9 +395,9 @@ export function BelongingsSection({
                     />
                     <label
                       htmlFor={`return-${item.id}`}
-                      className="text-muted-foreground cursor-pointer text-[11px]"
+                      className="text-ink-secondary cursor-pointer text-sm"
                     >
-                      Returned
+                      {t("belongingsReturned")}
                     </label>
                   </div>
                 </div>
@@ -535,12 +414,12 @@ export function BelongingsSection({
           showCloseButton
           aria-describedby={undefined}
         >
-          <DialogTitle className="sr-only">Belonging Photo</DialogTitle>
+          <DialogTitle className="sr-only">{t("belongingsPhoto")}</DialogTitle>
           {lightboxUrl && (
             <img
               src={lightboxUrl}
-              alt="Belonging photo"
-              className="w-full rounded-lg object-contain"
+              alt=""
+              className="w-full rounded-2xl object-contain"
             />
           )}
         </DialogContent>

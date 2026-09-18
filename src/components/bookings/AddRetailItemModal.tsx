@@ -27,6 +27,8 @@ import {
   Minus,
   SlidersHorizontal,
 } from "lucide-react";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRetailProducts } from "@/lib/api/retail-store";
@@ -57,6 +59,8 @@ export function AddRetailItemModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
+  const { t, fill, locale } = useStaffText("addRetailItem");
+  const money = (value: number) => formatMoney(value, locale);
   const [cart, setCart] = useState<
     Map<string, { name: string; price: number; quantity: number }>
   >(new Map());
@@ -103,9 +107,9 @@ export function AddRetailItemModal({
       const name = variant ? `${found.name} — ${variant.name}` : found.name;
       const price = variant ? variant.price : found.basePrice;
       addToCart(found.id + (variant?.id ?? ""), name, price);
-      toast.success(`Scanned: ${name}`);
+      toast.success(fill("scanned", { name }));
     } else {
-      toast.error(`No product found for barcode: ${trimmed}`);
+      toast.error(fill("noBarcode", { code: trimmed }));
     }
   };
 
@@ -173,50 +177,45 @@ export function AddRetailItemModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex max-h-[70vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-2xl p-0">
+      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
         {/* ── Fixed header ── */}
-        <div className="shrink-0 space-y-3 border-b p-5 pb-4">
+        <div className="border-line shrink-0 space-y-3 border-b p-5 pb-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-50">
-                <ShoppingBag className="size-4 text-emerald-600" />
-              </div>
-              Add Products to Invoice
+              <ShoppingBag className="size-5" />
+              {t("title")}
             </DialogTitle>
           </DialogHeader>
 
           {/* Search + Scan toggle */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <div className="flex flex-wrap gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="text-ink-tertiary absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, SKU, barcode, or brand..."
-                className="h-10 pl-10"
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchPlaceholder")}
+                className="pl-10"
                 autoFocus
               />
             </div>
-            <Button
-              variant="outline"
-              className="h-10 gap-1.5"
-              onClick={() => setCameraOpen(true)}
-            >
+            <Button variant="outline" onClick={() => setCameraOpen(true)}>
               <Barcode className="size-4" />
-              Scan
+              {t("scan")}
             </Button>
           </div>
 
           {/* Category filter + result count */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={activeCategory} onValueChange={setActiveCategory}>
-              <SelectTrigger className="h-9 w-[200px] text-xs">
-                <SlidersHorizontal className="text-muted-foreground mr-1 size-3.5" />
+              <SelectTrigger className="w-[220px] max-w-full text-sm">
+                <SlidersHorizontal className="text-ink-tertiary mr-1 size-4" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">
-                  All Categories ({categories.total})
+                  {fill("allCategories", { n: categories.total })}
                 </SelectItem>
                 {Array.from(categories.counts.entries())
                   .sort(([a], [b]) => a.localeCompare(b))
@@ -227,8 +226,10 @@ export function AddRetailItemModal({
                   ))}
               </SelectContent>
             </Select>
-            <span className="text-muted-foreground text-xs">
-              {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+            <span className="text-ink-tertiary text-xs">
+              {fill(filtered.length === 1 ? "productsOne" : "productsMany", {
+                n: filtered.length,
+              })}
             </span>
           </div>
         </div>
@@ -237,12 +238,10 @@ export function AddRetailItemModal({
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <Package className="text-muted-foreground/20 mx-auto size-12" />
-              <p className="text-muted-foreground mt-3 text-sm">
-                No products found
-              </p>
-              <p className="text-muted-foreground/60 mt-1 text-xs">
-                Try a different search or category
+              <Package className="text-ink-disabled mx-auto size-6" />
+              <p className="text-body-ink mt-3 text-sm">{t("noProducts")}</p>
+              <p className="text-ink-tertiary mt-1 text-xs">
+                {t("noProductsHint")}
               </p>
             </div>
           ) : (
@@ -253,90 +252,75 @@ export function AddRetailItemModal({
                 return (
                   <div
                     key={product.id}
+                    // Chosen is a 2px ring, never a tint (§6 rules 1 and 2).
                     className={cn(
-                      "group relative grid grid-cols-[2.75rem,minmax(0,1fr),auto] items-start gap-3 rounded-xl border p-3 transition-all duration-200",
-                      inCart
-                        ? "border-emerald-300 bg-emerald-50/60 shadow-sm"
-                        : "border-slate-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md",
+                      "border-line grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-2xl border p-3",
+                      inCart && "shadow-[inset_0_0_0_2px_var(--primary)]",
                     )}
                   >
-                    <div
-                      className={cn(
-                        "flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors",
-                        inCart
-                          ? "bg-emerald-100"
-                          : "bg-slate-100 group-hover:bg-emerald-50",
-                      )}
-                    >
-                      <ShoppingBag
-                        className={cn(
-                          "size-5 transition-colors",
-                          inCart
-                            ? "text-emerald-600"
-                            : "text-slate-400 group-hover:text-emerald-500",
-                        )}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="pr-1 text-sm/tight font-medium wrap-break-word"
-                        title={product.name}
-                      >
+                    <div className="min-w-0">
+                      <p className="text-body-ink text-sm/tight font-semibold wrap-break-word">
                         {product.name}
                       </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
+                      <p className="text-ink-tertiary mt-0.5 text-xs">
                         {product.brand ?? product.category}
                       </p>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <span className="text-sm font-bold tabular-nums">
-                          ${product.basePrice.toFixed(2)}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className="text-body-ink text-sm font-bold tabular-nums">
+                          {money(product.basePrice)}
                         </span>
                         {product.stock != null && (
                           <span
                             className={cn(
-                              "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                              "text-xs",
                               product.stock <= (product.minStock ?? 5)
-                                ? "bg-red-50 text-red-600"
-                                : "bg-emerald-50 text-emerald-600",
+                                ? "text-warning font-semibold"
+                                : "text-ink-tertiary",
                             )}
                           >
-                            {product.stock} in stock
+                            {fill("inStock", { n: product.stock })}
                           </span>
                         )}
                       </div>
                     </div>
                     {/* Add / Quantity stepper */}
                     {inCart ? (
-                      <div className="flex min-w-[86px] shrink-0 items-center justify-end gap-1 self-start">
-                        <button
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={fill("oneLess", { name: product.name })}
                           onClick={() =>
                             updateQuantity(product.id, cartQty - 1)
                           }
-                          className="flex size-7 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition-all hover:bg-emerald-50"
                         >
-                          <Minus className="size-3" />
-                        </button>
-                        <span className="w-6 text-center text-sm font-bold text-emerald-700 tabular-nums">
+                          <Minus className="size-4" />
+                        </Button>
+                        <span className="text-body-ink w-6 text-center text-sm font-bold tabular-nums">
                           {cartQty}
                         </span>
-                        <button
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={fill("oneMore", { name: product.name })}
                           onClick={() =>
                             updateQuantity(product.id, cartQty + 1)
                           }
-                          className="flex size-7 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition-all hover:bg-emerald-50"
                         >
-                          <Plus className="size-3" />
-                        </button>
+                          <Plus className="size-4" />
+                        </Button>
                       </div>
                     ) : (
-                      <button
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        aria-label={fill("add", { name: product.name })}
                         onClick={() =>
                           addToCart(product.id, product.name, product.basePrice)
                         }
-                        className="flex size-8 shrink-0 items-center justify-center self-start rounded-lg text-slate-300 transition-all hover:scale-110 hover:bg-emerald-50 hover:text-emerald-500"
                       >
-                        <Plus className="size-5" />
-                      </button>
+                        <Plus className="size-4" />
+                      </Button>
                     )}
                   </div>
                 );
@@ -346,61 +330,65 @@ export function AddRetailItemModal({
         </div>
 
         {/* ── Fixed footer — cart summary + actions ── */}
-        <div className="shrink-0 border-t bg-slate-50/80 p-5 pt-4">
+        <div className="border-line shrink-0 border-t p-5 pt-4">
           {cartItems.length > 0 && (
             <div className="mb-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium">
-                  {cartCount} item{cartCount !== 1 ? "s" : ""} selected
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-body-ink text-xs font-semibold">
+                  {fill(cartCount === 1 ? "selectedOne" : "selectedMany", {
+                    n: cartCount,
+                  })}
                 </p>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCart(new Map())}
-                  className="text-muted-foreground text-xs hover:underline"
                 >
-                  Clear all
-                </button>
+                  {t("clearAll")}
+                </Button>
               </div>
-              <div className="max-h-20 space-y-1 overflow-y-auto">
+              <ul className="max-h-24 space-y-1 overflow-y-auto">
                 {cartItems.map(([id, item]) => (
-                  <div
+                  <li
                     key={id}
-                    className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 shadow-sm"
+                    className="border-line flex items-center gap-2 rounded-2xl border px-3 py-1"
                   >
-                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                    <span className="text-body-ink min-w-0 flex-1 truncate text-xs font-semibold">
                       {item.name}
                     </span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-ink-tertiary text-xs tabular-nums">
                       ×{item.quantity}
                     </span>
-                    <span className="w-14 text-right text-xs font-semibold tabular-nums">
-                      ${(item.price * item.quantity).toFixed(2)}
+                    <span className="text-body-ink text-right text-xs font-semibold tabular-nums">
+                      {money(item.price * item.quantity)}
                     </span>
-                    <button
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={fill("remove", { name: item.name })}
                       onClick={() => removeFromCart(id)}
-                      className="text-muted-foreground hover:text-destructive"
                     >
-                      <X className="size-3" />
-                    </button>
-                  </div>
+                      <X className="size-4" />
+                    </Button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" className="flex-1" onClick={handleClose}>
-              Cancel
+              {t("keep")}
             </Button>
             <Button
-              className="flex-1 gap-1.5 bg-emerald-500 hover:bg-emerald-600"
+              className="flex-1"
               onClick={handleConfirm}
               disabled={cartItems.length === 0}
             >
               <Check className="size-4" />
-              Add to Invoice
-              {cartTotal > 0 && (
-                <span className="tabular-nums">— ${cartTotal.toFixed(2)}</span>
-              )}
+              {cartTotal > 0
+                ? fill("addWithTotal", { amount: money(cartTotal) })
+                : t("addToBill")}
             </Button>
           </div>
         </div>
@@ -412,7 +400,7 @@ export function AddRetailItemModal({
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <Barcode className="size-5" />
-              Scan Barcode
+              {t("scanTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-auto px-5 pb-5">
@@ -422,7 +410,7 @@ export function AddRetailItemModal({
               className="mt-3 w-full"
               onClick={() => setCameraOpen(false)}
             >
-              Close
+              {t("closeScanner")}
             </Button>
           </div>
         </DialogContent>

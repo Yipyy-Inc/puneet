@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Loader2 } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { balanceOf } from "@/lib/api/booking-money";
 import { bookingMoney, paymentQueries } from "@/lib/api/payments";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
@@ -13,6 +14,10 @@ import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import type { Booking } from "@/types/booking";
+import { formatMoney, formatPercent } from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
+import { useServiceName } from "@/lib/staff/use-service-name";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
 // What this booking costs, line by line.
@@ -74,12 +79,21 @@ interface BookingPaymentBreakdownProps {
   action?: React.ReactNode;
 }
 
-function Money({ value, bold }: { value: number; bold?: boolean }) {
+function Money({
+  value,
+  bold,
+  locale,
+}: {
+  value: number;
+  bold?: boolean;
+  locale: AppLocale;
+}) {
   return (
     <span
-      className={bold ? "text-base font-bold" : "text-muted-foreground text-sm"}
+      className={cn("tabular-nums", bold ? "text-base font-bold" : "text-sm")}
     >
-      {value < 0 ? "−" : ""}${Math.abs(value).toFixed(2)}
+      {value < 0 ? "−" : ""}
+      {formatMoney(Math.abs(value), locale)}
     </span>
   );
 }
@@ -90,12 +104,14 @@ function Line({
   value,
   bold,
   tone,
+  locale,
 }: {
   label: string;
   hint?: string;
   value: number;
   bold?: boolean;
   tone?: string;
+  locale: AppLocale;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
@@ -103,12 +119,10 @@ function Line({
         <span className={bold ? "text-sm font-semibold" : "text-sm"}>
           {label}
         </span>
-        {hint && (
-          <span className="text-muted-foreground ml-2 text-xs">{hint}</span>
-        )}
+        {hint && <span className="text-ink-tertiary ml-2 text-xs">{hint}</span>}
       </div>
-      <span className={tone}>
-        <Money value={value} bold={bold} />
+      <span className={tone ?? (bold ? "text-body-ink" : "text-ink-secondary")}>
+        <Money value={value} bold={bold} locale={locale} />
       </span>
     </div>
   );
@@ -137,6 +151,8 @@ export function BookingPaymentBreakdown({
   const money = bookingMoney(ledger ?? []);
 
   const settings = useFacilitySettings();
+  const { t, fill, locale } = useStaffText("paymentBreakdown");
+  const serviceName = useServiceName();
   const taxConfig = settings.settings.tax_config.value as TaxConfig;
 
   const items = lineItems ?? [];
@@ -163,27 +179,34 @@ export function BookingPaymentBreakdown({
   // page header reads too, so the two figures on one screen cannot disagree.
   const tax = computeTax(Math.round(outstanding * 100), taxConfig);
   const totals = bookingTotals(booking, taxConfig);
+  const taxRate = (rate: number) => {
+    const pct = Number((rate * 100).toFixed(3));
+    const digits = Number.isInteger(pct) ? 0 : String(pct).split(".")[1].length;
+    return formatPercent(pct, locale, digits);
+  };
   const balance = totals.balance;
 
   // `service` is stored lowercase ("boarding"); `serviceType` is the named
   // package when there is one. Either way it is the thing being charged for,
   // so it reads as a line on a bill rather than as a column value.
-  const raw = booking.serviceType || booking.service;
-  const serviceLabel = raw.charAt(0).toUpperCase() + raw.slice(1);
+  // A named package is the facility's own words; a bare service id is named
+  // in the viewer's language (use-service-name.ts).
+  const serviceLabel = booking.serviceType || serviceName(booking.service);
 
   return (
     <Card>
-      <CardHeader className="bg-muted/30 pb-3">
-        <CardTitle className="text-xs font-semibold tracking-wider uppercase">
-          Payment Summary
+      <CardHeader className="pb-3">
+        <CardTitle className="text-ink-tertiary text-xs font-bold tracking-[.06em] uppercase">
+          {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4">
         <div className="divide-y">
           <div className="pb-1">
             <Line
+              locale={locale}
               label={serviceLabel}
-              hint="Service"
+              hint={t("serviceHint")}
               value={booking.basePrice}
             />
           </div>
@@ -196,13 +219,17 @@ export function BookingPaymentBreakdown({
             <div className="py-1">
               {items.map((item) => (
                 <Line
+                  locale={locale}
                   key={item.id}
                   label={item.name}
                   hint={
                     item.quantity > 1
-                      ? `${item.quantity} × $${item.unitPrice.toFixed(2)}`
+                      ? fill("quantityTimes", {
+                          n: item.quantity,
+                          price: formatMoney(item.unitPrice, locale),
+                        })
                       : item.kind === "fee"
-                        ? "Fee"
+                        ? t("feeHint")
                         : undefined
                   }
                   value={item.price}
@@ -214,8 +241,9 @@ export function BookingPaymentBreakdown({
           {incidentCareTotal > 0 && (
             <div className="py-1">
               <Line
-                label="Incident care"
-                hint="From an incident report"
+                locale={locale}
+                label={t("incidentCare")}
+                hint={t("incidentCareHint")}
                 value={incidentCareTotal}
               />
             </div>
@@ -224,21 +252,22 @@ export function BookingPaymentBreakdown({
           {discount > 0 && (
             <div className="py-1">
               <Line
-                label="Discount"
+                locale={locale}
+                label={t("discount")}
                 hint={booking.discountReason}
                 value={-discount}
-                tone="text-emerald-600"
+                tone="text-success"
               />
             </div>
           )}
 
           <div className="py-1">
-            <Line label="Subtotal" value={subtotal} bold />
+            <Line locale={locale} label={t("subtotal")} value={subtotal} bold />
           </div>
 
           {tip > 0 && (
             <div className="py-1">
-              <Line label="Tip" value={tip} />
+              <Line locale={locale} label={t("tip")} value={tip} />
             </div>
           )}
 
@@ -246,9 +275,10 @@ export function BookingPaymentBreakdown({
             <div className="py-1">
               {tax.lines.map((line) => (
                 <Line
+                  locale={locale}
                   key={line.name}
                   label={line.name}
-                  hint={`${Number((line.rate * 100).toFixed(4))}%`}
+                  hint={taxRate(line.rate)}
                   value={line.amountCents / 100}
                 />
               ))}
@@ -256,7 +286,12 @@ export function BookingPaymentBreakdown({
           )}
 
           <div className="py-1">
-            <Line label="Total" value={totals.total} bold />
+            <Line
+              locale={locale}
+              label={t("total")}
+              value={totals.total}
+              bold
+            />
           </div>
 
           {/* GROSS, REFUNDED, NET — never the net on its own. `paid` is the
@@ -266,15 +301,21 @@ export function BookingPaymentBreakdown({
               it always did. */}
           {money.refunded > 0 ? (
             <div className="space-y-0.5 py-1">
-              <Line label="Paid" value={-money.gross} tone="text-emerald-600" />
               <Line
+                locale={locale}
+                label={t("paid")}
+                value={-money.gross}
+                tone="text-success"
+              />
+              <Line
+                locale={locale}
                 label={
                   money.refunds.length > 1
-                    ? `Refunded (${money.refunds.length})`
-                    : "Refunded"
+                    ? fill("refundedMany", { n: money.refunds.length })
+                    : t("refunded")
                 }
                 value={money.refunded}
-                tone="text-rose-600"
+                tone="text-destructive"
               />
               {/* The reason, where there is one. It is the whole point of
                   asking for it — a refund a year old that cannot say why is
@@ -284,31 +325,38 @@ export function BookingPaymentBreakdown({
                 .map((refund) => (
                   <p
                     key={refund.id}
-                    className="text-muted-foreground pl-1 text-xs italic"
+                    className="text-ink-secondary pl-1 text-xs"
                   >
                     {refund.note}
                   </p>
                 ))}
               <Line
-                label="Net paid"
+                locale={locale}
+                label={t("netPaid")}
                 value={-money.net}
-                tone="text-emerald-700"
+                tone="text-success"
               />
             </div>
           ) : (
             paid > 0 && (
               <div className="py-1">
-                <Line label="Paid" value={-paid} tone="text-emerald-600" />
+                <Line
+                  locale={locale}
+                  label={t("paid")}
+                  value={-paid}
+                  tone="text-success"
+                />
               </div>
             )
           )}
 
           <div className="pt-1">
             <Line
-              label={balance > 0 ? "Balance due" : "Settled"}
+              locale={locale}
+              label={balance > 0 ? t("balanceDue") : t("settled")}
               value={balance}
               bold
-              tone={balance > 0 ? "text-amber-700" : "text-emerald-600"}
+              tone={balance > 0 ? "text-warning" : "text-success"}
             />
           </div>
         </div>
@@ -329,14 +377,13 @@ export function AcceptPaymentButton({
   busy?: boolean;
   amount: number;
 }) {
+  const { t, fill, locale } = useStaffText("paymentBreakdown");
   return (
-    <Button className="w-full gap-2" onClick={onClick} disabled={busy}>
-      {busy ? (
-        <Loader2 className="size-4 animate-spin" />
-      ) : (
-        <CreditCard className="size-4" />
-      )}
-      Accept Payment{amount > 0 ? ` — $${amount.toFixed(2)}` : ""}
+    <Button className="w-full" onClick={onClick} loading={busy}>
+      <CreditCard className="size-4" />
+      {amount > 0
+        ? fill("acceptAmount", { amount: formatMoney(amount, locale) })
+        : t("accept")}
     </Button>
   );
 }

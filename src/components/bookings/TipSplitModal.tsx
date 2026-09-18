@@ -22,6 +22,8 @@ import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateTipSplit } from "@/lib/invoice-lifecycle";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
 // Splitting a tip between the people who earned it.
@@ -86,11 +88,11 @@ interface TipSplitModalProps {
 
 type SplitMethod = "by_service" | "equal" | "custom_percent" | "custom_amount";
 
-const METHODS: { value: SplitMethod; label: string }[] = [
-  { value: "by_service", label: "By service price" },
-  { value: "equal", label: "Split equally" },
-  { value: "custom_percent", label: "Custom (%)" },
-  { value: "custom_amount", label: "Custom ($)" },
+const METHODS: { value: SplitMethod; key: string }[] = [
+  { value: "by_service", key: "byService" },
+  { value: "equal", key: "equal" },
+  { value: "custom_percent", key: "customPercent" },
+  { value: "custom_amount", key: "customAmount" },
 ];
 
 const UNASSIGNED = "__unassigned__";
@@ -108,6 +110,8 @@ export function TipSplitModal({
   const [customValues, setCustomValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t, locale } = useStaffText("tipSplit");
+  const money = (value: number) => formatMoney(value, locale);
 
   /**
    * Which real person each invoice line belongs to.
@@ -131,8 +135,8 @@ export function TipSplitModal({
 
   const nameFor = useMemo(() => {
     const map = new Map(staffOptions.map((s) => [s.id, s.name]));
-    return (id: string) => map.get(id) ?? "Unassigned";
-  }, [staffOptions]);
+    return (id: string) => map.get(id) ?? t("unassigned");
+  }, [staffOptions, t]);
 
   const hasMultiStaff = staffServices.some((s) => s.multiStaff);
 
@@ -190,61 +194,58 @@ export function TipSplitModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Split Tips</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Total tip */}
-          <div className="bg-muted/30 rounded-lg border p-3 text-center">
-            <p className="text-muted-foreground text-xs">Total Tip</p>
-            <p className="text-2xl font-bold tabular-nums">
-              ${totalTip.toFixed(2)}
+          <div className="border-line rounded-2xl border p-3 text-center">
+            <p className="text-ink-secondary text-xs">{t("total")}</p>
+            <p className="text-body-ink text-2xl font-bold tabular-nums">
+              {money(totalTip)}
             </p>
-            <p className="text-muted-foreground mt-0.5 text-[11px]">
-              Collected on this booking
+            <p className="text-ink-tertiary mt-0.5 text-xs">
+              {t("collectedHere")}
             </p>
           </div>
 
           {totalTip <= 0 && (
-            <div className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-xs">
-              No tip has been collected on this booking, so there is nothing to
-              split.
-            </div>
+            <p className="border-line text-ink-secondary rounded-2xl border px-3 py-2 text-sm">
+              {t("nothingToSplit")}
+            </p>
           )}
 
           {/* Multi-staff warning */}
           {hasMultiStaff && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <div className="border-warning text-warning flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm">
               <Users className="size-4 shrink-0" />
-              <p>
-                Some services have multiple staff assigned. Staff reassignment
-                is disabled in multi-staff mode — edit individual assignments on
-                the invoice first.
-              </p>
+              <p>{t("multiStaff")}</p>
             </div>
           )}
 
           {/* Service assignments — review/edit staff per item */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-              Staff Assignments
+            <p className="text-ink-tertiary mb-2 text-xs font-bold tracking-[.06em] uppercase">
+              {t("assignments")}
             </p>
             <div className="space-y-1.5">
               {staffServices.map((s) => (
                 <div
                   key={s.serviceName}
-                  className="flex items-center gap-3 rounded-md border px-3 py-2"
+                  className="border-line flex flex-wrap items-center gap-3 rounded-2xl border px-3 py-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{s.serviceName}</p>
-                    <p className="text-muted-foreground text-xs tabular-nums">
-                      ${s.serviceValue.toFixed(2)}
+                    <p className="text-body-ink text-sm font-semibold">
+                      {s.serviceName}
+                    </p>
+                    <p className="text-ink-tertiary text-xs tabular-nums">
+                      {money(s.serviceValue)}
                     </p>
                   </div>
                   {s.multiStaff ? (
-                    <Badge variant="outline" className="text-[10px]">
-                      <Users className="mr-1 size-2.5" />
-                      Multi-staff
+                    <Badge variant="outline">
+                      <Users className="size-4" />
+                      {t("multiStaffBadge")}
                     </Badge>
                   ) : (
                     <Select
@@ -256,14 +257,19 @@ export function TipSplitModal({
                         }))
                       }
                     >
-                      <SelectTrigger className="h-7 w-36 text-xs">
+                      <SelectTrigger
+                        className="w-44 text-sm"
+                        aria-label={t("assignments")}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {/* A sentinel, never "" — a Radix SelectItem with an
                             empty value throws, and the resulting blank modal
                             looks like a screen that does nothing. */}
-                        <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                        <SelectItem value={UNASSIGNED}>
+                          {t("unassigned")}
+                        </SelectItem>
                         {staffOptions.map((option) => (
                           <SelectItem key={option.id} value={option.id}>
                             {option.name}
@@ -279,62 +285,64 @@ export function TipSplitModal({
 
           <Separator />
 
-          {/* Split method */}
-          <div className="mb-1 flex items-center justify-between">
-            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-              Split Method
-            </p>
-            <p className="text-muted-foreground text-[10px]">
-              Default from Settings → Staff → Payroll
-            </p>
-          </div>
+          {/* Split method. It said "Default from Settings → Staff → Payroll";
+              no default is read from there. */}
+          <p className="text-ink-tertiary mb-1 text-xs font-bold tracking-[.06em] uppercase">
+            {t("method")}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {METHODS.map((m) => (
               <button
                 key={m.value}
+                type="button"
+                aria-pressed={method === m.value}
                 onClick={() => {
                   setMethod(m.value);
                   setCustomValues({});
                 }}
                 className={cn(
-                  "rounded-lg border px-3 py-2 text-xs font-medium transition-all",
+                  // Chosen is a 2px ring, never a tint (§6 rules 1 and 2).
+                  "min-h-10 rounded-full border px-3 text-sm font-semibold",
                   method === m.value
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "hover:bg-muted/50",
+                    ? "border-primary text-primary shadow-[inset_0_0_0_2px_var(--primary)]"
+                    : "text-body-ink",
                 )}
               >
-                {m.label}
+                {t(m.key)}
               </button>
             ))}
           </div>
 
           {/* Tip breakdown */}
           <div className="space-y-2">
-            <div className="text-muted-foreground grid grid-cols-4 gap-2 text-[10px] font-semibold tracking-wider uppercase">
-              <span>Staff</span>
-              <span className="text-right">Service $</span>
-              <span className="text-right">Tip</span>
+            <div className="text-ink-tertiary grid grid-cols-4 gap-2 text-xs font-bold tracking-[.06em] uppercase">
+              <span>{t("colStaff")}</span>
+              <span className="text-right">{t("colService")}</span>
+              <span className="text-right">{t("colTip")}</span>
               <span className="text-right">%</span>
             </div>
             {entries.map((entry) => (
               <div
                 key={entry.staffName}
-                className="grid grid-cols-4 items-center gap-2 rounded-md px-1 py-1"
+                className="grid grid-cols-4 items-center gap-2 px-1 py-1"
               >
                 <span
                   className={cn(
-                    "truncate text-sm font-medium",
-                    entry.staffName === UNASSIGNED && "text-destructive",
+                    "truncate text-sm font-semibold",
+                    entry.staffName === UNASSIGNED
+                      ? "text-destructive"
+                      : "text-body-ink",
                   )}
                 >
                   {nameFor(entry.staffName)}
                 </span>
-                <span className="text-muted-foreground text-right text-sm tabular-nums">
-                  ${entry.serviceValue.toFixed(2)}
+                <span className="text-ink-secondary text-right text-sm tabular-nums">
+                  {money(entry.serviceValue)}
                 </span>
                 {method === "custom_amount" || method === "custom_percent" ? (
                   <Input
                     type="number"
+                    aria-label={t("colTip")}
                     value={customValues[entry.staffName] ?? ""}
                     onChange={(e) =>
                       setCustomValues((prev) => ({
@@ -342,24 +350,24 @@ export function TipSplitModal({
                         [entry.staffName]: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="h-7 text-right text-xs tabular-nums"
+                    className="text-right text-sm tabular-nums"
                     min={0}
                     step={0.01}
                     placeholder={method === "custom_percent" ? "%" : "$"}
                   />
                 ) : (
-                  <span className="text-right text-sm font-semibold tabular-nums">
-                    ${entry.tipAmount.toFixed(2)}
+                  <span className="text-body-ink text-right text-sm font-semibold tabular-nums">
+                    {money(entry.tipAmount)}
                   </span>
                 )}
-                <span className="text-muted-foreground text-right text-xs tabular-nums">
+                <span className="text-ink-secondary text-right text-xs tabular-nums">
                   {entry.percentage}%
                 </span>
               </div>
             ))}
             <Separator />
             <div className="grid grid-cols-4 gap-2 text-sm font-semibold">
-              <span>Total</span>
+              <span>{t("colTotal")}</span>
               <span />
               <span
                 className={cn(
@@ -367,46 +375,49 @@ export function TipSplitModal({
                   !isBalanced && "text-destructive",
                 )}
               >
-                ${totalAllocated.toFixed(2)}
+                {money(totalAllocated)}
               </span>
               <span className="text-right tabular-nums">100%</span>
             </div>
             {!isBalanced && (
-              <div className="text-destructive flex items-center gap-1.5 text-xs">
-                <AlertTriangle className="size-3" />
-                Total doesn&apos;t match tip amount — adjust values
-              </div>
+              <p className="text-destructive flex items-center gap-1.5 text-sm">
+                <AlertTriangle className="size-4 shrink-0" />
+                {t("notBalanced")}
+              </p>
             )}
             {anyUnassigned && (
-              <div className="text-destructive flex items-center gap-1.5 text-xs">
-                <AlertTriangle className="size-3" />
-                Every line needs a staff member before the split can be saved
-              </div>
+              <p className="text-destructive flex items-center gap-1.5 text-sm">
+                <AlertTriangle className="size-4 shrink-0" />
+                {t("needsStaff")}
+              </p>
             )}
             {error && (
-              <div className="text-destructive flex items-start gap-1.5 text-xs">
-                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+              <p
+                role="alert"
+                className="text-destructive flex items-start gap-1.5 text-sm"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 {error}
-              </div>
+              </p>
             )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("keep")}
           </Button>
           <Button
             onClick={handleSave}
+            loading={saving}
             disabled={
               !isBalanced ||
               anyUnassigned ||
-              saving ||
               totalTip <= 0 ||
               merged.length === 0
             }
           >
-            {saving ? "Saving…" : "Save Tip Split"}
+            {t("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

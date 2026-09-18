@@ -12,6 +12,7 @@ import { NotesList } from "@/components/shared/NotesList";
 import { useNotesForEntity } from "@/hooks/use-tags-notes";
 import type { NoteCategory } from "@/data/tags-notes";
 import { cn } from "@/lib/utils";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface NotesButtonProps {
   entityType: NoteCategory;
@@ -30,6 +31,7 @@ export function NotesButton({
   audience = "staff",
 }: NotesButtonProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useStaffText("recordButtons");
   const { noteCount, pinnedNotes } = useNotesForEntity(
     entityType,
     entityId,
@@ -44,25 +46,24 @@ export function NotesButton({
           variant="outline"
           size="sm"
           className={cn(
-            "h-8 gap-1.5 rounded-lg text-xs",
-            hasPinned &&
-              "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
+            "gap-1.5 text-sm",
+            hasPinned && "border-warning text-warning",
             className,
           )}
         >
           {hasPinned ? (
-            <Pin className="size-3.5" />
+            <Pin className="size-4" />
           ) : (
-            <MessageSquare className="size-3.5" />
+            <MessageSquare className="size-4" />
           )}
-          Notes
+          {t("notes")}
           {noteCount > 0 && (
             <span
               className={cn(
-                "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                "flex size-5 items-center justify-center rounded-full text-xs font-bold tabular-nums",
                 hasPinned
-                  ? "bg-amber-200 text-amber-800"
-                  : "bg-muted text-muted-foreground",
+                  ? "bg-wash-warning text-warning"
+                  : "bg-muted text-ink-secondary",
               )}
             >
               {noteCount}

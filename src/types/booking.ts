@@ -672,6 +672,11 @@ export const medicationEntrySchema = z.object({
   dosage: z.string(),
   method: z.string(),
   frequency: z.string(),
+  /** The booking record's own ids, so a screen can name them in its language. */
+  formId: medFormEnum.optional(),
+  frequencyId: medFrequencyEnum.optional(),
+  /** What the owner said it is for, apart from the instructions. */
+  purpose: z.string().optional(),
   times: z.array(z.string()),
   instructions: z.string().optional(),
   isCritical: z.boolean(),

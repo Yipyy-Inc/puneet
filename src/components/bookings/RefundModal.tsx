@@ -18,11 +18,13 @@ import {
   Wallet,
   Check,
   AlertTriangle,
-  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
+import { escapeHtml } from "@/lib/email/shell";
+import { formatDateLong, formatMoney, formatTime } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface RefundModalProps {
   open: boolean;
@@ -45,6 +47,27 @@ interface RefundModalProps {
 type RefundType = "full" | "partial" | "by_item";
 type RefundMethod = "original" | "store_credit" | "cash";
 
+const TYPE_KEYS: Record<RefundType, string> = {
+  full: "typeFull",
+  partial: "typePartial",
+  by_item: "typeByItem",
+};
+
+const METHODS = [
+  { value: "original" as const, key: "toCard", icon: CreditCard },
+  { value: "store_credit" as const, key: "toCredit", icon: Wallet },
+  { value: "cash" as const, key: "toCash", icon: Banknote },
+];
+
+// The refund receipt’s print styles: ink only, since on paper every colour
+// drops out (§6 rule 10).
+const RECEIPT_CSS =
+  "body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}h1{font-size:18px;margin:0}h2{font-size:12px;color:#444;margin:4px 0 20px;font-weight:400}.row{display:flex;justify-content:space-between;gap:16px;padding:5px 0;font-size:13px;border-bottom:1px solid #ccc}.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}.section{margin-top:14px;font-size:10px;color:#444;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}.stamp{border:1px solid #111;padding:6px 14px;text-align:center;margin-top:14px;font-weight:700;font-size:13px}.note{border:1px solid #ccc;padding:10px;margin-top:14px;font-size:11px;color:#444}.footer{margin-top:24px;text-align:center;font-size:10px;color:#444}";
+
+// Chosen is a 2px ring, never a tint (§6 rules 1 and 2).
+const CHOSEN =
+  "border-primary text-primary shadow-[inset_0_0_0_2px_var(--primary)]";
+
 export function RefundModal({
   open,
   onOpenChange,
@@ -54,6 +77,8 @@ export function RefundModal({
 }: RefundModalProps) {
   // The facility's OWN header, not the fixture's — see use-receipt-facility.
   const receiptFacility = useReceiptFacility();
+  const { t, fill, locale } = useStaffText("refund");
+  const money = (value: number) => formatMoney(value, locale);
   const [step, setStep] = useState<"select" | "confirm">("select");
   const [refundType, setRefundType] = useState<RefundType>("full");
   const [partialAmount, setPartialAmount] = useState("");
@@ -71,6 +96,10 @@ export function RefundModal({
         : items
             .filter((_, i) => selectedItems.has(i))
             .reduce((s, item) => s + item.price, 0);
+
+  const methodLabel = t(
+    METHODS.find((m) => m.value === method)?.key ?? "toCard",
+  );
 
   const toggleItem = (idx: number) => {
     setSelectedItems((prev) => {
@@ -90,7 +119,9 @@ export function RefundModal({
   // the evidence.
   //
   // Now the promise is awaited. Failure keeps the dialog open, says why, and
-  // prints nothing.
+  // prints nothing. The receipt is in the viewer's language, with the reason
+  // they typed escaped rather than written into the page as markup, and in ink
+  // only: on paper every colour drops out (§6 rule 10).
   const handleConfirm = async () => {
     if (step === "select") {
       setStep("confirm");
@@ -107,57 +138,39 @@ export function RefundModal({
         type: refundType,
       });
     } catch (error) {
-      setProblem(
-        error instanceof Error
-          ? error.message
-          : "The refund did not go through.",
-      );
+      setProblem(error instanceof Error ? error.message : t("notRefunded"));
       return;
     } finally {
       setBusy(false);
     }
 
-    // Receipt, now that there is something to give a receipt for.
     const w = window.open("", "_blank", "width=500,height=600");
     if (w) {
-      const methodLabel =
-        method === "original"
-          ? "Original Payment Method"
-          : method === "store_credit"
-            ? "Store Credit"
-            : "Cash";
-      w.document.write(`<!DOCTYPE html><html><head><title>Refund Receipt</title>
-<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
-h1{font-size:18px;margin:0;color:#dc2626}h2{font-size:12px;color:#666;margin:4px 0 20px}
-.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
-.row.total{border-top:2px solid #dc2626;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px;color:#dc2626}
-.row.sub{color:#666}.section{margin-top:14px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
-.badge{background:#fef2f2;color:#dc2626;padding:6px 14px;border-radius:8px;text-align:center;margin-top:14px;font-weight:600;font-size:13px}
-.note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-top:14px;font-size:11px;color:#64748b}
-</style></head><body>
+      const now = new Date();
+      const row = (label: string, value: string) =>
+        `<div class="row"><span>${escapeHtml(label)}</span><span>${escapeHtml(value)}</span></div>`;
+      w.document
+        .write(`<!DOCTYPE html><html lang="${locale}"><head><title>${escapeHtml(t("receiptTitle"))}</title>
+<style>${RECEIPT_CSS}</style></head><body>
 ${invoiceHeaderHtml(receiptFacility)}
-<h1>Refund Receipt</h1>
-<h2>Processed ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
-<div class="section">Refund Details</div>
-<div class="row"><span>Type</span><span>${refundType === "by_item" ? "By Item" : refundType === "partial" ? "Partial" : "Full"}</span></div>
-<div class="row"><span>Method</span><span>${methodLabel}</span></div>
-${reason ? `<div class="row"><span>Reason</span><span>${reason}</span></div>` : ""}
+<h1>${escapeHtml(t("receiptTitle"))}</h1>
+<h2>${escapeHtml(fill("receiptDate", { date: formatDateLong(now, locale) }))}</h2>
+<div class="section">${escapeHtml(t("receiptDetails"))}</div>
+${row(t("receiptType"), t(TYPE_KEYS[refundType]))}
+${row(t("receiptMethod"), methodLabel)}
+${reason ? row(t("receiptReason"), reason) : ""}
 ${
   refundType === "by_item"
-    ? `<div class="section">Refunded Items</div>${items
+    ? `<div class="section">${escapeHtml(t("receiptItems"))}</div>${items
         .filter((_, i) => selectedItems.has(i))
-        .map(
-          (item) =>
-            `<div class="row"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`,
-        )
+        .map((item) => row(item.name, money(item.price)))
         .join("")}`
     : ""
 }
-<div class="row total"><span>Refund Amount</span><span>$${refundAmount.toFixed(2)}</span></div>
-<div class="badge">REFUND PROCESSED</div>
-<div class="note">The original invoice remains unchanged for audit purposes. This refund receipt is linked to the original transaction.</div>
-<div class="footer">Refund processed by staff · ${new Date().toLocaleTimeString()}</div>
+<div class="row total"><span>${escapeHtml(t("receiptAmount"))}</span><span>${escapeHtml(money(refundAmount))}</span></div>
+<div class="stamp">${escapeHtml(t("receiptStamp"))}</div>
+<div class="note">${escapeHtml(t("receiptNote"))}</div>
+<div class="footer">${escapeHtml(fill("receiptFooter", { time: formatTime(now, locale) }))}</div>
 </body></html>`);
       w.document.close();
     }
@@ -179,26 +192,30 @@ ${
     }
   };
 
-  const METHODS = [
-    {
-      value: "original" as const,
-      label: "Original Method",
-      desc: "Refund to the card/method used",
-      icon: CreditCard,
-    },
-    {
-      value: "store_credit" as const,
-      label: "Store Credit",
-      desc: "Add to client's credit balance",
-      icon: Wallet,
-    },
-    {
-      value: "cash" as const,
-      label: "Cash",
-      desc: "Hand cash refund to client",
-      icon: Banknote,
-    },
-  ];
+  const typeOption = (
+    type: RefundType,
+    Icon: typeof RotateCcw,
+    title: string,
+    help: string,
+  ) => (
+    <button
+      type="button"
+      aria-pressed={refundType === type}
+      onClick={() => setRefundType(type)}
+      className={cn(
+        "border-line flex w-full items-center gap-3 rounded-2xl border p-4 text-left",
+        refundType === type && CHOSEN,
+      )}
+    >
+      <Icon className="size-5 shrink-0" />
+      <span className="min-w-0">
+        <span className="text-body-ink block text-sm font-semibold">
+          {title}
+        </span>
+        <span className="text-ink-secondary block text-xs">{help}</span>
+      </span>
+    </button>
+  );
 
   return (
     <Dialog
@@ -216,119 +233,57 @@ ${
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw className="size-5" />
-            Issue Refund
+            {t("title")}
           </DialogTitle>
         </DialogHeader>
 
         {step === "select" ? (
-          <div className="animate-in fade-in space-y-5 py-2 duration-200">
+          <div className="space-y-5 py-2">
             {/* Refund type */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-                Refund Type
+              <p className="text-ink-tertiary text-xs font-bold tracking-[.06em] uppercase">
+                {t("typeHeading")}
               </p>
               <div className="space-y-1.5">
-                <button
-                  onClick={() => setRefundType("full")}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                    refundType === "full"
-                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
-                      : "hover:border-border hover:bg-muted/30",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full",
-                      refundType === "full"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <RotateCcw className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Full Refund</p>
-                    <p className="text-muted-foreground text-xs">
-                      Refund entire payment of{" "}
-                      <span className="font-medium tabular-nums">
-                        ${amountPaid.toFixed(2)}
-                      </span>
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setRefundType("partial")}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                    refundType === "partial"
-                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
-                      : "hover:border-border hover:bg-muted/30",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full",
-                      refundType === "partial"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <Banknote className="size-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold">Partial Refund</p>
-                    <p className="text-muted-foreground text-xs">
-                      Specify a custom refund amount
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setRefundType("by_item")}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                    refundType === "by_item"
-                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
-                      : "hover:border-border hover:bg-muted/30",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full",
-                      refundType === "by_item"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <Check className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Refund by Item</p>
-                    <p className="text-muted-foreground text-xs">
-                      Select specific items to refund
-                    </p>
-                  </div>
-                </button>
+                {typeOption(
+                  "full",
+                  RotateCcw,
+                  t("fullTitle"),
+                  fill("fullHelp", { amount: money(amountPaid) }),
+                )}
+                {typeOption(
+                  "partial",
+                  Banknote,
+                  t("partialTitle"),
+                  t("partialHelp"),
+                )}
+                {typeOption(
+                  "by_item",
+                  Check,
+                  t("byItemTitle"),
+                  t("byItemHelp"),
+                )}
               </div>
             </div>
 
             {/* Partial amount input */}
             {refundType === "partial" && (
-              <div className="animate-in fade-in duration-150">
-                <p className="text-muted-foreground mb-1.5 text-xs">
-                  Refund Amount (max ${amountPaid.toFixed(2)})
-                </p>
+              <div>
+                <label
+                  htmlFor="refund-amount"
+                  className="text-ink-secondary mb-1.5 block text-xs"
+                >
+                  {fill("amountLabel", { max: money(amountPaid) })}
+                </label>
                 <Input
+                  id="refund-amount"
                   type="number"
                   value={partialAmount}
                   onChange={(e) => setPartialAmount(e.target.value)}
-                  placeholder="0.00"
                   min={0}
                   max={amountPaid}
                   step={0.01}
-                  className="h-12 text-center text-xl font-bold tabular-nums"
+                  className="text-center text-xl font-bold tabular-nums"
                   autoFocus
                 />
               </div>
@@ -336,36 +291,30 @@ ${
 
             {/* Item selection */}
             {refundType === "by_item" && (
-              <div className="animate-in fade-in space-y-1.5 duration-150">
-                <p className="text-muted-foreground text-xs">
-                  Select items to refund
-                </p>
+              <div className="space-y-1.5">
+                <p className="text-ink-secondary text-xs">{t("chooseItems")}</p>
                 {items.map((item, idx) => (
                   <button
                     key={idx}
+                    type="button"
+                    aria-pressed={selectedItems.has(idx)}
                     onClick={() => toggleItem(idx)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-all",
-                      selectedItems.has(idx)
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/30",
+                      "border-line flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border px-4 text-left",
+                      selectedItems.has(idx) && CHOSEN,
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Check
                         className={cn(
-                          "flex size-5 items-center justify-center rounded-full border-2 transition-all",
-                          selectedItems.has(idx)
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border",
+                          "size-4 shrink-0",
+                          !selectedItems.has(idx) && "invisible",
                         )}
-                      >
-                        {selectedItems.has(idx) && <Check className="size-3" />}
-                      </div>
-                      <span className="text-sm">{item.name}</span>
-                    </div>
-                    <span className="text-sm font-medium tabular-nums">
-                      ${item.price.toFixed(2)}
+                      />
+                      <span className="text-body-ink text-sm">{item.name}</span>
+                    </span>
+                    <span className="text-body-ink text-sm font-semibold tabular-nums">
+                      {money(item.price)}
                     </span>
                   </button>
                 ))}
@@ -374,8 +323,8 @@ ${
 
             {/* Refund method */}
             <div>
-              <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wider uppercase">
-                Refund To
+              <p className="text-ink-tertiary mb-2 text-xs font-bold tracking-[.06em] uppercase">
+                {t("toHeading")}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {METHODS.map((m) => {
@@ -383,16 +332,18 @@ ${
                   return (
                     <button
                       key={m.value}
+                      type="button"
+                      aria-pressed={method === m.value}
                       onClick={() => setMethod(m.value)}
                       className={cn(
-                        "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all",
-                        method === m.value
-                          ? "border-primary bg-primary/5 text-primary ring-primary/20 ring-1"
-                          : "hover:bg-muted/30",
+                        "border-line text-body-ink flex min-h-12 flex-col items-center justify-center gap-1.5 rounded-2xl border p-3",
+                        method === m.value && CHOSEN,
                       )}
                     >
                       <Icon className="size-5" />
-                      <span className="text-[11px] font-medium">{m.label}</span>
+                      <span className="text-center text-xs font-semibold">
+                        {t(m.key)}
+                      </span>
                     </button>
                   );
                 })}
@@ -401,71 +352,59 @@ ${
 
             {/* Reason */}
             <div>
-              <p className="text-muted-foreground mb-1.5 text-xs">
-                Reason for refund
-              </p>
+              <label
+                htmlFor="refund-reason"
+                className="text-ink-secondary mb-1.5 block text-xs"
+              >
+                {t("reasonLabel")}
+              </label>
               <Input
+                id="refund-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g., Service not rendered, client complaint..."
+                placeholder={t("reasonPlaceholder")}
                 className="text-sm"
               />
             </div>
           </div>
         ) : (
           /* Confirmation step */
-          <div className="animate-in fade-in slide-in-from-right-2 space-y-5 py-2 duration-200">
-            {/* Warning */}
-            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600" />
+          <div className="space-y-5 py-2">
+            <div className="border-warning flex items-start gap-3 rounded-2xl border p-4">
+              <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-800">
-                  Confirm Refund
+                <p className="text-body-ink text-sm font-semibold">
+                  {t("confirmTitle")}
                 </p>
-                <p className="mt-0.5 text-xs text-amber-700">
-                  This action cannot be undone. The refund will be processed
-                  immediately. The original invoice stays unchanged for audit
-                  purposes — a separate refund receipt will be generated.
+                <p className="text-ink-secondary mt-0.5 text-sm">
+                  {t("confirmBody")}
                 </p>
               </div>
             </div>
 
-            {/* Summary */}
-            <div className="bg-muted/20 rounded-xl border p-4">
-              <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Refund Type</span>
-                  <span className="font-medium capitalize">
-                    {refundType === "by_item"
-                      ? "By Item"
-                      : refundType === "partial"
-                        ? "Partial"
-                        : "Full"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Refund Method</span>
-                  <span className="font-medium">
-                    {METHODS.find((m) => m.value === method)?.label}
-                  </span>
-                </div>
-                {reason && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Reason</span>
-                    <span className="max-w-[200px] text-right text-sm italic">
-                      {reason}
-                    </span>
-                  </div>
-                )}
-                <Separator />
-                <div className="flex items-baseline justify-between">
-                  <span className="font-medium">Refund Amount</span>
-                  <span className="text-2xl font-bold text-red-600 tabular-nums">
-                    ${refundAmount.toFixed(2)}
-                  </span>
-                </div>
+            <dl className="border-line space-y-2.5 rounded-2xl border p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-secondary">{t("receiptType")}</dt>
+                <dd className="font-semibold">{t(TYPE_KEYS[refundType])}</dd>
               </div>
-            </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-secondary">{t("receiptMethod")}</dt>
+                <dd className="font-semibold">{methodLabel}</dd>
+              </div>
+              {reason && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-secondary">{t("receiptReason")}</dt>
+                  <dd className="max-w-[200px] text-right">{reason}</dd>
+                </div>
+              )}
+              <Separator />
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="font-semibold">{t("receiptAmount")}</dt>
+                <dd className="text-body-ink text-2xl font-bold tabular-nums">
+                  {money(refundAmount)}
+                </dd>
+              </div>
+            </dl>
 
             {problem && (
               <p className="text-destructive text-sm" role="alert">
@@ -477,26 +416,18 @@ ${
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleBack} disabled={busy}>
-            {step === "confirm" ? "Go Back" : "Cancel"}
+            {step === "confirm" ? t("back") : t("keep")}
           </Button>
           <Button
             onClick={() => void handleConfirm()}
-            disabled={busy || refundAmount <= 0 || refundAmount > amountPaid}
-            className={cn(
-              "gap-1.5",
-              step === "confirm" && "bg-red-600 text-white hover:bg-red-700",
-            )}
+            loading={busy}
+            disabled={refundAmount <= 0 || refundAmount > amountPaid}
+            variant={step === "confirm" ? "destructive" : "default"}
           >
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RotateCcw className="size-4" />
-            )}
-            {busy
-              ? "Refunding…"
-              : step === "confirm"
-                ? `Confirm Refund $${refundAmount.toFixed(2)}`
-                : `Continue — $${refundAmount.toFixed(2)}`}
+            <RotateCcw className="size-4" />
+            {fill(step === "confirm" ? "confirmAction" : "continueAction", {
+              amount: money(refundAmount),
+            })}
           </Button>
         </DialogFooter>
       </DialogContent>

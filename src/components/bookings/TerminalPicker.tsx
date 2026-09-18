@@ -5,6 +5,7 @@ import { Smartphone, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { terminalName, type TerminalOption } from "@/lib/api/terminals";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
 // Which box is going to light up.
@@ -44,39 +45,35 @@ export function TerminalPicker({
   problem?: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useStaffText("terminalPicker");
 
   if (isPending) {
-    return (
-      <p className="text-muted-foreground text-xs">Finding your terminals…</p>
-    );
+    return <p className="text-ink-secondary text-sm">{t("finding")}</p>;
   }
 
   if (terminals.length === 0) {
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
-        <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-        <span>
-          No card terminal is connected to this facility, so this payment cannot
-          be taken on one.
-        </span>
+      <div className="border-warning text-body-ink flex items-start gap-2 rounded-2xl border p-3 text-sm">
+        <TriangleAlert className="text-warning mt-0.5 size-4 shrink-0" />
+        <span>{t("none")}</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
+      <div className="border-line flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2">
         <span className="flex items-center gap-2 text-sm">
-          <Smartphone className="text-muted-foreground size-4" />
-          {chosen ? terminalName(chosen) : "No terminal"}
+          <Smartphone className="text-ink-tertiary size-4" />
+          {chosen ? terminalName(chosen) : t("noTerminal")}
         </span>
         {terminals.length > 1 && (
           <button
             type="button"
             onClick={() => setOpen((wasOpen) => !wasOpen)}
-            className="text-primary text-xs font-medium hover:underline"
+            className="text-primary min-h-10 text-sm font-semibold hover:underline"
           >
-            {open ? "Keep this one" : "Use a different terminal"}
+            {open ? t("keepThis") : t("useAnother")}
           </button>
         )}
       </div>
@@ -92,26 +89,25 @@ export function TerminalPicker({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-all",
-                terminal.serial === chosen?.serial
-                  ? "border-primary bg-primary/5"
-                  : "hover:bg-muted/40",
+                // Chosen is a 2px ring, never a tint (§6 rules 1 and 2).
+                "border-line flex min-h-10 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm",
+                terminal.serial === chosen?.serial &&
+                  "border-primary shadow-[inset_0_0_0_2px_var(--primary)]",
               )}
+              aria-pressed={terminal.serial === chosen?.serial}
             >
               <span>{terminalName(terminal)}</span>
-              <span className="text-muted-foreground text-[10px]">
-                {terminal.isDefault ? "default" : terminal.model}
+              <span className="text-ink-tertiary text-xs">
+                {terminal.isDefault ? t("default") : terminal.model}
               </span>
             </button>
           ))}
-          <p className="text-muted-foreground text-[11px]/relaxed">
-            This till will keep using whichever you pick.
-          </p>
+          <p className="text-ink-tertiary text-xs/relaxed">{t("sticky")}</p>
         </div>
       )}
 
       {problem && (
-        <p className="text-destructive text-xs" role="alert">
+        <p className="text-destructive text-sm" role="alert">
           {problem}
         </p>
       )}

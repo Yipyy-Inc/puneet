@@ -42,6 +42,25 @@ const SAME_IN_BOTH = new Set([
   "staff.boardingOverview.allergies", // Allergies / Allergies
   "staff.bookingDetail.taskCatExecution", // Service / Service
   "staff.bookingDetail.taskCatTransport", // Transport / Transport
+  // The booking page and its money and care dialogs (2026-09-18) — each the
+  // same word in French, or a pattern with no words of its own.
+  "staff.bookingDetail.detailsService", // Service / Service
+  "staff.bookingDetail.standardPackage", // Standard / Standard
+  "staff.bookingDetail.medDosage", // Dose / Dose
+  "staff.bookingDetail.medFormInjection", // Injection / Injection
+  "staff.bookingDetail.belongingsDescription", // Description / Description
+  "staff.checkout.methodTerminal", // Terminal / Terminal
+  "staff.checkout.receiptService", // Service / Service
+  "staff.checkout.receiptNote", // Note / Note
+  "staff.prepayment.preset", // {label} ({amount})
+  "staff.tipSplit.colService", // Service / Service
+  "staff.tipSplit.colTotal", // Total / Total
+  "staff.refund.receiptType", // Type / Type
+  "staff.paymentBreakdown.serviceHint", // Service / Service
+  "staff.paymentBreakdown.quantityTimes", // {n} × {price}
+  "staff.paymentBreakdown.total", // Total / Total
+  "staff.careGate.fromIncident", // {item} (incident {id})
+  "staff.recordButtons.notes", // Notes / Notes
   "staff.vaccinations.notesLabel", // Notes / Notes
   "staff.vaccinations.statusException", // Exception / Exception
   "staff.clientDocuments.version", // version {v} / version {v}
