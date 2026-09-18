@@ -4,6 +4,7 @@ import {
   addDaysIso,
   expiryState,
   isCover,
+  missingForService,
   missingRequired,
   recordMatchesRule,
 } from "@/lib/vaccinations";
@@ -85,5 +86,60 @@ describe("cover", () => {
       "2026-09-11",
     );
     expect(missing.map((r) => r.vaccineName)).toEqual(["Bordetella"]);
+  });
+});
+
+describe("missingForService", () => {
+  const rules = [
+    {
+      vaccineName: "Rabies",
+      required: true,
+      species: "Dog",
+      applicableServices: ["boarding", "daycare", "grooming"],
+    },
+    {
+      vaccineName: "Bordetella",
+      required: true,
+      species: "Dog",
+      applicableServices: ["Boarding", "daycare"],
+    },
+    {
+      vaccineName: "DHPP",
+      required: true,
+      species: "Dog",
+      applicableServices: [],
+    },
+  ];
+  const none: VaccinationRecord[] = [];
+
+  test("asks only what the service requires", () => {
+    const missing = missingForService(
+      "grooming",
+      "Dog",
+      none,
+      rules,
+      "2026-09-18",
+    );
+    expect(missing.map((r) => r.vaccineName)).toEqual(["Rabies", "DHPP"]);
+  });
+  test("matches the service whatever its case", () => {
+    const missing = missingForService(
+      "boarding",
+      "dog",
+      [rec({ vaccineName: "Rabies" }), rec({ vaccineName: "DHPP" })],
+      rules,
+      "2026-09-18",
+    );
+    expect(missing.map((r) => r.vaccineName)).toEqual(["Bordetella"]);
+  });
+  test("an expired certificate is a gap", () => {
+    const missing = missingForService(
+      "training",
+      "Dog",
+      [rec({ vaccineName: "DHPP", expiryDate: "2026-09-17" })],
+      rules,
+      "2026-09-18",
+    );
+    expect(missing.map((r) => r.vaccineName)).toEqual(["DHPP"]);
   });
 });

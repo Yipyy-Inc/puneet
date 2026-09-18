@@ -84,7 +84,10 @@ function AlertDialogFooter({
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        `flex flex-col-reverse gap-2 sm:flex-row sm:justify-end`,
+        // Wraps, so a long translated action — "Enregistrer l’arrivée de Buddy
+        // quand même" — takes a row of its own instead of running past the
+        // dialog's edge (§5g).
+        `flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end`,
         className,
       )}
       {...props}

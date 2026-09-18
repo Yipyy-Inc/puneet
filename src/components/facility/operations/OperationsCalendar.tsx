@@ -30,7 +30,6 @@ import {
   useUpdateTask,
   type TaskRow,
 } from "@/lib/api/facility-tasks";
-import { users } from "@/data/users";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
@@ -47,7 +46,6 @@ import {
   canAccessSavedView,
   loadStoredJson,
   parseCsv,
-  parseUserRoleFromCookie,
   toCsv,
 } from "@/components/facility/operations/OperationsCalendarHelpers";
 import {
@@ -59,6 +57,12 @@ import {
   OperationsCalendarNewEventMenu,
 } from "@/components/facility/operations/OperationsCalendarNewEventMenu";
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
+import { OperationsCalendarBookingDialogs } from "@/components/facility/operations/OperationsCalendarBookingDialogs";
+import { useCalendarBookingActions } from "@/components/facility/operations/use-calendar-booking-actions";
+import { useBookingActions } from "@/components/bookings/booking-actions/use-booking-actions";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { ANY_ARRIVAL_PERMISSION } from "@/lib/bookings/arrival-writer";
 import { useSettings } from "@/hooks/use-settings";
 import {
   OperationsCalendarSidePanel,
@@ -74,7 +78,6 @@ import {
   isOccurrenceCancelled,
   useRecurringCancellations,
 } from "@/lib/recurring-events";
-import { facilityConfig } from "@/data/facility-config";
 import {
   OperationsCalendarPrintSheet,
   buildDayPrintRows,
@@ -99,7 +102,6 @@ import {
   deriveResourceCalendarOptions,
   deriveFilterOptions,
   eventIntersectsWindow,
-  findResourceConflict,
   filterEvents,
   formatDateKey,
   formatRangeLabel,
@@ -172,20 +174,7 @@ interface ManagerAlert {
   createdAt: string;
 }
 
-type CalendarPermissionLevel =
-  | "view-only"
-  | "standard"
-  | "booking-edit"
-  | "manager"
-  | "admin";
-
-type CalendarVisibilityScope =
-  | "full-facility"
-  | "own-schedule"
-  | "selected-roles";
-
 interface CalendarPermissionSet {
-  level: CalendarPermissionLevel;
   canCompleteTasks: boolean;
   canCheckInOut: boolean;
   canEditBookings: boolean;
@@ -224,105 +213,6 @@ interface CalendarAuditEntry {
   actorRole: string;
   timestamp: string;
   details: Record<string, string | number | boolean | null | undefined>;
-}
-
-function parsePermissionLevelFromCookie(
-  userRole: string,
-): CalendarPermissionLevel {
-  if (typeof document !== "undefined") {
-    const cookieMatch = document.cookie.match(
-      /(?:^|;\s*)calendar_permission_level=([^;]+)/,
-    );
-    const cookieValue = cookieMatch?.[1];
-    if (
-      cookieValue === "view-only" ||
-      cookieValue === "standard" ||
-      cookieValue === "booking-edit" ||
-      cookieValue === "manager" ||
-      cookieValue === "admin"
-    ) {
-      return cookieValue;
-    }
-  }
-
-  const normalized = userRole.toLowerCase();
-  if (normalized.includes("admin")) return "admin";
-  if (normalized.includes("manager")) return "manager";
-  if (
-    normalized.includes("front") ||
-    normalized.includes("lead") ||
-    normalized.includes("supervisor")
-  ) {
-    return "booking-edit";
-  }
-  if (
-    normalized.includes("trainee") ||
-    normalized.includes("observer") ||
-    normalized.includes("shadow")
-  ) {
-    return "view-only";
-  }
-  return "standard";
-}
-
-function parseVisibilityScopeFromCookie(
-  level: CalendarPermissionLevel,
-): CalendarVisibilityScope {
-  if (typeof document !== "undefined") {
-    const cookieMatch = document.cookie.match(
-      /(?:^|;\s*)calendar_visibility_scope=([^;]+)/,
-    );
-    const cookieValue = cookieMatch?.[1];
-    if (
-      cookieValue === "full-facility" ||
-      cookieValue === "own-schedule" ||
-      cookieValue === "selected-roles"
-    ) {
-      return cookieValue;
-    }
-  }
-
-  if (level === "manager" || level === "admin") return "full-facility";
-  return "full-facility";
-}
-
-function parseVisibilityRolesFromCookie(): string[] {
-  if (typeof document === "undefined") return [];
-  const match = document.cookie.match(
-    /(?:^|;\s*)calendar_visibility_roles=([^;]+)/,
-  );
-  if (!match?.[1]) return [];
-  return decodeURIComponent(match[1])
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter((entry) => entry.length > 0);
-}
-
-function buildPermissionSet(
-  level: CalendarPermissionLevel,
-): CalendarPermissionSet {
-  return {
-    level,
-    canCompleteTasks:
-      level === "standard" ||
-      level === "booking-edit" ||
-      level === "manager" ||
-      level === "admin",
-    canCheckInOut:
-      level === "standard" ||
-      level === "booking-edit" ||
-      level === "manager" ||
-      level === "admin",
-    canEditBookings:
-      level === "booking-edit" || level === "manager" || level === "admin",
-    canCreateCustomEvents: level === "manager" || level === "admin",
-    canCreateBlockTime: level === "manager" || level === "admin",
-    canManageFacilitySavedViews: level === "manager" || level === "admin",
-    canViewAudit: level === "manager" || level === "admin",
-    canOverrideResourceConflict: level === "manager" || level === "admin",
-    canConfigureCalendar: level === "admin",
-    canRecoverDeletedEvents: level === "admin",
-  };
 }
 
 const TASK_COMPLETION_RULES: Record<
@@ -365,19 +255,6 @@ const TASK_COMPLETION_RULES: Record<
     createEscalationTask: false,
   },
 };
-
-function parseUserNameFromCookie(): string {
-  if (typeof document === "undefined") return "Manager on Duty";
-  const match = document.cookie.match(/(?:^|;\s*)user_name=([^;]+)/);
-  if (!match?.[1]) return "Manager on Duty";
-  return decodeURIComponent(match[1]);
-}
-
-function parseUserIdFromCookie(): string {
-  if (typeof document === "undefined") return "facility-user";
-  const match = document.cookie.match(/(?:^|;\s*)user_id=([^;]+)/);
-  return match?.[1] ?? "facility-user";
-}
 
 function parseTaskDueDate(task: FacilityTask): Date {
   return new Date(`${task.scheduledDate}T${task.scheduledTime}:00`);
@@ -573,9 +450,13 @@ export function OperationsCalendar() {
     serviceColorOverrides: colorOverrides,
   } = useSettings();
 
-  const [userRole, setUserRole] = useState("facility_admin");
-  const [userName, setUserName] = useState("Manager on Duty");
-  const [userId, setUserId] = useState("facility-user");
+  // WHO IS LOOKING, from the session. It was three cookies nothing writes any
+  // more — user_role, user_name, user_id — so every viewer was "Manager on
+  // Duty", a facility_admin, on every event and task they touched.
+  const { viewer, viewerResolved, staff: roster, can } = useFacilityRbac();
+  const userRole: string = viewer.primaryRole;
+  const userName = `${viewer.firstName} ${viewer.lastName}`.trim();
+  const userId = viewerResolved ? (viewer.rowId ?? viewer.id) : "";
 
   // ── REAL BOOKINGS ───────────────────────────────────────────────────────
   //
@@ -638,12 +519,6 @@ export function OperationsCalendar() {
     CalendarAuditEntry[]
   >([]);
   const [clockTimestamp, setClockTimestamp] = useState(0);
-
-  const [permissionLevel, setPermissionLevel] =
-    useState<CalendarPermissionLevel>("admin");
-  const [visibilityScope, setVisibilityScope] =
-    useState<CalendarVisibilityScope>("full-facility");
-  const [visibilityRoles, setVisibilityRoles] = useState<string[]>([]);
 
   const [axisMode] = useState<CalendarAxisMode>(() => {
     return "master";
@@ -847,29 +722,13 @@ export function OperationsCalendar() {
   const timelineRef = useRef<HTMLDivElement>(null);
   const didAutoScroll = useRef(false);
 
-  useEffect(() => {
-    const parsedRole = parseUserRoleFromCookie();
-    const parsedName = parseUserNameFromCookie();
-    const parsedId = parseUserIdFromCookie();
-    const parsedLevel = parsePermissionLevelFromCookie(parsedRole);
-
-    setUserRole(parsedRole);
-    setUserName(parsedName);
-    setUserId(parsedId);
-    setPermissionLevel(parsedLevel);
-    setVisibilityScope(parseVisibilityScopeFromCookie(parsedLevel));
-    setVisibilityRoles(parseVisibilityRolesFromCookie());
-  }, []);
-
   // This viewer, at the facility the page is for. Until both are known
   // nothing is read or written, so a render before them cannot overwrite what
   // was kept with the defaults.
   const activeFacilityId = useActiveFacilityId();
-  // "facility-user" is the placeholder until the session cookie is read.
+  // Empty until the roster has named the viewer.
   const storageScope =
-    activeFacilityId && userId && userId !== "facility-user"
-      ? `${activeFacilityId}:${userId}`
-      : null;
+    activeFacilityId && userId ? `${activeFacilityId}:${userId}` : null;
   const [hydratedScope, setHydratedScope] = useState<string | null>(null);
 
   useEffect(() => {
@@ -929,10 +788,26 @@ export function OperationsCalendar() {
     );
   }, [hydratedScope, selectedResourceType]);
 
-  const permissions = useMemo(
-    () => buildPermissionSet(permissionLevel),
-    [permissionLevel],
-  );
+  // What this viewer may do, from the permission cascade RLS resolves. It
+  // was a `calendar_permission_level` cookie nothing writes, so every viewer
+  // fell back to "admin": a receptionist was offered the audit log and the
+  // calendar's settings.
+  const permissions: CalendarPermissionSet = {
+    canCompleteTasks: can("ops_manage_tasks") || can("manage_own_tasks"),
+    canCheckInOut: ANY_ARRIVAL_PERMISSION.some((key) => can(key)),
+    canEditBookings: can("edit_bookings"),
+    canCreateCustomEvents: can("manage_booking_calendar"),
+    canCreateBlockTime: can("manage_booking_calendar"),
+    canManageFacilitySavedViews: can("manage_booking_calendar"),
+    canViewAudit: can("settings_audit_log"),
+    canOverrideResourceConflict: can("manage_booking_calendar"),
+    canConfigureCalendar: can("manage_facility_settings"),
+    canRecoverDeletedEvents: can("manage_booking_calendar"),
+  };
+  const readOnlyMode =
+    !permissions.canEditBookings &&
+    !permissions.canCheckInOut &&
+    !permissions.canCompleteTasks;
 
   // Real clients, for the same reason as real bookings: a calendar drawing
   // Postgres bookings and naming their customers from `src/data/clients` would
@@ -943,6 +818,7 @@ export function OperationsCalendar() {
   const clientLookup = useMemo(() => {
     return new Map(clientRecords.map((client) => [client.id, client]));
   }, [clientRecords]);
+  const { profile: facilityProfile } = useFacilityProfile();
 
   const convertedLeadBookings = useConvertedLeadBookings();
   const convertedLeadEventIds = useConvertedLeadEventIds();
@@ -959,7 +835,13 @@ export function OperationsCalendar() {
   const { tags: tagCatalogue, assignments: tagAssignmentList } =
     useTagCatalogue();
   // The vaccination expiry chip, from pet_vaccinations — same reason again.
+  // Check-in asks the same records whether a required vaccine is missing.
   const { vaccinations } = useFacilityVaccinations();
+  const calendarBookings = useCalendarBookingActions({
+    bookings: bookingRecords,
+    clients: clientRecords,
+    vaccinations,
+  });
 
   const allEvents = useMemo(() => {
     const merged = buildUnifiedEvents({
@@ -1028,26 +910,29 @@ export function OperationsCalendar() {
     [allEvents, activeModules, tagCatalogue],
   );
 
+  // The facility's own roster (use-facility-rbac), not `src/data/users` —
+  // whose sample staff were offered in every facility's staff filter and
+  // staff view beside the real ones.
   const staffOptions = useMemo(() => {
     return Array.from(
       new Set(
-        users
-          .filter((user) => user.status === "active")
-          .map((user) => user.name)
+        roster
+          .filter((member) => member.status === "active")
+          .map((member) => `${member.firstName} ${member.lastName}`.trim())
           .concat(filterOptions.staff.map((staff) => staff.value)),
       ),
     ).sort((first, second) => first.localeCompare(second));
-  }, [filterOptions.staff]);
+  }, [roster, filterOptions.staff]);
 
   const roleOptions = useMemo(() => {
     return Array.from(
       new Set(
-        users
-          .map((user) => user.role)
+        roster
+          .map((member) => toDisplayRole(member.primaryRole))
           .concat(filterOptions.staffRoles.map((role) => role.value)),
       ),
     ).sort((first, second) => first.localeCompare(second));
-  }, [filterOptions.staffRoles]);
+  }, [roster, filterOptions.staffRoles]);
 
   // Staff-as-resources for Staff View (one column per visible staff member).
   const staffResources = useMemo(
@@ -1105,37 +990,9 @@ export function OperationsCalendar() {
     }
   }, [resourceTypeOptions, selectedResourceType]);
 
-  const scopedEvents = useMemo(() => {
-    const roleScope = visibilityRoles.map((entry) => entry.toLowerCase());
-
-    return allEvents.filter((event) => {
-      if (visibilityScope === "full-facility") return true;
-
-      if (visibilityScope === "own-schedule") {
-        return (
-          event.staff === userName ||
-          event.createdByName === userName ||
-          event.staff.toLowerCase() === userRole.toLowerCase()
-        );
-      }
-
-      if (visibilityScope === "selected-roles") {
-        if (roleScope.length === 0) return true;
-
-        const staffRole = (event.staffRole ?? "").toLowerCase();
-        const roleGroup = (event.roleGroup ?? "").toLowerCase();
-        return roleScope.some(
-          (role) => staffRole.includes(role) || roleGroup.includes(role),
-        );
-      }
-
-      return true;
-    });
-  }, [allEvents, userName, userRole, visibilityRoles, visibilityScope]);
-
   const searchFilteredEvents = useMemo(
-    () => filterEvents(scopedEvents, filters, searchTerm),
-    [filters, scopedEvents, searchTerm],
+    () => filterEvents(allEvents, filters, searchTerm),
+    [filters, allEvents, searchTerm],
   );
 
   // Re-render when a recurring occurrence / series is cancelled.
@@ -1560,6 +1417,13 @@ export function OperationsCalendar() {
       (booking) => booking.id === selectedEvent.bookingId,
     );
   }, [bookingRecords, selectedEvent]);
+
+  // What the lifecycle offers this viewer for it — the booking page's answer.
+  // No deposit or location actions: those are the booking page's to take.
+  const selectedBookingActions = useBookingActions(selectedBooking, {
+    depositRuleApplies: false,
+    multiLocation: false,
+  });
 
   const selectedTask = useMemo(() => {
     if (!selectedEvent || selectedEvent.type !== "task") return undefined;
@@ -2252,7 +2116,7 @@ export function OperationsCalendar() {
 
     // Booking events — completing a booking means checking it out
     if (event.type === "booking" && event.bookingId) {
-      checkOutBooking(event.bookingId);
+      calendarBookings.checkOut(event.bookingId);
       return;
     }
 
@@ -2517,74 +2381,6 @@ export function OperationsCalendar() {
         completionNote: "Bulk completion from booking drawer",
       });
     }
-  };
-
-  const checkInBooking = (bookingId: number) => {
-    if (!permissions.canCheckInOut) {
-      toast.error("You do not have permission to check in from calendar");
-      return;
-    }
-
-    // Strict-enforcement facilities block check-in on an expired vaccination
-    // (spec 8.5 / Task 45). A manager may override with confirmation.
-    if (facilityConfig.vaccinationRequirements.mandatoryRecords) {
-      const warning = allEvents.find((event) => event.bookingId === bookingId)
-        ?.decorations?.vaccinationWarning;
-      if (warning && warning.daysLeft < 0) {
-        const override = window.confirm(
-          `Check-in blocked — ${warning.label}. Vaccination records are mandatory at this facility. Override and check in anyway?`,
-        );
-        if (!override) {
-          toast.error("Check-in blocked — vaccination expired");
-          return;
-        }
-        appendAuditEntry("booking_checkin", {
-          bookingId,
-          vaccinationOverride: warning.label,
-        });
-      }
-    }
-
-    patchBooking.mutate(
-      { id: bookingId, patch: { status: "in_progress" } },
-      {
-        onSuccess: () =>
-          toast.success(`Checked in by ${toDisplayRole(userRole)}`),
-      },
-    );
-    appendAuditEntry("booking_checkin", { bookingId });
-  };
-
-  const checkOutBooking = (bookingId: number) => {
-    if (!permissions.canCheckInOut) {
-      toast.error("You do not have permission to check out from calendar");
-      return;
-    }
-
-    const booking = bookingRecords.find((entry) => entry.id === bookingId);
-    if (!booking) return;
-
-    if ((booking.invoice?.remainingDue ?? 0) > 0) {
-      const openInvoice = window.confirm(
-        "Outstanding balance exists. Open invoice in POS after check-out?",
-      );
-      if (openInvoice) {
-        window.open(
-          `/facility/dashboard/services/retail?bookingId=${bookingId}`,
-          "_blank",
-        );
-      }
-    }
-
-    patchBooking.mutate(
-      { id: bookingId, patch: { status: "completed" } },
-      {
-        onSuccess: () =>
-          toast.success(`Checked out by ${toDisplayRole(userRole)}`),
-      },
-    );
-
-    appendAuditEntry("booking_checkout", { bookingId });
   };
 
   const assignBookingStaff = (
@@ -2884,52 +2680,6 @@ export function OperationsCalendar() {
     toast.success(`Messaging panel opened for ${customer?.name ?? "customer"}`);
   };
 
-  const rescheduleBooking = (bookingId: number) => {
-    if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to reschedule bookings");
-      return;
-    }
-
-    window.open(
-      `/facility/dashboard/bookings?bookingId=${bookingId}&mode=reschedule`,
-      "_blank",
-    );
-    appendAuditEntry("booking_rescheduled", {
-      bookingId,
-      source: "calendar-reschedule-shortcut",
-    });
-    toast.info("Reschedule flow opened");
-  };
-
-  const cancelBooking = (bookingId: number, reason: string) => {
-    if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to cancel bookings");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Cancellation reason: ${reason}\n\nCancellation policy and refund eligibility will be reviewed before confirmation. Continue?`,
-    );
-    if (!confirmed) return;
-
-    patchBooking.mutate(
-      {
-        id: bookingId,
-        patch: { status: "cancelled", cancellationReason: reason },
-      },
-      { onSuccess: () => toast.success("Booking cancelled") },
-    );
-
-    appendAuditEntry("booking_cancelled", {
-      bookingId,
-      reason,
-      source: "calendar-drawer",
-    });
-
-    // It offered to notify the #1 waitlist entry — a sample client — and
-    // toasted "notified — slot offered via SMS/email" without sending.
-  };
-
   const updateManualEvent = (
     eventId: string,
     updates: Partial<ManualFacilityEvent>,
@@ -3138,78 +2888,6 @@ export function OperationsCalendar() {
     setPendingReschedule(null);
   };
 
-  const onCreateBookingShortcut = (seed: NewEventSeed) => {
-    if (!permissions.canEditBookings) {
-      toast.error(
-        "You do not have permission to create bookings from calendar",
-      );
-      return;
-    }
-
-    const params = new URLSearchParams({
-      create: "1",
-      date: seed.date,
-      time: seed.time,
-    });
-
-    if (axisMode === "resource" && selectedResourceOption) {
-      const defaultResourceName = selectedResourceOption.resources[0]?.name;
-      const resourceName =
-        window
-          .prompt("Assign resource for this booking", defaultResourceName ?? "")
-          ?.trim() ?? "";
-
-      if (resourceName.length > 0) {
-        const start = new Date(`${seed.date}T${seed.time}:00`);
-        const end = new Date(start.getTime() + 60 * 60 * 1000);
-
-        const conflict = findResourceConflict(allEvents, {
-          start,
-          end,
-          resourceName,
-          resourceType: selectedResourceType,
-        });
-
-        if (conflict.hasConflict) {
-          if (!permissions.canOverrideResourceConflict) {
-            toast.error(
-              `Resource already booked (${conflict.conflictingEvent?.title ?? "existing event"}). Manager or admin override required.`,
-            );
-            return;
-          }
-
-          const approved = window.confirm(
-            `Resource ${resourceName} is already booked for this time. Override and continue?`,
-          );
-          if (!approved) {
-            return;
-          }
-
-          appendAuditEntry("resource_conflict_override", {
-            resourceName,
-            resourceType: selectedResourceType,
-            conflictedEventId: conflict.conflictingEvent?.id,
-            conflictedEventTitle: conflict.conflictingEvent?.title,
-            requestedDate: seed.date,
-            requestedTime: seed.time,
-          });
-        }
-
-        params.set("resource", resourceName);
-        params.set("resourceType", selectedResourceType);
-      }
-    }
-
-    appendAuditEntry("booking_created", {
-      source: "calendar-shortcut",
-      date: seed.date,
-      time: seed.time,
-      axisMode,
-    });
-    window.open(`/facility/dashboard/bookings?${params.toString()}`, "_blank");
-    toast.info("Booking creation flow opened");
-  };
-
   const rangeLabel = formatRangeLabel(anchorDate, view);
 
   // Print Day (spec 8.8 / Task 48 / Table 93): a print-optimised table of the
@@ -3315,11 +2993,11 @@ export function OperationsCalendar() {
               quickCreateAnchor={quickCreateAnchor}
               canCreateCustomEvent={permissions.canCreateCustomEvents}
               canCreateBlockTime={false}
-              canCreateBooking={false}
+              canCreateBooking={calendarBookings.canCreate}
               canRecoverDeleted={false}
               staffOptions={staffOptions}
               roleOptions={roleOptions}
-              onCreateBookingShortcut={onCreateBookingShortcut}
+              onCreateBookingShortcut={calendarBookings.create}
               onCreateCustomEvent={appendCustomEvent}
               onCreateBlockTime={appendBlockTime}
               onRecoverDeleted={recoverLastDeletedEvent}
@@ -3437,7 +3115,7 @@ export function OperationsCalendar() {
         event={selectedEvent}
         userRole={userRole}
         userDisplayName={userName}
-        readOnlyMode={permissions.level === "view-only"}
+        readOnlyMode={readOnlyMode}
         canCompleteTasks={permissions.canCompleteTasks}
         canCheckInOut={permissions.canCheckInOut}
         canEditBookingActions={permissions.canEditBookings}
@@ -3445,6 +3123,8 @@ export function OperationsCalendar() {
         supportsCheckInOut={selectedSupportsCheckInOut}
         showAddOnsTab={selectedAllowsAddOns}
         booking={selectedBooking}
+        bookingActions={selectedBookingActions}
+        canCreateBooking={calendarBookings.canCreate}
         client={selectedClient}
         pet={selectedPet}
         task={selectedTask}
@@ -3473,8 +3153,8 @@ export function OperationsCalendar() {
         managerAlertCount={managerAlerts.length}
         onClose={() => setDrawerOpen(false)}
         onOpenLinkedBooking={openLinkedBookingFromTask}
-        onCheckInBooking={checkInBooking}
-        onCheckOutBooking={checkOutBooking}
+        onCheckInBooking={calendarBookings.checkIn}
+        onCheckOutBooking={calendarBookings.checkOut}
         onAssignStaff={assignBookingStaff}
         onMarkTaskComplete={(taskId, allowEarly) =>
           markTaskComplete(taskId, {
@@ -3488,14 +3168,17 @@ export function OperationsCalendar() {
         onUpdateBookingAddOn={updateBookingAddOn}
         onRemoveBookingAddOn={removeBookingAddOn}
         onMessageCustomer={messageCustomer}
-        onRescheduleBooking={rescheduleBooking}
-        onCancelBooking={cancelBooking}
+        onEditBooking={calendarBookings.edit}
+        onCancelBooking={calendarBookings.cancel}
+        onRebookBooking={calendarBookings.rebook}
         onUpdateManualEvent={updateManualEvent}
         onDeleteManualEvent={deleteManualEvent}
       />
 
+      <OperationsCalendarBookingDialogs dialogs={calendarBookings.dialogs} />
+
       <OperationsCalendarPrintSheet
-        facilityName="Yipyy"
+        facilityName={facilityProfile.businessName}
         day={anchorDate}
         printedAt={printedAt}
         printedBy={userName}

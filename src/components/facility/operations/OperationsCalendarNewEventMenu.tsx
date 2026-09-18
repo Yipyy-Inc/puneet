@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
@@ -179,6 +180,7 @@ export function OperationsCalendarNewEventMenu({
   onCreateBlockTime,
   onRecoverDeleted,
 }: OperationsCalendarNewEventMenuProps) {
+  const { t: calT } = useStaffText("opsCalendar");
   const [mode, setMode] = useState<CreateMode>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -347,6 +349,12 @@ export function OperationsCalendarNewEventMenu({
   };
 
   // Quick-create popover → escalate to the full modal (keeps the typed name).
+  // The clicked slot as a booking: the wizard opens on that day and time.
+  const bookFromQuick = () => {
+    setQuickOpen(false);
+    onCreateBookingShortcut(seed);
+  };
+
   const openFullFromQuick = () => {
     setQuickOpen(false);
     setMode("custom-event");
@@ -443,7 +451,7 @@ export function OperationsCalendarNewEventMenu({
                 onSelect={() => onCreateBookingShortcut(seed)}
               >
                 <BookPlus className="size-4 text-emerald-600" />
-                Create booking
+                {calT("newBooking")}
               </DropdownMenuItem>
             )}
             {canRecoverDeleted && (
@@ -989,13 +997,24 @@ export function OperationsCalendarNewEventMenu({
             {formatQuickWhen(customDraft.date, customDraft.startTime)}
           </p>
           <div className="flex items-center justify-between pt-0.5">
-            <button
-              type="button"
-              onClick={openFullFromQuick}
-              className="text-xs font-medium text-sky-600 hover:underline"
-            >
-              More options
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={openFullFromQuick}
+                className="text-xs font-medium text-sky-600 hover:underline"
+              >
+                More options
+              </button>
+              {canCreateBooking && (
+                <button
+                  type="button"
+                  onClick={bookFromQuick}
+                  className="text-xs font-medium text-sky-600 hover:underline"
+                >
+                  {calT("newBooking")}
+                </button>
+              )}
+            </div>
             <Button
               size="sm"
               onClick={saveQuickEvent}

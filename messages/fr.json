@@ -1913,7 +1913,11 @@
         "prevDay": "Jour précédent",
         "jumpToday": "Aller à aujourd’hui",
         "nextDay": "Jour suivant",
-        "overdueNotCheckedIn": "En retard — pas encore arrivé"
+        "overdueNotCheckedIn": "En retard — pas encore arrivé",
+        "checkoutOnBookingPage": "Il reste {amount} à payer sur la réservation de {pet} — enregistrez le départ depuis la réservation, où le paiement est pris.",
+        "openBooking": "Ouvrir la réservation",
+        "addAddOn": "Ajouter un supplément",
+        "newBooking": "Nouvelle réservation"
       },
       "dailyCareBoard": {
         "flaggedHealth": "Signalement pour {pet} : problème de santé",
@@ -2662,7 +2666,13 @@
         "notCancelled": "La réservation n’a pas été annulée.",
         "keep": "Garder la réservation",
         "cancelAndRefund": "Annuler et rembourser {amount}",
-        "cancelOnly": "Annuler la réservation"
+        "cancelOnly": "Annuler la réservation",
+        "partialCardRefund": "{refunded} a été remboursé sur la carte, mais pas {short} — la réservation n’est pas encore annulée. Remboursez le reste autrement, puis annulez.",
+        "cancelledDone": "{ref} est annulée",
+        "cancelledRefundedCard": "{ref} est annulée — {amount} remboursé sur la carte",
+        "cancelledRefundedCash": "{ref} est annulée — {amount} remboursé en argent comptant",
+        "cancelledRefundedCredit": "{ref} est annulée — {amount} remboursé en crédit en magasin",
+        "notMessaged": "Le client n’a pas été avisé."
       },
       "moduleTasks": {
         "catSetup": "Préparation",
@@ -3058,7 +3068,15 @@
         "failCannotNow": "Cette réservation ne peut pas être enregistrée à l’arrivée ou au départ dans son état actuel.",
         "failFailed": "L’opération n’a pas abouti. Réessayez.",
         "changeStatus": "Changer le statut",
-        "earlyCheckoutNotApplied": "Le remboursement, le crédit en magasin ou les frais prévus par votre politique de départ anticipé ne sont pas appliqués automatiquement. Inscrivez-les sur la réservation après le départ."
+        "earlyCheckoutNotApplied": "Le remboursement, le crédit en magasin ou les frais prévus par votre politique de départ anticipé ne sont pas appliqués automatiquement. Inscrivez-les sur la réservation après le départ.",
+        "vaccineGapTitle": "Enregistrer l’arrivée sans vaccin à jour ?",
+        "vaccineGapBody": "Vos règles de vaccination les exigent pour ce service, et aucun n’est à jour au dossier : {gaps}.",
+        "vaccineGapPet": "{vaccines} pour {pet}",
+        "vaccineGapConfirm": "Enregistrer l’arrivée de {pet} quand même",
+        "bookAgainPet": "Réserver de nouveau pour {pet}",
+        "notAllowedEdit": "Vous n’avez pas la permission de modifier les réservations.",
+        "notAllowedCancel": "Vous n’avez pas la permission d’annuler les réservations.",
+        "notAllowedCreate": "Vous n’avez pas la permission de créer des réservations."
       }
     }
   },

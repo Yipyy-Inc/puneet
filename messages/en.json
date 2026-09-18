@@ -1913,7 +1913,11 @@
         "prevDay": "Previous day",
         "jumpToday": "Jump to today",
         "nextDay": "Next day",
-        "overdueNotCheckedIn": "Overdue — not checked in"
+        "overdueNotCheckedIn": "Overdue — not checked in",
+        "checkoutOnBookingPage": "{amount} is still owed on {pet}’s booking — check out from the booking, where the payment is taken.",
+        "openBooking": "Open the booking",
+        "addAddOn": "Add an add-on",
+        "newBooking": "New booking"
       },
       "dailyCareBoard": {
         "flaggedHealth": "{pet} is flagged for attention — health concern",
@@ -2662,7 +2666,13 @@
         "notCancelled": "The booking was not cancelled.",
         "keep": "Keep the booking",
         "cancelAndRefund": "Cancel and refund {amount}",
-        "cancelOnly": "Cancel the booking"
+        "cancelOnly": "Cancel the booking",
+        "partialCardRefund": "{refunded} went back to the card, but {short} did not — the booking is not cancelled yet. Refund the rest another way, then cancel.",
+        "cancelledDone": "{ref} is cancelled",
+        "cancelledRefundedCard": "{ref} is cancelled — {amount} refunded to the card",
+        "cancelledRefundedCash": "{ref} is cancelled — {amount} refunded in cash",
+        "cancelledRefundedCredit": "{ref} is cancelled — {amount} refunded as store credit",
+        "notMessaged": "The customer has not been messaged."
       },
       "moduleTasks": {
         "catSetup": "Setup",
@@ -3058,7 +3068,15 @@
         "failCannotNow": "This booking cannot be checked in or out in its current state.",
         "failFailed": "That did not go through. Try again.",
         "changeStatus": "Change the status",
-        "earlyCheckoutNotApplied": "Any refund, store credit or fee under your early-checkout policy is not applied automatically. Record it on the booking after checkout."
+        "earlyCheckoutNotApplied": "Any refund, store credit or fee under your early-checkout policy is not applied automatically. Record it on the booking after checkout.",
+        "vaccineGapTitle": "Check in without a current vaccination?",
+        "vaccineGapBody": "Your vaccination rules require these for this service, and none is current on file: {gaps}.",
+        "vaccineGapPet": "{vaccines} for {pet}",
+        "vaccineGapConfirm": "Check {pet} in anyway",
+        "bookAgainPet": "Book {pet} again",
+        "notAllowedEdit": "You do not have permission to edit bookings.",
+        "notAllowedCancel": "You do not have permission to cancel bookings.",
+        "notAllowedCreate": "You do not have permission to create bookings."
       }
     }
   },

@@ -86,3 +86,32 @@ export function missingRequired<
       ),
   );
 }
+
+/**
+ * The required vaccines one service needs that a pet has no cover for — the
+ * question a check-in asks. A grooming visit is not refused for want of a
+ * kennel-cough certificate the facility only asks of boarders. A rule that
+ * names no service applies to every service.
+ */
+export function missingForService<
+  R extends {
+    vaccineName: string;
+    required: boolean;
+    species: string;
+    applicableServices: string[];
+  },
+>(
+  service: string,
+  species: string,
+  records: VaccinationRecord[],
+  rules: R[],
+  today: string,
+): R[] {
+  const wanted = service.toLowerCase();
+  const forService = rules.filter(
+    (rule) =>
+      rule.applicableServices.length === 0 ||
+      rule.applicableServices.some((s) => s.toLowerCase() === wanted),
+  );
+  return missingRequired(species, records, forService, today);
+}

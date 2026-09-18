@@ -53,10 +53,10 @@ import { createWorkosServerClient } from "@/lib/supabase/workos-server";
 // /facility/set-role — a page whose two buttons wrote the cookie and offered
 // "Set as Super Admin" — is gone. getUserRole/setUserRole no longer exist.
 //
-// OperationsCalendar still READS it (and its own `calendar_permission_level`)
-// for the actor name it stamps on events. With no writer left those take their
-// fallbacks, which is what every real session already got. Converting it is an
-// identity change rather than an auth one; see the debt map.
+// OperationsCalendar was the last reader — of it, of its own
+// `calendar_permission_level`, and of `user_name` / `user_id` for the actor it
+// stamped on events. Since 2026-09-18 it takes the viewer and the permissions
+// from the session (use-facility-rbac), and nothing reads any of them.
 // ============================================================================
 
 export type ViewerMembership = {

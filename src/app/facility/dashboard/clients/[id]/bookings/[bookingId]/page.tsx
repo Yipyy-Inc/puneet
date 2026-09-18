@@ -43,6 +43,7 @@ import { arrivalFailure } from "@/lib/bookings/arrival-failure";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { printBookingInvoice } from "./_lib/print-invoice";
 import { bookingCareEntries } from "./_lib/booking-care";
+import { useCancelWithRefund } from "@/components/bookings/use-cancel-with-refund";
 import dynamic from "next/dynamic";
 
 // ~4,700 lines of wizard; only a person who edits should load it.
@@ -121,14 +122,18 @@ import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
 import { useBookingStatusRules } from "@/lib/api/facility-settings";
-import { isBookingStatus } from "@/lib/settings/booking-statuses";
+import { autoTransitionTarget } from "@/lib/settings/booking-statuses";
+import { useClientVaccinations } from "@/lib/api/vaccinations";
+import {
+  describeVaccineGaps,
+  useVaccineGaps,
+} from "@/lib/bookings/use-vaccine-gaps";
 import { useAssignedScope } from "@/lib/facility-permissions";
 import { bookingQueries, useAssignedBookingRefs } from "@/lib/api/booking";
 import { incidentQueries } from "@/lib/api/incidents";
 import {
   balanceOf,
   refundTender,
-  useCancelBooking,
   useChargeBooking,
   useRefundBooking,
   useRefundBookingToCard,
@@ -254,6 +259,10 @@ export default function ClientBookingDetailPage({
   } = useClientRecord(booking?.clientId ?? urlClientId);
   // Everything below is about the BOOKING's client.
   const clientId = booking?.clientId ?? urlClientId;
+  // The required vaccines a check-in would wave through, asked before one —
+  // the question the calendar asks too (use-vaccine-gaps.ts).
+  const { vaccinations: clientVaccinations } = useClientVaccinations(clientId);
+  const vaccineGaps = useVaccineGaps(clientVaccinations);
   // ── THE CARE LOG ────────────────────────────────────────────────────────
   //
   // What was actually done, from `care_log_entries` (20260819140000). Before
@@ -287,7 +296,7 @@ export default function ClientBookingDetailPage({
       }),
   });
 
-  const cancelBooking = useCancelBooking();
+  const cancelWithRefund = useCancelWithRefund();
   const refundBooking = useRefundBooking();
   const refundToCard = useRefundBookingToCard();
   const sendPayLink = useSendPayLink();
@@ -374,77 +383,11 @@ export default function ClientBookingDetailPage({
   const isEstimateSent = booking?.status === "estimate_sent";
   const isPaid = booking?.paymentStatus === "paid";
 
-  type AutoTransitionAction =
-    | "onDepositPaid"
-    | "onCheckIn"
-    | "onCheckout"
-    | "onPaymentComplete";
-
-  type IftttTransitionRule = {
-    id: string;
-    service: string;
-    action: AutoTransitionAction;
-    currentStatus: string;
-    targetStatus: string;
-    enabled: boolean;
-  };
-
   // THE FACILITY'S OWN RULES (`booking_status_rules`). These were read off
   // fixture facility 11 — every booking is mapped with `facilityId: 11` — so
-  // every facility checked in and out by the demo facility's rules.
+  // every facility checked in and out by the demo facility's rules. The
+  // calendar resolves them the same way (autoTransitionTarget).
   const { rules: statusRules } = useBookingStatusRules();
-  const autoTransitions: Record<string, string> = statusRules.autoTransitions;
-  const iftttTransitionRules: IftttTransitionRule[] =
-    statusRules.iftttTransitionRules;
-
-  const resolveAutoTransition = (action: AutoTransitionAction) => {
-    if (!booking) {
-      return {
-        target: null,
-        sourceLabel: null,
-      };
-    }
-
-    const bookingService = String(booking.service).toLowerCase();
-    const bookingStatus = booking.status;
-
-    const matchedRule = iftttTransitionRules.find((rule) => {
-      if (!rule || rule.enabled === false) return false;
-      if (rule.action !== action) return false;
-
-      const serviceMatches =
-        rule.service === "any" || rule.service === bookingService;
-      if (!serviceMatches) return false;
-
-      const statusMatches =
-        rule.currentStatus === "any" || rule.currentStatus === bookingStatus;
-      if (!statusMatches) return false;
-
-      // A custom status is a label: `bookings.status` is an enum and would
-      // refuse it, so a rule aimed at one is passed over.
-      return isBookingStatus(rule.targetStatus);
-    });
-
-    if (matchedRule) {
-      return {
-        target: matchedRule.targetStatus,
-        sourceLabel: "IFTTT rule",
-      };
-    }
-
-    const fallbackTarget = autoTransitions[action];
-    if (fallbackTarget && isBookingStatus(fallbackTarget)) {
-      return {
-        target: fallbackTarget,
-        sourceLabel: "default rule",
-      };
-    }
-
-    return {
-      target: null,
-      sourceLabel: null,
-    };
-  };
 
   const [editOpen, setEditOpen] = useState(false);
   // "Review and approve" opens the same wizard; saving it confirms the request.
@@ -874,7 +817,7 @@ export default function ClientBookingDetailPage({
     }
     // A facility's own rule may take a check-in further than checked_in —
     // straight to in progress, say. The arrival is recorded either way.
-    const { target } = resolveAutoTransition("onCheckIn");
+    const target = autoTransitionTarget(statusRules, booking, "onCheckIn");
     if (target && target !== "checked_in") {
       await updateStatus
         .mutateAsync({ id: booking.id, status: target as Booking["status"] })
@@ -933,7 +876,20 @@ export default function ClientBookingDetailPage({
       ),
     charge_deposit: () => setDepositOpen(true),
     take_prepayment: () => setPrepaymentOpen(true),
-    check_in: () => void checkIn(),
+    check_in: () => {
+      const gaps = vaccineGaps(booking.service, pets);
+      if (gaps.length === 0) return void checkIn();
+      confirmThen(
+        actT("vaccineGapTitle"),
+        actFill("vaccineGapBody", {
+          gaps: describeVaccineGaps(gaps, detailLocale, (vaccines, name) =>
+            actFill("vaccineGapPet", { vaccines, pet: name }),
+          ),
+        }),
+        actFill("vaccineGapConfirm", { pet: petName }),
+        () => void checkIn(),
+      );
+    },
     no_show: () =>
       confirmThen(
         detailT("noShowTitle"),
@@ -1925,46 +1881,8 @@ export default function ClientBookingDetailPage({
           petName={pet?.name}
           open={cancelOpen}
           onOpenChange={setCancelOpen}
-          // AWAITED, and refund FIRST: a refund that lands before a failed
-          // cancel leaves the money right and the status stale — visible, and
-          // fixed by cancelling again. The other order leaves a cancelled
-          // booking whose money never went back. "Back to the card" is the
-          // processor refund Issue Refund uses; it used to be a ledger row
-          // that toasted "$X refunded" without touching the card.
-          onConfirm={async (bId, reason, refundMethod, refundAmount) => {
-            let refunded = 0;
-            if (refundAmount > 0) {
-              if (refundMethod === "original") {
-                const result = await refundToCard.mutateAsync({
-                  bookingRef: bId,
-                  amountCents: Math.round(refundAmount * 100),
-                  reason,
-                });
-                refunded = result.refundedCents / 100;
-                if (result.shortfallCents > 0) {
-                  throw new Error(
-                    `$${refunded.toFixed(2)} went back to the card, but $${(result.shortfallCents / 100).toFixed(2)} did not — the booking is not cancelled yet. Refund the rest another way, then cancel.`,
-                  );
-                }
-              } else {
-                await refundBooking.mutateAsync({
-                  bookingId: bId,
-                  amount: refundAmount,
-                  method: refundTender(refundMethod),
-                  reason,
-                });
-                refunded = refundAmount;
-              }
-            }
-            await cancelBooking.mutateAsync({ bookingId: bId, reason });
-            toast.success(
-              `${bookingRef} cancelled` +
-                (refunded > 0
-                  ? ` — $${refunded.toFixed(2)} refunded${refundMethod === "store_credit" ? " as store credit" : refundMethod === "cash" ? " in cash" : " to the card"}`
-                  : ""),
-              { description: "The customer has not been messaged." },
-            );
-          }}
+          // Refund first, then cancel — see use-cancel-with-refund.ts.
+          onConfirm={cancelWithRefund}
         />
         <MoveBookingLocationDialog
           open={transferOpen}

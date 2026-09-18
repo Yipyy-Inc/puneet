@@ -2980,12 +2980,12 @@ branched on it, and two of them mattered:
 `getUserRole` / `setUserRole` / `ROLE_COOKIE_NAME` are deleted, and
 `/facility/set-role` with them.
 
-**Still reading it, and known:** `OperationsCalendarHelpers.parseUserRoleFromCookie`
-and the calendar's own `calendar_permission_level` cookie. With no writer left
-they take their fallbacks — which is exactly what every real session already got,
-since nobody in production ever visited the setter page. The calendar also takes
-its actor NAME from a cookie and stamps it on events it creates, so converting it
-is an identity change, not a permission one, and belongs in its own pass.
+**The last reader is gone (2026-09-18).** The operations calendar read it, its
+own `calendar_permission_level` cookie, and `user_name` / `user_id` for the actor
+it stamped on events — with no writer left, every viewer was "Manager on Duty",
+a facility admin, at permission level "admin". It takes the viewer from the
+session and each capability from the permission cascade now
+(`useFacilityRbac`), and `parseUserRoleFromCookie` is deleted.
 
 **Do instead:** when a screen needs to know what somebody may do, ask
 `usePermission(key)`. When it needs to know who they are, take it from the

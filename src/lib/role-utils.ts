@@ -572,10 +572,9 @@ const NAV_PERMISSIONS: Record<string, Permission> = {
 // anything. Who you are comes from the session; what you may do comes from the
 // permission cascade.
 //
-// Still reading it, and known: OperationsCalendarHelpers.parseUserRoleFromCookie
-// and the calendar's own `calendar_permission_level`. With no writer left they
-// take their fallbacks, which is what every real session already got — that
-// conversion is its own change. See the debt map.
+// The operations calendar was the last reader, with its own
+// `calendar_permission_level`; it reads the session and the permission
+// cascade since 2026-09-18, and the parser is gone.
 
 // Get facility-specific role
 export function getFacilityRole(): FacilityRole {

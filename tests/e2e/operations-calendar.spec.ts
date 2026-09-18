@@ -26,11 +26,13 @@ import { ACCOUNTS, signIn } from "./_auth";
 // Not the grid — the grid was never the doubtful part. What was doubtful is
 // whether pressing a button on it changes anything, and the answer was no.
 //
-// ── STILL A FIXTURE, AND NOT PRETENDED OTHERWISE ──────────────────────────
+// ── AND ITS BOOKING ACTIONS ARE THE BOOKING PAGE'S ────────────────────────
 //
-// `taskRecords` is `src/data/facility-tasks`. Facility tasks have no table at
-// all, so that is a build rather than a wiring job, and nothing here claims
-// they persist.
+// Check-in and check-out patched the status directly, so no form was asked
+// for, the day board never heard the dog arrived, and a balance was left
+// behind without anybody deciding to. "Cancel" took its reason from
+// window.prompt. The drawer drives the booking page's own flows now
+// (use-calendar-booking-actions.ts), and the tests below press its buttons.
 //
 // ── IT CLEANS UP ──────────────────────────────────────────────────────────
 //
@@ -45,6 +47,7 @@ const PET_REF = 1;
 interface BookingPayload {
   id: number;
   status?: string;
+  presence?: string;
   specialRequests?: string;
   startDate?: string;
   endDate?: string;
@@ -55,24 +58,25 @@ async function readBooking(
   page: import("@playwright/test").Page,
   ref: number,
 ): Promise<BookingPayload | undefined> {
-  // This client's bookings, not the facility's: the whole list is ~1,000 rows
-  // on this tenant, and one read of it under load came back as something other
-  // than an array ("all.find is not a function").
-  const all = (await (
-    await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`)
-  ).json()) as BookingPayload[];
-  return all.find((b) => b.id === ref);
+  // The one booking, by its number. This read the facility's whole list, then
+  // this client's — and client 15 carries every spec's bookings, so under load
+  // that read still came back as something other than an array ("all.find is
+  // not a function"). A failed read says so rather than looking empty.
+  const res = await page.request.get(`/api/bookings?ref=${ref}`);
+  expect(res.ok(), await res.text()).toBe(true);
+  const [row] = (await res.json()) as BookingPayload[];
+  return row;
 }
 
 /**
- * A DAYCARE booking: no kennel to reserve, so no exclusion constraint — and no
- * menu either. Grooming was the first choice and is refused with "this facility
- * has no grooming service", because a groom has to name a service from the
- * facility's own menu (check:grooming-menu exists to keep that true).
+ * A DAYCARE booking, for the tests that go through the API: no kennel to
+ * reserve, so no exclusion constraint, and no menu to name. The calendar draws
+ * no stay as an event, so the drawer tests book a groom instead (below).
  */
 async function createBooking(
   page: import("@playwright/test").Page,
   day: string,
+  price = 45,
 ): Promise<number> {
   const res = await page.request.post("/api/bookings", {
     data: {
@@ -85,14 +89,78 @@ async function createBooking(
       checkInTime: "08:00",
       checkOutTime: "17:00",
       status: "confirmed",
-      basePrice: 45,
+      basePrice: price,
       discount: 0,
-      totalCost: 45,
+      totalCost: price,
       specialRequests: MARKER,
     },
   });
   expect(res.status(), await res.text()).toBe(201);
   return ((await res.json()) as { id: number }).id;
+}
+
+/**
+ * A GROOM, for the tests that press the drawer's buttons: the calendar draws
+ * grooming, training and evaluations as events but not a daycare or boarding
+ * stay (only its add-ons), so a daycare booking has no chip to open. The
+ * service is one from this facility's own menu (check:grooming-menu).
+ */
+async function createGroom(
+  page: import("@playwright/test").Page,
+  day: string,
+  price: number,
+): Promise<number> {
+  const res = await page.request.post("/api/bookings", {
+    data: {
+      clientId: CLIENT_REF,
+      petId: PET_REF,
+      facilityId: 11,
+      service: "grooming",
+      serviceType: "groom-pkg-002",
+      startDate: day,
+      endDate: day,
+      checkInTime: "10:00",
+      checkOutTime: "11:00",
+      status: "confirmed",
+      basePrice: price,
+      discount: 0,
+      totalCost: price,
+      specialRequests: MARKER,
+    },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  return ((await res.json()) as { id: number }).id;
+}
+
+/**
+ * The drawer for one booking. The calendar's own search matches a booking's
+ * number, so the day shows this booking and not what earlier runs left there.
+ */
+async function openDrawer(
+  page: import("@playwright/test").Page,
+  day: string,
+  ref: number,
+) {
+  await page.goto(
+    `/facility/dashboard/calendar?date=${day}&view=day&search=${ref}`,
+  );
+  await page
+    .locator("[data-calendar-event-chip]")
+    .filter({ hasText: /buddy/i })
+    .first()
+    .click({ timeout: 90_000 });
+  await page.getByRole("button", { name: /open panel/i }).click();
+  const drawer = page.getByRole("dialog", { name: /buddy/i });
+  await expect(drawer).toBeVisible({ timeout: 15_000 });
+  return drawer;
+}
+
+async function presenceOf(
+  page: import("@playwright/test").Page,
+  ref: number,
+): Promise<string> {
+  const booking = await readBooking(page, ref);
+  return `${booking?.status}/${booking?.presence}`;
 }
 
 test.describe("the operations calendar", () => {
@@ -113,6 +181,9 @@ test.describe("the operations calendar", () => {
       for (const b of all) {
         if (!b.specialRequests?.includes(MARKER)) continue;
         if (b.status === "cancelled") continue;
+        // Off the daycare floor first: a cancelled booking with an attendance
+        // row is still somebody on the board.
+        await page.request.delete(`/api/daycare/attendance/${b.id}`);
         const res = await page.request.patch(`/api/bookings/${b.id}`, {
           data: { status: "cancelled" },
         });
@@ -148,24 +219,86 @@ test.describe("the operations calendar", () => {
   test("cancelling from the calendar reaches the database", async ({
     page,
   }) => {
+    test.slow();
     await signIn(page, ACCOUNTS.owner);
-    const ref = await createBooking(page, day);
+    const ref = await createGroom(page, day, 45);
 
-    // The handler behind the drawer's Cancel. Before this change it mapped over
-    // a local array and the booking was confirmed again on the next load.
-    const res = await page.request.patch(`/api/bookings/${ref}`, {
-      data: { status: "cancelled", cancellationReason: "e2e calendar cancel" },
-    });
-    expect(res.ok(), await res.text()).toBe(true);
+    // The booking's own cancel dialog, with its reason — the drawer asked in
+    // window.prompt and patched the status.
+    const drawer = await openDrawer(page, day, ref);
+    await drawer.getByRole("button", { name: /more actions/i }).click();
+    await page.getByRole("menuitem", { name: /^cancel booking$/i }).click();
+    const dialog = page.getByRole("dialog", { name: /cancel booking/i });
+    await dialog
+      .getByLabel(/reason for cancelling/i)
+      .fill("e2e calendar cancel");
+    await dialog.getByRole("button", { name: /^cancel the booking$/i }).click();
 
+    await expect
+      .poll(async () => (await readBooking(page, ref))?.status, {
+        timeout: 30_000,
+      })
+      .toBe("cancelled");
     const after = await readBooking(page, ref);
-    expect(after?.status, "cancelled, and it stayed cancelled").toBe(
-      "cancelled",
-    );
     expect(
       after?.cancellationReason,
-      "with the reason the drawer collected",
+      "with the reason the dialog collected",
     ).toBe("e2e calendar cancel");
+  });
+
+  test("checking in and out from the drawer records the arrival and the departure", async ({
+    page,
+  }) => {
+    test.slow();
+    await signIn(page, ACCOUNTS.owner);
+    // Nothing owed, so checking out records the departure here.
+    const ref = await createGroom(page, day, 0);
+    const drawer = await openDrawer(page, day, ref);
+
+    await drawer.getByRole("button", { name: /^check in buddy$/i }).click();
+    // Buddy has no vaccination on file and this facility requires rabies for
+    // grooming, so the check-in asks first (use-vaccine-gaps.ts).
+    const ask = page.getByRole("alertdialog");
+    await expect(ask).toContainText(/rabies/i);
+    await ask.getByRole("button", { name: /^check buddy in anyway$/i }).click();
+
+    // The groom's own write: the arrival is stamped and the facility's rule
+    // takes a groom on to in progress (autoTransitionTarget).
+    await expect
+      .poll(() => presenceOf(page, ref), { timeout: 30_000 })
+      .toMatch(/^(checked_in|in_progress)\/on-site$/);
+
+    await drawer
+      .getByRole("button", { name: /^check buddy out$/i })
+      .click({ timeout: 30_000 });
+    await expect
+      .poll(() => presenceOf(page, ref), { timeout: 30_000 })
+      .toBe("completed/departed");
+  });
+
+  test("checking out a guest who owes goes to the booking, where the payment is taken", async ({
+    page,
+  }) => {
+    test.slow();
+    await signIn(page, ACCOUNTS.owner);
+    const ref = await createGroom(page, day, 45);
+    const arrived = await page.request.patch("/api/grooming/appointments", {
+      data: { id: String(ref), status: "checked-in" },
+    });
+    expect(arrived.ok(), await arrived.text()).toBe(true);
+
+    const drawer = await openDrawer(page, day, ref);
+    await drawer
+      .getByRole("button", { name: /^check buddy out$/i })
+      .click({ timeout: 30_000 });
+
+    // Not a departure with the balance quietly left behind: the booking
+    // page, where checking out is the till.
+    await expect(page).toHaveURL(
+      new RegExp(`/clients/${CLIENT_REF}/bookings/${ref}`),
+      { timeout: 60_000 },
+    );
+    expect(await presenceOf(page, ref), "still on site").toMatch(/\/on-site$/);
   });
 
   test("rescheduling moves the booking, not a copy of it", async ({ page }) => {
