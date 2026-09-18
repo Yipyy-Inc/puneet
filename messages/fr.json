@@ -2514,7 +2514,8 @@
         "feeCancel": "Annuler",
         "feeAdd": "Ajouter les frais au panier",
         "store_credit_insufficient": "Ce client n’a pas assez de crédit en magasin. Appliquez moins, ou encaissez le reste autrement.",
-        "discount_not_permitted": "Votre rôle ne permet pas d’accorder de rabais. Demandez à un gestionnaire de l’appliquer."
+        "discount_not_permitted": "Votre rôle ne permet pas d’accorder de rabais. Demandez à un gestionnaire de l’appliquer.",
+        "store_credit_unbacked": "Le crédit en magasin de ce paiement ne correspond pas à ce qui a été retiré du crédit du client. Rien n’a été enregistré; recommencez la vente."
       },
       "kiosk": {
         "title": "Arrivées",

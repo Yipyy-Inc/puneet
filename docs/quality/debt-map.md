@@ -17318,3 +17318,47 @@ payments row can claim "$20 of this was store credit" with no matching debit in
 two to agree, and `authenticated` may insert into `payments`. Fixing it means
 deciding which of the two is the truth and deriving the other, which is a design
 decision about the ledger, not a guard.
+
+### ✅ The third trust gap — closed the same day
+
+The entry above recorded, and did not fix, that `payments.store_credit_applied`
+could be written with no matching debit. The owner said fix it, which meant
+deciding which record is the truth. **The ledger is.** A client's balance is the
+sum of their entries and that sum is what the overdraft guard protects; deriving
+the debit FROM the payment instead would hand the balance's input to a column
+any payer can write.
+
+Migration `20260918084508_a_payments_store_credit_is_what_the_ledger_debited`:
+**a payment's `store_credit_applied` must equal the DEBITS linked to it by
+`payment_id`, from the same client and facility.** Debits only — a refund TO
+store credit links a POSITIVE entry to a payment that claims $0, and that must
+stay valid (tested, C6).
+
+- **At commit** (deferred constraint triggers), because `record_payment` writes
+  the payment first and its debit second.
+- **From both sides** — on the payment, and on a linked debit — because a debit
+  can arrive later pointing at an existing payment (C5). Both tables are
+  immutable, so INSERT is the only way either side changes.
+- **No service-role exemption.** Whether a claim matches the ledger does not
+  depend on who wrote it.
+
+The negative control, run against the live database before the migration,
+showed all four forms accepted: a claim with no debit, a $10 claim with a $5
+debit, a claim backed by ANOTHER client's credit, and a debit attached later.
+After: `till-trust-guards.sql` 19/19; full SQL suite 115 files, 1,279
+assertions, 0 failed.
+
+**Nothing legitimate should be refused, and here is exactly how far that is
+proven.** The only writer of a store-credit claim is `record_payment`, which
+writes its own linked debit; `record_clover_payment` always writes
+`store_credit_applied = 0` (credit + card is two payments) and
+`attach_unattached_payment` never sets it. No payment in production claims
+store credit at all, so no existing row is out of step. **But the full SQL suite
+passing proves less than it looks:** every file there rolls back, and a deferred
+check fires only at COMMIT — so in the 114 other files it never ran. Only the C
+and D tests force it (`SET CONSTRAINTS ALL IMMEDIATE`). The first run that
+exercises it on genuinely committed payments is the e2e gate after the push.
+
+**Read this before writing a deferred trigger here:** a green `test:sql` is not
+evidence it spares the paths you did not force. Force it in the test, and treat
+the first committed run as the real one.

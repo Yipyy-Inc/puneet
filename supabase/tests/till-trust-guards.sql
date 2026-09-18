@@ -16,6 +16,10 @@
 --                            sale, as a redemption row, and must not count as
 --                            manual. Every file here rolls back, so each D test
 --                            forces the check with SET CONSTRAINTS ALL IMMEDIATE.
+--   C  payments              a payment's store_credit_applied must equal the
+--                            DEBITS linked to it in the ledger, from the same
+--                            client and facility — checked at commit from both
+--                            sides (20260918084508). The ledger is the truth.
 --
 -- No built-in role can take a sale without also being able to discount
 -- (measured: owner, admin, manager, supervisor, reception and retail all hold
@@ -293,6 +297,163 @@ exception when others then
   reset role; perform pg_temp.t('D5  the owner can give a manual discount', false, sqlerrm);
 end $$;
 
+-- ── C: a payment's store credit is what the ledger debited for it ──────────
+--
+-- Added the same day. `payments.store_credit_applied` was a column any payer
+-- could write: a payment could claim "$10 of this was store credit" with no
+-- matching debit, so the client kept the credit AND the facility counted it as
+-- paid. The ledger is the truth — a balance IS the sum of its entries, and that
+-- sum is what S guards — so a payment's claim must equal the DEBITS linked to it
+-- (payment_id), from the same client and facility. Checked at commit from BOTH
+-- sides: a payment inserted without its debit, and a debit attached afterwards
+-- to a payment that did not claim it. Positive (refund) entries are not debits
+-- and do not count.
+
+create or replace function pg_temp.pay_row(p_claim numeric, p_client uuid default '00000000-0000-0000-0000-0000003d7040')
+returns uuid language plpgsql as $$
+declare v_id uuid;
+begin
+  insert into public.payments (facility_id, client_id, method, subtotal, tax, tip,
+                               store_credit_applied, amount_charged, grand_total)
+  values ('00000000-0000-0000-0000-0000003d7020', p_client, 'store-credit',
+          p_claim, 0, 0, p_claim, 0, p_claim)
+  returning id into v_id;
+  return v_id;
+end $$;
+
+insert into public.clients (id, facility_id, name, email) values
+  ('00000000-0000-0000-0000-0000003d7041', '00000000-0000-0000-0000-0000003d7020',
+   'Someone Else', 'trust-c2@example.invalid');
+
+create temp table cstate (k text primary key, v uuid);
+grant all on cstate to authenticated;
+
+-- Credit for both clients, in its own statement: if it sat inside C1, an error
+-- there would roll it back and C3-C5 would be refused by the BALANCE guard (S)
+-- instead of the one under test — passing for the wrong reason.
+insert into public.store_credit_entries (facility_id, client_id, amount, reason)
+values ('00000000-0000-0000-0000-0000003d7020', '00000000-0000-0000-0000-0000003d7040', 40, 'added'),
+       ('00000000-0000-0000-0000-0000003d7020', '00000000-0000-0000-0000-0000003d7041', 40, 'added');
+
+do $$
+declare v_out jsonb;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  v_out := public.record_payment(
+    p_facility_id => '00000000-0000-0000-0000-0000003d7020',
+    p_method => 'store-credit',
+    p_subtotal => 15, p_tax => 0, p_tip => 0,
+    p_amount_charged => 0, p_grand_total => 15,
+    p_client_id => '00000000-0000-0000-0000-0000003d7040',
+    p_store_credit_applied => 15);
+  set constraints all immediate;
+  set constraints all deferred;
+  reset role;
+  insert into cstate values ('paid', (v_out->>'payment_id')::uuid);
+  perform pg_temp.t('C1  record_payment''s own store-credit payment matches the ledger',
+    v_out ? 'payment_id', format('payment=%s', v_out->>'payment_id'));
+exception when others then
+  reset role; perform pg_temp.t('C1  record_payment''s own store-credit payment matches the ledger', false, sqlerrm);
+end $$;
+
+do $$
+declare v_hint text := 'accepted';
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  begin
+    perform pg_temp.pay_row(10);
+    set constraints all immediate;
+  exception when check_violation then
+    get stacked diagnostics v_hint = pg_exception_hint;
+  end;
+  set constraints all deferred;
+  reset role;
+  perform pg_temp.t('C2  a payment cannot claim store credit nobody debited',
+    v_hint = 'store_credit_unbacked', format('hint=%s', v_hint));
+end $$;
+
+do $$
+declare v_hint text := 'accepted'; v_pay uuid;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  begin
+    v_pay := pg_temp.pay_row(10);
+    insert into public.store_credit_entries (facility_id, client_id, amount, reason, payment_id)
+    values ('00000000-0000-0000-0000-0000003d7020', '00000000-0000-0000-0000-0000003d7040',
+            -5, 'redeemed', v_pay);
+    set constraints all immediate;
+  exception when check_violation then
+    get stacked diagnostics v_hint = pg_exception_hint;
+  end;
+  set constraints all deferred;
+  reset role;
+  perform pg_temp.t('C3  a payment cannot claim $10 of credit when $5 was debited',
+    v_hint = 'store_credit_unbacked', format('hint=%s', v_hint));
+end $$;
+
+do $$
+declare v_hint text := 'accepted'; v_pay uuid;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  begin
+    v_pay := pg_temp.pay_row(10);
+    insert into public.store_credit_entries (facility_id, client_id, amount, reason, payment_id)
+    values ('00000000-0000-0000-0000-0000003d7020', '00000000-0000-0000-0000-0000003d7041',
+            -10, 'redeemed', v_pay);
+    set constraints all immediate;
+  exception when check_violation then
+    get stacked diagnostics v_hint = pg_exception_hint;
+  end;
+  set constraints all deferred;
+  reset role;
+  perform pg_temp.t('C4  a payment cannot be backed by SOMEONE ELSE''S credit',
+    v_hint = 'store_credit_unbacked', format('hint=%s', v_hint));
+end $$;
+
+do $$
+declare v_hint text := 'accepted';
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  begin
+    insert into public.store_credit_entries (facility_id, client_id, amount, reason, payment_id)
+    values ('00000000-0000-0000-0000-0000003d7020', '00000000-0000-0000-0000-0000003d7040',
+            -5, 'redeemed', (select v from cstate where k = 'paid'));
+    set constraints all immediate;
+  exception when check_violation then
+    get stacked diagnostics v_hint = pg_exception_hint;
+  end;
+  set constraints all deferred;
+  reset role;
+  perform pg_temp.t('C5  a debit cannot be attached later to a payment that did not claim it',
+    v_hint = 'store_credit_unbacked', format('hint=%s', v_hint));
+end $$;
+
+do $$
+declare v_out jsonb;
+begin
+  perform pg_temp.as_user('00000000-0000-0000-0000-0000003d7001');
+  set local role authenticated;
+  v_out := public.record_payment(
+    p_facility_id => '00000000-0000-0000-0000-0000003d7020',
+    p_method => 'store-credit',
+    p_subtotal => -10, p_tax => 0, p_tip => 0,
+    p_amount_charged => -10, p_grand_total => -10,
+    p_client_id => '00000000-0000-0000-0000-0000003d7040',
+    p_credit_note => 'refund to credit');
+  set constraints all immediate;
+  set constraints all deferred;
+  reset role;
+  perform pg_temp.t('C6  a refund TO store credit still works — a credit is not a debit',
+    v_out ? 'payment_id', format('payment=%s', v_out->>'payment_id'));
+exception when others then
+  reset role; perform pg_temp.t('C6  a refund TO store credit still works', false, sqlerrm);
+end $$;
+
 -- ── G: the guard functions are not callable by anyone ─────────────────────
 do $$
 declare v_bad text := '';
@@ -305,6 +466,10 @@ begin
     v_bad := v_bad || 'anon:discount '; end if;
   if has_function_privilege('authenticated', 'private.retail_sale_discount_is_permitted()', 'execute') then
     v_bad := v_bad || 'authenticated:discount '; end if;
+  if has_function_privilege('anon', 'private.payment_credit_matches_ledger()', 'execute') then
+    v_bad := v_bad || 'anon:ledger '; end if;
+  if has_function_privilege('authenticated', 'private.payment_credit_matches_ledger()', 'execute') then
+    v_bad := v_bad || 'authenticated:ledger '; end if;
   perform pg_temp.t('G1  neither guard is executable by anon or authenticated',
     v_bad = '', coalesce(nullif(v_bad, ''), 'none'));
 exception when others then
