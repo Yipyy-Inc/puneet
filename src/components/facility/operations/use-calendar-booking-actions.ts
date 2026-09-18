@@ -177,7 +177,11 @@ export function useCalendarBookingActions(input: {
           amount: formatMoney(owed, locale),
         }),
       );
-      router.push(`/facility/dashboard/bookings/${bookingId}`);
+      // The booking page's own address, not the /bookings/[id] redirect: one
+      // hop rather than two.
+      router.push(
+        `/facility/dashboard/clients/${booking.clientId}/bookings/${bookingId}`,
+      );
       return;
     }
     if (!mayArrive(booking)) {
