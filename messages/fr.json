@@ -2501,7 +2501,8 @@
         "subtotal": "Sous-total",
         "discountLabel": "Rabais",
         "tipLabel": "Pourboire",
-        "totalLabel": "Total"
+        "totalLabel": "Total",
+        "applyCartDiscount": "Appliquer un rabais"
       },
       "kiosk": {
         "title": "Arrivées",

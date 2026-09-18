@@ -16,11 +16,6 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { VariantSelector } from "@/components/retail/VariantSelector";
@@ -833,9 +828,19 @@ export default function POSPage() {
   const applyCartDiscount = () => {
     if (!canApplyDiscount) return;
 
+    // Clamped HERE, because the input's min={0} and max={100} are HTML
+    // attributes and stop nobody typing: 150% made the total negative and a
+    // fixed -50 raised the price by $50. This modal was unreachable until it
+    // was given a button, so both were latent — giving it one made them live.
+    const raw = Number(cartDiscountForm.value) || 0;
+    const value =
+      cartDiscountForm.type === "percent"
+        ? Math.min(Math.max(raw, 0), 100)
+        : Math.max(raw, 0);
+
     setCartDiscount({
       type: cartDiscountForm.type,
-      value: cartDiscountForm.value,
+      value,
       appliedBy: currentUserId || undefined,
       reason: cartDiscountForm.reason || undefined,
     });
@@ -2913,44 +2918,23 @@ export default function POSPage() {
                   <Separator className="my-2" />
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-1.5">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1 text-[10px]"
-                          >
-                            <Percent className="size-3" />
-                            Discount
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="top"
-                          align="start"
-                          className="w-52"
+                      {/* The cart discount was a popover whose two inputs had no value
+                          and no onChange, and whose Apply only toasted "Discount applied"
+                          — staff read success and charged full price. The real modal
+                          below (applyCartDiscount -> cartDiscount -> grandTotal) was fully
+                          built and opened by nothing. This is its door. Gated the way the
+                          per-item discount button is. */}
+                      {canApplyDiscount && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-[10px]"
+                          onClick={() => setIsCartDiscountModalOpen(true)}
                         >
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium">
-                              Apply Discount
-                            </p>
-                            <Input
-                              placeholder="Amount or %"
-                              className="h-7 text-xs"
-                            />
-                            <Input
-                              placeholder="Reason (e.g. Loyalty 10%)"
-                              className="h-7 text-xs"
-                            />
-                            <Button
-                              size="sm"
-                              className="h-7 w-full text-xs"
-                              onClick={() => toast.success("Discount applied")}
-                            >
-                              Apply
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                          <Percent className="size-3" />
+                          {tR("applyCartDiscount")}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -2962,54 +2946,10 @@ export default function POSPage() {
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1 text-[10px]"
-                          >
-                            <DollarSign className="size-3" />
-                            Add Tip
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="top"
-                          align="start"
-                          className="w-52"
-                        >
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium">Add Tip</p>
-                            <div className="flex gap-1.5">
-                              {[5, 10, 15, 20].map((amt) => (
-                                <button
-                                  key={amt}
-                                  onClick={() =>
-                                    toast.success(`$${amt} tip added`)
-                                  }
-                                  className="hover:bg-foreground hover:text-background flex-1 rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-all"
-                                >
-                                  ${amt}
-                                </button>
-                              ))}
-                            </div>
-                            <Input
-                              placeholder="Custom amount"
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              className="h-7 text-xs"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  const val = (e.target as HTMLInputElement)
-                                    .value;
-                                  if (val) toast.success(`$${val} tip added`);
-                                }
-                              }}
-                            />
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      {/* An "Add tip" popover sat here: $5/$10/$15/$20 and a custom
+                          amount, every one of them only toast.success("… tip added").
+                          Removed, not rewired — the working tip control above already
+                          sets tipPercentage / tipCustomAmount, which grandTotal reads. */}
                       {selectedClientId &&
                         selectedClientId !== "__walk_in__" && (
                           <>

@@ -241,6 +241,25 @@ const CLAIMS: Claim[] = [
     label: "specs in test:e2e:gate (the log line CI prints)",
     actual: gateSpecCount(),
   },
+  // ── the control-heights ratchet's total ─────────────────────────────────
+  //
+  // Added 2026-09-17. AGENTS.md said "625 across 235 files" while the
+  // baseline in check-control-heights.ts summed to 537 across 199: every
+  // per-file entry that came DOWN left this sentence behind, because nothing
+  // derived it. A ratchet's headline number is exactly the kind that only
+  // ever moves by hand, which is why it goes stale.
+  {
+    file: "AGENTS.md",
+    pattern: /Ratcheted PER FILE at (\d+) across \d+ files/,
+    label: "check:control-heights baseline total",
+    actual: controlHeightsBaseline().total,
+  },
+  {
+    file: "AGENTS.md",
+    pattern: /Ratcheted PER FILE at \d+ across (\d+) files/,
+    label: "check:control-heights baselined files",
+    actual: controlHeightsBaseline().files,
+  },
 ];
 
 /**
@@ -264,6 +283,22 @@ function checkScriptCount(): number {
     .split("\n")
     .map((line) => line.replace(/\\/g, "").trim())
     .filter(Boolean).length;
+}
+
+/**
+ * The control-heights ratchet, summed out of its own BASELINE entries.
+ *
+ * Read from the script rather than by running it: the headline in AGENTS.md
+ * describes the baseline, not today's hits, and the two differ by exactly the
+ * wins nobody has recorded yet.
+ */
+function controlHeightsBaseline(): { total: number; files: number } {
+  const src = readFileSync(join("scripts", "check-control-heights.ts"), "utf8");
+  const entries = [...src.matchAll(/\["[^"]+\.tsx?\",\s*(\d+)\]/g)];
+  return {
+    total: entries.reduce((sum, m) => sum + Number(m[1]), 0),
+    files: entries.length,
+  };
 }
 
 /**
