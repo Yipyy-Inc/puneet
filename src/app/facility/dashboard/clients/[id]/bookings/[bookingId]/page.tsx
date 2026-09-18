@@ -3,26 +3,9 @@
 import { use, useState, useMemo } from "react";
 import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
-import {
-  PawPrint,
-  CreditCard,
-  Banknote,
-  ClipboardList,
-  ShieldCheck,
-  XCircle,
-  CheckCircle2,
-  Clock,
-  CalendarDays,
-  MapPin,
-  AlertTriangle,
-  HandCoins,
-  LogOut,
-  CircleAlert,
-  CircleHelp,
-} from "lucide-react";
+import { CreditCard, CircleAlert, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,10 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  BookingActionBar,
-  type BookingActionHandlers,
-} from "@/components/bookings/booking-actions/BookingActionBar";
+import { type BookingActionHandlers } from "@/components/bookings/booking-actions/BookingActionBar";
 import { useBookingActions } from "@/components/bookings/booking-actions/use-booking-actions";
 import { useBookingArrival } from "@/lib/api/booking-arrival";
 import { arrivalFailure } from "@/lib/bookings/arrival-failure";
@@ -54,7 +34,6 @@ const BookingEditDialog = dynamic(
     ),
   { ssr: false },
 );
-import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +44,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/use-settings";
 import type { BoardingGuest } from "@/data/boarding";
 import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   AcceptPaymentButton,
   BookingPaymentBreakdown,
@@ -96,7 +74,6 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
 import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
-import { TagList } from "@/components/shared/TagList";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
@@ -119,7 +96,6 @@ import {
 import { MoveBookingLocationDialog } from "@/components/bookings/modals/MoveBookingLocationDialog";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { toast } from "sonner";
-import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { useFieldMask } from "@/lib/staff/mask";
 import { useBookingStatusRules } from "@/lib/api/facility-settings";
 import { autoTransitionTarget } from "@/lib/settings/booking-statuses";
@@ -148,10 +124,7 @@ import { tipStillToCollect } from "@/lib/payments/pledged-tip";
 import { staffQueries } from "@/lib/api/staff";
 import { AccessRestricted } from "@/components/employee/AccessRestricted";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
-import { NotesButton } from "@/components/shared/NotesButton";
 import { NotesList } from "@/components/shared/NotesList";
-import { TagsButton } from "@/components/shared/TagsButton";
-import { BookingStatusMenu } from "@/components/bookings/booking-actions/BookingStatusMenu";
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
@@ -160,7 +133,11 @@ import { formatBookingRef } from "@/lib/booking-id";
 import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
 import { YipyyGoBookingCard } from "@/components/yipyygo/staff/yipyy-go-booking-card";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
-import { PageHeader } from "@/components/ui/page-header";
+import { BookingDetailsCard } from "./_components/booking-details-card";
+import { BookingHero } from "./_components/booking-hero";
+import { BookingNotices } from "./_components/booking-notices";
+import { BookingPetsCard } from "./_components/booking-pets-card";
+import { BookingTipsCard } from "./_components/booking-tips-card";
 
 // ========================================
 // Helpers
@@ -173,21 +150,15 @@ function nightsBetween(start: string, end: string) {
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 }
 
-function formatDateLong(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateShort(dateStr: string) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
+// The built-in services by their key in the staff catalogue. Any other
+// service is a facility’s own and is shown by the name it was given.
+const SERVICE_KEYS: Record<string, string> = {
+  daycare: "svcDaycare",
+  boarding: "svcBoarding",
+  grooming: "svcGrooming",
+  training: "svcTraining",
+  evaluation: "svcEvaluation",
+};
 
 // ========================================
 // Page
@@ -282,6 +253,11 @@ export default function ClientBookingDetailPage({
     enabled: Number.isFinite(bookingId),
   });
   const [logDay] = useState(() => new Date().toISOString().slice(0, 10));
+  const {
+    t: detailT,
+    fill: detailFill,
+    locale: detailLocale,
+  } = useStaffText("bookingDetail");
 
   const recordCare = useMutation({
     mutationFn: logCare,
@@ -290,9 +266,9 @@ export default function ClientBookingDetailPage({
         queryKey: careLogKeys.forBooking(bookingId),
       }),
     onError: (error: unknown) =>
-      toast.error("Not recorded", {
+      toast.error(detailT("careNotRecorded"), {
         description:
-          error instanceof Error ? error.message : "Please try again.",
+          error instanceof Error ? error.message : detailT("tryAgain"),
       }),
   });
 
@@ -392,11 +368,6 @@ export default function ClientBookingDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   // "Review and approve" opens the same wizard; saving it confirms the request.
   const [approveOnSave, setApproveOnSave] = useState(false);
-  const {
-    t: detailT,
-    fill: detailFill,
-    locale: detailLocale,
-  } = useStaffText("bookingDetail");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const { locations } = useLocationContext();
@@ -486,9 +457,9 @@ export default function ClientBookingDetailPage({
       checkInDate: booking.startDate,
       checkOutDate: booking.endDate,
       kennelId: booking.kennel ?? "",
-      kennelName: booking.kennel ?? "Unassigned",
+      kennelName: booking.kennel ?? detailT("unassigned"),
       status: "checked-in",
-      packageType: booking.serviceType ?? "Standard",
+      packageType: booking.serviceType ?? detailT("standardPackage"),
       totalNights: nights,
       nightlyRate: booking.basePrice,
       discountApplied: 0,
@@ -762,6 +733,10 @@ export default function ClientBookingDetailPage({
         : `${pets[0].name} +${pets.length - 1}`;
   const petName = petLabel ?? bookingRef;
   const owed = balanceOf(booking);
+  // The service in the viewer's language; a facility's own custom service
+  // keeps the name it was given.
+  const serviceKey = SERVICE_KEYS[booking.service.toLowerCase()];
+  const serviceLabel = serviceKey ? detailT(serviceKey) : booking.service;
 
   const arrivalProblem = (error: unknown) => {
     const failure = arrivalFailure(error);
@@ -1010,7 +985,7 @@ export default function ClientBookingDetailPage({
     // instead; here four call sites funnel through this one function, so the
     // guard belongs in it.
     if (pricingPending) {
-      toast.info("One moment — loading this facility's fees.");
+      toast.info(detailT("loadingFees"));
       return;
     }
 
@@ -1026,7 +1001,10 @@ export default function ClientBookingDetailPage({
     });
     if (fee) {
       toast.warning(
-        `Late pickup: ${fee.minutesLate} min over — $${fee.amount.toFixed(2)} fee added`,
+        detailFill("latePickupFee", {
+          minutes: fee.minutesLate,
+          amount: formatMoneyIn(fee.amount, detailLocale),
+        }),
       );
     }
     setPendingLateFee(fee);
@@ -1046,7 +1024,9 @@ export default function ClientBookingDetailPage({
     : Math.round(bookingTotalForDeposit * 0.5 * 100) / 100;
   const ruleDepositLabel = depositRule
     ? depositRule.label
-    : `50% of total ($${(bookingTotalForDeposit * 0.5).toFixed(2)})`;
+    : detailFill("halfOfTotal", {
+        amount: formatMoneyIn(bookingTotalForDeposit * 0.5, detailLocale),
+      });
 
   // What has been paid toward this booking, from the payments ledger. The
   // banners read `invoice?.depositCollected` — a fixture blob no real booking
@@ -1080,277 +1060,95 @@ export default function ClientBookingDetailPage({
       />
 
       <div className="space-y-5 p-5 md:p-7">
-        {/* Evaluation Reminder — non-blocking mode */}
-        {!isCancelled &&
-          booking.status !== "completed" &&
-          facilityBookingFlowConfig.evaluationRequired &&
-          facilityBookingFlowConfig.servicesRequiringEvaluation.includes(
-            booking.service,
-          ) &&
-          !facilityBookingFlowConfig.hideServicesUntilEvaluationCompleted && (
-            <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-                  <ClipboardList className="size-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-amber-800">
-                    Evaluation Recommended
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    This pet may need an evaluation for {booking.service}.
-                    Consider scheduling one before check-in.
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
-                // It toasted "Evaluation appointment created" and created
-                // nothing. It opens the booking wizard on an evaluation for
-                // this pet, and the wizard creates it.
-                onClick={() =>
-                  openBookingModal({
-                    clients: client ? [client] : [],
-                    facilityId: booking.facilityId,
-                    facilityName: facilityProfile.businessName,
-                    preSelectedClientId: client?.id,
-                    preSelectedPetId: Array.isArray(booking.petId)
-                      ? booking.petId[0]
-                      : booking.petId,
-                    preSelectedService: "evaluation",
-                    onCreateBooking: createBooking,
-                  })
+        <BookingNotices
+          clientName={client.name}
+          petName={petName}
+          evaluationAdvised={
+            !isCancelled &&
+            booking.status !== "completed" &&
+            facilityBookingFlowConfig.evaluationRequired &&
+            facilityBookingFlowConfig.servicesRequiringEvaluation.includes(
+              booking.service,
+            ) &&
+            !facilityBookingFlowConfig.hideServicesUntilEvaluationCompleted
+          }
+          onBookEvaluation={() =>
+            openBookingModal({
+              clients: [client],
+              facilityId: booking.facilityId,
+              facilityName: facilityProfile.businessName,
+              preSelectedClientId: client.id,
+              preSelectedPetId: pet?.id,
+              preSelectedService: "evaluation",
+              onCreateBooking: createBooking,
+            })
+          }
+          estimateSent={isEstimateSent}
+          onConfirmEstimate={() =>
+            void revertTo("confirmed", "bookingConfirmed")
+          }
+          onDeclineEstimate={() => void revertTo("declined", "declinedDone")}
+          declined={
+            isDeclined ? (sourceEstimate ? "estimate" : "request") : null
+          }
+          // 5B: deposit amounts are part of the price breakdown, so they are
+          // omitted without view_booking_amounts. Only when a rule of the
+          // facility's own applies — it showed "Rule: 50%" on every booking.
+          depositDue={
+            canSeeBookingAmounts &&
+            !isPaid &&
+            !isCancelled &&
+            depositRule &&
+            depositCollected === 0
+              ? {
+                  rule: ruleDepositLabel,
+                  amount: ruleDepositAmount,
+                  confirms:
+                    autoTransitionTarget(
+                      statusRules,
+                      booking,
+                      "onDepositPaid",
+                    ) === "confirmed",
+                  onCharge: bookingActions.some(
+                    (a) => a.id === "charge_deposit",
+                  )
+                    ? () => setDepositOpen(true)
+                    : undefined,
                 }
-              >
-                <ClipboardList className="size-3.5" />
-                Add Evaluation
-              </Button>
-            </div>
-          )}
+              : null
+          }
+          partPaid={
+            canSeeBookingAmounts && depositCollected > 0 && !isPaid
+              ? { paid: depositCollected, owed: remainingDue }
+              : null
+          }
+          finished={booking.status === "completed"}
+        />
 
-        {/* "Evaluation results not recorded" stood here, with a Record
-            Results button that only toasted "Open the evaluation form" —
-            there is no form to open and nowhere a pass or fail is kept.
-            Removed rather than left pointing at nothing; it returns with
-            evaluation results themselves. */}
-
-        {/* Estimate Sent — waiting for client confirmation */}
-        {isEstimateSent && (
-          <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                <Clock className="size-4 text-violet-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-violet-800">
-                  Waiting for client confirmation
-                </p>
-                <p className="text-xs text-violet-600">
-                  Estimate sent to {client.name} — awaiting response
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {/* "Resend" opened a modal whose Send was a toast. An estimate is
-                  its own record now, resent from the Estimates screen. And
-                  Confirm said "confirmed" before — and whether or not — the
-                  deposit rule moved anything; it writes the status now. */}
-              <Button
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void revertTo("confirmed", "bookingConfirmed")}
-              >
-                <CheckCircle2 className="size-3.5" />
-                Confirm Booking
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-                onClick={() => void revertTo("declined", "declinedDone")}
-              >
-                <XCircle className="size-3.5" />
-                Decline
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Declined — client rejected the estimate */}
-        {isDeclined && (
-          <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-100">
-                <XCircle className="size-4 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-red-800">
-                  Estimate Declined
-                </p>
-                <p className="text-xs text-red-600">
-                  {client.name} declined this estimate
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Deposit Notice — unpaid. 5B: deposit amounts are part of the price
-            breakdown, so they're omitted without view_booking_amounts. */}
-        {/* Only when the facility has a deposit rule that applies to this
-            booking — it showed a hard-coded "Rule: 50%" on every booking. */}
-        {canSeeBookingAmounts &&
-          !isPaid &&
-          !isCancelled &&
-          depositRule &&
-          depositCollected === 0 && (
-            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                  <Banknote className="size-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-800">
-                    Deposit Required
-                  </p>
-                  <p className="text-xs text-blue-600">
-                    {detailFill("depositRuleLine", {
-                      rule: ruleDepositLabel,
-                      amount: `$${ruleDepositAmount.toFixed(2)}`,
-                    })}
-                  </p>
-                  <p className="text-[10px] text-blue-500">
-                    Paying the deposit will auto-confirm this booking
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => setDepositOpen(true)}
-              >
-                <Banknote className="size-3.5" />
-                Charge Deposit
-              </Button>
-            </div>
-          )}
-
-        {/* Deposit Collected — with auto-confirm note. 5B: omitted without
-            view_booking_amounts (it discloses deposit + remaining balance). */}
-        {canSeeBookingAmounts && depositCollected > 0 && !isPaid && (
-          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-                <CheckCircle2 className="size-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-800">
-                  Deposit Collected — ${depositCollected.toFixed(2)}
-                </p>
-                <p className="text-xs text-emerald-600">
-                  Remaining balance:{" "}
-                  <span className="font-medium tabular-nums">
-                    ${remainingDue.toFixed(2)}
-                  </span>{" "}
-                  {booking.status === "confirmed" ? " · Booking confirmed" : ""}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Finished Notice */}
-        {(booking.status === "completed" || isPaid) && !isCancelled && (
-          <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            <CheckCircle2 className="size-4 shrink-0" />
-            <span>
-              This booking is <strong>finished</strong>. Date, time, service
-              prices, and items are locked. You can still view the receipt,
-              split tips, or issue a refund. If a correction is needed, cancel
-              and refund this invoice, then create a new booking.
-            </span>
-          </div>
-        )}
-
-        {/* ── Hero Header ── */}
-        <div className="from-card to-muted/20 rounded-xl border bg-linear-to-r p-4 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                {/* §5r: an invoice number and a booking reference never pass
-                    through the locale layer. */}
-                <PageHeader title={bookingRef} />
-                <BookingStatusMenu
-                  status={booking.status}
-                  actions={bookingActions}
-                  handlers={handlers}
-                  petLabel={petLabel}
-                />
-                <TagsButton entityType="booking" entityId={booking.id} />
-                <NotesButton entityType="booking" entityId={booking.id} />
-                {sourceEstimate && (
-                  <Link
-                    href={`/facility/dashboard/estimates?q=${sourceEstimate.estimateId}`}
-                  >
-                    <Badge
-                      variant="outline"
-                      className="hover:bg-muted gap-1 text-xs"
-                    >
-                      From Estimate {sourceEstimate.estimateId}
-                    </Badge>
-                  </Link>
-                )}
-              </div>
-              <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                <span className="flex items-center gap-1.5">
-                  <CalendarDays className="size-3.5" />
-                  {formatDateShort(booking.startDate)}
-                  {booking.startDate !== booking.endDate &&
-                    ` → ${formatDateShort(booking.endDate)}`}
-                </span>
-                {nights > 0 && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="size-3.5" />
-                    {nights} night{nights !== 1 ? "s" : ""}
-                  </span>
-                )}
-                <span className="capitalize">{booking.service}</span>
-                {booking.kennel && (
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="size-3.5" />
-                    {booking.kennel}
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* Section 5B / 3C — total + payment status are OMITTED (not greyed)
-                without view_booking_amounts. */}
-            {canSeeBookingAmounts && (
-              <div className="text-right">
-                <p className="text-2xl font-bold tabular-nums">
-                  {/* The Payment Summary's own total — price, added items,
-                      tax and tip — not the bare price it used to show. */}
-                  {maskAmount(
-                    formatMoneyIn(
-                      bookingTotals(booking, facilityTaxConfig).total,
-                      detailLocale,
-                    ),
-                    "booking_financials",
-                  )}
-                </p>
-                <StatusBadge type="status" value={booking.paymentStatus} />
-              </div>
-            )}
-          </div>
-
-          {/* The lifecycle's actions for this viewer — see the handlers. */}
-          <BookingActionBar
-            actions={bookingActions}
-            handlers={handlers}
-            petLabel={petLabel}
-          />
-        </div>
+        <BookingHero
+          booking={booking}
+          bookingRef={bookingRef}
+          serviceLabel={serviceLabel}
+          nights={nights}
+          sourceEstimateId={sourceEstimate?.estimateId}
+          // Section 5B / 3C — the total is OMITTED (not greyed) without
+          // view_booking_amounts. The Payment Summary's own total — price,
+          // added items, tax and tip — not the bare price it used to show.
+          total={
+            canSeeBookingAmounts
+              ? maskAmount(
+                  formatMoneyIn(
+                    bookingTotals(booking, facilityTaxConfig).total,
+                    detailLocale,
+                  ),
+                  "booking_financials",
+                )
+              : null
+          }
+          actions={bookingActions}
+          handlers={handlers}
+          petLabel={petLabel}
+        />
 
         {/* ── Content Grid ── */}
         <div className="grid gap-5 *:min-w-0 lg:grid-cols-5">
@@ -1358,162 +1156,23 @@ export default function ClientBookingDetailPage({
           <div className="min-w-0 space-y-5 lg:col-span-3">
             {/* Booking Details + Pets */}
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              {/* Details */}
-              <Card className="overflow-hidden">
-                <CardHeader className="bg-muted/30 pb-3">
-                  <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-                    <CalendarDays className="size-3.5" />
-                    Booking Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Service</span>
-                      <span className="font-medium capitalize">
-                        {booking.service}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Check-in</span>
-                      <span className="font-medium">
-                        {formatDateLong(booking.startDate)}
-                        {booking.checkInTime && (
-                          <span className="text-muted-foreground ml-1 text-xs">
-                            {booking.checkInTime}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Check-out</span>
-                      <span className="font-medium">
-                        {formatDateLong(booking.endDate)}
-                        {booking.checkOutTime && (
-                          <span className="text-muted-foreground ml-1 text-xs">
-                            {booking.checkOutTime}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {booking.service.toLowerCase() === "boarding" &&
-                      !isCancelled &&
-                      booking.status !== "completed" &&
-                      unifiedForEarlyCheckout && (
-                        <div className="flex justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1.5 border-amber-300 text-xs text-amber-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
-                            onClick={() => setEarlyCheckoutOpen(true)}
-                          >
-                            <LogOut className="size-3.5" />
-                            Early Checkout
-                          </Button>
-                        </div>
-                      )}
-                    {booking.kennel && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Room</span>
-                        <span className="font-medium">{booking.kennel}</span>
-                      </div>
-                    )}
-                    {booking.specialRequests && (
-                      <div className="border-t pt-3">
-                        <p className="text-muted-foreground mb-1 text-xs">
-                          Special Requests
-                        </p>
-                        <p className="text-sm italic">
-                          {booking.specialRequests}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Pets */}
-              {pets.length > 0 && (
-                <Card className="overflow-hidden">
-                  <CardHeader className="bg-muted/30 pb-3">
-                    <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-                      <PawPrint className="size-3.5" />
-                      {pets.length === 1 ? "Pet" : `Pets (${pets.length})`}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2 pt-4 pb-4">
-                    {pets.map((p) => (
-                      <div
-                        key={p.id}
-                        className="border-border/70 bg-card hover:border-border flex items-center gap-3 rounded-2xl border p-3 transition-all hover:shadow-sm"
-                      >
-                        <Link
-                          href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
-                          className="relative block size-12 shrink-0"
-                        >
-                          {p.imageUrl ? (
-                            <div className="ring-background size-12 overflow-hidden rounded-2xl ring-2">
-                              <img
-                                src={p.imageUrl}
-                                alt={p.name}
-                                className="size-full object-cover"
-                              />
-                            </div>
-                          ) : (
-                            <div className="bg-primary/10 text-primary ring-background flex size-12 items-center justify-center rounded-2xl font-bold ring-2">
-                              {p.name.charAt(0)}
-                            </div>
-                          )}
-                        </Link>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Link
-                              href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
-                              className="text-sm leading-none font-semibold hover:underline"
-                            >
-                              {p.name}
-                            </Link>
-                            <TagList
-                              entityType="pet"
-                              entityId={p.id}
-                              compact
-                              maxVisible={2}
-                            />
-                          </div>
-                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                            {p.breed} · {p.type} · {getPetAgeDisplay(p)} ·{" "}
-                            {p.weight} lbs
-                            {p.sex && (
-                              <>
-                                {" · "}
-                                <span className="capitalize">{p.sex}</span>
-                              </>
-                            )}
-                          </p>
-                          {((p.allergies && p.allergies !== "None") ||
-                            (p.specialNeeds && p.specialNeeds !== "None")) && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {p.allergies && p.allergies !== "None" && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">
-                                  <ShieldCheck className="size-2.5 shrink-0" />
-                                  {p.allergies}
-                                </span>
-                              )}
-                              {p.specialNeeds && p.specialNeeds !== "None" && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
-                                  <AlertTriangle className="size-2.5 shrink-0" />
-                                  {p.specialNeeds}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+              <BookingDetailsCard
+                booking={booking}
+                serviceLabel={serviceLabel}
+                onEarlyCheckout={
+                  booking.service.toLowerCase() === "boarding" &&
+                  !isCancelled &&
+                  booking.status !== "completed" &&
+                  unifiedForEarlyCheckout
+                    ? () => setEarlyCheckoutOpen(true)
+                    : undefined
+                }
+              />
+              <BookingPetsCard
+                pets={pets}
+                clientId={clientId}
+                onSite={booking.presence === "on-site"}
+              />
             </div>
 
             {/* Care-instruction visibility is per-service config; default "optional" is backwards-compatible */}
@@ -1666,133 +1325,13 @@ export default function ClientBookingDetailPage({
               <YipyyGoBookingCard bookingRef={booking.id} />
             )}
 
-            {/* Tips Section — omitted without view_booking_financials (3C) */}
+            {/* Tips — omitted without view_booking_financials (3C) */}
             {isPaid && canSeeBookingAmounts && (
-              <Card id="tips" className="overflow-hidden">
-                <CardHeader className="bg-muted/30 pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-                      <HandCoins className="size-3.5" />
-                      Tips
-                    </CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px]"
-                      onClick={() => setTipSplitOpen(true)}
-                    >
-                      Edit Split
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {(tips?.tipCollected ?? 0) > 0 ? (
-                    <div className="space-y-3">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-muted-foreground text-sm">
-                          Total Tip
-                        </span>
-                        <span className="text-lg font-bold tabular-nums">
-                          ${(tips?.tipCollected ?? 0).toFixed(2)}
-                        </span>
-                      </div>
-
-                      {/* ── WHERE THE TIP CAME FROM ────────────────────────
-                          A facility reconciling a till needs to know which of
-                          these went through the card reader. Only shown when
-                          BOTH exist: labelling a single figure "Terminal" adds
-                          nothing when there is nothing to distinguish it from. */}
-                      {(tips?.bySource.terminal ?? 0) > 0 &&
-                        (tips?.bySource.online ?? 0) > 0 && (
-                          <div className="text-muted-foreground space-y-0.5 text-xs">
-                            <div className="flex justify-between">
-                              <span>Terminal</span>
-                              <span className="tabular-nums">
-                                ${(tips?.bySource.terminal ?? 0).toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Online</span>
-                              <span className="tabular-nums">
-                                ${(tips?.bySource.online ?? 0).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      <Separator />
-                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                        Distribution
-                      </p>
-                      <div className="space-y-1.5">
-                        {/* The split as RECORDED, when there is one. */}
-                        {!invoice?.items &&
-                          (tips?.allocations ?? []).map((allocation) => (
-                            <div
-                              key={allocation.id}
-                              className="flex items-center justify-between rounded-md border px-3 py-2"
-                            >
-                              <p className="text-sm font-medium">
-                                {tipStaffOptions.find(
-                                  (o) => o.id === allocation.staffId,
-                                )?.name ??
-                                  allocation.authorName ??
-                                  "—"}
-                              </p>
-                              <span className="text-sm font-semibold tabular-nums">
-                                ${allocation.amount.toFixed(2)}
-                              </span>
-                            </div>
-                          ))}
-                        {(invoice?.items ?? [])
-                          .filter(
-                            (item) =>
-                              item.price > 0 && item.type !== "package_credit",
-                          )
-                          .map((item, idx) => {
-                            const staffName =
-                              item.staffName ??
-                              booking.stylistPreference ??
-                              "Staff";
-                            const totalSvc = (invoice?.items ?? [])
-                              .filter(
-                                (i) =>
-                                  i.price > 0 && i.type !== "package_credit",
-                              )
-                              .reduce((s, i) => s + i.price, 0);
-                            const pct =
-                              totalSvc > 0 ? item.price / totalSvc : 0;
-                            const tipShare =
-                              Math.round((invoice?.tipTotal ?? 0) * pct * 100) /
-                              100;
-                            return (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between rounded-md border px-3 py-2"
-                              >
-                                <div>
-                                  <p className="text-sm font-medium">
-                                    {staffName}
-                                  </p>
-                                  <p className="text-muted-foreground text-xs">
-                                    {item.name} · ${item.price.toFixed(2)} (
-                                    {(pct * 100).toFixed(0)}%)
-                                  </p>
-                                </div>
-                                <span className="text-sm font-semibold tabular-nums">
-                                  ${tipShare.toFixed(2)}
-                                </span>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground py-2 text-center text-sm">
-                      No tip recorded for this booking
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <BookingTipsCard
+                tips={tips}
+                staff={tipStaffOptions}
+                onEditSplit={() => setTipSplitOpen(true)}
+              />
             )}
           </div>
 
@@ -1811,7 +1350,9 @@ export default function ClientBookingDetailPage({
                   <Button variant="outline" className="w-full gap-1.5" asChild>
                     <Link href={`/pay/${booking.id}`}>
                       <CreditCard className="size-4" />
-                      Pay by card — ${balanceOf(booking).toFixed(2)}
+                      {detailFill("payByCard", {
+                        amount: formatMoneyIn(balanceOf(booking), detailLocale),
+                      })}
                     </Link>
                   </Button>
                 )}
@@ -1989,7 +1530,12 @@ export default function ClientBookingDetailPage({
               amount: item.price,
             })),
             ...(pendingLateFee
-              ? [{ label: "Late pickup fee", amount: pendingLateFee.amount }]
+              ? [
+                  {
+                    label: detailT("latePickupLine"),
+                    amount: pendingLateFee.amount,
+                  },
+                ]
               : []),
           ]}
           // ── THE LEDGER, NOT THE INVOICE BLOB, AND NEVER THE PRICE ────────
@@ -2043,28 +1589,14 @@ export default function ClientBookingDetailPage({
           // database will let the split be measured against.
           totalTip={tips?.tipCollected ?? 0}
           staffOptions={tipStaffOptions}
-          staffServices={
-            invoice?.items
-              ? invoice.items
-                  .filter(
-                    (item) => item.type !== "package_credit" && item.price > 0,
-                  )
-                  .map((item) => ({
-                    staffName:
-                      item.staffName ?? booking.stylistPreference ?? "Staff",
-                    serviceName: item.name,
-                    serviceValue: item.price,
-                    multiStaff: false,
-                  }))
-              : [
-                  {
-                    staffName: booking.stylistPreference ?? "Staff",
-                    serviceName: `${booking.service} — ${booking.serviceType?.replace("_", " ") ?? "standard"}`,
-                    serviceValue: booking.basePrice,
-                    multiStaff: false,
-                  },
-                ]
-          }
+          staffServices={[
+            {
+              staffName: booking.stylistPreference ?? detailT("staffFallback"),
+              serviceName: serviceLabel,
+              serviceValue: booking.basePrice,
+              multiStaff: false,
+            },
+          ]}
           onSave={async (method, allocations) => {
             // Was `() => {}`. The modal balanced to the cent, said "Tip split
             // saved" and dropped the result on the floor.
@@ -2073,8 +1605,13 @@ export default function ClientBookingDetailPage({
               method,
               allocations,
             });
-            toast.success("Tip split saved", {
-              description: `${allocations.length} staff member${allocations.length === 1 ? "" : "s"}`,
+            toast.success(detailT("tipSplitSaved"), {
+              description: detailFill(
+                allocations.length === 1
+                  ? "tipSplitStaffOne"
+                  : "tipSplitStaffMany",
+                { n: allocations.length },
+              ),
             });
           }}
         />
@@ -2092,12 +1629,21 @@ export default function ClientBookingDetailPage({
               amount,
               tax: taxOnSupply(amount),
               method: method as Tender,
-              note: `Deposit — ${ruleDepositLabel}`,
+              note: detailFill("depositNote", { rule: ruleDepositLabel }),
             });
+            // What paying the deposit does is the facility's rule
+            // (booking_status_rules.onDepositPaid), and only ever moves a
+            // booking that is not yet confirmed.
+            const target = autoTransitionTarget(
+              statusRules,
+              booking,
+              "onDepositPaid",
+            );
             let confirmed = false;
             if (
-              booking.status === "pending" ||
-              booking.status === "request_submitted"
+              target === "confirmed" &&
+              (booking.status === "pending" ||
+                booking.status === "estimate_sent")
             ) {
               try {
                 await updateStatus.mutateAsync({
@@ -2106,17 +1652,17 @@ export default function ClientBookingDetailPage({
                 });
                 confirmed = true;
               } catch (error) {
-                toast.error(
-                  "Deposit recorded, but the booking is not confirmed",
-                  {
-                    description:
-                      error instanceof Error ? error.message : undefined,
-                  },
-                );
+                toast.error(detailT("depositNotConfirmed"), {
+                  description:
+                    error instanceof Error ? error.message : undefined,
+                });
               }
             }
             toast.success(
-              `Deposit of $${charged.toFixed(2)} recorded${confirmed ? " — booking confirmed" : ""}`,
+              detailFill(
+                confirmed ? "depositRecordedConfirmed" : "depositRecorded",
+                { amount: formatMoneyIn(charged, detailLocale) },
+              ),
             );
           }}
         />
@@ -2138,7 +1684,9 @@ export default function ClientBookingDetailPage({
               ...(result.note ? { note: result.note } : {}),
             });
             toast.success(
-              `$${charged.toFixed(2)} recorded in advance — the bill stays open`,
+              detailFill("prepaymentRecorded", {
+                amount: formatMoneyIn(charged, detailLocale),
+              }),
             );
           }}
         />
@@ -2167,14 +1715,24 @@ export default function ClientBookingDetailPage({
                 reason: refund.reason,
               });
               toast.success(
-                `$${(result.refundedCents / 100).toFixed(2)} refunded to the card`,
+                detailFill("refundedCard", {
+                  amount: formatMoneyIn(
+                    result.refundedCents / 100,
+                    detailLocale,
+                  ),
+                }),
                 { description: result.results.map((r) => r.detail).join(" ") },
               );
               if (result.shortfallCents > 0) {
                 // Not swallowed into the success toast: a partial refund is
                 // something somebody has to finish by hand.
                 toast.warning(
-                  `$${(result.shortfallCents / 100).toFixed(2)} of that refund did not go through.`,
+                  detailFill("refundShortfall", {
+                    amount: formatMoneyIn(
+                      result.shortfallCents / 100,
+                      detailLocale,
+                    ),
+                  }),
                 );
               }
               return;
@@ -2187,7 +1745,14 @@ export default function ClientBookingDetailPage({
               reason: refund.reason,
             });
             toast.success(
-              `$${refund.amount.toFixed(2)} refunded via ${refund.method.replace("_", " ")}`,
+              detailFill(
+                refund.method === "cash"
+                  ? "refundedCash"
+                  : refund.method === "store_credit"
+                    ? "refundedCredit"
+                    : "refundedOther",
+                { amount: formatMoneyIn(refund.amount, detailLocale) },
+              ),
             );
           }}
         />
@@ -2213,7 +1778,12 @@ export default function ClientBookingDetailPage({
               {
                 onSuccess: (result) =>
                   toast.success(
-                    `${result.items.length} item${result.items.length === 1 ? "" : "s"} added to ${bookingRef}`,
+                    detailFill(
+                      result.items.length === 1
+                        ? "itemsAddedOne"
+                        : "itemsAddedMany",
+                      { n: result.items.length, ref: bookingRef },
+                    ),
                   ),
                 onError: (error) => toast.error(error.message),
               },
@@ -2236,11 +1806,12 @@ export default function ClientBookingDetailPage({
           onContinueAnyway={() => {
             setCareGateOpen(false);
             toast(
-              `Proceeding to checkout with ${careStatus.pending.length} unlogged care item${careStatus.pending.length > 1 ? "s" : ""}`,
-              {
-                description:
-                  "Recorded on the booking audit trail for manager review",
-              },
+              detailFill(
+                careStatus.pending.length === 1
+                  ? "careGateOne"
+                  : "careGateMany",
+                { n: careStatus.pending.length },
+              ),
             );
             openCheckout();
           }}
@@ -2254,7 +1825,7 @@ export default function ClientBookingDetailPage({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {destructiveConfirm?.title ?? "Are you sure?"}
+                {destructiveConfirm?.title ?? detailT("confirmFallbackTitle")}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {destructiveConfirm?.description}
@@ -2268,7 +1839,7 @@ export default function ClientBookingDetailPage({
                   setDestructiveConfirm(null);
                 }}
               >
-                {destructiveConfirm?.confirmLabel ?? "Confirm"}
+                {destructiveConfirm?.confirmLabel ?? detailT("confirmFallback")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
