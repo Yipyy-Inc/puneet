@@ -1,5 +1,6 @@
 "use client";
 
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   formatDateLong,
@@ -432,6 +433,10 @@ function EarlyCheckoutSummary({
 }) {
   const { t: earlyText } = useStaffText("bookingActions");
   const { t, fill, locale } = useStaffText("checkOutDialog");
+  // Boarding settings have no page in /employee, so staff are not offered one.
+  const { reachable } = usePortalHref();
+  const policyHref =
+    "/facility/dashboard/services/boarding/settings#early-checkout";
   const { unusedNights, unusedValue, policy, customerNote } = adjustment;
 
   return (
@@ -446,13 +451,15 @@ function EarlyCheckoutSummary({
         <Alert variant="destructive" className="text-xs">
           <AlertDescription>
             {t("disabled")}{" "}
-            <Link
-              href="/facility/dashboard/services/boarding/settings#early-checkout"
-              className="inline-flex items-center gap-1 underline"
-            >
-              <Settings className="size-4" />
-              {t("setPolicy")}
-            </Link>
+            {reachable(policyHref) && (
+              <Link
+                href={policyHref}
+                className="inline-flex items-center gap-1 underline"
+              >
+                <Settings className="size-4" />
+                {t("setPolicy")}
+              </Link>
+            )}
           </AlertDescription>
         </Alert>
       ) : (

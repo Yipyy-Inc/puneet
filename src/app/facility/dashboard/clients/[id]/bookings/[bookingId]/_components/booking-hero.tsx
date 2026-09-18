@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { BookingAction } from "@/lib/bookings/booking-lifecycle";
 import { formatCalendarDayLong, formatDateShort } from "@/lib/i18n/format";
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { Booking } from "@/types/booking";
 
@@ -49,6 +50,7 @@ export function BookingHero({
   petLabel: string | null;
 }) {
   const { fill, locale } = useStaffText("bookingDetail");
+  const { href } = usePortalHref();
   const oneDay = booking.startDate === booking.endDate;
 
   return (
@@ -69,7 +71,9 @@ export function BookingHero({
             <NotesButton entityType="booking" entityId={booking.id} />
             {sourceEstimateId && (
               <Link
-                href={`/facility/dashboard/estimates?q=${sourceEstimateId}`}
+                href={href(
+                  `/facility/dashboard/estimates?q=${sourceEstimateId}`,
+                )}
               >
                 <Badge variant="outline" className="gap-1">
                   {fill("fromEstimate", { id: sourceEstimateId })}
@@ -102,7 +106,9 @@ export function BookingHero({
           </div>
         </div>
         {total !== null && (
-          <div className="text-right">
+          // On a phone the header wraps and this block starts its own line,
+          // so it lines up on the left with everything above it.
+          <div className="flex flex-col items-start gap-1 sm:items-end">
             <p className="text-body-ink text-2xl font-bold tabular-nums">
               {total}
             </p>

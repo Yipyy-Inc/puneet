@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PetAvatar } from "@/components/ui/pet-avatar";
 import { formatWeightFromLb } from "@/lib/i18n/format";
 import { calculatePetAge } from "@/lib/pet-utils";
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { Pet } from "@/types/pet";
 
@@ -30,6 +31,7 @@ export function BookingPetsCard({
   onSite: boolean;
 }) {
   const { t, fill, locale } = useStaffText("bookingDetail");
+  const portal = usePortalHref();
   if (pets.length === 0) return null;
 
   const age = (pet: Pet) => {
@@ -59,7 +61,9 @@ export function BookingPetsCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2 pt-1 pb-4">
         {pets.map((pet) => {
-          const href = `/facility/dashboard/clients/${clientId}/pets/${pet.id}`;
+          const href = portal.href(
+            `/facility/dashboard/clients/${clientId}/pets/${pet.id}`,
+          );
           const facts = [
             // A breed as the owner typed it never passes through the locale
             // layer (§5q); nor does the species the record holds.

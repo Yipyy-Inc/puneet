@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   useCalendarEventMutations,
@@ -438,7 +438,6 @@ function taskRowToCalendarTask(row: TaskRow): FacilityTask[] {
 }
 
 export function OperationsCalendar() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { activeModules, resources } = useCustomServices();
@@ -1145,12 +1144,20 @@ export function OperationsCalendar() {
     params.set("addonMode", visualConfig.addOnDisplayMode);
     params.set("taskDecor", visualConfig.completedTaskDecoration);
 
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    // The address records the view; it does not navigate. This was
+    // router.replace(), which IS a navigation — and a later navigation cancels
+    // an earlier one, so when this re-ran just after "Check Buddy out" had
+    // pushed the booking page, the calendar replaced it with itself and the
+    // payment was never reached. Next keeps useSearchParams in step with the
+    // history API (since 14.1), so nothing that reads the query loses it.
+    const next = `${pathname}?${params.toString()}`;
+    if (`${window.location.pathname}${window.location.search}` !== next) {
+      window.history.replaceState(null, "", next);
+    }
   }, [
     anchorDate,
     filters,
     pathname,
-    router,
     searchTerm,
     showFilters,
     view,
