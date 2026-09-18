@@ -73,7 +73,6 @@ const BASELINE: Record<string, number> = {
   "booking-tip-split.spec.ts": 1,
   "booking-write-integrity.spec.ts": 2,
   "bookings-list.spec.ts": 2,
-  "bulk-payment.spec.ts": 1,
   "client-balance.spec.ts": 1,
   "client-pet-write-path.spec.ts": 1,
   "daily-care-board.spec.ts": 1,
