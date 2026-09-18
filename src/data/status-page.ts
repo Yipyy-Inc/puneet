@@ -4,9 +4,6 @@
 // no Date.now() drift. Distinct from the pet/facility incident model in
 // src/data/incidents.ts — these are PLATFORM/service incidents.
 
-import { buildEnhancedAnnouncements } from "./enhanced-announcements";
-import type { EnhancedAnnouncement } from "@/types/announcement";
-
 export type ComponentStatus =
   | "operational"
   | "degraded"
@@ -343,25 +340,4 @@ export function uptimePercent(componentId: string): number {
   const h = componentHistory(componentId);
   const avg = h.reduce((s, d) => s + d.uptime, 0) / h.length;
   return Math.round(avg * 100) / 100;
-}
-
-// ---------------------------------------------------------------------------
-// Maintenance windows (sourced from Yipyy System Announcements)
-// ---------------------------------------------------------------------------
-
-const MAINTENANCE_RE =
-  /maintenance|downtime|service window|scheduled\s+(?:maintenance|upgrade)/i;
-
-/**
- * Published Yipyy announcements that describe a maintenance window — surfaced on
- * the public status page so a single announcement reaches facilities here too.
- */
-export function getMaintenanceAnnouncements(
-  nowMs: number,
-): EnhancedAnnouncement[] {
-  return buildEnhancedAnnouncements(nowMs).filter(
-    (a) =>
-      a.status === "Published" &&
-      (MAINTENANCE_RE.test(a.title) || MAINTENANCE_RE.test(a.body)),
-  );
 }

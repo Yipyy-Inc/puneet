@@ -1,8 +1,9 @@
+import { announcementPlainText } from "@/lib/announcements/sanitize-html";
 import type {
+  AnnouncementOptions,
   AnnouncementPriority,
   AnnouncementStatus,
   AnnouncementTarget,
-  DeliveryMethod,
   EnhancedAnnouncement,
 } from "@/types/announcement";
 
@@ -28,10 +29,11 @@ export const PRIORITY_OPTIONS: AnnouncementPriority[] = [
   "Urgent",
 ];
 
+// What each priority actually does on the facility side (20260918103842).
 export const PRIORITY_HELP: Record<AnnouncementPriority, string> = {
-  Normal: "Shows in the facility notification dropdown only.",
-  High: "Adds a yellow badge to the facility notification bell.",
-  Urgent: "Full-width red banner on every facility page until dismissed.",
+  Normal: "Listed in the facility notification bell.",
+  High: "Listed in the bell, and counts toward its badge until read.",
+  Urgent: "A red banner on every facility page until each person dismisses it.",
 };
 
 export const TARGET_OPTIONS: AnnouncementTarget[] = [
@@ -41,20 +43,7 @@ export const TARGET_OPTIONS: AnnouncementTarget[] = [
   "Specific Facilities",
 ];
 
-export const DELIVERY_OPTIONS: { value: DeliveryMethod; label: string }[] = [
-  { value: "in_platform", label: "In-platform" },
-  { value: "email", label: "Email" },
-  { value: "both", label: "Both" },
-];
-
-export const DELIVERY_LABEL: Record<DeliveryMethod, string> = {
-  in_platform: "In-platform",
-  email: "Email",
-  both: "In-platform + Email",
-};
-
-export const PLAN_TIERS = ["Basic", "Premium", "Enterprise"];
-
+/** The values facilities.business_types holds. */
 export const BUSINESS_TYPES: { value: string; label: string }[] = [
   { value: "daycare", label: "Daycare" },
   { value: "boarding", label: "Boarding" },
@@ -79,29 +68,36 @@ export const ANNOUNCEMENT_TABS: { value: AnnouncementTab; label: string }[] = [
 ];
 
 /** Short, human target description for the list/preview. */
-export function targetSummary(a: EnhancedAnnouncement): string {
+export function targetSummary(
+  a: Pick<
+    EnhancedAnnouncement,
+    "target" | "planTierIds" | "businessTypes" | "facilityIds"
+  >,
+  options?: AnnouncementOptions,
+): string {
   switch (a.target) {
     case "All Facilities":
       return "All Facilities";
     case "By Plan Tier":
-      return `Plan: ${(a.planTiers ?? []).join(", ") || "—"}`;
+      return `Plan: ${
+        a.planTierIds
+          .map((id) => options?.tiers.find((t) => t.id === id)?.name ?? id)
+          .join(", ") || "—"
+      }`;
     case "By Business Type":
       return `Type: ${
-        (a.businessTypes ?? [])
+        a.businessTypes
           .map((t) => BUSINESS_TYPES.find((b) => b.value === t)?.label ?? t)
           .join(", ") || "—"
       }`;
     case "Specific Facilities":
-      return `${(a.facilityIds ?? []).length} facilit${
-        (a.facilityIds ?? []).length === 1 ? "y" : "ies"
+      return `${a.facilityIds.length} facilit${
+        a.facilityIds.length === 1 ? "y" : "ies"
       }`;
   }
 }
 
-/** Strip HTML to a plain-text preview for table rows. */
+/** Plain-text preview for table rows. */
 export function bodyPreview(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return announcementPlainText(html);
 }

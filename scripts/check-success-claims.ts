@@ -143,7 +143,6 @@ const BASELINE = new Set<string>([
   "src/app/dashboard/reports/custom/_components/saved-reports-list.tsx",
   "src/app/dashboard/support/agreements/_components/AgreementTemplateEditor.tsx",
   "src/app/dashboard/support/agreements/_components/SentAgreementsTab.tsx",
-  "src/app/dashboard/support/announcements/_components/announcements-list-client.tsx",
   "src/app/dashboard/support/calling/_components/greeting-edit-modal.tsx",
   "src/app/dashboard/support/calling/_components/ivr-routing-tab.tsx",
   "src/app/dashboard/support/chat/_components/support-conversation-row.tsx",

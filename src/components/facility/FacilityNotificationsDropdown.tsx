@@ -12,11 +12,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationRow } from "@/components/notifications/notification-row";
+import { PlatformAnnouncementsSection } from "@/components/notifications/platform-announcements-section";
 import { useNotificationText } from "@/components/notifications/use-notification-text";
 import {
   useStaffNotificationMutations,
   useStaffNotifications,
 } from "@/lib/api/staff-notifications";
+import {
+  useActiveAnnouncements,
+  useMarkAnnouncement,
+} from "@/lib/api/platform-announcements";
 import { formatNumber } from "@/lib/i18n/format";
 
 // ============================================================================
@@ -27,6 +32,11 @@ import { formatNumber } from "@/lib/i18n/format";
 // reads the signed-in person's own notifications now (/api/notifications):
 // only what their role and their own preferences say they follow, and only
 // what their permissions let them see. "Mark all as read" is saved.
+//
+// It also carries platform announcements (20260918103842) — what a platform
+// admin published for this facility, High and Normal; Urgent ones are the
+// banner. An unread High one counts toward the badge, and opening the bell
+// reads them all.
 // ============================================================================
 
 const SHOWN = 8;
@@ -41,6 +51,24 @@ export function FacilityNotificationsDropdown({
   const { feed, error } = useStaffNotifications("active");
   const { markAllRead } = useStaffNotificationMutations();
   const [open, setOpen] = useState(false);
+  const { data: announcements } = useActiveAnnouncements();
+  const markAnnouncement = useMarkAnnouncement();
+  const fromYipyy = (announcements ?? []).filter(
+    (a) => a.priority !== "Urgent",
+  );
+  const unreadHigh = fromYipyy.filter(
+    (a) => a.priority === "High" && !a.read,
+  ).length;
+  const unread = feed.unread + unreadHigh;
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
+      for (const a of fromYipyy) {
+        if (!a.read) markAnnouncement.mutate({ id: a.id, action: "read" });
+      }
+    }
+  }
 
   // Urgent and unread first — the incident that needs somebody now — then newest.
   const rows = [...feed.items]
@@ -52,7 +80,7 @@ export function FacilityNotificationsDropdown({
   const urgentUnread = feed.items.some((n) => n.urgent && !n.read);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
@@ -60,13 +88,13 @@ export function FacilityNotificationsDropdown({
           size="icon"
           className="relative rounded-full"
           aria-label={
-            feed.unread > 0
-              ? `${text.t("title")}, ${text.t("unread").replace("{count}", formatNumber(feed.unread, text.locale))}`
+            unread > 0
+              ? `${text.t("title")}, ${text.t("unread").replace("{count}", formatNumber(unread, text.locale))}`
               : text.t("title")
           }
         >
           <Bell className="size-5" />
-          {feed.unread > 0 && (
+          {unread > 0 && (
             <span
               className={
                 urgentUnread
@@ -75,7 +103,7 @@ export function FacilityNotificationsDropdown({
               }
               aria-hidden
             >
-              {feed.unread > 9 ? "9+" : feed.unread}
+              {unread > 9 ? "9+" : unread}
             </span>
           )}
         </Button>
@@ -106,6 +134,10 @@ export function FacilityNotificationsDropdown({
         </div>
 
         <div className="max-h-[440px] divide-y overflow-y-auto">
+          <PlatformAnnouncementsSection
+            items={fromYipyy}
+            heading={text.t("fromYipyy")}
+          />
           {error ? (
             <p className="text-destructive px-4 py-8 text-center text-sm">
               {text.t("loadFailed")}

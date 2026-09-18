@@ -64,7 +64,7 @@ export function QuickActions() {
       description: "Broadcast composer",
       icon: Megaphone,
       tone: "violet",
-      onClick: () => router.push("/dashboard/communication/announcements"),
+      onClick: () => router.push("/dashboard/support/announcements/compose"),
     },
     {
       key: "import",
