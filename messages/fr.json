@@ -3057,7 +3057,8 @@
         "failNotAllowed": "Vous n’avez pas la permission d’enregistrer l’arrivée ou le départ pour cette réservation.",
         "failCannotNow": "Cette réservation ne peut pas être enregistrée à l’arrivée ou au départ dans son état actuel.",
         "failFailed": "L’opération n’a pas abouti. Réessayez.",
-        "changeStatus": "Changer le statut"
+        "changeStatus": "Changer le statut",
+        "earlyCheckoutNotApplied": "Le remboursement, le crédit en magasin ou les frais prévus par votre politique de départ anticipé ne sont pas appliqués automatiquement. Inscrivez-les sur la réservation après le départ."
       }
     }
   },

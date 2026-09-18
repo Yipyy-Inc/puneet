@@ -42,6 +42,7 @@ import { useBookingArrival } from "@/lib/api/booking-arrival";
 import { arrivalFailure } from "@/lib/bookings/arrival-failure";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { printBookingInvoice } from "./_lib/print-invoice";
+import { bookingCareEntries } from "./_lib/booking-care";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
@@ -59,11 +60,7 @@ import {
   BookingPaymentBreakdown,
 } from "@/components/bookings/BookingPaymentBreakdown";
 import {
-  applyFeedingLog,
-  applyMedicationLog,
   careLogStamp,
-  feedingEntriesFromSchedule,
-  medicationEntriesFromItems,
   medicationTaskKey,
 } from "@/lib/bookings/care-instructions";
 import { careLogKeys, careLogQueries, logCare } from "@/lib/api/care-log";
@@ -1099,9 +1096,13 @@ export default function ClientBookingDetailPage({
 
   // Care-completion check — surfaces unlogged meals/meds (and incident care,
   // 2B) before checkout.
+  // Today's meals and doses as the panels show them, and the gate reads the
+  // same rows — it read fixture checklist fields no real booking carries, so
+  // it never fired (see _lib/booking-care.ts).
+  const careEntries = bookingCareEntries(booking, careLog, logDay);
   const careStatus = getPendingCareItems(
-    booking.feedingInstructions,
-    booking.medicationInstructions,
+    careEntries.feeding,
+    careEntries.medication,
     (facilityIncidents ?? []).filter(
       (incident) => incident.bookingId === booking.id,
     ),
@@ -1166,37 +1167,11 @@ export default function ClientBookingDetailPage({
             </div>
           )}
 
-        {/* Checkout Alert — unrecorded evaluation results */}
-        {booking.service === "evaluation" &&
-          booking.status === "confirmed" &&
-          !isCancelled && (
-            <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-                  <ClipboardList className="size-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-orange-800">
-                    Evaluation results not recorded
-                  </p>
-                  <p className="text-xs text-orange-600">
-                    Please complete the evaluation form and record pass/fail
-                    before checkout
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                className="gap-1.5 bg-orange-600 text-white hover:bg-orange-700"
-                onClick={() =>
-                  toast.info("Open the evaluation form to record results")
-                }
-              >
-                <ClipboardList className="size-3.5" />
-                Record Results
-              </Button>
-            </div>
-          )}
+        {/* "Evaluation results not recorded" stood here, with a Record
+            Results button that only toasted "Open the evaluation form" —
+            there is no form to open and nowhere a pass or fail is kept.
+            Removed rather than left pointing at nothing; it returns with
+            evaluation results themselves. */}
 
         {/* Estimate Sent — waiting for client confirmation */}
         {isEstimateSent && (
@@ -1617,15 +1592,7 @@ export default function ClientBookingDetailPage({
                           owner's schedule, projected into the same shape. */}
                       <FeedingSection
                         key={`feed-${careLogStamp(careLog)}`}
-                        entries={applyFeedingLog(
-                          booking.feedingInstructions?.length
-                            ? booking.feedingInstructions
-                            : feedingEntriesFromSchedule(
-                                booking.feedingSchedule,
-                              ),
-                          careLog,
-                          logDay,
-                        )}
+                        entries={careEntries.feeding}
                         required={feedingMode === "required"}
                         onLog={(entryId, outcome) =>
                           recordCare.mutate({
@@ -1649,16 +1616,7 @@ export default function ClientBookingDetailPage({
                         // Remounted when the booking's own list changes, so an
                         // added medication appears from the row it was saved to.
                         key={`med-${careLogStamp(careLog)}-${booking.medications?.length ?? 0}`}
-                        entries={applyMedicationLog(
-                          booking.medicationInstructions?.length
-                            ? booking.medicationInstructions
-                            : medicationEntriesFromItems(
-                                booking.medications,
-                                logDay,
-                              ),
-                          careLog,
-                          logDay,
-                        )}
+                        entries={careEntries.medication}
                         required={medicationMode === "required"}
                         onAdd={async (item) => {
                           await bookingMutations.update(booking.id, {

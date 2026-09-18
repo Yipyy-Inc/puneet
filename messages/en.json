@@ -3057,7 +3057,8 @@
         "failNotAllowed": "You do not have permission to move this booking in or out.",
         "failCannotNow": "This booking cannot be checked in or out in its current state.",
         "failFailed": "That did not go through. Try again.",
-        "changeStatus": "Change the status"
+        "changeStatus": "Change the status",
+        "earlyCheckoutNotApplied": "Any refund, store credit or fee under your early-checkout policy is not applied automatically. Record it on the booking after checkout."
       }
     }
   },

@@ -15,7 +15,7 @@ import {
   usePayWithGiftCard,
 } from "@/lib/api/booking-money";
 import { useAddLineItems } from "@/lib/api/booking-line-items";
-import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import { useBookingArrival } from "@/lib/api/booking-arrival";
 import { incidentQueries, useUpdateIncident } from "@/lib/api/incidents";
 import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
@@ -85,7 +85,7 @@ export function useBookingCheckout(input: {
   const chargeSavedCard = useChargeSavedCard();
   const payWithGiftCard = usePayWithGiftCard();
   const writeStoreCredit = useWriteStoreCredit();
-  const updateStatus = useUpdateBookingStatus();
+  const arrival = useBookingArrival();
   const updateIncident = useUpdateIncident();
   const queryClient = useQueryClient();
   const earnPoints = useEarnLoyaltyPoints();
@@ -375,15 +375,20 @@ export function useBookingCheckout(input: {
       }
     }
 
-    // ── 6. A checkout that settles the bill checks the booking out ────────
+    // ── 6. A checkout that settles the bill checks the pet out ────────────
     // "Proceed to Checkout" took the money and left the guest checked in.
+    // Then it set the status to completed and recorded no departure, so the
+    // kennel stayed held and the board kept the guest on site. It records the
+    // DEPARTURE now, through the service's own write, and the database
+    // mirrors it into the status (20260918151018).
     if (
       input.completeOnSettle !== false &&
       stillOwed <= 0.005 &&
-      ["checked_in", "in_progress", "ready"].includes(booking.status)
+      (booking.presence === "on-site" ||
+        ["checked_in", "in_progress", "ready"].includes(booking.status))
     ) {
       try {
-        await updateStatus.mutateAsync({ id: booking.id, status: "completed" });
+        await arrival.checkOut(booking);
         // Flow C: the guest has left, so in-stay care on this booking's
         // incidents is locked — every item stopped, and Daily Care stops
         // scheduling it. Never blocking: a checkout by somebody who may not
