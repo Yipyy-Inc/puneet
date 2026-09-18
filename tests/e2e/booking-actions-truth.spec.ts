@@ -206,44 +206,37 @@ test.describe("the booking page's actions do what they say", () => {
     expect(nobody.status()).toBe(404);
   });
 
-  test("Mark as ready writes the ready status", async ({ page }) => {
+  test("checking in from the booking page records the arrival the boards read", async ({
+    page,
+  }) => {
+    // It wrote only the status, so the daycare board kept saying "expected"
+    // and a form required before check-in was never asked for. Since
+    // 2026-09-18 it goes through the attendance write and the database
+    // mirrors it into the status (20260918151018). ("Mark as ready" is a
+    // grooming step now, not a daycare one.)
     test.slow();
     await signIn(page, ACCOUNTS.owner);
     const created = await book(page, 432, 64);
-    const checkedIn = await page.request.patch(`/api/bookings/${created.id}`, {
-      data: { status: "checked_in" },
-    });
-    expect(checkedIn.ok(), await checkedIn.text()).toBe(true);
 
     await page.goto(
       `/facility/dashboard/clients/${BOB.client}/bookings/${created.id}`,
     );
     await page
-      .getByRole("button", { name: /^more$/i })
+      .getByRole("button", { name: /^check in /i })
       .first()
       .click({ timeout: 30_000 });
-    await page.getByRole("menuitem", { name: /mark as ready/i }).click();
-
-    // Unlogged care puts a gate in front of it; the gate's own "continue" is
-    // the staff member saying they know.
-    const gate = page.getByRole("alertdialog");
-    if (await gate.isVisible().catch(() => false)) {
-      await gate.getByRole("button").last().click();
-    }
 
     await expect
       .poll(
         async () => {
-          // This client alone: the whole facility list is ~1,000 rows and a read of
-          // it can outlast the poll, returning the status from before the write.
-          const res = await page.request.get(
-            `/api/bookings?clientRef=${BOB.client}`,
-          );
-          const all = (await res.json()) as BookingPayload[];
-          return all.find((b) => b.id === created.id)?.status;
+          const res = await page.request.get(`/api/bookings?ref=${created.id}`);
+          const [row] = (await res.json()) as (BookingPayload & {
+            presence?: string;
+          })[];
+          return `${row?.status}/${row?.presence}`;
         },
         { timeout: 30_000 },
       )
-      .toBe("ready");
+      .toBe("checked_in/on-site");
   });
 });

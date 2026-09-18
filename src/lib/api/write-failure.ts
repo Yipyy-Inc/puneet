@@ -57,5 +57,25 @@ export function writeFailure(
       { status: 400 },
     );
   }
+  if (error.code === "22023" || error.code === "23514") {
+    // A state the row cannot move to, raised by a trigger with a sentence for
+    // a person — "This booking cannot be checked in while it is request
+    // submitted" (20260918151018), a store-credit spend that would overdraw
+    // (20260918083126). A 422, with that sentence, not a 500: the request was
+    // understood and refused. Postgres's own CHECK violation names a
+    // constraint instead, and that text is not for a person.
+    const message = error.message?.trim();
+    const fromPostgres = message?.includes("violates check constraint");
+    return NextResponse.json(
+      {
+        error:
+          message && !fromPostgres
+            ? message
+            : "That change is not allowed for this record in its current state.",
+        reason: error.hint ?? null,
+      },
+      { status: 422 },
+    );
+  }
   return NextResponse.json({ error: error.message }, { status: 500 });
 }
