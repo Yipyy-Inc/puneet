@@ -207,7 +207,6 @@ const BASELINE = new Map<string, number>([
   ["src/app/facility/dashboard/staff/documents/page.tsx", 1],
 
   ["src/app/facility/dashboard/staff/warnings/page.tsx", 2],
-  ["src/app/facility/dashboard/tasks/CareTasks.tsx", 8],
   ["src/app/onboard/[token]/section-forms.tsx", 1],
   ["src/app/sign/[token]/_components/SignaturePad.tsx", 1],
   ["src/components/admin/ModuleRequestsInbox.tsx", 3],
@@ -314,7 +313,7 @@ const BASELINE = new Map<string, number>([
   ["src/components/facility/grooming/waitlist-panel.tsx", 7],
   ["src/components/facility/grooming/zone-and-tax-settings-panel.tsx", 2],
   ["src/components/facility/ImpersonationBanner.tsx", 1],
-  ["src/components/facility/InvoiceTemplateSettings.tsx", 5],
+  ["src/components/facility/InvoiceTemplateSettings.tsx", 4],
   ["src/components/facility/operations/OperationsCalendarColorPanel.tsx", 1],
   ["src/components/facility/operations/OperationsCalendarContent.tsx", 1],
   ["src/components/facility/operations/OperationsCalendarEventDrawer.tsx", 3],
@@ -390,7 +389,7 @@ const BASELINE = new Map<string, number>([
   ["src/components/tasks/TaskNotificationsPanel.tsx", 2],
   ["src/components/user-management/CreateAdminUserModal.tsx", 1],
   ["src/components/yipyygo/form-sections/FeedingSection.tsx", 3],
-  ["src/components/yipyygo/form-sections/MedicationSection.tsx", 3],
+  ["src/components/yipyygo/form-sections/MedicationSection.tsx", 2],
 ]);
 
 /** The primitives that own their own height. */
