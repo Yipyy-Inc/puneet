@@ -43,6 +43,16 @@ import { arrivalFailure } from "@/lib/bookings/arrival-failure";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { printBookingInvoice } from "./_lib/print-invoice";
 import { bookingCareEntries } from "./_lib/booking-care";
+import dynamic from "next/dynamic";
+
+// ~4,700 lines of wizard; only a person who edits should load it.
+const BookingEditDialog = dynamic(
+  () =>
+    import("@/components/bookings/BookingEditDialog").then(
+      (m) => m.BookingEditDialog,
+    ),
+  { ssr: false },
+);
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
@@ -81,8 +91,6 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
-import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
@@ -144,7 +152,6 @@ import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { BookingJournal } from "@/components/guest-journal/BookingJournal";
 import { formatBookingRef } from "@/lib/booking-id";
-import type { ExtraService } from "@/types/booking";
 import { BookingTasksCard } from "@/components/bookings/BookingTasksCard";
 import { YipyyGoBookingCard } from "@/components/yipyygo/staff/yipyy-go-booking-card";
 import { taskTemplateQueries } from "@/lib/api/task-templates";
@@ -442,7 +449,6 @@ export default function ClientBookingDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   // "Review and approve" opens the same wizard; saving it confirms the request.
   const [approveOnSave, setApproveOnSave] = useState(false);
-  const saveEdit = useSaveBookingEdit(booking);
   const {
     t: detailT,
     fill: detailFill,
@@ -1899,70 +1905,20 @@ export default function ClientBookingDetailPage({
           </div>
         </div>
 
-        {/* Edit Booking Wizard — pre-filled with current booking details */}
-        <BookingModal
-          open={editOpen}
-          onOpenChange={(open) => {
-            setEditOpen(open);
-            if (!open) setApproveOnSave(false);
-          }}
-          clients={[client]}
-          facilityId={booking.facilityId}
-          facilityName={facilityProfile.businessName}
-          editMode
-          preSelectedClientId={booking.clientId}
-          preSelectedPetId={
-            Array.isArray(booking.petId) ? booking.petId[0] : booking.petId
-          }
-          preSelectedService={booking.service}
-          preSelectedStartDate={booking.startDate}
-          preSelectedEndDate={booking.endDate}
-          preSelectedCheckInTime={booking.checkInTime}
-          preSelectedCheckOutTime={booking.checkOutTime}
-          preSelectedRoomId={booking.unitAssignment ?? undefined}
-          preSelectedDaycareSectionId={booking.sectionId ?? undefined}
-          preSelectedDaycareDates={booking.daycareSelectedDates}
-          preSelectedExtraServices={
-            booking.extraServices?.filter(
-              (s): s is ExtraService => typeof s !== "string",
-            ) ?? []
-          }
-          preSelectedFeedingSchedule={booking.feedingSchedule}
-          preSelectedMedications={booking.medications}
-          preSelectedSpecialRequests={booking.specialRequests}
-          onCreateBooking={async (edited) => {
-            // It closed and said "updated" here, and wrote nothing. The wizard
-            // waits for this answer now, and stays open on `false`.
-            try {
-              const changed = await saveEdit.mutateAsync(edited);
-              if (approveOnSave) {
-                // Priced by the wizard just now; approving is the second step.
-                await updateStatus.mutateAsync({
-                  id: booking.id,
-                  status: "confirmed",
-                });
-                setApproveOnSave(false);
-                toast.success(actFill("confirmedDone", { ref: bookingRef }));
-                return true;
-              }
-              toast.success(
-                changed
-                  ? detailFill("bookingUpdated", { ref: bookingRef })
-                  : detailT("nothingChanged"),
-              );
-              return true;
-            } catch (error) {
-              toast.error(
-                detailFill("bookingNotUpdated", { ref: bookingRef }),
-                {
-                  description:
-                    error instanceof Error ? error.message : undefined,
-                },
-              );
-              return false;
-            }
-          }}
-        />
+        {/* The edit wizard, pre-filled; "Review and approve" opens it to price
+            a request and confirms it on save. Loaded on first open. */}
+        {editOpen && (
+          <BookingEditDialog
+            booking={booking}
+            client={client}
+            open={editOpen}
+            mode={approveOnSave ? "approve" : "edit"}
+            onOpenChange={(open) => {
+              setEditOpen(open);
+              if (!open) setApproveOnSave(false);
+            }}
+          />
+        )}
         <CancelBookingModal
           booking={booking}
           clientName={client.name}
