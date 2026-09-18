@@ -2514,7 +2514,8 @@
         "feeCancel": "Cancel",
         "feeAdd": "Add fee to cart",
         "store_credit_insufficient": "This client doesn’t have enough store credit for that. Apply less, or take the rest another way.",
-        "discount_not_permitted": "Your role can’t give discounts. Ask a manager to apply this one."
+        "discount_not_permitted": "Your role can’t give discounts. Ask a manager to apply this one.",
+        "store_credit_unbacked": "This payment’s store credit doesn’t match what was taken from the client’s credit. Nothing was recorded; try the sale again."
       },
       "kiosk": {
         "title": "Check-in",
