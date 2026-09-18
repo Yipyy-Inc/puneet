@@ -127,7 +127,7 @@ test.describe("booking presence", () => {
     expect(booking?.arrivedAt).toBeNull();
   });
 
-  test("checking in moves presence and leaves the lifecycle alone", async ({
+  test("checking in moves presence, and the booking follows", async ({
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
@@ -141,10 +141,14 @@ test.describe("booking presence", () => {
     expect(booking?.presence).toBe("on-site");
     expect(booking?.arrivedAt, "with a time on it").not.toBeNull();
 
-    // THE POINT. The booking's status is untouched — presence is a different
-    // axis, and forcing it into `status` would have meant punching a hole
-    // through `enforce_booking_integrity` for the roles that check pets in.
-    expect(booking?.status, "the lifecycle did not move").toBe("confirmed");
+    // THE POINT, REVERSED 2026-09-18 (20260918151018). This asserted the
+    // status stayed "confirmed" — presence was a separate axis — and that
+    // left two records disagreeing: the board said on site, the list, the
+    // calendar and the customer said confirmed. The owner chose one truth:
+    // the attendance write is still the record of arrival, and the database
+    // mirrors it into the status, through a pass in enforce_booking_integrity
+    // that admits exactly that and nothing else.
+    expect(booking?.status, "the lifecycle follows the pet").toBe("checked_in");
   });
 
   test("checking out moves it again", async ({ page }) => {
@@ -158,7 +162,7 @@ test.describe("booking presence", () => {
     const booking = await readBooking(page, ref);
     expect(booking?.presence).toBe("departed");
     expect(booking?.departedAt).not.toBeNull();
-    expect(booking?.status).toBe("confirmed");
+    expect(booking?.status, "collected is completed").toBe("completed");
   });
 
   test("a service with no attendance table reads unknown", async ({ page }) => {

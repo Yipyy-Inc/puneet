@@ -10,8 +10,8 @@ import type { PermissionKey } from "@/types/facility-staff";
 // its own: the kiosk, the day boards, and since 2026-09-18 the booking page
 // and the calendar too. Those routes are where the required forms, the kennel
 // rule (409) and the check_in / check_out automations live, and the database
-// mirrors the arrival into the booking's status (20260918…_a_booking_follows_
-// its_pet_in_and_out), so one press moves both.
+// mirrors the arrival into the booking's status (20260918151018), so one press
+// moves both.
 //
 // A service with no attendance record — evaluations, a facility's custom
 // services — has none of that, and its status is its lifecycle.

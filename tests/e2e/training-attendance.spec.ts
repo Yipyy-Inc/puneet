@@ -192,7 +192,9 @@ test.describe("training attendance", () => {
       .toBe("checked-in");
   });
 
-  test("presence moves and the lifecycle does not", async ({ page }) => {
+  test("presence moves, and the booking's lifecycle follows it", async ({
+    page,
+  }) => {
     await signIn(page, ACCOUNTS.owner);
 
     const present = (await day(page)).find((a) => a.status === "checked-in");
@@ -202,8 +204,11 @@ test.describe("training attendance", () => {
     // table to ask.
     const booking = await readBooking(page, Number(present!.id));
     expect(booking?.presence).toBe("on-site");
-    expect(booking?.status, "the booking's own lifecycle is untouched").toBe(
-      "confirmed",
+    // It was "untouched" until 2026-09-18 (20260918151018): the arrival is
+    // mirrored into the status now, so the list and the calendar agree with
+    // the class roster.
+    expect(booking?.status, "the lifecycle follows the arrival").toBe(
+      "checked_in",
     );
   });
 
