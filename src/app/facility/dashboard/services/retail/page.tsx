@@ -2391,8 +2391,14 @@ export default function POSPage() {
       </div>
 
       {/* Right Side - Cart (Invoice Panel Style) */}
-      <div className="space-y-4">
-        <Card className="flex max-h-[calc(100vh-12rem)] flex-col overflow-hidden">
+      {/* Sticky beside the catalogue at desktop, and its height is chosen so the
+          bottom edge always clears the fixed help button (bottom 24 + 48 = 72px):
+          top-20 (80px, under the 64px header) plus 80px of floor is 10rem. It
+          was capped at 100vh-12rem at EVERY width and scrolled inside itself,
+          so a phone scrolled the page and then the card, and the help button
+          could sit on the total. Below 1024px the card just grows (§6 rule 7). */}
+      <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        <Card className="flex flex-col lg:max-h-[calc(100vh-10rem)] lg:overflow-hidden">
           {/* Header */}
           <CardHeader className="bg-muted/30 pb-3">
             <div className="flex items-center justify-between">
@@ -2413,7 +2419,7 @@ export default function POSPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1 text-[11px]"
+                    className="gap-1"
                     onClick={() => {
                       const sale = heldSales[0];
                       setCart(sale.items);
@@ -2423,7 +2429,7 @@ export default function POSPage() {
                       toast.success(`Resumed: ${sale.label}`);
                     }}
                   >
-                    <RotateCcw className="size-3" />
+                    <RotateCcw className="size-4" />
                     Resume ({heldSales.length})
                   </Button>
                 )}
@@ -2432,7 +2438,7 @@ export default function POSPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 gap-1 text-[11px]"
+                      className="gap-1"
                       onClick={() => {
                         setHeldSales((prev) => [
                           ...prev,
@@ -2447,14 +2453,14 @@ export default function POSPage() {
                         toast.success(tR("saleParked"));
                       }}
                     >
-                      <Pause className="size-3" />
+                      <Pause className="size-4" />
                       {tR("hold")}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setCart([])}
-                      className="text-destructive h-7 text-[11px]"
+                      className="text-destructive"
                     >
                       {tR("clearCart")}
                     </Button>
@@ -2489,7 +2495,6 @@ export default function POSPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-6"
                       onClick={() => {
                         setSelectedClientId("");
                         setCustomerName("");
@@ -2498,7 +2503,7 @@ export default function POSPage() {
                         setSelectedBookingId(null);
                       }}
                     >
-                      <X className="size-3" />
+                      <X className="size-4" />
                     </Button>
                   </div>
 
@@ -2523,10 +2528,9 @@ export default function POSPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-6"
                         onClick={() => setSelectedPetId(null)}
                       >
-                        <X className="size-3" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                   )}
@@ -2554,10 +2558,9 @@ export default function POSPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-6"
                         onClick={() => setSelectedBookingId(null)}
                       >
-                        <X className="size-3" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                   )}
@@ -2574,7 +2577,7 @@ export default function POSPage() {
                         )
                       }
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger>
                         <SelectValue placeholder={tR("linkToPet")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -2599,7 +2602,7 @@ export default function POSPage() {
                         )
                       }
                     >
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger>
                         <SelectValue placeholder={tR("applyToBooking")} />
                       </SelectTrigger>
                       <SelectContent>
@@ -2633,7 +2636,7 @@ export default function POSPage() {
                   <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                   <Input
                     placeholder={tR("searchCustomer")}
-                    className="h-8 pl-8 text-xs"
+                    className="pl-8"
                     onClick={() => setIsLinkModalOpen(true)}
                     readOnly
                   />
@@ -2661,117 +2664,114 @@ export default function POSPage() {
                 </p>
               </div>
             ) : (
-              <ScrollArea className="min-h-[150px] flex-1">
+              <ScrollArea className="shrink-0">
                 <div className="divide-y pr-2">
                   {cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="group flex items-start gap-3 py-3 first:pt-0"
-                    >
-                      {/* Thumbnail */}
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.productName}
-                          className="size-10 shrink-0 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
-                          <ShoppingCart className="text-muted-foreground/30 size-4" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm/tight font-medium">
-                          {item.productName}
-                          {item.variantName && (
-                            <span className="text-muted-foreground ml-1 text-xs font-normal">
-                              — {item.variantName}
-                            </span>
-                          )}
-                          {item.quantity > 1 && (
-                            <span className="text-muted-foreground ml-1 font-normal">
-                              ×{item.quantity}
-                            </span>
-                          )}
-                        </p>
-                        {false && item.variantName && (
-                          <p className="text-muted-foreground text-xs">
-                            {item.variantName}
-                          </p>
-                        )}
-                        <p className="text-muted-foreground text-xs">
-                          ${item.unitPrice.toFixed(2)} each
-                        </p>
-                        {item.discount > 0 && (
-                          <span className="text-xs font-medium text-emerald-600">
-                            -${item.discount.toFixed(2)} discount
-                          </span>
-                        )}
-                        {/* The stepper sits under the name: beside it, the
-                            cart column left the name one letter wide. */}
-                        <div className="mt-2 flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="size-6"
-                            onClick={() =>
-                              updateQuantity(item.id, item.quantity - 1)
-                            }
-                          >
-                            <Minus className="size-3" />
-                          </Button>
-                          <input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!Number.isNaN(val) && val > 0) {
-                                updateQuantity(item.id, val);
-                              }
-                            }}
-                            onFocus={(e) => e.target.select()}
-                            className="focus:border-primary h-6 w-8 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
+                    <div key={item.id} className="py-3 first:pt-0">
+                      <div className="flex items-start gap-3">
+                        {/* Thumbnail */}
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.productName}
+                            className="size-10 shrink-0 rounded-lg object-cover"
                           />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="size-6"
-                            onClick={() =>
-                              updateQuantity(item.id, item.quantity + 1)
-                            }
-                          >
-                            <Plus className="size-3" />
-                          </Button>
+                        ) : (
+                          <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
+                            <ShoppingCart className="text-muted-foreground/30 size-4" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm/tight font-medium">
+                            {item.productName}
+                            {item.variantName && (
+                              <span className="text-muted-foreground ml-1 text-xs font-normal">
+                                — {item.variantName}
+                              </span>
+                            )}
+                            {item.quantity > 1 && (
+                              <span className="text-muted-foreground ml-1 font-normal">
+                                ×{item.quantity}
+                              </span>
+                            )}
+                          </p>
+                          {false && item.variantName && (
+                            <p className="text-muted-foreground text-xs">
+                              {item.variantName}
+                            </p>
+                          )}
+                          <p className="text-muted-foreground text-xs">
+                            ${item.unitPrice.toFixed(2)} each
+                          </p>
+                          {item.discount > 0 && (
+                            <span className="text-xs font-medium text-emerald-600">
+                              -${item.discount.toFixed(2)} discount
+                            </span>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-medium">
+                            ${item.total.toFixed(2)}
+                          </p>
                         </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm font-medium">
-                          ${item.total.toFixed(2)}
-                        </p>
-                        <div className="mt-1 flex gap-1">
+                      {/* The stepper and the line's actions share a full-width row under the
+                            item, and wrap: at 40px (48 below 1024) four actions beside the
+                            name left it a few letters wide (§1, §6 rule 7). */}
+                      <div className="mt-2 flex flex-wrap items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            updateQuantity(item.id, item.quantity - 1)
+                          }
+                        >
+                          <Minus className="size-4" />
+                        </Button>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(val) && val > 0) {
+                              updateQuantity(item.id, val);
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="focus:border-primary min-h-10 w-12 rounded-full border bg-transparent text-center text-sm font-medium focus:outline-none max-lg:min-h-12"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            updateQuantity(item.id, item.quantity + 1)
+                          }
+                        >
+                          <Plus className="size-4" />
+                        </Button>
+                        <div className="ml-auto flex gap-1">
                           {canApplyDiscount && (
                             <>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="size-5"
                                 onClick={() => {
                                   setSelectedCartItem(item.id);
                                   setIsDiscountModalOpen(true);
                                 }}
                                 title="Apply Discount"
                               >
-                                <Percent className="size-3" />
+                                <Percent className="size-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="size-5 text-blue-600"
+                                className="text-primary"
                                 onClick={() => openEditPriceModal(item.id)}
                                 title="Edit Price / Discount"
                               >
-                                <DollarSign className="size-3" />
+                                <DollarSign className="size-4" />
                               </Button>
                             </>
                           )}
@@ -2779,24 +2779,24 @@ export default function POSPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-5 text-green-600"
+                              className="text-success"
                               onClick={() => {
                                 setSelectedCartItem(item.id);
                                 setIsCompItemModalOpen(true);
                               }}
                               title="Comp / Free Item"
                             >
-                              <Check className="size-3" />
+                              <Check className="size-4" />
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive size-5"
+                            className="text-destructive"
                             onClick={() => removeFromCart(item.id)}
                             title="Remove Item"
                           >
-                            <Trash2 className="size-3" />
+                            <Trash2 className="size-4" />
                           </Button>
                         </div>
                       </div>
@@ -2859,7 +2859,6 @@ export default function POSPage() {
                             tipPercentage === percent ? "default" : "outline"
                           }
                           size="sm"
-                          className="h-8 text-xs"
                           onClick={() => {
                             setTipPercentage(percent);
                             setTipCustomAmount("");
@@ -2884,12 +2883,10 @@ export default function POSPage() {
                           setTipPercentage(null);
                           setTipAmount(0);
                         }}
-                        className="h-8 text-xs"
                       />
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 px-2"
                         onClick={() => {
                           setTipPercentage(null);
                           setTipCustomAmount("");
@@ -2897,7 +2894,7 @@ export default function POSPage() {
                         }}
                         disabled={calculatedTipAmount === 0}
                       >
-                        <X className="size-3" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -2939,20 +2936,20 @@ export default function POSPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 gap-1 text-[10px]"
+                          className="gap-1"
                           onClick={() => setIsCartDiscountModalOpen(true)}
                         >
-                          <Percent className="size-3" />
+                          <Percent className="size-4" />
                           {tR("applyCartDiscount")}
                         </Button>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 gap-1 text-[10px]"
+                        className="gap-1"
                         onClick={() => setIsFeeDialogOpen(true)}
                       >
-                        <DollarSign className="size-3" />
+                        <DollarSign className="size-4" />
                         {tR("addFee")}
                       </Button>
                     </div>
@@ -2967,7 +2964,7 @@ export default function POSPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 gap-1 text-[10px]"
+                              className="gap-1"
                               // Opens checkout on the REAL store-credit tender
                               // (recorded with the sale, debited through
                               // record_payment) with the amount prefilled from
