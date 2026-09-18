@@ -17362,3 +17362,32 @@ exercises it on genuinely committed payments is the e2e gate after the push.
 **Read this before writing a deferred trigger here:** a green `test:sql` is not
 evidence it spares the paths you did not force. Force it in the test, and treat
 the first committed run as the real one.
+
+### ✅ The till's two layout defects — fixed (2026-09-18)
+
+Both were recorded above under "Seen in passing on the till".
+
+- **Every cart control is its primitive's height.** The ten
+  `check:control-heights` entries on `retail/page.tsx` were all in the cart
+  (`h-7`/`h-8` on Hold, Clear, the customer search, both link selects, the tip
+  buttons and input, the three quick actions), and the stepper and line
+  actions carried `size-5`/`size-6` icon buttons — 20–24px, which the gate does
+  not count. All removed: measured at **40px at 1280 and 48px at 599**, no
+  sideways scroll. The file's baseline entry is gone (10 → 0); AGENTS.md's
+  total is 521 across 198 files.
+- **Making them tap-sized broke the row, and only the browser showed it.** Four
+  40px actions beside the name left it a few letters wide ("MU6…$OEYV"). The
+  stepper and actions now share a full-width row under the item.
+- **The line list was a scroll box inside a scroll box.** `ScrollArea
+min-h-[150px] flex-1` took whatever height the summary left it, so one row
+  was clipped at 150px. It sizes to its content now; the card scrolls as one.
+- **The help button no longer sits on the total.** The cart was capped at
+  `100vh-12rem` at every width and scrolled inside itself. At `lg` it is sticky
+  at `top-20` with `max-h: 100vh-10rem`, so its bottom edge is always 80px above
+  the viewport's — clear of the fixed button (24 + 48 = 72px). Measured: card
+  bottom at 720 on an 800px viewport, button top at 728. Below 1024 the cap is
+  gone and the page scrolls.
+
+Still true: at 1280×800 the payment methods sit below the fold of the sticky
+card and need its own scroll. That is the cost of a cart that stays beside the
+catalogue; the alternative is a non-sticky card and a page scroll.

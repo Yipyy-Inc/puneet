@@ -149,7 +149,6 @@ const BASELINE = new Map<string, number>([
   ],
   ["src/app/facility/dashboard/incidents/page.tsx", 1],
   ["src/app/facility/dashboard/services/retail/orders/page.tsx", 1],
-  ["src/app/facility/dashboard/services/retail/page.tsx", 10],
   ["src/app/facility/dashboard/services/retail/products/page.tsx", 1],
   [
     "src/app/facility/dashboard/services/scheduling/availability-changes/page.tsx",
