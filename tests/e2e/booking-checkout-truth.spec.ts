@@ -148,7 +148,7 @@ async function openCheckout(page: Page, booking: BookingPayload) {
   await page.goto(
     `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
   );
-  const open = page.getByRole("button", { name: /accept payment/i }).first();
+  const open = page.getByRole("button", { name: /take payment/i }).first();
   await expect(open).toBeVisible({ timeout: 30_000 });
   await open.click();
   const dialog = page.getByRole("dialog");
@@ -232,7 +232,7 @@ test.describe("the booking checkout tells the truth", () => {
     // $64 + 5% = $67.20, on the button the money moves from.
     await dialog.getByRole("button", { name: /charge \$67\.20/i }).click();
     await dialog
-      .getByRole("button", { name: /confirm & charge \$67\.20/i })
+      .getByRole("button", { name: /confirm and charge \$67\.20/i })
       .click();
     await expect(dialog.getByText(/payment complete/i)).toBeVisible({
       timeout: 20_000,
@@ -277,7 +277,7 @@ test.describe("the booking checkout tells the truth", () => {
       .getByRole("button", { name: /charge \$/i })
       .first()
       .click();
-    await dialog.getByRole("button", { name: /confirm & charge \$/i }).click();
+    await dialog.getByRole("button", { name: /confirm and charge \$/i }).click();
 
     // The reason, in the dialog — not "Payment Complete".
     await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 20_000 });
@@ -363,7 +363,7 @@ test.describe("the booking checkout tells the truth", () => {
     // carries one.
     await expect(dialog.getByText(/carries a \$10\.00 tip/)).toBeVisible();
     const cashLabel = await dialog
-      .getByRole("button", { name: /checkout & charge \$/i })
+      .getByRole("button", { name: /^charge \$/i })
       .first()
       .textContent();
     const cash = Number(
@@ -378,7 +378,7 @@ test.describe("the booking checkout tells the truth", () => {
       dialog
         .getByRole("button", {
           name: new RegExp(
-            `checkout & charge \\$${(cash + 10).toFixed(2)}`,
+            `^charge \\$${(cash + 10).toFixed(2)}`,
             "i",
           ),
         })
