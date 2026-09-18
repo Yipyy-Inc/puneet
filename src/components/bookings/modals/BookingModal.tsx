@@ -63,6 +63,7 @@ import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
 import { getPetSize } from "@/lib/pet-size";
+import { estimateDobFromMonths } from "@/lib/pet-utils";
 import { computeBookingTotals } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
@@ -687,11 +688,18 @@ export function BookingModal({
           name: draft.name.trim(),
           type: "Dog",
           breed: draft.breed.trim(),
-          // Age stored as years (Pet schema) — converted from the months input.
+          // Whole years, the column's own unit, and the birth date the months
+          // imply — which is what every age on screen is read from. This sent
+          // `Math.round(months / 12 * 10) / 10`, so a three-month-old puppy
+          // was `age: 0.3` to an integer column and was never saved.
           age:
             draft.ageMonths !== undefined && draft.ageMonths > 0
-              ? Math.round((draft.ageMonths / 12) * 10) / 10
+              ? Math.floor(draft.ageMonths / 12)
               : 0,
+          dateOfBirth:
+            draft.ageMonths !== undefined && draft.ageMonths > 0
+              ? estimateDobFromMonths(draft.ageMonths)
+              : undefined,
           weight: draft.weight ?? 0,
           coatType: (draft.coatType as Pet["coatType"]) || undefined,
         });
