@@ -263,26 +263,29 @@ const CLAIMS: Claim[] = [
 ];
 
 /**
- * How many `check:*` scripts the checks job actually runs, read out of its own
- * loop in ci.yml.
+ * How many `check:*` scripts the checks job runs — and a refusal if it has gone
+ * back to choosing them by hand.
  *
- * The job's header comment counts them in prose, and said "Fourteen" from the
- * day it was written until 2026-09-02, by which point there were 22 — inside
- * the file that runs THIS script, which exists because counts written by hand
- * go stale. Deriving it costs four lines.
- *
- * Read from the `for script in \` list rather than from package.json on
- * purpose: a script registered in package.json but never added here would be
- * invisible to CI, and counting package.json would hide exactly that.
+ * This used to count the job's own hand-kept loop list, "rather than
+ * package.json on purpose: a script registered in package.json but never added
+ * here would be invisible to CI". Counting the list did not make that visible —
+ * nothing compared the two — and on 2026-09-18 three of 37 checks were found
+ * never to have run in CI. The job now reads package.json itself, so the count
+ * is package.json's, and this returns -1 (a claim no prose can match) if
+ * ci.yml stops deriving it.
  */
 function checkScriptCount(): number {
   const ci = readFileSync(join(".github", "workflows", "ci.yml"), "utf8");
-  const loop = ci.match(/for script in \\\n([\s\S]*?)\n\s*do\n/);
-  if (!loop) return 0;
-  return loop[1]
-    .split("\n")
-    .map((line) => line.replace(/\\/g, "").trim())
-    .filter(Boolean).length;
+  const derives =
+    ci.includes("for script in $scripts") &&
+    ci.includes('s.startsWith("check:") && s !== "check:all"');
+  if (!derives) return -1;
+  const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  };
+  return Object.keys(pkg.scripts).filter(
+    (s) => s.startsWith("check:") && s !== "check:all",
+  ).length;
 }
 
 /**

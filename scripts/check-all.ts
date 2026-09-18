@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Every `check:*` script, in one command, exactly as CI runs them.
+ * Every `check:*` script, in one command — the same set CI runs, because CI
+ * reads the list from package.json the same way (since 2026-09-18; before
+ * that CI kept its own list, and three checks ran here and never there).
  *
  * ── WHY THIS EXISTS ──────────────────────────────────────────────────────
  *
