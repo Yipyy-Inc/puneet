@@ -39,7 +39,6 @@
     "src/app/dashboard/commercial/trials/_components/extend-trial-dialog.tsx": 8,
     "src/app/dashboard/commercial/trials/_components/nudge-trial-dialog.tsx": 8,
     "src/app/dashboard/commercial/trials/_components/trials-client.tsx": 30,
-    "src/app/dashboard/communication/announcements/page.tsx": 81,
     "src/app/dashboard/communication/live-support/page.tsx": 70,
     "src/app/dashboard/facilities/[id]/_components/facility-billing.tsx": 14,
     "src/app/dashboard/facilities/[id]/_components/facility-clients.tsx": 21,

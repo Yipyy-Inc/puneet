@@ -5,8 +5,8 @@
 import { facilities } from "@/data/facilities";
 import { supportTickets } from "@/data/support-tickets";
 import { adminUsers, roleDisplayNames } from "@/data/admin-users";
-import { announcements } from "@/data/announcements";
 import { buildPlatformInvoices } from "@/data/platform-invoices";
+import type { EnhancedAnnouncement } from "@/types/announcement";
 
 export type AdminEntityType =
   | "facility"
@@ -40,7 +40,28 @@ function makeMatcher(term: string) {
     values.some((v) => v != null && String(v).toLowerCase().includes(term));
 }
 
-export function searchAdminEntities(rawTerm: string): AdminSearchResult[] {
+/**
+ * The real platform announcements (20260918103842). The other four groups
+ * still read fixtures; this one read a fixture too, and linked to a page that
+ * edited it. A failed read leaves the group empty rather than failing the
+ * whole search.
+ */
+async function platformAnnouncements(): Promise<EnhancedAnnouncement[]> {
+  try {
+    const response = await fetch("/api/admin/announcements");
+    if (!response.ok) return [];
+    const body = (await response.json()) as {
+      announcements?: EnhancedAnnouncement[];
+    };
+    return body.announcements ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function searchAdminEntities(
+  rawTerm: string,
+): Promise<AdminSearchResult[]> {
   const term = rawTerm.trim().toLowerCase();
   if (term.length < ADMIN_SEARCH_MIN_CHARS) return [];
   const match = makeMatcher(term);
@@ -95,13 +116,15 @@ export function searchAdminEntities(rawTerm: string): AdminSearchResult[] {
     }));
 
   // Announcements — title
-  const announcementResults: AdminSearchResult[] = announcements
+  const announcementResults: AdminSearchResult[] = (
+    await platformAnnouncements()
+  )
     .filter((a) => match(a.title))
     .slice(0, PER_GROUP)
     .map((a) => ({
       entityType: "announcement" as const,
       id: a.id,
-      href: `/dashboard/communication/announcements?id=${encodeURIComponent(a.id)}`,
+      href: `/dashboard/support/announcements/compose?id=${encodeURIComponent(a.id)}`,
       primaryText: a.title,
       secondaryText: `${a.status} · ${a.target}`,
     }));

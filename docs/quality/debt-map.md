@@ -17445,8 +17445,31 @@ Removed rather than kept fake:
 - **"By plan tier" read three tiers that do not exist** (Basic / Premium /
   Enterprise). It reads `subscription_tiers` now.
 
-Still fixture, found on the way and NOT converted: the older
-`/dashboard/communication/announcements` page (the admin dashboard's quick
-action pointed there; it points at the real composer now) and the admin search's
-announcement results (`src/lib/api/admin-search.ts`), which still list that
-page's fixture.
+**Follow-up the same day:** the older `/dashboard/communication/announcements`
+page — 903 lines editing a second fixture (`src/data/announcements.ts`, whose
+first row was "Platform Maintenance Scheduled") — is deleted with that fixture,
+and 81 of its strings leave the French baseline. The admin dashboard's quick
+action already pointed at the real composer; the global admin search's
+announcement results now read `/api/admin/announcements` and open the real
+composer. The search's other four groups (facilities, invoices, tickets, team)
+still read fixtures.
+
+### Two ways a check passed without looking (2026-09-18)
+
+Found while deleting the old announcements page, when `check:facility-scoped-reads`
+failed on `GET /api/admin/announcements` — a route that had already passed that
+check locally AND reached production through a green CI run.
+
+- **Locally, a new file is invisible until it is tracked.** The check lists
+  routes with `git ls-files`, so an untracked route is not scanned: `check:all`
+  was green before the commit because the route did not exist as far as git
+  knew. Run the checks after `git add`, not before.
+- **CI never runs three checks.** The `checks` job loops over a hand-kept list
+  of 34 names; `package.json` has 37. `query-default-loops`,
+  `facility-scoped-reads` and `frozen-translator` run under `check:all` and
+  nowhere in CI — which is how this reached production. Proposed separately:
+  derive CI's list from `package.json` the way `check:all` does.
+
+The route itself is the platform console and reads every announcement, tier and
+facility by design; it is exempted with that reason, like
+`admin/merchant-applications`.
