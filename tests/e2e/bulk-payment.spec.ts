@@ -142,7 +142,7 @@ test.describe("collecting several payments at once", () => {
     await expect(dialog).toBeVisible();
 
     await dialog.getByRole("button", { name: /continue/i }).click();
-    await dialog.getByRole("button", { name: /confirm & charge/i }).click();
+    await dialog.getByRole("button", { name: /confirm and charge/i }).click();
 
     // The ledger, not the toast. Every one of the three is settled, and the
     // amounts match — the RPC computed them, the screen did not send them.

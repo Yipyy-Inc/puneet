@@ -546,14 +546,14 @@ test.describe("the facility home board", () => {
     // demands evidence that the money actually moved.
     const payment = page
       .getByRole("dialog")
-      .filter({ hasText: /payment checkout/i });
+      .filter({ hasText: /take payment/i });
     await expect(payment).toBeVisible({ timeout: 15_000 });
     await payment.getByRole("button", { name: /^e-transfer$/i }).click();
 
-    // Two presses by design: "Checkout & Charge" arms it, "Confirm & Charge"
+    // Two presses by design: "Charge $X" arms it, "Confirm and charge $X"
     // takes the money.
-    await payment.getByRole("button", { name: /checkout & charge/i }).click();
-    await payment.getByRole("button", { name: /confirm & charge/i }).click();
+    await payment.getByRole("button", { name: /^charge /i }).click();
+    await payment.getByRole("button", { name: /confirm and charge/i }).click();
 
     // THE ASSERTION THAT WOULD HAVE FAILED BEFORE THIS CHANGE. The handler
     // toasted "Charged $X" and called no payment endpoint at all, so the

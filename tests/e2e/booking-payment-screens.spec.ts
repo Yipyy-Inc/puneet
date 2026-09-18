@@ -119,7 +119,7 @@ async function openCheckout(page: Page, ref: number, clientId: number) {
     await gate.getByRole("button", { name: /continue anyway/i }).click();
   const dialog = page
     .getByRole("dialog")
-    .filter({ hasText: /payment checkout/i });
+    .filter({ hasText: /take payment/i });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   return dialog;
 }
@@ -241,8 +241,8 @@ test.describe("the payment button reaches the ledger", () => {
 
     // ── TAKING MONEY IS TWO PRESSES, AND THE TEST HAS TO MAKE BOTH ────────
     //
-    // `PaymentCheckoutFlow` arms on the first press ("Checkout & Charge") and
-    // charges on the second ("Confirm & Charge"), which is deliberate: the
+    // `PaymentCheckoutFlow` arms on the first press ("Charge $X") and
+    // charges on the second ("Confirm and charge $X"), which is deliberate: the
     // button that moves real money is not the one under a cursor that was
     // already heading there.
     //
@@ -256,10 +256,10 @@ test.describe("the payment button reaches the ledger", () => {
     await charge.click();
     // Same locator, second press: the label changes, the button does not.
     await expect(
-      dialog.getByRole("button", { name: /confirm & charge \$/i }),
+      dialog.getByRole("button", { name: /confirm and charge \$/i }),
     ).toBeVisible();
     await dialog
-      .getByRole("button", { name: /confirm & charge \$/i })
+      .getByRole("button", { name: /confirm and charge \$/i })
       .first()
       .click();
 
@@ -345,7 +345,7 @@ test.describe("the payment button reaches the ledger", () => {
     await expect(dialog).toContainText(/already paid/i);
 
     // Two presses, as above — and here the SECOND one is the assertion that
-    // matters: its label carries the figure, so `Confirm & Charge $48.00`
+    // matters: its label carries the figure, so `Confirm and charge $48.00`
     // proves the button about to move money names the balance and not the
     // price. That is the whole point of this test.
     await dialog
@@ -354,7 +354,7 @@ test.describe("the payment button reaches the ledger", () => {
       .click();
     await dialog
       .getByRole("button", {
-        name: `Confirm & Charge $${(AMOUNT - part).toFixed(2)}`,
+        name: `Confirm and charge $${(AMOUNT - part).toFixed(2)}`,
       })
       .click();
 
