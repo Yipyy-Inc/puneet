@@ -127,6 +127,25 @@ const PET_LABEL: Partial<Record<BookingActionId, string>> = {
   check_out: "checkOutPet",
 };
 
+/** An action's glyph (§5b1 — from icon-map.json's meanings). */
+export function bookingActionIcon(id: BookingActionId): LucideIcon {
+  return ICON[id];
+}
+
+/**
+ * An action's label in the viewer's language, naming the pet where one walks
+ * through it ("Check in Kofi"). Shared by the bar and the status menu so the
+ * same action never reads two ways on one screen.
+ */
+export function useBookingActionLabel(petLabel: string | null) {
+  const { t, fill } = useStaffText("bookingActions");
+  return (id: BookingActionId) => {
+    const withPet = PET_LABEL[id];
+    if (withPet && petLabel) return fill(withPet, { pet: petLabel });
+    return t(LABEL[id]);
+  };
+}
+
 export function BookingActionBar({
   actions,
   handlers,
@@ -137,13 +156,8 @@ export function BookingActionBar({
   /** The pet's name for "Check in Kofi" — §5r, the record's own name. */
   petLabel: string | null;
 }) {
-  const { t, fill } = useStaffText("bookingActions");
-
-  const label = (id: BookingActionId) => {
-    const withPet = PET_LABEL[id];
-    if (withPet && petLabel) return fill(withPet, { pet: petLabel });
-    return t(LABEL[id]);
-  };
+  const { t } = useStaffText("bookingActions");
+  const label = useBookingActionLabel(petLabel);
 
   // An action is shown only where this screen can perform it.
   const shown = actions.filter((a) =>

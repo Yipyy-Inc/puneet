@@ -141,7 +141,7 @@ import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { NotesList } from "@/components/shared/NotesList";
 import { TagsButton } from "@/components/shared/TagsButton";
-import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdown";
+import { BookingStatusMenu } from "@/components/bookings/booking-actions/BookingStatusMenu";
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
@@ -1344,27 +1344,11 @@ export default function ClientBookingDetailPage({
                 {/* §5r: an invoice number and a booking reference never pass
                     through the locale layer. */}
                 <PageHeader title={bookingRef} />
-                <BookingStatusDropdown
-                  currentStatus={booking.status}
-                  // Was a toast and nothing else: the dropdown reported a
-                  // change the row never made, and a reload put it back.
-                  onStatusChange={async (newStatus) => {
-                    try {
-                      await updateStatus.mutateAsync({
-                        id: booking.id,
-                        status: newStatus as Booking["status"],
-                      });
-                      toast.success(
-                        `${bookingRef} is now ${newStatus.replace(/_/g, " ")}`,
-                      );
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "That status could not be saved.",
-                      );
-                    }
-                  }}
+                <BookingStatusMenu
+                  status={booking.status}
+                  actions={bookingActions}
+                  handlers={handlers}
+                  petLabel={petLabel}
                 />
                 <TagsButton entityType="booking" entityId={booking.id} />
                 <NotesButton entityType="booking" entityId={booking.id} />
