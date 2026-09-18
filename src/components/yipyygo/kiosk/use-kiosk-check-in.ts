@@ -9,6 +9,10 @@ import type { YipyyGoDeskCheckBody } from "@/lib/api/mappers/yipyy-go";
 import { useTrainingCheckIn } from "@/lib/api/training-attendance";
 import { useRecordDeskCheck } from "@/lib/api/yipyy-go";
 import { checkInWriterFor } from "@/lib/yipyy-go/check-in-writer";
+import {
+  arrivalFailure,
+  type ArrivalFailure,
+} from "@/lib/bookings/arrival-failure";
 
 // ============================================================================
 // Checking a booking in at the desk: the desk check first — every dog, what
@@ -22,22 +26,8 @@ import { checkInWriterFor } from "@/lib/yipyy-go/check-in-writer";
 // stays expected: presence is the truth of arrival, and the desk says why.
 // ============================================================================
 
-export type KioskFailure =
-  | "reason_required"
-  | "needs_kennel"
-  | "not_allowed"
-  | "cannot_now"
-  | "no_writer"
-  | "failed";
-
-function failureOf(error: unknown): KioskFailure {
-  const { status, code } = (error ?? {}) as { status?: number; code?: string };
-  if (code === "override_reason_required") return "reason_required";
-  if (status === 409) return "needs_kennel";
-  if (status === 403) return "not_allowed";
-  if (status === 404 || status === 422) return "cannot_now";
-  return "failed";
-}
+/** The shared arrival failures (src/lib/bookings/arrival-failure.ts). */
+export type KioskFailure = ArrivalFailure;
 
 export function useKioskCheckIn(bookingRef: number, service: string) {
   const deskCheck = useRecordDeskCheck(bookingRef);
@@ -71,7 +61,7 @@ export function useKioskCheckIn(bookingRef: number, service: string) {
         });
       setDone(true);
     } catch (error) {
-      setFailure(failureOf(error));
+      setFailure(arrivalFailure(error));
     }
   };
 
