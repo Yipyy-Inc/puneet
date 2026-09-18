@@ -21,6 +21,9 @@ import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { VariantSelector } from "@/components/retail/VariantSelector";
 import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
 
+const AddFeeDialog = dynamic(() =>
+  import("./_components/add-fee-dialog").then((m) => m.AddFeeDialog),
+);
 const CameraScanner = dynamic(
   () =>
     import("@/components/retail/CameraScanner").then((m) => m.CameraScanner),
@@ -229,6 +232,7 @@ export default function POSPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isFeeDialogOpen, setIsFeeDialogOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [isCartDiscountModalOpen, setIsCartDiscountModalOpen] = useState(false);
@@ -634,6 +638,32 @@ export default function POSPage() {
   }, [tipPercentage, tipCustomAmount, tipAmount, subtotal, discountTotal]);
 
   const grandTotal = subtotal - discountTotal + taxTotal + calculatedTipAmount;
+
+  // A fee is a line with no product: record_retail_sale records it without a
+  // stock movement, and the tax pass taxes it like a product. Its own id, so
+  // two fees never merge into one line the way two scans of a product do.
+  const addFeeToCart = ({
+    label,
+    amount,
+  }: {
+    label: string;
+    amount: number;
+  }) => {
+    setCart((current) => [
+      ...current,
+      {
+        id: `fee-${crypto.randomUUID()}`,
+        itemType: "product",
+        productName: label,
+        sku: "FEE",
+        quantity: 1,
+        unitPrice: amount,
+        discount: 0,
+        discountType: "fixed",
+        total: amount,
+      },
+    ]);
+  };
 
   const addToCart = (item: Product | ProductVariant) => {
     const isVariant = "variantType" in item;
@@ -1598,15 +1628,42 @@ export default function POSPage() {
         let finalAmount = grandTotal;
         let paymentNotes = "";
 
+        // Store credit is clamped to the client's balance AS IT IS NOW. Two
+        // holes, both measured on 2026-09-17: an EMPTY amount skipped the block
+        // below and recorded the full total as store credit whatever the
+        // balance, and `storeCreditAmount` is never reset after a sale, so the
+        // next customer could inherit the last one's amount. The ledger has no
+        // balance check of its own (the balance is a sum, nothing stops it
+        // going negative), so this is the only thing standing in the way.
+        const creditApplied =
+          paymentForm.method === "store_credit" && !paymentForm.splitPayments
+            ? Math.min(
+                storeCreditAmount,
+                selectedClientId && selectedClientId !== "__walk_in__"
+                  ? getStoreCreditBalance(selectedClientId)
+                  : 0,
+                grandTotal,
+              )
+            : 0;
+        if (
+          paymentForm.method === "store_credit" &&
+          !paymentForm.splitPayments &&
+          creditApplied <= 0
+        ) {
+          toast.error(tR("storeCreditNothingApplied"));
+          setIsProcessingPayment(false);
+          return;
+        }
+
         // Apply store credit if selected
-        if (paymentForm.method === "store_credit" && storeCreditAmount > 0) {
-          finalAmount = grandTotal - storeCreditAmount;
-          paymentNotes = `Store Credit Applied: $${storeCreditAmount.toFixed(2)}`;
+        if (paymentForm.method === "store_credit" && creditApplied > 0) {
+          finalAmount = grandTotal - creditApplied;
+          paymentNotes = `Store Credit Applied: ${creditApplied.toFixed(2)}`;
           if (finalAmount > 0) {
             paymentNotes += ` | Remaining: $${finalAmount.toFixed(2)}`;
             // TODO: Prompt for additional payment method for remaining amount
             alert(
-              `Store credit applied: $${storeCreditAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`,
+              `Store credit applied: ${creditApplied.toFixed(2)}. Remaining amount: ${finalAmount.toFixed(2)} needs to be paid with another method.`,
             );
             setIsProcessingPayment(false);
             return;
@@ -2855,62 +2912,16 @@ export default function POSPage() {
                 </span>
               </div>
 
-              {/* Available Benefits — only when customer linked */}
-              {selectedClientId &&
-                selectedClientId !== "__walk_in__" &&
-                cart.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
-                    <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                      Available Benefits
-                    </p>
-                    <button
-                      onClick={() =>
-                        toast.success(
-                          "Package credit applied — deducted from balance",
-                        )
-                      }
-                      className="flex w-full items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-left transition-all hover:bg-emerald-100"
-                    >
-                      <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-emerald-800">
-                          Package Credit
-                        </p>
-                        <p className="text-[10px] text-emerald-600">
-                          Client may have eligible package credits
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-medium text-emerald-700">
-                        Apply →
-                      </span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        toast.success(
-                          "Membership discount auto-applied — 15% off",
-                        )
-                      }
-                      className="flex w-full items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-2 text-left transition-all hover:bg-blue-100"
-                    >
-                      <div className="size-1.5 shrink-0 rounded-full bg-blue-500" />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-blue-800">
-                          Membership Discount
-                        </p>
-                        <p className="text-[10px] text-blue-600">
-                          Check for active membership benefits
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-medium text-blue-700">
-                        Apply →
-                      </span>
-                    </button>
-                    <p className="text-muted-foreground text-[9px] italic">
-                      Order: Package → Membership → Discount → Store Credit →
-                      Tax
-                    </p>
-                  </div>
-                )}
+              {/* "Available benefits" sat here: a Package credit button and a
+                  Membership discount button, both of which only toasted success
+                  ("… deducted from balance", "… auto-applied — 15% off"), under a
+                  note promising an order Package → Membership → Discount.
+                  Neither has anything to apply on a retail till: a package pass is
+                  bought for a SERVICE, and a membership's discount is promised on
+                  BOOKINGS ("comes off their bookings at checkout"; customers read
+                  "Discount on all services"). A retail discount for members would be
+                  a new policy — the plumbing exists (Membership.discountPercentage,
+                  the till's accountDiscount auto-apply) if the facility wants one. */}
 
               {/* Action buttons — same as booking invoice panel */}
               {cart.length > 0 && (
@@ -2939,10 +2950,10 @@ export default function POSPage() {
                         variant="outline"
                         size="sm"
                         className="h-7 gap-1 text-[10px]"
-                        onClick={() => toast.success("Fee added to cart")}
+                        onClick={() => setIsFeeDialogOpen(true)}
                       >
                         <DollarSign className="size-3" />
-                        Add Fee
+                        {tR("addFee")}
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -2957,23 +2968,31 @@ export default function POSPage() {
                               variant="outline"
                               size="sm"
                               className="h-7 gap-1 text-[10px]"
-                              onClick={() =>
-                                toast.success("Store credit applied")
+                              // Opens checkout on the REAL store-credit tender
+                              // (recorded with the sale, debited through
+                              // record_payment) with the amount prefilled from
+                              // the client's balance. It used to only toast
+                              // "Store credit applied". Disabled at no balance.
+                              disabled={
+                                getStoreCreditBalance(selectedClientId) <= 0
                               }
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "store_credit",
+                                  splitPayments: false,
+                                  chargeType: "pay_now",
+                                });
+                                setStoreCreditAmount(
+                                  Math.min(
+                                    getStoreCreditBalance(selectedClientId),
+                                    grandTotal,
+                                  ),
+                                );
+                                setIsPaymentModalOpen(true);
+                              }}
                             >
-                              Use Store Credit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1 text-[10px]"
-                              onClick={() =>
-                                toast.success(
-                                  "Membership discount applied — 15% off",
-                                )
-                              }
-                            >
-                              Redeem Membership
+                              {tR("useStoreCredit")}
                             </Button>
                           </>
                         )}
@@ -3358,6 +3377,12 @@ ${receiptConfig.returnPolicy.trim() ? `<div style="margin-top:16px;font-size:10p
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AddFeeDialog
+        open={isFeeDialogOpen}
+        onOpenChange={setIsFeeDialogOpen}
+        onAdd={addFeeToCart}
+      />
 
       {/* Cart Discount Modal */}
       <Dialog

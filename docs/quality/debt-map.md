@@ -17175,3 +17175,83 @@ itself. Negative-controlled three ways: a wrong total fails, a wrong file count
 fails, and **lowering one baseline entry without updating the doc fails** — so
 the next person to record a win is made to update the headline in the same
 commit.
+
+### All seven, resolved — four made real, three removed, and what building them found
+
+The till now has **zero** controls whose handler is only a toast (the same
+scanner that found seven now finds none). Where each one went:
+
+| control                  | outcome                               | why                                                                                            |
+| ------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Discount popover         | **rewired** to the real modal         | the modal was built and opened by nothing (above)                                              |
+| Add tip popover          | **removed**                           | a duplicate of the working tip control beside it                                               |
+| Add fee                  | **made real**                         | `record_retail_sale` already takes a line with no productId                                    |
+| Use store credit         | **made real** — opens the real tender | the tender already debits through `record_payment`                                             |
+| Package credit           | **removed**                           | a pass is bought for a SERVICE (`service_id not null`); nothing on a retail till for it to pay |
+| Membership discount (×2) | **removed**                           | promised on BOOKINGS, not retail — see below                                                   |
+
+**Add fee** needed no migration and no schema change. `productId` was already
+optional on `CartItem`, the RPC skips the stock movement for a line without
+one, and `addCartToBooking` already had `if (!item.productId) continue`. The
+code was built for a product-less line and nothing could make one. It lives in
+`_components/add-fee-dialog.tsx`, dynamically imported, and a fee is TAXED like
+a product — the tax pass exempts a line only when a real product says so, and
+an untaxed fee under-collects. **Not observed in the browser:** the e2e
+facility has no tax configured (total = subtotal), so the fee was seen on the
+bill but not seen taxed.
+
+**Membership is the one I had wrong, twice.** I first listed it as buildable,
+because `membership_plans.discount_percent` is real. Then I read what the
+product promises: staff are told the discount "comes off their **bookings** at
+checkout", and customers read "Discount on **all services**". Nobody was
+promised a retail discount and no plan was priced for one, so applying it at
+the till would have invented a policy. The plumbing exists if a facility ever
+wants that — `Membership.discountPercentage` and the till's `accountDiscount`
+auto-apply — but it is a decision, not a fix.
+
+### 🔴 The store-credit tender could spend credit a client did not have
+
+Found while pointing "Use store credit" at the tender, and live before any of
+this: an **empty** amount skipped the store-credit block in `handlePayment` and
+recorded the **full total** as store credit, whatever the balance. The checkout
+tender card is enabled for any linked client regardless of balance, and
+`storeCreditAmount` is never reset after a sale, so a second customer could
+also inherit the first one's amount. A client with $5 of credit could "pay" a
+$100 sale and end at −$95.
+
+**The ledger does not stop it.** `store_credit_entries` has no balance column
+and no balance check — the balance is a sum, and nothing refuses a sum going
+negative. `payments_credits_are_not_negative` only checks that the AMOUNT
+applied is not negative. So the till is now the only guard: the amount is
+clamped to the client's balance as it is at the moment of payment, and nothing
+applied is refused with a sentence. Verified in the browser with every
+`POST /api/retail/sales` intercepted and aborted — the refusal showed, and no
+sale request was ever made.
+
+### 🔴 Two money gaps where the database trusts the till — NOT fixed here
+
+Both want the same kind of change, a migration on a money RPC with SQL tests,
+and neither belongs folded into a UI commit:
+
+1. **`record_payment` has no store-credit balance check** (above). Any caller
+   that can record a payment can overdraw a client's credit; the till's clamp
+   protects only the till.
+2. **`record_retail_sale` trusts `p_discount`.** Only a promo code is re-quoted
+   server-side; `retail_apply_discount` appears nowhere in the function. The
+   permission is enforced by HIDING a button, so anyone holding
+   `retail_process_sale` can post any discount through the API.
+
+### Seen in passing on the till
+
+- At 1280px the floating help button sits on top of the till's **total**
+  (`$18.0` was clipped). On a till that is the one number that must not be
+  covered.
+- At 599px the quick-action buttons are 28px tall against a 48px tap-target
+  rule (§6 rule 7) — the whole row was already undersized; it is one of the ten
+  `check:control-heights` entries left on this file.
+- The fake "Scheduled maintenance" announcement renders on the live till.
+
+Ratchets lowered by hand again: `check:ui-french` 225 → 211 on this file and
+`check:control-heights` 11 → 10 — and the second one was caught by the derived
+`check:doc-counts` claim added earlier the same day, which failed until
+AGENTS.md's headline total moved from 532 to 531. First real win, first catch.
