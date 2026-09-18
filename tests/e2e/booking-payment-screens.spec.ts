@@ -117,9 +117,7 @@ async function openCheckout(page: Page, ref: number, clientId: number) {
   );
   if (gated)
     await gate.getByRole("button", { name: /continue anyway/i }).click();
-  const dialog = page
-    .getByRole("dialog")
-    .filter({ hasText: /take payment/i });
+  const dialog = page.getByRole("dialog").filter({ hasText: /take payment/i });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   return dialog;
 }

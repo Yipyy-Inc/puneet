@@ -277,7 +277,9 @@ test.describe("the booking checkout tells the truth", () => {
       .getByRole("button", { name: /charge \$/i })
       .first()
       .click();
-    await dialog.getByRole("button", { name: /confirm and charge \$/i }).click();
+    await dialog
+      .getByRole("button", { name: /confirm and charge \$/i })
+      .click();
 
     // The reason, in the dialog — not "Payment Complete".
     await expect(dialog.getByRole("alert")).toBeVisible({ timeout: 20_000 });
@@ -377,10 +379,7 @@ test.describe("the booking checkout tells the truth", () => {
     await expect(
       dialog
         .getByRole("button", {
-          name: new RegExp(
-            `^charge \\$${(cash + 10).toFixed(2)}`,
-            "i",
-          ),
+          name: new RegExp(`^charge \\$${(cash + 10).toFixed(2)}`, "i"),
         })
         .first(),
     ).toBeVisible();
