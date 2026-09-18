@@ -17475,3 +17475,70 @@ check locally AND reached production through a green CI run.
 The route itself is the platform console and reads every announcement, tier and
 facility by design; it is exempted with that reason, like
 `admin/merchant-applications`.
+
+## 2026-09-18 — Bookings, round 1: the booking page and the calendar do what they say
+
+The first round of finishing bookings one side at a time (the plan agreed with
+the client: build a function until it is right, hand it over to test, take
+feedback). Round 1 is the facility's booking page and operations calendar.
+
+### ✅ One truth of arrival
+
+A check-in or check-out anywhere — the day boards, the kiosk, the booking page,
+the calendar — goes through the service's attendance write, and the database
+mirrors it into `bookings.status` (20260918151018, `presence-mirror.sql`). It
+reverses 20260806960000's "derive presence, never copy it": two records that
+disagreed were a worse answer than one copy kept in step. A transaction-local
+flag lets the mirror's own update past the integrity trigger for a caretaker
+who holds no `edit_bookings`, for a status-only move and nothing else. A
+request, a waiting-list entry, an estimate, a declined, cancelled, no-show or
+completed booking cannot be checked in (22023, `booking_not_arrivable`).
+
+### ✅ One lifecycle, one set of flows
+
+`src/lib/bookings/booking-lifecycle.ts` answers what a booking's stage is,
+what this viewer may do with it now, and which status moves a direct write may
+make. The booking page's action bar and status menu, the calendar drawer and
+`PATCH /api/bookings/[ref]` all ask it. The PATCH writes only what changed, in
+the booking's own facility and time zone (it re-derived every column in the
+SESSION facility's zone), checks `cancel_bookings` and the check-in forms, and
+answers 422 with a reason. The calendar's booking actions are the booking
+page's own: check-in and check-out through `useBookingArrival`, edit through
+`BookingEditDialog`, cancel through `CancelBookingModal` with its refund,
+create and rebook through the wizard; checking out a guest who owes goes to
+the booking page, where checkout is the till. Its viewer and permissions come
+from the session, not three cookies nothing wrote.
+
+### ✅ The booking page reads one booking, and French
+
+It reads the booking by its number (it read the client's whole history), shows
+loading, error and not-found states, and lost its six invented "Change
+History" entries. It is split into `_components/` and is at zero English, as
+are the 18 dialogs and panels it opens (checkout, refund, deposit, prepayment,
+tip split, add item, early checkout, the care gate, the three care panels,
+the payment summary). `tests/e2e/booking-lifecycle.spec.ts` pins it from four
+chairs — caretaker, reception, accountant, and a request nobody may check in.
+
+### 🔴 Known, and not done in this round
+
+- **The server does not enforce vaccinations at arrival.** The booking page
+  and the calendar WARN before checking in a pet with no current required
+  vaccine (`use-vaccine-gaps.ts`, from the facility's own rules for the
+  service); the day boards and the kiosk do not, and nothing refuses.
+- **The care gate's "check out anyway" is not recorded.** It used to say it
+  was "recorded on the booking audit trail for manager review"; the claim is
+  gone and the record is round 2 (M4, `care_gate_overrides`).
+- **A booking's history is round 2** (M3). The calendar's "audit" panel is a
+  session-only list in component memory and says nothing a reload keeps.
+- **Still English, deliberately:** the incident report (76 strings) and the
+  kennel-card print (58), which the booking page opens but which are features
+  of their own; the rest of the operations calendar (~400 strings) outside
+  its booking actions; and the meal notes `care-instructions.ts` assembles
+  ("Allergies: …", "If refused: …") — pass keys, not sentences.
+- **The calendar's lead conversion is unreachable** — nothing produces the
+  external events it converts — and converts into memory. Left as it was.
+- **Manager holds no `daycare_check_in_out` in the presets**, so a manager
+  cannot check a daycare guest in without an override. A preset question for
+  the owner, not a code one.
+- **Grooming keeps status-drives-stamps**; its revert clears `check_in_at`
+  (it only ever cleared the check-out).
