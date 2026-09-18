@@ -133,3 +133,26 @@ export function estimateDobFromAge(ageYears: number): string {
   const year = new Date().getFullYear() - ageYears;
   return `${year}-01-01`;
 }
+
+/**
+ * A birth date from an age in months: the same day that many months ago, held
+ * to the end of a shorter month — 31 March less one month is the last day of
+ * February, not 3 March. The booking wizard asks for months, because that is
+ * how a puppy's age is counted.
+ */
+export function estimateDobFromMonths(
+  months: number,
+  now: Date = new Date(),
+): string {
+  const whole = Math.max(0, Math.round(months));
+  const month = new Date(now.getFullYear(), now.getMonth() - whole, 1);
+  const lastDay = new Date(
+    month.getFullYear(),
+    month.getMonth() + 1,
+    0,
+  ).getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${month.getFullYear()}-${pad(month.getMonth() + 1)}-${pad(
+    Math.min(now.getDate(), lastDay),
+  )}`;
+}
