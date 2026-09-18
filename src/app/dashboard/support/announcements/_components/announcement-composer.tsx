@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Eye, FileText, Send, X } from "lucide-react";
+import { ArrowLeft, Eye, FileText, Send } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,23 +22,20 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
-import { useHydrated } from "@/hooks/use-hydrated";
-import { facilities } from "@/data/facilities";
+import type { AnnouncementInput } from "@/lib/announcements/mapper";
 import {
-  type AnnouncementDraft,
-  upsertAnnouncement,
-  useAnnouncements,
-} from "@/lib/announcements-store";
-import { bodyPreview } from "./announcement-utils";
+  useAdminAnnouncements,
+  useSaveAnnouncement,
+} from "@/lib/api/platform-announcements";
 import type {
+  AnnouncementOptions,
   AnnouncementPriority,
   AnnouncementTarget,
   EnhancedAnnouncement,
 } from "@/types/announcement";
-import { FacilityPicker } from "../../../commercial/credits/_components/facility-picker";
 import {
+  bodyPreview,
   BUSINESS_TYPES,
-  PLAN_TIERS,
   PRIORITY_HELP,
   PRIORITY_OPTIONS,
   TARGET_OPTIONS,
@@ -48,7 +44,18 @@ import {
 import { AnnouncementPreview } from "./announcement-preview";
 import { RichTextEditor } from "./rich-text-editor";
 
+// Saves to public.platform_announcements (20260918103842). "Save draft" keeps
+// it off every screen; "Publish" makes it live for its target — now, or at the
+// scheduled time — and it comes down on its own after the auto-archive days,
+// or at once from the list's Archive. It used to write into a browser store in
+// the admin's own tab, so a "published" announcement reached nobody.
+//
+// Delivery is in-platform only: an Email option sat here with nothing behind
+// it that could send one.
+
 const LIST_URL = "/dashboard/support/announcements";
+
+const NO_OPTIONS: AnnouncementOptions = { tiers: [], facilities: [] };
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -70,10 +77,9 @@ function partsToIso(date: string, time: string): string {
 export function AnnouncementComposer() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
-  const announcements = useAnnouncements();
-  const hydrated = useHydrated();
+  const { data, isPending, error } = useAdminAnnouncements();
 
-  if (editId && !hydrated) {
+  if (isPending) {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-9 w-48" />
@@ -81,17 +87,41 @@ export function AnnouncementComposer() {
       </div>
     );
   }
+  if (error) {
+    return (
+      <div className="p-6">
+        <p className="text-destructive text-sm">
+          Announcements could not be loaded: {error.message}
+        </p>
+      </div>
+    );
+  }
 
   const existing = editId
-    ? (announcements.find((a) => a.id === editId) ?? null)
+    ? (data.announcements.find((a) => a.id === editId) ?? null)
     : null;
 
-  return <ComposerForm key={existing?.id ?? "new"} existing={existing} />;
+  return (
+    <ComposerForm
+      key={existing?.id ?? "new"}
+      existing={existing}
+      options={data.options ?? NO_OPTIONS}
+    />
+  );
 }
 
-function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
+function ComposerForm({
+  existing,
+  options,
+}: {
+  existing: EnhancedAnnouncement | null;
+  options: AnnouncementOptions;
+}) {
   const router = useRouter();
-  const initialSchedule = isoToParts(existing?.scheduledFor);
+  const save = useSaveAnnouncement();
+  const initialSchedule = isoToParts(
+    existing?.status === "Scheduled" ? existing.startsAt : undefined,
+  );
 
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
@@ -101,21 +131,16 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
   const [target, setTarget] = useState<AnnouncementTarget>(
     existing?.target ?? "All Facilities",
   );
-  const [planTiers, setPlanTiers] = useState<string[]>(
-    existing?.planTiers ?? [],
+  const [planTierIds, setPlanTierIds] = useState<string[]>(
+    existing?.planTierIds ?? [],
   );
   const [businessTypes, setBusinessTypes] = useState<string[]>(
     existing?.businessTypes ?? [],
   );
-  const [facilityIds, setFacilityIds] = useState<number[]>(
+  const [facilityIds, setFacilityIds] = useState<string[]>(
     existing?.facilityIds ?? [],
   );
-  const [inPlatform, setInPlatform] = useState(
-    existing ? existing.deliveryMethod !== "email" : true,
-  );
-  const [email, setEmail] = useState(
-    existing ? existing.deliveryMethod !== "in_platform" : false,
-  );
+  const [facilityFilter, setFacilityFilter] = useState("");
   const [scheduleMode, setScheduleMode] = useState<"now" | "later">(
     existing?.status === "Scheduled" ? "later" : "now",
   );
@@ -126,15 +151,20 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
   );
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const deliveryMethod =
-    inPlatform && email ? "both" : email ? "email" : "in_platform";
-  // Embedded media (image/video/iframe) counts as content even without text.
-  const hasMedia = /<img|<video|<iframe/i.test(body);
-  const hasVideo = /<video|<iframe/i.test(body);
+  // An embedded video counts as content even without text.
+  const hasMedia = /<iframe/i.test(body);
+  const targetNamed =
+    target === "All Facilities" ||
+    (target === "By Plan Tier" && planTierIds.length > 0) ||
+    (target === "By Business Type" && businessTypes.length > 0) ||
+    (target === "Specific Facilities" && facilityIds.length > 0);
+  const scheduleComplete =
+    scheduleMode === "now" || (scheduleDate !== "" && scheduleTime !== "");
   const canSave =
-    title.trim().length > 0 && (bodyPreview(body).length > 0 || hasMedia);
-  // Video can only be delivered in-platform; email degrades to a summary + link.
-  const videoEmailConflict = hasVideo && email;
+    title.trim().length > 0 &&
+    (bodyPreview(body).length > 0 || hasMedia) &&
+    targetNamed &&
+    !save.isPending;
 
   function toggle(list: string[], value: string): string[] {
     return list.includes(value)
@@ -142,47 +172,56 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
       : [...list, value];
   }
 
-  function buildDraft(intent: "draft" | "publish"): AnnouncementDraft {
-    const scheduledFor =
-      scheduleMode === "later" && scheduleDate && scheduleTime
-        ? partsToIso(scheduleDate, scheduleTime)
-        : undefined;
-    const status =
-      intent === "draft" ? "Draft" : scheduledFor ? "Scheduled" : "Published";
+  function buildInput(intent: "draft" | "publish"): AnnouncementInput {
+    const days = autoArchiveDays === "" ? null : Number(autoArchiveDays);
     return {
-      id: existing?.id,
       title: title.trim(),
       body,
       priority,
-      status,
+      intent,
       target,
-      planTiers: target === "By Plan Tier" ? planTiers : undefined,
-      businessTypes: target === "By Business Type" ? businessTypes : undefined,
-      facilityIds: target === "Specific Facilities" ? facilityIds : undefined,
-      deliveryMethod,
-      scheduledFor,
-      autoArchiveDays: autoArchiveDays === "" ? null : Number(autoArchiveDays),
+      planTierIds,
+      businessTypes,
+      facilityIds,
+      startsAt:
+        scheduleMode === "later" && scheduleDate && scheduleTime
+          ? partsToIso(scheduleDate, scheduleTime)
+          : null,
+      autoArchiveDays:
+        days != null && Number.isInteger(days) && days >= 1 && days <= 365
+          ? days
+          : null,
     };
   }
 
-  function save(intent: "draft" | "publish") {
+  function submit(intent: "draft" | "publish") {
     if (!canSave) return;
-    const draft = buildDraft(intent);
-    upsertAnnouncement(draft);
-    toast.success(
-      intent === "draft"
-        ? "Draft saved"
-        : draft.status === "Scheduled"
-          ? "Announcement scheduled"
-          : "Announcement published",
-    );
-    if (intent === "publish" && videoEmailConflict) {
-      toast(
-        "Email recipients will get a text summary with a “View full announcement” link.",
-      );
+    if (intent === "publish" && !scheduleComplete) {
+      toast.error("Choose the date and time to publish it.");
+      return;
     }
-    router.push(LIST_URL);
+    const input = buildInput(intent);
+    save.mutate(
+      { id: existing?.id, announcement: input },
+      {
+        onSuccess: (saved) => {
+          toast.success(
+            intent === "draft"
+              ? "Draft saved"
+              : saved.status === "Scheduled"
+                ? "Announcement scheduled"
+                : "Announcement published",
+          );
+          router.push(LIST_URL);
+        },
+        onError: (e) => toast.error(e.message),
+      },
+    );
   }
+
+  const shownFacilities = options.facilities.filter((f) =>
+    f.name.toLowerCase().includes(facilityFilter.trim().toLowerCase()),
+  );
 
   return (
     <div className="space-y-4 p-6">
@@ -214,15 +253,15 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
           <Button
             variant="outline"
             disabled={!canSave}
-            onClick={() => save("draft")}
+            onClick={() => submit("draft")}
           >
             <FileText className="size-4" />
             Save Draft
           </Button>
           <Button
-            className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
             disabled={!canSave}
-            onClick={() => save("publish")}
+            data-loading={save.isPending ? "" : undefined}
+            onClick={() => submit("publish")}
           >
             <Send className="size-4" />
             {scheduleMode === "later" ? "Schedule" : "Publish"}
@@ -230,7 +269,7 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         {/* LEFT — title + body */}
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -240,6 +279,7 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Announcement title"
+              maxLength={200}
               className="text-base font-medium"
             />
           </div>
@@ -311,18 +351,18 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
 
               {target === "By Plan Tier" && (
                 <div className="space-y-1.5">
-                  {PLAN_TIERS.map((tier) => (
+                  {options.tiers.map((tier) => (
                     <Label
-                      key={tier}
+                      key={tier.id}
                       className="flex cursor-pointer items-center gap-2 text-sm"
                     >
                       <Checkbox
-                        checked={planTiers.includes(tier)}
+                        checked={planTierIds.includes(tier.id)}
                         onCheckedChange={() =>
-                          setPlanTiers((l) => toggle(l, tier))
+                          setPlanTierIds((l) => toggle(l, tier.id))
                         }
                       />
-                      {tier}
+                      {tier.name}
                     </Label>
                   ))}
                 </div>
@@ -349,79 +389,35 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
 
               {target === "Specific Facilities" && (
                 <div className="space-y-2">
-                  <FacilityPicker
-                    value={null}
-                    onChange={(id) =>
-                      setFacilityIds((l) => (l.includes(id) ? l : [...l, id]))
-                    }
+                  <Input
+                    value={facilityFilter}
+                    onChange={(e) => setFacilityFilter(e.target.value)}
+                    placeholder="Search facilities"
+                    aria-label="Search facilities"
                   />
-                  <div className="flex flex-wrap gap-1.5">
-                    {facilityIds.map((id) => {
-                      const f = facilities.find((x) => x.id === id);
-                      return (
-                        <Badge
-                          key={id}
-                          variant="outline"
-                          className="gap-1 py-1"
-                        >
-                          {f?.name ?? `Facility ${id}`}
-                          <button
-                            type="button"
-                            aria-label={`Remove ${f?.name ?? id}`}
-                            onClick={() =>
-                              setFacilityIds((l) => l.filter((x) => x !== id))
-                            }
-                            className="hover:text-foreground"
-                          >
-                            <X className="size-3" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
+                  <div className="max-h-56 space-y-1.5 overflow-y-auto">
+                    {shownFacilities.map((f) => (
+                      <Label
+                        key={f.id}
+                        className="flex cursor-pointer items-center gap-2 text-sm"
+                      >
+                        <Checkbox
+                          checked={facilityIds.includes(f.id)}
+                          onCheckedChange={() =>
+                            setFacilityIds((l) => toggle(l, f.id))
+                          }
+                        />
+                        <span className="min-w-0 truncate">{f.name}</span>
+                      </Label>
+                    ))}
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Delivery */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Delivery Method</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox
-                  checked={inPlatform}
-                  onCheckedChange={(v) => setInPlatform(v === true)}
-                />
-                In-platform
-              </Label>
-              <Label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox
-                  checked={email}
-                  onCheckedChange={(v) => setEmail(v === true)}
-                />
-                Email
-              </Label>
-              {!inPlatform && !email && (
-                <p className="text-xs text-rose-600 dark:text-rose-400">
-                  Select at least one delivery method.
+              {!targetNamed && (
+                <p className="text-destructive text-xs">
+                  Choose who this announcement is for.
                 </p>
-              )}
-              {videoEmailConflict && (
-                <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-300">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <div className="space-y-0.5">
-                    <p className="font-medium">
-                      Video content cannot be sent via email.
-                    </p>
-                    <p>
-                      The email version will show a link to view the
-                      announcement in-platform.
-                    </p>
-                  </div>
-                </div>
               )}
             </CardContent>
           </Card>
@@ -479,6 +475,7 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
                 <Input
                   type="number"
                   min={1}
+                  max={365}
                   value={autoArchiveDays}
                   onChange={(e) => setAutoArchiveDays(e.target.value)}
                   placeholder="—"
@@ -499,13 +496,10 @@ function ComposerForm({ existing }: { existing: EnhancedAnnouncement | null }) {
         title={title}
         body={body}
         priority={priority}
-        targetText={targetSummary({
-          target,
-          planTiers,
-          businessTypes,
-          facilityIds,
-        } as EnhancedAnnouncement)}
-        deliveryMethod={deliveryMethod}
+        targetText={targetSummary(
+          { target, planTierIds, businessTypes, facilityIds },
+          options,
+        )}
       />
     </div>
   );

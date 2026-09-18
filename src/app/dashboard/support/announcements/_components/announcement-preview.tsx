@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { Bell, Mail, Megaphone, Smartphone, X } from "lucide-react";
+import { Bell, Megaphone, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,48 +11,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type {
-  AnnouncementPriority,
-  DeliveryMethod,
-} from "@/types/announcement";
-import {
-  DELIVERY_LABEL,
-  PRIORITY_BADGE,
-  PRIORITY_HELP,
-} from "./announcement-utils";
+import { sanitizeAnnouncementHtml } from "@/lib/announcements/sanitize-html";
+import type { AnnouncementPriority } from "@/types/announcement";
+import { PRIORITY_BADGE, PRIORITY_HELP } from "./announcement-utils";
 
-// Facility-portal content styling — images at natural size (capped to the
-// container) and videos as playable embeds. Mirrors the notification feed.
+// The body as a facility will see it: through the same sanitiser the save and
+// the bell use, so a tag the preview shows is a tag that will survive.
+// Delivery is in-platform only, so there is one view (the email half of this
+// dialog previewed a send nothing could perform).
 const CONTENT_CLASS =
-  "text-foreground/90 [&_a]:text-primary mt-2 text-sm/relaxed [&_a]:underline [&_iframe]:max-w-full [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-lg [&_ul]:list-disc [&_ul]:pl-5 [&_video]:h-auto [&_video]:max-w-full";
-
-/**
- * Email body: keeps text and images, but replaces every video (iframe/<video>)
- * with a "View full announcement" button — videos can't be delivered by email
- * (Task 15 rule). Returns whether any video was replaced.
- */
-function buildEmailBody(html: string): { html: string; hadVideo: boolean } {
-  if (typeof window === "undefined" || !html) {
-    return { html, hadVideo: /<iframe|<video/i.test(html) };
-  }
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const media = doc.querySelectorAll("iframe, video");
-  const hadVideo = media.length > 0;
-  media.forEach((el) => {
-    const wrapper = el.parentElement;
-    // Replace the media's single-purpose wrapper div if it only holds the media.
-    const target =
-      wrapper && wrapper !== doc.body && wrapper.children.length === 1
-        ? wrapper
-        : el;
-    const cta = doc.createElement("div");
-    cta.setAttribute("style", "margin:12px 0");
-    cta.innerHTML =
-      '<span style="display:inline-block;padding:9px 16px;background:#4f46e5;color:#ffffff;border-radius:8px;font-weight:600;font-size:13px">▶ View full announcement</span>';
-    target.replaceWith(cta);
-  });
-  return { html: doc.body.innerHTML, hadVideo };
-}
+  "text-foreground [&_a]:text-primary mt-2 text-sm/relaxed [&_a]:underline [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-xl [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5";
 
 function SurfaceMock({
   priority,
@@ -80,29 +47,14 @@ function SurfaceMock({
           <Bell className="size-4" />
           <span className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-500" />
         </span>
-        Yellow bell badge + notification dropdown
+        Counts toward the bell badge, listed in the bell
       </div>
     );
   }
   return (
     <div className="text-muted-foreground flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
       <Bell className="size-4" />
-      Notification dropdown only
-    </div>
-  );
-}
-
-function PanelHeading({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-      {icon}
-      {label}
+      Listed in the notification bell
     </div>
   );
 }
@@ -114,7 +66,6 @@ export function AnnouncementPreview({
   body,
   priority,
   targetText,
-  deliveryMethod,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -122,105 +73,35 @@ export function AnnouncementPreview({
   body: string;
   priority: AnnouncementPriority;
   targetText: string;
-  deliveryMethod: DeliveryMethod;
 }) {
-  const showInPlatform =
-    deliveryMethod === "both" || deliveryMethod === "in_platform";
-  const showEmail = deliveryMethod === "both" || deliveryMethod === "email";
-  const both = deliveryMethod === "both";
-
-  const { html: emailHtml, hadVideo } = useMemo(
-    () => buildEmailBody(body),
-    [body],
-  );
-
-  const bodyHtml =
-    body || "<p class='text-muted-foreground'>No content yet.</p>";
-
-  const inPlatformView = (
-    <div className="space-y-3">
-      <SurfaceMock priority={priority} title={title} />
-      <div className="rounded-lg border p-4">
-        <h3 className="text-base font-semibold">{title || "Untitled"}</h3>
-        <div
-          className={CONTENT_CLASS}
-          dangerouslySetInnerHTML={{ __html: bodyHtml }}
-        />
-      </div>
-    </div>
-  );
-
-  const emailView = (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-lg border">
-        <div className="bg-muted/40 space-y-0.5 border-b px-4 py-2 text-xs">
-          <p>
-            <span className="text-muted-foreground">From:</span> Yipyy
-            &lt;announcements@yipyy.com&gt;
-          </p>
-          <p>
-            <span className="text-muted-foreground">Subject:</span>{" "}
-            <span className="font-medium">{title || "Untitled"}</span>
-          </p>
-        </div>
-        <div className="p-4">
-          <h3 className="text-base font-semibold">{title || "Untitled"}</h3>
-          <div
-            className={CONTENT_CLASS}
-            dangerouslySetInnerHTML={{
-              __html:
-                emailHtml ||
-                "<p class='text-muted-foreground'>No content yet.</p>",
-            }}
-          />
-        </div>
-      </div>
-      {hadVideo && (
-        <p className="text-muted-foreground text-xs">
-          Video isn’t sent by email — recipients get a “View full announcement”
-          button that opens the in-platform version.
-        </p>
-      )}
-    </div>
-  );
+  const bodyHtml = sanitizeAnnouncementHtml(body);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "max-h-[calc(100vh-4rem)] overflow-y-auto",
-          both ? "sm:max-w-4xl" : "sm:max-w-xl",
-        )}
-      >
+      <DialogContent className="max-h-[calc(100vh-4rem)] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Preview</DialogTitle>
           <DialogDescription>
-            {both
-              ? "How this announcement appears in-platform and by email, side by side."
-              : "Exactly how this announcement reaches facilities."}
+            Exactly how this announcement reaches facilities.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className={cn("grid gap-4", both && "md:grid-cols-2")}>
-            {showInPlatform && (
-              <div className="space-y-2">
-                <PanelHeading
-                  icon={<Smartphone className="size-3.5" />}
-                  label="In-platform"
+          <div className="space-y-3">
+            <SurfaceMock priority={priority} title={title} />
+            <div className="rounded-lg border p-4">
+              <h3 className="text-base font-semibold">{title || "Untitled"}</h3>
+              {bodyHtml ? (
+                <div
+                  className={CONTENT_CLASS}
+                  dangerouslySetInnerHTML={{ __html: bodyHtml }}
                 />
-                {inPlatformView}
-              </div>
-            )}
-            {showEmail && (
-              <div className="space-y-2">
-                <PanelHeading
-                  icon={<Mail className="size-3.5" />}
-                  label="Email"
-                />
-                {emailView}
-              </div>
-            )}
+              ) : (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  No content yet.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -228,10 +109,6 @@ export function AnnouncementPreview({
               {priority}
             </Badge>
             <span className="text-muted-foreground">{targetText}</span>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-muted-foreground">
-              {DELIVERY_LABEL[deliveryMethod]}
-            </span>
           </div>
           <p className="text-muted-foreground text-xs">
             {PRIORITY_HELP[priority]}

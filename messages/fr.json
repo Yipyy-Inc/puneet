@@ -2929,7 +2929,8 @@
         "service_boarding": "Pension",
         "service_daycare": "Garderie",
         "service_grooming": "Toilettage",
-        "service_training": "Dressage"
+        "service_training": "Dressage",
+        "fromYipyy": "De Yipyy"
       },
       "notificationRoles": {
         "owner": "Propriétaire",

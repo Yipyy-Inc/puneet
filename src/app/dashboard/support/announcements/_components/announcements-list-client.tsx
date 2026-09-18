@@ -29,28 +29,32 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useHydrated } from "@/hooks/use-hydrated";
 import {
-  deleteAnnouncement,
-  setAnnouncementStatus,
-  useAnnouncements,
-} from "@/lib/announcements-store";
+  useAdminAnnouncements,
+  useDeleteAnnouncement,
+  useSetAnnouncementLive,
+} from "@/lib/api/platform-announcements";
 import type { EnhancedAnnouncement } from "@/types/announcement";
 import { toast } from "sonner";
 import {
   ANNOUNCEMENT_TABS,
   type AnnouncementTab,
   bodyPreview,
-  DELIVERY_LABEL,
   PRIORITY_BADGE,
   STATUS_BADGE,
   targetSummary,
 } from "./announcement-utils";
 
+// A stable empty list while loading, so nothing downstream sees a new array
+// every render (check:query-default-loops).
+const NO_ITEMS: EnhancedAnnouncement[] = [];
+
 export function AnnouncementsListClient() {
   const router = useRouter();
-  const announcements = useAnnouncements();
-  const hydrated = useHydrated();
+  const { data, isPending, error } = useAdminAnnouncements();
+  const announcements = data?.announcements ?? NO_ITEMS;
+  const setLive = useSetAnnouncementLive();
+  const remove = useDeleteAnnouncement();
   const [tab, setTab] = useState<AnnouncementTab>("all");
 
   const counts = useMemo(
@@ -109,15 +113,8 @@ export function AnnouncementsListClient() {
     {
       key: "target",
       label: "Target",
-      render: (a) => <span className="text-sm">{targetSummary(a)}</span>,
-    },
-    {
-      key: "delivery",
-      label: "Delivery",
       render: (a) => (
-        <span className="text-muted-foreground text-sm">
-          {DELIVERY_LABEL[a.deliveryMethod]}
-        </span>
+        <span className="text-sm">{targetSummary(a, data?.options)}</span>
       ),
     },
     {
@@ -134,7 +131,17 @@ export function AnnouncementsListClient() {
     },
   ];
 
-  if (!hydrated) {
+  if (error) {
+    return (
+      <div className="p-6">
+        <p className="text-destructive text-sm">
+          Announcements could not be loaded: {error.message}
+        </p>
+      </div>
+    );
+  }
+
+  if (isPending) {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-9 w-64" />
@@ -255,21 +262,34 @@ export function AnnouncementsListClient() {
               </DropdownMenuItem>
               {(a.status === "Draft" || a.status === "Scheduled") && (
                 <DropdownMenuItem
-                  onClick={() => {
-                    setAnnouncementStatus(a.id, "Published");
-                    toast.success("Announcement published");
-                  }}
+                  disabled={setLive.isPending}
+                  onClick={() =>
+                    setLive.mutate(
+                      { id: a.id, action: "publish" },
+                      {
+                        onSuccess: () =>
+                          toast.success("Announcement published"),
+                        onError: (e) => toast.error(e.message),
+                      },
+                    )
+                  }
                 >
                   <Send className="mr-2 size-4" />
                   Publish now
                 </DropdownMenuItem>
               )}
-              {a.status === "Published" && (
+              {(a.status === "Published" || a.status === "Scheduled") && (
                 <DropdownMenuItem
-                  onClick={() => {
-                    setAnnouncementStatus(a.id, "Archived");
-                    toast.success("Announcement archived");
-                  }}
+                  disabled={setLive.isPending}
+                  onClick={() =>
+                    setLive.mutate(
+                      { id: a.id, action: "archive" },
+                      {
+                        onSuccess: () => toast.success("Announcement archived"),
+                        onError: (e) => toast.error(e.message),
+                      },
+                    )
+                  }
                 >
                   <Archive className="mr-2 size-4" />
                   Archive
@@ -278,10 +298,13 @@ export function AnnouncementsListClient() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-rose-600 dark:text-rose-400"
-                onClick={() => {
-                  deleteAnnouncement(a.id);
-                  toast.success("Announcement deleted");
-                }}
+                disabled={remove.isPending}
+                onClick={() =>
+                  remove.mutate(a.id, {
+                    onSuccess: () => toast.success("Announcement deleted"),
+                    onError: (e) => toast.error(e.message),
+                  })
+                }
               >
                 <Trash2 className="mr-2 size-4" />
                 Delete

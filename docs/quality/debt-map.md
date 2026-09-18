@@ -17391,3 +17391,62 @@ min-h-[150px] flex-1` took whatever height the summary left it, so one row
 Still true: at 1280×800 the payment methods sit below the fold of the sticky
 card and need its own scroll. That is the cost of a cart that stays beside the
 catalogue; the alternative is a non-sticky card and a page scroll.
+
+### ✅ Platform announcements are rows, and show only while live (2026-09-18)
+
+Every facility, on every page, carried an URGENT red banner — "Scheduled
+maintenance window this weekend … Saturday from 2–4 AM ET" — and the public
+`/status` page repeated it to anyone. It was the first row of a fixture
+(`src/data/enhanced-announcements.ts`) that a browser store served "by default";
+the super-admin composer "published" into the same store, in the admin's own
+tab, so nothing an admin wrote ever reached a facility.
+
+Now (`20260918103842`, `20260918110704`, `supabase/tests/platform-announcements.sql`,
+23 assertions):
+
+- **`platform_announcements`** — only a platform admin reads or writes it (RLS).
+  Live = published, started (`starts_at`, or when published), not past
+  `auto_archive_days`. Scheduling and expiry are both a comparison with `now()`
+  at read time, so no timer runs. **Nothing published → nothing shows.**
+- **Facilities read through `active_platform_announcements(facility)`**, which
+  answers only for a facility the caller belongs to and applies the target: all,
+  plan tier (`facility_subscriptions.tier_id`), business type
+  (`facilities.business_types`), or named facilities. The route takes the
+  facility from the session.
+- **`platform_announcement_receipts`** — read / dismissed per PERSON, so a
+  dismissal follows someone across devices. Sent with `keepalive`: a walkthrough
+  that reloaded straight after Dismiss lost the request, and a person who clicks
+  and navigates would too.
+- **Urgent → the banner; High and Normal → a "From Yipyy" section in the bell.**
+  The old `AnnouncementBell` was mounted nowhere, so High and Normal had no
+  surface at all despite the composer promising a badge. An unread High counts
+  toward the bell's badge.
+- **The status page** reads `status_page_maintenance()` on the server with the
+  service role. The first migration granted it to anon;
+  `rpc-session-required.sql` V7 refused that on its first run, and the right
+  answer was a different shape, not an allowlist entry.
+
+**The body is HTML, and it is sanitised on write and on render**
+(`src/lib/announcements/sanitize-html.ts`, 10 unit tests). An allowlist
+tokenizer that rebuilds the markup — no parser is a dependency. Links keep only
+https / http / mailto / same-site paths, checked after entity decoding
+(`jav&#x61;script:` is `javascript:`); an iframe survives only as an exact
+YouTube or Vimeo player URL. Measured in the walkthrough: a body posted with
+`<img onerror>` and `<script>` was stored as the paragraph alone.
+
+Removed rather than kept fake:
+
+- **Email delivery.** The composer offered it; nothing could send one. The
+  Delivery card, its column and the preview's email half are gone.
+- **Image and video upload in the editor.** An image went in as a base64 data
+  URL of up to 10MB — inside the row every facility page loads — and an
+  "uploaded" video was a `blob:` URL that existed only in the admin's tab,
+  behind a toast saying it was uploaded. Both need file storage to be real.
+- **"By plan tier" read three tiers that do not exist** (Basic / Premium /
+  Enterprise). It reads `subscription_tiers` now.
+
+Still fixture, found on the way and NOT converted: the older
+`/dashboard/communication/announcements` page (the admin dashboard's quick
+action pointed there; it points at the real composer now) and the admin search's
+announcement results (`src/lib/api/admin-search.ts`), which still list that
+page's fixture.

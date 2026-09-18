@@ -119,7 +119,7 @@ export default async function FacilityLayout({
                           SmartInsightsWidget.tsx. */}
                       <main className="min-w-0 flex-1 overflow-x-clip">
                         <ImpersonationBanner />
-                        <AnnouncementBanner facilityId={11} />
+                        <AnnouncementBanner />
                         <FacilityOnboardingBanner />
                         {children}
                       </main>

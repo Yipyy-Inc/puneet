@@ -7606,6 +7606,92 @@ export type Database = {
           },
         ];
       };
+      platform_announcement_receipts: {
+        Row: {
+          announcement_id: string;
+          dismissed_at: string | null;
+          profile_id: string;
+          read_at: string | null;
+        };
+        Insert: {
+          announcement_id: string;
+          dismissed_at?: string | null;
+          profile_id?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          announcement_id?: string;
+          dismissed_at?: string | null;
+          profile_id?: string;
+          read_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_announcement_receipts_announcement_id_fkey";
+            columns: ["announcement_id"];
+            isOneToOne: false;
+            referencedRelation: "platform_announcements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      platform_announcements: {
+        Row: {
+          author_name: string | null;
+          auto_archive_days: number | null;
+          body: string;
+          business_types: string[];
+          created_at: string;
+          created_by: string;
+          facility_ids: string[];
+          id: string;
+          plan_tier_ids: string[];
+          priority: string;
+          published_at: string | null;
+          starts_at: string | null;
+          status: string;
+          target: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          author_name?: string | null;
+          auto_archive_days?: number | null;
+          body?: string;
+          business_types?: string[];
+          created_at?: string;
+          created_by?: string;
+          facility_ids?: string[];
+          id?: string;
+          plan_tier_ids?: string[];
+          priority?: string;
+          published_at?: string | null;
+          starts_at?: string | null;
+          status?: string;
+          target?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          author_name?: string | null;
+          auto_archive_days?: number | null;
+          body?: string;
+          business_types?: string[];
+          created_at?: string;
+          created_by?: string;
+          facility_ids?: string[];
+          id?: string;
+          plan_tier_ids?: string[];
+          priority?: string;
+          published_at?: string | null;
+          starts_at?: string | null;
+          status?: string;
+          target?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       platform_invitations: {
         Row: {
           accepted_at: string | null;
@@ -12328,6 +12414,28 @@ export type Database = {
       };
     };
     Functions: {
+      active_platform_announcements: {
+        Args: { p_facility_id: string };
+        Returns: {
+          body: string;
+          dismissed_at: string;
+          id: string;
+          priority: string;
+          published_at: string;
+          read_at: string;
+          starts_at: string;
+          title: string;
+        }[];
+      };
+      status_page_maintenance: {
+        Args: never;
+        Returns: {
+          body: string;
+          id: string;
+          published_at: string;
+          title: string;
+        }[];
+      };
       complete_yipyy_go_by_staff: {
         Args: {
           p_booking_id: string;

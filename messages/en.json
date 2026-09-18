@@ -2929,7 +2929,8 @@
         "service_boarding": "Boarding",
         "service_daycare": "Daycare",
         "service_grooming": "Grooming",
-        "service_training": "Training"
+        "service_training": "Training",
+        "fromYipyy": "From Yipyy"
       },
       "notificationRoles": {
         "owner": "Owner",

@@ -1,48 +1,30 @@
 "use client";
 
-import { useEffect } from "react";
 import { Megaphone, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useHydrated } from "@/hooks/use-hydrated";
 import { useShellText } from "@/lib/shell/use-shell-text";
+import { announcementPlainText } from "@/lib/announcements/sanitize-html";
 import {
-  dismissAnnouncement,
-  loadPersistedAnnouncements,
-  targetsFacility,
-  useAnnouncementDelivery,
-} from "@/lib/announcement-delivery-store";
+  useActiveAnnouncements,
+  useMarkAnnouncement,
+} from "@/lib/api/platform-announcements";
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Full-width red banner for an Urgent announcement, shown on every facility
- *  page until the facility dismisses it (persisted in localStorage). Injected in
- *  the facility layout next to ImpersonationBanner. */
-export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
+/** Full-width banner for an Urgent platform announcement, on every facility
+ *  page until the person dismisses it. It shows only what a platform admin has
+ *  PUBLISHED and is live for this facility (20260918103842) — with nothing
+ *  published it renders nothing. It used to render a seeded "Scheduled
+ *  maintenance window this weekend" to every facility, because a fixture was
+ *  the store's default. The facility comes from the session, in the route. */
+export function AnnouncementBanner() {
   const t = useShellText("banners");
-  const { delivered, dismissed } = useAnnouncementDelivery();
-  const hydrated = useHydrated();
+  const { data } = useActiveAnnouncements();
+  const mark = useMarkAnnouncement();
 
-  useEffect(() => {
-    loadPersistedAnnouncements();
-  }, []);
-
-  if (!hydrated) return null;
-
-  const urgent = delivered.find(
-    (a) =>
-      a.priority === "Urgent" &&
-      targetsFacility(a, facilityId) &&
-      !dismissed[a.id],
-  );
+  const urgent = data?.find((a) => a.priority === "Urgent" && !a.dismissed);
   if (!urgent) return null;
 
-  const preview = stripHtml(urgent.body);
+  const preview = announcementPlainText(urgent.body);
 
   return (
     // ── A BANNER IS A STATUS MARK THE WIDTH OF THE PAGE ──────────────────
@@ -109,10 +91,11 @@ export function AnnouncementBanner({ facilityId }: { facilityId: number }) {
           // On a solid status fill §3 inverts the mark: white outline, white
           // label, transparent field — so the button reads as sitting ON the
           // bar rather than as a second colour introduced onto it.
-          className="h-7 shrink-0 border-white/50 bg-transparent text-white hover:bg-white/15 hover:text-white"
-          onClick={() => dismissAnnouncement(urgent.id)}
+          className="shrink-0 border-white/50 bg-transparent text-white hover:bg-white/15 hover:text-white"
+          disabled={mark.isPending}
+          onClick={() => mark.mutate({ id: urgent.id, action: "dismiss" })}
         >
-          <X className="mr-1.5 size-3.5" />
+          <X className="size-4" />
           {t("dismiss")}
         </Button>
       </div>
