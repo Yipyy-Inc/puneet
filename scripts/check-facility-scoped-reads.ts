@@ -37,6 +37,8 @@ import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 const EXEMPT: Record<string, string> = {
+  "admin/announcements":
+    "platform admin console — every announcement, and every facility and tier the composer can target, by design",
   "admin/merchant-applications":
     "platform admin console — every facility's applications, by design",
   "admin/team": "the platform team, not a facility",
