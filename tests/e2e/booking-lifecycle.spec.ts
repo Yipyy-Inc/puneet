@@ -15,6 +15,13 @@ import { ACCOUNTS, signIn } from "./_auth";
 //              still follows, which is the whole point of the mirror's pass
 //   reception  runs the booking page end to end
 //   accountant takes money, never moves a pet
+//
+// Reception and the accountant are staff, not facility admins, so they open
+// a booking where they actually work: /employee/bookings/[ref], the same page
+// inside the employee shell. /facility/dashboard sends them to their schedule.
+// Reception also holds open_close_register, so the shell asks them to count
+// the drawer before anything else; the reception test switches that off for
+// its own run and puts back what it found.
 //   anyone     cannot check a REQUEST in, by the button or by the route
 //
 // Test data: client 15's Buddy at the e2e facility, on a day far enough out
@@ -73,6 +80,26 @@ async function read(page: Page, ref: number): Promise<BookingRow> {
 async function stateOf(page: Page, ref: number): Promise<string> {
   const row = await read(page, ref);
   return `${row.status}/${row.presence}`;
+}
+
+/** The number as the page prints it: formatBookingRef, "#" + 10000 + id. */
+const shown = (ref: number) => new RegExp(`#${10000 + ref}$`);
+
+/**
+ * The facility-wide "count the drawer on sign-in" setting, as the owner.
+ * Returns what it was, for the caller to put back.
+ */
+async function setRegisterGate(page: Page, required: boolean) {
+  const before = await page.request.get("/api/staff-onboarding/hr-config");
+  const was = before.ok()
+    ? ((await before.json()) as { requireRegisterOpenOnLogin?: boolean })
+        .requireRegisterOpenOnLogin
+    : undefined;
+  const res = await page.request.put("/api/staff-onboarding/hr-config", {
+    data: { requireRegisterOpenOnLogin: required },
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+  return was;
 }
 
 test.describe("a booking's lifecycle", () => {
@@ -140,28 +167,39 @@ test.describe("a booking's lifecycle", () => {
     // Nothing owed, so checking out records the departure rather than
     // opening the till.
     const ref = await book(page, { price: 0 });
+    const gate = await setRegisterGate(page, false);
 
-    await signIn(page, ACCOUNTS.reception);
-    await page.goto(
-      `/facility/dashboard/clients/${CLIENT_REF}/bookings/${ref}`,
-    );
-    await page
-      .getByRole("button", { name: /^check in buddy$/i })
-      .click({ timeout: 60_000 });
-    // Buddy has no vaccination on file; the check-in asks first.
-    const ask = page.getByRole("alertdialog");
-    await expect(ask).toContainText(/rabies/i);
-    await ask.getByRole("button", { name: /^check buddy in anyway$/i }).click();
-    await expect
-      .poll(() => stateOf(page, ref), { timeout: 30_000 })
-      .toBe("checked_in/on-site");
+    try {
+      await signIn(page, ACCOUNTS.reception);
+      await page.goto(`/employee/bookings/${ref}`);
+      await expect(page.getByRole("heading", { name: shown(ref) })).toBeVisible(
+        { timeout: 60_000 },
+      );
+      await page
+        .getByRole("button", { name: /^check in buddy$/i })
+        .click({ timeout: 30_000 });
+      // Buddy has no vaccination on file; the check-in asks first.
+      const ask = page.getByRole("alertdialog");
+      await expect(ask).toContainText(/rabies/i);
+      await ask
+        .getByRole("button", { name: /^check buddy in anyway$/i })
+        .click();
+      await expect
+        .poll(() => stateOf(page, ref), { timeout: 30_000 })
+        .toBe("checked_in/on-site");
 
-    await page
-      .getByRole("button", { name: /^check buddy out$/i })
-      .click({ timeout: 30_000 });
-    await expect
-      .poll(() => stateOf(page, ref), { timeout: 30_000 })
-      .toBe("completed/departed");
+      await page
+        .getByRole("button", { name: /^check buddy out$/i })
+        .click({ timeout: 30_000 });
+      await expect
+        .poll(() => stateOf(page, ref), { timeout: 30_000 })
+        .toBe("completed/departed");
+    } finally {
+      if (gate !== false) {
+        await signIn(page, ACCOUNTS.owner);
+        await setRegisterGate(page, gate ?? true);
+      }
+    }
   });
 
   test("the accountant takes money but is not offered a check-in", async ({
@@ -172,13 +210,11 @@ test.describe("a booking's lifecycle", () => {
     const ref = await book(page, { price: 45 });
 
     await signIn(page, ACCOUNTS.accountant);
-    await page.goto(
-      `/facility/dashboard/clients/${CLIENT_REF}/bookings/${ref}`,
-    );
+    await page.goto(`/employee/bookings/${ref}`);
     // The page has loaded when the booking's number is on it.
-    await expect(
-      page.getByRole("heading", { name: new RegExp(String(ref)) }),
-    ).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: shown(ref) })).toBeVisible({
+      timeout: 60_000,
+    });
     // No arrival permission, so no arrival button — and money owed with
     // take_payment, so a way to take it: a prepayment, or the deposit when a
     // deposit rule of the facility's applies.

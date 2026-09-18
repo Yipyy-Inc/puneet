@@ -28,6 +28,8 @@ const MARKER = "[e2e bulk-payment]";
 const CLIENT_REF = 15;
 const PET_REF = 1;
 const AMOUNTS = [40, 25, 15];
+/** Every booking here is on this day, which is also how they are found. */
+const DAY = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
 
 interface BookingPayload {
   id: number;
@@ -40,14 +42,13 @@ interface BookingPayload {
 }
 
 function bookingBody(total: number) {
-  const day = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
   return {
     clientId: CLIENT_REF,
     petId: PET_REF,
     facilityId: 11,
     service: "daycare",
-    startDate: day,
-    endDate: day,
+    startDate: DAY,
+    endDate: DAY,
     checkInTime: "09:00",
     checkOutTime: "17:00",
     // `completed` so it counts toward the overdue banner — that is the
@@ -63,7 +64,12 @@ function bookingBody(total: number) {
 async function mine(
   page: import("@playwright/test").Page,
 ): Promise<BookingPayload[]> {
-  const res = await page.request.get("/api/bookings");
+  // One client on one day. The whole list — every booking the e2e facility
+  // ever had — outgrew the database's statement timeout (2026-09-18), and
+  // took this spec's cleanup down with it.
+  const res = await page.request.get(
+    `/api/bookings?clientRef=${CLIENT_REF}&from=${DAY}&to=${DAY}`,
+  );
   expect(res.ok(), await res.text()).toBe(true);
   const all = (await res.json()) as BookingPayload[];
   return all.filter((b) => b.specialRequests?.includes(MARKER));
@@ -142,7 +148,8 @@ test.describe("collecting several payments at once", () => {
     await expect(dialog).toBeVisible();
 
     await dialog.getByRole("button", { name: /continue/i }).click();
-    await dialog.getByRole("button", { name: /confirm and charge/i }).click();
+    // BulkPaymentModal is not translated yet, so its label is still its own.
+    await dialog.getByRole("button", { name: /confirm & charge/i }).click();
 
     // The ledger, not the toast. Every one of the three is settled, and the
     // amounts match — the RPC computed them, the screen did not send them.

@@ -17519,6 +17519,37 @@ tip split, add item, early checkout, the care gate, the three care panels,
 the payment summary). `tests/e2e/booking-lifecycle.spec.ts` pins it from four
 chairs — caretaker, reception, accountant, and a request nobody may check in.
 
+### ✅ Staff reach the same page, and the calendar stops cancelling it
+
+Reception, caretakers and the accountant are staff, not facility admins: they
+open a booking at `/employee/bookings/[ref]`, the same page inside the
+employee shell, and `/facility/dashboard` sends them to their schedule. The
+booking page's and the calendar's links were written for admins, so a
+receptionist checking out a guest who owed was taken to their schedule rather
+than to the payment. They go through `usePortalHref()` now (`toEmployeeHref`
+in `employee-nav.ts`, pinned by `tests/unit/employee-href.test.ts`): a
+booking, a client and a pet open inside the shell, and a link the shell has no
+page for — boarding's early-checkout policy — is left out.
+
+The calendar also wrote its view into the address with `router.replace()`,
+which is a navigation, and a later navigation cancels an earlier one: when it
+re-ran just after "Check Buddy out" had pushed the booking page, the push never
+landed. It records the view with `window.history.replaceState` now, which
+Next keeps in step with `useSearchParams` without navigating.
+
+### ✅ The care gate asks when the pet is leaving, and care is logged while it is here
+
+Once the care gate read real care entries it asked on every payment — "2 care
+items not logged" before a prepayment on a stay eleven months away. It asks
+now when the pet is on site, the same test the checkout uses to record the
+departure; before arrival and after departure the feeding and medication
+panels are the instructions, with no "Give Apoquel" for this morning's dose,
+and say that meals and doses are logged while the pet is on site.
+
+`bulk-payment.spec.ts` read every booking the facility ever had to find its
+own three, and hit the database's statement timeout; it reads one client on
+one day now, and `check:unbounded-booking-reads` is down to 22 in 19 files.
+
 ### 🔴 Known, and not done in this round
 
 - **The server does not enforce vaccinations at arrival.** The booking page
@@ -17537,6 +17568,9 @@ chairs — caretaker, reception, accountant, and a request nobody may check in.
   ("Allergies: …", "If refused: …") — pass keys, not sentences.
 - **The calendar's lead conversion is unreachable** — nothing produces the
   external events it converts — and converts into memory. Left as it was.
+- **The calendar's "Message" opens `/facility/dashboard/communications`** in a
+  new tab, which staff in `/employee` cannot open, and toasts that it opened.
+  Messaging is not this round's.
 - **Manager holds no `daycare_check_in_out` in the presets**, so a manager
   cannot check a daycare guest in without an override. A preset question for
   the owner, not a code one.

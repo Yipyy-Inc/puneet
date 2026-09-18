@@ -525,7 +525,8 @@ test.describe("the facility home board", () => {
     // evidence was "element detached from the DOM".
     const checkOut = page.getByRole("dialog").filter({ hasText: /check out/i });
     await expect(checkOut).toBeVisible({ timeout: 15_000 });
-    await checkOut.getByRole("button", { name: /^check out$/i }).click();
+    // The dialog names the pet: "Check Buddy out".
+    await checkOut.getByRole("button", { name: /^check .+ out$/i }).click();
 
     // The payment modal. E-TRANSFER, and the choice is load-bearing:
     //
