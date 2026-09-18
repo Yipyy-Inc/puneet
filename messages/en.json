@@ -1814,6 +1814,7 @@
         "tipsDistribution": "Split",
         "tipsNone": "No tip recorded for this booking",
         "payByCard": "Pay by card — {amount}",
+        "careLogOnSite": "Meals and doses are logged here while {pet} is on site.",
         "careNotRecorded": "The care entry was not recorded",
         "loadingFees": "One moment — this facility’s fees are loading.",
         "latePickupFee": "Late pickup: {minutes} min over — {amount} fee added",

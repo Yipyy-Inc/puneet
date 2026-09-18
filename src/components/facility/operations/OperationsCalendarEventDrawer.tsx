@@ -123,6 +123,7 @@ import {
 } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
 import { BookingReadinessSection } from "@/components/facility/operations/BookingReadinessSection";
 import type { BookingAction } from "@/lib/bookings/booking-lifecycle";
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 export type BookingDrawerTab =
@@ -269,6 +270,8 @@ export function OperationsCalendarEventDrawer({
   const panelRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const capturedLeads = useCapturedLeads();
+  // Staff open this drawer inside /employee, where a /facility link bounces.
+  const { href } = usePortalHref();
 
   // Local tab state so tabs work for non-booking events too (the parent only
   // persists tab memory for bookings). Reseed from the prop when the event
@@ -391,10 +394,10 @@ export function OperationsCalendarEventDrawer({
   const clientId = client?.id ?? event.clientId;
   const petHref =
     petId && clientId
-      ? `/facility/dashboard/clients/${clientId}/pets/${petId}`
+      ? href(`/facility/dashboard/clients/${clientId}/pets/${petId}`)
       : undefined;
   const ownerHref = clientId
-    ? `/facility/dashboard/clients/${clientId}`
+    ? href(`/facility/dashboard/clients/${clientId}`)
     : undefined;
 
   const hasBooking =
@@ -587,7 +590,7 @@ export function OperationsCalendarEventDrawer({
             addOns={drawerAddOns}
             canComplete={canCompleteTasks && !isReadOnlyEvent}
             canEdit={canEdit}
-            bookingHref={`/facility/dashboard/bookings/${eventNumericId}`}
+            bookingHref={href(`/facility/dashboard/bookings/${eventNumericId}`)}
             onToggle={(addOnId, completed) =>
               onUpdateBookingAddOn(eventNumericId, addOnId, {
                 status: completed ? "completed" : "pending",
@@ -1306,6 +1309,7 @@ function DrawerActionBar({
 }) {
   const { fill } = useStaffText("bookingActions");
   const { t: calT } = useStaffText("opsCalendar");
+  const { href } = usePortalHref();
 
   const addAddOn = (option: AddOnOption) => {
     onAddBookingAddOn(eventNumericId, {
@@ -1371,7 +1375,7 @@ function DrawerActionBar({
   // ?bookingId= it never read, so both landed on an empty cart.
   const openBooking = (
     <Button asChild size="sm" variant="outline" className="gap-1.5">
-      <Link href={`/facility/dashboard/bookings/${eventNumericId}`}>
+      <Link href={href(`/facility/dashboard/bookings/${eventNumericId}`)}>
         <FileText className="size-3.5" />
         {calT("openBooking")}
       </Link>

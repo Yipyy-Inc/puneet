@@ -1814,6 +1814,7 @@
         "tipsDistribution": "Répartition",
         "tipsNone": "Aucun pourboire enregistré pour cette réservation",
         "payByCard": "Payer par carte — {amount}",
+        "careLogOnSite": "Les repas et les doses sont consignés ici pendant que {pet} est sur place.",
         "careNotRecorded": "Le soin n’a pas été enregistré",
         "loadingFees": "Un instant — les frais de l’établissement se chargent.",
         "latePickupFee": "Départ tardif : {minutes} min de retard — frais de {amount} ajoutés",
@@ -3290,7 +3291,7 @@
         "record": "Enregistrer l’acompte de {amount}"
       },
       "prepayment": {
-        "title": "Prendre un paiement anticipé",
+        "title": "Encaisser un prépaiement",
         "description": "Enregistrez une partie ou la totalité du paiement sans fermer la facture. La réservation reste ouverte et des articles peuvent encore être ajoutés.",
         "invoiceTotal": "Total de la facture",
         "alreadyPaid": "Déjà payé",
@@ -3300,7 +3301,7 @@
         "preset50": "50 %",
         "presetFull": "La totalité",
         "preset": "{label} ({amount})",
-        "afterThis": "Après ce paiement, il restera {amount} à payer au départ.",
+        "afterThis": "Après ce prépaiement, il restera {amount} à payer au départ.",
         "fullyPrepaid": "La facture sera entièrement payée. La réservation reste ouverte : les suppléments peuvent encore être facturés au départ.",
         "method": "Mode de paiement",
         "cash": "Comptant",

@@ -70,6 +70,7 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useServiceName } from "@/lib/staff/use-service-name";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
@@ -250,6 +251,8 @@ export default function ClientBookingDetailPage({
     locale: detailLocale,
   } = useStaffText("bookingDetail");
   const serviceName = useServiceName();
+  // /employee renders this page too; its links stay in the portal it is in.
+  const { href } = usePortalHref();
 
   const recordCare = useMutation({
     mutationFn: logCare,
@@ -651,7 +654,7 @@ export default function ClientBookingDetailPage({
         })}
         action={{
           label: detailT("backToBookings"),
-          href: "/facility/dashboard/bookings",
+          href: href("/facility/dashboard/bookings"),
         }}
       />
     );
@@ -809,9 +812,13 @@ export default function ClientBookingDetailPage({
   };
 
   // The till, behind the care gate: unlogged meals and doses are raised
-  // before the money moves, whichever button reached it.
+  // before the money moves, whichever button reached it — when the pet is
+  // leaving. A payment before arrival or after departure is not a departure,
+  // and today's meals are not this booking's to log with the pet elsewhere;
+  // the gate asked "2 care items not logged" of a stay eleven months away.
+  // The same test as the checkout's own departure (use-booking-checkout.ts).
   const toTill = () => {
-    if (careStatus.pending.length > 0) {
+    if (departing && careStatus.pending.length > 0) {
       setCareGateOpen(true);
       return;
     }
@@ -1039,13 +1046,16 @@ export default function ClientBookingDetailPage({
       (incident) => incident.bookingId === booking.id,
     ),
   );
+  const departing =
+    booking.presence === "on-site" ||
+    ["checked_in", "in_progress", "ready"].includes(booking.status);
 
   return (
     <div>
       {/* Client info strip — replaces the full sidebar */}
       <ClientInfoStrip
         client={client}
-        backHref={`/facility/dashboard/clients/${client.id}`}
+        backHref={href(`/facility/dashboard/clients/${client.id}`)}
         currentContext={`${bookingRef}${pet ? ` · ${pet.name}` : ""}`}
       />
 
@@ -1183,8 +1193,23 @@ export default function ClientBookingDetailPage({
               const medicationMode = care?.medication ?? "optional";
               const belongingsMode = care?.belongings ?? "optional";
 
+              // Today's meals and doses are logged while the pet is here.
+              // Before arrival and after departure the panels are the
+              // instructions: a stay eleven months away offered "Give
+              // Apoquel" for this morning's dose.
+              const careHere =
+                !isCancelled &&
+                !departing &&
+                (careEntries.feeding.length > 0 ||
+                  careEntries.medication.length > 0);
+
               return (
                 <>
+                  {careHere && (
+                    <p className="text-ink-tertiary text-xs">
+                      {detailFill("careLogOnSite", { pet: petName })}
+                    </p>
+                  )}
                   {!isCancelled && feedingMode !== "disabled" && (
                     <div
                       id={careSectionDomIds.feeding}
@@ -1205,15 +1230,18 @@ export default function ClientBookingDetailPage({
                         key={`feed-${careLogStamp(careLog)}`}
                         entries={careEntries.feeding}
                         required={feedingMode === "required"}
-                        onLog={(entryId, outcome) =>
-                          recordCare.mutate({
-                            bookingRef: booking.id,
-                            petRef: pet?.id ?? null,
-                            taskKey: entryId,
-                            taskType: "feeding",
-                            outcome,
-                            occurredOn: logDay,
-                          })
+                        onLog={
+                          departing
+                            ? (entryId, outcome) =>
+                                recordCare.mutate({
+                                  bookingRef: booking.id,
+                                  petRef: pet?.id ?? null,
+                                  taskKey: entryId,
+                                  taskType: "feeding",
+                                  outcome,
+                                  occurredOn: logDay,
+                                })
+                            : undefined
                         }
                       />
                     </div>
@@ -1237,19 +1265,22 @@ export default function ClientBookingDetailPage({
                             queryKey: ["bookings"],
                           });
                         }}
-                        onLog={(medicationId, scheduledAt, outcome, notes) =>
-                          recordCare.mutate({
-                            bookingRef: booking.id,
-                            petRef: pet?.id ?? null,
-                            taskKey: medicationTaskKey(
-                              medicationId,
-                              scheduledAt,
-                            ),
-                            taskType: "medication",
-                            outcome,
-                            notes,
-                            occurredOn: logDay,
-                          })
+                        onLog={
+                          departing
+                            ? (medicationId, scheduledAt, outcome, notes) =>
+                                recordCare.mutate({
+                                  bookingRef: booking.id,
+                                  petRef: pet?.id ?? null,
+                                  taskKey: medicationTaskKey(
+                                    medicationId,
+                                    scheduledAt,
+                                  ),
+                                  taskType: "medication",
+                                  outcome,
+                                  notes,
+                                  occurredOn: logDay,
+                                })
+                            : undefined
                         }
                       />
                     </div>
@@ -1376,13 +1407,7 @@ export default function ClientBookingDetailPage({
                         // Same care gate as the action bar's own payment
                         // actions: reaching checkout by a different button
                         // must not skip the unlogged-care check.
-                        onClick={() => {
-                          if (careStatus.pending.length > 0) {
-                            setCareGateOpen(true);
-                            return;
-                          }
-                          openCheckout();
-                        }}
+                        onClick={toTill}
                       />
                     ) : null
                   }

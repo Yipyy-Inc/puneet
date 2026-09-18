@@ -115,6 +115,36 @@ export function toEmployeeRoute(facilityUrl: string): string {
 }
 
 /**
+ * A link from inside a SHARED page — the booking page, the calendar — resolved
+ * for the employee shell.
+ *
+ * toEmployeeRoute() maps the nav's own urls. Those pages also link to one
+ * booking, one client and one pet, which the shell serves at other depths:
+ * `/employee/bookings/[id]` and `/employee/clients/[id]`, and no pet page of
+ * its own, so a pet opens on its owner's profile. Everything else goes through
+ * toEmployeeRoute(), and comes back unchanged when the shell has no page for
+ * it — see usePortalHref().reachable.
+ */
+export function toEmployeeHref(facilityUrl: string): string {
+  const cut = facilityUrl.search(/[?#]/);
+  const path = cut === -1 ? facilityUrl : facilityUrl.slice(0, cut);
+  const suffix = cut === -1 ? "" : facilityUrl.slice(cut);
+
+  const booking =
+    /^\/facility\/dashboard\/clients\/\d+\/bookings\/(\d+)$/.exec(path) ??
+    /^\/facility\/dashboard\/bookings\/(\d+)$/.exec(path);
+  if (booking) return `/employee/bookings/${booking[1]}${suffix}`;
+
+  const pet = /^\/facility\/dashboard\/clients\/(\d+)\/pets\/\d+$/.exec(path);
+  if (pet) return `/employee/clients/${pet[1]}`;
+
+  const client = /^\/facility\/dashboard\/clients\/(\d+)$/.exec(path);
+  if (client) return `/employee/clients/${client[1]}${suffix}`;
+
+  return toEmployeeRoute(facilityUrl);
+}
+
+/**
  * Dev guard: every NAV_SECTIONS item url has an employee-shell mapping. Returns
  * the list of unmapped urls (empty when the map is complete). Call sites can
  * assert on this in tests / a nav-parity check.

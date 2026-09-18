@@ -21,6 +21,7 @@ import {
   type VaccineGap,
 } from "@/lib/bookings/use-vaccine-gaps";
 import { formatMoney } from "@/lib/i18n/format";
+import { usePortalHref } from "@/lib/nav/use-portal-href";
 import { autoTransitionTarget } from "@/lib/settings/booking-statuses";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { Booking } from "@/types/booking";
@@ -69,6 +70,7 @@ export function useCalendarBookingActions(input: {
   const vaccineGaps = useVaccineGaps(input.vaccinations);
   const { t, fill, locale } = useStaffText("bookingActions");
   const { fill: calFill } = useStaffText("opsCalendar");
+  const { href } = usePortalHref();
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -178,9 +180,12 @@ export function useCalendarBookingActions(input: {
         }),
       );
       // The booking page's own address, not the /bookings/[id] redirect: one
-      // hop rather than two.
+      // hop rather than two — and in this portal, because staff sent to the
+      // admin's address were bounced to their schedule instead.
       router.push(
-        `/facility/dashboard/clients/${booking.clientId}/bookings/${bookingId}`,
+        href(
+          `/facility/dashboard/clients/${booking.clientId}/bookings/${bookingId}`,
+        ),
       );
       return;
     }
