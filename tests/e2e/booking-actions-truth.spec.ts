@@ -225,6 +225,12 @@ test.describe("the booking page's actions do what they say", () => {
       .getByRole("button", { name: /^check in /i })
       .first()
       .click({ timeout: 30_000 });
+    // Max has no vaccination on file and this facility requires three for
+    // daycare, so the check-in asks first — the same question the calendar
+    // asks (use-vaccine-gaps.ts).
+    const ask = page.getByRole("alertdialog");
+    await expect(ask).toContainText(/rabies/i);
+    await ask.getByRole("button", { name: /^check max in anyway$/i }).click();
 
     await expect
       .poll(

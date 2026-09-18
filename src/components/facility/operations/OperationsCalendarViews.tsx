@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   Cake,
   Check,
@@ -278,6 +279,8 @@ export function EventChip({
   // lookup was built from the shipped fixture, so a facility's own add-on
   // never matched and always rendered as "custom".
   const { addOns: facilityAddOns } = useServiceAddOns();
+  const { fill: actFill } = useStaffText("bookingActions");
+  const { t: calT } = useStaffText("opsCalendar");
   const [open, setOpen] = useState(false);
   const petLabel = formatPetLabel(event.petNames) || event.title;
   // Group / multi-pet module events show the module name + capacity.
@@ -676,19 +679,17 @@ export function EventChip({
                 className="flex min-w-[calc(50%-0.25rem)] flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-medium whitespace-nowrap text-slate-700 transition-colors hover:bg-slate-100"
               >
                 <Pencil className="size-3" />
-                Edit Booking
+                {calT("openBooking")}
               </Link>
             )}
+          {/* A booking is completed by checking it out, so it is offered
+              only to a guest on site — it was offered on every booking not
+              yet finished, and on one never checked in it checked out a dog
+              who had not arrived. */}
           {onMarkEventComplete &&
             (((event.type === "task" || event.type === "add-on") &&
               !isCompletedEvent) ||
-              (event.type === "booking" &&
-                ![
-                  "Completed",
-                  "Checked-out",
-                  "Checked Out",
-                  "Cancelled",
-                ].includes(event.status))) && (
+              (event.type === "booking" && event.status === "Checked-in")) && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -699,7 +700,9 @@ export function EventChip({
                 className="flex min-w-[calc(50%-0.25rem)] flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600"
               >
                 <Check className="size-3" />
-                Mark Complete
+                {event.type === "booking"
+                  ? actFill("checkOutPet", { pet: petLabel })
+                  : "Mark Complete"}
               </button>
             )}
           <button

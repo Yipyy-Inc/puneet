@@ -72,7 +72,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   type CapturedLead,
   convertLeadToBooking,
@@ -123,6 +122,8 @@ import {
   type NoteSectionState,
 } from "@/components/facility/operations/OperationsCalendarDrawerHelpers";
 import { BookingReadinessSection } from "@/components/facility/operations/BookingReadinessSection";
+import type { BookingAction } from "@/lib/bookings/booking-lifecycle";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 export type BookingDrawerTab =
   | "summary"
@@ -162,6 +163,9 @@ interface OperationsCalendarEventDrawerProps {
   bookingTasks: FacilityTask[];
   bookingAddOns: BookingDrawerAddOnItem[];
   bookingsForPet: Booking[];
+  /** What the lifecycle offers this viewer for the booking now. */
+  bookingActions: BookingAction[];
+  canCreateBooking: boolean;
   bookingTab: BookingDrawerTab;
   onBookingTabChange: (tab: BookingDrawerTab) => void;
   notesState: {
@@ -191,8 +195,12 @@ interface OperationsCalendarEventDrawerProps {
   ) => void;
   onRemoveBookingAddOn: (bookingId: number, addOnId: string) => void;
   onMessageCustomer: (bookingId: number) => void;
-  onRescheduleBooking: (bookingId: number) => void;
-  onCancelBooking: (bookingId: number, reason: string) => void;
+  /** Opens the booking's edit dialog — dates, times and services. */
+  onEditBooking: (bookingId: number) => void;
+  /** Opens the booking's real cancel dialog — reason and refund there. */
+  onCancelBooking: (bookingId: number) => void;
+  /** Opens the booking wizard for this pet again. */
+  onRebookBooking: (bookingId: number) => void;
   onUpdateManualEvent: (
     eventId: string,
     updates: Partial<ManualFacilityEvent>,
@@ -252,8 +260,11 @@ export function OperationsCalendarEventDrawer({
   onMarkTaskComplete,
   onAddBookingAddOn,
   onUpdateBookingAddOn,
-  onRescheduleBooking,
+  onEditBooking,
   onCancelBooking,
+  onRebookBooking,
+  bookingActions,
+  canCreateBooking,
 }: OperationsCalendarEventDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -391,7 +402,6 @@ export function OperationsCalendarEventDrawer({
     event.type === "booking" ||
     event.type === "add-on" ||
     Boolean(event.bookingId);
-  const currentStatusKey = toStatusKey(rawStatus);
   const durationLabel = event.allDay
     ? "All day"
     : formatDuration(event.start, event.end);
@@ -399,35 +409,19 @@ export function OperationsCalendarEventDrawer({
     ? BOOKING_SOURCE_LABELS[event.bookingSource]
     : "—";
 
+  // A task is completed here. A booking is finished by checking it out,
+  // which the action bar offers when the lifecycle does.
   const showMarkComplete =
-    !isCheckedOut &&
-    !isCancelled &&
-    (event.type === "task" ? Boolean(event.taskId) : hasBooking);
-  const canMarkComplete =
-    event.type === "task"
-      ? canCompleteTasks && !isReadOnlyEvent
-      : canCheckInOut && !isReadOnlyEvent;
+    event.type === "task" && Boolean(event.taskId) && !isCheckedOut;
+  const canMarkComplete = canCompleteTasks && !isReadOnlyEvent;
 
   const handleStaffChange = (staff: string) => {
     onAssignStaff(eventNumericId, staff);
   };
-  const handleStatusChange = (next: StatusKey) => {
-    if (next === currentStatusKey) return;
-    if (next === "checked_in") {
-      onCheckInBooking(eventNumericId);
-    } else if (next === "completed") {
-      onCheckOutBooking(eventNumericId);
-    } else if (next === "cancelled") {
-      const reason =
-        window.prompt("Cancellation reason", "Customer request") ??
-        "Customer request";
-      onCancelBooking(eventNumericId, reason);
-    }
-    // "confirmed": no revert handler exists — the control snaps back on render.
-  };
+  // The edit dialog, in place. It opened the booking page in a new tab.
   const handleEditBooking = () => {
     if (event.type === "booking" || event.type === "add-on") {
-      window.open(event.href, "_blank");
+      onEditBooking(eventNumericId);
     } else if (event.bookingId) {
       onOpenLinkedBooking(event.bookingId);
     }
@@ -436,8 +430,6 @@ export function OperationsCalendarEventDrawer({
     if (!window.confirm("Mark this as complete?")) return;
     if (event.type === "task" && event.taskId) {
       onMarkTaskComplete(event.taskId);
-    } else {
-      onCheckOutBooking(eventNumericId);
     }
   };
 
@@ -509,13 +501,14 @@ export function OperationsCalendarEventDrawer({
             ownerHref={ownerHref}
             petHref={petHref}
             clientId={clientId}
-            petId={petId}
             recipientName={ownerName}
             recipientPhone={client?.phone}
-            currentDate={booking?.startDate}
-            onEditBooking={handleEditBooking}
+            petName={petName}
+            canCreateBooking={canCreateBooking}
+            canCancel={bookingActions.some((a) => a.id === "cancel")}
+            onEdit={handleEditBooking}
             onCancelBooking={onCancelBooking}
-            onRescheduleBooking={onRescheduleBooking}
+            onRebookBooking={onRebookBooking}
             onCloseDrawer={onClose}
           />
           <Button
@@ -578,16 +571,13 @@ export function OperationsCalendarEventDrawer({
             staffOptions={staffOptions}
             location={event.location ?? "-"}
             durationLabel={durationLabel}
-            currentStatusKey={currentStatusKey}
             bookingSourceLabel={bookingSourceLabel}
             hasBooking={hasBooking}
             canEditStaff={hasBooking && canEdit}
-            canChangeStatus={hasBooking && !isReadOnlyEvent}
-            showEditBooking={hasBooking}
+            showEditBooking={hasBooking && canEdit}
             showMarkComplete={showMarkComplete}
             canMarkComplete={canMarkComplete}
             onStaffChange={handleStaffChange}
-            onStatusChange={handleStatusChange}
             onEditBooking={handleEditBooking}
             onMarkComplete={handleMarkComplete}
           />
@@ -597,7 +587,7 @@ export function OperationsCalendarEventDrawer({
             addOns={drawerAddOns}
             canComplete={canCompleteTasks && !isReadOnlyEvent}
             canEdit={canEdit}
-            invoiceHref={`/facility/dashboard/services/retail?bookingId=${eventNumericId}`}
+            bookingHref={`/facility/dashboard/bookings/${eventNumericId}`}
             onToggle={(addOnId, completed) =>
               onUpdateBookingAddOn(eventNumericId, addOnId, {
                 status: completed ? "completed" : "pending",
@@ -667,16 +657,15 @@ export function OperationsCalendarEventDrawer({
           event={event}
           isReadOnlyEvent={isReadOnlyEvent}
           hasBooking={hasBooking}
-          isCheckedIn={isCheckedIn}
           isCompleted={isCheckedOut}
           isCancelled={isCancelled}
           checkInOutEnabled={checkInOutEnabled}
-          canCheckInOut={canCheckInOut}
           canEdit={canEdit}
           canCompleteTasks={canCompleteTasks}
+          canCreateBooking={canCreateBooking}
+          bookingActions={bookingActions}
           eventNumericId={eventNumericId}
           clientId={clientId}
-          petId={petId}
           petName={petName}
           recipientName={ownerName}
           recipientPhone={client?.phone}
@@ -684,6 +673,7 @@ export function OperationsCalendarEventDrawer({
           senderName={userDisplayName}
           onCheckInBooking={onCheckInBooking}
           onCheckOutBooking={onCheckOutBooking}
+          onRebookBooking={onRebookBooking}
           onAddBookingAddOn={onAddBookingAddOn}
           onMarkTaskComplete={onMarkTaskComplete}
           onConvertToBooking={isLeadEvent ? handleConvertToBooking : undefined}
@@ -706,13 +696,14 @@ function DrawerHeaderMenu({
   ownerHref,
   petHref,
   clientId,
-  petId,
   recipientName,
   recipientPhone,
-  currentDate,
-  onEditBooking,
+  petName,
+  canCreateBooking,
+  canCancel,
+  onEdit,
   onCancelBooking,
-  onRescheduleBooking,
+  onRebookBooking,
   onCloseDrawer,
 }: {
   event: OperationsCalendarEvent;
@@ -723,30 +714,25 @@ function DrawerHeaderMenu({
   ownerHref?: string;
   petHref?: string;
   clientId?: number;
-  petId?: number;
   recipientName: string;
   recipientPhone?: string;
-  currentDate?: string;
-  onEditBooking: () => void;
-  onCancelBooking: (bookingId: number, reason: string) => void;
-  onRescheduleBooking: (bookingId: number) => void;
+  petName: string;
+  canCreateBooking: boolean;
+  /** The lifecycle offers a cancel — the stage allows it and so does the role. */
+  canCancel: boolean;
+  onEdit: () => void;
+  /** Opens the booking's real cancel dialog — reason and refund there. */
+  onCancelBooking: (bookingId: number) => void;
+  /** Opens the booking wizard for this pet again. */
+  onRebookBooking: (bookingId: number) => void;
   onCloseDrawer: () => void;
 }) {
   const router = useRouter();
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const { t, fill } = useStaffText("bookingActions");
   const [recurringCancelOpen, setRecurringCancelOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
 
   const isRecurring = Boolean(event.recurrenceSeriesId);
-
-  const rebook = () => {
-    const params = new URLSearchParams();
-    if (clientId) params.set("clientId", String(clientId));
-    if (petId) params.set("petId", String(petId));
-    if (event.service) params.set("service", event.service.toLowerCase());
-    window.open(`/facility/dashboard/bookings?${params.toString()}`, "_blank");
-  };
 
   return (
     <>
@@ -762,34 +748,21 @@ function DrawerHeaderMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {hasBooking && (
-            <DropdownMenuItem
-              className="gap-2"
-              disabled={!canEdit}
-              onClick={onEditBooking}
-            >
+          {/* "Move to Different Date" opened a date picker whose choice was
+              thrown away; the dates are edited in the edit dialog now. */}
+          {hasBooking && canEdit && (
+            <DropdownMenuItem className="gap-2" onClick={onEdit}>
               <Pencil className="size-4" />
-              Edit Booking
+              {t("edit")}
             </DropdownMenuItem>
           )}
-          {hasBooking && !isTerminal && (
+          {hasBooking && canCreateBooking && (
             <DropdownMenuItem
               className="gap-2"
-              disabled={!canEdit}
-              onClick={() => setMoveOpen(true)}
-            >
-              <CalendarClock className="size-4" />
-              Move to Different Date
-            </DropdownMenuItem>
-          )}
-          {hasBooking && (
-            <DropdownMenuItem
-              className="gap-2"
-              disabled={!canEdit}
-              onClick={rebook}
+              onClick={() => onRebookBooking(eventNumericId)}
             >
               <CalendarPlus className="size-4" />
-              Rebook
+              {fill("bookAgainPet", { pet: petName })}
             </DropdownMenuItem>
           )}
           {hasBooking && (
@@ -822,31 +795,34 @@ function DrawerHeaderMenu({
             </DropdownMenuItem>
           )}
 
-          {(hasBooking || isRecurring) && !isTerminal && (
+          {isRecurring && !isTerminal && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="gap-2 text-red-600 focus:text-red-700"
                 disabled={!canEdit}
-                onClick={() =>
-                  isRecurring
-                    ? setRecurringCancelOpen(true)
-                    : setCancelOpen(true)
-                }
+                onClick={() => setRecurringCancelOpen(true)}
               >
                 <Ban className="size-4" />
-                {isRecurring ? "Cancel…" : "Cancel Booking"}
+                Cancel…
+              </DropdownMenuItem>
+            </>
+          )}
+          {!isRecurring && hasBooking && canCancel && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 text-red-600 focus:text-red-700"
+                onClick={() => onCancelBooking(eventNumericId)}
+              >
+                <Ban className="size-4" />
+                {t("cancel")}
               </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CancelBookingDialog
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
-        onConfirm={(reason) => onCancelBooking(eventNumericId, reason)}
-      />
       <RecurringCancelDialog
         open={recurringCancelOpen}
         onOpenChange={setRecurringCancelOpen}
@@ -861,103 +837,7 @@ function DrawerHeaderMenu({
         recipientPhone={recipientPhone}
         event={event}
       />
-      <MoveDateDialog
-        open={moveOpen}
-        onOpenChange={setMoveOpen}
-        currentDate={currentDate}
-        onConfirm={() => onRescheduleBooking(eventNumericId)}
-      />
     </>
-  );
-}
-
-const CANCEL_REASONS = [
-  "Customer request",
-  "Schedule conflict",
-  "Pet unwell",
-  "Weather",
-  "Facility closure",
-  "No-show",
-];
-
-function CancelBookingDialog({
-  open,
-  onOpenChange,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: (reason: string) => void;
-}) {
-  const [reason, setReason] = useState(CANCEL_REASONS[0]);
-  const [fee, setFee] = useState("");
-
-  const confirm = () => {
-    const feeValue = Number(fee);
-    const composed =
-      feeValue > 0
-        ? `${reason} — cancellation fee ${formatCurrency(feeValue)}`
-        : reason;
-    onConfirm(composed);
-    onOpenChange(false);
-    setFee("");
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Cancel booking</DialogTitle>
-          <DialogDescription>
-            Cancellation policy and refund eligibility will be reviewed before
-            this is confirmed.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Reason</Label>
-            <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CANCEL_REASONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="cancel-fee">Cancellation fee (optional)</Label>
-            <Input
-              id="cancel-fee"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="0.00"
-              value={fee}
-              onChange={(changeEvent) => setFee(changeEvent.target.value)}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Keep booking
-          </Button>
-          <Button
-            className="bg-red-600 text-white hover:bg-red-700"
-            onClick={confirm}
-          >
-            Cancel booking
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -1289,60 +1169,6 @@ function NotifyComposer({
   );
 }
 
-function MoveDateDialog({
-  open,
-  onOpenChange,
-  currentDate,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  currentDate?: string;
-  onConfirm: () => void;
-}) {
-  const [date, setDate] = useState(currentDate ?? "");
-
-  const confirm = () => {
-    onConfirm();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Move to a different date</DialogTitle>
-          <DialogDescription>
-            Pick a new date, then continue to the reschedule flow.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-1.5">
-          <Label>New date</Label>
-          <DatePicker
-            value={date}
-            onValueChange={(next) => setDate(next)}
-            displayMode="dialog"
-          />
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
-            disabled={!date}
-            onClick={confirm}
-          >
-            Continue
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 /* ═══════════════════════════════════════════════════
    Sticky bottom action bar (Table 35)
    ═══════════════════════════════════════════════════ */
@@ -1433,16 +1259,15 @@ function DrawerActionBar({
   event,
   isReadOnlyEvent,
   hasBooking,
-  isCheckedIn,
   isCompleted,
   isCancelled,
   checkInOutEnabled,
-  canCheckInOut,
   canEdit,
   canCompleteTasks,
+  canCreateBooking,
+  bookingActions,
   eventNumericId,
   clientId,
-  petId,
   petName,
   recipientName,
   recipientPhone,
@@ -1450,6 +1275,7 @@ function DrawerActionBar({
   senderName,
   onCheckInBooking,
   onCheckOutBooking,
+  onRebookBooking,
   onAddBookingAddOn,
   onMarkTaskComplete,
   onConvertToBooking,
@@ -1457,16 +1283,15 @@ function DrawerActionBar({
   event: OperationsCalendarEvent;
   isReadOnlyEvent: boolean;
   hasBooking: boolean;
-  isCheckedIn: boolean;
   isCompleted: boolean;
   isCancelled: boolean;
   checkInOutEnabled: boolean;
-  canCheckInOut: boolean;
   canEdit: boolean;
   canCompleteTasks: boolean;
+  canCreateBooking: boolean;
+  bookingActions: BookingAction[];
   eventNumericId: number;
   clientId?: number;
-  petId?: number;
   petName: string;
   recipientName: string;
   recipientPhone?: string;
@@ -1474,24 +1299,13 @@ function DrawerActionBar({
   senderName: string;
   onCheckInBooking: (bookingId: number) => void;
   onCheckOutBooking: (bookingId: number) => void;
+  onRebookBooking: (bookingId: number) => void;
   onAddBookingAddOn: (bookingId: number, addOn: BookingDrawerAddOnItem) => void;
   onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
   onConvertToBooking?: () => void;
 }) {
-  // No dedicated payment/invoice handler is passed to the drawer, so both open
-  // the POS/retail surface for this booking — the same target checkout uses.
-  const openInvoice = () =>
-    window.open(
-      `/facility/dashboard/services/retail?bookingId=${eventNumericId}`,
-      "_blank",
-    );
-
-  const bookAgain = () => {
-    const params = new URLSearchParams();
-    if (clientId) params.set("clientId", String(clientId));
-    if (petId) params.set("petId", String(petId));
-    window.open(`/facility/dashboard/bookings?${params.toString()}`, "_blank");
-  };
+  const { fill } = useStaffText("bookingActions");
+  const { t: calT } = useStaffText("opsCalendar");
 
   const addAddOn = (option: AddOnOption) => {
     onAddBookingAddOn(eventNumericId, {
@@ -1552,63 +1366,79 @@ function DrawerActionBar({
 
   if (!hasBooking) return null;
 
-  // Completed (or cancelled) → View Invoice + Book Again
+  // The booking page, where the money, the history and every other action
+  // live. "Collect Payment" and "View Invoice" opened the till with a
+  // ?bookingId= it never read, so both landed on an empty cart.
+  const openBooking = (
+    <Button asChild size="sm" variant="outline" className="gap-1.5">
+      <Link href={`/facility/dashboard/bookings/${eventNumericId}`}>
+        <FileText className="size-3.5" />
+        {calT("openBooking")}
+      </Link>
+    </Button>
+  );
+  const notify = (
+    <NotifyComposer
+      event={event}
+      clientRef={clientId}
+      petName={petName}
+      recipientName={recipientName}
+      recipientPhone={recipientPhone}
+      recipientEmail={recipientEmail}
+      senderName={senderName}
+    />
+  );
+
+  // Finished → the booking, and the same pet again. "Book Again" opened the
+  // bookings list with parameters it never read.
   if (isCompleted || isCancelled) {
     return (
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 gap-1.5"
-          onClick={openInvoice}
-        >
-          <FileText className="size-3.5" />
-          View Invoice
-        </Button>
-        <Button
-          size="sm"
-          className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-          disabled={!canEdit}
-          onClick={bookAgain}
-        >
-          <CalendarPlus className="size-3.5" />
-          Book Again
-        </Button>
-        <NotifyComposer
-          event={event}
-          clientRef={clientId}
-          petName={petName}
-          recipientName={recipientName}
-          recipientPhone={recipientPhone}
-          recipientEmail={recipientEmail}
-          senderName={senderName}
-        />
+      <div className="flex flex-wrap gap-2">
+        {openBooking}
+        {canCreateBooking && (
+          <Button
+            size="sm"
+            className="gap-1.5"
+            onClick={() => onRebookBooking(eventNumericId)}
+          >
+            <CalendarPlus className="size-3.5" />
+            {fill("bookAgainPet", { pet: petName })}
+          </Button>
+        )}
+        {notify}
       </div>
     );
   }
 
-  // Active booking → Check In / Check Out + Add Add-On + Collect Payment
+  // What the lifecycle offers now (booking-lifecycle.ts), the same answer the
+  // booking page gets: an expected guest is checked in, one on site is
+  // checked out, and a request is reviewed on the booking page. It offered
+  // "Check In" on every booking that was not already checked in — requests
+  // and waiting-list entries included.
+  const live = checkInOutEnabled && !isReadOnlyEvent;
+  const arrive = live && bookingActions.some((a) => a.id === "check_in");
+  const depart = live && bookingActions.some((a) => a.id === "check_out");
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {isCheckedIn ? (
+      {arrive && (
         <Button
           size="sm"
-          className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-          disabled={!checkInOutEnabled || !canCheckInOut || isReadOnlyEvent}
-          onClick={() => onCheckOutBooking(eventNumericId)}
-        >
-          <LogOut className="size-3.5" />
-          Check Out
-        </Button>
-      ) : (
-        <Button
-          size="sm"
-          className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
-          disabled={!checkInOutEnabled || !canCheckInOut || isReadOnlyEvent}
+          className="gap-1.5"
           onClick={() => onCheckInBooking(eventNumericId)}
         >
           <LogIn className="size-3.5" />
-          Check In
+          {fill("checkInPet", { pet: petName })}
+        </Button>
+      )}
+      {depart && (
+        <Button
+          size="sm"
+          className="gap-1.5"
+          onClick={() => onCheckOutBooking(eventNumericId)}
+        >
+          <LogOut className="size-3.5" />
+          {fill("checkOutPet", { pet: petName })}
         </Button>
       )}
 
@@ -1622,31 +1452,13 @@ function DrawerActionBar({
             disabled={!canEdit}
           >
             <Plus className="size-3.5" />
-            Add Add-On
+            {calT("addAddOn")}
           </Button>
         }
       />
 
-      <Button
-        size="sm"
-        variant="outline"
-        className="gap-1.5"
-        disabled={isReadOnlyEvent}
-        onClick={openInvoice}
-      >
-        <CreditCard className="size-3.5" />
-        Collect Payment
-      </Button>
-
-      <NotifyComposer
-        event={event}
-        clientRef={clientId}
-        petName={petName}
-        recipientName={recipientName}
-        recipientPhone={recipientPhone}
-        recipientEmail={recipientEmail}
-        senderName={senderName}
-      />
+      {openBooking}
+      {notify}
     </div>
   );
 }
@@ -1654,30 +1466,6 @@ function DrawerActionBar({
 /* ═══════════════════════════════════════════════════
    Tab: Details (A2 / Table 30)
    ═══════════════════════════════════════════════════ */
-
-type StatusKey = "confirmed" | "checked_in" | "completed" | "cancelled";
-
-const STATUS_OPTIONS: Array<{ value: StatusKey; label: string }> = [
-  { value: "confirmed", label: "Confirmed" },
-  { value: "checked_in", label: "Checked-in" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-];
-
-function toStatusKey(rawStatus: string): StatusKey {
-  if (rawStatus === "in_progress" || rawStatus === "checked_in") {
-    return "checked_in";
-  }
-  if (
-    rawStatus === "completed" ||
-    rawStatus === "checked-out" ||
-    rawStatus === "checked_out"
-  ) {
-    return "completed";
-  }
-  if (rawStatus === "cancelled") return "cancelled";
-  return "confirmed";
-}
 
 function formatDuration(start: Date, end: Date): string {
   const minutes = Math.max(
@@ -1706,16 +1494,13 @@ function DetailsTab({
   staffOptions,
   location,
   durationLabel,
-  currentStatusKey,
   bookingSourceLabel,
   hasBooking,
   canEditStaff,
-  canChangeStatus,
   showEditBooking,
   showMarkComplete,
   canMarkComplete,
   onStaffChange,
-  onStatusChange,
   onEditBooking,
   onMarkComplete,
 }: {
@@ -1730,19 +1515,17 @@ function DetailsTab({
   staffOptions: string[];
   location: string;
   durationLabel: string;
-  currentStatusKey: StatusKey;
   bookingSourceLabel: string;
   hasBooking: boolean;
   canEditStaff: boolean;
-  canChangeStatus: boolean;
   showEditBooking: boolean;
   showMarkComplete: boolean;
   canMarkComplete: boolean;
   onStaffChange: (staff: string) => void;
-  onStatusChange: (next: StatusKey) => void;
   onEditBooking: () => void;
   onMarkComplete: () => void;
 }) {
+  const { t } = useStaffText("bookingActions");
   const staffValues = staffOptions.includes(staffName)
     ? staffOptions
     : [staffName, ...staffOptions];
@@ -1811,26 +1594,11 @@ function DetailsTab({
           <FieldValue value={durationLabel} />
         </Field>
 
+        {/* A select of four statuses stood here. It checked in, checked
+            out and cancelled by a side door, and "Confirmed" did nothing.
+            The status moves by its actions now, on the bar below. */}
         <Field label="Status">
-          {canChangeStatus ? (
-            <Select
-              value={currentStatusKey}
-              onValueChange={(value) => onStatusChange(value as StatusKey)}
-            >
-              <SelectTrigger size="sm" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <FieldValue value={event.status} />
-          )}
+          <FieldValue value={event.status} />
         </Field>
 
         <Field label="Booking Source">
@@ -1886,7 +1654,7 @@ function DetailsTab({
               onClick={onEditBooking}
             >
               <Pencil className="size-3.5" />
-              Edit Booking
+              {t("edit")}
             </Button>
           )}
           {showMarkComplete && (
@@ -1993,17 +1761,18 @@ function AddOnsTab({
   addOns,
   canComplete,
   canEdit,
-  invoiceHref,
+  bookingHref,
   onToggle,
   onAdd,
 }: {
   addOns: BookingDrawerAddOnItem[];
   canComplete: boolean;
   canEdit: boolean;
-  invoiceHref: string;
+  bookingHref: string;
   onToggle: (addOnId: string, completed: boolean) => void;
   onAdd: (option: AddOnOption) => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const { addOns: facilityAddOns } = useServiceAddOns();
   const total = addOns.reduce(
     (sum, addOn) => sum + addOnPrice(facilityAddOns, addOn.name),
@@ -2095,15 +1864,15 @@ function AddOnsTab({
             {formatCurrency(total)}
           </p>
         </div>
-        <a
-          href={invoiceHref}
-          target="_blank"
-          rel="noreferrer"
+        {/* "View on Invoice" opened the till with a ?bookingId= it never
+            read. The add-ons are line items on the booking, shown there. */}
+        <Link
+          href={bookingHref}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:underline"
         >
           <FileText className="size-3.5" />
-          View on Invoice
-        </a>
+          {calT("openBooking")}
+        </Link>
       </div>
     </div>
   );

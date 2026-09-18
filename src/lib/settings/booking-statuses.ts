@@ -122,6 +122,35 @@ export const bookingStatusRulesSchema = z.object({
 
 export type BookingStatusRules = z.infer<typeof bookingStatusRulesSchema>;
 
+/**
+ * Where this facility's rules take a booking after something happened to it:
+ * a per-service rule first, then the facility's default. Null when neither
+ * names a status the booking can hold — a custom status is a label, and
+ * `bookings.status` is an enum that would refuse it.
+ *
+ * The booking page resolved this inline and the calendar not at all, so a
+ * groomer's check-in from the calendar stopped at checked_in while the same
+ * press on the booking page went on to in progress.
+ */
+export function autoTransitionTarget(
+  rules: BookingStatusRules,
+  booking: { service: string; status: string },
+  action: StatusTransitionAction,
+): (typeof BOOKING_STATUS_IDS)[number] | null {
+  const service = booking.service.toLowerCase();
+  const rule = rules.iftttTransitionRules.find(
+    (r) =>
+      r.enabled !== false &&
+      r.action === action &&
+      (r.service === "any" || r.service === service) &&
+      (r.currentStatus === "any" || r.currentStatus === booking.status) &&
+      isBookingStatus(r.targetStatus),
+  );
+  if (rule && isBookingStatus(rule.targetStatus)) return rule.targetStatus;
+  const fallback = rules.autoTransitions[action];
+  return fallback && isBookingStatus(fallback) ? fallback : null;
+}
+
 export const DEFAULT_BOOKING_STATUS_RULES: BookingStatusRules = {
   customStatuses: [],
   autoTransitions: {
