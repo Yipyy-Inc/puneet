@@ -99,7 +99,9 @@ test.describe("the booking detail link", () => {
       { timeout: 60_000 },
     );
     await expect(
-      page.getByText(/booking not found/i),
+      // Both wordings: the page says "No booking with that number" since
+      // 2026-09-18, and the old one must not come back either.
+      page.getByText(/booking not found|no booking with that number/i),
       "the dead end is gone",
     ).toHaveCount(0);
   });

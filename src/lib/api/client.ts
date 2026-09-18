@@ -103,10 +103,26 @@ export const clientQueries = {
     queryKey: ["clients", "all"] as const,
     queryFn: fetchClients,
   }),
+  /**
+   * One client, by ref — `null` when there is none this viewer may see.
+   *
+   * It fetched the WHOLE client list and picked one out of it, on every
+   * screen that wanted one client. A 404 is an answer ("not here"); anything
+   * else is a failure the screen should say it had, not a missing client.
+   */
   detail: (id: number) => ({
     queryKey: ["clients", id] as const,
-    queryFn: async () =>
-      (await fetchClients()).find((c) => c.id === id) ?? null,
+    queryFn: async (): Promise<Client | null> => {
+      const response = await fetch(`/api/clients/${id}`);
+      if (response.status === 404) return null;
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(detail?.error ?? `Request failed (${response.status})`);
+      }
+      return (await response.json()) as Client;
+    },
   }),
   search: (query: string) => ({
     queryKey: ["clients", "search", query] as const,
@@ -149,7 +165,7 @@ export function useClientRecord(id: string | number | undefined) {
   const ref = typeof id === "number" ? id : parseInt(String(id ?? ""), 10);
   const valid = Number.isInteger(ref);
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, refetch } = useQuery({
     ...clientQueries.detail(ref),
     enabled: valid,
   });
@@ -158,6 +174,9 @@ export function useClientRecord(id: string | number | undefined) {
     client: data ?? undefined,
     /** True while the answer is unknown. A disabled query is not pending. */
     pending: valid && isPending,
+    /** The read FAILED — which is not the same as "no such client". */
+    error: error ?? null,
+    retry: () => void refetch(),
   };
 }
 

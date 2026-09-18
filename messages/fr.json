@@ -1765,7 +1765,13 @@
         "bookingConfirmed": "{ref} confirmée",
         "belongingsNotSaved": "Les effets personnels n’ont pas été enregistrés",
         "medicationNotSaved": "Le médicament n’a pas été enregistré",
-        "medicationAdded": "Médicament ajouté"
+        "medicationAdded": "Médicament ajouté",
+        "loadFailedTitle": "Impossible de charger cette réservation",
+        "loadFailedBody": "La réservation existe toujours — cette page n’a pas pu la lire. Réessayez dans un instant.",
+        "tryAgain": "Réessayer",
+        "notFoundTitle": "Aucune réservation avec ce numéro",
+        "notFoundBody": "{ref} n’est pas une réservation de cet établissement, ou vous n’y avez pas accès.",
+        "backToBookings": "Retour aux réservations"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
