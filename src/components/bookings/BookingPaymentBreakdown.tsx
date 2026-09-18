@@ -10,6 +10,7 @@ import { balanceOf } from "@/lib/api/booking-money";
 import { bookingMoney, paymentQueries } from "@/lib/api/payments";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import type { Booking } from "@/types/booking";
 
@@ -155,17 +156,14 @@ export function BookingPaymentBreakdown({
   // paid in full (booking 569 carries amount_paid 200 AND amount_due 200).
   // balanceOf() is what the "Pay by card" button uses, so the two figures on
   // this screen cannot disagree.
-  const total = booking.amountDue ?? subtotal;
   const outstanding = balanceOf(booking);
   // Tax on what is still OWED, which is what a payment will charge — not on the
-  // whole bill, or a part-paid booking would be taxed twice.
+  // whole bill, or a part-paid booking would be taxed twice. The lines are
+  // listed here; the total and the balance are bookingTotals(), which the
+  // page header reads too, so the two figures on one screen cannot disagree.
   const tax = computeTax(Math.round(outstanding * 100), taxConfig);
-  const taxTotal = tax.totalCents / 100;
-  // A tax-inclusive facility's tax is already inside the price, so it is broken
-  // out rather than added.
-  const balance = taxConfig.pricesIncludeTax
-    ? outstanding
-    : outstanding + taxTotal;
+  const totals = bookingTotals(booking, taxConfig);
+  const balance = totals.balance;
 
   // `service` is stored lowercase ("boarding"); `serviceType` is the named
   // package when there is one. Either way it is the thing being charged for,
@@ -258,13 +256,7 @@ export function BookingPaymentBreakdown({
           )}
 
           <div className="py-1">
-            <Line
-              label="Total"
-              value={
-                (taxConfig.pricesIncludeTax ? total : total + taxTotal) + tip
-              }
-              bold
-            />
+            <Line label="Total" value={totals.total} bold />
           </div>
 
           {/* GROSS, REFUNDED, NET — never the net on its own. `paid` is the
