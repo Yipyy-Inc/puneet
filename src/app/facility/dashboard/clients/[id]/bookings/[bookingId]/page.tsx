@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from "react";
+import { use, useState, useMemo } from "react";
 import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import {
@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   HandCoins,
   LogOut,
+  CircleAlert,
+  CircleHelp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +39,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CreateIncidentModal } from "@/components/incidents/CreateIncidentModal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useClientEstimates } from "@/lib/api/estimates";
-import { clientQueries } from "@/lib/api/client";
+import { useClientRecord } from "@/lib/api/client";
+import { RouteState } from "@/components/ui/route-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/use-settings";
 import type { BoardingGuest } from "@/data/boarding";
@@ -79,7 +82,6 @@ import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingMo
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
 import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
 import { TagList } from "@/components/shared/TagList";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useMembershipPlans, useMemberships } from "@/lib/api/memberships";
@@ -199,12 +201,9 @@ export default function ClientBookingDetailPage({
   const assignedStaffId = useAssignedScope("view_bookings");
   const { refs: assignedRefs, pending: assignedPending } =
     useAssignedBookingRefs(assignedStaffId);
-  const clientId = parseInt(id, 10);
+  const urlClientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
-  // The client's bookings, live. `byClient` rather than `detail` because the
-  // invoice panel below needs the client's OTHER unpaid bookings too, and two
-  // queries for one client's bookings would be two answers to one question.
   // The facility's own module configs and booking-flow rules. Both were read
   // from `src/data/settings.ts`, so the evaluation gate and the per-service
   // care-instruction visibility were the same for every facility.
@@ -215,20 +214,33 @@ export default function ClientBookingDetailPage({
     training,
     bookingFlow: facilityBookingFlowConfig,
   } = useSettings();
-  const { data: clientBookings = [], isPending: bookingsPending } = useQuery(
-    bookingQueries.byClient(clientId),
-  );
-  // The clients, from the same place the booking came from. This read used to
-  // be the `@/data/clients` fixture, so a client created in Postgres — which is
-  // every client created since the migration — had a booking page that said the
-  // booking did not exist.
+  // ── ONE BOOKING, AND ITS OWN CLIENT ────────────────────────────────────
   //
-  // The whole list rather than `detail`, because the edit wizard below takes a
-  // list and lets staff move the booking to a different customer. One request
-  // answers both; `detail` would fetch the same endpoint under another key.
-  const { data: allClients = [], isPending: clientPending } = useQuery(
-    clientQueries.all(),
-  );
+  // This read the client's WHOLE booking history (`byClient`) and the
+  // facility's WHOLE client list to show one booking — for an invoice panel
+  // that no longer exists and an edit wizard that cannot change the client
+  // anyway (`editablePatch`). On a client with a long history that read hits
+  // the 8-second statement timeout, and the page said "Booking not found."
+  //
+  // The client is the one the BOOKING names, not the one in the URL: the URL
+  // is how the page was reached, the row is what it is about.
+  const {
+    data: booking,
+    isPending: bookingPending,
+    error: bookingError,
+    refetch: refetchBooking,
+  } = useQuery({
+    ...bookingQueries.detail(bookingId),
+    enabled: Number.isInteger(bookingId),
+  });
+  const {
+    client,
+    pending: clientPending,
+    error: clientError,
+    retry: retryClient,
+  } = useClientRecord(booking?.clientId ?? urlClientId);
+  // Everything below is about the BOOKING's client.
+  const clientId = booking?.clientId ?? urlClientId;
   // ── THE CARE LOG ────────────────────────────────────────────────────────
   //
   // What was actually done, from `care_log_entries` (20260819140000). Before
@@ -268,14 +280,6 @@ export default function ClientBookingDetailPage({
   const sendPayLink = useSendPayLink();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
-  const initialBooking = useMemo(
-    () => clientBookings.find((b) => b.id === bookingId),
-    [clientBookings, bookingId],
-  );
-  const [booking, setBooking] = useState(() => initialBooking);
-  useEffect(() => {
-    setBooking(initialBooking);
-  }, [initialBooking]);
   // Traceability: the estimate this booking was converted from, if any.
   // The estimate this booking was converted from, among the client's own —
   // the fixture matched a real booking to an invented estimate by number.
@@ -312,24 +316,20 @@ export default function ClientBookingDetailPage({
   const { data: clientMembershipRows } = useMemberships(clientId);
   const { data: membershipPlanRows } = useMembershipPlans();
   const { fill: fillJoin } = useStaffText("joinMembership");
-  const client = useMemo(
-    () => allClients.find((c) => c.id === clientId),
-    [allClients, clientId],
-  );
-  const pets = useMemo(() => {
+  const pets = (() => {
     if (!client || !booking) return [];
     const pids = Array.isArray(booking.petId) ? booking.petId : [booking.petId];
     return pids
       .map((pid) => client.pets?.find((p) => p.id === pid))
       .filter(Boolean) as NonNullable<(typeof client.pets)[number]>[];
-  }, [client, booking]);
+  })();
   const pet = pets[0] ?? null;
 
   const nights = booking
     ? nightsBetween(booking.startDate, booking.endDate)
     : 0;
 
-  const unifiedForEarlyCheckout = useMemo<UnifiedBooking | null>(() => {
+  const unifiedForEarlyCheckout: UnifiedBooking | null = (() => {
     if (!booking || !pet) return null;
     const svc = booking.service.toLowerCase();
     return {
@@ -355,7 +355,7 @@ export default function ClientBookingDetailPage({
       price: booking.totalCost,
       totalNights: nights,
     };
-  }, [booking, pet, client, nights]);
+  })();
   const isCancelled = booking?.status === "cancelled";
   const isDeclined = booking?.status === "declined";
   const isEstimateSent = booking?.status === "estimate_sent";
@@ -540,7 +540,7 @@ export default function ClientBookingDetailPage({
 
   const isBoarding = booking?.service.toLowerCase() === "boarding";
 
-  const boardingGuestForPrint = useMemo<BoardingGuest | null>(() => {
+  const boardingGuestForPrint: BoardingGuest | null = (() => {
     if (!isBoarding || !booking || !pet) return null;
     const refId = `bk-${String(booking.id).padStart(3, "0")}`;
     const allergyList = pet.allergies
@@ -583,9 +583,9 @@ export default function ClientBookingDetailPage({
       medications: [],
       tags: [],
       notes: booking.specialRequests ?? "",
-      createdAt: new Date().toISOString(),
+      createdAt: booking.startDate,
     } as BoardingGuest;
-  }, [isBoarding, booking, pet, client, nights]);
+  })();
 
   const bookingRef = formatBookingRef(booking?.id ?? bookingId);
   // Above the early returns below — a hook after a conditional return is
@@ -695,23 +695,61 @@ export default function ClientBookingDetailPage({
   // which apply and the generator filters on it.
   const { data: allTaskTemplates = [] } = useQuery(taskTemplateQueries.all());
 
-  // "Not found" is a conclusion, and it needs both answers back before it can
-  // be drawn. Rendering it while either request is open told staff a booking
-  // they were looking at did not exist.
-  if (bookingsPending || clientPending) {
+  // ── THREE ANSWERS, NOT ONE ─────────────────────────────────────────────
+  //
+  // "Not found" is a conclusion, and it needs the answers back before it can be
+  // drawn. And a read that FAILED is not a booking that does not exist: this
+  // page used to say "Booking not found." for both, so a timeout told staff
+  // the booking they had just opened was gone.
+  if (bookingError || clientError) {
     return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="mt-4 h-40 w-full" />
+      <RouteState
+        surface="card"
+        pose="error"
+        icon={CircleAlert}
+        inkClassName="text-destructive"
+        title={detailT("loadFailedTitle")}
+        description={detailT("loadFailedBody")}
+        action={{
+          label: detailT("tryAgain"),
+          onClick: () => {
+            if (bookingError) void refetchBooking();
+            if (clientError) retryClient();
+          },
+        }}
+      />
+    );
+  }
+
+  if (bookingPending || (booking && clientPending)) {
+    return (
+      <div className="space-y-4 p-5 md:p-7" aria-busy="true">
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-3xl" />
+        <div className="grid gap-5 lg:grid-cols-5">
+          <Skeleton className="h-96 rounded-3xl lg:col-span-3" />
+          <Skeleton className="h-96 rounded-3xl lg:col-span-2" />
+        </div>
       </div>
     );
   }
 
   if (!booking || !client) {
     return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Booking not found.</p>
-      </div>
+      <RouteState
+        surface="card"
+        pose="confused"
+        icon={CircleHelp}
+        inkClassName="text-ink-secondary"
+        title={detailT("notFoundTitle")}
+        description={detailFill("notFoundBody", {
+          ref: formatBookingRef(bookingId),
+        })}
+        action={{
+          label: detailT("backToBookings"),
+          href: "/facility/dashboard/bookings",
+        }}
+      />
     );
   }
 
@@ -887,7 +925,7 @@ export default function ClientBookingDetailPage({
       {/* Client info strip — replaces the full sidebar */}
       <ClientInfoStrip
         client={client}
-        backHref={`/facility/dashboard/clients/${clientId}`}
+        backHref={`/facility/dashboard/clients/${client.id}`}
         currentContext={`${bookingRef}${pet ? ` · ${pet.name}` : ""}`}
       />
 
@@ -1947,13 +1985,11 @@ export default function ClientBookingDetailPage({
           </div>
         </div>
 
-        <PageAuditTrail area="bookings" />
-
         {/* Edit Booking Wizard — pre-filled with current booking details */}
         <BookingModal
           open={editOpen}
           onOpenChange={setEditOpen}
-          clients={allClients}
+          clients={[client]}
           facilityId={booking.facilityId}
           facilityName={facilityProfile.businessName}
           editMode

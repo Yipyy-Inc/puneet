@@ -1765,7 +1765,13 @@
         "bookingConfirmed": "{ref} confirmed",
         "belongingsNotSaved": "The belongings were not saved",
         "medicationNotSaved": "The medication was not saved",
-        "medicationAdded": "Medication added"
+        "medicationAdded": "Medication added",
+        "loadFailedTitle": "This booking could not be loaded",
+        "loadFailedBody": "The booking is still there — this page could not read it. Try again in a moment.",
+        "tryAgain": "Try again",
+        "notFoundTitle": "No booking with that number",
+        "notFoundBody": "{ref} is not a booking at this facility, or you do not have access to it.",
+        "backToBookings": "Back to bookings"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",

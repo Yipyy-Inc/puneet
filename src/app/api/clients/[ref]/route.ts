@@ -6,7 +6,11 @@ import {
   clientToRow,
   rowToClient,
 } from "@/lib/api/mappers/client";
-import { getFacilityContext } from "@/lib/api/facility-context";
+import {
+  activeFacilityIdForStaff,
+  getFacilityContext,
+  inFacility,
+} from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { Client } from "@/types/client";
 
@@ -32,6 +36,55 @@ import type { Client } from "@/types/client";
 // ============================================================================
 
 export const dynamic = "force-dynamic";
+
+/**
+ * One client, with their pets.
+ *
+ * Every screen that needed one client — the booking page, and the fifteen in
+ * the client file behind `useClientRecord` — fetched the facility's WHOLE
+ * client list and picked one out of it. `clients.ref` is unique across the
+ * platform, so this is one row; it is still narrowed to the facility this
+ * portal is showing, so a platform admin or a member of two facilities cannot
+ * open another facility's client by typing its number. RLS decides the rest,
+ * and a row it hides is the same 404 as a row that does not exist.
+ */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ ref: string }> },
+) {
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const { ref } = await params;
+  const numericRef = Number(ref);
+  if (!Number.isInteger(numericRef) || numericRef <= 0) {
+    return NextResponse.json({ error: "Invalid client id." }, { status: 400 });
+  }
+
+  const supabase = await createServerClient();
+  const scope = await activeFacilityIdForStaff();
+  const [{ data, error }, context] = await Promise.all([
+    supabase
+      .from("clients")
+      .select(CLIENT_SELECT)
+      .eq("ref", numericRef)
+      .match(inFacility(scope))
+      .maybeSingle(),
+    getFacilityContext(),
+  ]);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!data) {
+    return NextResponse.json({ error: "Client not found." }, { status: 404 });
+  }
+  return NextResponse.json(
+    rowToClient(data, context?.name ?? "Example Pet Care Facility"),
+  );
+}
 
 export async function PATCH(
   request: NextRequest,

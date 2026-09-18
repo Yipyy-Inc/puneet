@@ -17,12 +17,19 @@ import { deployedFixture, deployedFixtureRef } from "./_fixtures";
 //
 // Skips without its fixtures: a real client with a real booking, plus staff who
 // may see it.
+//
+// 2026-09-18: the page reads ONE booking (`?ref=`) and ONE client
+// (`/api/clients/[ref]`) instead of the client's whole history and the
+// facility's whole client list — the history read timed out on a long-standing
+// client and the page said the booking was not found. A failed read now says it
+// failed; only a booking that is really absent says "No booking with that number".
 // ============================================================================
 
 const CLIENT_REF = deployedFixtureRef("E2E_POSTGRES_CLIENT_REF");
 const BOOKING_REF = deployedFixtureRef("E2E_POSTGRES_BOOKING_REF");
 const CLIENT_NAME = deployedFixture("E2E_POSTGRES_CLIENT_NAME");
 const STAFF = deployedFixture("CLOVER_E2E_STAFF_EMAIL");
+const NOT_FOUND = "No booking with that number";
 
 test.describe("a booking belonging to a Postgres client", () => {
   test.skip(
@@ -45,7 +52,7 @@ test.describe("a booking belonging to a Postgres client", () => {
     await expect(page.getByText(CLIENT_NAME).first()).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText("Booking not found.")).toHaveCount(0);
+    await expect(page.getByText(NOT_FOUND)).toHaveCount(0);
   });
 
   test("does not flash 'not found' before the data arrives", async ({
@@ -60,7 +67,7 @@ test.describe("a booking belonging to a Postgres client", () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route("**/api/clients", async (route) => {
+    await page.route("**/api/clients/*", async (route) => {
       await held;
       await route.continue();
     });
@@ -68,11 +75,28 @@ test.describe("a booking belonging to a Postgres client", () => {
     await page.goto(
       `/facility/dashboard/clients/${CLIENT_REF}/bookings/${BOOKING_REF}`,
     );
-    await expect(page.getByText("Booking not found.")).toHaveCount(0);
+    await expect(page.getByText(NOT_FOUND)).toHaveCount(0);
     release();
     await expect(page.getByText(CLIENT_NAME).first()).toBeVisible({
       timeout: 20_000,
     });
+  });
+
+  test("a read that fails says it failed, not that the booking is gone", async ({
+    page,
+  }) => {
+    await signIn(page, STAFF);
+    await page.route("**/api/bookings?*", (route) =>
+      route.fulfill({ status: 500, body: JSON.stringify({ error: "boom" }) }),
+    );
+    await page.goto(
+      `/facility/dashboard/clients/${CLIENT_REF}/bookings/${BOOKING_REF}`,
+    );
+    await expect(
+      page.getByText("This booking could not be loaded"),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(NOT_FOUND)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   });
 
   test("a booking that really is absent still says so", async ({ page }) => {
@@ -82,7 +106,7 @@ test.describe("a booking belonging to a Postgres client", () => {
     await page.goto(
       `/facility/dashboard/clients/${CLIENT_REF}/bookings/999999`,
     );
-    await expect(page.getByText("Booking not found.")).toBeVisible({
+    await expect(page.getByText(NOT_FOUND)).toBeVisible({
       timeout: 20_000,
     });
   });
