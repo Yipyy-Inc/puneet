@@ -17131,3 +17131,47 @@ The French pass stopped at this block rather than going through it. A false
 claim translated is a false claim in two languages, and lowering the
 `check:ui-french` baseline over these strings would record them as finished
 work. They stay in English until they are either removed or made real.
+
+### Two of the seven, fixed — and a correction to how I described them
+
+I wrote above that the discount and tip popovers were "duplicates of working
+controls", so deleting them lost nothing. **That was true of one of them.**
+
+- **Tip — a real duplicate. Deleted.** The working tip control is rendered a
+  few lines above (`setTipPercentage` / `setTipCustomAmount`, lines ~2800) and
+  feeds `calculatedTipAmount` → `grandTotal`. The fake popover beside it is
+  gone, with a comment saying what it was.
+- **Discount — a duplicate of a control NOTHING COULD OPEN. Rewired.** The real
+  cart-discount modal (`isCartDiscountModalOpen`, `applyCartDiscount`) was fully
+  built and rendered, and `setIsCartDiscountModalOpen(true)` appeared nowhere in
+  the file. So the fake popover was the only visible way in. Deleting it would
+  have left a finished feature unreachable; the button now opens the real modal
+  instead, gated by `canApplyDiscount` exactly as the per-item discount button is.
+
+**Wiring it up exposed two bugs that had been latent only because the modal was
+unreachable.** The inputs' `min={0}` and `max={100}` are HTML attributes and stop
+nobody typing: a 150% discount made the total negative, and a fixed `-50`
+_raised_ the price by $50. Both are now clamped in `applyCartDiscount`, the one
+entry point for a manual discount. **Making dead code reachable is not free** —
+it inherits every bug that deadness was hiding, so read it as if it were new.
+
+**Five remain, and they are the owner's call:** Add Fee, Use Store Credit,
+Redeem Membership, and the two "Available Benefits" buttons. None has a working
+equivalent on this screen. `store_credit_entries` and `redeem_package_pass`
+make store credit and package credit buildable; deleting them instead removes a
+feature the till currently promises.
+
+Ratchets recorded by hand, since neither has a stale-baseline arm and an
+unrecorded win leaks back: `check:ui-french` 236 → 225 on this file (eleven
+fake strings removed, not translated), and `check:control-heights` 16 → 11
+(six `h-7` controls removed, one added).
+
+### AGENTS.md's control-heights total had drifted too
+
+It said "625 across 235 files" while the baseline summed to 537 across 199 —
+every per-file entry that came down left the headline behind. Corrected to 532
+across 199, and `check:doc-counts` now derives both numbers from the baseline
+itself. Negative-controlled three ways: a wrong total fails, a wrong file count
+fails, and **lowering one baseline entry without updating the doc fails** — so
+the next person to record a win is made to update the headline in the same
+commit.

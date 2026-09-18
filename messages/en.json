@@ -2501,7 +2501,8 @@
         "subtotal": "Subtotal",
         "discountLabel": "Discount",
         "tipLabel": "Tip",
-        "totalLabel": "Total"
+        "totalLabel": "Total",
+        "applyCartDiscount": "Apply a discount"
       },
       "kiosk": {
         "title": "Check-in",
