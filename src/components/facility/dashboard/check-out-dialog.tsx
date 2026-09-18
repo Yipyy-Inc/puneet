@@ -1,5 +1,6 @@
 "use client";
 
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -436,16 +437,8 @@ function EarlyCheckoutSummary({
   adjustment: EarlyCheckoutAdjustment;
   disabledByPolicy: boolean;
 }) {
-  const {
-    unusedNights,
-    unusedValue,
-    policy,
-    refundAmount,
-    creditAmount,
-    feeAmount,
-    creditExpiresDays,
-    customerNote,
-  } = adjustment;
+  const { t: earlyText } = useStaffText("bookingActions");
+  const { unusedNights, unusedValue, policy, customerNote } = adjustment;
 
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
@@ -476,39 +469,14 @@ function EarlyCheckoutSummary({
               value={formatMoney(unusedValue)}
               muted
             />
-            {refundAmount > 0 && (
-              <Row
-                label="Refund to customer"
-                value={formatMoney(refundAmount)}
-                accent="emerald"
-              />
-            )}
-            {creditAmount > 0 && (
-              <Row
-                label={
-                  creditExpiresDays && creditExpiresDays > 0
-                    ? `Store credit (expires in ${creditExpiresDays} days)`
-                    : "Store credit"
-                }
-                value={formatMoney(creditAmount)}
-                accent="blue"
-              />
-            )}
-            {feeAmount > 0 && (
-              <Row
-                label="Early checkout fee"
-                value={`− ${formatMoney(feeAmount)}`}
-                accent="rose"
-              />
-            )}
-            {policy === "none" && (
-              <Row
-                label="Customer forfeits"
-                value={formatMoney(unusedValue)}
-                accent="rose"
-              />
-            )}
           </div>
+          {/* The refund, store credit, fee or forfeit this policy works out
+              were shown here as amounts — and nothing applied them: the
+              checkout records the departure and the balance, not the policy.
+              Until that is a real money write, it says so instead (§5s). */}
+          <p className="text-warning text-xs/snug">
+            {earlyText("earlyCheckoutNotApplied")}
+          </p>
           {customerNote && (
             <p className="text-[11px] leading-snug text-amber-900/80 italic dark:text-amber-200/80">
               {customerNote}
