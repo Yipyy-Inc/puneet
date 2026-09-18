@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft,
-  MessageSquare,
   ExternalLink,
   Phone,
   Mail,
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import type { Client } from "@/types/client";
 import { cn } from "@/lib/utils";
 import { HIDDEN, useFieldMask } from "@/lib/staff/mask";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface ClientInfoStripProps {
   client: Client;
@@ -30,6 +30,7 @@ export function ClientInfoStrip({
   // Hide contact details from staff without view_client_contact_info (Table 21).
   // TODO: also strip server-side when a backend exists.
   const { canSee } = useFieldMask();
+  const { t } = useStaffText("clientStrip");
   const showContact = canSee("client_contact");
 
   const hasMembership =
@@ -49,8 +50,8 @@ export function ClientInfoStrip({
           href={backHref}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
         >
-          <ArrowLeft className="size-3.5" />
-          Back to client profile
+          <ArrowLeft className="size-4" />
+          {t("backToClient")}
         </Link>
         {currentContext && (
           <span className="text-muted-foreground text-xs">
@@ -147,23 +148,13 @@ export function ClientInfoStrip({
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-1.5 rounded-lg shadow-sm"
-          >
-            <MessageSquare className="size-4" />
-            <span className="hidden sm:inline">Message</span>
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="h-9 gap-1.5 rounded-lg shadow-sm"
-            asChild
-          >
+          {/* A "Message" button stood here with no handler at all. The
+              contact row above already reaches the client by email and by
+              phone. */}
+          <Button variant="outline" size="sm" asChild>
             <Link href={backHref}>
-              <ExternalLink className="size-3.5" />
-              <span className="hidden sm:inline">Full Profile</span>
+              <ExternalLink className="size-4" />
+              {t("fullProfile")}
             </Link>
           </Button>
         </div>

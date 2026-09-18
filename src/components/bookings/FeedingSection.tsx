@@ -3,10 +3,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,73 +10,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   UtensilsCrossed,
   Clock,
   CheckCircle2,
   Circle,
   Ban,
-  Plus,
 } from "lucide-react";
-import { toast } from "sonner";
-import { facilityConfig } from "@/data/facility-config";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { formatTime, formatTimeOfDay } from "@/lib/i18n/format";
+import { SHIPPED_CARE_TASK_FEEDBACK } from "@/lib/settings/care-task-feedback";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { FeedingEntry } from "@/types/booking";
+
+// ============================================================================
+// Today's meals on the booking page, and how each one went.
+//
+// Translated as it was touched, and two things corrected:
+//
+//   · The outcomes it offered came from `facilityConfig.careTaskFeedback` — a
+//     fixture — while the day-care board read the facility's own
+//     `care_task_feedback` setting, so the same meal could be logged with
+//     options one screen offered and the other did not. Both read the setting.
+//     A facility that has not set its own sees the shipped options in its
+//     language; one that has sees its own words.
+//   · "Add Meal" added a row to this component's state and nothing else — the
+//     comment beside it said so — and a reload lost it. Meals are planned in
+//     the booking itself (Edit the booking), which is where it went.
+// ============================================================================
 
 interface FeedingSectionProps {
   entries: FeedingEntry[];
   required?: boolean;
   /**
-   * Whether staff may log a meal or add one here.
-   *
-   * FALSE on the booking page, and that is not a permission decision — it is
-   * that neither action writes anything. `handleLog` and `handleAdd` below set
-   * component state and toast; a reload loses both. That was invisible while
-   * this panel was empty for every real booking, and became reachable the
-   * moment it started rendering the owner's schedule, so the controls are
-   * hidden rather than left to lose somebody's work.
-   *
-   * TRUE again on the booking page as of the care-log table
-   * (20260819140000) — but only when `onLog` is supplied, because that is what
-   * makes it persist.
+   * Whether staff may log a meal here — only when `onLog` is supplied, since
+   * that is what makes it persist (the care log, 20260819140000).
    */
   canLog?: boolean;
   /**
    * Record a meal. The parent owns the write and the refetch; this panel just
    * says which slot and how it went.
-   *
-   * Absent means the panel is a display, which is what it was before there was
-   * anywhere to write to.
    */
   onLog?: (entryId: string, outcome: string) => void;
 }
 
-const FEEDBACK_OPTIONS = facilityConfig.careTaskFeedback.feeding;
-
-const MEAL_LABELS = ["Breakfast", "Lunch", "Dinner", "Snack", "Treats"];
-const FOOD_TYPES = [
-  "Dry Kibble",
-  "Wet Food",
-  "Raw",
-  "Homemade",
-  "Prescription Diet",
-  "Other",
-];
-
-function fmtTime(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function fmtTimestamp(ts: string) {
-  return new Date(ts).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-let _feedId = 100;
+// The shipped outcomes by their translated names (the journal's keys).
+const OUTCOME_KEYS: Record<string, string> = {
+  ate_all: "journalOutcomeAteAll",
+  ate_most: "journalOutcomeAteMost",
+  ate_some: "journalOutcomeAteSome",
+  ate_little: "journalOutcomeAteLittle",
+  refused: "journalOutcomeRefused",
+};
 
 export function FeedingSection({
   entries,
@@ -88,233 +69,98 @@ export function FeedingSection({
   canLog = true,
   onLog,
 }: FeedingSectionProps) {
-  const [items, setItems] = useState(entries);
-  const [addOpen, setAddOpen] = useState(false);
-  const [newEntry, setNewEntry] = useState({
-    label: "Breakfast",
-    time: "08:00",
-    amount: "",
-    foodType: "",
-    instructions: "",
-  });
+  const { t, fill, locale } = useStaffText("bookingDetail");
+  const { settings } = useFacilitySettings();
+  const feedback = settings.care_task_feedback;
+  const options = (
+    feedback.configured
+      ? feedback.value.feeding
+      : SHIPPED_CARE_TASK_FEEDBACK.feeding
+  ).map((option) => ({
+    value: option.value,
+    // The facility's own words when it chose them; ours in its language
+    // when it did not.
+    label:
+      !feedback.configured && OUTCOME_KEYS[option.value]
+        ? t(OUTCOME_KEYS[option.value])
+        : option.label,
+  }));
+  const outcomeLabel = (value?: string) =>
+    options.find((o) => o.value === value)?.label ?? value;
 
-  const handleLog = (id: string, feedback: string) => {
+  const [items, setItems] = useState(entries);
+
+  const handleLog = (id: string, outcome: string) => {
     // Optimistic, then authoritative: the row turns over immediately and the
-    // parent's refetch replaces it with what the database stored. This used to
-    // be the ONLY thing that happened, which is why a reload lost it.
+    // parent's refetch replaces it with what the database stored.
     setItems((prev) =>
       prev.map((e) =>
         e.id === id
           ? {
               ...e,
               status: "completed" as const,
-              feedback:
-                FEEDBACK_OPTIONS.find((o) => o.value === feedback)?.label ??
-                feedback,
-              completedBy: "You",
+              feedback: outcome,
+              completedBy: t("loggedByYou"),
               completedAt: new Date().toISOString(),
             }
           : e,
       ),
     );
-    onLog?.(id, feedback);
-  };
-
-  const handleAdd = () => {
-    if (!newEntry.amount && !newEntry.foodType) {
-      toast.error("Please fill in amount and food type");
-      return;
-    }
-    _feedId += 1;
-    setItems((prev) => [
-      ...prev,
-      {
-        id: `feed-new-${_feedId}`,
-        ...newEntry,
-        status: "pending" as const,
-      },
-    ]);
-    setNewEntry({
-      label: MEAL_LABELS[Math.min(items.length + 1, MEAL_LABELS.length - 1)],
-      time: "12:00",
-      amount: "",
-      foodType: "",
-      instructions: "",
-    });
-    setAddOpen(false);
-    // No toast: nothing is written. Adding an unplanned meal has no home in
-    // `care_log_entries` — that row executes a SCHEDULED task — so this stays
-    // local until the schedule can be amended. `canLog` hides it meanwhile.
+    onLog?.(id, outcome);
   };
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="bg-muted/30 pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
-            <UtensilsCrossed className="size-3.5" />
-            Feeding Instructions
-            {required && (
-              <Badge variant="destructive" className="text-[10px] normal-case">
-                Required
-              </Badge>
-            )}
-          </CardTitle>
-          {canLog && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1 text-[11px]"
-              onClick={() => setAddOpen(!addOpen)}
-            >
-              <Plus className="size-3" />
-              Add Meal
-            </Button>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-ink-tertiary flex flex-wrap items-center gap-2 text-xs font-bold tracking-[.06em] uppercase">
+          <UtensilsCrossed className="size-4" />
+          {t("feedingTitle")}
+          {required && (
+            <Badge variant="destructive" className="normal-case">
+              {t("taskRequired")}
+            </Badge>
           )}
-        </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        {/* Inline add form */}
-        <Collapsible open={addOpen} onOpenChange={setAddOpen}>
-          <CollapsibleContent>
-            <div className="space-y-3 border-b py-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div>
-                  <Label className="text-[11px]">Meal</Label>
-                  <Select
-                    value={newEntry.label}
-                    onValueChange={(v) =>
-                      setNewEntry((p) => ({ ...p, label: v }))
-                    }
-                  >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MEAL_LABELS.map((l) => (
-                        <SelectItem key={l} value={l} className="text-xs">
-                          {l}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-[11px]">Time</Label>
-                  <Input
-                    type="time"
-                    value={newEntry.time}
-                    onChange={(e) =>
-                      setNewEntry((p) => ({ ...p, time: e.target.value }))
-                    }
-                    className="mt-1 h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px]">Amount</Label>
-                  <Input
-                    value={newEntry.amount}
-                    onChange={(e) =>
-                      setNewEntry((p) => ({ ...p, amount: e.target.value }))
-                    }
-                    placeholder="e.g. 1 cup"
-                    className="mt-1 h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px]">Food Type</Label>
-                  <Select
-                    value={newEntry.foodType}
-                    onValueChange={(v) =>
-                      setNewEntry((p) => ({ ...p, foodType: v }))
-                    }
-                  >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FOOD_TYPES.map((f) => (
-                        <SelectItem key={f} value={f} className="text-xs">
-                          {f}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label className="text-[11px]">Instructions (optional)</Label>
-                <Textarea
-                  value={newEntry.instructions}
-                  onChange={(e) =>
-                    setNewEntry((p) => ({ ...p, instructions: e.target.value }))
-                  }
-                  placeholder="e.g. Mix with warm water..."
-                  className="mt-1 min-h-[50px] text-xs"
-                  rows={2}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  onClick={() => setAddOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-7 text-[11px]"
-                  onClick={handleAdd}
-                >
-                  Add Meal
-                </Button>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Entries */}
         {items.length === 0 ? (
           <div className="py-6 text-center">
-            <UtensilsCrossed className="text-muted-foreground/20 mx-auto size-8" />
-            <p className="text-muted-foreground mt-2 text-xs">
-              {canLog
-                ? "No feeding instructions — click “Add Meal” to add"
-                : "No feeding instructions were given for this booking"}
+            <UtensilsCrossed className="text-ink-disabled mx-auto size-6" />
+            <p className="text-ink-secondary mt-2 text-sm">
+              {t("feedingNone")}
             </p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-line divide-y">
             {items.map((entry) => (
               <div key={entry.id} className="py-4 first:pt-4">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       {entry.status === "completed" ? (
-                        <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                        <CheckCircle2 className="text-success size-4 shrink-0" />
                       ) : entry.status === "skipped" ? (
-                        <Ban className="size-4 shrink-0 text-red-400" />
+                        <Ban className="text-destructive size-4 shrink-0" />
                       ) : (
-                        <Circle className="text-muted-foreground/30 size-4 shrink-0" />
+                        <Circle className="text-ink-disabled size-4 shrink-0" />
                       )}
-                      <span className="text-sm font-semibold">
+                      {/* The meal's name as the owner gave it. */}
+                      <span className="text-body-ink text-sm font-semibold">
                         {entry.label}
                       </span>
                     </div>
-                    <div className="text-muted-foreground mt-1 ml-6 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3" />
-                        {fmtTime(entry.time)}
+                    <div className="text-ink-secondary mt-1 ml-6 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                      <span className="flex items-center gap-1 tabular-nums">
+                        <Clock className="size-4" />
+                        {formatTimeOfDay(entry.time, locale)}
                       </span>
                       {entry.amount && <span>{entry.amount}</span>}
                       {entry.foodType && (
-                        <span className="font-medium">{entry.foodType}</span>
+                        <span className="font-semibold">{entry.foodType}</span>
                       )}
                     </div>
                     {entry.instructions && (
-                      <p className="text-muted-foreground mt-1 ml-6 text-xs italic">
+                      <p className="text-ink-secondary mt-1 ml-6 text-xs">
                         {entry.instructions}
                       </p>
                     )}
@@ -322,36 +168,33 @@ export function FeedingSection({
 
                   {entry.status === "completed" ? (
                     <div className="shrink-0 text-right">
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <span className="bg-wash-success text-success rounded-full px-2 py-0.5 text-xs font-semibold">
                         {/* A logged outcome arrives as its stored value
-                            ("ate_all"); one logged in this session arrives as
-                            a label. Both are put through the same lookup so
-                            the row reads the same either way. */}
-                        {FEEDBACK_OPTIONS.find(
-                          (o) => o.value === entry.feedback,
-                        )?.label ?? entry.feedback}
+                            ("ate_all"); both paths name it the same way. */}
+                        {outcomeLabel(entry.feedback)}
                       </span>
                       {entry.completedBy && (
-                        <p className="text-muted-foreground mt-0.5 text-[10px]">
-                          {entry.completedBy} at{" "}
+                        <p className="text-ink-tertiary mt-0.5 text-xs">
                           {entry.completedAt
-                            ? fmtTimestamp(entry.completedAt)
-                            : ""}
+                            ? fill("loggedByAt", {
+                                name: entry.completedBy,
+                                time: formatTime(entry.completedAt, locale),
+                              })
+                            : entry.completedBy}
                         </p>
                       )}
                     </div>
-                  ) : canLog ? (
+                  ) : canLog && onLog ? (
                     <Select onValueChange={(v) => handleLog(entry.id, v)}>
-                      <SelectTrigger className="h-7 w-[140px] text-[11px]">
-                        <SelectValue placeholder="Log meal..." />
+                      <SelectTrigger
+                        className="w-[180px] text-sm"
+                        aria-label={t("logMeal")}
+                      >
+                        <SelectValue placeholder={t("logMeal")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {FEEDBACK_OPTIONS.map((opt) => (
-                          <SelectItem
-                            key={opt.value}
-                            value={opt.value}
-                            className="text-xs"
-                          >
+                        {options.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
                         ))}
@@ -360,7 +203,7 @@ export function FeedingSection({
                   ) : null}
                 </div>
                 {entry.notes && (
-                  <p className="text-muted-foreground bg-muted/30 mt-1 ml-6 rounded-sm px-2 py-1 text-[11px]">
+                  <p className="border-line text-ink-secondary mt-1 ml-6 rounded-2xl border px-2 py-1 text-xs">
                     {entry.notes}
                   </p>
                 )}

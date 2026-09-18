@@ -71,6 +71,7 @@ import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useServiceName } from "@/lib/staff/use-service-name";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
 import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
@@ -149,16 +150,6 @@ function nightsBetween(start: string, end: string) {
     new Date(start + "T00:00:00").getTime();
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
 }
-
-// The built-in services by their key in the staff catalogue. Any other
-// service is a facility’s own and is shown by the name it was given.
-const SERVICE_KEYS: Record<string, string> = {
-  daycare: "svcDaycare",
-  boarding: "svcBoarding",
-  grooming: "svcGrooming",
-  training: "svcTraining",
-  evaluation: "svcEvaluation",
-};
 
 // ========================================
 // Page
@@ -258,6 +249,7 @@ export default function ClientBookingDetailPage({
     fill: detailFill,
     locale: detailLocale,
   } = useStaffText("bookingDetail");
+  const serviceName = useServiceName();
 
   const recordCare = useMutation({
     mutationFn: logCare,
@@ -733,10 +725,8 @@ export default function ClientBookingDetailPage({
         : `${pets[0].name} +${pets.length - 1}`;
   const petName = petLabel ?? bookingRef;
   const owed = balanceOf(booking);
-  // The service in the viewer's language; a facility's own custom service
-  // keeps the name it was given.
-  const serviceKey = SERVICE_KEYS[booking.service.toLowerCase()];
-  const serviceLabel = serviceKey ? detailT(serviceKey) : booking.service;
+  // The service in the viewer's language (use-service-name.ts).
+  const serviceLabel = serviceName(booking.service);
 
   const arrivalProblem = (error: unknown) => {
     const failure = arrivalFailure(error);

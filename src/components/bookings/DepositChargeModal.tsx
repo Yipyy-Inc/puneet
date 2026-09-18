@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeftRight, Banknote } from "lucide-react";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,6 +47,8 @@ export function DepositChargeModal({
   const [method, setMethod] = useState<DepositTender>("cash");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const { t, fill, locale } = useStaffText("depositCharge");
+  const money = (value: number) => formatMoney(value, locale);
 
   const amount = useRule ? ruleAmount : parseFloat(customAmount) || 0;
   const tax = taxFor && amount > 0 ? taxFor(amount) : 0;
@@ -54,8 +58,8 @@ export function DepositChargeModal({
     label: string;
     icon: typeof Banknote;
   }[] = [
-    { value: "cash", label: "Cash", icon: Banknote },
-    { value: "e_transfer", label: "E-Transfer", icon: ArrowLeftRight },
+    { value: "cash", label: t("cash"), icon: Banknote },
+    { value: "e_transfer", label: t("eTransfer"), icon: ArrowLeftRight },
   ];
 
   // The toast used to say "charged" before the page had written anything —
@@ -68,11 +72,7 @@ export function DepositChargeModal({
       await onCharge(amount, method);
       onOpenChange(false);
     } catch (error) {
-      setProblem(
-        error instanceof Error
-          ? error.message
-          : "The deposit was not recorded.",
-      );
+      setProblem(error instanceof Error ? error.message : t("notRecorded"));
     } finally {
       setBusy(false);
     }
@@ -82,12 +82,12 @@ export function DepositChargeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Charge Deposit</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           <p className="text-muted-foreground text-sm">
-            Deposit Rule: {ruleLabel}
+            {fill("ruleLine", { rule: ruleLabel })}
           </p>
 
           {/* Amount selection */}
@@ -100,10 +100,8 @@ export function DepositChargeModal({
                 className="accent-primary"
               />
               <span className="text-sm">
-                Use rule amount:{" "}
-                <strong className="tabular-nums">
-                  ${ruleAmount.toFixed(2)}
-                </strong>
+                {t("useRule")}{" "}
+                <strong className="tabular-nums">{money(ruleAmount)}</strong>
               </span>
             </label>
             <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5">
@@ -113,7 +111,7 @@ export function DepositChargeModal({
                 onChange={() => setUseRule(false)}
                 className="accent-primary"
               />
-              <span className="text-sm">Custom amount:</span>
+              <span className="text-sm">{t("customAmount")}</span>
               <Input
                 type="number"
                 value={customAmount}
@@ -121,7 +119,8 @@ export function DepositChargeModal({
                   setCustomAmount(e.target.value);
                   setUseRule(false);
                 }}
-                className="ml-auto h-8 w-24 text-right tabular-nums"
+                aria-label={t("customAmountLabel")}
+                className="ml-auto w-28 text-right tabular-nums"
                 min={0}
                 step={0.01}
                 placeholder="0.00"
@@ -131,8 +130,8 @@ export function DepositChargeModal({
 
           {/* Payment method */}
           <div>
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-              Payment Method
+            <p className="text-ink-tertiary mb-2 text-xs font-bold tracking-[.06em] uppercase">
+              {t("method")}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {methods.map((m) => {
@@ -140,12 +139,16 @@ export function DepositChargeModal({
                 return (
                   <button
                     key={m.value}
+                    type="button"
+                    aria-pressed={method === m.value}
                     onClick={() => setMethod(m.value)}
                     className={cn(
-                      "flex flex-col items-center gap-1 rounded-lg border p-2.5 text-xs font-medium transition-all",
+                      // Selected is a 2px ring and the primary ink, never a
+                      // tint (§6 rules 1 and 2).
+                      "flex min-h-10 flex-col items-center justify-center gap-1 rounded-2xl border p-2.5 text-xs font-semibold",
                       method === m.value
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "hover:bg-muted/50",
+                        ? "border-primary text-primary shadow-[inset_0_0_0_2px_var(--primary)]"
+                        : "text-body-ink",
                     )}
                   >
                     <Icon className="size-4" />
@@ -154,14 +157,11 @@ export function DepositChargeModal({
                 );
               })}
             </div>
-            <p className="text-ink-tertiary mt-2 text-xs">
-              This records money already in hand. A card is charged at checkout,
-              on the terminal or a saved card.
-            </p>
+            <p className="text-ink-tertiary mt-2 text-xs">{t("inHandNote")}</p>
           </div>
           {tax > 0 && (
             <p className="text-ink-secondary text-sm tabular-nums">
-              Plus ${tax.toFixed(2)} tax — ${(amount + tax).toFixed(2)} in all
+              {fill("plusTax", { tax: money(tax), total: money(amount + tax) })}
             </p>
           )}
           {problem && (
@@ -173,14 +173,14 @@ export function DepositChargeModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("keep")}
           </Button>
           <Button
             onClick={() => void handleCharge()}
             disabled={amount <= 0}
             loading={busy}
           >
-            Record deposit ${(amount + tax).toFixed(2)}
+            {fill("record", { amount: money(amount + tax) })}
           </Button>
         </DialogFooter>
       </DialogContent>

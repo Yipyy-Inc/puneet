@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { useMoveBookingLocation } from "@/lib/api/booking-status";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
 // Move a booking to another branch.
@@ -52,11 +53,12 @@ export function MoveBookingLocationDialog({
   const { locations } = useLocationContext();
   const [locationId, setLocationId] = useState<string | undefined>(undefined);
   const move = useMoveBookingLocation();
+  const { t, fill } = useStaffText("moveBooking");
 
   const selected = locationId ?? currentLocationId ?? undefined;
   const destination = locations.find((l) => l.id === selected);
   const currentName =
-    locations.find((l) => l.id === currentLocationId)?.name ?? "No branch";
+    locations.find((l) => l.id === currentLocationId)?.name ?? t("noBranch");
 
   const save = () => {
     if (!selected) return;
@@ -65,7 +67,9 @@ export function MoveBookingLocationDialog({
       {
         onSuccess: () => {
           toast.success(
-            `Moved to ${destination?.name ?? "the selected branch"}`,
+            destination?.name
+              ? fill("moved", { branch: destination.name })
+              : t("movedAnon"),
           );
           onOpenChange(false);
           setLocationId(undefined);
@@ -79,16 +83,15 @@ export function MoveBookingLocationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Move to another location</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            Currently at {currentName}. This changes which branch the booking
-            belongs to.
+            {fill("description", { branch: currentName })}
           </DialogDescription>
         </DialogHeader>
 
         <Select value={selected} onValueChange={setLocationId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Choose a branch" />
+          <SelectTrigger className="w-full" aria-label={t("choose")}>
+            <SelectValue placeholder={t("choose")} />
           </SelectTrigger>
           <SelectContent>
             {locations.map((loc) => (
@@ -101,16 +104,16 @@ export function MoveBookingLocationDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("keep")}
           </Button>
           <Button
-            disabled={
-              !selected || selected === currentLocationId || move.isPending
-            }
-            className="bg-emerald-600 hover:bg-emerald-700"
+            disabled={!selected || selected === currentLocationId}
+            loading={move.isPending}
             onClick={save}
           >
-            {move.isPending ? "Moving…" : "Move"}
+            {destination?.name && selected !== currentLocationId
+              ? fill("moveTo", { branch: destination.name })
+              : t("move")}
           </Button>
         </DialogFooter>
       </DialogContent>

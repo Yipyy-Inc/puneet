@@ -12,6 +12,7 @@ import { TagList } from "@/components/shared/TagList";
 import { useTagsForEntity } from "@/hooks/use-tags-notes";
 import type { TagType } from "@/types/tags";
 import { cn } from "@/lib/utils";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 interface TagsButtonProps {
   entityType: TagType;
@@ -25,6 +26,7 @@ export function TagsButton({
   className,
 }: TagsButtonProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useStaffText("recordButtons");
   const { tags, hasCritical, hasWarning } = useTagsForEntity(
     entityType,
     entityId,
@@ -39,21 +41,20 @@ export function TagsButton({
           variant="outline"
           size="sm"
           className={cn(
-            "h-8 gap-1.5 rounded-lg text-xs",
-            hasAlert &&
-              "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
+            "gap-1.5 text-sm",
+            hasAlert && "border-destructive text-destructive",
             className,
           )}
         >
-          <Tags className="size-3.5" />
-          Tags
+          <Tags className="size-4" />
+          {t("tags")}
           {count > 0 && (
             <span
               className={cn(
-                "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                "flex size-5 items-center justify-center rounded-full text-xs font-bold tabular-nums",
                 hasAlert
-                  ? "bg-red-200 text-red-800"
-                  : "bg-muted text-muted-foreground",
+                  ? "bg-wash-error text-destructive"
+                  : "bg-muted text-ink-secondary",
               )}
             >
               {count}
@@ -66,8 +67,8 @@ export function TagsButton({
         className="w-[320px] p-4"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wider uppercase">
-          Tags
+        <p className="text-ink-tertiary mb-3 text-xs font-bold tracking-[.06em] uppercase">
+          {t("tags")}
         </p>
         <TagList
           entityType={entityType}
@@ -76,8 +77,8 @@ export function TagsButton({
           maxVisible={20}
         />
         {count === 0 && (
-          <p className="text-muted-foreground mt-2 text-center text-xs">
-            No tags assigned
+          <p className="text-ink-secondary mt-2 text-center text-sm">
+            {t("noTags")}
           </p>
         )}
       </PopoverContent>

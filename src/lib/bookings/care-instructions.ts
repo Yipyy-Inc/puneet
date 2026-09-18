@@ -132,8 +132,9 @@ export function medicationEntriesFromItems(
   if (!medications?.length) return [];
 
   return medications.map((med) => {
+    // The purpose travels on its own (`purpose`), so a screen words it in its
+    // own language rather than reading an English "For …" out of the notes.
     const instructions = [
-      med.purpose?.trim() ? `For ${med.purpose.trim()}` : "",
       med.adminNotes?.trim(),
       med.givenWithNotes?.trim(),
       med.frequencyNotes?.trim(),
@@ -149,6 +150,9 @@ export function medicationEntriesFromItems(
       dosage: [med.amount, med.strength].filter(Boolean).join(" ").trim(),
       method: humanise(med.form),
       frequency: humanise(med.frequency),
+      formId: med.form,
+      frequencyId: med.frequency,
+      purpose: med.purpose?.trim() || undefined,
       times: med.times,
       instructions: instructions || undefined,
       // `isHighRisk` is the owner's flag and `isCritical` is the panel's; they

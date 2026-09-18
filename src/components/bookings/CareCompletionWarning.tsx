@@ -12,13 +12,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { PendingCareItem } from "@/lib/care-completion";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { cn } from "@/lib/utils";
 
-interface CareCompletionWarningProps {
-  pending: PendingCareItem[];
-  hasCritical: boolean;
-}
+// ============================================================================
+// The question checkout asks when today's meals or doses are not logged.
+//
+// Translated as it was touched. It also exported an inline banner that nothing
+// rendered; that is gone.
+// ============================================================================
 
 interface CareCompletionDialogProps {
   open: boolean;
@@ -29,79 +32,7 @@ interface CareCompletionDialogProps {
   onClose: () => void;
 }
 
-/** Inline banner that lives at the top of the InvoicePanel when items are pending. */
-export function CareCompletionInlineBanner({
-  pending,
-  hasCritical,
-}: CareCompletionWarningProps) {
-  if (pending.length === 0) return null;
-
-  const summary = buildSummary(pending);
-  const firstDomId = pending[0]?.domId;
-
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-2.5 rounded-lg border px-3 py-2.5",
-        hasCritical
-          ? "border-rose-300 bg-rose-50"
-          : "border-amber-300 bg-amber-50",
-      )}
-      role="alert"
-    >
-      <div
-        className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-full",
-          hasCritical ? "bg-rose-100" : "bg-amber-100",
-        )}
-      >
-        <AlertTriangle
-          className={cn(
-            "size-4",
-            hasCritical ? "text-rose-700" : "text-amber-700",
-          )}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p
-          className={cn(
-            "text-xs font-semibold",
-            hasCritical ? "text-rose-900" : "text-amber-900",
-          )}
-        >
-          {pending.length} care item{pending.length > 1 ? "s" : ""} not logged
-          today
-          {hasCritical && (
-            <span className="ml-1.5 rounded-full bg-rose-200 px-1.5 py-0 text-[9px] font-bold tracking-wider text-rose-900 uppercase">
-              Critical
-            </span>
-          )}
-        </p>
-        <p
-          className={cn(
-            "mt-0.5 text-[11px]",
-            hasCritical ? "text-rose-800/80" : "text-amber-800/80",
-          )}
-        >
-          {summary}. Please confirm before checkout.
-        </p>
-        <button
-          type="button"
-          onClick={() => scrollToDomId(firstDomId)}
-          className={cn(
-            "mt-1 inline-flex items-center gap-1 text-[11px] font-semibold underline-offset-2 hover:underline",
-            hasCritical ? "text-rose-800" : "text-amber-800",
-          )}
-        >
-          Review Care
-          <ArrowDown className="size-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Confirmation modal that gates checkout when there are pending items. */
+/** Confirmation that gates checkout when there are pending items. */
 export function CareCompletionGateDialog({
   open,
   pending,
@@ -110,6 +41,14 @@ export function CareCompletionGateDialog({
   onContinueAnyway,
   onClose,
 }: CareCompletionDialogProps) {
+  const { t, fill } = useStaffText("careGate");
+  // An owner's own item is named as they wrote it; an incident's carries its
+  // reference, which never passes through the locale layer (§5r).
+  const label = (item: PendingCareItem) =>
+    item.incidentId
+      ? fill("fromIncident", { item: item.label, id: item.incidentId })
+      : item.label;
+
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
       <AlertDialogContent>
@@ -117,99 +56,61 @@ export function CareCompletionGateDialog({
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle
               className={cn(
-                "size-5",
-                hasCritical ? "text-rose-600" : "text-amber-600",
+                "size-5 shrink-0",
+                hasCritical ? "text-destructive" : "text-warning",
               )}
             />
-            {pending.length} care item{pending.length > 1 ? "s" : ""} not logged
+            {fill(pending.length === 1 ? "titleOne" : "titleMany", {
+              n: pending.length,
+            })}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {hasCritical
-              ? "One or more critical medications haven't been recorded as given today. Please verify before closing this booking out."
-              : "These were scheduled for today but haven't been marked complete yet. Make sure they were given before checkout, or confirm the pet didn't need them."}
+            {hasCritical ? t("bodyCritical") : t("body")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="bg-muted/30 mt-2 max-h-64 space-y-1.5 overflow-y-auto rounded-md border p-3">
+        <ul className="border-line mt-2 max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border p-3">
           {pending.map((item, i) => {
             const Icon = item.kind === "feeding" ? Utensils : Pill;
             return (
-              <div
-                key={i}
-                className="bg-background flex items-start gap-2 rounded-md px-2.5 py-1.5"
-              >
+              <li key={i} className="flex items-start gap-2 px-1 py-1">
                 <Icon
                   className={cn(
-                    "mt-0.5 size-3.5 shrink-0",
-                    item.isCritical ? "text-rose-600" : "text-muted-foreground",
+                    "mt-0.5 size-4 shrink-0",
+                    item.isCritical ? "text-destructive" : "text-ink-tertiary",
                   )}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">
-                    {itemLabel(item)}
+                  <p className="text-body-ink text-sm font-semibold">
+                    {label(item)}
                     {item.isCritical && (
-                      <span className="ml-1.5 text-[9px] font-bold tracking-wider text-rose-700 uppercase">
-                        Critical
+                      <span className="text-destructive ml-1.5 text-xs font-bold tracking-[.06em] uppercase">
+                        {t("critical")}
                       </span>
                     )}
                   </p>
                   {item.scheduleNote && (
-                    <p className="text-muted-foreground text-[10px]">
+                    <p className="text-ink-tertiary text-xs">
                       {item.scheduleNote}
                     </p>
                   )}
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>{t("keep")}</AlertDialogCancel>
           <Button variant="outline" onClick={onReview}>
-            <ArrowDown className="size-3.5" />
-            Review Care
+            <ArrowDown className="size-4" />
+            {t("review")}
           </Button>
-          <AlertDialogAction
-            onClick={onContinueAnyway}
-            className={
-              hasCritical
-                ? "bg-rose-600 hover:bg-rose-700"
-                : "bg-amber-600 hover:bg-amber-700"
-            }
-          >
-            Continue Anyway
+          <AlertDialogAction onClick={onContinueAnyway}>
+            {t("continue")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-/** Item name with its incident reference appended, e.g.
- *  "Wound cream (Incident INC-007)". Owner-provided items are unchanged. */
-function itemLabel(item: PendingCareItem): string {
-  return item.incidentId
-    ? `${item.label} (Incident ${item.incidentId})`
-    : item.label;
-}
-
-function buildSummary(pending: PendingCareItem[]): string {
-  if (pending.length === 0) return "";
-  if (pending.length === 1) return itemLabel(pending[0]);
-  if (pending.length === 2)
-    return `${itemLabel(pending[0])} and ${itemLabel(pending[1])}`;
-  return `${itemLabel(pending[0])}, ${itemLabel(pending[1])}, and ${pending.length - 2} more`;
-}
-
-function scrollToDomId(domId: string | undefined): void {
-  if (!domId || typeof document === "undefined") return;
-  const el = document.getElementById(domId);
-  if (!el) return;
-  el.scrollIntoView({ behavior: "smooth", block: "start" });
-  // Brief highlight pulse for visual orientation
-  el.classList.add("ring-2", "ring-amber-400", "ring-offset-2");
-  setTimeout(() => {
-    el.classList.remove("ring-2", "ring-amber-400", "ring-offset-2");
-  }, 1800);
 }

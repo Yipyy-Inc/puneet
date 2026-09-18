@@ -1,6 +1,11 @@
 "use client";
 
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import {
+  formatDateLong,
+  formatMoney as formatMoneyIn,
+} from "@/lib/i18n/format";
+import type { AppLocale } from "@/lib/language-settings";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -68,12 +73,12 @@ const BUILTIN_ICONS: Record<string, typeof Sun> = {
   training: GraduationCap,
 };
 
-const POLICY_LABEL: Record<EarlyCheckoutPolicy, string> = {
-  none: "No refund",
-  full_refund: "Full refund",
-  partial_refund: "Partial refund",
-  credit: "Store credit",
-  fee: "Early checkout fee",
+const POLICY_KEY: Record<EarlyCheckoutPolicy, string> = {
+  none: "policyNone",
+  full_refund: "policyFullRefund",
+  partial_refund: "policyPartialRefund",
+  credit: "policyCredit",
+  fee: "policyFee",
 };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -184,22 +189,12 @@ function computeAdjustment(
   };
 }
 
+function money(n: number, locale: AppLocale): string {
+  return formatMoneyIn(n, locale);
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
-}
-
-function formatMoney(n: number): string {
-  return `$${n.toFixed(2)}`;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export function CheckOutDialog({
@@ -210,6 +205,7 @@ export function CheckOutDialog({
   onConfirm,
 }: CheckOutDialogProps) {
   const settings = useSettings();
+  const { t, fill, locale } = useStaffText("checkOutDialog");
   const moduleConfig = getServiceConfig(booking.serviceKey, settings);
   const policy = moduleConfig?.settings.earlyCheckout;
 
@@ -276,14 +272,14 @@ export function CheckOutDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <LogOut className="size-4" />
-            {isEarlyCheckout ? "Early Checkout" : "Check Out"}
-            <span className="text-muted-foreground font-normal">
+            {isEarlyCheckout ? t("titleEarly") : t("title")}
+            <span className="text-ink-tertiary font-normal tabular-nums">
               #{booking.rawId}
             </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="bg-muted/30 flex items-center gap-3 rounded-2xl border p-3">
+        <div className="border-line flex items-center gap-3 rounded-2xl border p-3">
           {petImage ? (
             <div className="ring-background size-14 overflow-hidden rounded-2xl ring-2">
               <Image
@@ -326,10 +322,15 @@ export function CheckOutDialog({
             {isBoarding && (
               <p className="text-muted-foreground mt-0.5 text-xs">
                 <CalendarClock className="mr-1 inline size-3" />
-                Scheduled {formatDate(booking.scheduledStart)} →{" "}
-                {formatDate(booking.scheduledEnd)}
+                {fill("scheduled", {
+                  start: formatDateLong(booking.scheduledStart, locale),
+                  end: formatDateLong(booking.scheduledEnd, locale),
+                })}
                 {booking.totalNights
-                  ? ` · ${booking.totalNights} night${booking.totalNights > 1 ? "s" : ""}`
+                  ? ` · ${fill(
+                      booking.totalNights > 1 ? "nightsMany" : "nightsOne",
+                      { n: booking.totalNights },
+                    )}`
                   : ""}
               </p>
             )}
@@ -345,7 +346,7 @@ export function CheckOutDialog({
           >
             {isBoarding && (
               <div className="grid gap-2">
-                <Label className="text-sm font-medium">Check-out Date</Label>
+                <Label className="text-sm font-medium">{t("date")}</Label>
                 <DatePicker
                   value={date}
                   onValueChange={(next) => {
@@ -357,14 +358,14 @@ export function CheckOutDialog({
                   popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
                   calendarClassName="p-1"
                   showQuickPresets={false}
-                  placeholder="Select check-out date"
+                  placeholder={t("datePlaceholder")}
                 />
               </div>
             )}
 
             <div className="grid gap-2">
               <Label htmlFor="check-out-time" className="text-sm font-medium">
-                Check-out Time
+                {t("time")}
               </Label>
               <TimePickerLux
                 id="check-out-time"
@@ -381,14 +382,14 @@ export function CheckOutDialog({
                 htmlFor="early-checkout-reason"
                 className="text-sm font-medium"
               >
-                Reason
+                {t("reason")}
               </Label>
               <Textarea
                 id="early-checkout-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Owner returning early from trip, pet not adjusting well…"
-                className="h-20 resize-none text-sm"
+                placeholder={t("reasonPlaceholder")}
+                className="min-h-20 resize-none text-sm"
               />
             </div>
           )}
@@ -403,26 +404,18 @@ export function CheckOutDialog({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("keep")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={
               !!earlyCheckoutDisabled || (isEarlyCheckout && !reason.trim())
             }
-            className={cn(
-              "gap-1",
-              isEarlyCheckout
-                ? "bg-amber-600 text-white hover:bg-amber-700"
-                : "bg-violet-600 text-white hover:bg-violet-700",
-            )}
           >
-            <LogOut className="size-3.5" />
-            {isEarlyCheckout
-              ? "Confirm Early Checkout"
-              : adjustment && adjustment.unusedNights > 0
-                ? "Confirm Early Checkout"
-                : "Check Out"}
+            <LogOut className="size-4" />
+            {isEarlyCheckout || (adjustment && adjustment.unusedNights > 0)
+              ? t("confirmEarly")
+              : fill("checkOutPet", { pet: booking.petName })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -438,26 +431,27 @@ function EarlyCheckoutSummary({
   disabledByPolicy: boolean;
 }) {
   const { t: earlyText } = useStaffText("bookingActions");
+  const { t, fill, locale } = useStaffText("checkOutDialog");
   const { unusedNights, unusedValue, policy, customerNote } = adjustment;
 
   return (
-    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-      <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
-        <AlertTriangle className="size-4" />
-        Early Checkout ·{" "}
-        <span className="font-normal">{POLICY_LABEL[policy]}</span>
+    <div className="border-warning space-y-3 rounded-2xl border p-3">
+      <div className="text-body-ink flex flex-wrap items-center gap-2 text-sm font-semibold">
+        <AlertTriangle className="text-warning size-4" />
+        {t("summaryTitle")} ·{" "}
+        <span className="font-normal">{t(POLICY_KEY[policy])}</span>
       </div>
 
       {disabledByPolicy ? (
         <Alert variant="destructive" className="text-xs">
           <AlertDescription>
-            Early checkout is currently disabled for boarding.{" "}
+            {t("disabled")}{" "}
             <Link
               href="/facility/dashboard/services/boarding/settings#early-checkout"
               className="inline-flex items-center gap-1 underline"
             >
-              <Settings className="size-3" />
-              Configure policy
+              <Settings className="size-4" />
+              {t("setPolicy")}
             </Link>
           </AlertDescription>
         </Alert>
@@ -465,8 +459,8 @@ function EarlyCheckoutSummary({
         <>
           <div className="space-y-1 text-xs">
             <Row
-              label={`Unused nights (${unusedNights})`}
-              value={formatMoney(unusedValue)}
+              label={fill("unusedNights", { n: unusedNights })}
+              value={money(unusedValue, locale)}
               muted
             />
           </div>
@@ -478,7 +472,7 @@ function EarlyCheckoutSummary({
             {earlyText("earlyCheckoutNotApplied")}
           </p>
           {customerNote && (
-            <p className="text-[11px] leading-snug text-amber-900/80 italic dark:text-amber-200/80">
+            <p className="text-ink-secondary text-xs leading-snug">
               {customerNote}
             </p>
           )}
@@ -501,17 +495,17 @@ function Row({
 }) {
   const accentClass =
     accent === "emerald"
-      ? "text-emerald-700 dark:text-emerald-300"
+      ? "text-success"
       : accent === "blue"
-        ? "text-blue-700 dark:text-blue-300"
+        ? "text-info"
         : accent === "rose"
-          ? "text-rose-700 dark:text-rose-300"
+          ? "text-destructive"
           : "";
   return (
     <div
       className={cn(
         "flex items-center justify-between",
-        muted && "text-muted-foreground",
+        muted && "text-ink-secondary",
       )}
     >
       <span>{label}</span>
