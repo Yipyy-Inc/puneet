@@ -53,7 +53,7 @@
     "src/app/dashboard/facilities/[id]/_components/module-entitlement-row.tsx": 8,
     "src/app/dashboard/facilities/[id]/_components/not-yet-real.tsx": 1,
     "src/app/dashboard/facilities/[id]/_components/owner-invitation.tsx": 23,
-    "src/app/dashboard/facilities/[id]/page.tsx": 28,
+    "src/app/dashboard/facilities/[id]/page.tsx": 20,
     "src/app/dashboard/facilities/page.tsx": 44,
     "src/app/dashboard/facilities/requests/_components/facility-requests-client.tsx": 16,
     "src/app/dashboard/facilities/requests/_components/reject-request-dialog.tsx": 8,

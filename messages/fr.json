@@ -8070,7 +8070,21 @@
       "method_e-transfer": "Virement Interac",
       "method_gift-card": "Carte-cadeau",
       "method_ach": "Virement bancaire",
-      "searchBookings": "Réservations"
+      "searchBookings": "Réservations",
+      "bookingsColRef": "Réservation",
+      "bookingsColClient": "Client",
+      "bookingsColService": "Service",
+      "bookingsColWhen": "Début",
+      "bookingsColStatus": "Statut",
+      "bookingsColTotal": "Total",
+      "bookingsColPaid": "Payé",
+      "bookingsFilterPlaceholder": "Numéro de réservation, client ou animal",
+      "bookingsFilterAction": "Rechercher",
+      "bookingsLoading": "Chargement des réservations…",
+      "bookingsCount": "{shown} réservations sur {total}",
+      "bookingsPrev": "Précédent",
+      "bookingsNext": "Suivant",
+      "bookingsPageOf": "Page {page} sur {last}"
     },
     "booking": {
       "savedPricingFor": "Tarif enregistré pour {pet}",

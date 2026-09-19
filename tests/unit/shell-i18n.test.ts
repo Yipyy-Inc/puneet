@@ -35,6 +35,9 @@ const GROUPS = Object.keys(enShell) as ShellGroup[];
  */
 const SAME_IN_BOTH = new Set([
   "admin.bookingClient", // Client / Client
+  "admin.bookingsColClient", // Client / Client
+  "admin.bookingsColService", // Service / Service
+  "admin.bookingsColTotal", // Total / Total
   "admin.bookingTotal", // Total / Total
   "admin.method_terminal", // Terminal / Terminal — the card reader
   "payments.cardCvv", // CVV / CVV — the card's own label

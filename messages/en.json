@@ -8070,7 +8070,21 @@
       "method_e-transfer": "E-transfer",
       "method_gift-card": "Gift card",
       "method_ach": "Bank transfer",
-      "searchBookings": "Bookings"
+      "searchBookings": "Bookings",
+      "bookingsColRef": "Booking",
+      "bookingsColClient": "Client",
+      "bookingsColService": "Service",
+      "bookingsColWhen": "Starts",
+      "bookingsColStatus": "Status",
+      "bookingsColTotal": "Total",
+      "bookingsColPaid": "Paid",
+      "bookingsFilterPlaceholder": "Booking number, client or pet",
+      "bookingsFilterAction": "Search bookings",
+      "bookingsLoading": "Loading bookings…",
+      "bookingsCount": "{shown} of {total} bookings",
+      "bookingsPrev": "Previous",
+      "bookingsNext": "Next",
+      "bookingsPageOf": "Page {page} of {last}"
     },
     "booking": {
       "savedPricingFor": "Saved pricing for {pet}",

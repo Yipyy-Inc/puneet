@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AdminFacilityRow } from "@/types/admin-facility";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
+import { FacilityBookings } from "./_components/facility-bookings";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import {
+  CalendarCheck,
   ArrowLeft,
   Building,
   Users,
@@ -76,6 +78,7 @@ const tabs = [
     name: "Clients",
     icon: UserCheck,
   },
+  { id: "bookings", name: "Bookings", icon: CalendarCheck },
   {
     id: "staff",
     name: "Staff",
@@ -200,6 +203,8 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
       case "clients":
         return <FacilityClients facilityId={facility.id} />;
 
+      case "bookings":
+        return <FacilityBookings facilityId={facility.id} />;
       case "staff":
         return <FacilityStaff facilityId={facility.id} />;
 

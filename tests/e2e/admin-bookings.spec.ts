@@ -131,3 +131,57 @@ test("signed out gets 401", async ({ request }) => {
   });
   expect(res.status()).toBe(401);
 });
+
+test("a facility's bookings tab lists its own, paged, and is refused to others", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.admin);
+  const detail = (await (
+    await page.request.get(`/api/admin/bookings/${ref}`)
+  ).json()) as { facility: { id: string } };
+  const facilityId = detail.facility.id;
+
+  const listed = await page.request.get(
+    `/api/facilities/${facilityId}/bookings?q=${ref}`,
+  );
+  expect(listed.status(), await listed.text()).toBe(200);
+  const body = (await listed.json()) as {
+    rows: Array<{ ref: number; clientName: string | null }>;
+    total: number;
+    pageSize: number;
+    timezone: string;
+  };
+  expect(body.rows.map((r) => r.ref)).toEqual([ref]);
+  expect(body.rows[0]?.clientName).toBeTruthy();
+  expect(body.timezone).toBeTruthy();
+
+  // Paged: page 1 of everything the facility has, at most a page's worth.
+  const firstPage = (await (
+    await page.request.get(`/api/facilities/${facilityId}/bookings`)
+  ).json()) as { rows: unknown[]; total: number; pageSize: number };
+  expect(firstPage.rows.length).toBeLessThanOrEqual(firstPage.pageSize);
+  expect(firstPage.total).toBeGreaterThanOrEqual(firstPage.rows.length);
+
+  await page.goto(`/dashboard/facilities/${facilityId}?tab=bookings`);
+  await page
+    .getByPlaceholder(/booking number, client or pet/i)
+    .fill(String(ref));
+  await page.getByRole("button", { name: /^search bookings$/i }).click();
+  await expect(
+    page.getByRole("link", { name: new RegExp(formatBookingRef(ref)) }).first(),
+  ).toBeVisible({ timeout: 60_000 });
+
+  // The facility's own owner reads their bookings in their own portal, never
+  // through the platform's route.
+  const owner = await page.context().browser()!.newContext();
+  const ownerPage = await owner.newPage();
+  try {
+    await signIn(ownerPage, ACCOUNTS.owner);
+    const refused = await ownerPage.request.get(
+      `/api/facilities/${facilityId}/bookings`,
+    );
+    expect(refused.status()).toBe(403);
+  } finally {
+    await owner.close();
+  }
+});

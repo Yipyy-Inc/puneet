@@ -18007,3 +18007,14 @@ and not the facility's own. They need a translated vocabulary of their own.
 Not done: the admin portal outside these screens is still untranslated and
 largely fixture-backed (invoices, tickets, team in search; the dashboard's
 builders). See round 4 parts B and C.
+
+## 2026-09-19 — A facility's bookings, on its admin page (round 4, part B)
+
+`/api/facilities/[id]/bookings` (platform members, read-only) pages a
+facility's bookings newest first, with a count, and searches by booking
+number or — through `booking_search_names` — the client's name or any
+pet's. The facility page has a Bookings tab on `DataTable`: booking, client
+and pets, service, start, status, total, and paid as a hidden column. Times
+are the facility's own. Every row links to the read-only booking page.
+e2e: in `admin-bookings.spec.ts`, including the facility owner being
+refused the platform route.
