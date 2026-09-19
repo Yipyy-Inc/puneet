@@ -3,11 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
-import {
-  SETTING_DOMAINS,
-  defaultSettings,
-  isSettingDomain,
-} from "@/lib/settings/domains";
+import { settingsFromRows } from "@/lib/settings/from-rows";
+import { SETTING_DOMAINS, isSettingDomain } from "@/lib/settings/domains";
 
 // ============================================================================
 // A facility's configuration, per domain.
@@ -55,22 +52,7 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const settings = defaultSettings();
-
-  for (const row of data ?? []) {
-    if (!isSettingDomain(row.domain)) continue;
-
-    // A stored value that no longer matches its schema is IGNORED in favour of
-    // the default, not merged and not thrown. Merging would hand a screen a
-    // half-shaped object it has no way to detect; throwing would take the whole
-    // settings page down because one domain drifted after a schema change.
-    const parsed = SETTING_DOMAINS[row.domain].schema.safeParse(row.value);
-    if (!parsed.success) continue;
-
-    settings[row.domain] = { value: parsed.data, configured: true };
-  }
-
-  return NextResponse.json(settings);
+  return NextResponse.json(settingsFromRows(data ?? []));
 }
 
 export async function PATCH(request: NextRequest) {

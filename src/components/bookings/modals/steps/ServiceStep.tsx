@@ -27,6 +27,7 @@ import type { FacilityBookingFlowConfig } from "@/types/booking";
 import type { ModuleConfig } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { useSettingsAudience } from "@/lib/api/settings-audience";
 import { getAllServiceCategories } from "@/lib/service-registry";
 
 interface ServiceStepProps {
@@ -110,12 +111,14 @@ export function ServiceStep({
     [activeModules],
   );
 
+  // A customer reads their own facility's catalogue (lib/api/settings-audience).
+  const settingsAudience = useSettingsAudience();
   // Training is course-catalog-driven: the "service option" is a Course Type,
   // and its "From $X" comes from the cheapest live series for that course
   // (not a separate Programs/Rates entry). This is what makes the Course
   // Catalog the single source of truth in the booking flow.
   const { data: trainingCourseTypes = [] } = useQuery(
-    trainingQueries.courseTypes(),
+    trainingQueries.courseTypes(settingsAudience),
   );
   const { data: trainingSeries = [] } = useQuery(trainingQueries.series());
   const trainingFromPriceByCourse = useMemo(() => {

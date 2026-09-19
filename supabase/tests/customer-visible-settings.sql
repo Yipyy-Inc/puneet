@@ -266,6 +266,22 @@ begin
     'training_module_settings, training_pathways and training_disciplines are on the customer allowlist',
     array['training_module_settings', 'training_pathways', 'training_disciplines'] <@ domains,
     array_to_string(domains, ', '));
+  -- What the booking wizard prices and schedules with (a_customer_books_with_their_facilitys_own_settings).
+  perform pg_temp.t(12,
+    'the booking wizard''s domains are on the customer allowlist',
+    array['pricing_rules', 'deposit_rules', 'service_addons', 'care_fees',
+          'booking_approval', 'evaluation_config', 'daycare_rates',
+          'service_date_blocks', 'schedule_time_overrides',
+          'drop_off_pick_up_overrides', 'grooming_scheduling',
+          'training_programs', 'training_course_types'] <@ domains,
+    array_to_string(domains, ', '));
+  -- ...and nothing that is the facility's own business.
+  perform pg_temp.t(13,
+    'staff, payroll, messaging and integration domains stay off it',
+    not (domains && array['payroll_config', 'tip_attribution', 'calling',
+                         'messaging_policy', 'quickbooks', 'form_notifications',
+                         'incident_protocols', 'abandonment_recovery']),
+    array_to_string(domains, ', '));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

@@ -53,6 +53,7 @@ import {
   bookingClientSummaryQueries,
   summaryByClient,
 } from "@/lib/api/booking-client-summary";
+import { useSettingsAudience } from "@/lib/api/settings-audience";
 import { trainingQueries } from "@/lib/api/training";
 
 interface ClientPetStepProps {
@@ -141,9 +142,13 @@ export function ClientPetStep({
   onAddPet,
   mayOverrideEvaluation = false,
 }: ClientPetStepProps) {
+  // A customer reads their own facility's catalogue (lib/api/settings-audience).
+  const settingsAudience = useSettingsAudience();
   // Visit counts from the booking summary, not every booking the facility has.
   const { data: bookingSummary } = useQuery(bookingClientSummaryQueries.all());
-  const { data: trainingPrograms } = useQuery(trainingQueries.packages());
+  const { data: trainingPrograms } = useQuery(
+    trainingQueries.packages(settingsAudience),
+  );
   const t = useShellText("booking");
   const locale = useShellLocale();
   // ── Quick-create state ────────────────────────────────────────────────

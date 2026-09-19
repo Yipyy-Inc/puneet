@@ -29,6 +29,7 @@ import {
   type TrainingModuleSettings,
 } from "@/lib/training-module-settings";
 import type { TrainingDropInBooking } from "@/lib/training-drop-ins";
+import type { SettingsAudience } from "@/lib/api/settings-audience";
 
 /** Seeded dog-specific private session plans (mock), keyed by petId. Charlie
  *  (14) is a reactive dog doing 1-on-1 work (session-006, an adaptive Private
@@ -51,11 +52,12 @@ const seededPrivateSessionPlans: Record<number, CourseCurriculumWeek[]> = {
 // settings domains (lib/settings/training-catalog.ts). These read them; the
 // editors write them through useSaveTrainingCatalog. They were the fixtures,
 // and the editors "saved" with setQueryData.
-const disciplineList = () =>
+const disciplineList = (audience: SettingsAudience = "staff") =>
   fetchTrainingCatalog<TrainingDiscipline>(
     "training_disciplines",
     "disciplines",
     defaultTrainingDisciplines,
+    audience,
   );
 const exerciseList = () =>
   fetchTrainingCatalog<TrainingExerciseDef>(
@@ -71,11 +73,12 @@ const homeworkTemplateList = () =>
   );
 const pathwayList = () =>
   fetchTrainingCatalog<TrainingPathway>("training_pathways", "pathways", []);
-const courseTypeList = () =>
+const courseTypeList = (audience: SettingsAudience = "staff") =>
   fetchTrainingCatalog<TrainingCourseType>(
     "training_course_types",
     "courseTypes",
     defaultTrainingCourseTypes,
+    audience,
   );
 
 export const trainingQueries = {
@@ -139,19 +142,21 @@ export const trainingQueries = {
       progressRecords.filter((p) => p.enrollmentId === enrollmentId),
   }),
   // The facility's programs (training_programs), not @/data/training's.
-  packages: () => ({
-    queryKey: ["training", "packages"] as const,
-    queryFn: fetchTrainingPrograms,
+  /** `audience` "customer" reads the customer's own facility — see
+   *  lib/api/settings-audience.tsx. Keyed apart so the two never share. */
+  packages: (audience: SettingsAudience = "staff") => ({
+    queryKey: ["training", "packages", audience] as const,
+    queryFn: () => fetchTrainingPrograms(audience),
   }),
   /** Active course types from the Course Catalog — the single source of truth
    *  for what a client can book/enroll in. The booking flow scopes its series
    *  list to a chosen course type from this list. */
   // The catalogue's course types, plus any course a real series names that
   // the catalogue does not carry — otherwise that series could not be booked.
-  courseTypes: () => ({
-    queryKey: ["training", "course-types"] as const,
+  courseTypes: (audience: SettingsAudience = "staff") => ({
+    queryKey: ["training", "course-types", audience] as const,
     queryFn: async () => [
-      ...(await courseTypeList()).filter((c) => c.isActive),
+      ...(await courseTypeList(audience)).filter((c) => c.isActive),
       ...(await fetchTrainingBook()).extraCourseTypes,
     ],
   }),
@@ -159,7 +164,7 @@ export const trainingQueries = {
    *  inactive course types too. */
   allCourseTypes: () => ({
     queryKey: ["training", "course-types", "all"] as const,
-    queryFn: courseTypeList,
+    queryFn: () => courseTypeList(),
   }),
   // The facility's series and who is in them — the booking step, the
   // Students tab and make-ups read these. They were `@/data/training-series`.
@@ -185,15 +190,16 @@ export const trainingQueries = {
     queryKey: ["training", "series-enrollments", "all"] as const,
     queryFn: async () => (await fetchTrainingBook()).seriesEnrollments,
   }),
-  disciplines: () => ({
-    queryKey: ["training", "disciplines"] as const,
-    queryFn: async () => (await disciplineList()).filter((d) => d.isActive),
+  disciplines: (audience: SettingsAudience = "staff") => ({
+    queryKey: ["training", "disciplines", audience] as const,
+    queryFn: async () =>
+      (await disciplineList(audience)).filter((d) => d.isActive),
   }),
   /** Unfiltered discipline list — used by Settings → Training so staff can
    *  toggle inactive disciplines back on. */
   allDisciplines: () => ({
     queryKey: ["training", "disciplines", "all"] as const,
-    queryFn: disciplineList,
+    queryFn: () => disciplineList(),
   }),
   /** Homework templates — saved homework assignments a trainer can load
    *  into the post-session prompt or curate per course in the Course

@@ -119,7 +119,9 @@ export function CustomerTrainingCatalog({
   onJoinProgramWaitlist,
 }: Props) {
   const { t } = useCustomerText("training");
-  const { data: packages = [] } = useQuery(trainingQueries.packages());
+  const { data: packages = [] } = useQuery(
+    trainingQueries.packages("customer"),
+  );
   // The facility's own disciplines and pathways, through the client row —
   // trainingQueries goes through a staff membership, so a customer only ever
   // saw the shipped library.

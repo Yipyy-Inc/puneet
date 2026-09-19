@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { SettingsProvider } from "@/hooks/use-settings";
+import { SettingsAudienceProvider } from "@/lib/api/settings-audience";
 import {
   CustomServicesProvider,
   type CustomServicesAudience,
@@ -25,19 +26,27 @@ export function SettingsProviderWrapper({
   children: ReactNode;
   audience?: CustomServicesAudience;
 }) {
+  // The audience also decides which route EVERY settings hook reads
+  // (lib/api/settings-audience.tsx): a customer's own facility, through their
+  // client row — never the staff route, which answers a customer with the
+  // demo facility.
   return (
-    <SettingsProvider>
-      <CustomServicesProvider audience={audience}>
-        <RoomsProvider>
-          <DaycareAreasProvider>
-            <GroomingStationsProvider>
-              <MobileGroomingProvider audience={audience}>
-                <GroomingWaitlistProvider>{children}</GroomingWaitlistProvider>
-              </MobileGroomingProvider>
-            </GroomingStationsProvider>
-          </DaycareAreasProvider>
-        </RoomsProvider>
-      </CustomServicesProvider>
-    </SettingsProvider>
+    <SettingsAudienceProvider audience={audience}>
+      <SettingsProvider>
+        <CustomServicesProvider audience={audience}>
+          <RoomsProvider>
+            <DaycareAreasProvider>
+              <GroomingStationsProvider>
+                <MobileGroomingProvider audience={audience}>
+                  <GroomingWaitlistProvider>
+                    {children}
+                  </GroomingWaitlistProvider>
+                </MobileGroomingProvider>
+              </GroomingStationsProvider>
+            </DaycareAreasProvider>
+          </RoomsProvider>
+        </CustomServicesProvider>
+      </SettingsProvider>
+    </SettingsAudienceProvider>
   );
 }

@@ -6,6 +6,18 @@ import type {
 import type { VaccinationRecord } from "@/types/pet";
 import type { TrainingBook } from "@/lib/api/mappers/training-book";
 import type { TrainingTrainer } from "@/lib/api/training-trainers";
+import type { SettingsAudience } from "@/lib/api/settings-audience";
+
+/**
+ * Which settings route answers this reader. A customer's goes through their
+ * own client row; the staff route answers a customer with the DEMO facility
+ * (lib/api/settings-audience.tsx).
+ */
+function settingsPath(audience: SettingsAudience): string {
+  return audience === "customer"
+    ? "/api/customer/settings"
+    : "/api/facility/settings";
+}
 import type { CustomerTrainingSettings } from "@/app/api/customer/training-settings/route";
 
 // ============================================================================
@@ -104,8 +116,10 @@ export async function fetchFacilityVaccinations(): Promise<
  * — the Rates tab's priced offers. These were `trainingPackages` from
  * `@/data/training`; the Rates tab now writes the domain.
  */
-export async function fetchTrainingPrograms(): Promise<TrainingPackage[]> {
-  const response = await fetch("/api/facility/settings");
+export async function fetchTrainingPrograms(
+  audience: SettingsAudience = "staff",
+): Promise<TrainingPackage[]> {
+  const response = await fetch(settingsPath(audience));
   if (response.status === 401) return [];
   if (!response.ok) {
     throw new Error(`Failed to load training programs (${response.status})`);
@@ -184,8 +198,9 @@ export async function fetchTrainingCatalog<T>(
   domain: string,
   key: string,
   fallback: T[],
+  audience: SettingsAudience = "staff",
 ): Promise<T[]> {
-  const response = await fetch("/api/facility/settings");
+  const response = await fetch(settingsPath(audience));
   if (response.status === 401 || response.status === 403) return fallback;
   if (!response.ok) {
     throw new Error(`Failed to load ${domain} (${response.status})`);

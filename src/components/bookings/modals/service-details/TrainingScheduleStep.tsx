@@ -43,6 +43,7 @@ import {
 import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
+import { useSettingsAudience } from "@/lib/api/settings-audience";
 import type { TrainingPackage } from "@/types/training";
 
 // Stable while the query loads.
@@ -177,6 +178,8 @@ export function TrainingScheduleStep({
   const { data: seriesList = [], isPending: seriesPending } = useQuery(
     trainingQueries.series(),
   );
+  // A customer reads their own facility's catalogue (lib/api/settings-audience).
+  const settingsAudience = useSettingsAudience();
   const { data: allSeriesEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
@@ -184,12 +187,14 @@ export function TrainingScheduleStep({
     data: courseTypes = [],
     isPending: courseTypesPending,
     isError: courseTypesFailed,
-  } = useQuery(trainingQueries.courseTypes());
+  } = useQuery(trainingQueries.courseTypes(settingsAudience));
   // The facility's own programs (the training_programs settings domain).
   const { data: trainingPrograms = NO_PROGRAMS } = useQuery(
-    trainingQueries.packages(),
+    trainingQueries.packages(settingsAudience),
   );
-  const { data: disciplines = [] } = useQuery(trainingQueries.disciplines());
+  const { data: disciplines = [] } = useQuery(
+    trainingQueries.disciplines(settingsAudience),
+  );
 
   const todayISO = useMemo(() => formatDateString(new Date()), []);
 

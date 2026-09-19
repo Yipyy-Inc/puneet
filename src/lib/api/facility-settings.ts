@@ -21,6 +21,10 @@ import type {
   CallingTags,
 } from "@/lib/settings/calling";
 import { SETTING_DOMAINS, type SettingDomain } from "@/lib/settings/domains";
+import {
+  useSettingsAudience,
+  type SettingsAudience,
+} from "@/lib/api/settings-audience";
 import type { BookingApproval } from "@/lib/settings/booking-approval";
 import type { CareFees } from "@/lib/settings/care-fees";
 import type { IncidentProtocols } from "@/lib/settings/incident-protocols";
@@ -327,10 +331,22 @@ function fallbackSettings(): FacilitySettings {
 }
 
 export const facilitySettingsQueries = {
-  all: () => ({
-    queryKey: ["facility", "settings"] as const,
+  /**
+   * The staff read by default. A customer's reads go to
+   * /api/customer/settings (see lib/api/settings-audience.tsx), under their
+   * own key so the two can never serve each other's cache.
+   */
+  all: (audience: SettingsAudience = "staff") => ({
+    queryKey:
+      audience === "customer"
+        ? (["customer", "settings"] as const)
+        : (["facility", "settings"] as const),
     queryFn: async (): Promise<FacilitySettings> => {
-      const response = await fetch("/api/facility/settings");
+      const response = await fetch(
+        audience === "customer"
+          ? "/api/customer/settings"
+          : "/api/facility/settings",
+      );
       if (!response.ok) {
         const detail = (await response.json().catch(() => null)) as {
           error?: string;
@@ -351,7 +367,10 @@ export const facilitySettingsQueries = {
  * when the request lands.
  */
 export function useFacilitySettings() {
-  const { data, isPending, error } = useQuery(facilitySettingsQueries.all());
+  const audience = useSettingsAudience();
+  const { data, isPending, error } = useQuery(
+    facilitySettingsQueries.all(audience),
+  );
   return { settings: data ?? fallbackSettings(), isPending, error };
 }
 

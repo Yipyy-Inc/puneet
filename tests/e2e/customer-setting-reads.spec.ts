@@ -167,3 +167,66 @@ test.describe("a customer reads which app features they are offered", () => {
     expect(typeof body.configured).toBe("boolean");
   });
 });
+
+// ── The booking wizard reads the customer's own facility ───────────────────
+//
+// It read every price, deposit rule and schedule through
+// /api/facility/settings, which answers a customer with the DEMO facility.
+// /api/customer/settings resolves the facility through their own client row
+// (20260919182016 widened what a customer may read to what they book with).
+test.describe("a customer books with their own facility's settings", () => {
+  const SETTINGS = "/api/customer/settings";
+
+  test("signed out gets 401", async ({ request }) => {
+    const response = await request.get(SETTINGS, { failOnStatusCode: false });
+    expect(response.status()).toBe(401);
+  });
+
+  test("a customer gets the booking domains, and nothing staff-only", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const response = await page.request.get(SETTINGS, {
+      failOnStatusCode: false,
+    });
+    expect(response.status(), await response.text()).toBe(200);
+    const body = (await response.json()) as Record<
+      string,
+      { value: unknown; configured: boolean }
+    >;
+    // Every domain comes back, in the staff route's shape…
+    for (const domain of [
+      "business_hours",
+      "pricing_rules",
+      "deposit_rules",
+      "service_addons",
+      "care_fees",
+      "daycare_rates",
+    ]) {
+      expect(body[domain], domain).toBeDefined();
+      expect(typeof body[domain]?.configured, domain).toBe("boolean");
+    }
+    // …and one the customer may not read is only ever its default.
+    expect(body.payroll_config?.configured).toBe(false);
+  });
+
+  test("the booking wizard never asks the staff route", async ({ page }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const staffReads: string[] = [];
+    const ownReads: string[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/facility/settings") staffReads.push(url.href);
+      if (url.pathname === SETTINGS) ownReads.push(url.href);
+    });
+    await page.goto("/customer/bookings/new");
+    await expect
+      .poll(() => ownReads.length, { timeout: 60_000 })
+      .toBeGreaterThan(0);
+    // Give the rest of the wizard's first render time to ask for anything.
+    await page.waitForLoadState("networkidle").catch(() => {});
+    expect(staffReads, "the wizard read the demo facility's settings").toEqual(
+      [],
+    );
+  });
+});

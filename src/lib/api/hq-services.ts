@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { groomingCatalogueKeys } from "@/lib/api/grooming-catalogue";
 import { ROOMS_KEY } from "@/hooks/use-rooms";
+import { useSettingsAudience } from "@/lib/api/settings-audience";
 import type { HqGroomingService } from "@/types/hq-services";
 
 // ============================================================================
@@ -113,9 +114,15 @@ async function fetchDaycareLocationPrices(): Promise<DaycareLocationPrice[]> {
 }
 
 export function useDaycareLocationPrices() {
+  // Not for a customer: the route resolves the facility by membership and
+  // answers a customer with the demo facility's branch prices, and the
+  // customer portal has no branch selected to pick one by anyway. Their
+  // wizard prices daycare from their own facility's rates.
+  const audience = useSettingsAudience();
   return useQuery({
     queryKey: DAYCARE_LOCATION_PRICES_KEY,
     queryFn: fetchDaycareLocationPrices,
+    enabled: audience !== "customer",
   });
 }
 

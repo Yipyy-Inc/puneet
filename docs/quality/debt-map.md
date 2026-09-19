@@ -17902,3 +17902,36 @@ the settings registry, which imports the care-task outcomes. Only
 `domains.ts` may import the fixture default (`check:settings-fixture`), so
 the entry clears when the outcome labels are translated, not by working
 around the registry.
+
+## 2026-09-19 — The customer's booking wizard reads their own facility (round 3, part 5)
+
+Every setting the customer wizard read went through `/api/facility/settings`,
+which resolves the facility by membership. For a customer it falls back to
+the demo facility, so every pet owner was priced, scheduled and asked for
+deposits by the demo facility's rules.
+
+What changed:
+
+- `SettingsProviderWrapper` now provides an audience
+  (`lib/api/settings-audience.tsx`). Under the customer portal every
+  `useFacilitySettings` read goes to `/api/customer/settings`, which resolves
+  the facility through the caller's own client row (`profile_id`, so a member
+  of staff browsing the portal never gets an arbitrary client's facility).
+- Migration 20260919182016 adds the domains the wizard books with to
+  `private.customer_visible_setting_domains()` (SQL #12–13). Every other
+  domain comes back as its default, `configured: false`.
+- The training catalogue fetchers take the audience too (course types,
+  disciplines, programs), and so does the customer training page.
+- `useDaycareLocationPrices` is off for customers, whose portal has no
+  branch selected.
+- e2e: the wizard never calls the staff route.
+
+Still reading the wrong place, and still open:
+
+- `useSettings().profile` (`/api/facility/profile`, demo for a customer).
+- `holidays` (fixture).
+- `staffQueries.profiles()` (fixture fallback), which feeds the tip step's
+  invented staff.
+- The care vocabulary: `facilityConfig`, and `PetCareAutoPopulate` from
+  `@/data/pet-data`.
+- The wizard's tip step, still offered to customers. The plan removes it.
