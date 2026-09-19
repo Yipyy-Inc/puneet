@@ -133,7 +133,6 @@ const BASELINE = new Set<string>([
   // Its two neighbours in that folder are the same.
   //
   // Recorded, not excused. Every line below is a screen that lies today.
-  "src/app/customer/bookings/_components/PastBookingCard.tsx",
   "src/app/dashboard/_components/needs-attention.tsx",
   "src/app/dashboard/commercial/credits/_components/apply-discount-modal.tsx",
   "src/app/dashboard/commercial/dunning/_components/dunning-client.tsx",

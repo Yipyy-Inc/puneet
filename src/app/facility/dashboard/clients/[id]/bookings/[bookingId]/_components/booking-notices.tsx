@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Banknote,
   CheckCircle2,
   ClipboardList,
@@ -10,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { formatMoney } from "@/lib/i18n/format";
+import { formatDateLong, formatMoney, formatTime } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
@@ -53,6 +54,16 @@ export interface BookingNoticesProps {
   /** Money taken and still owed, when some but not all has been paid. */
   partPaid: { paid: number; owed: number } | null;
   finished: boolean;
+  /** The client cancelled it themselves (details.cancellation, written by
+   * the database with the terms it was made under). */
+  customerCancellation?: {
+    at?: string;
+    reason?: string | null;
+    withdrawal?: boolean;
+    late?: boolean;
+    noticeHours?: number | null;
+    feePercentage?: number | null;
+  } | null;
 }
 
 export function BookingNotices({
@@ -67,13 +78,64 @@ export function BookingNotices({
   depositDue,
   partPaid,
   finished,
+  customerCancellation,
 }: BookingNoticesProps) {
   const { t, fill, locale } = useStaffText("bookingDetail");
   const { t: actT } = useStaffText("bookingActions");
   const money = (amount: number) => formatMoney(amount, locale);
 
+  const cancelledAt = customerCancellation?.at
+    ? `${formatDateLong(customerCancellation.at, locale)}, ${formatTime(customerCancellation.at, locale)}`
+    : "";
+
   return (
     <>
+      {customerCancellation && (
+        <Notice
+          icon={
+            customerCancellation.late ? (
+              <AlertTriangle className="text-warning size-4" />
+            ) : (
+              <XCircle className="size-4" />
+            )
+          }
+          title={
+            customerCancellation.withdrawal
+              ? fill("clientWithdrewTitle", { client: clientName })
+              : customerCancellation.late
+                ? fill("clientCancelledLateTitle", { client: clientName })
+                : fill("clientCancelledTitle", { client: clientName })
+          }
+          body={
+            <>
+              {cancelledAt}
+              {customerCancellation.late &&
+                customerCancellation.noticeHours != null && (
+                  <>
+                    {" · "}
+                    {customerCancellation.feePercentage
+                      ? fill("clientCancelledLateFee", {
+                          hours: customerCancellation.noticeHours,
+                          fee: customerCancellation.feePercentage,
+                        })
+                      : fill("clientCancelledLateNoFee", {
+                          hours: customerCancellation.noticeHours,
+                        })}
+                  </>
+                )}
+              {customerCancellation.reason && (
+                <>
+                  {" · "}
+                  {fill("clientCancelledReason", {
+                    reason: customerCancellation.reason,
+                  })}
+                </>
+              )}
+            </>
+          }
+        />
+      )}
+
       {evaluationAdvised && (
         <Notice
           icon={<ClipboardList className="size-4" />}
