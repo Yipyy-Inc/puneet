@@ -17953,3 +17953,26 @@ Still open: the care vocabulary (feeding options, medication quick times,
 "given with") is the `facilityConfig` fixture's English lists. They are
 static words, not another facility's data, but they are English in French
 and not the facility's own. They need a translated vocabulary of their own.
+
+## 2026-09-19 — `/book/<slug>`, the dashboard's day, and a gate (round 3, part 7)
+
+- **`/book/<slug>`** rendered `LocationBookingPage`: the demo facility's
+  fixture locations with a form that wrote nowhere. It is now a route
+  handler. A real facility's slug gets a 307 to its own address's
+  `/customer/bookings/new`; any other slug gets a 404. It is a route, not a
+  page, because a page's `redirect()` inside the streamed root layout comes
+  back as a 200 with a client-side hop.
+- **Customer dashboard.** It had the list's UTC bug (today's booking and its
+  pre-arrival reminder dropped off from the morning on) and read the
+  client's whole history. It now uses the list's two reads and
+  `bookingTiming`.
+- **Unfinished bookings.** The wizard saved an unfinished booking's
+  requested dates through `/^d{4}-d{2}-d{2}$/`, which is missing its
+  backslashes and so matched nothing. Every draft was stored without its
+  dates. It now uses `isoDayOrUndefined`.
+- **`check:customer-routes`** (new, 38th) fails if the customer's own routes
+  call `getFacilityContext()` or read `/api/facility/settings` or
+  `/api/facility/profile`. Both answer a customer with the demo facility. A
+  negative control was run for both patterns.
+  `activeFacilityIdForStaff()` is deliberately allowed: it is null for a
+  customer, and `check:facility-scoped-reads` requires it of list reads.

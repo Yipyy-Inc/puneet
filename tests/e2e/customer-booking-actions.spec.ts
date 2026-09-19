@@ -398,3 +398,22 @@ test("the pay link says when nothing is due yet, and reads in French", async ({
   ).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText(/Back to the booking/)).toHaveCount(0);
 });
+
+test("a /book link leads to the facility's own booking form, or nowhere", async ({
+  request,
+}) => {
+  // It rendered the demo facility's fixture locations with a form that wrote
+  // nowhere. A real facility's slug now leads to its booking form…
+  const real = await request.get("/book/yipyy-demo-facility", {
+    maxRedirects: 0,
+    failOnStatusCode: false,
+  });
+  expect([307, 308]).toContain(real.status());
+  expect(real.headers()["location"]).toMatch(/\/customer\/bookings\/new$/);
+
+  // …and one that names no facility is a 404, not a guess.
+  const unknown = await request.get("/book/no-such-facility-e2e", {
+    failOnStatusCode: false,
+  });
+  expect(unknown.status()).toBe(404);
+});

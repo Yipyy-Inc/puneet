@@ -48,7 +48,12 @@ import { clientCommunications } from "@/data/communications";
 import { useQuery } from "@tanstack/react-query";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import { groomingQueries } from "@/lib/api/grooming";
-import { bookingQueries } from "@/lib/api/booking";
+import { customerBookingQueries } from "@/lib/api/customer-bookings";
+import { bookingTiming } from "@/lib/bookings/booking-timing";
+import { localToday } from "@/lib/vaccinations";
+import type { Booking } from "@/types/booking";
+
+const NO_BOOKINGS: Booking[] = [];
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
 import { ABANDONMENT_STEP_LABELS } from "@/data/unfinished-bookings";
@@ -120,10 +125,29 @@ export default function CustomerDashboardPage() {
   // Their real bookings. RLS scopes these already — `bookings_read` admits
   // `client_id in own_client_ids()` — so this asks for their own rows and the
   // database would refuse anyone else's regardless of the id passed.
-  const { data: allCustomerBookings = [] } = useQuery({
-    ...bookingQueries.byClient(customerId ?? -1),
-    enabled: customerId != null,
+  //
+  // What is still open from today, and the recent past — the two reads the
+  // bookings list makes. It read the client's WHOLE history, through a fetch
+  // that serves fixture bookings when signed out.
+  const today = isMounted ? localToday() : "";
+  const { data: currentBookings } = useQuery({
+    ...customerBookingQueries.current(today),
+    enabled: today !== "",
   });
+  const { data: recentBookings } = useQuery({
+    ...customerBookingQueries.recent(today),
+    enabled: today !== "",
+  });
+  const allCustomerBookings = useMemo(() => {
+    const byRef = new Map<number, Booking>();
+    for (const b of [
+      ...(recentBookings ?? NO_BOOKINGS),
+      ...(currentBookings ?? NO_BOOKINGS),
+    ]) {
+      byRef.set(b.id, b);
+    }
+    return [...byRef.values()];
+  }, [currentBookings, recentBookings]);
 
   // Already this client's own bookings: the query names their client row, and
   // RLS admits nobody else's. Not filtered by `selectedFacility.id`, which is
@@ -132,35 +156,16 @@ export default function CustomerDashboardPage() {
   // filter hid every booking, and the pre-arrival form reminder with them.
   const customerBookings = allCustomerBookings;
 
-  // Get upcoming bookings (sorted by date)
+  // Upcoming, by the customer's own calendar day: today's booking is upcoming
+  // until its last day is over. It compared a facility-local date parsed as
+  // UTC midnight with the current instant, so today's booking dropped off
+  // this page — and its pre-arrival reminder with it — from the morning on.
   const upcomingBookings = useMemo(() => {
-    if (!isMounted) return [];
-    const now = new Date();
+    if (!today) return [];
     return customerBookings
-      .filter((b) => {
-        const bookingDate = new Date(b.startDate);
-        return bookingDate >= now && b.status !== "cancelled";
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-      );
-  }, [customerBookings, isMounted]);
-
-  // Get past bookings
-  const _pastBookings = useMemo(() => {
-    if (!isMounted) return [];
-    const now = new Date();
-    return customerBookings
-      .filter((b) => {
-        const bookingDate = new Date(b.endDate || b.startDate);
-        return bookingDate < now || b.status === "completed";
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-      );
-  }, [customerBookings, isMounted]);
+      .filter((b) => bookingTiming(b, today) !== "past")
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  }, [customerBookings, today]);
 
   // Get next booking
   const nextBooking = useMemo(() => {

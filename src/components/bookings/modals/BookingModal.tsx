@@ -148,6 +148,7 @@ import type { Pet, Evaluation } from "@/types/pet";
 import { useCareFees } from "@/lib/api/facility-settings";
 import { careFeeLines } from "@/lib/settings/care-fees";
 import { bookingQueries } from "@/lib/api/booking";
+import { isoDayOrUndefined } from "@/lib/bookings/booking-timing";
 import { staffQueries } from "@/lib/api/staff";
 
 // Stable while the query loads, so a memo keyed on it does not recompute.
@@ -2970,7 +2971,9 @@ export function BookingModal({
           : stepId === "confirm"
             ? "review"
             : "date_and_details";
-    const day = (v: string) => (/^d{4}-d{2}-d{2}$/.test(v) ? v : undefined);
+    // It was /^d{4}-d{2}-d{2}$/ — no backslashes, so it matched nothing and
+    // every unfinished booking was saved without the dates asked for.
+    const day = isoDayOrUndefined;
     const firstPet = selectedPets[0];
     return {
       clientRef: selectedClient.id,
