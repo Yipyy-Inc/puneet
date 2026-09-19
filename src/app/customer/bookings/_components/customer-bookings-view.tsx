@@ -16,9 +16,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RouteState } from "@/components/ui/route-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { customerBookingQueries } from "@/lib/api/customer-bookings";
+import { useCustomerFacility as useMyFacility } from "@/lib/api/customer-facility";
 import { unfinishedBookingQueries } from "@/lib/api/unfinished-bookings";
 import { bookingTiming } from "@/lib/bookings/booking-timing";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
@@ -49,7 +49,9 @@ export function CustomerBookingsView() {
   // which is the wrong calendar for anyone not in UTC; the lists wait.
   const today = hydrated ? localToday() : "";
 
-  const { selectedFacility } = useCustomerFacility();
+  // Their facility, through their own client row — the portal context names
+  // a fixture business on the apex.
+  const facility = useMyFacility();
   const { client: customer } = useCurrentCustomer();
   const customerId = customer?.id;
   const customerPets = customer?.pets;
@@ -200,7 +202,7 @@ export function CustomerBookingsView() {
             key={booking.id}
             booking={booking}
             pets={pets}
-            facilityName={selectedFacility?.name}
+            facilityName={facility?.name}
             today={today}
             onCancel={(b, petName) => setToCancel({ booking: b, petName })}
             onNote={(b, petName, kind) =>

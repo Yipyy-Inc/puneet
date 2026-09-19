@@ -72,6 +72,34 @@ export const customerBookingQueries = {
       ];
     },
   }),
+  /**
+   * One booking, by its reference — null when it is not theirs or does not
+   * exist (RLS answers both the same). It read the client's whole history to
+   * show one, which timed out for a client with a thousand bookings.
+   */
+  detail: (ref: number) => ({
+    queryKey: ["bookings", "mine", "detail", ref] as const,
+    queryFn: async () => {
+      const rows = await readJson<Booking[]>(
+        await fetch(`/api/bookings${bookingListSearch({ ref })}`),
+      );
+      return rows.find((b) => b.id === ref) ?? null;
+    },
+  }),
+  /** The lines added to the bill — products, add-ons, fees. */
+  lineItems: (ref: number) => ({
+    queryKey: ["bookings", "mine", "line-items", ref] as const,
+    queryFn: async () =>
+      readJson<
+        Array<{
+          id: string;
+          kind: "item" | "fee";
+          name: string;
+          quantity: number;
+          price: number;
+        }>
+      >(await fetch(`/api/bookings/${ref}/line-items`)),
+  }),
   /** What cancelling this booking would mean (GET …/cancel). */
   cancelTerms: (ref: number) => ({
     queryKey: ["bookings", "cancel-terms", ref] as const,
