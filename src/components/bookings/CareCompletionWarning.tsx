@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle, ArrowDown, Pill, Utensils } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -12,6 +12,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { PendingCareItem } from "@/lib/care-completion";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,10 @@ import { cn } from "@/lib/utils";
 //
 // Translated as it was touched. It also exported an inline banner that nothing
 // rendered; that is gone.
+//
+// Going ahead needs a reason, which the caller saves before checkout opens
+// (record_care_gate_override): "Check out anyway" used to leave a toast and
+// nothing else.
 // ============================================================================
 
 interface CareCompletionDialogProps {
@@ -28,7 +34,8 @@ interface CareCompletionDialogProps {
   pending: PendingCareItem[];
   hasCritical: boolean;
   onReview: () => void;
-  onContinueAnyway: () => void;
+  /** Resolves once the reason is saved; the dialog waits for it. */
+  onContinueAnyway: (reason: string) => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -42,6 +49,17 @@ export function CareCompletionGateDialog({
   onClose,
 }: CareCompletionDialogProps) {
   const { t, fill } = useStaffText("careGate");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const goAhead = async () => {
+    setSaving(true);
+    try {
+      await onContinueAnyway(reason.trim());
+      setReason("");
+    } finally {
+      setSaving(false);
+    }
+  };
   // An owner's own item is named as they wrote it; an incident's carries its
   // reference, which never passes through the locale layer (§5r).
   const label = (item: PendingCareItem) =>
@@ -50,7 +68,7 @@ export function CareCompletionGateDialog({
       : item.label;
 
   return (
-    <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <AlertDialog open={open} onOpenChange={(o) => !o && !saving && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
@@ -100,15 +118,34 @@ export function CareCompletionGateDialog({
           })}
         </ul>
 
+        <div className="grid gap-1.5">
+          <Label htmlFor="care-gate-reason">{t("reasonLabel")}</Label>
+          <Textarea
+            id="care-gate-reason"
+            value={reason}
+            maxLength={500}
+            rows={2}
+            placeholder={t("reasonPlaceholder")}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <p className="text-ink-tertiary text-xs">{t("reasonHelp")}</p>
+        </div>
+
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel onClick={onClose}>{t("keep")}</AlertDialogCancel>
-          <Button variant="outline" onClick={onReview}>
+          <AlertDialogCancel onClick={onClose} disabled={saving}>
+            {t("keep")}
+          </AlertDialogCancel>
+          <Button variant="outline" onClick={onReview} disabled={saving}>
             <ArrowDown className="size-4" />
             {t("review")}
           </Button>
-          <AlertDialogAction onClick={onContinueAnyway}>
+          <Button
+            onClick={() => void goAhead()}
+            disabled={!reason.trim()}
+            loading={saving}
+          >
             {t("continue")}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

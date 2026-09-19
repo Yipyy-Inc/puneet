@@ -1937,7 +1937,10 @@
         "historyShowAll": "Show all {n}",
         "historyShowFewer": "Show fewer",
         "receiptEmailed": "Receipt emailed to {email}",
-        "receiptNotSent": "The receipt was not sent"
+        "receiptNotSent": "The receipt was not sent",
+        "careGateNotSaved": "The reason was not saved, so checkout did not open",
+        "historyCareGateOne": "Checked out with {n} care item not logged: {reason}",
+        "historyCareGateMany": "Checked out with {n} care items not logged: {reason}"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",
@@ -3485,7 +3488,10 @@
         "fromIncident": "{item} (incident {id})",
         "keep": "Not now",
         "review": "Review the care",
-        "continue": "Check out anyway"
+        "continue": "Check out anyway",
+        "reasonLabel": "Why is the pet going home with this not logged?",
+        "reasonPlaceholder": "For example: the owner gave the evening dose at pickup",
+        "reasonHelp": "Kept on the booking's history with your name."
       },
       "checkOutDialog": {
         "title": "Check out",

@@ -97,3 +97,51 @@ test("a booking's status and price changes are its history", async ({
   await expect(card).toContainText(/Total: \$40\.00 → \$35\.00/);
   await expect(card).toContainText(/Created as Confirmed/);
 });
+
+// Checkout asks when today's care is not logged; going ahead needs a reason,
+// kept append-only (20260919153807) and shown in the same history.
+test("checking out with care not logged keeps the reason", async ({ page }) => {
+  test.skip(made === null, "needs the booking from the test above");
+  await signIn(page, ACCOUNTS.owner);
+
+  const empty = await page.request.post(`/api/bookings/${made}/care-override`, {
+    data: { reason: "   ", items: [] },
+  });
+  expect(empty.status()).toBe(422);
+
+  const kept = await page.request.post(`/api/bookings/${made}/care-override`, {
+    data: {
+      reason: `${MARKER} owner fed him at pickup`,
+      items: [{ kind: "feeding", label: "Dinner", critical: false }],
+    },
+  });
+  expect(kept.status(), await kept.text()).toBe(201);
+
+  const history = (await (
+    await page.request.get(`/api/bookings/${made}/history`)
+  ).json()) as HistoryEntry[];
+  expect(
+    history.some((e) =>
+      e.changes.some(
+        (c) =>
+          c.field === "careGate" &&
+          c.to === `${MARKER} owner fed him at pickup`,
+      ),
+    ),
+  ).toBe(true);
+
+  await page.goto(`/facility/dashboard/clients/${BOB.client}/bookings/${made}`);
+  await expect(page.locator("#history")).toContainText(
+    /Checked out with 1 care item not logged: .*owner fed him at pickup/,
+    { timeout: 60_000 },
+  );
+});
+
+test("a customer does not record a staff reason", async ({ page }) => {
+  test.skip(made === null, "needs the booking from the first test");
+  await signIn(page, ACCOUNTS.customer);
+  const res = await page.request.post(`/api/bookings/${made}/care-override`, {
+    data: { reason: "not mine to give", items: [] },
+  });
+  expect([403, 404]).toContain(res.status());
+});

@@ -86,6 +86,7 @@ import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { PrepaymentModal } from "@/components/bookings/PrepaymentModal";
 import { CareCompletionGateDialog } from "@/components/bookings/CareCompletionWarning";
+import { useRecordCareOverride } from "@/lib/api/booking-care-override";
 import { getPendingCareItems, careSectionDomIds } from "@/lib/care-completion";
 import {
   findApplicableDepositRule,
@@ -430,6 +431,7 @@ export default function ClientBookingDetailPage({
     onConfirm: () => void;
   } | null>(null);
   const [careGateOpen, setCareGateOpen] = useState(false);
+  const recordCareOverride = useRecordCareOverride();
 
   const isBoarding = booking?.service.toLowerCase() === "boarding";
 
@@ -1885,7 +1887,21 @@ export default function ClientBookingDetailPage({
               if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
             }
           }}
-          onContinueAnyway={() => {
+          onContinueAnyway={async (reason) => {
+            // The reason is kept before checkout opens — never a checkout
+            // on a reason that was not saved.
+            try {
+              await recordCareOverride.mutateAsync({
+                bookingRef: booking.id,
+                reason,
+                pending: careStatus.pending,
+              });
+            } catch (error) {
+              toast.error(detailT("careGateNotSaved"), {
+                description: error instanceof Error ? error.message : undefined,
+              });
+              return;
+            }
             setCareGateOpen(false);
             toast(
               detailFill(
