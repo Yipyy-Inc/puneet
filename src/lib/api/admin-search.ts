@@ -2,13 +2,16 @@
 // Wrapped as a TanStack Query factory so the search bar can debounce + cache by
 // term. Swapping to a real backend later means changing only the queryFn.
 
-import { facilities } from "@/data/facilities";
 import { supportTickets } from "@/data/support-tickets";
 import { adminUsers, roleDisplayNames } from "@/data/admin-users";
 import { buildPlatformInvoices } from "@/data/platform-invoices";
 import type { EnhancedAnnouncement } from "@/types/announcement";
+import type { AdminFacilityRow } from "@/types/admin-facility";
+import type { AdminBookingMatch } from "@/app/api/admin/bookings/route";
+import { bookingRefCandidates, formatBookingRef } from "@/lib/booking-id";
 
 export type AdminEntityType =
+  | "booking"
   | "facility"
   | "invoice"
   | "ticket"
@@ -28,11 +31,36 @@ export const ADMIN_SEARCH_MIN_CHARS = 2;
 /** Max results shown per entity group. */
 const PER_GROUP = 5;
 
-function cityOf(f: (typeof facilities)[number]): string | null {
-  const address = f.locationsList?.[0]?.address;
-  if (!address) return null;
-  const parts = address.split(",").map((s) => s.trim());
-  return parts.length > 1 ? parts[parts.length - 1] : null;
+/**
+ * The real facilities (/api/facilities, platform admins only). This group
+ * read the `@/data/facilities` fixture and linked to its NUMERIC ids, which
+ * the detail page — resolving real uuids — answered with a 404.
+ */
+async function platformFacilities(): Promise<AdminFacilityRow[]> {
+  try {
+    const response = await fetch("/api/facilities");
+    if (!response.ok) return [];
+    return (await response.json()) as AdminFacilityRow[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * A booking, when the term is a number that could be one — "#10896" or
+ * "896" (bookingRefCandidates). Any facility's, with its facility named.
+ */
+async function bookingMatches(term: string): Promise<AdminBookingMatch[]> {
+  if (bookingRefCandidates(term).length === 0) return [];
+  try {
+    const response = await fetch(
+      `/api/admin/bookings?q=${encodeURIComponent(term)}`,
+    );
+    if (!response.ok) return [];
+    return (await response.json()) as AdminBookingMatch[];
+  } catch {
+    return [];
+  }
 }
 
 function makeMatcher(term: string) {
@@ -66,17 +94,32 @@ export async function searchAdminEntities(
   if (term.length < ADMIN_SEARCH_MIN_CHARS) return [];
   const match = makeMatcher(term);
 
-  // Facilities — name / city / email
-  const facilityResults: AdminSearchResult[] = facilities
-    .filter((f) => match(f.name, cityOf(f), f.contact?.email))
+  const [facilityRows, bookingRows] = await Promise.all([
+    platformFacilities(),
+    bookingMatches(rawTerm),
+  ]);
+
+  // Bookings — by number, across every facility
+  const bookingResults: AdminSearchResult[] = bookingRows
+    .slice(0, PER_GROUP)
+    .map((b) => ({
+      entityType: "booking" as const,
+      id: String(b.ref),
+      href: `/dashboard/bookings/${b.ref}`,
+      primaryText: `${formatBookingRef(b.ref)} · ${b.facilityName}`,
+      secondaryText: [b.clientName, b.service].filter(Boolean).join(" · "),
+    }));
+
+  // Facilities — name / slug / owner email
+  const facilityResults: AdminSearchResult[] = facilityRows
+    .filter((f) => match(f.name, f.slug, f.owner?.email))
     .slice(0, PER_GROUP)
     .map((f) => ({
       entityType: "facility" as const,
-      id: String(f.id),
+      id: f.id,
       href: `/dashboard/facilities/${f.id}`,
       primaryText: f.name,
-      secondaryText:
-        [cityOf(f), f.contact?.email].filter(Boolean).join(" · ") || f.plan,
+      secondaryText: [f.slug, f.owner?.email].filter(Boolean).join(" · "),
     }));
 
   // Invoices — number / amount (+ facility)
@@ -130,6 +173,7 @@ export async function searchAdminEntities(
     }));
 
   return [
+    ...bookingResults,
     ...facilityResults,
     ...invoiceResults,
     ...ticketResults,

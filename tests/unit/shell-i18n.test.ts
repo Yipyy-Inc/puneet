@@ -34,6 +34,9 @@ const GROUPS = Object.keys(enShell) as ShellGroup[];
  * is a word French borrowed whole.
  */
 const SAME_IN_BOTH = new Set([
+  "admin.bookingClient", // Client / Client
+  "admin.bookingTotal", // Total / Total
+  "admin.method_terminal", // Terminal / Terminal — the card reader
   "payments.cardCvv", // CVV / CVV — the card's own label
   "header.messages", // Messages / Messages
   "notifications.title", // Notifications / Notifications

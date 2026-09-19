@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   Building2,
+  CalendarCheck,
   LifeBuoy,
   Loader2,
   Megaphone,
@@ -39,6 +40,7 @@ import {
 // read an object property outside the settings surface (2026-09-10).
 const GROUPS: { type: AdminEntityType; labelKey: string; icon: LucideIcon }[] =
   [
+    { type: "booking", labelKey: "searchBookings", icon: CalendarCheck },
     { type: "facility", labelKey: "searchFacilities", icon: Building2 },
     { type: "invoice", labelKey: "searchInvoices", icon: Receipt },
     { type: "ticket", labelKey: "searchTickets", icon: LifeBuoy },

@@ -3,6 +3,7 @@
 import { useSignOutEverywhere } from "@/lib/auth/sign-out-client";
 import {
   Activity,
+  CalendarCheck,
   AlertTriangle,
   BarChart2,
   BellRing,
@@ -106,6 +107,13 @@ export function AppSidebar() {
           ),
           url: "/dashboard/facilities/requests",
           icon: Inbox,
+          disabled: false,
+        },
+        {
+          // Any facility's booking, by its number (read-only).
+          title: navText.item("/dashboard/bookings", "Bookings"),
+          url: "/dashboard/bookings",
+          icon: CalendarCheck,
           disabled: false,
         },
       ],

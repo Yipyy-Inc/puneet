@@ -17976,3 +17976,34 @@ and not the facility's own. They need a translated vocabulary of their own.
   negative control was run for both patterns.
   `activeFacilityIdForStaff()` is deliberately allowed: it is null for a
   customer, and `check:facility-scoped-reads` requires it of list reads.
+
+## 2026-09-19 — Platform roles read, a superadmin writes; admins find any booking (round 4, part A)
+
+- **Platform roles.** `has_permission()` and `permitted_facility_ids()` began
+  with `is_platform_admin() or …`, which is true for every permission and
+  every platform role. A read-only or support member of Yipyy's team could
+  therefore edit, cancel and refund any facility's bookings. The SQL
+  negative control (R2) showed the UPDATE going through. Now
+  `private.platform_may(permission)` (20260919195116) gives a superadmin
+  everything and gives support, billing and read-only only the viewing
+  keys: `view_*`, `*_view*` and the audit log. Never a write or an export.
+  `is_platform_admin()` is unchanged, because read policies use it. Only
+  three platform members exist, all superadmins, so nothing changes for
+  anyone today. SQL: `platform-role-writes.sql` (10); all 1,375 SQL checks
+  pass.
+- **Finding a booking.** `/dashboard/bookings` looks up any facility's
+  booking by its displayed number (`#10896`) or bare ref
+  (`bookingRefCandidates`, unit-tested). `/dashboard/bookings/[ref]` reads it
+  in full and read-only: client, pets, the facility's local times, price,
+  lines, payments. The admin global search has a Bookings group, and its
+  Facilities group now reads `/api/facilities`; it read a fixture and linked
+  to numeric ids that 404ed. There is a sidebar entry, in EN and FR.
+  e2e: `admin-bookings.spec.ts`.
+- **Impersonate** is hidden on the facility page. It promised that every
+  action was logged and the facility's admin was emailed; the log lived in
+  memory and the email was a toast. Other admin screens still reference
+  `lib/impersonation` and were not part of this change.
+
+Not done: the admin portal outside these screens is still untranslated and
+largely fixture-backed (invoices, tickets, team in search; the dashboard's
+builders). See round 4 parts B and C.

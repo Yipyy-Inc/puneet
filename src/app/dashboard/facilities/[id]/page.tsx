@@ -5,10 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AdminFacilityRow } from "@/types/admin-facility";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
-import {
-  createImpersonationToken,
-  IMPERSONATING_ADMIN,
-} from "@/lib/impersonation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +34,6 @@ import {
   MapPin,
   CreditCard,
   MoreVertical,
-  LogIn,
   Power,
   Pause,
   Archive,
@@ -138,7 +133,6 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
   const [statusChangeModal, setStatusChangeModal] = useState<{
     newStatus: "active" | "inactive" | "suspended" | "archived";
   } | null>(null);
-  const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
 
   const services = facility.locationsList.flatMap(
     (location) => location.services,
@@ -193,22 +187,6 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
   const confirmStatusChange = () => {
     if (!statusChangeModal) return;
     changeStatus.mutate(statusChangeModal.newStatus);
-  };
-
-  const handleImpersonate = () => {
-    const token = createImpersonationToken({
-      facilityId: facility.id,
-      facilityName: facility.name,
-      primaryAdminEmail: facility.owner?.email ?? facility.contact?.email ?? "",
-      adminName: IMPERSONATING_ADMIN.name,
-    });
-    // Open the facility's own dashboard in a NEW tab with the temporary token.
-    window.open(
-      `/facility/dashboard?impersonate=${encodeURIComponent(token)}`,
-      "_blank",
-      "noopener",
-    );
-    setShowImpersonateDialog(false);
   };
 
   const renderTabContent = () => {
@@ -317,13 +295,6 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowImpersonateDialog(true)}
-              >
-                <LogIn className="mr-2 size-4" />
-                Impersonate
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
@@ -412,51 +383,11 @@ function FacilityDetail({ facility }: { facility: AdminFacilityRow }) {
       {/* Tab Content */}
       <div className="flex-1 p-6">{renderTabContent()}</div>
 
-      {/* Impersonation Dialog */}
-      <Dialog
-        open={showImpersonateDialog}
-        onOpenChange={setShowImpersonateDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Impersonate Facility Admin</DialogTitle>
-            <DialogDescription>
-              You are about to open <strong>{facility.name}</strong>&apos;s
-              dashboard in a new tab as their admin. Every action is logged in
-              the audit trail, and the facility&apos;s primary admin is notified
-              by email.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-muted space-y-2 rounded-lg p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Facility:</span>
-                <span className="font-medium">{facility.name}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Plan:</span>
-                <span className="font-medium">{facility.plan}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Status:</span>
-                <StatusBadge type="status" value={currentStatus} />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowImpersonateDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleImpersonate}>
-              <LogIn className="mr-2 size-4" />
-              Start Impersonation
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Impersonate was here: a button that opened the facility in a new tab
+          as the admin themselves, promising that every action was logged in
+          the audit trail and the facility's primary admin was emailed. The log
+          lived in memory and the email was a toast. Hidden until real,
+          server-side impersonation is designed. */}
 
       {/* Status Change Dialog */}
       <Dialog
