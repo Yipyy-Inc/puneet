@@ -3197,7 +3197,9 @@
         "service_daycare": "Garderie",
         "service_grooming": "Toilettage",
         "service_training": "Dressage",
-        "fromYipyy": "De Yipyy"
+        "fromYipyy": "De Yipyy",
+        "kind_booking_customer_note": "{client} a laissé une note sur une réservation",
+        "kind_booking_change_requested": "{client} demande de changer les dates d’une réservation"
       },
       "notificationRoles": {
         "owner": "Propriétaire",
@@ -8811,7 +8813,9 @@
       "noteUnpinnedDone": "Note désépinglée",
       "noteSharedDone": "Note partagée avec le client",
       "noteInternalDone": "Note rendue interne",
-      "noteNotSaved": "La note n’a pas été enregistrée"
+      "noteNotSaved": "La note n’a pas été enregistrée",
+      "badgeFromClient": "Du client",
+      "badgeChangeDates": "Demande de changer les dates"
     },
     "messaging": {
       "scheduleSend": "Programmer l’envoi",
@@ -9673,7 +9677,24 @@
         "cancelInTime": "C’est plus de {hours} heures à l’avance, donc ce n’est pas une annulation tardive.",
         "cancelReasonLabel": "Dites pourquoi à l’établissement (facultatif)",
         "cancelReasonPlaceholder": "Par exemple : nos plans ont changé",
-        "keepRequest": "Garder la demande"
+        "keepRequest": "Garder la demande",
+        "askToChangeDates": "Demander de changer les dates",
+        "leaveNote": "Laisser une note",
+        "changeDatesTitle": "Demander de changer la réservation de {pet} du {date}",
+        "changeDatesBody": "L’établissement voit votre demande et vous répond. Rien ne change tant qu’il ne l’a pas modifiée.",
+        "changeDatesLabel": "Quelles dates vous conviendraient?",
+        "changeDatesPlaceholder": "Par exemple : arrivée le 14 plutôt que le 12",
+        "changeDatesSend": "Envoyer la demande",
+        "changeDatesSent": "Demande envoyée. L’établissement vous répondra.",
+        "changeDatesFailed": "La demande n’a pas été envoyée",
+        "noteTitle": "Laisser une note sur la réservation de {pet} du {date}",
+        "noteBody": "L’établissement la lit avec la réservation. Vous la voyez aussi.",
+        "noteLabel": "Votre note",
+        "notePlaceholder": "Par exemple : elle apportera son propre lit",
+        "noteSend": "Envoyer la note",
+        "noteSent": "Note enregistrée sur la réservation",
+        "noteFailed": "La note n’a pas été enregistrée",
+        "noteClose": "Fermer sans envoyer"
       },
       "bookingDetail": {
         "notFound": "Réservation introuvable",

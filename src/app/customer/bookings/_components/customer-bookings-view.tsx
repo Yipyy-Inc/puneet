@@ -6,6 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, CircleAlert, Plus, SearchX } from "lucide-react";
 
 import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
+import {
+  BookingNoteDialog,
+  type BookingNoteKind,
+} from "@/components/customer/BookingNoteDialog";
 import { CancelBookingDialog } from "@/components/customer/CancelBookingDialog";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -80,6 +84,11 @@ export function CustomerBookingsView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("all");
+  const [toNote, setToNote] = useState<{
+    booking: Booking;
+    petName: string;
+    kind: BookingNoteKind;
+  } | null>(null);
   const [toCancel, setToCancel] = useState<{
     booking: Booking;
     petName: string;
@@ -194,6 +203,9 @@ export function CustomerBookingsView() {
             facilityName={selectedFacility?.name}
             today={today}
             onCancel={(b, petName) => setToCancel({ booking: b, petName })}
+            onNote={(b, petName, kind) =>
+              setToNote({ booking: b, petName, kind })
+            }
           />
         ))}
       </div>
@@ -254,6 +266,15 @@ export function CustomerBookingsView() {
         )}
       </Tabs>
 
+      <BookingNoteDialog
+        open={toNote !== null}
+        onOpenChange={(open) => {
+          if (!open) setToNote(null);
+        }}
+        kind={toNote?.kind ?? "note"}
+        booking={toNote?.booking ?? null}
+        petName={toNote?.petName}
+      />
       <CancelBookingDialog
         open={toCancel !== null}
         onOpenChange={(open) => {

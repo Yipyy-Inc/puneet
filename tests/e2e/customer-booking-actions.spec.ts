@@ -124,6 +124,21 @@ test.afterAll(async ({ browser }) => {
   try {
     await signIn(page, ACCOUNTS.owner);
     const refused: string[] = [];
+    // The customer's notes: they cannot delete their own, the facility can.
+    for (const ref of made) {
+      const read = await page.request.get(
+        `/api/notes?category=booking&ref=${ref}`,
+      );
+      if (!read.ok()) continue;
+      for (const n of (await read.json()) as Array<{
+        id: string;
+        content: string;
+      }>) {
+        if (!n.content.includes(MARKER)) continue;
+        const del = await page.request.delete(`/api/notes/${n.id}`);
+        if (!del.ok()) refused.push(`note ${n.id}: ${await del.text()}`);
+      }
+    }
     for (const ref of made) {
       const res = await page.request.patch(`/api/bookings/${ref}`, {
         data: { status: "cancelled" },
@@ -260,4 +275,65 @@ test("the list reads in French and fits a 599px screen", async ({ page }) => {
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(overflow, "the page scrolls sideways at 599px").toBeLessThanOrEqual(0);
+});
+
+test("asking to change dates and leaving a note are saved, and shared", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.customer);
+  await page.goto("/customer/bookings");
+
+  const card = page
+    .locator('[data-slot="booking-card"]')
+    .filter({
+      has: page.locator(`a[href="/customer/bookings/${refs.today}"]`),
+    })
+    .first();
+  await expect(card).toBeVisible({ timeout: 60_000 });
+  await card.getByRole("button", { name: /^more for/i }).click();
+  await page.getByRole("menuitem", { name: /ask to change dates/i }).click();
+
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel(/which dates would work/i)
+    .fill(`${MARKER} a day later please`);
+  await dialog.getByRole("button", { name: /^send the request$/i }).click();
+  await expect(page.getByText(/request sent/i)).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const note = await page.request.post(
+    `/api/customer/bookings/${refs.today}/notes`,
+    { data: { kind: "note", content: `${MARKER} bringing her bed` } },
+  );
+  expect(note.status(), await note.text()).toBe(201);
+
+  const empty = await page.request.post(
+    `/api/customer/bookings/${refs.today}/notes`,
+    { data: { kind: "note", content: "   " } },
+  );
+  expect(empty.status()).toBe(422);
+
+  const theirs = await page.request.post(
+    `/api/customer/bookings/${refs.bobs}/notes`,
+    { data: { kind: "note", content: "not mine" } },
+  );
+  expect(theirs.status()).toBe(404);
+
+  // Both are booking notes shared with the customer, marked as theirs.
+  const read = await page.request.get(
+    `/api/notes?category=booking&ref=${refs.today}`,
+  );
+  expect(read.ok(), await read.text()).toBe(true);
+  const notes = (await read.json()) as Array<{
+    content: string;
+    visibility: string;
+    customerRequest?: string;
+  }>;
+  const mine = notes.filter((n) => n.content.includes(MARKER));
+  expect(mine.map((n) => n.customerRequest).sort()).toEqual([
+    "change_dates",
+    "note",
+  ]);
+  expect(mine.every((n) => n.visibility === "shared_with_customer")).toBe(true);
 });

@@ -84,6 +84,32 @@ export const customerBookingQueries = {
 };
 
 /**
+ * A note on the customer's own booking, or a request to change its dates
+ * (POST …/notes). Resolves once the note is saved, so the toast is true.
+ */
+export function useAddBookingNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      ref: number;
+      kind: "note" | "change_dates";
+      content: string;
+    }) =>
+      readJson<{ id: string }>(
+        await fetch(`/api/customer/bookings/${input.ref}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: input.kind, content: input.content }),
+        }),
+      ),
+    onSuccess: (_data, input) =>
+      queryClient.invalidateQueries({
+        queryKey: ["notes", "booking", input.ref],
+      }),
+  });
+}
+
+/**
  * Cancels, or withdraws, the customer's own booking. Resolves only once the
  * database has recorded it — never a "cancelled" toast for a booking that
  * was not.
