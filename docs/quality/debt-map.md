@@ -17801,6 +17801,7 @@ check_in_out or daycare_check_in_out). SQL: `care-gate-overrides.sql` (12).
 e2e: `booking-history.spec.ts`.
 
 Still open:
+
 - The gate reads only the booking page's care log. The board's own checkout,
   the kiosk and the calendar do not ask at all.
 - No screen lists the reasons across bookings. They are read one booking at a
