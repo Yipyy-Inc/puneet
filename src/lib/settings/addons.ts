@@ -54,21 +54,40 @@ export const NO_ADDONS: ServiceAddOnsConfig = {
 };
 
 /**
- * The add-ons offered for one service.
- *
- * `applicableServices` is empty or contains "all" to mean every service, which
- * is the normalisation the four booking flows each used to do for themselves.
+ * The swatch a category starts with, wherever one is created — the sheet or
+ * the add-on dialog. It is DATA, not a style: it is stored on the category and
+ * the facility recolours it with the picker, which is why it is a literal and
+ * not a token.
  */
+export const DEFAULT_ADDON_CATEGORY_COLOR = "#3b82f6";
+
+/**
+ * Whether an add-on is offered for one service, active or not.
+ *
+ * `applicableServices` is empty or contains "all" to mean EVERY service, which
+ * is the normalisation the four booking flows each used to do for themselves.
+ * Reading an empty list as "no services" instead is how an add-on saved as
+ * "All services" came to appear on no service's screen at all — it was
+ * created from the boarding tab, offered on every booking flow, and listed
+ * nowhere a manager could find it again.
+ */
+export function addOnAppliesToService(
+  addOn: ServiceAddOn,
+  serviceId: string,
+): boolean {
+  const services = addOn.applicableServices ?? [];
+  if (services.length === 0 || services.includes("all")) return true;
+  return services.includes(serviceId);
+}
+
+/** The ACTIVE add-ons offered for one service — what a booking flow sells. */
 export function addOnsForService(
   addOns: ServiceAddOn[],
   serviceId: string,
 ): ServiceAddOn[] {
-  return addOns.filter((addOn) => {
-    if (!addOn.isActive) return false;
-    const services = addOn.applicableServices ?? [];
-    if (services.length === 0 || services.includes("all")) return true;
-    return services.includes(serviceId);
-  });
+  return addOns.filter(
+    (addOn) => addOn.isActive && addOnAppliesToService(addOn, serviceId),
+  );
 }
 
 export type { ServiceAddOn, AddOnCategory };

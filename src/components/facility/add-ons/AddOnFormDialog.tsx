@@ -35,6 +35,7 @@ import {
 import { AddOnPetFilter } from "@/components/facility/add-ons/AddOnPetFilter";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import {
+  Plus,
   Hash,
   Clock,
   Repeat,
@@ -132,6 +133,21 @@ const SCHEDULING_OPTIONS: {
     Icon: Scissors,
   },
 ];
+
+// The row that leaves the category list, rather than choosing from it.
+//
+// A facility that has never set up categories has an EMPTY list — which is
+// every facility in the database on 2026-09-19 — and a Select with no items
+// opens onto nothing at all. That is what the client saw when they created a
+// boarding add-on: a field that answers a click with a blank popover and no
+// way forward. So the list always carries a way to name one, and a facility
+// with no categories gets the name field straight away.
+//
+// The name typed here joins the facility's categories when the ADD-ON is
+// saved (AddOnsManager.handleSave), not on a keystroke: the two lists share
+// one settings domain, so writing a category mid-edit would refetch the
+// domain and remount the editor under the open dialog.
+const NEW_CATEGORY = "__new_category__";
 
 const SIZE_KEYS = ["small", "medium", "large", "giant"] as const;
 type SizeKey = (typeof SIZE_KEYS)[number];
@@ -311,8 +327,14 @@ export function AddOnFormDialog({
   onSave,
 }: Props) {
   const t = useSettingsText().section("addons");
+  // Seeded from `editing` whenever there IS one — including the blank-but-for-
+  // its-service row the manager hands over for a create on a service tab.
+  // `editing.id !== ""` used to gate this, so that row was thrown away and its
+  // `applicableServices: ["boarding"]` with it: every add-on created from the
+  // boarding tab was saved as "All services". Only the TITLE and the save
+  // button ask whether this is an edit.
   const [form, setForm] = useState<AddOnFormValues>(() =>
-    editing && editing.id !== ""
+    editing
       ? {
           name: editing.name,
           description: editing.description,
@@ -344,8 +366,18 @@ export function AddOnFormDialog({
       : blank(),
   );
 
+  // No categories to choose from, or an add-on whose category is not in the
+  // list: name it. Either way the field is never an empty menu.
+  const hasCategories = categories.length > 0;
+  const [namingCategory, setNamingCategory] = useState(
+    () =>
+      !hasCategories ||
+      (!!editing?.category &&
+        !categories.some((c) => c.name === editing.category)),
+  );
+
   const [sizePricingOn, setSizePricingOn] = useState(
-    !!(editing && editing.id !== "" && editing.sizePricing?.length),
+    !!editing?.sizePricing?.length,
   );
   const [sizeRows, setSizeRows] = useState<
     Array<{
@@ -456,29 +488,71 @@ export function AddOnFormDialog({
                   <Label className="text-muted-foreground text-xs">
                     {t("fieldCategory")}
                   </Label>
-                  <Select
-                    value={form.category ?? ""}
-                    onValueChange={(v) => f("category", v)}
-                  >
-                    <SelectTrigger className="text-sm">
-                      <SelectValue placeholder={t("categoryPlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.name}>
+                  {namingCategory ? (
+                    <>
+                      <Input
+                        value={form.category ?? ""}
+                        onChange={(e) => f("category", e.target.value)}
+                        placeholder={t("categoryNamePlaceholder")}
+                        className="text-sm"
+                      />
+                      {hasCategories ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground -ml-2 px-2 text-xs"
+                          onClick={() => {
+                            setNamingCategory(false);
+                            f("category", "");
+                          }}
+                        >
+                          {t("categoryBack")}
+                        </Button>
+                      ) : (
+                        <p className="text-muted-foreground text-[11px]">
+                          {t("categoryFirstHelp")}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <Select
+                      value={form.category ?? ""}
+                      onValueChange={(v) => {
+                        if (v === NEW_CATEGORY) {
+                          setNamingCategory(true);
+                          f("category", "");
+                          return;
+                        }
+                        f("category", v);
+                      }}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder={t("categoryPlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.name}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="size-2 rounded-full"
+                                style={{
+                                  backgroundColor: c.colorCode ?? "#64748b",
+                                }}
+                              />
+                              {c.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={NEW_CATEGORY}>
                           <div className="flex items-center gap-2">
-                            <span
-                              className="size-2 rounded-full"
-                              style={{
-                                backgroundColor: c.colorCode ?? "#64748b",
-                              }}
-                            />
-                            {c.name}
+                            <Plus className="size-3.5" />
+                            {t("categoryNew")}
                           </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-muted-foreground text-xs">

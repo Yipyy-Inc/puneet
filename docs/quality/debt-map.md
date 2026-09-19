@@ -18044,3 +18044,48 @@ chart, overdue invoices, suspension flags, support tickets, and the search's
 invoice/ticket/team groups. The dashboard's builders in
 `src/data/platform-dashboard.ts` are all fixtures. Round 4 covered bookings
 only.
+
+## 2026-09-19 — Creating an add-on for boarding (client feedback)
+
+The client: "When creating add on for the boarding, it does not show
+anything for the category." Three defects sat on top of each other in
+`src/components/facility/add-ons/`, and the first one was the least of them.
+
+- **An empty menu was the whole empty state.** The Category `Select` was
+  built from the facility's own category list, and NO facility in the
+  database has one — so it opened onto nothing, with no way to add the
+  first. The field now offers "New category" in the list and, for a facility
+  with none, the name box directly, with a sentence saying the name joins
+  the list when the add-on is saved. It is reconciled in
+  `AddOnsManager.handleSave` — in the SAME write as the add-on, because both
+  lists share the `service_addons` domain and saving a category on its own
+  refetches that domain and remounts the editor under the open dialog. A
+  name matching an existing one under another casing is normalised to it,
+  since rows group and filter by the name itself.
+- **Every Edit opened on a blank form.** `AddOnFormDialog` seeds its whole
+  form in `useState` initialisers, and the manager mounted it once, for the
+  life of the screen, with nothing being edited — so those initialisers ran
+  against `null` and never again. Saving wrote the blanks back over the
+  add-on. Fixed with a key that moves on each open (`dialogSeq`).
+  `MultiPetModal` solves the same problem the other sanctioned way —
+  `prevEditing` state compared during render — and the other ~38 call sites
+  passing an `editing` prop are UNAUDITED. Either pattern is fine; a
+  permanently mounted dialog with neither is the bug.
+- **An add-on created on the boarding tab vanished from it.** Two causes.
+  `openCreate()` pre-seeds `applicableServices: [serviceFilter]`, and the
+  dialog threw that row away because it gated seeding on `id !== ""` — so
+  every add-on created from a service tab was saved as "All services".
+  Then the manager read an EMPTY `applicableServices` as "no services",
+  while the booking flows read it as "all" — so an "All services" add-on
+  appeared on no service tab at all. The predicate is one function now,
+  `addOnAppliesToService` in `src/lib/settings/addons.ts`, used by both.
+
+Verified by hand on the demo facility at 1440 and 599px, EN and FR:
+the empty state, the category saved with the add-on, the add-on still on
+the boarding tab after a reload, and Edit seeded from the row clicked. The
+walkthrough spec was temporary and its data was removed; Doggieville was
+not touched.
+
+Not done: the Category and Image URL fields stay side by side at 599px
+(`grid-cols-2`, pre-existing), so both are narrow on a phone. A new category
+takes the default swatch and is recoloured in the Categories sheet.

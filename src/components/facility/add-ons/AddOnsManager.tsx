@@ -6,6 +6,10 @@ import {
   useSaveFacilitySetting,
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
+import {
+  addOnAppliesToService,
+  DEFAULT_ADDON_CATEGORY_COLOR,
+} from "@/lib/settings/addons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -201,6 +205,7 @@ function AddOnsEditor({
   const [categories, setCategories] =
     useState<AddOnCategory[]>(initialCategories);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogSeq, setDialogSeq] = useState(0);
   const [editingAddon, setEditingAddon] = useState<ServiceAddOn | null>(null);
   const [catSheetOpen, setCatSheetOpen] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
@@ -235,60 +240,118 @@ function AddOnsEditor({
     persist(addOns, next);
   }
 
-  function openCreate() {
-    if (serviceFilter) {
-      // Pre-seed applicableServices so the new add-on is scoped to this service
-      setEditingAddon({
-        id: "",
-        name: "",
-        description: "",
-        image: "",
-        category: "",
-        colorCode: "#3b82f6",
-        pricingType: "flat",
-        price: 0,
-        unitLabel: "",
-        applicableServices: [serviceFilter],
-        schedulingType: "quantity",
-        requiresScheduling: false,
-        generatesTask: true,
-        isActive: true,
-        sortOrder: 0,
-        createdAt: "",
-        updatedAt: "",
-      } as ServiceAddOn);
-    } else {
-      setEditingAddon(null);
-    }
+  // The dialog seeds its whole form from `editing` in `useState` initialisers,
+  // and it is mounted for the life of this screen — so those initialisers ran
+  // ONCE, on the first render, with nothing being edited. Every Edit opened on
+  // a blank form, and saving it wrote the blanks back over the add-on. The key
+  // moves on each open, so the form is seeded from the row that was clicked.
+  function openDialog(addon: ServiceAddOn | null) {
+    setEditingAddon(addon);
+    setDialogSeq((n) => n + 1);
     setDialogOpen(true);
   }
+
+  function openCreate() {
+    openDialog(
+      serviceFilter
+        ? // Pre-seed applicableServices so the new add-on is scoped to this service
+          ({
+            id: "",
+            name: "",
+            description: "",
+            image: "",
+            category: "",
+            colorCode: "#3b82f6",
+            pricingType: "flat",
+            price: 0,
+            unitLabel: "",
+            applicableServices: [serviceFilter],
+            schedulingType: "quantity",
+            requiresScheduling: false,
+            generatesTask: true,
+            isActive: true,
+            sortOrder: 0,
+            createdAt: "",
+            updatedAt: "",
+          } as ServiceAddOn)
+        : null,
+    );
+  }
   function openEdit(addon: ServiceAddOn) {
-    setEditingAddon(addon);
-    setDialogOpen(true);
+    openDialog(addon);
+  }
+
+  // A category named in the dialog joins the facility's list HERE, in the same
+  // write as the add-on it was named for — the two lists share one settings
+  // domain, so creating it on a keystroke would refetch that domain and
+  // remount this editor under the open dialog.
+  //
+  // A name that already exists under another casing is not a second category:
+  // rows are grouped and filtered by the name itself, so "treats" beside
+  // "Treats" would read as two groups on every booking screen.
+  function withNamedCategory(typed: string | undefined): {
+    category: string | undefined;
+    categories: AddOnCategory[];
+  } {
+    const name = (typed ?? "").trim();
+    if (name === "") return { category: undefined, categories };
+    const existing = categories.find(
+      (c) => c.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) return { category: existing.name, categories };
+    const now = new Date().toISOString();
+    return {
+      category: name,
+      categories: [
+        ...categories,
+        {
+          id: `cat-${Date.now()}`,
+          name,
+          description: "",
+          colorCode: DEFAULT_ADDON_CATEGORY_COLOR,
+          sortOrder: categories.length + 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    };
   }
 
   function handleSave(values: AddOnFormValues) {
     const now = new Date().toISOString();
+    const { category, categories: nextCategories } = withNamedCategory(
+      values.category,
+    );
+    const saved = { ...values, category };
+    let nextAddOns: ServiceAddOn[];
     if (editingAddon && editingAddon.id !== "") {
-      persistAddOns(
-        addOns.map((a) =>
-          a.id === editingAddon.id
-            ? { ...editingAddon, ...values, updatedAt: now }
-            : a,
-        ),
+      nextAddOns = addOns.map((a) =>
+        a.id === editingAddon.id
+          ? { ...editingAddon, ...saved, updatedAt: now }
+          : a,
       );
-      toast.success(t("addOnUpdated").replace("{name}", values.name));
     } else {
-      const newAddon: ServiceAddOn = {
-        id: `addon-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        ...values,
-        sortOrder: addOns.length + 1,
-        createdAt: now,
-        updatedAt: now,
-      };
-      persistAddOns([...addOns, newAddon]);
-      toast.success(t("addOnCreated").replace("{name}", values.name));
+      nextAddOns = [
+        ...addOns,
+        {
+          id: `addon-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          ...saved,
+          sortOrder: addOns.length + 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
     }
+    setAddOns(nextAddOns);
+    setCategories(nextCategories);
+    persist(nextAddOns, nextCategories);
+    toast.success(
+      t(
+        editingAddon && editingAddon.id !== ""
+          ? "addOnUpdated"
+          : "addOnCreated",
+      ).replace("{name}", values.name),
+    );
     setDialogOpen(false);
   }
 
@@ -308,8 +371,13 @@ function AddOnsEditor({
   }
 
   // Stats (scoped to serviceFilter when set)
+  //
+  // Through `addOnAppliesToService`, because an EMPTY `applicableServices` is
+  // what the booking flows read as "all services" — and reading it here as
+  // "no services" hid every add-on saved that way from all four service tabs
+  // at once, moments after it was created on one of them.
   const scopedAddOns = serviceFilter
-    ? addOns.filter((a) => a.applicableServices.includes(serviceFilter))
+    ? addOns.filter((a) => addOnAppliesToService(a, serviceFilter))
     : addOns;
   const active = scopedAddOns.filter((a) => a.isActive).length;
   const scheduled = scopedAddOns.filter(
@@ -318,9 +386,7 @@ function AddOnsEditor({
 
   // Filtered + grouped
   const filtered = addOns
-    .filter(
-      (a) => !serviceFilter || a.applicableServices.includes(serviceFilter),
-    )
+    .filter((a) => !serviceFilter || addOnAppliesToService(a, serviceFilter))
     .filter((a) => !filterCat || a.category === filterCat)
     .filter(
       (a) => !search || a.name.toLowerCase().includes(search.toLowerCase()),
@@ -663,6 +729,7 @@ function AddOnsEditor({
       )}
 
       <AddOnFormDialog
+        key={dialogSeq}
         open={dialogOpen}
         editing={editingAddon}
         categories={categories}

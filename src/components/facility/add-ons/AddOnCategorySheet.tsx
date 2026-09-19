@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AddOnCategory } from "@/types/facility";
+import { DEFAULT_ADDON_CATEGORY_COLOR } from "@/lib/settings/addons";
 import { cn } from "@/lib/utils";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { toast } from "sonner";
@@ -31,7 +32,12 @@ function blankCategory(): Omit<
   AddOnCategory,
   "id" | "createdAt" | "updatedAt"
 > {
-  return { name: "", description: "", colorCode: "#3b82f6", sortOrder: 0 };
+  return {
+    name: "",
+    description: "",
+    colorCode: DEFAULT_ADDON_CATEGORY_COLOR,
+    sortOrder: 0,
+  };
 }
 
 export function AddOnCategorySheet({
