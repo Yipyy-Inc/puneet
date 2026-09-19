@@ -67,6 +67,8 @@ import {
 } from "@/lib/i18n/format";
 import { useInvoiceTemplate } from "@/hooks/use-invoice-template";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
+import { careGuestFromBooking } from "@/lib/daily-care/care-guest";
+import { getPetSize } from "@/lib/pet-size";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
@@ -116,6 +118,7 @@ import {
   useRefundBooking,
   useRefundBookingToCard,
   useSendPayLink,
+  useEmailReceipt,
   useMarkBookingNoShow,
   type Tender,
 } from "@/lib/api/booking-money";
@@ -156,6 +159,9 @@ function nightsBetween(start: string, end: string) {
 // ========================================
 // Page
 // ========================================
+
+/** What a profile writes when the pet has no allergy: nothing to print. */
+const NO_ALLERGY = /^(none|n\/?a|no|nil|aucune?)$/i;
 
 export default function ClientBookingDetailPage({
   params,
@@ -272,6 +278,7 @@ export default function ClientBookingDetailPage({
   const refundBooking = useRefundBooking();
   const refundToCard = useRefundBookingToCard();
   const sendPayLink = useSendPayLink();
+  const emailReceipt = useEmailReceipt();
   const chargeBooking = useChargeBooking();
   const addLineItems = useAddLineItems();
   // Traceability: the estimate this booking was converted from, if any.
@@ -429,19 +436,47 @@ export default function ClientBookingDetailPage({
   const boardingGuestForPrint: BoardingGuest | null = (() => {
     if (!isBoarding || !booking || !pet) return null;
     const refId = `bk-${String(booking.id).padStart(3, "0")}`;
-    const allergyList = pet.allergies
-      ? pet.allergies
-          .split(/[,;]/)
-          .map((a) => a.trim())
-          .filter(Boolean)
-      : [];
+    // The booking's own feeding schedule and medications, through the same
+    // conversion the Daily Care board reads (careGuestFromBooking). This
+    // printed no feeding times, no medications, the special requests as the
+    // feeding instructions, and every dog as "medium".
+    const care = careGuestFromBooking(
+      {
+        id: refId,
+        petId: pet.id,
+        petNames: [pet.name],
+        ownerName: client?.name ?? "",
+        ownerPhone: client?.phone,
+        roomName: booking.kennel ?? null,
+        scheduledArrival: booking.startDate,
+        scheduledDeparture: booking.endDate,
+        nights,
+      },
+      {
+        feedingSchedule: booking.feedingSchedule,
+        medications: booking.medications,
+        specialRequests: booking.specialRequests,
+      },
+    );
+    const allergyList = [
+      ...new Set([
+        ...(pet.allergies
+          ? pet.allergies
+              .split(/[,;]/)
+              .map((a) => a.trim())
+              // A profile that says "None" has no allergy to print.
+              .filter((a) => a && !NO_ALLERGY.test(a))
+          : []),
+        ...care.allergies,
+      ]),
+    ];
     return {
       id: `synthetic-${booking.id}`,
       petId: pet.id,
       bookingId: refId,
       petName: pet.name,
       petBreed: pet.breed,
-      petSize: "medium",
+      petSize: getPetSize(pet),
       petWeight: pet.weight,
       petColor: pet.color,
       petPhotoUrl: pet.imageUrl,
@@ -462,11 +497,11 @@ export default function ClientBookingDetailPage({
       peakSurcharge: 0,
       totalPrice: booking.totalCost,
       allergies: allergyList,
-      feedingInstructions: booking.specialRequests ?? "",
-      foodBrand: "",
-      feedingTimes: [],
-      feedingAmount: "",
-      medications: [],
+      feedingInstructions: care.feedingInstructions,
+      foodBrand: care.foodBrand,
+      feedingTimes: care.feedingTimes,
+      feedingAmount: care.feedingAmount,
+      medications: care.medications,
       tags: [],
       notes: booking.specialRequests ?? "",
       createdAt: booking.startDate,
@@ -697,6 +732,27 @@ export default function ClientBookingDetailPage({
       }
     } catch (error) {
       toast.error(detailT("payLinkNotSent"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
+  // Says where it went, or why it did not — never "sent" for an email that
+  // was not.
+  const emailTheReceipt = async () => {
+    try {
+      const result = await emailReceipt.mutateAsync({ bookingRef: booking.id });
+      if (result.sent) {
+        toast.success(
+          detailFill("receiptEmailed", { email: result.to ?? client.email }),
+        );
+      } else {
+        toast.warning(detailT("receiptNotSent"), {
+          description: result.detail,
+        });
+      }
+    } catch (error) {
+      toast.error(detailT("receiptNotSent"), {
         description: error instanceof Error ? error.message : undefined,
       });
     }
@@ -934,6 +990,13 @@ export default function ClientBookingDetailPage({
     // "the customer is not messaged from here".
     cancel: () => setCancelOpen(true),
     onPayLink: (channel) => void sendPayLinkBy(channel),
+    // A receipt says "paid": offered once the booking is, to who may see money.
+    ...(canSeeBookingAmounts && booking.paymentStatus === "paid"
+      ? { onEmailReceipt: () => void emailTheReceipt() }
+      : {}),
+    ...(boardingGuestForPrint
+      ? { onPrintCareSheet: () => setBoardingSheetOpen(true) }
+      : {}),
     onPrintInvoice: () =>
       printBookingInvoice({
         booking,

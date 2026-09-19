@@ -30,6 +30,7 @@ import {
   Contrast,
 } from "lucide-react";
 import type { BoardingGuest } from "@/data/boarding";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
 
 const QR_BASE = "https://care.yipyy.com";
 
@@ -928,9 +929,26 @@ export function PrintKennelCardsModal({
   const [collarFields, setCollarFields] = useState<CollarFields>(
     DEFAULT_COLLAR_FIELDS,
   );
-  const [facilityInfo, setFacilityInfo] = useState<FacilityInfo>(
-    DEFAULT_FACILITY_INFO,
-  );
+  // The facility’s OWN name, phone and address, from its profile. This
+  // started from a hardcoded "Yipyy, (514) 555-0100" and printed it on every
+  // collar label unless somebody retyped it. Staff can still change it for one
+  // print; their change wins until the modal closes.
+  const { profile } = useFacilityProfile();
+  const [editedFacility, setFacilityInfo] = useState<FacilityInfo | null>(null);
+  const facilityInfo: FacilityInfo = editedFacility ?? {
+    name: profile.businessName,
+    phone: profile.phone || "",
+    address: [
+      profile.address.street,
+      profile.address.city,
+      [profile.address.state, profile.address.zipCode]
+        .filter(Boolean)
+        .join(" "),
+    ]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(", "),
+  };
   const [showCustomize, setShowCustomize] = useState(false);
   const [colorMode, setColorMode] = useState<ColorMode>("color");
 

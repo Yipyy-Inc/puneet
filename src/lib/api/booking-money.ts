@@ -700,3 +700,35 @@ export function useSendPayLink() {
     },
   });
 }
+
+/**
+ * Email a settled booking's itemised receipt to the client
+ * (POST /api/bookings/[ref]/receipt). The answer says whether it went and to
+ * whom; a booking with something still owed is refused by the route.
+ */
+export function useEmailReceipt() {
+  return useMutation({
+    mutationFn: async (input: {
+      bookingRef: number;
+    }): Promise<{ sent: boolean; detail?: string; to?: string }> => {
+      const response = await fetch(
+        `/api/bookings/${input.bookingRef}/receipt`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as {
+        sent?: boolean;
+        detail?: string;
+        to?: string;
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(body?.error ?? `Request failed (${response.status})`);
+      }
+      return { sent: Boolean(body?.sent), detail: body?.detail, to: body?.to };
+    },
+  });
+}

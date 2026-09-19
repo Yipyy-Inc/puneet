@@ -17748,3 +17748,41 @@ decides that. `booking-history.sql` and `booking-history.spec.ts` pin it.
   timeline would read them beside it.
 - `audit-scheduling-and-facility-read.sql` T10 now says "no audit trail beyond
   the bookings they may see": that is the intended widening, not a loosened test.
+
+## 2026-09-19 — Bookings, round 2, slice 5: the care sheet and the emailed receipt
+
+### ✅ The care sheet prints the booking's care
+
+Round 1 left the kennel card mounted with nothing to open it, and what it would
+have printed was invented: no feeding times, no medications, the special
+requests as the feeding instructions, every dog "medium", and a hardcoded
+"Yipyy, (514) 555-0100" on the collar label. Print → **Care sheet** is back for
+a boarding booking, built with `careGuestFromBooking` — the conversion the
+Daily Care board reads — so the feeding times, amounts and instructions, each
+medication with its dose, times and HIGH RISK flag, and the allergies from the
+schedule and the pet's profile are what staff entered. The size comes from the
+weight (`getPetSize`, the tiers grooming and boarding price by). The modal
+reads the facility's own name, phone and address from its profile; staff can
+still edit them for one print.
+
+### ✅ A settled booking's receipt can be emailed
+
+More → **Email the receipt**, for staff who may see the booking's money, once
+it is paid. `POST /api/bookings/[ref]/receipt` builds it from the payment
+ledger (`src/lib/payments/booking-receipt.ts`, unit-tested): the booking's
+lines, a line for any difference between them and what was paid, the tax the
+payments recorded (split by name only when the facility's rates reproduce it),
+the tip, and one payment's card details or "Paid in N payments". A booking still
+owing is refused (409) — a receipt says "paid"; it needs the pay link — and the
+answer says whether the email went. `booking-receipt.spec.ts` sends to Resend's
+own test inbox.
+
+### 🔴 Known, and not done here
+
+- The receipt email and the care sheet are English only (the shared receipt
+  template, `src/lib/clover/receipt.ts`, has no locale).
+- **The retail receipt prints no tax**: `retail/sales/[id]/receipt` passes
+  `taxLines: []`, and the template prints only tax lines, so a taxed sale's
+  receipt shows a subtotal and a total that differ by an unexplained amount.
+- A medication's frequency prints its raw id ("twice_daily") on the care sheet
+  and the Daily Care board alike.

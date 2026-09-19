@@ -1935,7 +1935,9 @@
         "historyBy": "{who} · {when}",
         "historyAutomatic": "Automatic",
         "historyShowAll": "Show all {n}",
-        "historyShowFewer": "Show fewer"
+        "historyShowFewer": "Show fewer",
+        "receiptEmailed": "Receipt emailed to {email}",
+        "receiptNotSent": "The receipt was not sent"
       },
       "bookingRequests": {
         "requestConfirmed": "Booking confirmed for {pet}",
@@ -3316,7 +3318,9 @@
         "bookAgainPet": "Book {pet} again",
         "notAllowedEdit": "You do not have permission to edit bookings.",
         "notAllowedCancel": "You do not have permission to cancel bookings.",
-        "notAllowedCreate": "You do not have permission to create bookings."
+        "notAllowedCreate": "You do not have permission to create bookings.",
+        "printCareSheet": "Care sheet",
+        "emailReceipt": "Email the receipt"
       },
       "depositCharge": {
         "title": "Charge the deposit",
