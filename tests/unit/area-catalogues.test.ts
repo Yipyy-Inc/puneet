@@ -38,6 +38,8 @@ const SAME_IN_BOTH = new Set([
   "staff.directory.colServices",
   "staff.shell.tabDocuments",
   "staff.roleMatrix.colPermission",
+  // Two placeholders and a separator — no words of its own.
+  "staff.bookingDetail.historyBy",
   "staff.bookingDetail.notesTitle", // Notes / Notes
   "staff.boardingOverview.allergies", // Allergies / Allergies
   "staff.bookingDetail.taskCatExecution", // Service / Service

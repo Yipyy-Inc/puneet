@@ -44,6 +44,11 @@ const SAME_IN_BOTH = new Set([
   "customer.notifications", // Notifications / Notifications
   "booking.service", // Service / Service
   "booking.standard", // Standard / Standard
+  "booking.listColDates", // Dates / Dates
+  "booking.listColNotes", // Notes / Notes
+  "booking.csvClient", // Client / Client
+  "booking.csvService", // Service / Service
+  "booking.csvTotal", // Total / Total
   // Placeholders and a separator, with no words of its own — identical by
   // construction rather than by oversight.
   "booking.clientAndPets", // {client} · {pets}

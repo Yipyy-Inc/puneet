@@ -178,8 +178,14 @@ begin
     json_build_object('sub', v_groomer, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
 
-  select count(*) into n from public.audit_log;
-  perform pg_temp.t(10, 'a groomer reads NO audit trail at all', n = 0, n::text);
+  -- Since 20260919142555 a member who may see a booking reads THAT booking's
+  -- history (audit_log_booking_read, tested in booking-history.sql) — the
+  -- booking page shows it. Nothing else in the trail: not a shift, not a role
+  -- change, not a setting, not another facility's anything.
+  select count(*) into n from public.audit_log
+   where entity_type is distinct from 'booking';
+  perform pg_temp.t(10, 'a groomer reads NO audit trail beyond the bookings they may see',
+                    n = 0, n::text);
 
   -- THE POSITIVE CONTROL for T10. Without this, T10 passes when the JWT never
   -- took effect, when the session can read nothing, or when the table is empty.

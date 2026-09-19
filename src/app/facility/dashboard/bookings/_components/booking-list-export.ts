@@ -70,7 +70,9 @@ export function exportBookingsToCSV(
 
   const csv = [headers.map(cell).join(","), ...rows].join("\n");
   // A byte-order mark, so Excel reads "Réservation" as UTF-8, not "RÃ©".
-  const blob = new Blob(["﻿", csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([String.fromCharCode(0xfeff), csv], {
+    type: "text/csv;charset=utf-8;",
+  });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.href = url;
