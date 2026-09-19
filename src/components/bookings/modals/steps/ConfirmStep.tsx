@@ -27,8 +27,6 @@ import {
   Moon,
   ClipboardCheck,
   Info,
-  Star,
-  Heart,
   FileSignature,
   Pen,
   CheckCircle,
@@ -48,7 +46,7 @@ import { cn } from "@/lib/utils";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
-import type { ServiceAddOn, TipConfig } from "@/types/facility";
+import type { ServiceAddOn } from "@/types/facility";
 import { useBookingApproval, useCareFees } from "@/lib/api/facility-settings";
 import { responseHoursFor } from "@/lib/settings/booking-approval";
 import { offeredMedicationAids } from "@/lib/settings/care-fees";
@@ -166,9 +164,6 @@ interface ConfirmStepProps {
   /** Grooming-only: true when the customer chose mobile (van) service. Drives
    *  the "Mobile" badge + the "Arrival window" time label. */
   isMobileGrooming?: boolean;
-  tipConfig: TipConfig;
-  tipAmount: number;
-  onTipChange: (amount: number) => void;
   /** Individual tax lines from the facility's tax config (for per-tax breakdown) */
   facilityTaxes?: Array<{ name: string; rate: number }>;
   /** Jump to a specific wizard step (index) + optional sub-step */
@@ -291,8 +286,6 @@ export function ConfirmStep({
   isMobileGrooming,
   setNotificationSMS,
   facilityTaxes,
-  tipConfig,
-  tipAmount,
   onEditStep,
 }: ConfirmStepProps) {
   // The FACILITY's evaluation settings — name, description, duration and
@@ -1207,26 +1200,6 @@ export function ConfirmStep({
         </p>
       </div>
 
-      {/* Tip amount summary — shown when a tip was added in the tip step */}
-      {tipConfig.enabled && tipAmount > 0 && (
-        <div className="border-primary/20 bg-primary/5 flex items-center gap-3 rounded-2xl border p-4">
-          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-            <Heart className="size-5 fill-current" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">
-              {t("tipAdded").replace(
-                "{amount}",
-                formatMoney(tipAmount, locale),
-              )}
-            </p>
-            <p className="text-muted-foreground text-[12px]">
-              {t("tipAllToTeam")}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* ── Pending Waivers ───────────────────────────────────── */}
       {pendingWaivers.length > 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
@@ -1444,16 +1417,6 @@ export function ConfirmStep({
                 </span>
               </div>
             ))}
-          {tipAmount > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Star className="size-3" /> {t("tip")}
-              </span>
-              <span className="font-medium tabular-nums">
-                +{formatMoney(tipAmount, locale)}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Total */}
@@ -1463,12 +1426,12 @@ export function ConfirmStep({
             <span className="text-sm font-bold">{t("total")}</span>
           </div>
           <span className="text-primary text-xl font-bold tabular-nums">
-            {redeemedPackageId && calculatePrice.total + tipAmount === 0 ? (
+            {redeemedPackageId && calculatePrice.total === 0 ? (
               <span className="text-sm text-emerald-600">
                 {t("packagePassApplied")}
               </span>
             ) : (
-              formatMoney(calculatePrice.total + tipAmount, locale)
+              formatMoney(calculatePrice.total, locale)
             )}
           </span>
         </div>

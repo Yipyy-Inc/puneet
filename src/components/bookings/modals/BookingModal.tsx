@@ -58,7 +58,6 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
-import { TipWizardContent } from "./steps/TipWizardContent";
 import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
@@ -355,7 +354,6 @@ export function BookingModal({
     training,
     bookingFlow,
     serviceNotifDefaults,
-    tipConfig,
     evaluation: evaluationConfig,
   } = useSettings();
   // The facility's own surcharges and discounts, from `facility_settings`.
@@ -1000,8 +998,6 @@ export function BookingModal({
       setGroomingAutoAttachedAddOnIds([]);
     }
   }, [selectedService]);
-  const [tipAmount, setTipAmount] = useState(0);
-  const [showingTipStep, setShowingTipStep] = useState(false);
   const [showingPackagePromptStep, setShowingPackagePromptStep] =
     useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
@@ -2218,19 +2214,14 @@ export function BookingModal({
   }, [selectedClient, selectedService, serviceType, customerPackagesData]);
 
   const handleNext = () => {
-    // If package prompt is showing, dismiss it and proceed to tip/confirm.
-    // The tip step is customer-only (spec Table 93) — staff never see it.
+    // If package prompt is showing, dismiss it and proceed to confirm.
+    //
+    // There was a tip step here, for customers. Its tip never reached the
+    // booking — the database zeroes a customer's tip on insert
+    // (enforce_booking_integrity) — and it showed three invented staff to
+    // split it between. A tip is given on /pay, where it is charged.
     if (showingPackagePromptStep) {
       setShowingPackagePromptStep(false);
-      if (tipConfig?.enabled && !isEstimateMode && isCustomerMode) {
-        setShowingTipStep(true);
-      }
-      return;
-    }
-
-    // Tip step is showing — dismiss it and proceed to confirm
-    if (showingTipStep) {
-      setShowingTipStep(false);
       return;
     }
 
@@ -2256,7 +2247,7 @@ export function BookingModal({
       setHighestStepReached((prev) => Math.max(prev, nextStep));
       rememberUnfinished(nextStep);
 
-      // Intercept before confirm step to show package prompt or tip screen
+      // Intercept before confirm step to show the package prompt
       if (nextStepId === "confirm" && !isEstimateMode) {
         if (
           applicablePackages.length > 0 &&
@@ -2264,8 +2255,6 @@ export function BookingModal({
           !isCustomerMode
         ) {
           setShowingPackagePromptStep(true);
-        } else if (tipConfig?.enabled && isCustomerMode) {
-          setShowingTipStep(true);
         }
       }
     }
@@ -2292,44 +2281,12 @@ export function BookingModal({
       return;
     }
 
-    // Tip step is showing — go back to package prompt (if applicable) or previous step
-    if (showingTipStep) {
-      setShowingTipStep(false);
-      if (
-        applicablePackages.length > 0 &&
-        !redeemedPackageId &&
-        !isCustomerMode
-      ) {
-        setShowingPackagePromptStep(true);
-        return;
-      }
-
-      const prevStep = currentStep - 1;
-      const prevStepId = displayedSteps[prevStep]?.id;
-      setCurrentStep(prevStep);
-      if (
-        prevStepId === "details" &&
-        (selectedService === "daycare" ||
-          selectedService === "boarding" ||
-          selectedService === "evaluation" ||
-          selectedService === "grooming")
-      ) {
-        setCurrentSubStep(currentSubSteps.length - 1);
-      } else {
-        setCurrentSubStep(0);
-      }
-      return;
-    }
-
     const currentStepId = displayedSteps[currentStep]?.id;
     const prevStepId = displayedSteps[currentStep - 1]?.id;
 
-    // From confirm, go back to tip step or package prompt instead of jumping straight to details
+    // From confirm, go back to the package prompt instead of jumping straight to details
     if (currentStepId === "confirm" && !isEstimateMode) {
-      if (tipConfig?.enabled && isCustomerMode) {
-        setShowingTipStep(true);
-        return;
-      } else if (
+      if (
         applicablePackages.length > 0 &&
         !redeemedPackageId &&
         !isCustomerMode
@@ -2703,7 +2660,6 @@ export function BookingModal({
         );
         return known.length > 0 ? known : undefined;
       })(),
-      tipAmount: tipAmount > 0 ? tipAmount : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
       // Booked past the evaluation rule: which pets were short of it, and why.
@@ -3104,7 +3060,6 @@ export function BookingModal({
     setExtraServices([]);
     setNotificationEmail(true);
     setNotificationSMS(false);
-    setTipAmount(0);
     setIncludesEvaluation(false);
     setEvaluationOverride(null);
     setBookingRequested(false);
@@ -3970,7 +3925,6 @@ export function BookingModal({
                           if (canClickStep) {
                             setCurrentStep(idx);
                             setCurrentSubStep(0);
-                            setShowingTipStep(false);
                           }
                         }}
                         onKeyDown={(e) => {
@@ -3981,7 +3935,6 @@ export function BookingModal({
                             e.preventDefault();
                             setCurrentStep(idx);
                             setCurrentSubStep(0);
-                            setShowingTipStep(false);
                           }
                         }}
                         className={cn(
@@ -4181,21 +4134,15 @@ export function BookingModal({
                   />
                 </div>
                 <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-                  $
-                  {(
-                    calculatePrice.total + (isEstimateMode ? 0 : tipAmount)
-                  ).toFixed(2)}
+                  ${calculatePrice.total.toFixed(2)}
                 </span>
               </div>
               <h2 className="text-lg font-semibold">
                 {showingPackagePromptStep
                   ? t("applyPackagePass")
-                  : showingTipStep
-                    ? t("showYourAppreciation")
-                    : t(displayedSteps[currentStep]?.titleKey ?? "")}
+                  : t(displayedSteps[currentStep]?.titleKey ?? "")}
               </h2>
               {!showingPackagePromptStep &&
-                !showingTipStep &&
                 displayedSteps[currentStep]?.id === "details" &&
                 (selectedService === "daycare" ||
                   selectedService === "boarding" ||
@@ -4212,35 +4159,10 @@ export function BookingModal({
                   onApply={(packageId) => {
                     setRedeemedPackageId(packageId);
                     setShowingPackagePromptStep(false);
-                    if (tipConfig?.enabled && !isEstimateMode) {
-                      setShowingTipStep(true);
-                    }
                   }}
                   onSkip={() => {
                     setShowingPackagePromptStep(false);
-                    if (tipConfig?.enabled && !isEstimateMode) {
-                      setShowingTipStep(true);
-                    }
                   }}
-                />
-              </div>
-            ) : showingTipStep && tipConfig?.enabled ? (
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <TipWizardContent
-                  tipConfig={tipConfig}
-                  subtotal={
-                    calculatePrice.subtotal ??
-                    calculatePrice.total - (calculatePrice.taxAmount ?? 0)
-                  }
-                  tipAmount={tipAmount}
-                  onTipChange={setTipAmount}
-                  petName={selectedPets[0]?.name}
-                  serviceLabel={
-                    selectedService
-                      ? (configs[selectedService as keyof typeof configs]
-                          ?.clientFacingName ?? selectedService)
-                      : undefined
-                  }
                 />
               </div>
             ) : (
@@ -4399,7 +4321,6 @@ export function BookingModal({
                   )}
 
                   {!isCustomerMode &&
-                    !showingTipStep &&
                     displayedSteps[currentStep]?.id === "confirm" &&
                     evaluationOverridden &&
                     evaluationOverride && (
@@ -4411,7 +4332,6 @@ export function BookingModal({
 
                   {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
                   {!isCustomerMode &&
-                    !showingTipStep &&
                     displayedSteps[currentStep]?.id === "confirm" &&
                     selectedService !== "evaluation" &&
                     !(isEstimateMode && estimateCreated) && (
@@ -4438,7 +4358,6 @@ export function BookingModal({
 
                   {/* Staff-facing deposit prompt */}
                   {!isCustomerMode &&
-                    !showingTipStep &&
                     displayedSteps[currentStep]?.id === "confirm" &&
                     !(isEstimateMode && estimateCreated) &&
                     applicableDepositRule && (
@@ -4452,7 +4371,6 @@ export function BookingModal({
 
                   {/* Customer-facing deposit panel: pay-now + card picker */}
                   {isCustomerMode &&
-                    !showingTipStep &&
                     displayedSteps[currentStep]?.id === "confirm" &&
                     !bookingRequested &&
                     applicableDepositRule &&
@@ -4509,8 +4427,7 @@ export function BookingModal({
                   )}
 
                   {/* Estimate success state */}
-                  {!showingTipStep &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
+                  {displayedSteps[currentStep]?.id === "confirm" &&
                     isEstimateMode &&
                     estimateCreated && (
                       <div className="flex flex-col items-center px-6 py-12 text-center">
@@ -4634,8 +4551,7 @@ export function BookingModal({
                       </div>
                     )}
 
-                  {!showingTipStep &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
+                  {displayedSteps[currentStep]?.id === "confirm" &&
                     !(isEstimateMode && estimateCreated) &&
                     !(isCustomerMode && bookingRequested) &&
                     selectedService === "training" && (
@@ -4652,8 +4568,7 @@ export function BookingModal({
                       />
                     )}
 
-                  {!showingTipStep &&
-                    displayedSteps[currentStep]?.id === "confirm" &&
+                  {displayedSteps[currentStep]?.id === "confirm" &&
                     !(isEstimateMode && estimateCreated) &&
                     !(isCustomerMode && bookingRequested) && (
                       <ConfirmStep
@@ -4696,9 +4611,6 @@ export function BookingModal({
                         specialRequests={specialRequests}
                         setSpecialRequests={setSpecialRequests}
                         isCustomerMode={isCustomerMode}
-                        tipConfig={tipConfig}
-                        tipAmount={tipAmount}
-                        onTipChange={setTipAmount}
                         onEditStep={(stepIdx, subStep) => {
                           setCurrentStep(stepIdx);
                           setCurrentSubStep(subStep ?? 0);
@@ -4737,7 +4649,6 @@ export function BookingModal({
                       {t("cancel")}
                     </Button>
                     {currentStep < displayedSteps.length - 1 ||
-                    showingTipStep ||
                     showingPackagePromptStep ? (
                       <Button
                         type="button"
@@ -4749,11 +4660,7 @@ export function BookingModal({
                             : ""
                         }
                       >
-                        {showingPackagePromptStep
-                          ? t("skip")
-                          : showingTipStep
-                            ? t("continueToReview")
-                            : t("next")}
+                        {showingPackagePromptStep ? t("skip") : t("next")}
                       </Button>
                     ) : (
                       <Button

@@ -17935,3 +17935,21 @@ Still reading the wrong place, and still open:
 - The care vocabulary: `facilityConfig`, and `PetCareAutoPopulate` from
   `@/data/pet-data`.
 - The wizard's tip step, still offered to customers. The plan removes it.
+
+## 2026-09-19 — The wizard's tip step and the fixture care pre-fill are gone (round 3, part 6)
+
+- **Tip step.** It was offered to customers just before Confirm, and nothing
+  it took reached the booking: the database zeroes a customer's tip on
+  insert (`enforce_booking_integrity`). It also split the tip between three
+  invented staff (`FALLBACK_STAFF`). The staff package prompt opened this
+  "customer-only" step too. It is removed. A customer tips on `/pay`, where
+  the tip is charged.
+- **Care pre-fill.** "Load previous care" (`PetCareAutoPopulate`) read the
+  `careInstructions` fixture by pet NUMBER. Real refs overlap the fixture's
+  ids, so a real Buddy was offered the fixture Buddy's feeding and
+  medication. It is removed for staff as well as customers.
+
+Still open: the care vocabulary (feeding options, medication quick times,
+"given with") is the `facilityConfig` fixture's English lists. They are
+static words, not another facility's data, but they are English in French
+and not the facility's own. They need a translated vocabulary of their own.

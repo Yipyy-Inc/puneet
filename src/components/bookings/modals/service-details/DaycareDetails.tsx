@@ -12,10 +12,6 @@ import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
 import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
-import {
-  FeedingAutoPopulate,
-  MedicationAutoPopulate,
-} from "@/components/booking/shared/PetCareAutoPopulate";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -258,14 +254,6 @@ export function DaycareDetails({
 
             {isStepAccessible(3) && (
               <div className="space-y-4">
-                <FeedingAutoPopulate
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                  }))}
-                  feedingSchedule={feedingSchedule}
-                  setFeedingSchedule={setFeedingSchedule}
-                />
                 <SimpleFeedingForm
                   feedingSchedule={feedingSchedule}
                   setFeedingSchedule={setFeedingSchedule}
@@ -300,14 +288,6 @@ export function DaycareDetails({
 
             {isStepAccessible(4) && (
               <div className="space-y-4">
-                <MedicationAutoPopulate
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                  }))}
-                  medications={medications}
-                  setMedications={setMedications}
-                />
                 <SimpleMedicationForm
                   medications={medications}
                   setMedications={setMedications}
