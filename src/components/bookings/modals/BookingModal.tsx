@@ -2747,7 +2747,7 @@ export function BookingModal({
     }
 
     if (isCustomerMode) {
-      if (!(await saveThrough(booking))) return false;
+      if (!(await saveThrough(withBookingParts(booking)))) return false;
       // Pass-redemption booking: apply one prepaid pass once the booking
       // exists, and say how many are left.
       if (passRedemption) {
@@ -2867,13 +2867,19 @@ export function BookingModal({
   // pick three daycare days, or put two dogs in two kennels, and the form
   // saved ONE booking — the first day, the first kennel; the rest was a list
   // in `details` that no board reads. It now sends a PART per day or per room,
-  // and the server writes them all or none (`create_bookings`). A customer's
-  // request stays one booking: the facility schedules it.
+  // and the server writes them all or none (`create_bookings`).
+  //
+  // A customer's multi-day daycare request is a part per day too, tied by one
+  // `bookingGroup`. It was one booking dated its FIRST day with the rest in
+  // `details`, and approving it kept it that way: days two and three never
+  // reached a board. Staff decide the request whole (the decision route moves
+  // every day). A customer's boarding stays one booking — a part carries a
+  // room, and a request must not hold a kennel; rooms are the facility's.
   const withBookingParts = (
     booking: NewBooking,
     rooms: Array<{ petId: number; roomId: string }> = roomAssignments,
   ): NewBooking => {
-    if (isCustomerMode) return booking;
+    if (isCustomerMode && selectedService !== "daycare") return booking;
     const money = {
       basePrice: booking.basePrice,
       discount: booking.discount,

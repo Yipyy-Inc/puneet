@@ -17638,3 +17638,48 @@ these, now fixed:
   training step above all — is English only.
 - Required agreements show on Confirm as "not signed yet" for staff and do not
   block; the e2e facility carries leftover `[e2e] expiry …` agreements.
+
+## 2026-09-19 — Bookings, round 2, slice 1: a customer's request is decided whole
+
+### ✅ A multi-day request is a booking per day, and one decision
+
+A customer's multi-day daycare request was ONE booking dated its first day,
+the other days a list in `details` that no board reads — and approving it kept
+it that way, so days two and three never reached the daycare board. The
+customer form now sends a part per day, as staff's does (`withBookingParts`),
+tied by one `details.bookingGroup`. A customer's boarding request stays one
+booking: a part carries a room, and a request must not hold a kennel.
+
+`POST /api/bookings/[ref]/decision` approves, declines or waitlists every open
+day of the request together; a refused write puts back the days already moved
+(no transaction is available without a migration — see below). The requests
+page shows one card per request, with its days and quote.
+
+### ✅ Not approved at $0 by accident
+
+The database zeroes a customer's price on insert and keeps the quote as
+`details.requestedQuote`. Approving a request still at that $0 when a price was
+quoted is refused — by the decision route and by `PATCH /api/bookings/[ref]`
+(`approvalRefusal`, `src/lib/bookings/request-decision.ts`, unit-tested). A comp
+(a base price, fully discounted) and a request that quoted nothing still pass.
+"Approve at $X" writes the quote to each day still unpriced; a day staff priced
+keeps its price, which is what lets "Review and approve" price the day it
+reviewed and approve the rest at the quote.
+
+### ✅ The customer hears only what was sent, and the page says so
+
+The decision route emits `booking_request_approved` / `_declined` and awaits
+the dispatch, so the toast says whether the facility's message went, is on its
+way, or was not sent because it is switched off in Automations. The card and
+its detail dialog share `BookingRequestActions`, in the one action colour; the
+card is in English and French. The top-bar badge counts real open requests —
+it counted a localStorage fixture for facility 11.
+
+### 🔴 Known, and not done here
+
+- **No migration could be applied**: the Supabase connector this machine has is
+  another organisation's, so the group decision is compensated in the route
+  rather than one transaction (`decide_booking_requests` in the plan). Authorise
+  the project's connector and move it into the database.
+- The detail dialog's body is still English and reads rooms from a fixture.
+- `bookings/page.tsx` still reads `useBookingRequestsStore` (slice 3).

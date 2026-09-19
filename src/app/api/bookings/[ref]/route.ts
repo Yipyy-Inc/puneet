@@ -20,6 +20,7 @@ import {
 import type { BookingStatus } from "@/types/base";
 import type { NewBooking } from "@/types/booking";
 import { requireForms } from "@/lib/forms/require-forms";
+import { approvalRefusal } from "@/lib/bookings/request-decision";
 
 // ============================================================================
 // A single booking, by its app-facing numeric ref.
@@ -170,11 +171,23 @@ export async function PATCH(
       }
     }
 
-    // Approving a request: the forms the facility requires before approval.
+    // Approving a request: not at the $0 it arrived at when the customer was
+    // quoted a price (see src/lib/bookings/request-decision.ts), and the
+    // forms the facility requires before approval.
     if (
       nextStatus === "confirmed" &&
       (currentStatus === "request_submitted" || currentStatus === "waitlisted")
     ) {
+      if (approvalRefusal({ ...existing, ...changes }, false)) {
+        return NextResponse.json(
+          {
+            error:
+              "This request has not been priced. Review it and set the price, or approve it at the price the customer was quoted.",
+            reason: "unpriced",
+          },
+          { status: 422 },
+        );
+      }
       const refused = await requireForms(
         supabase,
         stored.id,
