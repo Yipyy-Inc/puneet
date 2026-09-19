@@ -1127,6 +1127,12 @@ export default function ClientBookingDetailPage({
 
       <div className="space-y-5 p-5 md:p-7">
         <BookingNotices
+          customerCancellation={
+            booking.status === "cancelled" &&
+            booking.cancellation?.by === "customer"
+              ? booking.cancellation
+              : null
+          }
           clientName={client.name}
           petName={petName}
           evaluationAdvised={

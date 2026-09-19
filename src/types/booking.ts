@@ -285,6 +285,20 @@ export const newBookingSchema = z.object({
       quotedAt: z.string().optional(),
     })
     .optional(),
+  /** A customer's own cancellation, written by the database alone
+   * (enforce_booking_integrity, 20260919162510): who, when, why, and whether
+   * it fell inside the facility's notice window. Server-set. */
+  cancellation: z
+    .object({
+      by: z.string().optional(),
+      at: z.string().optional(),
+      reason: z.string().nullable().optional(),
+      withdrawal: z.boolean().optional(),
+      late: z.boolean().optional(),
+      noticeHours: z.number().nullable().optional(),
+      feePercentage: z.number().nullable().optional(),
+    })
+    .optional(),
   /** The bookings this request makes, when it is more than one. Read by
    * POST /api/bookings and removed there; a stored booking never has it. */
   parts: z.array(bookingPartSchema).optional(),

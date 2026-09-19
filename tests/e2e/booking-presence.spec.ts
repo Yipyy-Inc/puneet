@@ -204,9 +204,17 @@ test.describe("booking presence", () => {
     // The daycare booking above went home; before this change the list would
     // have shown "Confirmed" and nothing else, for it and for every boarding
     // guest in the building.
+    //
+    // Found by its number rather than read off the first page. This asserted
+    // that SOME row on page one stated a presence, which held only because
+    // every cancelled row said "Expected" — a promise about a pet that was
+    // never coming. Since the list stopped saying that (222c1e6a), a first
+    // page of cancelled test bookings has nothing to state, correctly.
+    test.skip(ref === 0, "needs the daycare booking from the tests above");
+    await page.getByPlaceholder(/search by booking number/i).fill(String(ref));
     await expect(
-      page.locator("[data-presence]").first(),
-      "at least one row states where the pet is",
+      page.locator('[data-presence="departed"]').first(),
+      "the booking that went home says so",
     ).toBeVisible({ timeout: 30_000 });
   });
 });

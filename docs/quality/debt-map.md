@@ -17806,3 +17806,33 @@ Still open:
   the kiosk and the calendar do not ask at all.
 - No screen lists the reasons across bookings. They are read one booking at a
   time.
+
+## 2026-09-19 — A customer cancels for real (round 3, part 1)
+
+The customer's Cancel waited a second and said "cancelled", and nothing was
+written. `public.cancel_my_booking` (20260919162510) now cancels the caller's
+own booking. The booking trigger decides the rest:
+
+- A confirmed booking that has started is refused (55000).
+- Withdrawing a request is always allowed and is never counted as late.
+- `details.cancellation` records who cancelled, when and why, and whether it
+  fell inside the facility's `booking_rules.cancelPolicyHours`. When it is
+  late, it also records the fee percentage the facility's rule names.
+- Only a rule the facility actually saved counts. With no rule, nothing is
+  late.
+- A customer cannot write or rewrite that record, even through PostgREST.
+- Nothing is charged or refunded. The staff booking page shows the
+  cancellation and says so.
+
+SQL: `owner-cancel.sql` (14). e2e: `customer-booking-actions.spec.ts`.
+
+The list was also fixed. Today's booking stays under Upcoming (it used to move
+to Past at midnight UTC). The page reads by status, so hundreds of cancelled
+test bookings can no longer push today's out. Pay goes to `/pay/{ref}` only
+when something is owed, and a request says "waiting for the facility to
+confirm". The fake receipt, the tip kept in the browser, the fixture staff
+notes and the faded past cards were removed.
+
+Still open in round 3: "Add a note" and "Ask to change dates" (both removed
+until they are real), the booking detail page, `/pay` in French, the wizard
+reading the customer's own facility settings, and `/book/[slug]`.
