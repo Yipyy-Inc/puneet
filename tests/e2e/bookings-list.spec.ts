@@ -74,7 +74,7 @@ test.describe("the bookings list", () => {
     // rather than hope. searchKey is the booking id.
     const theirBooking = bookings.find((b) => b.clientId === target.id)!;
     await page
-      .getByPlaceholder(/Search by booking ID/i)
+      .getByPlaceholder(/Search by booking number/i)
       .fill(String(theirBooking.id));
 
     await expect(page.getByText(target.name).first()).toBeVisible({
@@ -82,7 +82,9 @@ test.describe("the bookings list", () => {
     });
     // "Unknown" was what this row said before. Asserting the right name AND the
     // absence of the wrong one, because a row could contain both.
-    await expect(page.getByRole("cell", { name: "Unknown" })).toHaveCount(0);
+    await expect(
+      page.getByRole("cell", { name: /client not found/i }),
+    ).toHaveCount(0);
   });
 
   test("the Upcoming tile counts bookings that have not happened yet", async ({

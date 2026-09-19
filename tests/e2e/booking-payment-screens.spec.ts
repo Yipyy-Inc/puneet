@@ -215,7 +215,7 @@ test.describe("the payment button reaches the ledger", () => {
     // them sat further in the future than this one and pushed it off the
     // first page. Its number is what makes it this booking; search by it.
     await page
-      .getByPlaceholder(/search by booking id/i)
+      .getByPlaceholder(/search by booking number/i)
       .first()
       .fill(String(created.id), { timeout: 30_000 });
     await expect(
