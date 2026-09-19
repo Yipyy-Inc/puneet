@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,8 @@ interface Props {
   categoryId: string;
   categoryName?: string;
   facilityId?: number;
+  /** True while the save is in flight — the button says so and refuses a second. */
+  saving?: boolean;
   onClose: () => void;
   onSave: (room: FacilityRoom) => void;
 }
@@ -45,6 +48,7 @@ export function RoomUnitFormDialog({
   categoryId,
   categoryName,
   facilityId = 11,
+  saving = false,
   onClose,
   onSave,
 }: Props) {
@@ -137,11 +141,21 @@ export function RoomUnitFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button disabled={!valid} onClick={() => onSave(form)}>
-            {editing ? "Save Changes" : "Add Room"}
+          {/* §5s rule 9: a button with no loading state double-submits. */}
+          <Button disabled={!valid || saving} onClick={() => onSave(form)}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving…
+              </>
+            ) : editing ? (
+              "Save Changes"
+            ) : (
+              "Add Room"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

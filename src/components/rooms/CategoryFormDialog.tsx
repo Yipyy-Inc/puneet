@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Info } from "lucide-react";
+import { Plus, Trash2, Info, Loader2 } from "lucide-react";
 import type {
   RoomCategory,
   RoomRule,
@@ -143,6 +143,8 @@ interface Props {
   open: boolean;
   editing: RoomCategory | null;
   facilityId?: number;
+  /** True while the save is in flight — the button says so and refuses a second. */
+  saving?: boolean;
   onClose: () => void;
   /** When creating, unitCount is the number of units to auto-generate */
   onSave: (cat: RoomCategory, unitCount: number) => void;
@@ -154,6 +156,7 @@ export function CategoryFormDialog({
   open,
   editing,
   facilityId = 11,
+  saving = false,
   onClose,
   onSave,
 }: Props) {
@@ -409,16 +412,25 @@ export function CategoryFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
+          {/* §5s rule 9: a button with no loading state double-submits, and
+              this one waits on two writes (the category, then its units). */}
           <Button
-            disabled={!valid}
+            disabled={!valid || saving}
             onClick={() => onSave(form, editing ? 0 : unitCount)}
           >
-            {editing
-              ? "Save Changes"
-              : `Create with ${unitCount} Unit${unitCount > 1 ? "s" : ""}`}
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving…
+              </>
+            ) : editing ? (
+              "Save Changes"
+            ) : (
+              `Create with ${unitCount} Unit${unitCount > 1 ? "s" : ""}`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

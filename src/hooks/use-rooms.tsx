@@ -40,24 +40,39 @@ interface RoomsPayload {
   rooms: FacilityRoom[];
 }
 
+/**
+ * What a write did, resolved rather than thrown.
+ *
+ * Every writer here answers with one of these and NEVER rejects. A screen that
+ * wants to say "Category created" can await the answer and say it only if it
+ * happened; a caller that ignores the promise — several do — cannot leave an
+ * unhandled rejection behind.
+ */
+export type RoomWrite = { ok: true } | { ok: false; error: string };
+
 interface RoomsContextValue {
   categories: RoomCategory[];
   rooms: FacilityRoom[];
-  /** True while the catalogue is loading; the page shows its empty state. */
+  /** True while the catalogue is loading — NOT the same as having none. */
   isLoading: boolean;
-  /** The last write failure, for the screen to surface. */
+  /** True while a write is in flight, so a Save button can say so. */
+  isSaving: boolean;
+  /** The last write failure, for a screen that does not await its writes. */
   error: string | null;
 
   // Category CRUD
-  addCategory: (category: RoomCategory, unitCount?: number) => void;
-  updateCategory: (category: RoomCategory) => void;
-  deleteCategory: (id: string) => void;
+  addCategory: (
+    category: RoomCategory,
+    unitCount?: number,
+  ) => Promise<RoomWrite>;
+  updateCategory: (category: RoomCategory) => Promise<RoomWrite>;
+  deleteCategory: (id: string) => Promise<RoomWrite>;
 
   // Room unit CRUD
-  addRoom: (room: FacilityRoom) => void;
-  updateRoom: (room: FacilityRoom) => void;
-  deleteRoom: (id: string) => void;
-  toggleRoom: (id: string) => void;
+  addRoom: (room: FacilityRoom) => Promise<RoomWrite>;
+  updateRoom: (room: FacilityRoom) => Promise<RoomWrite>;
+  deleteRoom: (id: string) => Promise<RoomWrite>;
+  toggleRoom: (id: string) => Promise<RoomWrite>;
 
   // Queries
   getCategoriesByService: (service: RoomCategory["service"]) => RoomCategory[];
@@ -113,75 +128,94 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
     onSuccess: invalidate,
   });
 
-  const run = save.mutate;
+  // `mutateAsync` so a screen can WAIT for the answer before claiming one.
+  // The Rooms page used to call `mutate` and announce "Category created" in
+  // the next statement, which is a claim about a request that had not been
+  // sent yet — a refusal then arrived as a second, contradicting toast.
+  const runAsync = save.mutateAsync;
+
+  const run = useCallback(
+    async (op: {
+      url: string;
+      method: string;
+      body?: unknown;
+    }): Promise<RoomWrite> => {
+      try {
+        await runAsync(op);
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : "That was not saved.",
+        };
+      }
+    },
+    [runAsync],
+  );
 
   const addCategory = useCallback(
-    (category: RoomCategory, unitCount = 0) => {
+    (category: RoomCategory, unitCount = 0) =>
       run({
         url: "/api/rooms/categories",
         method: "POST",
         body: { ...category, unitCount },
-      });
-    },
+      }),
     [run],
   );
 
   const updateCategory = useCallback(
-    (category: RoomCategory) => {
+    (category: RoomCategory) =>
       run({
         url: `/api/rooms/categories/${encodeURIComponent(category.id)}`,
         method: "PATCH",
         body: category,
-      });
-    },
+      }),
     [run],
   );
 
   const deleteCategory = useCallback(
-    (id: string) => {
+    (id: string) =>
       run({
         url: `/api/rooms/categories/${encodeURIComponent(id)}`,
         method: "DELETE",
-      });
-    },
+      }),
     [run],
   );
 
   const addRoom = useCallback(
-    (room: FacilityRoom) => {
-      run({ url: "/api/rooms/units", method: "POST", body: room });
-    },
+    (room: FacilityRoom) =>
+      run({ url: "/api/rooms/units", method: "POST", body: room }),
     [run],
   );
 
   const updateRoom = useCallback(
-    (room: FacilityRoom) => {
+    (room: FacilityRoom) =>
       run({
         url: `/api/rooms/units/${encodeURIComponent(room.id)}`,
         method: "PATCH",
         body: room,
-      });
-    },
+      }),
     [run],
   );
 
   const deleteRoom = useCallback(
-    (id: string) => {
+    (id: string) =>
       run({
         url: `/api/rooms/units/${encodeURIComponent(id)}`,
         method: "DELETE",
-      });
-    },
+      }),
     [run],
   );
 
   const toggleRoom = useCallback(
-    (id: string) => {
+    (id: string): Promise<RoomWrite> => {
       // Read the current state rather than sending `!active` blind: the server
       // owns the row, and a toggle computed from nothing would be a guess.
       const room = rooms.find((r) => r.id === id);
-      if (!room) return;
-      run({
+      if (!room) {
+        return Promise.resolve({ ok: false, error: "That room is not here." });
+      }
+      return run({
         url: `/api/rooms/units/${encodeURIComponent(id)}`,
         method: "PATCH",
         body: { active: !room.active },
@@ -208,6 +242,7 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
       categories,
       rooms,
       isLoading,
+      isSaving: save.isPending,
       error: writeError,
       addCategory,
       updateCategory,
@@ -223,6 +258,7 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
       categories,
       rooms,
       isLoading,
+      save.isPending,
       writeError,
       addCategory,
       updateCategory,

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomCategory, FacilityRoom } from "@/types/rooms";
@@ -14,6 +15,8 @@ export function BoardingRoomsClient() {
   const {
     categories: allCategories,
     rooms: allRooms,
+    isLoading,
+    isSaving,
     addCategory,
     updateCategory,
     deleteCategory,
@@ -21,16 +24,7 @@ export function BoardingRoomsClient() {
     updateRoom,
     deleteRoom,
     toggleRoom,
-    error: writeError,
   } = useRooms();
-
-  // A save can now be REFUSED — by the `manage_services` policy, or because a
-  // category still holds rooms, or because a room has stays recorded against
-  // it. While this page wrote to localStorage none of that could happen and it
-  // had nowhere to say so.
-  useEffect(() => {
-    if (writeError) toast.error(writeError);
-  }, [writeError]);
 
   // Scope to the BOARDING service, and to nothing else.
   //
@@ -70,41 +64,66 @@ export function BoardingRoomsClient() {
     }, 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const saveCategory = (cat: RoomCategory, unitCount: number) => {
+  //
+  // Every one of these AWAITS its write before saying anything. They used to
+  // announce "Category created" in the statement after `addCategory(...)` —
+  // before the request had been sent, let alone answered — and close the
+  // dialog on top of it. A refusal (the `manage_services` policy, a category
+  // that still holds rooms, a room with stays recorded against it) then
+  // arrived as a second toast contradicting the first, with the typed values
+  // already thrown away.
+  const saveCategory = async (cat: RoomCategory, unitCount: number) => {
     const isNew = !catDialog.editing;
-    if (isNew) {
-      addCategory(cat, unitCount);
-      toast.success(
-        unitCount > 0
+    const result = isNew
+      ? await addCategory(cat, unitCount)
+      : await updateCategory(cat);
+    if (!result.ok) {
+      toast.error(result.error);
+      return; // The dialog stays open, still holding what was typed.
+    }
+    toast.success(
+      !isNew
+        ? "Category updated"
+        : unitCount > 0
           ? `Category created with ${unitCount} unit${unitCount > 1 ? "s" : ""}`
           : "Category created",
-      );
-    } else {
-      updateCategory(cat);
-      toast.success("Category updated");
-    }
+    );
     setCatDialog({ open: false, editing: null });
   };
 
-  const handleDeleteCategory = (id: string) => {
-    deleteCategory(id);
+  const handleDeleteCategory = async (id: string) => {
+    const result = await deleteCategory(id);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Category and its units removed");
   };
 
-  const saveUnit = (room: FacilityRoom) => {
-    if (unitDialog.editing) {
-      updateRoom(room);
-      toast.success("Room updated");
-    } else {
-      addRoom(room);
-      toast.success("Room added");
+  const saveUnit = async (room: FacilityRoom) => {
+    const result = unitDialog.editing
+      ? await updateRoom(room)
+      : await addRoom(room);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
     }
+    toast.success(unitDialog.editing ? "Room updated" : "Room added");
     setUnitDialog({ open: false, editing: null, categoryId: "" });
   };
 
-  const handleDeleteUnit = (id: string) => {
-    deleteRoom(id);
+  const handleDeleteUnit = async (id: string) => {
+    const result = await deleteRoom(id);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Room removed");
+  };
+
+  const handleToggleUnit = async (id: string) => {
+    const result = await toggleRoom(id);
+    if (!result.ok) toast.error(result.error);
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -135,30 +154,41 @@ export function BoardingRoomsClient() {
           value={totalCapacity}
           color="indigo"
           sub="active units"
+          loading={isLoading}
         />
         <StatCard
           label="Active Rooms"
           value={totalActive}
           color="emerald"
           sub="ready for booking"
+          loading={isLoading}
         />
         <StatCard
           label="Categories"
           value={categories.length}
           color="violet"
           sub="room types"
+          loading={isLoading}
         />
         <StatCard
           label="Offline"
           value={totalInactive}
           color="amber"
           sub="inactive rooms"
+          loading={isLoading}
         />
       </div>
 
       {/* Category cards */}
       <div className="space-y-4">
-        {categories.length === 0 ? (
+        {isLoading ? (
+          // NOT the empty state. The catalogue is a round trip away, and while
+          // it was in flight this screen said "No room categories yet" over
+          // four zeroes — a facility with rooms was told it had none, under a
+          // button offering to create the first. One facility has three
+          // categories called "Suites", two of them 24 seconds apart.
+          <LoadingState />
+        ) : categories.length === 0 ? (
           <EmptyState
             onAdd={() => setCatDialog({ open: true, editing: null })}
           />
@@ -189,7 +219,7 @@ export function BoardingRoomsClient() {
                     categoryId: cat.id,
                   })
                 }
-                onToggleUnit={toggleRoom}
+                onToggleUnit={handleToggleUnit}
                 onDeleteUnit={handleDeleteUnit}
               />
             ))
@@ -200,6 +230,7 @@ export function BoardingRoomsClient() {
       <CategoryFormDialog
         open={catDialog.open}
         editing={catDialog.editing}
+        saving={isSaving}
         onClose={() => setCatDialog({ open: false, editing: null })}
         onSave={saveCategory}
       />
@@ -207,6 +238,7 @@ export function BoardingRoomsClient() {
       <RoomUnitFormDialog
         open={unitDialog.open}
         editing={unitDialog.editing}
+        saving={isSaving}
         categoryId={unitDialog.categoryId}
         categoryName={
           categories.find((c) => c.id === unitDialog.categoryId)?.name
@@ -227,11 +259,14 @@ function StatCard({
   value,
   color,
   sub,
+  loading = false,
 }: {
   label: string;
   value: number;
   sub: string;
   color: "indigo" | "emerald" | "violet" | "amber";
+  /** A count nobody has read yet is not zero. */
+  loading?: boolean;
 }) {
   const text = {
     indigo: "text-indigo-600 dark:text-indigo-400",
@@ -244,8 +279,23 @@ function StatCard({
       <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {label}
       </p>
-      <p className={`text-2xl font-bold ${text}`}>{value}</p>
+      {loading ? (
+        <Skeleton className="my-1 h-6 w-10" />
+      ) : (
+        <p className={`text-2xl font-bold ${text}`}>{value}</p>
+      )}
       <p className="text-muted-foreground mt-0.5 text-xs">{sub}</p>
+    </div>
+  );
+}
+
+/** Three card-shaped placeholders — "still reading", not "there is nothing". */
+function LoadingState() {
+  return (
+    <div className="space-y-4" aria-busy="true">
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+      ))}
     </div>
   );
 }

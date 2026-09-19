@@ -18089,3 +18089,43 @@ not touched.
 Not done: the Category and Image URL fields stay side by side at 599px
 (`grid-cols-2`, pre-existing), so both are narrow on a phone. A new category
 takes the default swatch and is recoloured in the Categories sheet.
+
+## 2026-09-19 — "Creation of rooms in boarding doesn't work" (client feedback)
+
+Creation works — POST `/api/rooms/categories` answers 201, the row persists,
+its units are created with it, and the catalogue refetches. What did not work
+was everything the screen said WHILE that happened.
+
+- **The loading state was the empty state.** `useRooms()` exposes
+  `isLoading` and `BoardingRoomsClient` ignored it, so for the ~1.5s the
+  catalogue takes (measured: `/api/rooms` 1.6–1.9s of application time
+  against the shared database) a facility with 29 rooms was shown "No room
+  categories yet", four zeroes, and a button offering to create its first
+  category. Doggieville has THREE boarding categories named "Suites", two of
+  them created 24 seconds apart — which is what that screen produces.
+  Skeletons now, in the cards AND in the four tiles: a count nobody has read
+  yet is not zero.
+- **Success was claimed before the write was sent.** `saveCategory` called
+  `addCategory(...)` and toasted "Category created" in the next statement,
+  then closed the dialog. A refusal — the `manage_services` policy, a
+  category that still holds rooms, a room with stays against it — arrived
+  later as a second toast contradicting the first, with the typed values
+  already discarded. The writers in `src/hooks/use-rooms.tsx` now return a
+  `RoomWrite` (`{ok:true} | {ok:false,error}`) that RESOLVES rather than
+  rejects, so a screen can await the answer and a caller that ignores the
+  promise cannot leave an unhandled rejection. On a refusal the page toasts
+  the server's own words and the dialog stays open, still holding the form.
+- **Neither dialog had a pending state** (§5s rule 9), and the category one
+  waits on two writes. Both buttons now say "Saving…" and refuse a second
+  click.
+
+Verified against the demo facility: the empty claim is gone while loading; a
+403 injected at the network shows ONLY the error toast and keeps the dialog
+open; a real create returns 201 and appears. Test rows were removed.
+
+**The two sibling screens have the same shape and were not changed.**
+`DaycareAreasClient` and `GroomingStationsClient` show their empty state
+while loading, and the daycare hook does not surface a write failure at all —
+`useDaycareAreas` exposes no `error`, so a refused play-area save is silent.
+Both wrap the same `useRooms` writers, so they can adopt `RoomWrite` when
+they are next touched.
