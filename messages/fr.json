@@ -1937,7 +1937,10 @@
         "historyShowAll": "Tout afficher ({n})",
         "historyShowFewer": "Afficher moins",
         "receiptEmailed": "Reçu envoyé à {email}",
-        "receiptNotSent": "Le reçu n’a pas été envoyé"
+        "receiptNotSent": "Le reçu n’a pas été envoyé",
+        "careGateNotSaved": "La raison n’a pas été enregistrée : le paiement n’a pas été ouvert",
+        "historyCareGateOne": "Départ avec {n} soin non consigné : {reason}",
+        "historyCareGateMany": "Départ avec {n} soins non consignés : {reason}"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
@@ -3485,7 +3488,10 @@
         "fromIncident": "{item} (incident {id})",
         "keep": "Pas maintenant",
         "review": "Revoir les soins",
-        "continue": "Enregistrer le départ quand même"
+        "continue": "Enregistrer le départ quand même",
+        "reasonLabel": "Pourquoi l’animal part-il sans que ce soit consigné?",
+        "reasonPlaceholder": "Par exemple : le propriétaire a donné la dose du soir au départ",
+        "reasonHelp": "Conservé dans l’historique de la réservation avec votre nom."
       },
       "checkOutDialog": {
         "title": "Départ",

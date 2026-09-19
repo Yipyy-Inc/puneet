@@ -91,6 +91,13 @@ function describe(
       });
     case "location_id":
       return t("historyLocation");
+    case "careGate": {
+      const n = Array.isArray(change.from) ? change.from.length : 0;
+      return fill(n === 1 ? "historyCareGateOne" : "historyCareGateMany", {
+        n,
+        reason: name(change.to),
+      });
+    }
     default:
       return t("historyChanged");
   }

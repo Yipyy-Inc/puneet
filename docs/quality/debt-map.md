@@ -17786,3 +17786,22 @@ own test inbox.
   receipt shows a subtotal and a total that differ by an unexplained amount.
 - A medication's frequency prints its raw id ("twice_daily") on the care sheet
   and the Daily Care board alike.
+
+## 2026-09-19 — "Check out anyway" keeps its reason (round 2, M4)
+
+Checkout asks when a meal or a dose planned for today is not logged. "Check
+out anyway" went ahead with a toast and kept nothing: no reason and no name. It
+now needs a reason, and checkout opens only once the reason is saved.
+`public.record_care_gate_override` (20260919153807) writes it to the
+append-only `care_gate_overrides` table, which no role may update or delete.
+It also writes an audit entry, so the booking's history shows it ("Checked out
+with 1 care item not logged: …"). Critical items are recorded at Medium
+severity. Anyone who may check the pet out may give the reason (edit_bookings,
+check_in_out or daycare_check_in_out). SQL: `care-gate-overrides.sql` (12).
+e2e: `booking-history.spec.ts`.
+
+Still open:
+- The gate reads only the booking page's care log. The board's own checkout,
+  the kiosk and the calendar do not ask at all.
+- No screen lists the reasons across bookings. They are read one booking at a
+  time.
