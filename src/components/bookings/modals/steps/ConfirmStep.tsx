@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
+import { useRooms } from "@/hooks/use-rooms";
 import type { ServiceModule } from "@/types/facility-staff";
 import { useQuery } from "@tanstack/react-query";
 
@@ -82,6 +83,7 @@ function formatAddonUnit(
   }
 }
 import type { Pet } from "@/types/pet";
+import { localToday } from "@/lib/vaccinations";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
 import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
@@ -101,6 +103,12 @@ interface ConfirmStepProps {
   checkInTime: string;
   checkOutTime: string;
   daycareSelectedDates: Date[];
+  /** The day picker's own times, per day — what a daycare booking is made at. */
+  daycareDateTimes?: Array<{
+    date: string;
+    checkInTime: string;
+    checkOutTime: string;
+  }>;
   boardingRangeStart: Date | null;
   boardingRangeEnd: Date | null;
   boardingDateTimes: Array<{
@@ -260,6 +268,7 @@ export function ConfirmStep({
   checkInTime,
   checkOutTime,
   daycareSelectedDates,
+  daycareDateTimes = [],
   boardingRangeStart,
   boardingRangeEnd,
   boardingDateTimes,
@@ -310,6 +319,14 @@ export function ConfirmStep({
   // extra the booking screen had never offered.
   const resolvedAddOns = addOnsCatalog ?? facilityAddOns;
   const t = useShellText("booking");
+  // The room step keeps an id — a room type from its cards, a room from the
+  // occupancy grid. This printed the id itself, so a dog placed in the
+  // Condominium read "Buddy → Cat Condo" ("cat" for category).
+  const { categories: roomCategories, rooms: facilityRooms } = useRooms();
+  const roomLabel = (id: string) =>
+    facilityRooms.find((room) => room.id === id)?.name ??
+    roomCategories.find((category) => category.id === id)?.name ??
+    id;
   const { approval } = useBookingApproval();
   const { fees: careFees } = useCareFees();
   const { data: staffProfiles } = useQuery(staffQueries.profiles());
@@ -363,13 +380,30 @@ export function ConfirmStep({
       ? nightsBetween(boardingRangeStart, boardingRangeEnd)
       : 0;
 
+  // Daycare is booked at the day picker's times — the first day's here. This
+  // showed the form's own defaults instead, so Confirm said 8:00–17:00 over a
+  // booking made for 7:00–19:00.
+  const firstDaycareDay =
+    selectedService === "daycare" && daycareSelectedDates.length > 0
+      ? localToday(
+          [...daycareSelectedDates].sort(
+            (a, b) => a.getTime() - b.getTime(),
+          )[0],
+        )
+      : undefined;
+  const daycareTimes = firstDaycareDay
+    ? daycareDateTimes.find((d) => d.date === firstDaycareDay)
+    : undefined;
+
   // Time display
   const timeDisplay =
     selectedService === "boarding" && boardingDateTimes.length > 0
       ? `${fmtTime(boardingDateTimes[0]?.checkInTime || checkInTime, locale)} — ${fmtTime(boardingDateTimes[boardingDateTimes.length - 1]?.checkOutTime || checkOutTime, locale)}`
-      : checkInTime
-        ? `${fmtTime(checkInTime, locale)}${checkOutTime ? ` — ${fmtTime(checkOutTime, locale)}` : ""}`
-        : "";
+      : daycareTimes
+        ? `${fmtTime(daycareTimes.checkInTime || checkInTime, locale)} — ${fmtTime(daycareTimes.checkOutTime || checkOutTime, locale)}`
+        : checkInTime
+          ? `${fmtTime(checkInTime, locale)}${checkOutTime ? ` — ${fmtTime(checkOutTime, locale)}` : ""}`
+          : "";
 
   // Step index helpers for edit jumps (step ids: client-pet=0, service=1, details=2, confirm=3)
   const clientPetStepIdx = onEditStep ? 0 : -1;
@@ -861,8 +895,8 @@ export function ConfirmStep({
                     </span>
                     <span className="text-xs font-medium">{pet?.name}</span>
                     <span className="text-muted-foreground text-xs">→</span>
-                    <span className="text-xs font-semibold capitalize">
-                      {a.roomId.replace(/-/g, " ")}
+                    <span className="text-xs font-semibold">
+                      {roomLabel(a.roomId)}
                     </span>
                   </div>
                 );

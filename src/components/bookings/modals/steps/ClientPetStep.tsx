@@ -106,6 +106,9 @@ interface ClientPetStepProps {
       weight?: number;
     },
   ) => Promise<number | null>;
+  /** Staff may book past the evaluation rule at the service step, so the
+   *  pets it catches are a heads-up here, not a dead end. */
+  mayOverrideEvaluation?: boolean;
 }
 
 export function ClientPetStep({
@@ -136,6 +139,7 @@ export function ClientPetStep({
   setGuestPetWeights,
   onAddClient,
   onAddPet,
+  mayOverrideEvaluation = false,
 }: ClientPetStepProps) {
   // Visit counts from the booking summary, not every booking the facility has.
   const { data: bookingSummary } = useQuery(bookingClientSummaryQueries.all());
@@ -501,11 +505,22 @@ export function ClientPetStep({
     <div className="space-y-6">
       {/* #2 — Single consolidated alert for all evaluation issues */}
       {petEvalIssues.length > 0 && (
-        <Alert variant="destructive">
-          <FileWarning className="size-4" />
+        <Alert
+          variant={mayOverrideEvaluation ? "default" : "destructive"}
+          className={mayOverrideEvaluation ? "border-warning" : undefined}
+        >
+          <FileWarning
+            className={cn("size-4", mayOverrideEvaluation && "text-warning")}
+          />
           <AlertTitle>{t("evalIssues")}</AlertTitle>
           <AlertDescription>
-            <p>{t("evalIssuesHelp")}</p>
+            <p>
+              {t(
+                mayOverrideEvaluation
+                  ? "evalIssuesStaffHelp"
+                  : "evalIssuesHelp",
+              )}
+            </p>
             <ul className="mt-2 space-y-1">
               {petEvalIssues.map(({ pet, reason }) => (
                 <li key={pet.id} className="flex items-center gap-2">
@@ -521,7 +536,11 @@ export function ClientPetStep({
                 </li>
               ))}
             </ul>
-            <p className="mt-2">{t("evalIssuesFix")}</p>
+            <p className="mt-2">
+              {t(
+                mayOverrideEvaluation ? "evalIssuesStaffFix" : "evalIssuesFix",
+              )}
+            </p>
           </AlertDescription>
         </Alert>
       )}

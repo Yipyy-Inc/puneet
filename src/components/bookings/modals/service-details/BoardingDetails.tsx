@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { localToday } from "@/lib/vaccinations";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Button } from "@/components/ui/button";
 import { Check, PawPrint, Bed, X, AlertCircle, Gift, Lock } from "lucide-react";
@@ -395,15 +396,29 @@ function BoardingRoomSelectionStep({
     return allRooms.filter((r) => ids.has(r.categoryId));
   }, [allRooms, boardingCategories]);
 
-  const startDate = boardingRangeStart?.toISOString().split("T")[0] ?? "";
-  const endDate = boardingRangeEnd?.toISOString().split("T")[0] ?? "";
+  // The picked days in the browser's own calendar. `toISOString()` reads
+  // UTC, which names the day BEFORE east of Greenwich, so availability was
+  // counted for the wrong nights there.
+  const startDate = boardingRangeStart ? localToday(boardingRangeStart) : "";
+  const endDate = boardingRangeEnd ? localToday(boardingRangeEnd) : "";
 
-  // When checking eligibility, use the currently active (selected) pet, or first pet.
-  // For guest estimates we don't know the pet's weight/type, so skip eligibility entirely
-  // and let any room be picked.
+  // The dog a room click is for: the one picked, else the next without a
+  // room. A click on a room with no dog picked did nothing at all — with one
+  // dog, the usual case, the step could not be finished without first
+  // finding and clicking the dog's chip, and nothing said so.
+  const targetPet =
+    activePet ??
+    selectedPets.find(
+      (pet) => !roomAssignments.some((ra) => ra.petId === pet.id),
+    ) ??
+    null;
+
+  // Eligibility is for that same dog, so a click assigns the dog the card was
+  // checked for. For guest estimates we don't know the pet's weight/type, so
+  // skip eligibility entirely and let any room be picked.
   const focusPet = skipEligibility
     ? undefined
-    : (activePet ?? selectedPets[0] ?? undefined);
+    : (targetPet ?? selectedPets[0] ?? undefined);
 
   // Capacity from the bookings the caller may see, not a fixture's.
   // Only stays overlapping the requested dates, and none before they are set.
@@ -630,8 +645,8 @@ function BoardingRoomSelectionStep({
                 <div
                   key={category.id}
                   onClick={() => {
-                    if (activePet && !isFullyBooked && eligible) {
-                      assignPet(activePet, category.id);
+                    if (targetPet && !isFullyBooked && eligible) {
+                      assignPet(targetPet, category.id);
                     }
                   }}
                   onDragOver={(e) => {
@@ -648,9 +663,9 @@ function BoardingRoomSelectionStep({
                   }}
                   className={cn(
                     "group relative overflow-hidden rounded-2xl border-2 transition-all duration-200",
-                    activePet && !isFullyBooked && eligible
+                    targetPet && !isFullyBooked && eligible
                       ? "cursor-pointer"
-                      : activePet && (isFullyBooked || !eligible)
+                      : targetPet && (isFullyBooked || !eligible)
                         ? "cursor-not-allowed"
                         : "",
                     isDragOver && canDrop
@@ -658,7 +673,7 @@ function BoardingRoomSelectionStep({
                       : petsHere.length > 0
                         ? "border-primary/70 shadow-md"
                         : "border-border hover:border-primary/30 hover:shadow-sm",
-                    (isFullyBooked || (!eligible && activePet)) && "opacity-70",
+                    (isFullyBooked || (!eligible && targetPet)) && "opacity-70",
                   )}
                 >
                   {/* Image area */}

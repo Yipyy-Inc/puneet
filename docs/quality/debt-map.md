@@ -17576,3 +17576,65 @@ one day now, and `check:unbounded-booking-reads` is down to 22 in 19 files.
   the owner, not a code one.
 - **Grooming keeps status-drives-stamps**; its revert clears `check_in_at`
   (it only ever cleared the check-out).
+
+## 2026-09-19 — The New Booking wizard: staff can book past an evaluation, and every service saves
+
+A facility reported bookings "stuck on the evaluations — can't override
+evaluations from the facility side". A dog with no passed evaluation (or an
+expired or failed one) could not be booked by staff at all: the service card
+was hidden or locked, Next stayed disabled, and the only way out was to book
+an evaluation first. The wizard also created one silently, for today at 9:00,
+whenever a booking went through without one.
+
+### ✅ Staff choose, with a reason; customers are unchanged
+
+For staff, a service that needs an evaluation stays open and says so. Picking
+it shows `EvaluationOverridePanel`: book an evaluation instead, or book
+without it and say why (three characters at least). The reason and the pets
+it covers are saved on the booking as `details.evaluationOverride`
+(`{ reason, pets: [{ id, name, reason: missing | failed | expired }] }`), and
+Confirm repeats it. The silent "today 9:00" evaluation is gone. A customer
+still has to book an evaluation first — the server enforces none of this, so
+the rule is only as strong as the customer form.
+
+### ✅ Every service reaches a saved booking
+
+`tests/e2e/booking-wizard.spec.ts` (in `test:e2e:ci`) drives the real form as
+staff and reads each booking back. Walking every service through it found
+these, now fixed:
+
+- **Every boarding booking made by clicking a room card was refused.** The
+  cards are room TYPES, and the type's id went out as the room:
+  `create_booking` answered "This facility has no room cat-condo." in a toast
+  that was gone before anyone read it. `roomsForAssignments`
+  (`capacity-engine.ts`, unit-tested) turns a type into a free room of that
+  type, one room per dog; a full type drops the room rather than swapping the
+  type, and the stay is saved to be given a room on the board. The stays it
+  checks are read at the moment of saving and waited on — the background read
+  it first used built its window from UTC and read as "no bookings" while
+  loading, so it picked a room already taken.
+- **A click on a room card did nothing with one dog**, until the dog's chip
+  was found and clicked first. It places the next dog without a room now.
+- **One day of daycare could not be booked** ("null value in column end_at"):
+  it went out with the day as its start and nothing as its end.
+- Confirm showed the room's id ("Buddy → Cat Condo" for a dog in the
+  Condominium), and daycare times of 8:00–17:00 for a day saved as 7:00–19:00.
+- Training said "No course types yet" while the courses loaded; it shows
+  placeholders, and says so when they could not be loaded.
+
+### 🔴 Known, and not done here
+
+- **A heavy client's history times out.** Alice Johnson (client 15 on the e2e
+  facility) holds 1,183 bookings from earlier runs, and `GET
+/api/bookings?clientRef=15` — and even a six-week window of it — answers
+  500 (statement timeout); `client-summary` too. The client page's booking
+  list fails for her. A dog in daycare every weekday for three years is ~750
+  bookings, so this is a real client's future, not only test debt.
+- **The e2e facility has course types but no class series**, so a training
+  booking cannot be completed there; the wizard says so and offers to create
+  one. Paws & Co has series.
+- The wizard still paints its buttons in per-service accent colours (brown,
+  violet, green) where §1 has one action colour, and much of it — the
+  training step above all — is English only.
+- Required agreements show on Confirm as "not signed yet" for staff and do not
+  block; the e2e facility carries leftover `[e2e] expiry …` agreements.

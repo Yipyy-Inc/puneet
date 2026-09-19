@@ -292,6 +292,23 @@ export const newBookingSchema = z.object({
   evaluationStatus: z
     .enum(["pending", "in_progress", "completed", "skipped"])
     .optional(),
+  /**
+   * Staff booked this past the facility's evaluation rule: the pets that were
+   * short of it — none on file, failed, or expired — and the reason given.
+   * Kept in `details`; a customer's booking never carries one.
+   */
+  evaluationOverride: z
+    .object({
+      reason: z.string(),
+      pets: z.array(
+        z.object({
+          id: z.number(),
+          name: z.string(),
+          reason: z.enum(["missing", "failed", "expired"]),
+        }),
+      ),
+    })
+    .optional(),
   kennel: z.string().optional(),
   /**
    * Boarding: the room assigned to this booking, as a `boarding_rooms.legacy_id`
