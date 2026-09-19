@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -134,9 +136,14 @@ test.describe("notes", () => {
     test.slow();
     await signIn(page, ACCOUNTS.owner);
 
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+    // A few open bookings, not the facility’s whole history: that read is
+    // 1,500+ rows, it timed out, and the error body — not a list — failed
+    // here as "bookings.find is not a function" (nightly, 2026-09-19).
+    const res = await page.request.get(
+      `/api/bookings${bookingListSearch({ statuses: ["confirmed"], limit: 5 })}`,
+    );
+    expect(res.ok(), await res.text()).toBe(true);
+    const bookings = (await res.json()) as BookingPayload[];
     const booking = bookings.find((b) => b.status !== "cancelled");
     test.skip(!booking, "the owner's facility has no booking to open");
     touched.push({ category: "booking", ref: booking!.id });

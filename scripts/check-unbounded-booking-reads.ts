@@ -79,7 +79,6 @@ const BASELINE: Record<string, number> = {
   "dashboard-live-board.spec.ts": 1,
   "daycare-attendance.spec.ts": 1,
   "grooming-ready-estimate.spec.ts": 1,
-  "notes.spec.ts": 1,
   "operations-calendar.spec.ts": 1,
   "training-attendance.spec.ts": 1,
 };
