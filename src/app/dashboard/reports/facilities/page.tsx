@@ -2,8 +2,8 @@ import { getFacilitiesReport } from "@/lib/api/facilities-report";
 import { FacilitiesReportClient } from "./_components/facilities-report-client";
 import { PageHeader } from "@/components/ui/page-header";
 
-export default function FacilitiesReportPage() {
-  const report = getFacilitiesReport();
+export default async function FacilitiesReportPage() {
+  const report = await getFacilitiesReport();
 
   return (
     <div className="space-y-6 p-6">

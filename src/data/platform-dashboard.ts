@@ -33,7 +33,6 @@ import type {
   PlatformEventTone,
   SlaBreachedTicketItem,
   SuspensionFlagItem,
-  AtRiskFacilityItem,
 } from "@/types/platform-dashboard";
 
 const DAY = 86_400_000;
@@ -244,50 +243,17 @@ export function buildNeedsAttention(now: Date): NeedsAttention {
     }))
     .sort((a, b) => b.hoursOver - a.hoursOver);
 
-  // Facilities at risk: overdue invoice, or booking volume < 50% of last month,
-  // or no admin login in > 14 days.
-  const overdueFacilityIds = new Set(overdueInvoices.map((i) => i.facilityId));
-  const atRiskFacilities: AtRiskFacilityItem[] = [];
-  for (const f of facilities) {
-    if (f.status !== "active") continue;
-
-    const reasons: string[] = [];
-    let severity: AtRiskFacilityItem["severity"] = "warning";
-
-    if (overdueFacilityIds.has(f.id)) {
-      reasons.push("Has an overdue invoice");
-      severity = "critical";
-    }
-    const volumePct = stableInt(`vol-${f.id}`, 20, 130); // this month vs last
-    if (volumePct < 50) {
-      reasons.push(`Bookings at ${volumePct}% of last month`);
-      severity = "critical";
-    }
-    const lastLoginDays = stableInt(`login-${f.id}`, 2, 30);
-    if (lastLoginDays > 14) {
-      reasons.push(`No admin login in ${lastLoginDays} days`);
-    }
-
-    if (reasons.length > 0) {
-      atRiskFacilities.push({
-        facilityId: f.id,
-        facilityName: f.name,
-        reason: reasons[0],
-        severity,
-      });
-    }
-  }
-  atRiskFacilities.sort(
-    (a, b) =>
-      (a.severity === "critical" ? 0 : 1) - (b.severity === "critical" ? 0 : 1),
-  );
+  // The at-risk list was built here from stableInt("vol-<id>") and
+  // stableInt("login-<id>") — a hash of the facility's id, rendered as
+  // "Bookings at 43% of last month" and "No admin login in 21 days". It is
+  // counted now, in /api/admin/facilities-at-risk (20260919203825), and the
+  // dashboard reads it from there.
 
   return {
     overdueInvoices,
     suspensionFlags,
     pendingRequests,
     slaBreachedTickets,
-    atRiskFacilities: atRiskFacilities.slice(0, 6),
   };
 }
 

@@ -8084,7 +8084,9 @@
       "bookingsCount": "{shown} réservations sur {total}",
       "bookingsPrev": "Précédent",
       "bookingsNext": "Suivant",
-      "bookingsPageOf": "Page {page} sur {last}"
+      "bookingsPageOf": "Page {page} sur {last}",
+      "atRiskNone": "Aucune réservation en 28 jours — {before} dans les 28 précédents",
+      "atRiskDown": "{n} réservations en 28 jours, {pct} % des 28 précédents"
     },
     "booking": {
       "savedPricingFor": "Tarif enregistré pour {pet}",

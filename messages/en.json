@@ -8084,7 +8084,9 @@
       "bookingsCount": "{shown} of {total} bookings",
       "bookingsPrev": "Previous",
       "bookingsNext": "Next",
-      "bookingsPageOf": "Page {page} of {last}"
+      "bookingsPageOf": "Page {page} of {last}",
+      "atRiskNone": "No bookings in 28 days — {before} in the 28 before",
+      "atRiskDown": "{n} bookings in 28 days, {pct}% of the 28 before"
     },
     "booking": {
       "savedPricingFor": "Saved pricing for {pet}",

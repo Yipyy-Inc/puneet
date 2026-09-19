@@ -1,6 +1,6 @@
 import { availableModules, facilities } from "@/data/facilities";
 import { getCurrentSubscription } from "@/data/facility-billing";
-import { REFERENCE_DATE } from "@/data/churn";
+import { createServerClient } from "@/lib/supabase/server";
 
 // Builder for the Facilities Report (/dashboard/reports/facilities).
 //
@@ -179,34 +179,34 @@ function buildLoginDistribution(): LoginBucket[] {
   }));
 }
 
-// --- booking volume trend (deterministic 12-month weekly series) -----------
+// --- booking volume trend -------------------------------------------------
+//
+// COUNTED (platform_booking_volume, 20260919203825). It was
+// mulberry32(20260624) × a seasonal factor × a growth factor × a base of 420
+// — a chart nobody could tell from a measurement.
 
-function weekLabel(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function buildBookingTrend(): BookingWeekPoint[] {
-  const rng = mulberry32(20260624);
-  const ref = new Date(REFERENCE_DATE).getTime();
-  const points: BookingWeekPoint[] = [];
-  for (let i = 0; i < 52; i++) {
-    const weeksAgo = 51 - i;
-    const d = new Date(ref - weeksAgo * 7 * DAY);
-    const month = d.getMonth();
-    // Summer boarding peak (Jun–Aug), mild winter-holiday bump (Dec–Jan).
-    const seasonal =
-      month >= 5 && month <= 7 ? 1.3 : month === 11 || month <= 0 ? 1.12 : 1;
-    const trend = 1 + i * 0.012; // gradual platform growth over the year
-    const noise = 0.85 + rng() * 0.3; // 0.85 … 1.15
-    const bookings = Math.round(420 * seasonal * trend * noise);
-    points.push({ label: weekLabel(d), bookings });
-  }
-  return points;
+async function readBookingTrend(): Promise<BookingWeekPoint[]> {
+  const supabase = await createServerClient();
+  const { data, error } = await (
+    supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{
+      data: Array<{ week_start: string; bookings: number }> | null;
+      error: { message: string } | null;
+    }>
+  )("platform_booking_volume", { p_weeks: 52 });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({
+    // The week's own day, formatted where it is read (§5q).
+    label: row.week_start,
+    bookings: Number(row.bookings ?? 0),
+  }));
 }
 
 // --- entry point -----------------------------------------------------------
 
-export function getFacilitiesReport(): FacilitiesReport {
+export async function getFacilitiesReport(): Promise<FacilitiesReport> {
   const { rows, totalMrr } = buildTopByMrr();
   const paying = rows.filter((r) => r.mrr > 0).length;
 
@@ -220,6 +220,6 @@ export function getFacilitiesReport(): FacilitiesReport {
     topByMrr: rows,
     moduleAdoption: buildModuleAdoption(),
     loginDistribution: buildLoginDistribution(),
-    bookingTrend: buildBookingTrend(),
+    bookingTrend: await readBookingTrend(),
   };
 }

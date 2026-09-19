@@ -69,13 +69,6 @@ export interface SlaBreachedTicketItem {
 
 export type RiskSeverity = "warning" | "critical";
 
-export interface AtRiskFacilityItem {
-  facilityId: number;
-  facilityName: string;
-  reason: string;
-  severity: RiskSeverity;
-}
-
 /** A facility flagged for suspension by the Day-14 dunning step. */
 export interface SuspensionFlagItem {
   facilityId: number;
@@ -90,7 +83,6 @@ export interface NeedsAttention {
   suspensionFlags: SuspensionFlagItem[];
   pendingRequests: PendingRequestItem[];
   slaBreachedTickets: SlaBreachedTicketItem[];
-  atRiskFacilities: AtRiskFacilityItem[];
 }
 
 /** Zone 3 — Activity feed. */

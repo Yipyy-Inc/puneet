@@ -18018,3 +18018,29 @@ and pets, service, start, status, total, and paid as a hidden column. Times
 are the facility's own. Every row links to the read-only booking page.
 e2e: in `admin-bookings.spec.ts`, including the facility owner being
 refused the platform route.
+
+## 2026-09-19 — The platform's booking numbers are counted (round 4, part C)
+
+- `platform_booking_volume(weeks)` and `platform_facility_volume(days)`
+  (20260919203825, platform members only) count bookings by `created_at`.
+  SQL: `platform-booking-volume.sql` (6).
+- The Facilities report's "Booking Volume Trend" was
+  `mulberry32(20260624) × a seasonal factor × a growth factor × 420`. It is
+  the weekly count now, labelled by ISO week (§5q), and the page awaits it.
+- "Facilities at risk" said "Bookings at 43% of last month" and "No admin
+  login in 21 days" from `stableInt()`, a hash of the facility's id, and
+  linked to fixture numeric ids. It now reads
+  `/api/admin/facilities-at-risk`: the last 28 days against the 28 before,
+  real names, real uuids. A facility that never took a booking is not "at
+  risk", so only a real fall appears. The hashed builder and its type are
+  deleted.
+- The facility Reports tab formats money with `formatMoney` and the reader's
+  locale; it was hard-coded en-US/USD.
+
+**Still invented on the admin dashboard and the facilities report**, and now
+sitting beside real numbers, which is its own hazard: MRR and its growth,
+module adoption, "actively using", login recency and the login-frequency
+chart, overdue invoices, suspension flags, support tickets, and the search's
+invoice/ticket/team groups. The dashboard's builders in
+`src/data/platform-dashboard.ts` are all fixtures. Round 4 covered bookings
+only.

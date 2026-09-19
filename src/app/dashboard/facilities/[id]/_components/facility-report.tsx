@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/select";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { ReportChartCard } from "@/components/reports/chart-kit";
-import { formatCount, formatCurrency, formatPercent } from "@/lib/format";
+import { formatCount, formatPercent } from "@/lib/format";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { formatMoney } from "@/lib/i18n/format";
 import type { FacilityReport } from "@/lib/api/facility-report";
 
 // ============================================================================
@@ -80,6 +83,11 @@ function serviceName(slug: string): string {
 }
 
 export function FacilityReport({ facilityId }: { facilityId: string }) {
+  // The reader's locale, not a hard-coded en-US/USD (§5q).
+  const hydrated = useHydrated();
+  const appLocale = useAppLocale();
+  const locale = hydrated ? appLocale : "en";
+  const money = (dollars: number) => formatMoney(dollars, locale);
   const [months, setMonths] = useState("6");
 
   const { data, isLoading, isError } = useQuery({
@@ -139,10 +147,10 @@ export function FacilityReport({ facilityId }: { facilityId: string }) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile
           label="Revenue"
-          value={formatCurrency(totals.revenueCents / 100)}
+          value={money(totals.revenueCents / 100)}
           hint={
             totals.tipsCents > 0
-              ? `plus ${formatCurrency(totals.tipsCents / 100)} in tips`
+              ? `plus ${money(totals.tipsCents / 100)} in tips`
               : "no tips recorded"
           }
           icon={DollarSign}
@@ -222,7 +230,7 @@ export function FacilityReport({ facilityId }: { facilityId: string }) {
                       )}
                     </td>
                     <td className="py-2 text-right tabular-nums">
-                      {formatCurrency(service.revenueCents / 100)}
+                      {money(service.revenueCents / 100)}
                     </td>
                   </tr>
                 ))}
@@ -232,8 +240,8 @@ export function FacilityReport({ facilityId }: { facilityId: string }) {
         )}
         {totals.outstandingCents > 0 && (
           <p className="text-muted-foreground mt-3 text-xs">
-            {formatCurrency(totals.outstandingCents / 100)} is still owed across
-            bookings that were not cancelled.
+            {money(totals.outstandingCents / 100)} is still owed across bookings
+            that were not cancelled.
           </p>
         )}
       </Card>

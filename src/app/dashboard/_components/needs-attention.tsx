@@ -19,6 +19,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ToneMark, type MarkTone } from "@/components/ui/tone-mark";
 import { Button } from "@/components/ui/button";
+import type { AtRiskFacility } from "@/app/api/admin/facilities-at-risk/route";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   Accordion,
   AccordionContent,
@@ -71,7 +73,8 @@ function FacilityLink({
   facilityId,
   name,
 }: {
-  facilityId?: number;
+  /** The real uuid, or a fixture's number for the sections still on one. */
+  facilityId?: number | string;
   name: string;
 }) {
   const href = facilityId
@@ -88,6 +91,8 @@ function FacilityLink({
   );
 }
 
+const NO_AT_RISK: AtRiskFacility[] = [];
+
 export function NeedsAttention() {
   const { data, isLoading } = useQuery(
     platformDashboardQueries.needsAttention(),
@@ -97,7 +102,20 @@ export function NeedsAttention() {
   const flags = data?.suspensionFlags ?? [];
   const requests = data?.pendingRequests ?? [];
   const slaTickets = data?.slaBreachedTickets ?? [];
-  const atRisk = data?.atRiskFacilities ?? [];
+  // COUNTED (/api/admin/facilities-at-risk): the last 28 days against the 28
+  // before them. The builder's list said "Bookings at 43% of last month" and
+  // "No admin login in 21 days" from a hash of the facility's id, and linked
+  // to fixture numeric ids that opened nothing.
+  const adminText = useShellText("admin");
+  const { data: atRiskData } = useQuery({
+    queryKey: ["admin", "facilities-at-risk"],
+    queryFn: async (): Promise<AtRiskFacility[]> => {
+      const response = await fetch("/api/admin/facilities-at-risk");
+      if (!response.ok) return [];
+      return (await response.json()) as AtRiskFacility[];
+    },
+  });
+  const atRisk = atRiskData ?? NO_AT_RISK;
 
   const total =
     overdue.length +
@@ -336,7 +354,7 @@ export function NeedsAttention() {
                           facilityId={f.facilityId}
                           name={f.facilityName}
                         />
-                        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                        <p className="text-muted-foreground flex items-center gap-1.5 text-xs tabular-nums">
                           <span
                             className={
                               f.severity === "critical"
@@ -344,7 +362,14 @@ export function NeedsAttention() {
                                 : "size-1.5 rounded-full bg-amber-500"
                             }
                           />
-                          {f.reason}
+                          {f.madeThisPeriod === 0
+                            ? adminText("atRiskNone").replace(
+                                "{before}",
+                                String(f.madeLastPeriod),
+                              )
+                            : adminText("atRiskDown")
+                                .replace("{n}", String(f.madeThisPeriod))
+                                .replace("{pct}", String(f.percentOfLast))}
                         </p>
                       </div>
                       <Button
