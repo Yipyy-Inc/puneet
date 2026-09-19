@@ -17683,3 +17683,45 @@ it counted a localStorage fixture for facility 11.
   the project's connector and move it into the database.
 - The detail dialog's body is still English and reads rooms from a fixture.
 - `bookings/page.tsx` still reads `useBookingRequestsStore` (slice 3).
+
+## 2026-09-19 — Bookings, round 2, slice 3: the bookings list
+
+### ✅ Filters that match what the database holds
+
+The status filter offered four of the twelve statuses, so a request, the
+waiting list, a guest checked in, a no-show or a declined booking could not be
+found; the service filter offered "vet" and no training or custom service; the
+payment filter offered "pending" and "refunded", which no booking carries, so
+either emptied the table. All three are built from the enums in
+`src/types/base.ts` now (`_components/booking-list-filters.ts`), and the payment
+filter goes with the payment column when the viewer may not see money.
+
+### ✅ What is owed, in the reader's language
+
+"Cost" was `totalCost` with a `$` pasted before `toFixed(2)`, whatever had been
+paid. The column is **Owed** — `bookingTotals(...).balance`, the booking page's
+own arithmetic with the facility's tax — with the total under it, or "Paid".
+Dates are `formatCalendarDayLong` (weekday and year, pinned in UTC), times are
+the reader's clock, a stay counts nights and a daycare run counts days, and
+every label is in `shell.booking` (EN/FR). The CSV has translated headers, plain
+numbers, the paid and owed amounts, and a byte-order mark so Excel reads the
+accents.
+
+### ✅ Honest states, and a page under 500 lines
+
+A failed load shows `RouteState` with "Try again" instead of an empty table;
+the first page shows placeholder rows rather than the table's "No data yet".
+"Expected" no longer appears on a cancelled, declined, no-show or request row —
+it is a promise that a pet is coming. The page is 384 lines with its columns,
+filters and export in `_components/`. The draft effect that read
+`booking_requests_schedule_draft` (a key nothing writes) went, with
+`EditBookingModal`, `useBookingRequestsStore`, `bookingQueries.requests()` and
+the `src/data/booking-requests.ts` fixture only they reached.
+
+### 🔴 Known, and not done here
+
+- The presence chip still uses remapped `emerald`/`amber` class names (they
+  render the success and warning inks since stage 1); a shared presence chip is
+  the tidy answer.
+- `clientQueries.all()` still loads every client to name the rows; a page of
+  bookings should carry its client and pet names from the server.

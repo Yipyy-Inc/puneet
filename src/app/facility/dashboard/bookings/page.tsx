@@ -1,51 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { clientQueries } from "@/lib/api/client";
-import { useFacilityProfile } from "@/lib/api/facility-profile";
-import type { Client } from "@/types/client";
-import type { Booking } from "@/types/booking";
-import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
-import { Badge } from "@/components/ui/badge";
-import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import {
-  Download,
   Calendar,
-  DollarSign,
-  Clock,
   CalendarDays,
   CalendarX,
-  CheckSquare,
-  FileText,
-  Hash,
-  User,
-  CircleDot,
-  TrendingUp,
+  CircleAlert,
+  Clock,
+  Download,
   Hourglass,
+  TrendingUp,
 } from "lucide-react";
-import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
-import { FormStatusChip } from "@/components/yipyygo/form-status-chip";
-import { useStaffText } from "@/lib/staff/use-staff-text";
-import { useShellText } from "@/lib/shell/use-shell-text";
-import { useAppLocale } from "@/hooks/use-app-locale";
-import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
-import { formatMoney } from "@/lib/i18n/format";
-import { TagList } from "@/components/shared/TagList";
+
+import { clientQueries } from "@/lib/api/client";
+import { useFacilityProfile } from "@/lib/api/facility-profile";
+import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { noteQueries } from "@/lib/api/notes";
 import { useTagCatalogue } from "@/lib/api/tags";
-import { useTagsByEntity } from "@/hooks/use-tags-notes";
-import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
-import { useLocationContext } from "@/hooks/use-location-context";
-import { usePermission } from "@/hooks/use-facility-rbac";
-import { useAssignedScope } from "@/lib/facility-permissions";
-import { bookingMutations } from "@/lib/api/booking";
 import {
   bookingPageQueries,
   fetchAllBookingPages,
@@ -54,11 +28,32 @@ import type {
   BookingPageParams,
   BookingPageSort,
 } from "@/lib/api/booking-page-params";
+import { bookingTotals } from "@/lib/payments/booking-totals";
+import type { TaxConfig } from "@/lib/settings/tax";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useFieldMask } from "@/lib/staff/mask";
+import { useAssignedScope } from "@/lib/facility-permissions";
+import { useAppLocale } from "@/hooks/use-app-locale";
+import { useTagsByEntity } from "@/hooks/use-tags-notes";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { usePermission } from "@/hooks/use-facility-rbac";
+import type { Booking } from "@/types/booking";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
+import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { PageHeader } from "@/components/ui/page-header";
+import { RouteState } from "@/components/ui/route-state";
 import { SavedViews } from "@/components/ui/saved-views";
-import { PetAvatar } from "@/components/ui/pet-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { bookingListColumns } from "./_components/booking-list-columns";
+import { bookingListFilters } from "./_components/booking-list-filters";
+import { exportBookingsToCSV } from "./_components/booking-list-export";
+
 const PAGE_SIZE = 15;
 // Stable while the page loads.
 const NO_BOOKINGS: Booking[] = [];
@@ -67,142 +62,44 @@ const SERVER_SORTS: Record<string, BookingPageSort> = {
   id: "id",
   dates: "dates",
   status: "status",
-  totalCost: "totalCost",
 };
 
-const calculateTaskCount = (booking: Booking): number => {
-  let count = 0;
+/** A Date as its own YYYY-MM-DD, without a timezone shift. */
+const dayOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // Feeding tasks
-  if (booking.feedingSchedule) {
-    count += booking.feedingSchedule.length;
-  }
-
-  // Medication tasks (each medication can have multiple times)
-  if (booking.medications) {
-    booking.medications.forEach((med) => {
-      count += med.times.length;
-    });
-  }
-
-  // Extra services
-  if (booking.extraServices) {
-    count += booking.extraServices.length;
-  }
-
-  // Walk schedule for boarding
-  if (booking.service === "boarding" && booking.walkSchedule) {
-    count += 1;
-  }
-
-  return count;
-};
-
-// The client lookup is PASSED IN rather than imported.
+// ============================================================================
+// The facility's bookings, a page of fifteen at a time.
 //
-// This read `src/data/clients.ts` — twenty fixture rows — to name the customer
-// on each of 202 real bookings. Every client created since the migration came
-// out as "Unknown", and where a real id happened to collide with a fixture id,
-// the export named the WRONG PERSON against a real booking. On a file people
-// send to their accountant.
-const exportBookingsToCSV = (
-  bookingsData: Booking[],
-  clientById: Map<number, Client>,
-) => {
-  const headers = [
-    "ID",
-    "Client",
-    "Pet",
-    "Service",
-    "Start Date",
-    "End Date",
-    "Duration",
-    "Status",
-    "Tasks",
-    "Total Cost",
-    "Payment Status",
-    "Check In",
-    "Check Out",
-  ];
-
-  const csvContent = [
-    headers.join(","),
-    ...bookingsData.map((booking: Booking) => {
-      const client = clientById.get(booking.clientId);
-      const pet = client?.pets.find((p) => p.id === booking.petId);
-      const duration = calculateDuration(booking.startDate, booking.endDate);
-      return [
-        booking.id,
-        `"${client?.name || "Unknown"}"`,
-        `"${pet?.name || "Unknown"}"`,
-        booking.service,
-        booking.startDate,
-        booking.endDate,
-        duration,
-        booking.status,
-        calculateTaskCount(booking),
-        booking.totalCost,
-        booking.paymentStatus,
-        booking.checkInTime || "",
-        booking.checkOutTime || "",
-      ].join(",");
-    }),
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute(
-    "download",
-    `bookings_export_${new Date().toISOString().split("T")[0]}.csv`,
-  );
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-const calculateDuration = (startDate: string, endDate: string): string => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays === 0
-    ? "Same day"
-    : `${diffDays + 1} day${diffDays > 0 ? "s" : ""}`;
-};
-
+// Shared by both portals: in the employee portal a row opens the booking
+// inside the /employee shell, so its gates and scope apply there. The table
+// asks /api/bookings/page in the viewer's scope — the chosen location when
+// there are several, the viewer's own bookings when view_bookings is
+// assigned_only — and the tiles come from /api/bookings/totals in that scope.
+//
+// ── 2026-09-19 ───────────────────────────────────────────────────────────
+//
+// The filters come from the database's enums (all twelve statuses, every
+// service, the four payment states); the money column is what is still OWED,
+// by the booking page's own arithmetic; every word, date and time is the
+// reader's; a failed load says so instead of showing an empty table. The
+// columns, filters and export live in `_components/`. A draft effect that
+// read `booking_requests_schedule_draft` — a key nothing writes — went, with
+// the edit modal and the localStorage request store only it could reach.
+// ============================================================================
 export default function FacilityBookingsPage() {
   const router = useRouter();
-  // Section 5B: this table is shared by both portals. In the employee portal the
-  // row must open the detail INSIDE the /employee shell, so the RBAC provider
-  // stays mounted and the detail's gates + scope actually apply.
   const pathname = usePathname();
   const inEmployeePortal = pathname?.startsWith("/employee") ?? false;
-  const facilityId = 11;
-  // Name from the SESSION, not the fixture — see the header of
-  // src/components/layout/facility-admin-sidebar.tsx. `facilityId` stays for
-  // the mock-only lookups below it; nothing sends it over the wire.
   const { profile } = useFacilityProfile();
 
-  // Real clients, RLS-scoped to the caller's facility, keyed for O(1) lookup.
-  // A Map rather than `.find` per row: this runs twice per booking per render
-  // on a table that pages 200 rows.
-
-  // The pre-arrival form column reads each booking’s own status, derived in
-  // SQL (booking_yipyy_go, through /api/bookings), in the viewer’s language.
   const { t: formText } = useStaffText("yipyyGo");
-  // The list's own copy. `shell.booking` already carries 594 keys at full
-  // French parity, so this screen joins the catalogue the booking wizard and
-  // the customer's own pages read rather than starting a fourth one.
   const t = useShellText("booking");
-  // Statuses and service names come from the SHARED label helpers
-  // (lib/i18n/labels.ts), the same ones the customer portal's four booking
-  // screens use. Adding `status_pending` here would have been a second
-  // spelling of an answer that already exists — and `serviceTypeLabel` also
-  // knows to return a service the FACILITY named itself exactly as typed
-  // (§5q), which a catalogue lookup cannot.
+  const fill = (key: string, values: Record<string, string | number>) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      t(key),
+    );
   const locale = useAppLocale();
 
   const { data: clientList = [] } = useQuery(clientQueries.all());
@@ -211,39 +108,30 @@ export default function FacilityBookingsPage() {
     () => new Map(clientList.map((c) => [c.id, c])),
     [clientList],
   );
-  const { setRequests: setBookingRequests } = useBookingRequestsStore();
   const { currentLocationId, isHQView, isMultiLocation, locations } =
     useLocationContext();
+
   // Table 21 masking: booking $ hidden from staff without view_booking_financials;
-  // the Revenue KPI is Manager+ (financial_view_revenue).
+  // the Revenue KPI is Manager+ (financial_view_revenue). Without the booking
+  // financials, the money columns are OMITTED from the DOM, not just masked.
   const { maskAmount, canSee } = useFieldMask();
   const canSeeRevenue = usePermission("financial_view_revenue");
-  // Section 3C / Table 5: without view_booking_financials, OMIT the Cost and
-  // Payment-status columns from the DOM entirely (not just mask the values).
-  const canSeeBookingAmounts = canSee("booking_financials");
-  // Section 8B: when view_bookings resolves to assigned_only, this is the
-  // viewer's fs-* id; otherwise undefined (full access, as admin sees).
-  const assignedStaffId = useAssignedScope("view_bookings");
+  const showMoney = canSee("booking_financials");
+  // Section 8B: the viewer's own bookings when view_bookings is assigned_only.
+  const assignedOnly = Boolean(useAssignedScope("view_bookings"));
 
-  // Section 8B scoping is applied HERE now, not by the factory. It used to pass
-  // the viewer's id down to `scopeBookingsToStaff`, whose idea of "assigned"
-  // was `pool[booking.id % pool.length]` over the staff fixture. The set comes
-  // from `bookings.assigned_staff_id` instead — and it has to be applied at the
-  // call site, because only the caller can tell "not assigned" from "not
-  // loaded", which a queryFn cannot.
-  // ── ONE PAGE AT A TIME ───────────────────────────────────────────────────
-  //
-  // The table loaded every booking the facility ever had, then searched,
-  // filtered, sorted and paged them here, and the tiles added them all up. It
-  // asks /api/bookings/page for fifteen now, in the same scope this page
-  // applied: the chosen location when there are several, and the viewer's
-  // assigned bookings when view_bookings is assigned_only. The tiles come from
-  // /api/bookings/totals, counted in that scope.
+  // What is owed, as the booking page and its checkout count it.
+  const taxConfig = useFacilitySettings().settings.tax_config
+    .value as TaxConfig;
+  const moneyOf = (booking: Booking) => {
+    const totals = bookingTotals(booking, taxConfig);
+    return { balance: totals.balance, total: totals.total };
+  };
+
   const locationId =
     isMultiLocation && !isHQView && currentLocationId
       ? currentLocationId
       : undefined;
-  const assignedOnly = Boolean(assignedStaffId);
   const [activeTab, setActiveTab] = useState("all");
   const [filterStart, setFilterStart] = useState<Date | null>(null);
   const [filterEnd, setFilterEnd] = useState<Date | null>(null);
@@ -258,9 +146,6 @@ export default function FacilityBookingsPage() {
     setActiveTab(key);
     setTablePage(1);
   };
-  // A Date as its own YYYY-MM-DD, without a timezone shift.
-  const dayOf = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const chosen = (key: string) =>
     tableFilters[key] && tableFilters[key] !== "all"
       ? tableFilters[key]
@@ -281,10 +166,14 @@ export default function FacilityBookingsPage() {
     sort: tableSort.key ? SERVER_SORTS[tableSort.key] : undefined,
     dir: tableSort.dir,
   };
-  const { data: pageData, isLoading } = useQuery({
+  const {
+    data: pageData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     ...bookingPageQueries.page(pageParams),
-    // The previous page stays on screen while the next one loads, rather than
-    // the table emptying on every click.
+    // The previous page stays on screen while the next one loads.
     placeholderData: (previous) => previous,
   });
   const { data: totals } = useQuery(
@@ -292,452 +181,31 @@ export default function FacilityBookingsPage() {
   );
   const bookings = pageData?.bookings ?? NO_BOOKINGS;
 
-  const queryClient = useQueryClient();
-  const saveBooking = useMutation({
-    mutationFn: async (booking: Booking) =>
-      bookings.some((b) => b.id === booking.id)
-        ? bookingMutations.update(booking.id, booking)
-        : bookingMutations.create(booking, currentLocationId),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
-  });
-
-  // The page, already scoped to its location and viewer by the server.
-  const locationBookings = bookings;
-
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-
-  useEffect(() => {
-    // Not until the list is here. The draft's id is derived from the highest
-    // one already in use, so running against an EMPTY list would produce id 1 —
-    // which `saveBooking` would then find in the list and treat as an edit of
-    // booking #1. The key is only consumed once, so re-running is harmless.
-    if (isLoading) return;
-    const raw = localStorage.getItem("booking_requests_schedule_draft");
-    if (!raw) return;
-    try {
-      const draft = JSON.parse(raw) as {
-        requestId: string;
-        clientId: number;
-        petId: number;
-        service: string;
-        appointmentAt: string;
-      };
-      // Create a draft booking that staff can edit, then Save will add it.
-      const appointment = new Date(draft.appointmentAt);
-      const isoDate = appointment.toISOString().slice(0, 10);
-      const hh = String(appointment.getHours()).padStart(2, "0");
-      const mm = String(appointment.getMinutes()).padStart(2, "0");
-      const time = `${hh}:${mm}`;
-
-      // A placeholder above every id in use, so the save is a CREATE and the
-      // server assigns the real reference.
-      const maxId = Math.max(...bookings.map((b) => b.id ?? 0), 0);
-      setEditingBooking({
-        id: maxId + 1,
-        clientId: draft.clientId,
-        petId: draft.petId,
-        facilityId,
-        service: draft.service,
-        startDate: isoDate,
-        endDate: isoDate,
-        checkInTime: time,
-        checkOutTime: time,
-        status: "pending",
-        basePrice: 0,
-        discount: 0,
-        totalCost: 0,
-        paymentStatus: "pending",
-        specialRequests: `Scheduled from request ${draft.requestId}`,
-      } as Booking);
-    } finally {
-      localStorage.removeItem("booking_requests_schedule_draft");
-    }
-  }, [facilityId, isLoading, bookings]);
-
-  // The "Facility not found" screen that used to be here keyed on
-  // `facilities.find((f) => f.id === 11)` — a MOCK row. It turned the whole
-  // bookings page, holding real bookings the caller can read perfectly well,
-  // into an error state whenever a fixture was missing. The bookings come from
-  // the database and are already RLS-scoped; the facility name is decoration on
-  // top of them, not a precondition for showing them.
-
-  // The tiles, counted by the server in the table's own scope.
   const totalBookings = totals?.total ?? 0;
   const todayCount = totals?.today ?? 0;
-  const upcomingCount = totals?.upcoming ?? 0;
-  const pendingCount = totals?.pending ?? 0;
-  const totalRevenue = totals?.paidRevenue ?? 0;
-  const pendingRevenue = totals?.pendingRevenue ?? 0;
-
-  const fmtDate = (d: string) => {
-    try {
-      return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return d;
-    }
-  };
-
-  const columns: ColumnDef<(typeof bookings)[number]>[] = [
-    {
-      key: "id",
-      label: "ID",
-      icon: Hash,
-      defaultVisible: true,
-      render: (booking) => (
-        <span className="font-mono text-sm">#{booking.id}</span>
-      ),
-    },
-    ...(isMultiLocation && isHQView
-      ? [
-          {
-            key: "location",
-            label: "Location",
-            icon: CircleDot,
-            defaultVisible: true,
-            sortable: false,
-            render: (booking: (typeof bookings)[number]) => {
-              // The booking's own branch, resolved against the REAL locations
-              // `useLocationContext` loads from `public.locations`.
-              //
-              // This read `getLocationById(deriveLocationId(booking.id))` —
-              // a fixture lookup keyed by a hash of the reference. It always
-              // rendered a name, and the name was invented.
-              const loc = locations.find((l) => l.id === booking.locationId);
-              if (!loc)
-                return <span className="text-muted-foreground text-xs">—</span>;
-              // `color` and `shortCode` are nullable on a REAL location and were
-              // not on the fixture, which is the sort of difference that only
-              // shows up once a screen reads the database. A branch with
-              // neither set falls back to its name rather than an empty chip.
-              return (
-                <div className="flex items-center gap-1.5">
-                  {loc.color && (
-                    <div
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: loc.color }}
-                    />
-                  )}
-                  <span className="text-xs font-medium">
-                    {loc.shortCode ?? loc.name}
-                  </span>
-                </div>
-              );
-            },
-          } as ColumnDef<(typeof bookings)[number]>,
-        ]
-      : []),
-    {
-      key: "client",
-      label: "Client",
-      icon: User,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => {
-        const client = clientById.get(booking.clientId);
-        const pet = client?.pets.find((p) => p.id === booking.petId);
-        return (
-          <div className="flex items-center gap-2.5">
-            {/* ── §2b territory 1, and the whole point of the budget. ──────
-                "Bookings list — a ring on each pet avatar down the column:
-                thirty of them, still ONE idea." Repetition is free;
-                competition is not.
-
-                The CLIENT gets no ring and no avatar here: §2b is explicit
-                that "the client has no ring", and §5l that people get
-                initials while pets get photographs. The ring is how you tell
-                the animal from the paperwork at a glance.
-
-                `present` is the booking's real presence field, the same one
-                the "On site" column reads — so the dot turns off at
-                check-out on its own. A badge that never turns off is
-                decoration. */}
-            {pet && (
-              <PetAvatar
-                name={pet.name}
-                src={pet.imageUrl}
-                size="sm"
-                present={booking.presence === "on-site"}
-              />
-            )}
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate font-medium">
-                {client?.name || "Unknown"}
-              </span>
-              <span className="text-ink-tertiary truncate text-xs">
-                {pet?.name || "Unknown pet"}
-              </span>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "service",
-      label: t("service"),
-      icon: CalendarDays,
-      defaultVisible: true,
-      sortable: false,
-      // The enum was rendered raw under CSS `capitalize`, which made "daycare"
-      // look like a deliberate English word instead of a missing lookup — and
-      // left it English for a French reader. `serviceTypeLabel` also returns a
-      // service the FACILITY named itself exactly as typed (§5q), so the
-      // `capitalize` goes with it: "Yoda’s Splash" is already its own spelling.
-      render: (booking) => (
-        <Badge variant="outline">
-          {serviceTypeLabel(locale, booking.service)}
-        </Badge>
-      ),
-    },
-    {
-      key: "dates",
-      label: "Dates",
-      icon: Calendar,
-      defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => booking.startDate,
-      render: (booking) => {
-        const duration = calculateDuration(booking.startDate, booking.endDate);
-        return (
-          <div className="flex flex-col">
-            <span className="text-sm">{fmtDate(booking.startDate)}</span>
-            {booking.startDate !== booking.endDate && (
-              <span className="text-muted-foreground text-xs">
-                to {fmtDate(booking.endDate)}
-              </span>
-            )}
-            <span className="text-muted-foreground mt-0.5 text-xs">
-              {duration}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      key: "time",
-      label: "Time",
-      icon: Clock,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => (
-        <div className="flex flex-col text-xs">
-          <span>In: {booking.checkInTime}</span>
-          <span className="text-muted-foreground">
-            Out: {booking.checkOutTime}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      icon: CircleDot,
-      defaultVisible: true,
-      sortable: true,
-      sortValue: (booking) => booking.status,
-      render: (booking) => <StatusBadge type="status" value={booking.status} />,
-    },
-    {
-      // ── Where the pet is, and it means the same thing for every service ──
-      //
-      // A SEPARATE AXIS FROM `status`. Grooming records arrival by moving
-      // `bookings.status` ('checked_in', 'in_progress', 'ready'); daycare and
-      // boarding leave the status alone and stamp a timestamp on their own
-      // table. So this list could tell you a groom was in the building and
-      // could not tell you the same about a boarding guest — it showed
-      // "Confirmed" for a dog that had been in kennel 4 since Tuesday.
-      //
-      // `booking_presence` (20260806960000) derives one answer from whichever
-      // table owns it. `unknown` is honest: training and custom services have
-      // no attendance table at all.
-      key: "presence",
-      label: "On site",
-      icon: CircleDot,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => {
-        const presence = booking.presence ?? "unknown";
-        if (presence === "unknown") {
-          return <span className="text-muted-foreground text-xs">—</span>;
-        }
-        const label =
-          presence === "on-site"
-            ? "On site"
-            : presence === "departed"
-              ? "Gone home"
-              : "Expected";
-        return (
-          <span
-            data-presence={presence}
-            className="data-[presence=departed]:text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium data-[presence=expected]:border-amber-200 data-[presence=expected]:text-amber-700 data-[presence=on-site]:border-emerald-200 data-[presence=on-site]:text-emerald-700 dark:data-[presence=expected]:text-amber-400 dark:data-[presence=on-site]:text-emerald-400"
-          >
-            {label}
-          </span>
-        );
-      },
-    },
-    // Payment-status column — omitted without view_booking_financials (3C).
-    ...(canSeeBookingAmounts
-      ? [
-          {
-            key: "payment",
-            label: "Payment",
-            icon: DollarSign,
-            defaultVisible: true,
-            sortable: false,
-            render: (booking: (typeof bookings)[number]) => (
-              <StatusBadge type="status" value={booking.paymentStatus} />
-            ),
-          } as ColumnDef<(typeof bookings)[number]>,
-        ]
-      : []),
-    {
-      key: "tags",
-      label: "Tags",
-      icon: FileText,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => (
-        <TagList
-          entityType="booking"
-          entityId={booking.id}
-          compact
-          maxVisible={2}
-        />
-      ),
-    },
-    {
-      key: "notes",
-      label: "Notes",
-      icon: FileText,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => {
-        const count = bookingNoteCounts?.[booking.id] ?? 0;
-        return count > 0 ? (
-          <Badge variant="outline" className="gap-1 text-xs">
-            {count} {count === 1 ? "note" : "notes"}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-xs">—</span>
-        );
-      },
-    },
-    {
-      key: "yipyygo",
-      label: formText("columnLabel"),
-      icon: FileText,
-      defaultVisible: true,
-      // Each booking’s own status, derived in SQL: whether the facility asks
-      // for a form for its service, and how far its dogs’ forms have got. A
-      // booking that needs none sorts and reads as “—”.
-      sortable: false,
-      render: (booking) =>
-        booking.yipyyGo?.requirement ? (
-          <FormStatusChip
-            status={booking.yipyyGo.status}
-            mandatory={booking.yipyyGo.requirement === "mandatory"}
-          />
-        ) : (
-          <span className="text-muted-foreground text-xs">—</span>
-        ),
-    },
-    {
-      key: "tasks",
-      label: "Tasks",
-      icon: CheckSquare,
-      defaultVisible: true,
-      sortable: false,
-      render: (booking) => {
-        const taskCount = calculateTaskCount(booking);
-        return (
-          <span className="text-muted-foreground text-sm">{taskCount}</span>
-        );
-      },
-    },
-    // Cost column — omitted without view_booking_financials (3C).
-    ...(canSeeBookingAmounts
-      ? [
-          {
-            key: "totalCost",
-            label: "Cost",
-            icon: DollarSign,
-            defaultVisible: true,
-            sortable: true,
-            sortValue: (booking: (typeof bookings)[number]) =>
-              booking.totalCost,
-            render: (booking: (typeof bookings)[number]) => (
-              <span className="price-value">
-                {maskAmount(
-                  `$${booking.totalCost.toFixed(2)}`,
-                  "booking_financials",
-                )}
-              </span>
-            ),
-          } as ColumnDef<(typeof bookings)[number]>,
-        ]
-      : []),
-  ];
 
   const { tags: tagCatalogue } = useTagCatalogue();
   const { tagsFor } = useTagsByEntity();
 
-  const filters: FilterDef[] = [
-    {
-      key: "status",
-      label: t("filterStatus"),
-      options: [
-        { value: "all", label: t("filterAllStatuses") },
-        ...["pending", "confirmed", "completed", "cancelled"].map((id) => ({
-          value: id,
-          label: statusLabel(locale, id),
-        })),
-      ],
-    },
-    {
-      key: "service",
-      label: t("service"),
-      options: [
-        { value: "all", label: t("filterAllServices") },
-        ...["daycare", "boarding", "grooming", "evaluation", "vet"].map(
-          (id) => ({ value: id, label: serviceTypeLabel(locale, id) }),
-        ),
-      ],
-    },
-    {
-      key: "paymentStatus",
-      label: t("filterPayment"),
-      options: [
-        { value: "all", label: t("filterAllPayments") },
-        ...["paid", "pending", "refunded"].map((id) => ({
-          value: id,
-          label: statusLabel(locale, id),
-        })),
-      ],
-    },
-    {
-      key: "tag",
-      label: t("filterTag"),
-      options: [
-        { value: "all", label: t("filterAllTags") },
-        ...tagCatalogue
-          .filter((t) => t.type === "booking" && t.isActive)
-          .map((t) => ({ value: t.id, label: t.name })),
-      ],
-      // Without a `filterFn`, DataTable compares `item.tag` to the chosen
-      // value — and a booking row has no `tag` field, so picking any tag
-      // emptied the table. It was unreachable while the options came from a
-      // fixture nobody's bookings carried; the moment they became real tags it
-      // would have been a filter that hides everything. A tag lives on an
-      // assignment, not on the booking, so the lookup is the right comparison.
-      filterFn: (item: { id?: unknown }, value: string) =>
-        tagsFor("booking", Number(item.id)).some((t) => t.id === value),
-    },
-  ];
+  const columns = bookingListColumns({
+    t,
+    fill,
+    formText,
+    locale,
+    clientById,
+    noteCounts: bookingNoteCounts,
+    locations: isMultiLocation && isHQView ? locations : undefined,
+    showMoney,
+    maskAmount,
+    moneyOf,
+  });
+  const filters = bookingListFilters({
+    t,
+    locale,
+    tags: tagCatalogue.filter((tag) => tag.type === "booking" && tag.isActive),
+    tagsOf: (id) => tagsFor("booking", id),
+    showMoney,
+  });
 
   // An export holds everything the table matches, every page of it.
   const exportAll = async () => {
@@ -745,52 +213,20 @@ export default function FacilityBookingsPage() {
       exportBookingsToCSV(
         await fetchAllBookingPages({ ...pageParams, page: 1 }),
         clientById,
+        t,
+        moneyOf,
+        showMoney,
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
   };
 
-  // The cancel, payment and refund modals used to live here with their
-  // handlers. NOTHING EVER OPENED THEM: `setProcessingPayment`,
-  // `setCancellingBooking` and `setRefundingBooking` were only ever called with
-  // null, to close a dialog that could not be opened. This DataTable has no
-  // actions column at all — a row is a link to the booking, which is where
-  // those three now record real money.
-
-  const handleSaveBooking = (updatedBooking: Booking) => {
-    setEditingBooking(null);
-    saveBooking.mutate(updatedBooking, {
-      onSuccess: (saved) => {
-        // If this booking originated from a booking request, mark that request
-        // as scheduled. Only after the write lands — a request marked scheduled
-        // against a booking that failed to save points at nothing.
-        const special = updatedBooking.specialRequests ?? "";
-        const match =
-          typeof special === "string"
-            ? special.match(/Scheduled from request\s+([A-Za-z0-9-]+)/)
-            : null;
-        const requestId = match?.[1];
-        if (requestId) {
-          setBookingRequests((prev) =>
-            prev.map((r) =>
-              r.id === requestId ? { ...r, status: "scheduled" } : r,
-            ),
-          );
-        }
-        toast.success(`Booking #${saved?.id ?? updatedBooking.id} saved`);
-      },
-      onError: (error) => toast.error(error.message),
-    });
-  };
-
   return (
     <div className="flex-1 space-y-5 p-4 pt-6">
-      {/* Header */}
       <div className="space-y-3">
-        {/* §5b pattern 01 — one 32px title, and Export stays a 40px outline
-            control: this header has no primary action, and §1 allows exactly
-            one prominent control per screen, not at least one. */}
+        {/* §5b pattern 01 — one 32px title; Export stays a 40px outline
+            control, because this header has no primary action. */}
         <PageHeader
           title={t("pageTitle")}
           description={profile.businessName}
@@ -804,7 +240,6 @@ export default function FacilityBookingsPage() {
         <LocationFilterBanner />
       </div>
 
-      {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <KpiTile
           label={t("tileAll")}
@@ -826,14 +261,14 @@ export default function FacilityBookingsPage() {
         />
         <KpiTile
           label={t("tileUpcoming")}
-          value={upcomingCount}
+          value={totals?.upcoming ?? 0}
           hint={t("tileUpcomingHint")}
           icon={Hourglass}
           tone="violet"
         />
         <KpiTile
           label={t("tilePending")}
-          value={pendingCount}
+          value={totals?.pending ?? 0}
           hint={t("tilePendingHint")}
           icon={Clock}
           tone="rose"
@@ -841,10 +276,12 @@ export default function FacilityBookingsPage() {
         {canSeeRevenue && (
           <KpiTile
             label={t("tileRevenue")}
-            value={formatMoney(totalRevenue, locale, { whole: true })}
+            value={formatMoney(totals?.paidRevenue ?? 0, locale, {
+              whole: true,
+            })}
             hint={t("tileRevenueHint").replace(
               "{amount}",
-              formatMoney(pendingRevenue, locale, { whole: true }),
+              formatMoney(totals?.pendingRevenue ?? 0, locale, { whole: true }),
             )}
             icon={TrendingUp}
             tone="emerald"
@@ -852,15 +289,6 @@ export default function FacilityBookingsPage() {
         )}
       </div>
 
-      {/* ── Saved views. §5b pattern 02, and the one legal underline. ───────
-          These were `TabsList` pills carrying their count in a second pill
-          inside the label — three shapes deep for two words and a number.
-          The strip is what §5b asks for: the count IS the label, "the
-          difference between a tab and an answer".
-
-          `Tabs` went with them. Its `TabsContent` was `value={activeTab}`,
-          so it always rendered whichever panel was selected — the component
-          was doing nothing that a div does not. */}
       <div className="w-full">
         <div className="flex items-center gap-4 overflow-x-auto pb-1">
           <SavedViews
@@ -882,29 +310,50 @@ export default function FacilityBookingsPage() {
           />
         </div>
         <div className="mt-4">
-          {!isLoading && totalBookings === 0 ? (
+          {isError && !pageData ? (
+            <RouteState
+              surface="card"
+              pose="error"
+              icon={CircleAlert}
+              inkClassName="text-destructive"
+              title={t("listLoadFailedTitle")}
+              description={t("listLoadFailedBody")}
+              action={{
+                label: t("listTryAgain"),
+                onClick: () => void refetch(),
+              }}
+            />
+          ) : isLoading && !pageData ? (
+            // The first page is on its way: rows the shape of the table, not
+            // the table's "No data yet", which read as "you have no bookings".
+            <div className="space-y-2" aria-busy="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-[14px]" />
+              ))}
+            </div>
+          ) : !isLoading && totals && totalBookings === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-20">
-                <div className="bg-muted/60 mb-4 flex size-16 items-center justify-center rounded-2xl">
-                  <CalendarX className="text-muted-foreground/50 size-8" />
+                <div className="bg-muted mb-4 flex size-16 items-center justify-center rounded-2xl">
+                  <CalendarX className="text-muted-foreground size-8" />
                 </div>
                 <h3 className="mb-1.5 text-base font-semibold">
-                  No bookings found
+                  {t("listEmptyTitle")}
                 </h3>
                 <p className="text-muted-foreground max-w-xs text-center text-sm">
-                  There are no bookings in this category yet.
+                  {t("listEmptyBody")}
                 </p>
               </CardContent>
             </Card>
           ) : (
             <DataTable
-              data={locationBookings as unknown as Record<string, unknown>[]}
+              data={bookings as unknown as Record<string, unknown>[]}
               columns={
                 columns as unknown as ColumnDef<Record<string, unknown>>[]
               }
               filters={filters}
               searchKey="id"
-              searchPlaceholder={"Search by booking ID, client, or pet..."}
+              searchPlaceholder={t("listSearchPlaceholder")}
               itemsPerPage={PAGE_SIZE}
               serverPaging={{
                 total: pageData?.total ?? 0,
@@ -914,10 +363,9 @@ export default function FacilityBookingsPage() {
                 onFilterChange: setTableFilters,
                 onSortChange: (key, dir) => setTableSort({ key, dir }),
               }}
-              // §5n: names this table so its column choice and row height
-              // survive a reload. §5m: the four fields a phone shows are a
-              // decision only this screen can make — identity, what it is,
-              // when, and whether the pet is in the building.
+              // §5n: the column choice and row height survive a reload. §5m:
+              // the four fields a phone shows — identity, what, when, and
+              // whether the pet is in the building.
               tableId="facility.bookings"
               cardColumns={["client", "service", "dates", "presence"]}
               onRowClick={(booking) =>
@@ -931,16 +379,6 @@ export default function FacilityBookingsPage() {
           )}
         </div>
       </div>
-
-      {/* Edit Booking Modal */}
-      {editingBooking && (
-        <EditBookingModal
-          booking={editingBooking}
-          open={!!editingBooking}
-          onOpenChange={(open) => !open && setEditingBooking(null)}
-          onSave={handleSaveBooking}
-        />
-      )}
     </div>
   );
 }

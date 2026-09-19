@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { bookings } from "@/data/bookings";
-import { BOOKING_REQUESTS } from "@/data/booking-requests";
 import { facilityStaff } from "@/data/facility-staff";
 import type { Booking, NewBooking } from "@/types/booking";
 import type { ServiceModule } from "@/types/facility-staff";
@@ -216,10 +215,6 @@ export const bookingQueries = {
     // facility, and a client-supplied facility id is not a boundary anyway.
     // Its one reader asks "is there any booking", so one is enough.
     queryFn: async () => fetchBookings({ limit: 1 }),
-  }),
-  requests: () => ({
-    queryKey: ["booking-requests"] as const,
-    queryFn: async () => BOOKING_REQUESTS,
   }),
 };
 
