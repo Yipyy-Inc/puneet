@@ -19,12 +19,12 @@ export const facilityConfig = {
     },
   },
   pricing: {
-    enforceOnAll: false,
-    defaultPricing: {
-      boarding: { basePrice: 50, additionalPet: 25 },
-      daycare: { basePrice: 30, additionalPet: 15 },
-      grooming: { basePrice: 40, additionalPet: 20 },
-    },
+    // A platform-wide `defaultPricing` (boarding 50, daycare 30, grooming 40,
+    // plus an additional-pet price each) and an `enforceOnAll` flag sat here
+    // until 2026-09-20. One file read them — the super-admin card that edited
+    // them — so no booking was ever priced from them and no facility was ever
+    // held to them. What a service costs is the facility's own, in its rooms,
+    // rates and services. See PricingSettings.tsx.
     taxSettings: {
       taxRate: 0.08, // 8%
       taxIncluded: false,

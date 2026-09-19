@@ -46,7 +46,7 @@ export default function FacilityConfigPage() {
         <div className="flex items-center justify-between">
           <PageHeader
             title="Facility Configuration"
-            description="Configure global settings that apply to all facilities in the platform, including service availability, pricing structures, booking rules, and operational policies."
+            description="Configure global settings that apply to all facilities in the platform: service availability, tax, booking rules, and operational policies. What a service costs is each facility's own."
           />
           <Button onClick={handleSave}>
             <Save className="mr-2 size-4" />
@@ -60,7 +60,7 @@ export default function FacilityConfigPage() {
               <div className="font-medium text-yellow-800">{"Warning"}</div>
               <div className="text-sm text-yellow-700">
                 {
-                  "Some configuration changes may be destructive and could affect existing bookings, pricing, or facility operations. Please review changes carefully before saving."
+                  "Some configuration changes may be destructive and could affect existing bookings or facility operations. Review changes carefully before saving."
                 }
               </div>
             </div>

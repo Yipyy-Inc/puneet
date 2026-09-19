@@ -21,10 +21,17 @@ export type Weekday =
 
 export type BillingCycle = "monthly" | "annual";
 
-export interface ServicePricingEntry {
+/**
+ * A service this facility offers.
+ *
+ * It carried a `basePrice` and an `additionalAnimalFee` until 2026-09-20,
+ * both REQUIRED to get past the step — and neither was ever sent: the wizard
+ * posts name, timezone, owner, contact, locations, businessTypes and
+ * allowCustomerSignup, and nothing else. A facility prices its own work once
+ * it exists, in its rooms, rates and services.
+ */
+export interface ServiceSelectionEntry {
   enabled: boolean;
-  basePrice: string;
-  additionalAnimalFee: string;
 }
 
 export interface DayHours {
@@ -56,7 +63,7 @@ export interface FacilityDraft {
   promoCode: string;
 
   // Step 3 — Services & Pricing
-  services: Record<string, ServicePricingEntry>;
+  services: Record<string, ServiceSelectionEntry>;
   taxRate: string;
 
   // Step 4 — Operating Configuration

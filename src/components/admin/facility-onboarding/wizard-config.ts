@@ -11,7 +11,7 @@ import type { LucideIcon } from "lucide-react";
 import type {
   BusinessTypeId,
   FacilityDraft,
-  ServicePricingEntry,
+  ServiceSelectionEntry,
   Weekday,
 } from "./wizard-types";
 
@@ -90,8 +90,8 @@ export const STEP_META: StepMeta[] = [
   },
   {
     id: "services",
-    title: "Services & Pricing",
-    summary: "Per-service base price, additional-animal fee, and tax.",
+    title: "Services",
+    summary: "What this facility offers, and its tax rate.",
     icon: Tags,
   },
   {
@@ -114,12 +114,9 @@ export const STEP_META: StepMeta[] = [
   },
 ];
 
-function emptyServicePricing(): Record<string, ServicePricingEntry> {
-  const entries = BUSINESS_TYPES.map((b) => [
-    b.id,
-    { enabled: false, basePrice: "", additionalAnimalFee: "" },
-  ]);
-  return Object.fromEntries(entries) as Record<string, ServicePricingEntry>;
+function emptyServicePricing(): Record<string, ServiceSelectionEntry> {
+  const entries = BUSINESS_TYPES.map((b) => [b.id, { enabled: false }]);
+  return Object.fromEntries(entries) as Record<string, ServiceSelectionEntry>;
 }
 
 function defaultSchedule() {

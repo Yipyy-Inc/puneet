@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-const isNonNegativeNumber = (v: string) =>
-  v.trim() !== "" && !Number.isNaN(Number(v)) && Number(v) >= 0;
-
 // Step 1 — Business Information
 export const businessInfoSchema = z
   .object({
@@ -50,17 +47,10 @@ export const planTrialSchema = z
     }
   });
 
-// Step 3 — Services & Pricing
+// Step 3 — Services
 export const servicesPricingSchema = z
   .object({
-    services: z.record(
-      z.string(),
-      z.object({
-        enabled: z.boolean(),
-        basePrice: z.string(),
-        additionalAnimalFee: z.string(),
-      }),
-    ),
+    services: z.record(z.string(), z.object({ enabled: z.boolean() })),
     taxRate: z.string(),
   })
   .superRefine((val, ctx) => {
@@ -68,28 +58,9 @@ export const servicesPricingSchema = z
     if (enabled.length === 0) {
       ctx.addIssue({
         code: "custom",
-        message: "Enable and price at least one service",
+        message: "Choose at least one service",
         path: ["services"],
       });
-    }
-    for (const [id, v] of enabled) {
-      if (!isNonNegativeNumber(v.basePrice)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Enter a base price",
-          path: ["services", id, "basePrice"],
-        });
-      }
-      if (
-        v.additionalAnimalFee.trim() !== "" &&
-        Number.isNaN(Number(v.additionalAnimalFee))
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Invalid fee",
-          path: ["services", id, "additionalAnimalFee"],
-        });
-      }
     }
     if (val.taxRate.trim() !== "" && Number.isNaN(Number(val.taxRate))) {
       ctx.addIssue({

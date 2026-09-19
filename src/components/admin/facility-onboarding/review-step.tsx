@@ -112,22 +112,18 @@ export function ReviewStep({
             ) : null}
           </Section>
 
-          <Section title="Services & Pricing" stepIndex={2} onEdit={onEdit}>
-            {enabledServices.length > 0 ? (
-              enabledServices.map((s) => (
-                <Row
-                  key={s.id}
-                  label={s.label}
-                  value={`$${draft.services[s.id].basePrice || "0"}${
-                    draft.services[s.id].additionalAnimalFee
-                      ? ` (+$${draft.services[s.id].additionalAnimalFee}/extra)`
-                      : ""
-                  }`}
-                />
-              ))
-            ) : (
-              <Row label="Services" value="—" />
-            )}
+          <Section title="Services" stepIndex={2} onEdit={onEdit}>
+            {/* One row, not one per service with a price beside it: the
+                wizard no longer asks for prices, so there is nothing to show
+                per service but its name. */}
+            <Row
+              label="Services"
+              value={
+                enabledServices.length > 0
+                  ? enabledServices.map((s) => s.label).join(", ")
+                  : "—"
+              }
+            />
             <Row
               label="Tax rate"
               value={draft.taxRate ? `${draft.taxRate}%` : "—"}

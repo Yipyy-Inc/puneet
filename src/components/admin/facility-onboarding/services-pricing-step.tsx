@@ -14,31 +14,6 @@ import { SERVICES } from "./wizard-config";
 import { FieldErrorOnly } from "./wizard-fields";
 import type { StepProps } from "./wizard-types";
 
-function MoneyInput({
-  field,
-  placeholder,
-}: {
-  field: AnyFieldApi;
-  placeholder?: string;
-}) {
-  return (
-    <div className="relative">
-      <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
-        $
-      </span>
-      <Input
-        value={(field.state.value as string) ?? ""}
-        onChange={(e) => field.handleChange(e.target.value)}
-        onBlur={field.handleBlur}
-        inputMode="decimal"
-        placeholder={placeholder}
-        className="pl-7"
-        aria-invalid={field.state.meta.errors.length > 0 ? true : undefined}
-      />
-    </div>
-  );
-}
-
 export function ServicesPricingStep({
   draft,
   onNext,
@@ -60,8 +35,15 @@ export function ServicesPricingStep({
     >
       <div className="space-y-1">
         <Label>Services offered</Label>
+        {/* No prices here, and that is the point. This step asked for a base
+            price and an additional-animal fee per service, REQUIRED to get
+            past it, and sent neither — the facility is created from its name,
+            owner, locations and services. A facility prices its own work once
+            it exists: rooms carry their nightly rates, daycare its rate cards,
+            grooming its services. */}
         <p className="text-muted-foreground text-xs">
-          Enable each service this facility offers and set its pricing.
+          Choose what this facility offers. They set their own prices once the
+          facility is created.
         </p>
         <FieldErrorOnly form={form} name="services" />
       </div>
@@ -80,41 +62,6 @@ export function ServicesPricingStep({
                 </label>
               )}
             </form.Field>
-
-            <form.Subscribe
-              selector={(s) =>
-                (s.values.services as Record<string, { enabled: boolean }>)?.[
-                  svc.id
-                ]?.enabled
-              }
-            >
-              {(enabled) =>
-                enabled ? (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <form.Field name={`services.${svc.id}.basePrice`}>
-                      {(field: AnyFieldApi) => (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Base price</Label>
-                          <MoneyInput field={field} placeholder="0.00" />
-                          <FormFieldError field={field} />
-                        </div>
-                      )}
-                    </form.Field>
-                    <form.Field name={`services.${svc.id}.additionalAnimalFee`}>
-                      {(field: AnyFieldApi) => (
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">
-                            Additional animal fee
-                          </Label>
-                          <MoneyInput field={field} placeholder="0.00" />
-                          <FormFieldError field={field} />
-                        </div>
-                      )}
-                    </form.Field>
-                  </div>
-                ) : null
-              }
-            </form.Subscribe>
           </div>
         ))}
       </div>
