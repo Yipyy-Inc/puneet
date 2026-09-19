@@ -3,7 +3,9 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  CalendarClock,
   CalendarPlus,
+  MessageSquare,
   Clock,
   CreditCard,
   EllipsisVertical,
@@ -63,6 +65,11 @@ interface BookingCardProps {
   facilityName?: string;
   today: string;
   onCancel: (booking: Booking, petName: string) => void;
+  onNote: (
+    booking: Booking,
+    petName: string,
+    kind: "note" | "change_dates",
+  ) => void;
 }
 
 export function petOf(
@@ -79,6 +86,7 @@ export function BookingCard({
   facilityName,
   today,
   onCancel,
+  onNote,
 }: BookingCardProps) {
   const { t, fill, locale } = useCustomerText("bookings");
   const pet = petOf(booking, pets);
@@ -92,6 +100,10 @@ export function BookingCard({
   const cancellable = isCustomerCancellable(booking, today);
   const upcoming = (booking.endDate ?? booking.startDate) >= today;
   const late = booking.cancellation?.late === true;
+  // What add_owner_booking_note accepts: open, or under way.
+  const noteable = !["completed", "cancelled", "declined", "no_show"].includes(
+    booking.status,
+  );
 
   const multiDay = booking.endDate && booking.endDate !== booking.startDate;
   const when = multiDay
@@ -180,7 +192,7 @@ export function BookingCard({
             {t("viewBooking")}
           </Link>
         </Button>
-        {upcoming && booking.status !== "cancelled" && (
+        {upcoming && noteable && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -192,6 +204,18 @@ export function BookingCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => onNote(booking, petName, "change_dates")}
+              >
+                <CalendarClock className="size-4" aria-hidden />
+                {t("askToChangeDates")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onNote(booking, petName, "note")}
+              >
+                <MessageSquare className="size-4" aria-hidden />
+                {t("leaveNote")}
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
                   downloadCalendarEvent(

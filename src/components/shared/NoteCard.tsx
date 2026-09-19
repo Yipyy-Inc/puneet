@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import {
+  CalendarClock,
   Eye,
+  MessageSquare,
   EyeOff,
   Pin,
   PinOff,
@@ -91,6 +93,25 @@ export function NoteCard({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {note.customerRequest && (
+            <Badge
+              variant={
+                note.customerRequest === "change_dates" ? "warning" : "info"
+              }
+              className="gap-0.5 text-[10px]"
+            >
+              {note.customerRequest === "change_dates" ? (
+                <CalendarClock className="size-2.5" />
+              ) : (
+                <MessageSquare className="size-2.5" />
+              )}
+              {t(
+                note.customerRequest === "change_dates"
+                  ? "badgeChangeDates"
+                  : "badgeFromClient",
+              )}
+            </Badge>
+          )}
           {subtypeStyle && (
             <Badge variant={subtypeStyle.variant} className="text-[10px]">
               {t(subtypeStyle.labelKey)}

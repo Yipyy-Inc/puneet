@@ -31,7 +31,7 @@ export const noteEntityCategorySchema = z.enum([
 ]);
 
 export const NOTE_SELECT =
-  "id, category, sub_type, entity_id, content, visibility, is_pinned, edit_history, created_by_name, updated_by_name, created_at, updated_at";
+  "id, category, sub_type, entity_id, content, visibility, is_pinned, edit_history, created_by_name, updated_by_name, created_at, updated_at, customer_request";
 
 export type NoteRow = {
   id: string;
@@ -46,6 +46,7 @@ export type NoteRow = {
   updated_by_name: string | null;
   created_at: string;
   updated_at: string;
+  customer_request?: "note" | "change_dates" | null;
 };
 
 export function rowToNote(row: NoteRow, entityRef: number): Note {
@@ -54,6 +55,7 @@ export function rowToNote(row: NoteRow, entityRef: number): Note {
     id: row.id,
     category: row.category,
     subType: row.sub_type ?? undefined,
+    customerRequest: row.customer_request ?? undefined,
     entityId: entityRef,
     content: row.content,
     visibility: row.visibility,

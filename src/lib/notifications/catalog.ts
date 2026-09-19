@@ -84,6 +84,23 @@ export const NOTIFICATION_KINDS = {
     mandatory: false,
     urgent: false,
   },
+  /** A customer left a note on their booking (add_owner_booking_note). */
+  booking_customer_note: {
+    category: "bookings",
+    permission: "view_bookings",
+    mandatory: false,
+    urgent: false,
+  },
+  /**
+   * A customer asked to change their booking's dates. They cannot move it
+   * themselves; somebody has to, so it reaches whoever may edit bookings.
+   */
+  booking_change_requested: {
+    category: "bookings",
+    permission: "edit_bookings",
+    mandatory: false,
+    urgent: false,
+  },
   form_submitted: {
     category: "forms",
     permission: "view_clients",

@@ -17833,6 +17833,20 @@ when something is owed, and a request says "waiting for the facility to
 confirm". The fake receipt, the tip kept in the browser, the fixture staff
 notes and the faded past cards were removed.
 
-Still open in round 3: "Add a note" and "Ask to change dates" (both removed
-until they are real), the booking detail page, `/pay` in French, the wizard
+Still open in round 3: the booking detail page, `/pay` in French, the wizard
 reading the customer's own facility settings, and `/book/[slug]`.
+
+## 2026-09-19 — A customer can leave a note or ask to change dates (round 3, part 2)
+
+Both are real now. `public.add_owner_booking_note` (20260919170912) writes a
+booking note shared with the client, under their name. It accepts only the
+caller's own booking while it is open or under way, 1–1000 characters, at
+most ten a day. `notes.customer_request` records whether the client left a
+note or asked to change dates. A trigger stops staff from setting or
+clearing it, so a note can never be made to look like the client wrote it.
+Staff are notified through two new kinds: `booking_customer_note` (to
+view_bookings) and `booking_change_requested` (to edit_bookings, because
+someone has to move the booking). On the staff side the note card is marked
+"From the client" or "Asks to change dates". Nothing moves by itself: there
+is still no self-service reschedule, by decision. SQL:
+`owner-booking-notes.sql` (12).

@@ -28,6 +28,14 @@ const WORDS: Record<
     subject: `New online booking from ${value(p, "client", "a customer")}`,
     line: `${value(p, "client", "A customer")} booked ${value(p, "service", "a service")}${p.date ? ` on ${value(p, "date")}` : ""} online.`,
   }),
+  booking_customer_note: (p) => ({
+    subject: `A note from ${value(p, "client", "a customer")}`,
+    line: `${value(p, "client", "A customer")} left a note on ${value(p, "service", "their booking")}${p.date ? ` on ${value(p, "date")}` : ""}.`,
+  }),
+  booking_change_requested: (p) => ({
+    subject: `${value(p, "client", "A customer")} asks to change dates`,
+    line: `${value(p, "client", "A customer")} asked to change the dates of ${value(p, "service", "their booking")}${p.date ? ` on ${value(p, "date")}` : ""}. Nothing has moved until someone changes it.`,
+  }),
   booking_cancelled: (p) => ({
     subject: `Booking cancelled by ${value(p, "client", "a customer")}`,
     line: `${value(p, "client", "A customer")} cancelled ${value(p, "service", "their booking")}${p.date ? ` on ${value(p, "date")}` : ""}.`,

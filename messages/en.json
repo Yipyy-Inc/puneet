@@ -3197,7 +3197,9 @@
         "service_daycare": "Daycare",
         "service_grooming": "Grooming",
         "service_training": "Training",
-        "fromYipyy": "From Yipyy"
+        "fromYipyy": "From Yipyy",
+        "kind_booking_customer_note": "{client} left a note on a booking",
+        "kind_booking_change_requested": "{client} asks to change a booking’s dates"
       },
       "notificationRoles": {
         "owner": "Owner",
@@ -8811,7 +8813,9 @@
       "noteUnpinnedDone": "Note unpinned",
       "noteSharedDone": "Note shared with the customer",
       "noteInternalDone": "Note made internal",
-      "noteNotSaved": "The note was not saved"
+      "noteNotSaved": "The note was not saved",
+      "badgeFromClient": "From the client",
+      "badgeChangeDates": "Asks to change dates"
     },
     "messaging": {
       "scheduleSend": "Schedule send",
@@ -9673,7 +9677,24 @@
         "cancelInTime": "This is more than {hours} hours ahead, so it is not a late cancellation.",
         "cancelReasonLabel": "Tell the facility why (optional)",
         "cancelReasonPlaceholder": "For example: our plans changed",
-        "keepRequest": "Keep the request"
+        "keepRequest": "Keep the request",
+        "askToChangeDates": "Ask to change dates",
+        "leaveNote": "Leave a note",
+        "changeDatesTitle": "Ask to change {pet}’s booking on {date}",
+        "changeDatesBody": "The facility sees your request and gets back to you. Nothing moves until they change it.",
+        "changeDatesLabel": "Which dates would work instead?",
+        "changeDatesPlaceholder": "For example: arriving on the 14th instead of the 12th",
+        "changeDatesSend": "Send the request",
+        "changeDatesSent": "Request sent. The facility will get back to you.",
+        "changeDatesFailed": "The request was not sent",
+        "noteTitle": "Leave a note on {pet}’s booking for {date}",
+        "noteBody": "The facility reads it with the booking. You can see it there too.",
+        "noteLabel": "Your note",
+        "notePlaceholder": "For example: she will bring her own bed",
+        "noteSend": "Send the note",
+        "noteSent": "Note saved on the booking",
+        "noteFailed": "The note was not saved",
+        "noteClose": "Close without sending"
       },
       "bookingDetail": {
         "notFound": "Booking not found",
