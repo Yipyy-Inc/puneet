@@ -140,6 +140,7 @@ import { BookingHero } from "./_components/booking-hero";
 import { BookingNotices } from "./_components/booking-notices";
 import { BookingPetsCard } from "./_components/booking-pets-card";
 import { BookingTipsCard } from "./_components/booking-tips-card";
+import { BookingHistoryCard } from "./_components/booking-history-card";
 
 // ========================================
 // Helpers
@@ -1354,6 +1355,9 @@ export default function ClientBookingDetailPage({
                 onEditSplit={() => setTipSplitOpen(true)}
               />
             )}
+
+            {/* What happened to this booking, recorded by the database. */}
+            <BookingHistoryCard bookingRef={booking.id} />
           </div>
 
           {/* Right — 2 cols — Invoice */}
