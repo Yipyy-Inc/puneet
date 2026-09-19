@@ -5,8 +5,10 @@ import {
   getDaycareSectionUsage,
   holdsSpace,
   isGroomingStationBooked,
+  roomsForAssignments,
 } from "@/lib/capacity-engine";
 import type { Booking } from "@/types/booking";
+import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 
 const booking = (patch: Partial<Booking>): Booking =>
   ({
@@ -131,5 +133,103 @@ describe("isGroomingStationBooked", () => {
         { ...slot, status: "no_show" },
       ]),
     ).toBe(false);
+  });
+});
+
+// ============================================================================
+// A ROOM TYPE BECOMES A ROOM.
+//
+// The wizard's room cards are categories, and every boarding booking staff made
+// by clicking one was refused: "This facility has no room cat-condo." These pin
+// the translation from a category to a free room of that same category.
+// ============================================================================
+describe("roomsForAssignments", () => {
+  const condo = {
+    id: "cat-condo",
+    service: "boarding",
+    name: "Condominium",
+    defaultCapacity: 1,
+  } as RoomCategory;
+  const suite = {
+    id: "cat-suite",
+    service: "boarding",
+    name: "Suite",
+    defaultCapacity: 1,
+  } as RoomCategory;
+  const room = (id: string, categoryId: string, active = true) =>
+    ({ id, categoryId, name: id, active, rules: [] }) as FacilityRoom;
+  const units = [
+    room("c1", "cat-condo"),
+    room("c2", "cat-condo"),
+    room("s1", "cat-suite"),
+  ];
+  const input = {
+    startDate: "2026-10-06",
+    endDate: "2026-10-07",
+    categories: [condo, suite],
+    units,
+    bookings: [] as Booking[],
+  };
+
+  test("a category becomes a free room of that category", () => {
+    expect(
+      roomsForAssignments({
+        ...input,
+        assignments: [{ petId: 1, roomId: "cat-condo" }],
+      }),
+    ).toEqual([{ petId: 1, roomId: "c1" }]);
+  });
+
+  test("two dogs in one category get two rooms", () => {
+    expect(
+      roomsForAssignments({
+        ...input,
+        assignments: [
+          { petId: 1, roomId: "cat-condo" },
+          { petId: 2, roomId: "cat-condo" },
+        ],
+      }),
+    ).toEqual([
+      { petId: 1, roomId: "c1" },
+      { petId: 2, roomId: "c2" },
+    ]);
+  });
+
+  test("a room taken on those nights is skipped", () => {
+    expect(
+      roomsForAssignments({
+        ...input,
+        bookings: [
+          booking({
+            service: "boarding",
+            unitAssignment: "c1",
+            startDate: "2026-10-05",
+            endDate: "2026-10-07",
+          }),
+        ],
+        assignments: [{ petId: 1, roomId: "cat-condo" }],
+      }),
+    ).toEqual([{ petId: 1, roomId: "c2" }]);
+  });
+
+  test("a full category is never swapped for another; the dog waits for a room", () => {
+    expect(
+      roomsForAssignments({
+        ...input,
+        assignments: [
+          { petId: 1, roomId: "cat-suite" },
+          { petId: 2, roomId: "cat-suite" },
+        ],
+      }),
+    ).toEqual([{ petId: 1, roomId: "s1" }]);
+  });
+
+  test("a room already named passes through", () => {
+    expect(
+      roomsForAssignments({
+        ...input,
+        assignments: [{ petId: 1, roomId: "s1" }],
+      }),
+    ).toEqual([{ petId: 1, roomId: "s1" }]);
   });
 });

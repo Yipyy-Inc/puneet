@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatMoney } from "@/lib/i18n/format";
 import Image from "next/image";
@@ -7,6 +7,7 @@ import {
   Lock,
   Ban,
   Check,
+  ClipboardCheck,
   Sparkles,
   ChevronRight,
   Info,
@@ -44,6 +45,13 @@ interface ServiceStepProps {
    *  to that course type, and advances. Surfaces the Course Catalog directly
    *  in Step 2 so course types — not a separate program — are the choice. */
   onPickTrainingCourse?: (courseTypeId: string) => void;
+  /** Staff: a service this pet's evaluation does not cover stays open and
+   *  says so — the wizard asks them to decide, under the services. A
+   *  customer's is locked, and hidden where the facility hides it. */
+  mayOverrideEvaluation?: boolean;
+  /** What staff decide about the evaluation, shown in the chosen service's
+   *  own pane — beside the button it unlocks, inside the scroll. */
+  evaluationDecision?: ReactNode;
 }
 
 const DEFAULT_ACCENT = {
@@ -64,6 +72,8 @@ export function ServiceStep({
   selectedPets = [],
   onBookService,
   onPickTrainingCourse,
+  mayOverrideEvaluation = false,
+  evaluationDecision,
 }: ServiceStepProps) {
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -215,6 +225,7 @@ export function ServiceStep({
         if (service.id === "evaluation") return true;
         if (bookingFlow.hiddenServices.includes(service.id)) return false;
         if (
+          !mayOverrideEvaluation &&
           bookingFlow.evaluationRequired &&
           bookingFlow.hideServicesUntilEvaluationCompleted
         ) {
@@ -302,12 +313,14 @@ export function ServiceStep({
                 !(config?.settings.evaluation.optional ?? false)));
 
           const hasPetContext = selectedPets.length > 0;
-          const isLockedByEvaluation =
+          const needsEvaluation =
             requiresEvaluation && hasPetContext
               ? selectedPets.some(
                   (p) => !isPetUnlockedForService(p, service.id),
                 )
               : false;
+          const isLockedByEvaluation =
+            needsEvaluation && !mayOverrideEvaluation;
 
           const isDisabled = isEvaluation
             ? false
@@ -490,6 +503,16 @@ export function ServiceStep({
                       <Lock className="size-3" />
                       {t("lockedNeedsEvaluation")}
                     </span>
+                  ) : needsEvaluation ? (
+                    <span className="flex flex-col gap-0.5">
+                      <span className={cn("text-xs font-bold", accent.price)}>
+                        {displayPrice}
+                      </span>
+                      <span className="text-warning flex items-center gap-1 text-xs font-medium">
+                        <ClipboardCheck className="size-4" />
+                        {t("needsEvaluationBadge")}
+                      </span>
+                    </span>
                   ) : isDisabled && config?.status.reason ? (
                     <span className="text-muted-foreground flex items-center gap-1 text-xs">
                       <Ban className="size-3" />
@@ -515,6 +538,7 @@ export function ServiceStep({
                   )}
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {isSelected && evaluationDecision}
                   {isTraining ? (
                     <TrainingCourseQuickPicks
                       courseTypes={trainingCourseTypes}

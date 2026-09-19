@@ -315,6 +315,57 @@ export function autoAssignBoardingUnit(
   return null;
 }
 
+/**
+ * The wizard's room step places each dog in a room TYPE — its cards are the
+ * categories — but a booking is held by a ROOM, and `create_booking` refuses
+ * an id it cannot find among the facility's rooms ("This facility has no room
+ * cat-condo."). So every boarding booking staff made by clicking a card was
+ * refused, and the refusal was a toast that had gone before anyone read it.
+ *
+ * Each assignment naming a category becomes a free room of THAT category (never
+ * another: the type is what was chosen and what is priced), no two dogs sent
+ * to the same room past its capacity. One that is already a room passes
+ * through — the occupancy grid and the customer's auto-assignment name rooms.
+ * A category with no free room drops the assignment: a stay may be saved
+ * without a room and given one on the board, which a refused save may not.
+ */
+export function roomsForAssignments(input: {
+  assignments: Array<{ petId: number; roomId: string }>;
+  startDate: string;
+  endDate: string;
+  categories: RoomCategory[];
+  units: FacilityRoom[];
+  bookings: Booking[];
+}): Array<{ petId: number; roomId: string }> {
+  const { startDate, endDate, categories, units, bookings } = input;
+  const placedHere = new Map<string, number>();
+  const out: Array<{ petId: number; roomId: string }> = [];
+  for (const assignment of input.assignments) {
+    if (units.some((u) => u.id === assignment.roomId)) {
+      out.push(assignment);
+      placedHere.set(
+        assignment.roomId,
+        (placedHere.get(assignment.roomId) ?? 0) + 1,
+      );
+      continue;
+    }
+    const category = categories.find((c) => c.id === assignment.roomId);
+    if (!category) continue;
+    const free = units.find((unit) => {
+      if (unit.categoryId !== category.id || !unit.active) return false;
+      const cap = unit.capacity ?? category.defaultCapacity;
+      const used =
+        getBoardingUnitUsage(unit.id, startDate, endDate, bookings) +
+        (placedHere.get(unit.id) ?? 0);
+      return used < cap;
+    });
+    if (!free) continue;
+    placedHere.set(free.id, (placedHere.get(free.id) ?? 0) + 1);
+    out.push({ petId: assignment.petId, roomId: free.id });
+  }
+  return out;
+}
+
 // ── Grooming capacity ─────────────────────────────────────────────────────────
 
 /** Returns true if a grooming station is booked for an overlapping time slot. */

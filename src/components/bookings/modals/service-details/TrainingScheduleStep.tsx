@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -172,11 +174,17 @@ export function TrainingScheduleStep({
   const router = useRouter();
   const queryClient = useQueryClient();
   const enrollInSeries = useEnrollInTrainingSeries();
-  const { data: seriesList = [] } = useQuery(trainingQueries.series());
+  const { data: seriesList = [], isPending: seriesPending } = useQuery(
+    trainingQueries.series(),
+  );
   const { data: allSeriesEnrollments = [] } = useQuery(
     trainingQueries.allSeriesEnrollments(),
   );
-  const { data: courseTypes = [] } = useQuery(trainingQueries.courseTypes());
+  const {
+    data: courseTypes = [],
+    isPending: courseTypesPending,
+    isError: courseTypesFailed,
+  } = useQuery(trainingQueries.courseTypes());
   // The facility's own programs (the training_programs settings domain).
   const { data: trainingPrograms = NO_PROGRAMS } = useQuery(
     trainingQueries.packages(),
@@ -520,6 +528,8 @@ export function TrainingScheduleStep({
   if (!selectedCourseTypeId || !selectedCourseType) {
     return (
       <CourseTypePicker
+        loading={courseTypesPending || seriesPending}
+        failed={courseTypesFailed}
         courseTypes={courseTypes}
         seriesList={seriesList}
         spotsLeftBySeries={spotsLeftBySeries}
@@ -723,6 +733,8 @@ export function TrainingScheduleStep({
 // ============================================================================
 
 function CourseTypePicker({
+  loading,
+  failed,
   courseTypes,
   seriesList,
   spotsLeftBySeries,
@@ -730,6 +742,11 @@ function CourseTypePicker({
   todayISO,
   onSelect,
 }: {
+  /** Still arriving: not the same as none. This said "No course types yet —
+   *  add one in the Course Catalog" for the second or two the catalog took
+   *  to load, to a facility that had six. */
+  loading: boolean;
+  failed: boolean;
   courseTypes: TrainingCourseType[];
   seriesList: TrainingSeries[];
   spotsLeftBySeries: Map<string, number>;
@@ -737,6 +754,7 @@ function CourseTypePicker({
   todayISO: string;
   onSelect: (id: string) => void;
 }) {
+  const t = useShellText("booking");
   return (
     <div className="space-y-5">
       <div className="flex items-start gap-3">
@@ -752,7 +770,18 @@ function CourseTypePicker({
         </div>
       </div>
 
-      {courseTypes.length === 0 ? (
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2" aria-busy="true">
+          <Skeleton className="h-28 rounded-2xl" />
+          <Skeleton className="h-28 rounded-2xl" />
+        </div>
+      ) : failed ? (
+        <EmptyHint
+          icon={BookOpen}
+          title={t("coursesLoadFailed")}
+          text={t("coursesLoadFailedHelp")}
+        />
+      ) : courseTypes.length === 0 ? (
         <EmptyHint
           icon={BookOpen}
           title="No course types yet"

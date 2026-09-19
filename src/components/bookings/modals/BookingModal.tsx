@@ -64,6 +64,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
 import { getPetSize } from "@/lib/pet-size";
 import { estimateDobFromMonths } from "@/lib/pet-utils";
+import {
+  EVALUATION_OVERRIDE_MIN_REASON,
+  EvaluationOverridePanel,
+  EvaluationOverrideSummary,
+  type EvaluationIssue,
+} from "@/components/bookings/modals/steps/EvaluationOverridePanel";
 import { computeBookingTotals } from "@/lib/service-areas";
 import { useMobileGrooming } from "@/hooks/use-mobile-grooming";
 import { computePackagePassDiscount } from "@/lib/grooming/package-pass";
@@ -96,6 +102,7 @@ import { useDaycareLocationPrices } from "@/lib/api/hq-services";
 import {
   autoAssignDaycareSection,
   autoAssignBoardingUnit,
+  roomsForAssignments,
 } from "@/lib/capacity-engine";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
@@ -998,6 +1005,14 @@ export function BookingModal({
   const [showingPackagePromptStep, setShowingPackagePromptStep] =
     useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
+  // Staff may book past a missing, failed or expired evaluation — the
+  // facility's own call — with a reason kept on the booking. `key` ties the
+  // decision to the pets and service it was made for: change either and it
+  // has to be made again.
+  const [evaluationOverride, setEvaluationOverride] = useState<{
+    key: string;
+    reason: string;
+  } | null>(null);
   // OFF until staff say the money is in their hand. It used to default ON as
   // "card on file", which recorded nothing; it records a real payment now, so
   // defaulting it on would book cash nobody took.
@@ -1431,7 +1446,10 @@ export function BookingModal({
     if (!selectedService || selectedService === "evaluation")
       return selectedService;
     if (bookingFlow.hiddenServices.includes(selectedService)) return "";
+    // Only a customer is sent to the evaluation. Staff choose, at the
+    // service step — book it first, or book without it and say why.
     if (
+      isCustomerMode &&
       bookingFlow.evaluationRequired &&
       bookingFlow.hideServicesUntilEvaluationCompleted &&
       !canAccessLockedServices
@@ -1439,7 +1457,7 @@ export function BookingModal({
       return "evaluation";
     }
     return selectedService;
-  }, [bookingFlow, selectedService, canAccessLockedServices]);
+  }, [bookingFlow, selectedService, canAccessLockedServices, isCustomerMode]);
 
   if (effectiveService !== selectedService) {
     setSelectedService(effectiveService);
@@ -1964,6 +1982,45 @@ export function BookingModal({
     return isEvaluationOptionalForService(selectedService);
   }, [isEvaluationOptionalForService, selectedService]);
 
+  // The pets this service's evaluation rule stops, and why — the test the
+  // steps below always applied: an expired or failed evaluation stops any
+  // service, and a missing one stops a service that requires it.
+  const evaluationIssues = useMemo((): EvaluationIssue[] => {
+    if (!selectedService || selectedService === "evaluation") return [];
+    const issues: EvaluationIssue[] = [];
+    for (const pet of selectedPets) {
+      if (petHasExpiredEvaluation(pet)) {
+        issues.push({ pet, reason: "expired" });
+      } else if (petHasFailedEvaluation(pet)) {
+        issues.push({ pet, reason: "failed" });
+      } else if (
+        serviceRequiresEvaluation &&
+        !isEvaluationOptional &&
+        !petHasValidEvaluation(pet)
+      ) {
+        issues.push({ pet, reason: "missing" });
+      }
+    }
+    return issues;
+  }, [
+    selectedService,
+    selectedPets,
+    petHasExpiredEvaluation,
+    petHasFailedEvaluation,
+    petHasValidEvaluation,
+    serviceRequiresEvaluation,
+    isEvaluationOptional,
+  ]);
+  const evaluationIssueKey = `${selectedService}:${evaluationIssues
+    .map((issue) => `${issue.pet.id}-${issue.reason}`)
+    .join(",")}`;
+  // A customer is stopped by the rule; staff go on once they have said why.
+  const evaluationOverridden =
+    !isCustomerMode &&
+    evaluationIssues.length > 0 &&
+    evaluationOverride?.key === evaluationIssueKey &&
+    evaluationOverride.reason.trim().length >= EVALUATION_OVERRIDE_MIN_REASON;
+
   // Resolve any deposit rule that applies to this booking. Customer-mode
   // now participates so the deposit + card picker can render on Confirm.
   // The facility's rules, and NOT while they are still arriving. This called
@@ -2032,20 +2089,8 @@ export function BookingModal({
         // Evaluation-eligibility guards — now enforced at the service step
         // because the user picks pets first. This blocks moving forward when
         // the chosen service requires an evaluation the selected pets don't have.
-        if (selectedService !== "evaluation") {
-          const hasExpired = selectedPets.some((pet) =>
-            petHasExpiredEvaluation(pet),
-          );
-          const hasFailed = selectedPets.some((pet) =>
-            petHasFailedEvaluation(pet),
-          );
-          if (hasExpired || hasFailed) return false;
-          if (serviceRequiresEvaluation && !isEvaluationOptional) {
-            const petsWithoutEvaluation = selectedPets.filter(
-              (pet) => !petHasValidEvaluation(pet),
-            );
-            if (petsWithoutEvaluation.length > 0) return false;
-          }
+        if (evaluationIssues.length > 0 && !evaluationOverridden) {
+          return false;
         }
         return true;
       case "details": {
@@ -2059,7 +2104,7 @@ export function BookingModal({
           const hasFailed = selectedPets.some((pet) =>
             petHasFailedEvaluation(pet),
           );
-          if (hasExpired || hasFailed) return false;
+          if ((hasExpired || hasFailed) && !evaluationOverridden) return false;
         }
         return isSubStepComplete(
           currentSubSteps[currentSubStep]?.id ?? currentSubStep,
@@ -2073,7 +2118,7 @@ export function BookingModal({
           const hasFailed = selectedPets.some((pet) =>
             petHasFailedEvaluation(pet),
           );
-          if (hasExpired || hasFailed) return false;
+          if ((hasExpired || hasFailed) && !evaluationOverridden) return false;
         }
         // Waivers: a CUSTOMER signs what applies before asking — they are the
         // signer, and they are here. Staff are not refused: a phone booking
@@ -2095,15 +2140,14 @@ export function BookingModal({
     selectedService,
     startDate,
     isSubStepComplete,
-    serviceRequiresEvaluation,
-    isEvaluationOptional,
+    evaluationIssues,
+    evaluationOverridden,
     isEstimateMode,
     isGuestEstimate,
     isGuestInquiryComplete,
     selectedPets,
     petHasExpiredEvaluation,
     petHasFailedEvaluation,
-    petHasValidEvaluation,
     waivers.loading,
     waivers.pending.length,
     applicableDepositRule,
@@ -2481,6 +2525,62 @@ export function BookingModal({
 
     if (!clientId || petIdList.length === 0) return false;
 
+    // ── ONE DAYCARE DAY IS A DAY TOO ────────────────────────────────────────
+    //
+    // Two days or more go out as one part per day (withBookingParts), each
+    // with its own date and times. ONE day went out as it was: the day as its
+    // start, and the form's own end date and times — which the daycare picker
+    // never fills — as its end. The database refused it ("null value in
+    // column end_at"), so a single day of daycare could not be booked from
+    // this form at all. It is that day, start to end, at that day's times.
+    const daycareDay =
+      selectedService === "daycare" && daycareSelectedDates.length > 0
+        ? localDay(daycareSelectedDates[0])
+        : undefined;
+    const daycareDayTimes = daycareDay
+      ? daycareDateTimes.find((d) => d.date === daycareDay)
+      : undefined;
+
+    // A room card is a room TYPE; the booking holds a room. See
+    // roomsForAssignments — a type sent as a room was refused outright.
+    //
+    // The stays it checks are asked for NOW, for exactly these nights, and
+    // waited on. `knownBookings` is a background read whose window is built
+    // from UTC, so east of Greenwich it names another pair of days, and while
+    // it loads it reads as "no bookings": every room looked free, the first
+    // was picked, and the database refused it as taken.
+    let bookedRooms = roomAssignments;
+    if (
+      selectedService === "boarding" &&
+      boardingRangeStart &&
+      boardingRangeEnd
+    ) {
+      const nights = {
+        from: localDay(boardingRangeStart),
+        to: localDay(boardingRangeEnd),
+      };
+      let stays: Booking[];
+      try {
+        stays = await queryClient.fetchQuery({
+          ...bookingQueries.window(nights),
+          staleTime: 0,
+        });
+      } catch (error) {
+        toast.error(t("bookingNotSaved"), {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        return false;
+      }
+      bookedRooms = roomsForAssignments({
+        assignments: roomAssignments,
+        startDate: nights.from,
+        endDate: nights.to,
+        categories: roomCategories,
+        units: facilityRooms,
+        bookings: stays,
+      });
+    }
+
     const booking: NewBooking = {
       clientId,
       petId,
@@ -2489,25 +2589,25 @@ export function BookingModal({
       serviceType:
         selectedService === "evaluation" ? "evaluation" : serviceType,
       startDate:
-        selectedService === "daycare" && daycareSelectedDates.length > 0
-          ? localDay(daycareSelectedDates[0])
-          : selectedService === "boarding" && boardingRangeStart
-            ? localDay(boardingRangeStart)
-            : startDate,
+        daycareDay ??
+        (selectedService === "boarding" && boardingRangeStart
+          ? localDay(boardingRangeStart)
+          : startDate),
       endDate:
-        selectedService === "evaluation"
+        daycareDay ??
+        (selectedService === "evaluation"
           ? startDate
           : selectedService === "boarding" && boardingRangeEnd
             ? localDay(boardingRangeEnd)
-            : endDate || startDate,
+            : endDate || startDate),
       checkInTime:
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[0].checkInTime
-          : checkInTime,
+          : daycareDayTimes?.checkInTime || checkInTime,
       checkOutTime:
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
-          : checkOutTime,
+          : daycareDayTimes?.checkOutTime || checkOutTime,
       // A customer's booking is a REQUEST, always: the database makes every
       // booking a customer inserts `request_submitted` with no price
       // (private.enforce_booking_integrity), whatever a setting said. Staff
@@ -2539,8 +2639,8 @@ export function BookingModal({
           ? roomAssignments
           : undefined,
       unitAssignment:
-        selectedService === "boarding" && roomAssignments.length > 0
-          ? roomAssignments[0].roomId
+        selectedService === "boarding" && bookedRooms.length > 0
+          ? bookedRooms[0].roomId
           : undefined,
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
@@ -2606,6 +2706,18 @@ export function BookingModal({
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
       includesEvaluation: includesEvaluation || undefined,
       evaluationStatus: includesEvaluation ? "pending" : undefined,
+      // Booked past the evaluation rule: which pets were short of it, and why.
+      evaluationOverride:
+        evaluationOverridden && evaluationOverride
+          ? {
+              reason: evaluationOverride.reason.trim(),
+              pets: evaluationIssues.map(({ pet, reason }) => ({
+                id: pet.id,
+                name: pet.name,
+                reason,
+              })),
+            }
+          : undefined,
       initialDeposit: (() => {
         if (!applicableDepositRule) return undefined;
         // A customer's booking arrives unpriced (enforce_booking_integrity),
@@ -2727,7 +2839,7 @@ export function BookingModal({
     }
 
     const saved = await saveThrough(
-      editMode ? booking : withBookingParts(booking),
+      editMode ? booking : withBookingParts(booking, bookedRooms),
     );
     if (!saved) return false;
 
@@ -2735,41 +2847,11 @@ export function BookingModal({
     // new booking. The caller reports what the edit itself did.
     if (editMode) return true;
 
-    // Evaluations for the dogs that still need one, made once the booking
-    // they are for exists. Each goes through the same save, so each is real
-    // and each reports itself.
-    const requiresEvaluation = requiresEvaluationForService(selectedService);
-    if (requiresEvaluation) {
-      const petsNeedingEvaluation = selectedPets.filter(
-        (pet) =>
-          !(
-            pet.evaluations?.some(
-              (e) => e.status === "passed" && e.isExpired !== true,
-            ) ?? false
-          ),
-      );
-      for (const pet of petsNeedingEvaluation) {
-        const today = localDay(new Date());
-        await saveThrough({
-          clientId,
-          petId: pet.id,
-          facilityId,
-          service: "evaluation",
-          serviceType: evaluationConfig.duration,
-          startDate: today,
-          endDate: today,
-          checkInTime: "09:00",
-          checkOutTime:
-            evaluationConfig.duration === "half-day" ? "12:00" : "17:00",
-          status: "confirmed",
-          basePrice: evaluationConfig.price,
-          discount: 0,
-          totalCost: evaluationConfig.price,
-          notificationEmail: true,
-          notificationSMS: false,
-        });
-      }
-    }
+    // No evaluation is booked behind staff's back. This made one for every
+    // pet short of a passed evaluation, dated TODAY at 09:00 whatever the
+    // booking's own dates — a booking nobody asked for, often in the past.
+    // Staff book the evaluation first, add it to this booking's first day
+    // (the switch on Confirm), or book without it and say why.
 
     if (redeemedPackageId) {
       const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
@@ -2787,7 +2869,10 @@ export function BookingModal({
   // in `details` that no board reads. It now sends a PART per day or per room,
   // and the server writes them all or none (`create_bookings`). A customer's
   // request stays one booking: the facility schedules it.
-  const withBookingParts = (booking: NewBooking): NewBooking => {
+  const withBookingParts = (
+    booking: NewBooking,
+    rooms: Array<{ petId: number; roomId: string }> = roomAssignments,
+  ): NewBooking => {
     if (isCustomerMode) return booking;
     const money = {
       basePrice: booking.basePrice,
@@ -2815,7 +2900,7 @@ export function BookingModal({
     if (selectedService === "boarding" && petIds.length > 1) {
       const parts = boardingParts({
         petIds,
-        roomAssignments,
+        roomAssignments: rooms,
         startDate: booking.startDate,
         endDate: booking.endDate,
         checkInTime: booking.checkInTime ?? checkInTime,
@@ -3015,6 +3100,7 @@ export function BookingModal({
     setNotificationSMS(false);
     setTipAmount(0);
     setIncludesEvaluation(false);
+    setEvaluationOverride(null);
     setBookingRequested(false);
     setSelectedStaffId(null);
     setRedeemedPackageId(null);
@@ -4165,10 +4251,43 @@ export function BookingModal({
                       selectedPets={selectedPets}
                       onBookService={canProceed ? handleNext : undefined}
                       onPickTrainingCourse={handlePickTrainingCourse}
+                      mayOverrideEvaluation={!isCustomerMode}
+                      evaluationDecision={
+                        !isCustomerMode && evaluationIssues.length > 0 ? (
+                          <EvaluationOverridePanel
+                            issues={evaluationIssues}
+                            overriding={
+                              evaluationOverride?.key === evaluationIssueKey
+                            }
+                            reason={
+                              evaluationOverride?.key === evaluationIssueKey
+                                ? evaluationOverride.reason
+                                : ""
+                            }
+                            onOverridingChange={(on) =>
+                              setEvaluationOverride(
+                                on
+                                  ? { key: evaluationIssueKey, reason: "" }
+                                  : null,
+                              )
+                            }
+                            onReasonChange={(reason) =>
+                              setEvaluationOverride({
+                                key: evaluationIssueKey,
+                                reason,
+                              })
+                            }
+                            onBookEvaluation={() =>
+                              handleServiceChange("evaluation")
+                            }
+                          />
+                        ) : undefined
+                      }
                     />
                   )}
                   {displayedSteps[currentStep]?.id === "client-pet" && (
                     <ClientPetStep
+                      mayOverrideEvaluation={!isCustomerMode}
                       searchQuery={searchQuery}
                       setSearchQuery={setSearchQuery}
                       filteredClients={filteredClients}
@@ -4272,6 +4391,17 @@ export function BookingModal({
                       }
                     />
                   )}
+
+                  {!isCustomerMode &&
+                    !showingTipStep &&
+                    displayedSteps[currentStep]?.id === "confirm" &&
+                    evaluationOverridden &&
+                    evaluationOverride && (
+                      <EvaluationOverrideSummary
+                        issues={evaluationIssues}
+                        reason={evaluationOverride.reason}
+                      />
+                    )}
 
                   {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
                   {!isCustomerMode &&
@@ -4530,6 +4660,7 @@ export function BookingModal({
                         checkInTime={checkInTime}
                         checkOutTime={checkOutTime}
                         daycareSelectedDates={daycareSelectedDates}
+                        daycareDateTimes={daycareDateTimes}
                         boardingRangeStart={boardingRangeStart}
                         boardingRangeEnd={boardingRangeEnd}
                         boardingDateTimes={boardingDateTimes}
