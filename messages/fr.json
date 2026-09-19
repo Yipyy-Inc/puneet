@@ -1935,7 +1935,9 @@
         "historyBy": "{who} · {when}",
         "historyAutomatic": "Automatique",
         "historyShowAll": "Tout afficher ({n})",
-        "historyShowFewer": "Afficher moins"
+        "historyShowFewer": "Afficher moins",
+        "receiptEmailed": "Reçu envoyé à {email}",
+        "receiptNotSent": "Le reçu n’a pas été envoyé"
       },
       "bookingRequests": {
         "requestConfirmed": "Réservation confirmée pour {pet}",
@@ -3316,7 +3318,9 @@
         "bookAgainPet": "Réserver de nouveau pour {pet}",
         "notAllowedEdit": "Vous n’avez pas la permission de modifier les réservations.",
         "notAllowedCancel": "Vous n’avez pas la permission d’annuler les réservations.",
-        "notAllowedCreate": "Vous n’avez pas la permission de créer des réservations."
+        "notAllowedCreate": "Vous n’avez pas la permission de créer des réservations.",
+        "printCareSheet": "Fiche de soins",
+        "emailReceipt": "Envoyer le reçu par courriel"
       },
       "depositCharge": {
         "title": "Encaisser l’acompte",

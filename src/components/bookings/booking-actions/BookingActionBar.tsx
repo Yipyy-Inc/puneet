@@ -6,6 +6,7 @@ import {
   CircleCheck,
   CircleSlash,
   CircleX,
+  ClipboardList,
   CreditCard,
   DoorOpen,
   Ellipsis,
@@ -13,6 +14,7 @@ import {
   HandCoins,
   Link2,
   ListPlus,
+  Mail,
   MapPin,
   Pencil,
   Plus,
@@ -58,6 +60,10 @@ export type BookingActionHandlers = Partial<
   /** The pay link, by channel — both, or neither. */
   onPayLink?: (channel: "email" | "sms") => void;
   onPrintInvoice?: () => void;
+  /** The care sheet for the kennel or the play area, printed. */
+  onPrintCareSheet?: () => void;
+  /** A settled booking's receipt, emailed to the client. */
+  onEmailReceipt?: () => void;
 };
 
 const ICON: Record<BookingActionId, LucideIcon> = {
@@ -210,11 +216,17 @@ export function BookingActionBar({
                 <FileText className="size-4" aria-hidden />
                 {t("printInvoice")}
               </DropdownMenuItem>
+              {handlers.onPrintCareSheet && (
+                <DropdownMenuItem onClick={handlers.onPrintCareSheet}>
+                  <ClipboardList className="size-4" aria-hidden />
+                  {t("printCareSheet")}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
 
-        {more.length > 0 && (
+        {(more.length > 0 || handlers.onEmailReceipt) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -223,6 +235,15 @@ export function BookingActionBar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
+              {handlers.onEmailReceipt && (
+                <>
+                  <DropdownMenuItem onClick={handlers.onEmailReceipt}>
+                    <Mail className="size-4" aria-hidden />
+                    {t("emailReceipt")}
+                  </DropdownMenuItem>
+                  {more.length > 0 && <DropdownMenuSeparator />}
+                </>
+              )}
               {more.map((a) => {
                 const Icon = ICON[a.id];
                 if (a.id === "send_pay_link") {
