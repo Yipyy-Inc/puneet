@@ -17725,3 +17725,26 @@ the `src/data/booking-requests.ts` fixture only they reached.
   the tidy answer.
 - `clientQueries.all()` still loads every client to name the rows; a page of
   bookings should carry its client and pet names from the server.
+
+## 2026-09-19 — Bookings, round 2, slice 4: a booking's history is what happened to it
+
+The database records every write to a booking
+(`20260919142555_a_bookings_changes_record_themselves`): created, status,
+start, end, assigned staff, service type and notes as a Data entry; price,
+discount, total and tip as a separate Financial entry. The booking page's
+**History** card (`_components/booking-history-card.tsx`) reads
+`GET /api/bookings/[ref]/history` and words each change in the reader's
+language — a status by its label, a time in their clock, money as money — with
+who made it and when. Staff who may see the booking read its history; its
+price changes need `view_booking_financials`, and the policy (not the card)
+decides that. `booking-history.sql` and `booking-history.spec.ts` pin it.
+
+### 🔴 Known, and not done here
+
+- History starts on 2026-09-19: bookings older than that say so rather than
+  pretending they had none.
+- Payments, refunds and check-in/out times live in their own tables (the ledger
+  and the attendance records) and are not in this card yet — a combined
+  timeline would read them beside it.
+- `audit-scheduling-and-facility-read.sql` T10 now says "no audit trail beyond
+  the bookings they may see": that is the intended widening, not a loosened test.
