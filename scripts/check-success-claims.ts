@@ -234,7 +234,6 @@ const BASELINE = new Set<string>([
   //
   // Recorded, not excused. Step 3's remaining work removes the training,
   // grooming and guest-journal entries as it converts those screens.
-  "src/app/customer/bookings/[id]/page.tsx",
   "src/app/customer/settings/_components/LoginSecurityCard.tsx",
   "src/app/customer/training/page.tsx",
   "src/app/dashboard/facilities/page.tsx",

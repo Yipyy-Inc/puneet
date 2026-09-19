@@ -17850,3 +17850,30 @@ someone has to move the booking). On the staff side the note card is marked
 "From the client" or "Asks to change dates". Nothing moves by itself: there
 is still no self-service reschedule, by decision. SQL:
 `owner-booking-notes.sql` (12).
+
+## 2026-09-19 — The customer's booking page is the booking (round 3, part 3)
+
+`/customer/bookings/[id]` used to read the client's whole history to show one
+booking, which timed out for a client with a thousand. It took its price from
+a fixture `invoice` real bookings never have, so no price ever showed. It
+answered an estimate with two toasts, decided "today" by UTC, and pointed
+"Message us" at a fixture inbox.
+
+It now reads the booking by its ref, strictly, with not-found, error and
+loading states. It shows:
+
+- the real price, discount, bill lines (`booking_line_items`), total, what
+  was paid and the balance;
+- **Pay {amount}** to `/pay/{ref}` only when something is owed;
+- the quote on a request, with a note that the facility confirms the price;
+- the check-in code on the booking's own day;
+- the shared notes, with "Leave a note" and "Ask to change dates";
+- Cancel;
+- the facility's real phone and email (`/api/customer/facility`).
+
+An estimate now links to the real estimates page instead of the fake buttons.
+
+The list also takes the facility's name from `/api/customer/facility` now.
+The portal context's `selectedFacility` still names a fixture business on the
+apex and still carries fixture contact details. Other customer screens read
+it, which is the next thing to replace.

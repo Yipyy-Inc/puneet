@@ -337,3 +337,28 @@ test("asking to change dates and leaving a note are saved, and shared", async ({
   ]);
   expect(mine.every((n) => n.visibility === "shared_with_customer")).toBe(true);
 });
+
+test("the booking page shows its price, today's tools, and nobody else's", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.customer);
+  await page.goto(`/customer/bookings/${refs.today}`);
+
+  await expect(
+    page.getByRole("heading", { name: /price and payment/i }),
+  ).toBeVisible({ timeout: 60_000 });
+  // $40, nothing paid: the balance and a real pay link.
+  const pay = page.getByRole("link", { name: /^pay \$40\.00$/i });
+  await expect(pay).toBeVisible();
+  await expect(pay).toHaveAttribute("href", `/pay/${refs.today}`);
+  // It is today's booking, so the arrival tools are on it.
+  await expect(
+    page.getByRole("link", { name: /show my check-in code/i }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^notes$/i })).toBeVisible();
+
+  await page.goto(`/customer/bookings/${refs.bobs}`);
+  await expect(page.getByText(/not one of your bookings/i)).toBeVisible({
+    timeout: 60_000,
+  });
+});
