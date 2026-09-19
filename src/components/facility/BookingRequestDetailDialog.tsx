@@ -13,8 +13,6 @@ import {
   Bell,
   StickyNote,
   Plus,
-  Check,
-  Hourglass,
   X,
   Sun,
   Bed,
@@ -23,7 +21,10 @@ import {
 } from "lucide-react";
 
 import type { BookingRequest, BookingRequestService } from "@/types/booking";
-import { Button } from "@/components/ui/button";
+import {
+  BookingRequestActions,
+  type BookingRequestActionHandlers,
+} from "@/components/facility/BookingRequestActions";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { facilityRooms } from "@/data/rooms";
@@ -120,14 +121,12 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export interface BookingRequestDetailDialogProps {
+export interface BookingRequestDetailDialogProps extends BookingRequestActionHandlers {
   request: BookingRequest | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   variant?: "pending" | "waitlist";
-  onSchedule?: (req: BookingRequest) => void;
-  onDecline?: (req: BookingRequest) => void;
-  onWaitlist?: (req: BookingRequest) => void;
+  busy?: boolean;
 }
 
 export function BookingRequestDetailDialog({
@@ -135,9 +134,11 @@ export function BookingRequestDetailDialog({
   open,
   onOpenChange,
   variant = "pending",
-  onSchedule,
-  onDecline,
+  busy,
+  onReview,
+  onApproveAtQuote,
   onWaitlist,
+  onDecline,
 }: BookingRequestDetailDialogProps) {
   // The facility's own extras, for resolving a requested add-on's name. This
   // looked the id up in the shipped fixture, so an add-on the business had
@@ -161,11 +162,11 @@ export function BookingRequestDetailDialog({
     };
   });
 
-  const handleAction = (cb?: (req: BookingRequest) => void) => {
-    if (!cb) return;
-    cb(request);
-    onOpenChange(false);
-  };
+  const closeThen =
+    (cb: (req: BookingRequest) => void) => (req: BookingRequest) => {
+      onOpenChange(false);
+      cb(req);
+    };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -477,37 +478,18 @@ export function BookingRequestDetailDialog({
           )}
         </div>
 
-        <div className="bg-card border-border/60 flex items-center justify-end gap-2 border-t px-6 py-4">
-          {onDecline && (
-            <Button
-              size="sm"
-              onClick={() => handleAction(onDecline)}
-              className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/30 text-white shadow-none"
-            >
-              <X className="size-3.5" />
-              Decline
-            </Button>
-          )}
-          {onWaitlist && variant === "pending" && (
-            <Button
-              size="sm"
-              onClick={() => handleAction(onWaitlist)}
-              className="bg-warning/10 text-warning hover:bg-warning/20 focus-visible:ring-warning/30 border-0 shadow-none"
-            >
-              <Hourglass className="size-3.5" />
-              Move to waitlist
-            </Button>
-          )}
-          {onSchedule && (
-            <Button
-              size="sm"
-              onClick={() => handleAction(onSchedule)}
-              className="bg-emerald-600 text-white shadow-none hover:bg-emerald-700 focus-visible:ring-emerald-600/30"
-            >
-              <Check className="size-3.5" />
-              Schedule booking
-            </Button>
-          )}
+        <div className="bg-card border-border/60 border-t px-6 py-4">
+          <BookingRequestActions
+            request={request}
+            variant={variant}
+            busy={busy}
+            onReview={closeThen(onReview)}
+            onApproveAtQuote={
+              onApproveAtQuote ? closeThen(onApproveAtQuote) : undefined
+            }
+            onWaitlist={onWaitlist ? closeThen(onWaitlist) : undefined}
+            onDecline={closeThen(onDecline)}
+          />
         </div>
       </DialogContent>
     </Dialog>

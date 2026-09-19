@@ -5,7 +5,10 @@ import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
+import { useQuery } from "@tanstack/react-query";
+import { bookingQueries } from "@/lib/api/booking";
+import { groupRequests } from "@/lib/bookings/request-decision";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -13,6 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+const OPEN = ["request_submitted"] as const;
 
 function formatBadge(count: number) {
   if (!Number.isFinite(count) || count <= 0) return "";
@@ -25,14 +30,14 @@ export function BookingRequestsTopbarDropdown({
 }: {
   className?: string;
 }) {
-  const facilityId = 11;
-  const { requests } = useBookingRequestsStore();
+  // The facility’s own open requests — one per request, so a three-day
+  // daycare request is one. It counted a localStorage fixture for facility 11,
+  // so a real request never moved it.
+  const { t } = useStaffText("bookingRequests");
+  const { data: open } = useQuery(bookingQueries.byStatus(OPEN));
   const pendingCount = React.useMemo(
-    () =>
-      requests.filter(
-        (r) => r.facilityId === facilityId && r.status === "pending",
-      ).length,
-    [requests, facilityId],
+    () => (open ? groupRequests(open).length : 0),
+    [open],
   );
   const badge = formatBadge(pendingCount);
 
@@ -44,7 +49,7 @@ export function BookingRequestsTopbarDropdown({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Booking requests"
+            aria-label={t("topbarLabel")}
             className={cn("relative size-10 rounded-xl", className)}
             data-has-badge={badge ? "true" : "false"}
             asChild
@@ -63,7 +68,7 @@ export function BookingRequestsTopbarDropdown({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" align="center">
-          Booking requests
+          {t("topbarLabel")}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

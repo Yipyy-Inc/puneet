@@ -23,7 +23,11 @@ import { buildResumePreselection } from "@/lib/resume-booking";
 import { bookingQueries } from "@/lib/api/booking";
 import { clientQueries } from "@/lib/api/client";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
-import { useUpdateBookingStatus } from "@/lib/api/booking-status";
+import {
+  useDecideRequest,
+  type RequestDecision,
+} from "@/lib/api/booking-requests";
+import { groupRequests, quotedTotal } from "@/lib/bookings/request-decision";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
@@ -79,9 +83,15 @@ const SERVICE_FILTERS: {
  * created a SECOND booking beside it.
  */
 function toRequest(
-  b: Booking,
+  days: Booking[],
   clientsByRef: Map<number, Client>,
 ): BookingRequest {
+  // A multi-day request is a booking per day; the card is the first day's,
+  // with every day and the whole quote.
+  const b = days[0];
+  const quotes = days
+    .map((day) => quotedTotal(day))
+    .filter((q): q is number => q !== null);
   const client = clientsByRef.get(b.clientId);
   const petRef = Array.isArray(b.petId) ? b.petId[0] : b.petId;
   const pet = client?.pets?.find((p) => p.id === petRef);
@@ -110,6 +120,9 @@ function toRequest(
     ),
     feedingSchedule: b.feedingSchedule,
     medications: b.medications,
+    refs: days.map((day) => day.id),
+    dayDates: days.map((day) => day.startDate),
+    quote: quotes.length > 0 ? quotes.reduce((a, q) => a + q, 0) : null,
   };
 }
 
@@ -259,7 +272,7 @@ export default function OnlineBookingPage() {
     bookingQueries.byStatus(REQUEST_STATUSES),
   );
   const { data: facilityClients = [] } = useQuery(clientQueries.all());
-  const updateStatus = useUpdateBookingStatus();
+  const decide = useDecideRequest();
   const createBooking = useCreateBookingFromModal();
 
   const bookingsById = React.useMemo(
@@ -268,11 +281,11 @@ export default function OnlineBookingPage() {
   );
   const facilityRequests = React.useMemo(() => {
     const clientsByRef = new Map(facilityClients.map((c) => [c.id, c]));
-    return bookings
-      .filter(
+    return groupRequests(
+      bookings.filter(
         (b) => b.status === "request_submitted" || b.status === "waitlisted",
-      )
-      .map((b) => toRequest(b, clientsByRef));
+      ),
+    ).map((days) => toRequest(days, clientsByRef));
   }, [bookings, facilityClients]);
 
   // The request being scheduled: its booking, opened in the edit wizard.
@@ -338,16 +351,14 @@ export default function OnlineBookingPage() {
     )?.petName;
     try {
       await saveEdit.mutateAsync(edited);
-      await updateStatus.mutateAsync({
-        id: booking.id,
-        status: "confirmed",
+      // Every day of the request, at once. The day reviewed carries the price
+      // staff set; any other day still unpriced takes the customer's quote.
+      const decided = await decide.mutateAsync({
+        ref: booking.id,
+        action: "approve",
+        atQuote: true,
       });
-      toast.success(
-        fill("requestConfirmed", { pet: pet || `#${booking.id}` }),
-        {
-          description: t("customerNotMessaged"),
-        },
-      );
+      announce(decided, pet || `#${booking.id}`);
       setScheduling(null);
       return true;
     } catch (error) {
@@ -372,6 +383,45 @@ export default function OnlineBookingPage() {
     });
   };
 
+  // What happened, and — truthfully — whether the customer heard. The
+  // decision route dispatches the facility's own message and says whether it
+  // went; it used to be "not messaged from here" whatever the settings said.
+  const announce = (decided: RequestDecision, pet: string) => {
+    const title =
+      decided.status === "confirmed"
+        ? decided.refs.length > 1
+          ? fill("requestApprovedDays", { n: decided.refs.length, pet })
+          : fill("requestConfirmed", { pet })
+        : decided.status === "declined"
+          ? fill("requestDeclinedFor", { pet })
+          : fill("requestWaitlistedFor", { pet });
+    const heard =
+      decided.messaged === "sent"
+        ? t("customerMessaged")
+        : decided.messaged === "queued"
+          ? t("customerMessageQueued")
+          : decided.status === "waitlisted"
+            ? t("customerNotMessaged")
+            : t("customerNotMessagedOff");
+    toast.success(title, { description: heard });
+  };
+
+  // One click: every day, at the price the customer was quoted.
+  const approveAtQuote = async (req: BookingRequest) => {
+    try {
+      const decided = await decide.mutateAsync({
+        ref: Number(req.id),
+        action: "approve",
+        atQuote: true,
+      });
+      announce(decided, req.petName || `#${req.id}`);
+    } catch (error) {
+      toast.error(t("requestNotChanged"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   // Decline and waitlist are the booking's status. They were a localStorage
   // edit followed by a "notify the customer?" step whose text and email
   // options sent nothing; that step is gone rather than kept as a promise.
@@ -379,14 +429,11 @@ export default function OnlineBookingPage() {
     if (!confirmTarget) return;
     const action = confirmAction;
     try {
-      await updateStatus.mutateAsync({
-        id: Number(confirmTarget.id),
-        status: action === "decline" ? "declined" : "waitlisted",
+      const decided = await decide.mutateAsync({
+        ref: Number(confirmTarget.id),
+        action,
       });
-      toast.success(
-        t(action === "decline" ? "requestDeclined" : "requestWaitlisted"),
-        { description: t("customerNotMessaged") },
-      );
+      announce(decided, confirmTarget.petName || `#${confirmTarget.id}`);
       setConfirmOpen(false);
     } catch (error) {
       toast.error(t("requestNotChanged"), {
@@ -537,7 +584,9 @@ export default function OnlineBookingPage() {
                   key={r.id}
                   request={r}
                   variant="pending"
-                  onSchedule={schedule}
+                  busy={decide.isPending}
+                  onReview={schedule}
+                  onApproveAtQuote={approveAtQuote}
                   onDecline={(req) => openConfirm("decline", req)}
                   onWaitlist={(req) => openConfirm("waitlist", req)}
                 />
@@ -577,7 +626,9 @@ export default function OnlineBookingPage() {
                   key={r.id}
                   request={r}
                   variant="waitlist"
-                  onSchedule={schedule}
+                  busy={decide.isPending}
+                  onReview={schedule}
+                  onApproveAtQuote={approveAtQuote}
                   onDecline={(req) => openConfirm("decline", req)}
                 />
               ))}

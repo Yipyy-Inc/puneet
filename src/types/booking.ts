@@ -273,6 +273,18 @@ export const newBookingSchema = z.object({
   bookingGroup: z
     .object({ id: z.string(), part: z.number(), of: z.number() })
     .optional(),
+  /** What a customer's request was priced at when it was sent. The database
+   * zeroes a customer's price on insert and keeps it here
+   * (enforce_booking_integrity), so a request reads $0 until staff price it —
+   * this is the number "Approve at the quoted price" uses. Server-set. */
+  requestedQuote: z
+    .object({
+      basePrice: z.number().nullable().optional(),
+      discount: z.number().nullable().optional(),
+      totalCost: z.number().nullable().optional(),
+      quotedAt: z.string().optional(),
+    })
+    .optional(),
   /** The bookings this request makes, when it is more than one. Read by
    * POST /api/bookings and removed there; a stored booking never has it. */
   parts: z.array(bookingPartSchema).optional(),
@@ -874,6 +886,12 @@ export const bookingRequestSchema = z.object({
   medications: z.array(medicationItemSchema).optional(),
   notificationEmail: z.boolean().optional(),
   notificationSMS: z.boolean().optional(),
+  /** Every booking this request made — one per daycare day — in date order. */
+  refs: z.array(z.number()).optional(),
+  /** The days it asks for, as YYYY-MM-DD, one per booking. */
+  dayDates: z.array(z.string()).optional(),
+  /** What the customer's form quoted for the whole request; null when none. */
+  quote: z.number().nullable().optional(),
 });
 
 export type BookingRequest = z.infer<typeof bookingRequestSchema>;
