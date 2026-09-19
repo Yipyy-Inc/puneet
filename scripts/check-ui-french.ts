@@ -782,6 +782,10 @@ const PAGE_ROOTS: [string, string, string[]][] = [
   ["admin", "src/app/dashboard", []],
   ["employee", "src/app/employee", []],
   ["facility", "src/app/facility", [SETTINGS, STAFF]],
+  // The pay link: a customer and a member of staff both open it, so it sits
+  // outside every portal — and outside every surface, until 2026-09-19. It
+  // joined at zero, with the card fields and saved cards it imports.
+  ["pay", "src/app/pay", []],
 ];
 
 /** Every `page.tsx` and `layout.tsx` under a route, at any depth. */

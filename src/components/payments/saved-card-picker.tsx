@@ -4,6 +4,7 @@ import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import {
   useRemoveSavedCard,
   useSavedCards,
@@ -39,8 +40,8 @@ export interface SavedCardPickerProps {
   className?: string;
 }
 
-function describe(card: SavedCard): string {
-  const brand = card.brand ?? "Card";
+function describe(card: SavedCard, cardWord: string): string {
+  const brand = card.brand ?? cardWord;
   const tail = card.last4 ? ` ••••${card.last4}` : "";
   return `${brand}${tail}`;
 }
@@ -55,10 +56,11 @@ export function SavedCardPicker({
   clientId,
   selectedId,
   onSelect,
-  newCardLabel = "Use a new card",
+  newCardLabel,
   allowRemove = false,
   className,
 }: SavedCardPickerProps) {
+  const t = useShellText("payments");
   const { data: cards, isPending, error } = useSavedCards(clientId);
   const remove = useRemoveSavedCard(clientId);
 
@@ -76,7 +78,7 @@ export function SavedCardPicker({
         )}
       >
         <Loader2 className="size-3.5 animate-spin" />
-        Looking for saved cards…
+        {t("lookingForCards")}
       </div>
     );
   }
@@ -89,7 +91,7 @@ export function SavedCardPicker({
   return (
     <div className={cn("space-y-2", className)}>
       <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-        Saved cards
+        {t("savedCards")}
       </p>
 
       <div className="space-y-1.5">
@@ -112,7 +114,9 @@ export function SavedCardPicker({
                 className="flex flex-1 items-center gap-2 text-left disabled:cursor-not-allowed"
               >
                 <CreditCard className="text-muted-foreground size-4 shrink-0" />
-                <span className="text-sm font-medium">{describe(card)}</span>
+                <span className="text-sm font-medium">
+                  {describe(card, t("card"))}
+                </span>
                 {exp && (
                   <span className="text-muted-foreground text-xs tabular-nums">
                     {exp}
@@ -120,7 +124,7 @@ export function SavedCardPicker({
                 )}
                 {!card.chargeable && (
                   <span className="text-muted-foreground text-xs">
-                    · saved without consent to charge
+                    · {t("savedWithoutConsent")}
                   </span>
                 )}
               </button>
@@ -130,7 +134,10 @@ export function SavedCardPicker({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label={`Remove ${describe(card)}`}
+                  aria-label={t("removeCard").replace(
+                    "{card}",
+                    describe(card, t("card")),
+                  )}
                   disabled={remove.isPending}
                   onClick={() => {
                     remove.mutate(card.id, {
@@ -159,7 +166,7 @@ export function SavedCardPicker({
           )}
         >
           <Plus className="text-muted-foreground size-4 shrink-0" />
-          <span className="text-sm">{newCardLabel}</span>
+          <span className="text-sm">{newCardLabel ?? t("useNewCard")}</span>
         </button>
       </div>
 

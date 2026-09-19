@@ -74,6 +74,7 @@ const refs = {
   request: 0,
   started: 0,
   bobs: 0,
+  asked: 0,
 };
 
 test.describe.configure({ mode: "serial" });
@@ -107,6 +108,12 @@ test.beforeAll(async ({ browser }) => {
       start: day(-1),
       end: day(2),
       status: "confirmed",
+    });
+    refs.asked = await book(page, ALICE, {
+      service: "daycare",
+      start: day(23),
+      end: day(23),
+      status: "request_submitted",
     });
     refs.bobs = await book(page, BOB, {
       service: "daycare",
@@ -361,4 +368,33 @@ test("the booking page shows its price, today's tools, and nobody else's", async
   await expect(page.getByText(/not one of your bookings/i)).toBeVisible({
     timeout: 60_000,
   });
+});
+
+test("the pay link says when nothing is due yet, and reads in French", async ({
+  page,
+}) => {
+  await signIn(page, ACCOUNTS.customer);
+
+  // A request is priced at nothing until it is confirmed. It read "Paid in
+  // full".
+  await page.goto(`/pay/${refs.asked}`);
+  await expect(
+    page.getByRole("heading", { name: /not confirmed yet/i }),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByRole("link", { name: /back to the booking/i }),
+  ).toHaveAttribute("href", `/customer/bookings/${refs.asked}`);
+
+  const host = new URL(page.url()).hostname;
+  await page.context().addCookies([
+    { name: "APP_LANG_PRIMARY", value: "fr", domain: host, path: "/" },
+    { name: "NEXT_LOCALE", value: "fr", domain: host, path: "/" },
+  ]);
+  await page.goto(`/pay/${refs.today}`);
+  // Whether the facility takes cards or not, the page is French and leads
+  // back to the booking.
+  await expect(
+    page.getByRole("link", { name: /retour à la réservation/i }).first(),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/Back to the booking/)).toHaveCount(0);
 });

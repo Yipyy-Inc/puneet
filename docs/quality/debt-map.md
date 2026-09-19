@@ -17877,3 +17877,28 @@ The list also takes the facility's name from `/api/customer/facility` now.
 The portal context's `selectedFacility` still names a fixture business on the
 apex and still carries fixture contact details. Other customer screens read
 it, which is the next thing to replace.
+
+## 2026-09-19 — The pay link in French, and honest about a request (round 3, part 4)
+
+`/pay/[ref]` was English throughout, with money and dates formatted as
+`en-CA`. A request, which is priced at nothing until it is confirmed, showed
+"Paid in full".
+
+- The server page reads the locale (`getLocale`) and the new
+  `customerPages.pay` catalogue.
+- A request says it is not confirmed yet and that nothing is due.
+- The booking's day is shown on the facility's own clock.
+- Every notice leads back to the booking: the customer's page, or the
+  facility's page for staff.
+- The card fields, saved cards and card checkout are shared with the staff
+  checkout, so they moved to `shell.payments`.
+- `formatMoney` now takes the merchant's currency.
+- The pay button uses the one primary colour; it was an emerald override.
+
+`/pay` became its own surface in `check:ui-french` (`pages:pay`). It has one
+baselined file, `components/daily-care/outcome-meta.ts` (24). The page never
+renders it: the gate reaches it because the page reads its tip default from
+the settings registry, which imports the care-task outcomes. Only
+`domains.ts` may import the fixture default (`check:settings-fixture`), so
+the entry clears when the outcome labels are translated, not by working
+around the registry.

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
@@ -9,6 +10,9 @@ import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
 import { tipStillToCollect } from "@/lib/payments/pledged-tip";
 import { tipConfigSchema, type TipConfig } from "@/types/facility";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
+import { customerText } from "@/lib/customer/text";
+import type { AppLocale } from "@/lib/language-settings";
+import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 
 import { PayBooking } from "./_components/pay-booking";
 import { PayNotice } from "./_components/pay-notice";
@@ -64,8 +68,11 @@ interface BookingRow {
   amount_paid: number | null;
   /** The tip the booking carries: the owner's pledge, or one added when booking. */
   tip_amount: number | string | null;
-  facilities: { name: string } | null;
+  facilities: { name: string; timezone: string | null } | null;
 }
+
+/** Asked for, and not yet a booking: nothing is due until it is confirmed. */
+const AWAITING = new Set(["request_submitted", "estimate_sent", "waitlisted"]);
 
 export default async function PayBookingPage({
   params,
@@ -75,6 +82,13 @@ export default async function PayBookingPage({
   const { ref } = await params;
   const bookingRef = Number(ref);
   if (!Number.isInteger(bookingRef) || bookingRef <= 0) notFound();
+
+  const locale: AppLocale = (await getLocale()) === "fr" ? "fr" : "en";
+  const t = (key: string, values: Record<string, string | number> = {}) =>
+    Object.entries(values).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      customerText(locale, "pay", key),
+    );
 
   const viewer = await getViewer();
   if (viewer.source !== "session") {
@@ -87,7 +101,7 @@ export default async function PayBookingPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, tip_amount, facilities ( name )",
+      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, tip_amount, facilities ( name, timezone )",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
@@ -95,7 +109,23 @@ export default async function PayBookingPage({
   const booking = data as BookingRow | null;
   if (!booking) notFound();
 
-  const facilityName = booking.facilities?.name ?? "the facility";
+  const facilityName = booking.facilities?.name ?? t("theFacility");
+  // Back to the booking, where this person reads it: a customer's own page,
+  // or the facility's.
+  const back = {
+    href:
+      viewer.memberships.length === 0 && !viewer.isPlatformAdmin
+        ? `/customer/bookings/${booking.ref}`
+        : `/facility/dashboard/bookings/${booking.ref}`,
+    label: t("backToBooking"),
+  };
+  // The booking's day on the facility's own clock, not the server's.
+  const startDay = booking.start_at
+    ? wallClockParts(
+        booking.start_at,
+        booking.facilities?.timezone ?? DEFAULT_TIMEZONE,
+      ).date
+    : null;
   const owedCents = Math.round(
     (Number(booking.amount_due ?? 0) - Number(booking.amount_paid ?? 0)) * 100,
   );
@@ -104,8 +134,22 @@ export default async function PayBookingPage({
     return (
       <PayNotice
         tone="neutral"
-        title="This booking was cancelled"
-        body={`Nothing is owed on booking #${booking.ref}. If you think that is wrong, ${facilityName} can put it right.`}
+        title={t("cancelledTitle")}
+        body={t("cancelledBody", { ref: booking.ref, facility: facilityName })}
+        back={back}
+      />
+    );
+  }
+
+  // A request is priced at nothing until the facility accepts it, so it read
+  // "Paid in full" — true of the number and false of the booking.
+  if (AWAITING.has(booking.status)) {
+    return (
+      <PayNotice
+        tone="waiting"
+        title={t("notConfirmedTitle")}
+        body={t("notConfirmedBody", { facility: facilityName })}
+        back={back}
       />
     );
   }
@@ -114,8 +158,9 @@ export default async function PayBookingPage({
     return (
       <PayNotice
         tone="paid"
-        title="Paid in full"
-        body={`Booking #${booking.ref} has nothing outstanding.`}
+        title={t("paidTitle")}
+        body={t("paidBody", { ref: booking.ref })}
+        back={back}
       />
     );
   }
@@ -158,8 +203,9 @@ export default async function PayBookingPage({
     return (
       <PayNotice
         tone="problem"
-        title="This facility cannot take card payments yet"
-        body={`${facilityName} has not connected a merchant account, so there is nowhere for this money to go. They can settle it with you directly.`}
+        title={t("noMerchantTitle")}
+        body={t("noMerchantBody", { facility: facilityName })}
+        back={back}
       />
     );
   }
@@ -172,8 +218,9 @@ export default async function PayBookingPage({
     return (
       <PayNotice
         tone="problem"
-        title="Card payments are not set up"
-        body="This deployment cannot reach the Clover environment this facility is connected to."
+        title={t("notSetUpTitle")}
+        body={t("notSetUpBody")}
+        back={back}
       />
     );
   }
@@ -185,8 +232,9 @@ export default async function PayBookingPage({
     return (
       <PayNotice
         tone="problem"
-        title="This facility's payment account is not ready"
-        body={`${facilityName} needs to reconnect their merchant account before a card can be taken here.`}
+        title={t("notReadyTitle")}
+        body={t("notReadyBody", { facility: facilityName })}
+        back={back}
       />
     );
   }
@@ -199,7 +247,8 @@ export default async function PayBookingPage({
       facilityName={facilityName}
       service={booking.service}
       serviceType={booking.service_type}
-      startAt={booking.start_at}
+      startDay={startDay}
+      backHref={back.href}
       amountCents={owedCents + taxCents}
       taxCents={taxCents}
       currency={connection.currency}

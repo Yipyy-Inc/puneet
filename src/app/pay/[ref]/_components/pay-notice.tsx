@@ -1,59 +1,48 @@
-import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Clock, Info, TriangleAlert } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // ============================================================================
-// The states of /pay/[ref] where there is nothing to pay.
+// The pay page when there is nothing to pay, or no way to take a card.
 //
-// A server component with no interactivity, so it costs no client JavaScript.
-// Each caller says WHICH thing is missing — "paid in full" and "this facility
-// has not connected an account" are the same shape but not the same news, and
-// collapsing them into one "unavailable" screen sends the reader looking for
-// the wrong person to fix it.
+// A white card, the glyph in its own status ink, and the words (§6 rule 2 —
+// no tinted disc behind the glyph). The words arrive translated from the
+// server page, which knows the reader's locale.
 // ============================================================================
 
 const TONES = {
-  paid: {
-    icon: CheckCircle2,
-    ring: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30",
-  },
-  neutral: {
-    icon: Info,
-    ring: "bg-muted text-muted-foreground",
-  },
-  problem: {
-    icon: TriangleAlert,
-    ring: "bg-amber-50 text-amber-600 dark:bg-amber-950/30",
-  },
+  paid: { icon: CheckCircle2, ink: "text-success" },
+  neutral: { icon: Info, ink: "text-ink-secondary" },
+  waiting: { icon: Clock, ink: "text-ink-secondary" },
+  problem: { icon: TriangleAlert, ink: "text-warning" },
 } as const;
 
 export function PayNotice({
   tone,
   title,
   body,
+  back,
 }: {
   tone: keyof typeof TONES;
   title: string;
   body: string;
+  /** Where the booking can be read — the customer's page or the facility's. */
+  back?: { href: string; label: string };
 }) {
-  const { icon: Icon, ring } = TONES[tone];
+  const { icon: Icon, ink } = TONES[tone];
   return (
-    <div className="mx-auto max-w-md px-4 py-16">
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-          <div
-            className={cn(
-              "flex size-12 items-center justify-center rounded-full",
-              ring,
-            )}
-          >
-            <Icon className="size-6" />
-          </div>
-          <p className="text-lg font-semibold">{title}</p>
-          <p className="text-muted-foreground text-sm/relaxed">{body}</p>
-        </CardContent>
-      </Card>
-    </div>
+    <main className="mx-auto w-full max-w-md px-4 py-16">
+      <section className="bg-card border-line shadow-card flex flex-col items-center gap-3 rounded-3xl border px-6 py-10 text-center">
+        <Icon className={`size-6 ${ink}`} aria-hidden />
+        <h1 className="text-heading text-[19px] font-bold">{title}</h1>
+        <p className="text-ink-secondary text-[14.5px]">{body}</p>
+        {back && (
+          <Button variant="outline" asChild className="mt-2">
+            <Link href={back.href}>{back.label}</Link>
+          </Button>
+        )}
+      </section>
+    </main>
   );
 }

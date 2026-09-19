@@ -87,6 +87,9 @@ type ShellCatalogue = {
    *  the check-in boards the service pages share. Its own group because it is
    *  the FIRST screen anybody sees and none of the others owns it. */
   dashboard: Record<string, string>;
+  /** `components/payments` — the card fields, saved cards and card checkout,
+   *  shared by the customer's pay link and the staff checkout. */
+  payments: Record<string, string>;
 };
 
 /** The groups, one per surface of the app chrome. */

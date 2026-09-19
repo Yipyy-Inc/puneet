@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { Lock } from "lucide-react";
+import { useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Clover's hosted card fields. The only place a card is typed in this app.
@@ -65,10 +66,10 @@ declare global {
 }
 
 const FIELDS = [
-  { kind: "CARD_NUMBER", slug: "number", label: "Card number" },
-  { kind: "CARD_DATE", slug: "date", label: "Expiry" },
-  { kind: "CARD_CVV", slug: "cvv", label: "CVV" },
-  { kind: "CARD_POSTAL_CODE", slug: "postal", label: "Postal code" },
+  { kind: "CARD_NUMBER", slug: "number", labelKey: "cardNumber" },
+  { kind: "CARD_DATE", slug: "date", labelKey: "cardExpiry" },
+  { kind: "CARD_CVV", slug: "cvv", labelKey: "cardCvv" },
+  { kind: "CARD_POSTAL_CODE", slug: "postal", labelKey: "cardPostal" },
 ] as const;
 
 export type TokenResult =
@@ -102,7 +103,12 @@ export const CloverCardFields = forwardRef<
   { publicApiKey, merchantId, sdkUrl, onReadyChange, className },
   ref,
 ) {
-  const [problem, setProblem] = useState<string | null>(null);
+  // A catalogue key for our own sentences; Clover's per-field message is
+  // passed through as it came (it is the provider's words, not ours).
+  const t = useShellText("payments");
+  const [problem, setProblem] = useState<
+    { key: string } | { raw: string } | null
+  >(null);
   const clover = useRef<CloverInstance | null>(null);
 
   // ── THE IDS MUST BE UNIQUE AND MUST BE VALID CSS ─────────────────────────
@@ -143,9 +149,7 @@ export const CloverCardFields = forwardRef<
         // the console gets the reason. Without this the two are the same string
         // and the actual fault is unknowable from outside.
         console.error("Clover's card fields could not be mounted.", error);
-        setProblem(
-          "The payment form could not be loaded. Refresh and try again.",
-        );
+        setProblem({ key: "formNotLoaded" });
         readyChanged.current?.(false);
       }
     };
@@ -165,7 +169,7 @@ export const CloverCardFields = forwardRef<
     script.async = true;
     script.addEventListener("load", mount);
     script.addEventListener("error", () =>
-      setProblem("Could not reach the payment provider."),
+      setProblem({ key: "providerUnreachable" }),
     );
     if (!existing) document.head.appendChild(script);
 
@@ -179,7 +183,7 @@ export const CloverCardFields = forwardRef<
 
   const createToken = useCallback(async (): Promise<TokenResult> => {
     if (!clover.current) {
-      return { ok: false, message: "The card form is not ready yet." };
+      return { ok: false, message: t("formNotReady") };
     }
     setProblem(null);
     try {
@@ -187,17 +191,16 @@ export const CloverCardFields = forwardRef<
       if (!result.token) {
         // Clover reports per-field problems; the first is the one to fix.
         const first = result.errors ? Object.values(result.errors)[0] : null;
-        const message = first ?? "Check the card details and try again.";
-        setProblem(message);
+        const message = first ?? t("checkCardDetails");
+        setProblem(first ? { raw: first } : { key: "checkCardDetails" });
         return { ok: false, message };
       }
       return { ok: true, token: result.token };
     } catch {
-      const message = "The card could not be read. Try again.";
-      setProblem(message);
-      return { ok: false, message };
+      setProblem({ key: "cardNotRead" });
+      return { ok: false, message: t("cardNotRead") };
     }
-  }, []);
+  }, [t]);
 
   useImperativeHandle(ref, () => ({ createToken }), [createToken]);
 
@@ -210,7 +213,7 @@ export const CloverCardFields = forwardRef<
             className={field.kind === "CARD_NUMBER" ? "sm:col-span-2" : ""}
           >
             <label className="text-muted-foreground mb-1 block text-xs font-medium">
-              {field.label}
+              {t(field.labelKey)}
             </label>
             {/* Empty on purpose: Clover mounts an iframe here.
              *
@@ -230,13 +233,13 @@ export const CloverCardFields = forwardRef<
 
       {problem && (
         <p className="text-destructive mt-3 text-sm" role="alert">
-          {problem}
+          {"key" in problem ? t(problem.key) : problem.raw}
         </p>
       )}
 
       <p className="text-muted-foreground mt-3 flex items-center justify-center gap-1.5 text-xs">
         <Lock className="size-3" />
-        Card details go straight to Clover. They never reach Yipyy.
+        {t("straightToClover")}
       </p>
     </div>
   );

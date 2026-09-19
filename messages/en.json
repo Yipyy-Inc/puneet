@@ -9450,6 +9450,31 @@
       "acrossServices": "across {count} services",
       "allServices": "All",
       "exportCsv": "Export"
+    },
+    "payments": {
+      "cardNumber": "Card number",
+      "cardExpiry": "Expiry",
+      "cardCvv": "CVV",
+      "cardPostal": "Postal code",
+      "formNotLoaded": "The payment form could not be loaded. Refresh and try again.",
+      "providerUnreachable": "Could not reach the payment provider.",
+      "formNotReady": "The card form is not ready yet.",
+      "checkCardDetails": "Check the card details and try again.",
+      "cardNotRead": "The card could not be read. Try again.",
+      "card": "Card",
+      "lookingForCards": "Looking for saved cards…",
+      "savedCards": "Saved cards",
+      "savedWithoutConsent": "saved without consent to charge",
+      "removeCard": "Remove {card}",
+      "useNewCard": "Use a new card",
+      "cardNotSaved": "The card could not be saved, so it was not kept for next time.",
+      "paymentFailed": "The payment did not go through.",
+      "lostContact": "We lost contact while taking the payment. Do not retry — check with the facility before paying again.",
+      "saveCard": "Save this card for future payments",
+      "saveCardConsent": "The card is stored securely by our payment processor so this facility can charge it again. You can remove it at any time.",
+      "takingPayment": "Taking payment…",
+      "payAmount": "Pay {amount}",
+      "straightToClover": "Card details go straight to Clover. They never reach Yipyy."
     }
   },
   "customerPages": {
@@ -11777,6 +11802,31 @@
         "staysInSyncBody": "Your changes go to the same contact list staff see on the client file. Whoever you tag for pickup or drop-off can arrive without you needing to call ahead.",
         "tagsLabel": "Tags:",
         "tagsHint": "— choose one or more per contact based on what they're allowed to do."
+      },
+      "pay": {
+        "theFacility": "the facility",
+        "backToBooking": "Back to the booking",
+        "cancelledTitle": "This booking was cancelled",
+        "cancelledBody": "Nothing is owed on booking #{ref}. If you think that is wrong, {facility} can put it right.",
+        "notConfirmedTitle": "Not confirmed yet",
+        "notConfirmedBody": "{facility} has not confirmed this booking, so nothing is due. They set the price when they confirm it.",
+        "paidTitle": "Paid in full",
+        "paidBody": "Booking #{ref} has nothing outstanding.",
+        "noMerchantTitle": "This facility cannot take card payments yet",
+        "noMerchantBody": "{facility} has not connected a merchant account, so there is nowhere for this money to go. They can settle it with you directly.",
+        "notSetUpTitle": "Card payments are not set up",
+        "notSetUpBody": "This deployment cannot reach the Clover environment this facility is connected to.",
+        "notReadyTitle": "This facility’s payment account is not ready",
+        "notReadyBody": "{facility} needs to reconnect their merchant account before a card can be taken here.",
+        "paidAmount": "{amount} paid",
+        "paidFor": "Booking #{ref} at {facility}",
+        "card": "Card",
+        "payTitle": "Pay {facility}",
+        "booking": "Booking",
+        "balanceOn": "Balance on booking #{ref}",
+        "includesTax": "Includes {amount} tax",
+        "addTip": "Add a tip (optional)",
+        "pledgedTip": "Includes the {amount} tip on this booking. Change it, or choose No tip."
       }
     }
   }

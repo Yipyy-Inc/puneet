@@ -12,6 +12,8 @@ import {
 import { SavedCardPicker } from "@/components/payments/saved-card-picker";
 import { savedCardKeys } from "@/lib/api/saved-cards";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatMoney } from "@/lib/i18n/format";
+import { useShellLocale, useShellText } from "@/lib/shell/use-shell-text";
 
 // ============================================================================
 // Paying a booking by card.
@@ -86,13 +88,6 @@ export interface CloverCheckoutProps {
   }) => void;
 }
 
-function money(cents: number, currency: string): string {
-  return new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: currency || "CAD",
-  }).format(cents / 100);
-}
-
 export function CloverCheckout({
   bookingId,
   clientId = null,
@@ -104,6 +99,8 @@ export function CloverCheckout({
   tipCents = 0,
   onPaid,
 }: CloverCheckoutProps) {
+  const t = useShellText("payments");
+  const locale = useShellLocale();
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -188,10 +185,7 @@ export function CloverCheckout({
               queryKey: savedCardKeys.forClient(clientId),
             });
           } else {
-            setNotSaved(
-              savedBody?.error ??
-                "The card could not be saved, so it was not kept for next time.",
-            );
+            setNotSaved(savedBody?.error ?? t("cardNotSaved"));
           }
         }
       }
@@ -212,7 +206,7 @@ export function CloverCheckout({
       } | null;
 
       if (!response.ok || !payload?.paid) {
-        setProblem(payload?.error ?? "The payment did not go through.");
+        setProblem(payload?.error ?? t("paymentFailed"));
         return;
       }
 
@@ -227,9 +221,7 @@ export function CloverCheckout({
       // The charge may or may not have happened. Say so — "try again" here
       // would invite a double payment, and the server's idempotency key only
       // covers a retry of the SAME attempt.
-      setProblem(
-        "We lost contact while taking the payment. Do not retry — check with the facility before paying again.",
-      );
+      setProblem(t("lostContact"));
     } finally {
       setBusy(false);
     }
@@ -242,6 +234,7 @@ export function CloverCheckout({
     saveCard,
     clientId,
     queryClient,
+    t,
   ]);
 
   // A stored card needs no hosted fields, so the pay button must not wait on
@@ -274,13 +267,12 @@ export function CloverCheckout({
                 className="mt-0.5"
               />
               <span className="text-sm">
-                Save this card for future payments
+                {t("saveCard")}
                 {/* The wording is the consent. It has to say that the card is
                     kept and may be charged again, because that is what is
                     being agreed to — "save this card" alone does not. */}
                 <span className="text-muted-foreground block text-xs">
-                  The card is stored securely by our payment processor so this
-                  facility can charge it again. You can remove it at any time.
+                  {t("saveCardConsent")}
                 </span>
               </span>
             </label>
@@ -303,19 +295,20 @@ export function CloverCheckout({
         </p>
       )}
 
-      <Button
-        onClick={pay}
-        disabled={!canPay || busy}
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
-      >
+      <Button onClick={pay} disabled={!canPay || busy} className="w-full">
         {busy ? (
           <Loader2 className="mr-2 size-4 animate-spin" />
         ) : (
           <CreditCard className="mr-2 size-4" />
         )}
         {busy
-          ? "Taking payment…"
-          : `Pay ${money(amountCents + tipCents, currency)}`}
+          ? t("takingPayment")
+          : t("payAmount").replace(
+              "{amount}",
+              formatMoney((amountCents + tipCents) / 100, locale, {
+                currency: currency || "CAD",
+              }),
+            )}
       </Button>
     </div>
   );

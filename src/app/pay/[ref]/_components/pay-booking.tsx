@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useCustomerText } from "@/lib/customer/use-customer-text";
+import { formatCalendarDayLong, formatMoney } from "@/lib/i18n/format";
+import { serviceTypeLabel } from "@/lib/i18n/labels";
 import { CloverCheckout } from "@/components/payments/clover-checkout";
 import { TipSelector } from "@/components/bookings/TipSelector";
 import type { TipConfig } from "@/types/facility";
@@ -37,7 +41,10 @@ export interface PayBookingProps {
   facilityName: string;
   service: string | null;
   serviceType: string | null;
-  startAt: string | null;
+  /** The booking's first day on the facility's clock, "YYYY-MM-DD". */
+  startDay: string | null;
+  /** The booking, where this person reads it. */
+  backHref: string;
   /** What the card will be charged before any tip: the balance plus its tax. */
   amountCents: number;
   /** The tax inside `amountCents`; zero where prices include it or none is set. */
@@ -69,19 +76,6 @@ interface Paid {
   cardLast4: string | null;
 }
 
-function money(cents: number, currency: string): string {
-  return new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency,
-  }).format(cents / 100);
-}
-
-function serviceLabel(service: string | null, serviceType: string | null) {
-  const base = service ? service.replace(/_/g, " ") : "Booking";
-  const sub = serviceType ? serviceType.replace(/_/g, " ") : null;
-  return sub ? `${base} — ${sub}` : base;
-}
-
 export function PayBooking({
   bookingId,
   bookingRef,
@@ -89,7 +83,8 @@ export function PayBooking({
   facilityName,
   service,
   serviceType,
-  startAt,
+  startDay,
+  backHref,
   amountCents,
   taxCents,
   currency,
@@ -99,6 +94,9 @@ export function PayBooking({
   tipConfig,
   pledgedTipCents = 0,
 }: PayBookingProps) {
+  const { t, fill, locale } = useCustomerText("pay");
+  const money = (cents: number, code: string) =>
+    formatMoney(cents / 100, locale, { currency: code });
   const [tipCents, setTipCents] = useState(pledgedTipCents);
   const [paid, setPaid] = useState<Paid | null>(null);
 
@@ -106,113 +104,111 @@ export function PayBooking({
 
   if (paid) {
     return (
-      <div className="mx-auto max-w-md px-4 py-12">
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30">
-              <CheckCircle2 className="size-6" />
-            </div>
-            <p className="text-lg font-semibold">
-              {money(paid.amountCents, currency)} paid
-            </p>
-            <p className="text-muted-foreground text-sm/relaxed">
-              Booking #{bookingRef} at {facilityName}
-              {paid.cardLast4
-                ? ` · ${paid.cardBrand ?? "Card"} ···${paid.cardLast4}`
-                : ""}
-            </p>
-            {/* CLOVER's reference, not our ledger id. It is what the facility
+      <main className="mx-auto w-full max-w-md px-4 py-12">
+        <section className="bg-card border-line shadow-card flex flex-col items-center gap-3 rounded-3xl border px-6 py-10 text-center">
+          <CheckCircle2 className="text-success size-6" aria-hidden />
+          <h1 className="text-heading text-[19px] font-bold">
+            {fill("paidAmount", { amount: money(paid.amountCents, currency) })}
+          </h1>
+          <p className="text-ink-secondary text-[14.5px]">
+            {fill("paidFor", { ref: bookingRef, facility: facilityName })}
+            {paid.cardLast4
+              ? ` · ${paid.cardBrand ?? t("card")} ···${paid.cardLast4}`
+              : ""}
+          </p>
+          {/* CLOVER's reference, not our ledger id. It is what the facility
                 and their processor can both look this payment up by; our uuid
                 means nothing to either of them. */}
-            {paid.reference && (
-              <p className="text-muted-foreground font-mono text-xs">
-                {paid.reference}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          {paid.reference && (
+            <p className="text-ink-tertiary font-mono text-xs">
+              {paid.reference}
+            </p>
+          )}
+          <Button variant="outline" asChild className="mt-2">
+            <Link href={backHref}>{t("backToBooking")}</Link>
+          </Button>
+        </section>
+      </main>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4 px-4 py-8">
+    <main className="mx-auto w-full max-w-md space-y-4 px-4 py-8">
+      <Button variant="ghost" asChild className="-ml-2">
+        <Link href={backHref}>
+          <ArrowLeft className="size-4" aria-hidden />
+          {t("backToBooking")}
+        </Link>
+      </Button>
       <div className="text-center">
-        <h1 className="text-xl font-semibold tracking-tight">
-          Pay {facilityName}
+        <h1 className="text-heading text-[24px] font-bold">
+          {fill("payTitle", { facility: facilityName })}
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm capitalize">
-          {serviceLabel(service, serviceType)}
-          {startAt
-            ? ` · ${new Date(startAt).toLocaleDateString("en-CA", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}`
-            : ""}
+        <p className="text-ink-secondary mt-1 text-[14.5px]">
+          {service
+            ? serviceTypeLabel(locale, serviceType || service)
+            : t("booking")}
+          {startDay ? ` · ${formatCalendarDayLong(startDay, locale)}` : ""}
         </p>
       </div>
 
-      <Card>
-        <CardContent className="space-y-5 pt-6">
-          <div className="bg-muted/30 rounded-lg border p-4 text-center">
-            <p className="text-muted-foreground text-xs">
-              Balance on booking #{bookingRef}
+      <section className="bg-card border-line shadow-card space-y-5 rounded-3xl border p-5">
+        <div className="border-line rounded-2xl border p-4 text-center">
+          <p className="text-ink-tertiary text-[13.5px]">
+            {fill("balanceOn", { ref: bookingRef })}
+          </p>
+          <p className="text-body-ink text-3xl font-bold tabular-nums">
+            {money(amountCents, currency)}
+          </p>
+          {taxCents > 0 && (
+            <p className="text-ink-tertiary mt-1 text-xs tabular-nums">
+              {fill("includesTax", { amount: money(taxCents, currency) })}
             </p>
-            <p className="text-3xl font-bold tabular-nums">
-              {money(amountCents, currency)}
-            </p>
-            {taxCents > 0 && (
-              <p className="text-ink-tertiary mt-1 text-xs tabular-nums">
-                Includes {money(taxCents, currency)} tax
-              </p>
-            )}
-          </div>
+          )}
+        </div>
 
-          {/* The facility's OWN tips — this page hardcoded 10/15/20 until
+        {/* The facility's OWN tips — this page hardcoded 10/15/20 until
               2026-08-26, so a customer paying by link was offered a different
               set from the one the facility configured and from the one the
               counter offered. Absent entirely when they offer no tips, rather
               than shown as an empty row. */}
-          {tipConfig && (
-            <div>
-              <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
-                Add a tip (optional)
+        {tipConfig && (
+          <div>
+            <p className="text-ink-tertiary mb-2 text-[12px] font-bold tracking-[.06em] uppercase">
+              {t("addTip")}
+            </p>
+            {pledgedTipCents > 0 && tipCents === pledgedTipCents && (
+              <p className="text-ink-secondary mb-2 text-xs">
+                {fill("pledgedTip", {
+                  amount: money(pledgedTipCents, currency),
+                })}
               </p>
-              {pledgedTipCents > 0 && tipCents === pledgedTipCents && (
-                <p className="text-ink-secondary mb-2 text-xs">
-                  Includes the {money(pledgedTipCents, currency)} tip on this
-                  booking. Change it, or choose No tip.
-                </p>
-              )}
-              <TipSelector
-                tipConfig={tipConfig}
-                // Pre-tax: a gratuity on top of sales tax is not what "20%"
-                // means to the person pressing it (the terminal's convention).
-                subtotal={(amountCents - taxCents) / 100}
-                tipAmount={tipCents / 100}
-                onTipChange={(dollars) =>
-                  setTipCents(Math.round(dollars * 100))
-                }
-              />
-            </div>
-          )}
+            )}
+            <TipSelector
+              tipConfig={tipConfig}
+              // Pre-tax: a gratuity on top of sales tax is not what "20%"
+              // means to the person pressing it (the terminal's convention).
+              subtotal={(amountCents - taxCents) / 100}
+              tipAmount={tipCents / 100}
+              onTipChange={(dollars) => setTipCents(Math.round(dollars * 100))}
+            />
+          </div>
+        )}
 
-          <Separator />
+        <Separator />
 
-          <CloverCheckout
-            bookingId={bookingId}
-            clientId={clientId}
-            publicApiKey={publicApiKey}
-            merchantId={merchantId}
-            sdkUrl={sdkUrl}
-            amountCents={amountCents}
-            currency={currency}
-            tipCents={tipCents}
-            onPaid={onPaid}
-          />
-        </CardContent>
-      </Card>
-    </div>
+        <CloverCheckout
+          bookingId={bookingId}
+          clientId={clientId}
+          publicApiKey={publicApiKey}
+          merchantId={merchantId}
+          sdkUrl={sdkUrl}
+          amountCents={amountCents}
+          currency={currency}
+          tipCents={tipCents}
+          onPaid={onPaid}
+        />
+      </section>
+    </main>
   );
 }

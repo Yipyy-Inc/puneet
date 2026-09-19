@@ -375,12 +375,17 @@ export function formatList(
 export function formatMoney(
   value: number | null | undefined,
   locale: AppLocale,
-  options?: { whole?: boolean },
+  options?: {
+    whole?: boolean;
+    /** The merchant settles in another currency. Defaults to CAD. */
+    currency?: string;
+  },
 ): string {
   const digits = options?.whole ? 0 : 2;
-  return numFmt(locale, `cur${digits}`, {
+  const currency = options?.currency || CURRENCY;
+  return numFmt(locale, `cur${digits}:${currency}`, {
     style: "currency",
-    currency: CURRENCY,
+    currency,
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(Number(value ?? 0));

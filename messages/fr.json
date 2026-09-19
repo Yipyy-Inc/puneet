@@ -9450,6 +9450,31 @@
       "acrossServices": "sur {count} services",
       "allServices": "Tous",
       "exportCsv": "Exporter"
+    },
+    "payments": {
+      "cardNumber": "Numéro de carte",
+      "cardExpiry": "Expiration",
+      "cardCvv": "CVV",
+      "cardPostal": "Code postal",
+      "formNotLoaded": "Le formulaire de paiement n’a pas pu se charger. Actualisez la page et réessayez.",
+      "providerUnreachable": "Impossible de joindre le fournisseur de paiement.",
+      "formNotReady": "Le formulaire de carte n’est pas encore prêt.",
+      "checkCardDetails": "Vérifiez les renseignements de la carte et réessayez.",
+      "cardNotRead": "La carte n’a pas pu être lue. Réessayez.",
+      "card": "Carte",
+      "lookingForCards": "Recherche des cartes enregistrées…",
+      "savedCards": "Cartes enregistrées",
+      "savedWithoutConsent": "enregistrée sans consentement pour être débitée",
+      "removeCard": "Retirer {card}",
+      "useNewCard": "Utiliser une nouvelle carte",
+      "cardNotSaved": "La carte n’a pas pu être enregistrée; elle n’a donc pas été conservée pour la prochaine fois.",
+      "paymentFailed": "Le paiement n’a pas été accepté.",
+      "lostContact": "Nous avons perdu la connexion pendant le paiement. Ne réessayez pas — vérifiez auprès de l’établissement avant de payer de nouveau.",
+      "saveCard": "Enregistrer cette carte pour les prochains paiements",
+      "saveCardConsent": "La carte est conservée de façon sécurisée par notre fournisseur de paiement afin que cet établissement puisse la débiter de nouveau. Vous pouvez la retirer en tout temps.",
+      "takingPayment": "Paiement en cours…",
+      "payAmount": "Payer {amount}",
+      "straightToClover": "Les renseignements de la carte vont directement à Clover. Ils ne passent jamais par Yipyy."
     }
   },
   "customerPages": {
@@ -11777,6 +11802,31 @@
         "staysInSyncBody": "Vos changements vont dans la même liste de contacts que le personnel voit au dossier client. Les personnes que vous autorisez à récupérer ou déposer votre animal peuvent se présenter sans que vous ayez à appeler.",
         "tagsLabel": "Étiquettes :",
         "tagsHint": "— choisissez-en une ou plusieurs par contact selon ce que la personne est autorisée à faire."
+      },
+      "pay": {
+        "theFacility": "l’établissement",
+        "backToBooking": "Retour à la réservation",
+        "cancelledTitle": "Cette réservation a été annulée",
+        "cancelledBody": "Rien n’est dû sur la réservation n°{ref}. Si vous pensez que c’est une erreur, {facility} peut corriger la situation.",
+        "notConfirmedTitle": "Pas encore confirmée",
+        "notConfirmedBody": "{facility} n’a pas encore confirmé cette réservation, donc rien n’est dû. Le prix est fixé à la confirmation.",
+        "paidTitle": "Payée en entier",
+        "paidBody": "Il ne reste rien à payer sur la réservation n°{ref}.",
+        "noMerchantTitle": "Cet établissement ne peut pas encore accepter les cartes",
+        "noMerchantBody": "{facility} n’a pas connecté de compte marchand; ce paiement n’a donc nulle part où aller. Vous pouvez le régler directement avec l’établissement.",
+        "notSetUpTitle": "Les paiements par carte ne sont pas configurés",
+        "notSetUpBody": "Ce déploiement ne peut pas joindre l’environnement Clover auquel cet établissement est connecté.",
+        "notReadyTitle": "Le compte de paiement de cet établissement n’est pas prêt",
+        "notReadyBody": "{facility} doit reconnecter son compte marchand avant qu’une carte puisse être acceptée ici.",
+        "paidAmount": "{amount} payés",
+        "paidFor": "Réservation n°{ref} chez {facility}",
+        "card": "Carte",
+        "payTitle": "Payer {facility}",
+        "booking": "Réservation",
+        "balanceOn": "Solde de la réservation n°{ref}",
+        "includesTax": "Taxes de {amount} incluses",
+        "addTip": "Ajouter un pourboire (facultatif)",
+        "pledgedTip": "Inclut le pourboire de {amount} sur cette réservation. Modifiez-le ou choisissez « Aucun pourboire »."
       }
     }
   }
