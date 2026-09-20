@@ -1,6 +1,6 @@
 "use client";
 
-import { Car, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SlotEntry } from "@/lib/grooming-scheduling";
 
@@ -11,8 +11,6 @@ interface SlotGridProps {
   onSelect: (startTime: string) => void;
   /** Drives the dimmed-vs-bright styling for non-recommended slots. */
   smartSchedulingEnabled: boolean;
-  /** When true, drive-time annotations are shown next to each slot. */
-  showDriveTime?: boolean;
   /** Caption shown when the slot list is empty. */
   emptyLabel?: string;
 }
@@ -30,7 +28,6 @@ export function SlotGrid({
   selectedStartTime,
   onSelect,
   smartSchedulingEnabled,
-  showDriveTime = false,
   emptyLabel = "No slots available for this date.",
 }: SlotGridProps) {
   if (slots.length === 0) {
@@ -111,14 +108,13 @@ export function SlotGrid({
                   <Sparkles className="size-3 text-pink-500" />
                 ) : null}
               </div>
-              {showDriveTime &&
-                !isConflict &&
-                slot.driveMinFromPrev !== undefined && (
-                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-[10px]">
-                    <Car className="size-2.5" />
-                    <span>~{slot.driveMinFromPrev} min drive</span>
-                  </div>
-                )}
+              {/*
+                The "~N min drive" line is gone. It was computed from a hash of
+                the pet and owner NAMES rather than from any address — see the
+                note in lib/grooming-scheduling.ts. Nothing sets
+                `driveMinFromPrev` now, so this branch could never run; it is
+                removed rather than left as dead code that looks like a feature.
+              */}
             </button>
           );
         })}

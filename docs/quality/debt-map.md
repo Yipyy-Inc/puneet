@@ -17235,13 +17235,26 @@ sale request was ever made.
 Both want the same kind of change, a migration on a money RPC with SQL tests,
 and neither belongs folded into a UI commit:
 
-1. **`record_payment` has no store-credit balance check** (above). Any caller
+1. ~~**`record_payment` has no store-credit balance check** (above). Any caller
    that can record a payment can overdraw a client's credit; the till's clamp
-   protects only the till.
+   protects only the till.~~
+   **✅ CLOSED, and this entry was stale — corrected 2026-09-20.** The guard
+   exists, and it is in a better place than the one this entry asked for: the
+   trigger `store_credit_never_overdrawn` on `store_credit_entries`, plus
+   `payments_credit_matches_ledger` and `store_credit_debit_matches_payment`
+   holding the two records to each other. A guard inside `record_payment` would
+   have protected one caller; a trigger protects every caller, including a
+   session reaching PostgREST directly.
+   **Read the lesson, not just the fix:** this was checked by asking the
+   database (`pg_trigger`), not by re-reading the function it named. An entry
+   that says "X has no check" goes stale the moment the check lands somewhere
+   else, and a debt map nobody re-measures starts costing more than it saves.
 2. **`record_retail_sale` trusts `p_discount`.** Only a promo code is re-quoted
    server-side; `retail_apply_discount` appears nowhere in the function. The
    permission is enforced by HIDING a button, so anyone holding
    `retail_process_sale` can post any discount through the API.
+   **Still open**, re-confirmed 2026-09-20 against the live function body and
+   against `pg_trigger` — there is no trigger standing in for it either.
 
 ### Seen in passing on the till
 
@@ -18748,3 +18761,43 @@ genuinely the same word and are now allowlisted in
 `tests/unit/area-catalogues.test.ts` with the reason beside each. Both were
 found by `bun run test:unit`, and both were invisible to `check:ui-french`,
 which only counts what is still English.
+
+## 2026-09-20 — The mobile-grooming drive time was a hash of the dog's name
+
+`slot-grid.tsx` showed `~7 min drive` beside each slot while a groomer planned
+a mobile day. It came from `driveMinutes(pseudoCoord(prevSeed),
+pseudoCoord(newAddressSeed))`, and `appointmentAddressSeed` is:
+
+```ts
+return `${apt.petName}-${apt.ownerName}-${apt.ownerPhone}`;
+```
+
+**No address was involved at any point.** The number was a hash of the pet's
+name, the owner's name and their phone — so renaming a dog changed the drive
+time between two houses, and two neighbours could read as forty minutes apart.
+`route-planning.ts` says "we don't have a real geocoder wired up, so
+coordinates are derived deterministically from address strings", which is how
+it survived review: the comment describes hashing an ADDRESS, and the seed it
+is actually given is names.
+
+**The number is gone rather than approximated.** Nothing can replace it yet —
+the appointment shape carries no coordinates, and an address only gained a
+latitude and longitude today, so only clients entered since have one. §6: a
+thing that cannot be real is hidden, not left fake. `showDriveTime` went with
+it, because a prop that decides nothing is the defect `check:inert-permissions`
+exists for.
+
+**What landed toward the real thing.** `Address` now carries optional
+`latitude`/`longitude` (types/client.ts), the client form stores them when a
+suggestion is chosen, and it CLEARS them when the street is edited afterwards —
+stale coordinates are worse than none, because they read as verified.
+
+### 🔴 Still fake, and named so nobody mistakes it for geography
+
+`mobile-route-map-preview.tsx` and the route-planner map still draw pins from
+`pseudoCoord`, and `optimizeNearestNeighbor` still orders stops by it. So the
+MAP and the stop ORDER remain a picture of nothing. Making them real needs the
+appointment shape to carry the client's coordinates and a decision about what
+to show when one stop on a route has none — a route is only as honest as its
+least-known stop. That is a round of its own, and it is now unblocked rather
+than done.

@@ -12,6 +12,21 @@ export const addressSchema = z.object({
   state: z.string(),
   zip: z.string(),
   country: z.string(),
+  /**
+   * Where the address actually is, when it was chosen from the geocoder
+   * rather than typed.
+   *
+   * OPTIONAL BY DESIGN, and the optionality is the point. Every address
+   * entered before 2026-09-20 has none, and one typed past the suggestion
+   * list still has none — so anything reading these must treat "absent" as
+   * the ordinary case, not an error. `src/lib/route-planning.ts` is the
+   * reason they are stored: it hashes the address STRING into a position on
+   * a 10-90 grid, so every drive time and stop order a mobile groomer reads
+   * today is invented. A real pair is what retires that, one client at a
+   * time, and a route is only as honest as its least-known stop.
+   */
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export const additionalContactTagSchema = z.enum([

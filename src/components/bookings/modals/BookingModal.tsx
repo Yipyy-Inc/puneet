@@ -1529,8 +1529,10 @@ export function BookingModal({
           // a 1-line explainer ("Standard Poodle breed pricing", "Coat: long
           // +$10", etc.) without recomputing.
           const lines: string[] = [];
+          // The sign is ours (it says "on top of the base"), the money is
+          // Intl's — so a French reader gets `+10,00 $` rather than `+$10.00`.
           const fmtDelta = (d: number) =>
-            `${d > 0 ? "+" : "-"}$${Math.abs(d).toFixed(2)}`;
+            `${d > 0 ? "+" : "-"}${formatMoney(Math.abs(d), locale)}`;
           if (pricing.source === "pet-custom") {
             lines.push(t("savedPricingFor").replace("{pet}", pet.name));
           } else if (pricing.source === "breed-override") {
@@ -4078,7 +4080,11 @@ export function BookingModal({
                   />
                 </div>
                 <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-                  ${calculatePrice.total.toFixed(2)}
+                  {/* §5q: French is `42,50 $` — the sign follows, after a
+                      non-breaking space. A hard-coded `$` in front is the
+                      single most common French-Canadian money error, and this
+                      one sat in the wizard header on every step. */}
+                  {formatMoney(calculatePrice.total, locale)}
                 </span>
               </div>
               <h2 className="text-lg font-semibold">

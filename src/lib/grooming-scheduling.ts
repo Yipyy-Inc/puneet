@@ -8,7 +8,6 @@ import type {
   GroomingAppointment,
   StylistAvailability,
 } from "@/types/grooming";
-import { driveMinutes, pseudoCoord } from "@/lib/route-planning";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -271,15 +270,22 @@ export function computeSlotGrid(args: ComputeSlotGridArgs): SlotEntry[] {
         const prev = [...stylistAppts]
           .filter((a) => timeToMin(a.endTime) <= start)
           .sort((a, b) => b.endTime.localeCompare(a.endTime))[0];
-        const prevSeed = prev
-          ? `${prev.petName}-${prev.ownerName}-${prev.ownerPhone}`
-          : mobile.facilityBaseSeed;
-        if (prevSeed) {
-          slot.driveMinFromPrev = driveMinutes(
-            pseudoCoord(prevSeed),
-            pseudoCoord(mobile.newAddressSeed),
-          );
-        }
+        // ── THE DRIVE TIME IS GONE, AND WHY ─────────────────────────────
+        //
+        // It was `driveMinutes(pseudoCoord(prevSeed), pseudoCoord(newSeed))`,
+        // and `prevSeed` was `petName-ownerName-ownerPhone`. So the minutes a
+        // groomer read between two stops were a hash of THE DOG'S NAME. Not a
+        // rough estimate of a real distance — no distance was involved at any
+        // point, and renaming a pet changed the answer.
+        //
+        // Nothing is put in its place here because nothing can be yet: the
+        // appointment shape carries no coordinates, and an address only gained
+        // a latitude and longitude on 2026-09-20 (types/client.ts), so only
+        // clients entered since have one. A real drive time needs both stops
+        // to be real, and a route is only as honest as its least-known stop.
+        // Showing an invented number while a groomer plans a day is worse than
+        // showing none — §6, and the debt map entry that goes with this.
+        void prev;
       }
     }
 

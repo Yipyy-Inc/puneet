@@ -122,6 +122,12 @@ interface ClientForm {
   email: string;
   phone: string;
   street: string;
+  /**
+   * Set only when the street came from the suggestion list. Typed addresses
+   * have none, and that is the ordinary case — see Address in types/client.ts.
+   */
+  latitude?: number;
+  longitude?: number;
   city: string;
   state: string;
   zip: string;
@@ -873,6 +879,11 @@ export function CreateClientModal({
         state: client.state,
         zip: client.zip,
         country: client.country,
+        // Present only when a suggestion was chosen. What eventually replaces
+        // the hashed pseudo-coordinates the route planner draws today.
+        ...(client.latitude !== undefined && client.longitude !== undefined
+          ? { latitude: client.latitude, longitude: client.longitude }
+          : {}),
       },
       additionalContacts: additionalContacts.map((c) => ({
         ...c,
@@ -916,7 +927,9 @@ export function CreateClientModal({
     setErrors({});
   };
 
-  const updateClient = (field: string, value: string) => {
+  // `number | undefined` as well as string, since the address now carries
+  // latitude and longitude when one was chosen from the suggestion list.
+  const updateClient = (field: string, value: string | number | undefined) => {
     setClient((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
@@ -1048,11 +1061,20 @@ export function CreateClientModal({
             <Field label={t("street")} required error={errors.street}>
               <AddressAutocomplete
                 value={client.street}
-                onValueChange={(street) => updateClient("street", street)}
+                onValueChange={(street) => {
+                  updateClient("street", street);
+                  // Typing after a pick means the coordinates describe an
+                  // address that is no longer in the box. Stale coordinates
+                  // are worse than none: they read as verified.
+                  updateClient("latitude", undefined);
+                  updateClient("longitude", undefined);
+                }}
                 onSelect={(suggestion) => {
                   updateClient("city", suggestion.city);
                   updateClient("state", suggestion.province);
                   updateClient("zip", suggestion.postalCode);
+                  updateClient("latitude", suggestion.latitude);
+                  updateClient("longitude", suggestion.longitude);
                 }}
                 placeholder={t("streetPlaceholderSuggest")}
                 hintText={t("addressSuggestions")}

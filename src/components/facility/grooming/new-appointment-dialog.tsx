@@ -2556,7 +2556,6 @@ export function NewAppointmentDialog({
                           );
                         }}
                         smartSchedulingEnabled={smartSchedulingEnabled}
-                        showDriveTime={form.isMobile}
                         emptyLabel={
                           dayCapInfo?.atCap
                             ? `${dayCapInfo.cap}-appointment daily cap reached. Pick another date.`
