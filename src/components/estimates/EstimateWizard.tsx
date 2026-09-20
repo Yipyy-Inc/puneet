@@ -32,7 +32,6 @@ import {
   Phone,
   PawPrint,
   Info,
-  Dog,
   Cat,
   Package,
   type LucideIcon,
@@ -46,7 +45,7 @@ import { useServiceFromPrices } from "@/lib/api/service-from-prices";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { daycareDayRate } from "@/lib/daycare-pricing";
 import type { TrainingPackage } from "@/types/training";
-import { clientQueries, useCreateClient, useCreatePet } from "@/lib/api/client";
+import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
@@ -84,15 +83,6 @@ const STEPS = [
   { id: "details", title: "Details" },
   { id: "review", title: "Review & Send" },
 ];
-
-interface AddedPet {
-  id: number;
-  name: string;
-  species: string;
-  breed: string;
-  age: string;
-  weight: string;
-}
 
 // Facility-configured discount reasons offered on estimates (+ Custom free text).
 const DISCOUNT_TYPES = [
@@ -154,7 +144,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   const offeredPrograms = trainingPrograms.filter((p) => p.isActive);
   const { create: createEstimate, act: actOnEstimate } = useEstimateMutations();
   const createClientMutation = useCreateClient();
-  const createPetMutation = useCreatePet();
   // The facility's own tax setup, not `taxRates` from `@/data/settings`.
   const taxConfig = useFacilitySettings().settings.tax_config
     .value as TaxConfig;
@@ -171,17 +160,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
 
   // Pet selection (existing-client flow)
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>([]);
-  const [addedPets, setAddedPets] = useState<AddedPet[]>([]);
-  const [petTempSeq, setPetTempSeq] = useState(-1);
-  const [isAddingPet, setIsAddingPet] = useState(false);
-  const emptyPetDraft = {
-    name: "",
-    species: "Dog",
-    breed: "",
-    age: "",
-    weight: "",
-  };
-  const [newPetDraft, setNewPetDraft] = useState(emptyPetDraft);
 
   // Guest contact
   const [guestFirstName, setGuestFirstName] = useState("");
@@ -283,22 +261,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
 
-  const submitNewPet = () => {
-    const name = newPetDraft.name.trim();
-    if (!name) return;
-    const id = petTempSeq;
-    setPetTempSeq((s) => s - 1);
-    setAddedPets((prev) => [...prev, { ...newPetDraft, name, id }]);
-    setSelectedPetIds((prev) => [...prev, id]);
-    setNewPetDraft(emptyPetDraft);
-    setIsAddingPet(false);
-  };
-
-  const removeAddedPet = (id: number) => {
-    setAddedPets((prev) => prev.filter((p) => p.id !== id));
-    setSelectedPetIds((prev) => prev.filter((p) => p !== id));
-  };
-
   // Normalized card list (existing pets + newly-added) and the resolved set of
   // pets this estimate is for (used by the Details context + downstream).
   const clientPetCards = selectedClient
@@ -307,12 +269,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
           id: p.id,
           name: p.name,
           species: p.type,
-          breed: p.breed,
-        })),
-        ...addedPets.map((p) => ({
-          id: p.id,
-          name: p.name,
-          species: p.species,
           breed: p.breed,
         })),
       ]
@@ -551,24 +507,13 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         petRefs: (client.pets ?? []).map((p) => p.id),
       };
     }
-    const refs: number[] = [];
-    for (const id of selectedPetIds) {
-      if (id > 0) {
-        refs.push(id);
-        continue;
-      }
-      const draft = addedPets.find((p) => p.id === id);
-      if (!draft || !selectedClientId) continue;
-      const pet = await createPetMutation.mutateAsync({
-        clientId: selectedClientId,
-        name: draft.name,
-        type: draft.species,
-        breed: draft.breed,
-        weight: Number(draft.weight) || undefined,
-      });
-      refs.push(pet.id);
-    }
-    return { clientRef: selectedClientId ?? undefined, petRefs: refs };
+    // Every id here is a real pet. The wizard used to mint negative
+    // placeholder ids for pets it would create on submit; that quick-add is
+    // gone, so there is nothing left to resolve.
+    return {
+      clientRef: selectedClientId ?? undefined,
+      petRefs: selectedPetIds,
+    };
   };
 
   const estimateBody = (): Omit<
@@ -677,10 +622,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     setIsGuest(false);
     setSelectedClientId(null);
     setSelectedPetIds([]);
-    setAddedPets([]);
-    setPetTempSeq(-1);
-    setIsAddingPet(false);
-    setNewPetDraft(emptyPetDraft);
     setSelectedService("");
     setStartDate("");
     setEndDate("");
@@ -880,7 +821,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                       setIsGuest(false);
                       setSelectedClientId(null);
                       setSelectedPetIds([]);
-                      setAddedPets([]);
                     }}
                     className={cn(
                       "flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all",
@@ -903,7 +843,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                       setIsGuest(true);
                       setSelectedClientId(null);
                       setSelectedPetIds([]);
-                      setAddedPets([]);
                     }}
                     className={cn(
                       "flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all",
@@ -940,7 +879,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                           onClick={() => {
                             setSelectedClientId(c.id);
                             setSelectedPetIds(c.pets.map((p) => p.id));
-                            setAddedPets([]);
                           }}
                           className={cn(
                             "flex w-full items-center gap-3 border-b px-4 py-2.5 text-left transition-colors last:border-0",
@@ -1187,7 +1125,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                       <div className="grid grid-cols-2 gap-3">
                         {clientPetCards.map((pet) => {
                           const isSelected = selectedPetIds.includes(pet.id);
-                          const isAdded = pet.id < 0;
                           return (
                             <div
                               key={pet.id}
@@ -1231,160 +1168,15 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                                   <Check className="size-4 shrink-0 text-blue-600" />
                                 )}
                               </div>
-                              {isAdded && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeAddedPet(pet.id);
-                                  }}
-                                  className="absolute top-1.5 right-1.5 text-slate-300 hover:text-red-500"
-                                  aria-label={`Remove ${pet.name}`}
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </button>
-                              )}
                             </div>
                           );
                         })}
                       </div>
                     ) : (
                       <p className="text-muted-foreground text-sm">
-                        This client has no pets on file — add one below.
+                        This client has no pets on file. Add one on their
+                        profile, then reopen this estimate.
                       </p>
-                    )}
-
-                    {isAddingPet ? (
-                      <div className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
-                        <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-                          <PawPrint className="size-4 text-violet-600" />
-                          Add new pet for this estimate
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="col-span-2 space-y-1.5">
-                            <Label className="text-xs">
-                              Name <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              autoFocus
-                              value={newPetDraft.name}
-                              onChange={(e) =>
-                                setNewPetDraft((p) => ({
-                                  ...p,
-                                  name: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. Buddy"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="col-span-2 space-y-1.5">
-                            <Label className="text-xs">Species</Label>
-                            <div className="flex gap-2">
-                              {(["Dog", "Cat"] as const).map((sp) => {
-                                const Icon = sp === "Cat" ? Cat : Dog;
-                                const active = newPetDraft.species === sp;
-                                return (
-                                  <button
-                                    key={sp}
-                                    type="button"
-                                    onClick={() =>
-                                      setNewPetDraft((p) => ({
-                                        ...p,
-                                        species: sp,
-                                      }))
-                                    }
-                                    className={cn(
-                                      "flex flex-1 items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-medium transition-all",
-                                      active
-                                        ? "border-transparent bg-violet-100 text-violet-700"
-                                        : "border-slate-200 hover:border-violet-200",
-                                    )}
-                                  >
-                                    <Icon className="size-4" /> {sp}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Breed</Label>
-                            <Input
-                              value={newPetDraft.breed}
-                              onChange={(e) =>
-                                setNewPetDraft((p) => ({
-                                  ...p,
-                                  breed: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. Labrador"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Age (years)</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={newPetDraft.age}
-                              onChange={(e) =>
-                                setNewPetDraft((p) => ({
-                                  ...p,
-                                  age: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. 3"
-                              className="bg-white"
-                            />
-                          </div>
-                          <div className="col-span-2 space-y-1.5">
-                            <Label className="text-xs">Weight (lbs)</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={newPetDraft.weight}
-                              onChange={(e) =>
-                                setNewPetDraft((p) => ({
-                                  ...p,
-                                  weight: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g. 45"
-                              className="bg-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setIsAddingPet(false);
-                              setNewPetDraft(emptyPetDraft);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={submitNewPet}
-                            disabled={!newPetDraft.name.trim()}
-                          >
-                            Add pet
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingPet(true)}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium text-violet-700 hover:border-violet-300 hover:bg-violet-50/40"
-                      >
-                        <Plus className="size-4" />
-                        Add new pet for this estimate
-                      </button>
                     )}
 
                     {selectedPetIds.length > 0 && (
