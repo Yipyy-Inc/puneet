@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { provinceCode, suggestionsFromPhoton } from "@/lib/geocode/address";
+import {
+  provinceCode,
+  suggestionsFromPhoton,
+  withTypedHouseNumber,
+} from "@/lib/geocode/address";
 
 // ============================================================================
 // Reading an address out of a geocoder's answer.
@@ -292,5 +296,54 @@ describe("the fields a form would otherwise leave empty", () => {
     });
     expect(first!.postalCode).toBe("H3A 1W9");
     expect(first!.country).toBe("CA");
+  });
+});
+
+describe("the house number the person typed survives the suggestion", () => {
+  // Found by typing a RURAL address. OSM's Canadian house numbers are good in
+  // Montréal and thin in the Laurentians, so Photon answers with the STREET —
+  // and accepting it used to delete the number already in the field.
+  test("a street-only suggestion keeps the number that was typed", () => {
+    expect(
+      withTypedHouseNumber(
+        "100 chemin du lac sainte-adele",
+        "Chemin du Lac-Renaud",
+      ),
+    ).toBe("100 Chemin du Lac-Renaud");
+  });
+
+  test("a suggestion with its own number is left alone", () => {
+    // The map's number beats the typed one — it is the one that is verified.
+    expect(
+      withTypedHouseNumber("1200 rue sainte", "1200 Rue Sainte-Catherine Est"),
+    ).toBe("1200 Rue Sainte-Catherine Est");
+    expect(
+      withTypedHouseNumber("1200 rue sainte", "1198 Rue Sainte-Catherine Est"),
+    ).toBe("1198 Rue Sainte-Catherine Est");
+  });
+
+  test("nothing is invented when no number was typed", () => {
+    expect(withTypedHouseNumber("chemin du lac", "Chemin du Lac-Renaud")).toBe(
+      "Chemin du Lac-Renaud",
+    );
+    expect(withTypedHouseNumber("", "Chemin du Lac-Renaud")).toBe(
+      "Chemin du Lac-Renaud",
+    );
+  });
+
+  test("Canadian house numbers that are not plain integers still work", () => {
+    expect(withTypedHouseNumber("12A rue peel", "Rue Peel")).toBe(
+      "12A Rue Peel",
+    );
+    // A unit-and-number, which Québec addresses use.
+    expect(withTypedHouseNumber("1200-14 rue peel", "Rue Peel")).toBe(
+      "1200-14 Rue Peel",
+    );
+  });
+
+  test("a number already at the front is not doubled", () => {
+    expect(withTypedHouseNumber("100 chemin", "100 Chemin du Lac")).toBe(
+      "100 Chemin du Lac",
+    );
   });
 });

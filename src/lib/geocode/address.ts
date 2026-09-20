@@ -144,6 +144,41 @@ function cityLine(p: NonNullable<PhotonFeature["properties"]>): string {
   return text(p.city) || text(p.district) || text(p.county);
 }
 
+/**
+ * Keep the house number the person typed when the suggestion has none.
+ *
+ * ── THE CASE THIS EXISTS FOR, FOUND BY TYPING A RURAL ADDRESS ─────────────
+ *
+ * OpenStreetMap's Canadian house numbers are good in Montréal and Toronto and
+ * thin everywhere else — which is where boarding kennels and mobile-grooming
+ * customers are. Photon does not fail there; it degrades to the STREET. Typing
+ * "100 chemin du lac sainte-adele" offers "Chemin du Lac-Renaud, Sainte-Adèle,
+ * QC, J8B 1A5": the right street, with a postcode, and no number.
+ *
+ * Selecting it used to overwrite the field with the street alone, so the "100"
+ * the person had already typed was DELETED by the act of accepting help. They
+ * would not necessarily notice — the line still reads like an address.
+ *
+ * So the number survives. Only a leading one, only when the suggestion has
+ * none of its own, and `12A` and `1200-14` are addresses too.
+ */
+export function withTypedHouseNumber(
+  typed: string,
+  suggestionStreet: string,
+): string {
+  // The suggestion already carries a number — it wins, it came from the map.
+  if (/^\d/.test(suggestionStreet.trim())) return suggestionStreet;
+
+  const leading = typed.trim().match(/^(\d+[A-Za-z]?(?:-\d+[A-Za-z]?)?)\s+/);
+  if (!leading) return suggestionStreet;
+
+  // Already there (they typed the number and the street matched it back).
+  const number = leading[1]!;
+  if (suggestionStreet.trim().startsWith(number)) return suggestionStreet;
+
+  return `${number} ${suggestionStreet}`;
+}
+
 export interface SuggestionOptions {
   /**
    * Keep only results in this country (alpha-2). Photon has no country

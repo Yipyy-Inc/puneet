@@ -7,7 +7,10 @@ import { Loader2, MapPin } from "lucide-react";
 import { useAppLocale } from "@/hooks/use-app-locale";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { AddressSuggestion } from "@/lib/geocode/address";
+import {
+  withTypedHouseNumber,
+  type AddressSuggestion,
+} from "@/lib/geocode/address";
 
 // ============================================================================
 // A street field that offers real addresses while it is typed.
@@ -113,7 +116,10 @@ export function AddressAutocomplete({
   }, [open]);
 
   const choose = (suggestion: AddressSuggestion) => {
-    onValueChange(suggestion.street);
+    // Outside the big cities OpenStreetMap often knows the STREET and not the
+    // number, so accepting a suggestion must not delete the number the person
+    // already typed. See withTypedHouseNumber.
+    onValueChange(withTypedHouseNumber(value, suggestion.street));
     onSelect(suggestion);
     setOpen(false);
     setActive(-1);
