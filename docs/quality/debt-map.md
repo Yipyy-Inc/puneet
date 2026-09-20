@@ -18129,3 +18129,307 @@ while loading, and the daycare hook does not surface a write failure at all —
 `useDaycareAreas` exposes no `error`, so a refused play-area save is silent.
 Both wrap the same `useRooms` writers, so they can adopt `RoomWrite` when
 they are next touched.
+
+## 2026-09-20 — No base pricing anywhere (client feedback)
+
+The client, on the boarding Settings tab: "There isn't any need to put base
+pricing, we don't need any base pricing even for new facilities. When we
+create the facility everything should be empty and facility will create the
+rates, add-ons, rooms. We need to remove the base pricing from the workflow
+even on the superadmin side."
+
+**`ModuleConfig.basePrice` is gone** — the field, its editors, its four
+fixture defaults (boarding 45, daycare 35, grooming 50, training 60) and
+every read. It was not decoration: the booking wizard priced from it
+whenever the facility's own rate was missing, so a facility that had never
+opened the screen quoted numbers nobody there had chosen. Grooming's 50 and
+training's 60 had no editor at all — they priced bookings and could not be
+seen.
+
+What each service is priced from now, and what happens when it is not set:
+
+- **Boarding** — the assigned class's nightly rate (`room_categories`, or a
+  branch override). `boardingPricing` reports `unpricedClasses` by name.
+  **It also resolves an assignment that names a CLASS rather than a room**,
+  which is how the wizard's cards work: only the room case resolved before,
+  so a type-level assignment found no class and fell through to the flat
+  $45 — per-class pricing was in force and not applying. Found by
+  `booking-wizard.spec.ts` refusing to enable Create.
+- **Daycare** — the branch's own price, then the facility's rate card
+  (`daycare_rates`), through `daycareDayRate`. The wizard read the rate card
+  only to decide which sections a rate may be booked into and priced the day
+  from `daycare_config.basePrice`: a facility could set "Full day $38" and
+  watch every booking charge 35.
+- **Grooming / training** — the package or the series, as before; the
+  fallbacks are removed.
+- **No rate set = the booking is refused**, with the reason in the wizard's
+  footer and the Create button disabled (§5s). `RateGap` in
+  `src/lib/bookings/rate-gap.ts` carries which rate is missing; EN and FR.
+
+**The customer-facing "From $X" is real now.** Both service pickers (the
+booking wizard's and the estimate wizard's) read
+`useServiceFromPrices()` — the cheapest thing the facility actually sells
+per service — and show nothing where it has priced nothing. They read
+`config.basePrice` then the static SERVICE_CATEGORIES fixture, so a customer
+was offered "From $45" for boarding at a facility whose cheapest kennel was
+$38. Those five fixture prices are deleted.
+
+**The estimate wizard** quoted `{Standard 35, Premium 50, Luxury Suite 65}` —
+three room types no facility has — with `?? 45` behind it, and never read
+facility settings at all. Its room cards are the facility's own classes at
+their own rates, daycare goes through `daycareDayRate`, and where it cannot
+price a service it adds no line rather than inventing one; staff add it.
+
+**Super-admin** (committed separately, bf3746cd): the Facility Configuration
+"Default Pricing" block and its "Enforce on all facilities" checkbox are
+gone — one file read them, nothing was enforced — and the onboarding wizard
+no longer asks for a base price per service it never sent.
+
+Unit tests: `tests/unit/service-rates.test.ts` (19) pin the resolution and,
+more importantly, the ABSENCE — `null`/`unpricedClasses` rather than a
+number, and a genuinely free rate kept distinct from an unpriced one.
+
+**What this means for a live facility.** Every facility's boarding classes
+are priced, so boarding is unaffected. **Daycare is not**: only
+paws-co-demo had a daycare rate card, so a facility that offers daycare must
+set its rates before it can take a daycare booking — which is the instructed
+behaviour, and the wizard names the screen. The e2e facility was given the
+rate card it should always have had (full day 38 / half day 24).
+
+Not done: `/test-grooming-booking` still holds its own hard-coded grooming
+catalogue (a dev sandbox route, not linked from the product);
+`CUSTOMER_ADDONS` in the booking constants still ships prices; the platform
+`facility-config` screen still edits a fixture nothing persists.
+
+## 2026-09-20 — "+ New Booking" in the top bar booked only the page you were on (client feedback)
+
+The client: "The new booking button on the top nav bar menu only shows the
+service that I am in right now. So if I am in the boarding module, it shows
+to book just boarding, same goes for grooming and training, it was not
+supposed to be made like this, this button should be able to book any
+service from any page."
+
+`FacilityHeader` passed `preSelectedService` AND `lockService: !!sectionService`
+to both "+ New Booking" and "+ New Estimate". **`lockService` does not filter
+the Service step — it removes it** (`displayedSteps` in `BookingModal.tsx`),
+so the wizard opened on the module's own detail step with no way back to the
+service list. The one button in the chrome that is supposed to mean the same
+thing on every page meant something different on five of them.
+
+`lockService` is gone from both call sites. The section's service stays as a
+PRE-SELECTION — the module's own Book button has always done that, and
+starting on the service you are looking at is right — and every other service
+is one click away. `training` was added to `SERVICE_SECTION_SLUGS` while it
+was open; its absence is what made the bug visible, because training was the
+one module where the button behaved.
+
+`lockService` still exists and still has real callers (a service module's own
+Book button, where the lock IS the intent). **Do instead:** before passing
+it, decide whether the surface is _about_ one service or merely _showing_
+one. Chrome is never about one.
+
+## 2026-09-20 — A custom module's bookings were seven invented ones (found in passing)
+
+`src/app/facility/dashboard/services/custom/[slug]/bookings/page.tsx` rendered
+`MOCK_BOOKINGS` — Sarah Johnson, Tom Williams, Emma Davis and four more, with
+pets, durations, statuses and amounts, dated March 2026 — as the facility's
+own work. Beside them a "New Booking" button with no `onClick` and a "View" on
+every row with no `onClick`: the only two ways to learn the rows were not real
+were to click, and neither did anything.
+
+`bookings.service` is **text**, not an enum, and holds a custom module's slug,
+so a module's bookings were always a query — `bookingPageQueries.page({service})`
+already took the parameter. The page is now that query, paged at 25, with
+loading / error+retry / empty states, `StatusBadge`, `Intl` dates and money,
+View linking to the real booking page, and New Booking opening the wizard on
+the module. Every label translated (EN/FR) — it left `check:ui-french` at 0
+rather than joining the ratchet.
+
+**Do instead:** a custom module's other tabs (`overview`, `settings`) were not
+audited in this pass. Assume a `MOCK_*` const under `services/custom/` is
+rendered as real until you have read it.
+
+## 2026-09-20 — An evaluation nobody had asked for (client feedback)
+
+The client: "The evaluations are off but still I can not book any booking, it
+shows evaluation required… Without evaluation I can not even move forward and
+I can not do the evaluation either."
+
+Both true, and neither was a bug in the evaluation feature — the facility had
+never turned it ON. Two fixture defaults in `src/data/settings.ts` decided it
+instead, and a facility that has never saved a settings domain reads the
+fixture:
+
+- `facilityBookingFlowConfig.servicesRequiringEvaluation: ["daycare"]`
+- `daycareConfig.settings.evaluation: {enabled: true, optional: false}`
+
+So the wizard locked the daycare card with "Needs an evaluation", while
+Settings → Evaluations showed the requirement switched OFF — there was nothing
+to turn off, because nothing had been turned on. Both are now empty/disabled:
+requiring an evaluation is the facility's decision, and the fallback is what a
+facility that has decided nothing gets.
+
+This is the **third** bug in one week from the same shape — see "No base
+pricing anywhere" above, where four module `basePrice` values priced real
+bookings the same way. **Do instead:** when adding a key to a settings-domain
+fallback in `src/data/settings.ts`, ask what it does to a facility that never
+opens that screen. A default that DEMANDS something, or CHARGES something, is
+a policy applied to a business that never chose it. `tests/unit/facility-starts-empty.test.ts`
+pins the evaluation defaults and the absence of `basePrice`; extend it rather
+than trusting review.
+
+## 2026-09-20 — The admin "viewing as" banner was a label
+
+`src/components/facility/ImpersonationBanner.tsx` rendered "Yipyy admin mode —
+you are viewing <facility> as <admin>" from a browser-local session
+(`localStorage`, started by an `?impersonate=` token). **No read or write ever
+consulted it.** Every API call resolved the facility from the signed-in
+session, so the screen underneath was the viewer's OWN facility the whole time —
+its settings, its bookings, its rooms — under another business's name. A
+support person testing through it was reading the wrong facility and had no
+way to tell.
+
+The button that started a session went with round 4 (super-admin); a session
+already in a browser outlived it, because localStorage does. The component is
+deleted and its mount in `src/app/facility/layout.tsx` replaced by a comment
+saying why. Its `check:success-claims` baseline entry was removed in the same
+change — a stale baseline entry fails that gate, which is the ratchet working.
+
+Real server-side impersonation remains unbuilt and out of scope (round 4's
+"Out of scope"). **Do instead:** if it is built, the facility must come from
+the impersonation grant on the server — an `x-facility-slug`-style resolution
+inside `getFacilityContext()` — and be audited there. A client-side flag can
+never be it.
+
+## 2026-09-20 — Adding a client from inside the booking wizard (client feedback)
+
+The client, on the quick-add form in the booking wizard's first step: no breed
+list, a size dropdown ("under 15 lbs") where a weight box belongs, an age in
+months with no date picker — "This whole wizard to make a new client from this
+new booking is not supposed to be here… we already have the new client button
+so this just adds confusion."
+
+Removed rather than repaired: the "Add a client" button, the 98-line inline
+form, `isAddingNewClient` / `newClientDraft` / `savingClient`, both handlers
+and the `onAddClient` prop in `ClientPetStep.tsx`, plus `handleAddClient`,
+`useCreateClient` and the prop pass-down in `BookingModal.tsx`. The real
+client form (Clients → New client) is unaffected and has the fields this one
+was missing.
+
+**The PET quick-add went the same way**, on the same reasoning (decided
+2026-09-20): it carried the identical three defects — a size band where a
+weight belongs, a free-text breed, an age in months with no date picker — and
+a pet is added on the client's own profile, which asks properly. So step one
+of the wizard now SELECTS and only selects: the client list with its search
+(name, email or phone, sorted by how often they book), then that client's
+pets. A client with no pets on file is told where to add one rather than
+offered a form.
+
+Removing it took `draftClients`, `addedPets` and the `mergedClients` merge
+with it — they existed only to fold quick-created rows into the list the
+caller passed — so the wizard's client list is now exactly its prop. Nine
+`shell.booking` message keys were orphaned by the two removals and are
+deleted in both locales. 385 lines out, 18 in.
+
+**Not done, and adjacent:** `src/components/estimates/EstimateWizard.tsx` has
+its OWN inline client AND pet quick-create (`newPetDraft`, `addedPets`), with
+the same free-text breed and no date picker. The client's feedback named the
+booking wizard, so it was left alone. If consistency is wanted it is the same
+removal again.
+
+## 2026-09-20 — The suite's forms, and a list with no limit
+
+A local full-suite run failed `forms.spec.ts` "the screen shows the forms the
+database holds". The row the test had just created was not on the screen. Three
+separate things were true, and only the last one is fixed.
+
+**1,076 of the 1,117 rows in `forms` were e2e leftovers**, going back to
+2026-08-23, with 880 of the 905 rows in `form_submissions` hanging off them.
+`purge_e2e_bookings()` has taken the suite's BOOKINGS back out since
+2026-08-20; nothing had ever taken its forms. All 1,076 were on the demo
+facility — no real business was involved.
+
+**`GET /api/forms` sets no limit, so PostgREST capped the answer at 1,000.**
+That is the actual reason the test failed: sorted by name, the new
+`[e2e] screen <timestamp>` sorted past the cap and never reached the browser.
+**This is a product defect, not a test one, and it is NOT fixed.** A facility
+with more than a thousand forms loses the rest with no indication — no count,
+no "showing 1,000 of N", no paging. **Do instead:** when that route is next
+touched, page it or bound it explicitly, the way
+`check:unbounded-booking-reads` already requires of bookings. A silent cap is
+worse than a refusal because the screen looks complete.
+
+**`public.purge_e2e_forms()`** (migration 20260920122748) now removes them, and
+`bun run e2e:purge` calls it beside the bookings and report cards — the command
+CI already runs with `if: always()`, because a third script is a third thing
+nobody runs. The ordering is the whole function: `form_submissions` is not a
+child of `forms` at all, it points at `form_versions` **ON DELETE RESTRICT**, so
+the answers must go before the form. Proven as a negative control first:
+
+    delete from public.forms where name like '[e2e]%';
+    ERROR: ... violates foreign key constraint
+           "form_submissions_form_version_id_fkey"
+
+Safety sits in the function, like its siblings: no argument, so the pattern
+cannot be passed in and got wrong; `[e2e]` anchored at the front; execute
+revoked from `public`, `anon` and `authenticated` and asserted against
+`has_function_privilege()` in `supabase/tests/purge-e2e-forms.sql`, not trusted
+for having been written. Run: 1,117 forms → 41, 905 submissions → 25, which are
+exactly the non-e2e counts measured beforehand.
+
+## 2026-09-20 — Three policies sit on `audit_log`, and RLS ORs them
+
+`schedule-audit-trail.spec.ts` asserted that a groomer reading `/api/audit-log`
+gets an empty array, with a comment naming `audit_log_facility_read` as the
+reason: it admits facility admins, a groomer is not one, so nothing comes back.
+
+That was true of that ONE policy. There are three, and RLS ORs them:
+
+| policy                    | admits                      | groomer |
+| ------------------------- | --------------------------- | ------- |
+| `audit_log_facility_read` | facility admins             | no      |
+| `audit_log_read`          | platform admins             | no      |
+| `audit_log_booking_read`  | anyone with `view_bookings` | **yes** |
+
+`audit_log_booking_read` arrived with booking history (round 2) and is correct:
+staff who may see a booking may see what changed on it. So the spec had been
+passing only while the demo facility had no booking history to read — and at
+1,827 booking audit rows it stopped.
+
+**Not a leak, and not a regression.** The spec now asserts the boundary the file
+is actually about — nothing a groomer reads may be anything but a booking —
+which is a stronger statement than "empty" was, because an empty array also
+passes when the sign-in silently failed.
+
+**Do instead:** before asserting that a role sees nothing from a table, list
+every policy on it (`select polname, pg_get_expr(polqual, polrelid) from
+pg_policy where polrelid = '<table>'::regclass`). A permissive policy added
+later widens the answer without touching the route, and the test that guards
+the old boundary is the one that reports it — often months later, and only once
+the data exists to expose it.
+
+## 2026-09-20 — `bun test` fails about once in ten, only when it runs slowly
+
+Three times in one day `bun run test:unit` reported a single failure, and every
+time the run that failed took **20–25 seconds against a normal 0.7** — a
+thirty-fold slowdown, each time while a Playwright suite or a `next build` was
+still using the disk. Seven consecutive runs immediately afterwards passed in
+~700 ms. The failing test's name was not captured on any of the three
+occasions, which is the first thing to fix if it happens again:
+
+    for i in 1 2 3 4 5; do bun test 2>&1 | grep -A4 "(fail)"; done
+
+**This tier is meant to be immune to that.** [AGENTS.md](../../AGENTS.md)
+describes it as pure logic, no browser, no database — a shape that should not
+be able to flake at all. So one of two things is true and nobody has
+established which: either a test in `tests/unit/` is not pure (a `Date.now()`
+near a boundary, a relative-time window, an unawaited promise), or bun's own
+runner has a timing fault under I/O starvation. **Do instead:** do not add a
+retry and do not dismiss a red unit run as "the flake" — capture the name
+first. A retry here would hide the only signal that says which of the two it
+is, and a genuinely impure unit test is a real defect wearing a flake's
+clothes.
+
+Until then the practical rule, learned the expensive way: **do not run
+`test:unit` while a suite or a build is running.** Every observed failure has
+been under that contention and none outside it.

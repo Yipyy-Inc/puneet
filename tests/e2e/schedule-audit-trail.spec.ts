@@ -15,10 +15,16 @@ import { ACCOUNTS, signIn } from "./_auth";
 // ── THE BOUNDARY IS A POLICY, NOT A ROUTE CHECK ───────────────────────────
 //
 // `/api/audit-log` no longer refuses a non-platform-admin. It asks and RLS
-// answers, so a groomer gets **200 with an empty array** rather than 403. T2
-// asserts exactly that, and T3 is its positive control: the same session can
-// read something else, so "sees nothing" is a statement about this table and
-// not about a broken sign-in.
+// answers, so a groomer gets **200**, never a 403. T2 asserts what that 200
+// may contain, and T3 is its positive control: the same session can read
+// something else, so "sees nothing of the roster" is a statement about this
+// table and not about a broken sign-in.
+//
+// T2 asserted an EMPTY array until 2026-09-20. Three policies sit on
+// `audit_log` and RLS ORs them, so reading only `audit_log_facility_read`
+// made that look safe; `audit_log_booking_read` admits anyone holding
+// `view_bookings`, which a groomer has. It passed only while the demo
+// facility had no booking history, and 1,827 booking rows later it stopped.
 //
 // ── CLEANUP, AND THE ONE THING THAT CANNOT BE CLEANED ─────────────────────
 //
@@ -223,16 +229,29 @@ test.describe("the schedule audit trail", () => {
     expect(res.status()).toBe(401);
   });
 
-  test("a groomer gets an empty trail, not a refusal", async ({ page }) => {
+  test("a groomer reads no roster history, and is not refused", async ({
+    page,
+  }) => {
     await signIn(page, ACCOUNTS.groomer);
 
-    // 200 and empty. The route stopped deciding; `audit_log_facility_read`
-    // admits facility ADMINS and a groomer is not one, so the database returns
-    // nothing. A 403 here would mean the route had started second-guessing the
-    // policy again.
+    // 200, never 403: the route stopped deciding and RLS answers. A 403 here
+    // would mean it had started second-guessing the policy again.
     const res = await page.request.get(AUDIT);
     expect(res.status()).toBe(200);
-    expect((await res.json()) as AuditEntry[]).toEqual([]);
+    const entries = (await res.json()) as AuditEntry[];
+
+    // This asserted an EMPTY array until 2026-09-20, and passed only while the
+    // demo facility had no booking history to read. `audit_log_booking_read`
+    // — the booking-history policy — admits anyone holding `view_bookings`,
+    // which a groomer does, so booking rows are theirs BY DESIGN. Three
+    // policies sit on `audit_log` and RLS ORs them; reading only the first
+    // one is what made the old assertion look safe.
+    //
+    // The boundary this file is about is the ROSTER, so assert that: nothing
+    // a groomer reads may be a shift, a time-off request, a swap, a
+    // membership or anything else the schedule writes. Filtering rather than
+    // counting means a failure prints the rows that leaked.
+    expect(entries.filter((e) => e.entityType !== "booking")).toEqual([]);
   });
 
   test("the same groomer session can still read something else", async ({

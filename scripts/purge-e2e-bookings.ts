@@ -91,3 +91,35 @@ console.log(
     ? "Nothing to purge: no e2e report cards left."
     : `Purged ${cardsDeleted} e2e report card(s).`,
 );
+
+// ── Forms ───────────────────────────────────────────────────────────────────
+//
+// Same reasoning as the report cards above: this is the command CI already runs
+// with `if: always()`, so a third script would be a third thing nobody runs.
+//
+// Nothing removed the suite's FORMS until 2026-09-20. Measured that day:
+// `forms` held 1,117 rows, 1,076 of them e2e leftovers going back to
+// 2026-08-23, and 880 of the 905 rows in `form_submissions` hung off them.
+//
+// It was not only untidy. `GET /api/forms` sets no limit, so PostgREST caps the
+// answer at 1,000 rows, and `forms.spec.ts` "the screen shows the forms the
+// database holds" started failing because the row it had just created sorted
+// past the cap. Junk data made a real screen wrong, not just a test.
+//
+// `purge_e2e_forms()` deletes the submissions first — `form_submissions` points
+// at `form_versions` ON DELETE RESTRICT, so the answers block the form — then
+// the forms, which cascade to their versions and requirement overrides.
+const { data: formData, error: formError } = await db.rpc("purge_e2e_forms");
+
+if (formError) {
+  console.error(`Could not purge forms: ${formError.message}`);
+  process.exit(1);
+}
+
+const formsDeleted = typeof formData === "number" ? formData : 0;
+
+console.log(
+  formsDeleted === 0
+    ? "Nothing to purge: no e2e forms left."
+    : `Purged ${formsDeleted} e2e form(s) and their submissions.`,
+);
