@@ -61,7 +61,15 @@ export default function HQServicesPage() {
         locations={locations}
       />
       <DaycareServiceCatalogClient
-        facilityDefault={settings.daycare_config.value.basePrice}
+        // The facility's own full-day rate, from its rate card. This read
+        // `daycare_config.basePrice` — one number per service, defaulting to
+        // a fixture's 35 — while the rate card beside it held what the
+        // facility charges.
+        facilityDefault={
+          settings.daycare_rates.value.rates.find(
+            (rate) => rate.type === "full-day" && rate.isActive,
+          )?.basePrice ?? null
+        }
         overrides={daycareOverrides}
         locations={locations}
       />

@@ -15,7 +15,6 @@ import {
 import { Gift, Plus, Trash2 } from "lucide-react";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { usePackageServiceOptions } from "@/lib/api/package-services";
-import { useStaffText } from "@/lib/staff/use-staff-text";
 import type {
   MembershipIncludedItem,
   IncludedItemKind,
@@ -40,12 +39,10 @@ export function StepIncluded({ data, update }: Props) {
   // another facility's price list. These are what this facility sells, the
   // options its package editors offer — one list per module, prefixed so a
   // grooming "Bath" and a daycare "Full day" cannot share an id.
-  const { t: tPk } = useStaffText("modulePackages");
-  const labels = { fullDay: tPk("fullDay") };
-  const grooming = usePackageServiceOptions("grooming", labels);
-  const boarding = usePackageServiceOptions("boarding", labels);
-  const daycare = usePackageServiceOptions("daycare", labels);
-  const training = usePackageServiceOptions("training", labels);
+  const grooming = usePackageServiceOptions("grooming");
+  const boarding = usePackageServiceOptions("boarding");
+  const daycare = usePackageServiceOptions("daycare");
+  const training = usePackageServiceOptions("training");
   const services = [
     ...grooming.map((s) => ({ id: `grooming:${s.id}`, name: s.name })),
     ...boarding.map((s) => ({ id: `boarding:${s.id}`, name: s.name })),

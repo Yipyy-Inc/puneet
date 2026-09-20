@@ -128,7 +128,9 @@ export interface ServiceCategoryItem {
   name: string;
   icon: LucideIcon;
   description: string;
-  basePrice: number;
+  /** A custom module's own price. A built-in service carries none: what it
+   *  costs is read from the facility's catalogue, not from this list. */
+  basePrice?: number;
   included: string[];
   isCustom?: boolean;
 }

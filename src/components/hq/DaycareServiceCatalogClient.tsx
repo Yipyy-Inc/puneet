@@ -46,8 +46,8 @@ interface DaycareRow {
 function effectivePrice(
   overrides: DaycareLocationPrice[],
   locationId: string,
-  facilityDefault: number,
-): number {
+  facilityDefault: number | null,
+): number | null {
   return (
     overrides.find((p) => p.locationId === locationId)?.basePrice ??
     facilityDefault
@@ -59,7 +59,12 @@ function hasOverride(overrides: DaycareLocationPrice[], locationId: string) {
 }
 
 interface Props {
-  facilityDefault: number;
+  /**
+   * The facility's own full-day daycare rate, from its rate card — null when
+   * it has not set one. It was `daycare_config.basePrice`, which defaulted to
+   * a fixture's 35 for every facility that never edited it.
+   */
+  facilityDefault: number | null;
   overrides: DaycareLocationPrice[];
   locations: FacilityLocation[];
 }
@@ -140,7 +145,11 @@ export function DaycareServiceCatalogClient({
         label: "Base rate",
         align: "right",
         render: (_row: DaycareRow) => (
-          <span className="tabular-nums">${facilityDefault}/day</span>
+          <span className="tabular-nums">
+            {facilityDefault === null
+              ? "No rate set"
+              : `$${facilityDefault}/day`}
+          </span>
         ),
       },
       ...locations.map<ColumnDef<DaycareRow>>((loc) => ({
@@ -167,7 +176,7 @@ export function DaycareServiceCatalogClient({
                   : "text-muted-foreground",
               )}
             >
-              ${price}
+              {price === null ? "Set a rate" : `$${price}`}
             </button>
           );
         },
@@ -225,7 +234,9 @@ export function DaycareServiceCatalogClient({
               type="number"
               min={0}
               step="0.01"
-              placeholder={String(facilityDefault)}
+              placeholder={
+                facilityDefault === null ? "" : String(facilityDefault)
+              }
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
             />

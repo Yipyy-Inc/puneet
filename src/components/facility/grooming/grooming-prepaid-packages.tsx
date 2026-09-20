@@ -136,9 +136,7 @@ export function GroomingPrepaidPackages({
   const canManageGrooming = usePermission("grooming_manage_styles");
   const canManageServices = usePermission("manage_services");
   const canManageStyles = isGrooming ? canManageGrooming : canManageServices;
-  const services = usePackageServiceOptions(module, {
-    fullDay: tPk("fullDay"),
-  });
+  const services = usePackageServiceOptions(module);
   const { clients } = useFacilityClientList();
   const { data: customerPackages = [] } = useQuery(
     groomingQueries.customerPackages(),

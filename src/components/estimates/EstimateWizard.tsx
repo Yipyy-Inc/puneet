@@ -41,6 +41,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { trainingQueries } from "@/lib/api/training";
+import { useRooms } from "@/hooks/use-rooms";
+import { useServiceFromPrices } from "@/lib/api/service-from-prices";
+import { useDaycareRates } from "@/hooks/use-daycare-rates";
+import { daycareDayRate } from "@/lib/daycare-pricing";
 import type { TrainingPackage } from "@/types/training";
 import { clientQueries, useCreateClient, useCreatePet } from "@/lib/api/client";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
@@ -128,6 +132,22 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // shipped `trainingClasses` fixture: an estimate quoted a program this
   // business does not run, at a price it never set, and the sessions it offered
   // were another facility's timetable.
+  // Boarding classes and daycare rates, the facility's own. An estimate
+  // quoted {Standard 35, Premium 50, Luxury Suite 65} — three room types no
+  // facility in the product has — and priced everything else from a static
+  // catalogue with `?? 45`. The booking wizard for the same stay resolved
+  // through `room_categories`, so one business could quote two numbers for
+  // one night.
+  const { categories: roomCategories } = useRooms();
+  const fromPriceByService = useServiceFromPrices();
+  const { rates: daycareRateCards } = useDaycareRates();
+  const boardingClasses = useMemo(
+    () =>
+      roomCategories.filter(
+        (c) => c.service === "boarding" && c.active !== false,
+      ),
+    [roomCategories],
+  );
   const { data: trainingProgramData } = useQuery(trainingQueries.packages());
   const trainingPrograms: TrainingPackage[] =
     trainingProgramData ?? NO_PROGRAMS;
@@ -307,8 +327,6 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
   // Auto-generate line items from service details
   const autoLineItems = useMemo((): EstimateLineItem[] => {
     if (!selectedService || !startDate) return [];
-    const svc = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
-    const price = svc?.basePrice ?? 45;
     const items: EstimateLineItem[] = [];
 
     const nightsBetween = () =>
@@ -321,12 +339,12 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       );
 
     if (selectedService === "boarding" && startDate && endDate) {
-      const roomPrices: Record<string, number> = {
-        Standard: 35,
-        Premium: 50,
-        "Luxury Suite": 65,
-      };
-      const nightlyRate = roomPrices[roomType] ?? price;
+      // The chosen class's own nightly rate. No class, or a class the
+      // facility has not priced, quotes nothing — staff add the line.
+      const nightlyRate = boardingClasses.find(
+        (c) => c.name === roomType,
+      )?.defaultBasePrice;
+      if (nightlyRate == null) return [];
       const nights = nightsBetween();
       items.push({
         label: roomType ? `${roomType} Room` : "Boarding Room",
@@ -336,6 +354,10 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         total: nightlyRate * nights,
       });
     } else if (selectedService === "daycare") {
+      // The facility's rate card, through the same resolver the booking
+      // wizard uses (@/lib/daycare-pricing).
+      const price = daycareDayRate({ rates: daycareRateCards, half: false });
+      if (price == null) return [];
       const days = daycareMode === "multi" && endDate ? nightsBetween() + 1 : 1;
       items.push({
         label: "Daycare",
@@ -346,10 +368,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       });
     } else if (selectedService === "training") {
       const program = trainingPrograms.find((p) => p.id === trainingProgramId);
-      const perSession =
-        program && program.sessions > 0
-          ? Math.round(program.price / program.sessions)
-          : price;
+      if (!program || program.sessions <= 0) return [];
+      const perSession = Math.round(program.price / program.sessions);
       const sessions = Math.max(1, trainingSessions);
       items.push({
         label: program ? program.name : "Training",
@@ -359,13 +379,11 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         total: perSession * sessions,
       });
     } else {
-      items.push({
-        label: svc?.name ?? "Service",
-        description: `${svc?.name ?? "Service"} service`,
-        amount: price,
-        quantity: 1,
-        total: price,
-      });
+      // Grooming and the rest are priced from a menu this wizard does not
+      // read. It used to quote the static catalogue's number — 40 for a
+      // groom, `?? 45` for anything else — so the line is left to staff
+      // rather than invented.
+      return [];
     }
     return items;
   }, [
@@ -376,6 +394,9 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     daycareMode,
     trainingProgramId,
     trainingSessions,
+    boardingClasses,
+    daycareRateCards,
+    trainingPrograms,
   ]);
 
   // Merge auto + custom line items
@@ -427,10 +448,13 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     : activeAddOns;
 
   // Service types offered on estimates (spec 4.3): the four core services + Other.
+  // Names and glyphs only. Each option carried a `basePrice` from the static
+  // catalogue — and "Other" carried a literal 45 — which the picker showed as
+  // this facility's "from" price. That number is read from the facility's own
+  // catalogue now, and a service it has not priced shows none.
   const serviceOptions: {
     id: string;
     name: string;
-    basePrice: number;
     icon: LucideIcon;
   }[] = [
     ...SERVICE_CATEGORIES.filter((s) =>
@@ -438,10 +462,9 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     ).map((s) => ({
       id: s.id,
       name: s.name,
-      basePrice: s.basePrice,
       icon: s.icon,
     })),
-    { id: "other", name: "Other", basePrice: 45, icon: Package },
+    { id: "other", name: "Other", icon: Package },
   ];
 
   const handleSelectProgram = (id: string) => {
@@ -1410,9 +1433,11 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                         </div>
                         <div>
                           <p className="text-sm font-semibold">{svc.name}</p>
-                          <p className="text-muted-foreground text-[11px]">
-                            from ${svc.basePrice}
-                          </p>
+                          {fromPriceByService[svc.id] !== undefined && (
+                            <p className="text-muted-foreground text-[11px]">
+                              from ${fromPriceByService[svc.id]}
+                            </p>
+                          )}
                         </div>
                       </button>
                     );
@@ -1501,52 +1526,61 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                         Room Type{" "}
                         <span className="text-destructive text-xs">*</span>
                       </Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(
-                          [
-                            {
-                              value: "Standard",
-                              price: 35,
-                              desc: "Cozy & comfortable",
-                            },
-                            {
-                              value: "Premium",
-                              price: 50,
-                              desc: "Extra space & views",
-                            },
-                            {
-                              value: "Luxury Suite",
-                              price: 65,
-                              desc: "Premium experience",
-                            },
-                          ] as const
-                        ).map((room) => (
-                          <button
-                            key={room.value}
-                            type="button"
-                            onClick={() => setRoomType(room.value)}
-                            className={cn(
-                              "flex flex-col items-start gap-0.5 rounded-xl border-2 p-3 text-left transition-all",
-                              roomType === room.value
-                                ? "border-transparent bg-blue-50/50 shadow-sm"
-                                : "border-slate-200 hover:border-blue-200",
-                            )}
-                          >
-                            <span className="text-sm font-semibold">
-                              {room.value}
-                            </span>
-                            <span className="text-base font-bold text-blue-600">
-                              ${room.price}
-                              <span className="text-muted-foreground text-xs font-normal">
-                                /night
-                              </span>
-                            </span>
-                            <span className="text-muted-foreground text-[11px]">
-                              {room.desc}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                      {/* The facility's own kennel classes, at the nightly
+                          rates it set in Rooms & Suites. This offered three
+                          invented ones — Standard $35, Premium $50, Luxury
+                          Suite $65 — and the booking wizard for the same
+                          stay priced by the real class. */}
+                      {boardingClasses.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">
+                          No room types yet. Add them in Rooms &amp; Suites,
+                          with a nightly rate each.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {boardingClasses.map((room) => {
+                            const priced = room.defaultBasePrice != null;
+                            return (
+                              <button
+                                key={room.id}
+                                type="button"
+                                disabled={!priced}
+                                onClick={() => setRoomType(room.name)}
+                                className={cn(
+                                  "flex flex-col items-start gap-0.5 rounded-xl border-2 p-3 text-left transition-all",
+                                  roomType === room.name
+                                    ? "border-transparent bg-blue-50/50 shadow-sm"
+                                    : "border-slate-200 hover:border-blue-200",
+                                  !priced && "cursor-not-allowed opacity-60",
+                                )}
+                              >
+                                <span className="text-sm font-semibold">
+                                  {room.name}
+                                </span>
+                                <span className="text-base font-bold text-blue-600">
+                                  {priced ? (
+                                    <>
+                                      ${room.defaultBasePrice}
+                                      <span className="text-muted-foreground text-xs font-normal">
+                                        /night
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs font-normal">
+                                      No rate set
+                                    </span>
+                                  )}
+                                </span>
+                                {room.description && (
+                                  <span className="text-muted-foreground line-clamp-2 text-[11px]">
+                                    {room.description}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

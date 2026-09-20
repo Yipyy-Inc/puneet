@@ -3,18 +3,10 @@ import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
 import { formatWeightFromLb } from "@/lib/i18n/format";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Search,
   PawPrint,
@@ -31,8 +23,6 @@ import {
   Phone,
   Plus,
   Trash2,
-  UserPlus,
-  ArrowLeft,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -86,27 +76,6 @@ interface ClientPetStepProps {
   setGuestPetNames?: React.Dispatch<React.SetStateAction<string[]>>;
   guestPetWeights?: string[];
   setGuestPetWeights?: React.Dispatch<React.SetStateAction<string[]>>;
-  /**
-   * Quick-create hooks. The wizard SAVES the record and answers with its real
-   * id, or `null` when it was refused (having said why) — in which case the
-   * little form stays filled in.
-   */
-  onAddClient?: (draft: {
-    name: string;
-    phone: string;
-    email: string;
-  }) => Promise<number | null>;
-  onAddPet?: (
-    clientId: number,
-    draft: {
-      name: string;
-      breed: string;
-      size: string;
-      coatType?: string;
-      ageMonths?: number;
-      weight?: number;
-    },
-  ) => Promise<number | null>;
   /** Staff may book past the evaluation rule at the service step, so the
    *  pets it catches are a heads-up here, not a dead end. */
   mayOverrideEvaluation?: boolean;
@@ -138,8 +107,6 @@ export function ClientPetStep({
   setGuestPetNames,
   guestPetWeights,
   setGuestPetWeights,
-  onAddClient,
-  onAddPet,
   mayOverrideEvaluation = false,
 }: ClientPetStepProps) {
   // A customer reads their own facility's catalogue (lib/api/settings-audience).
@@ -151,105 +118,6 @@ export function ClientPetStep({
   );
   const t = useShellText("booking");
   const locale = useShellLocale();
-  // ── Quick-create state ────────────────────────────────────────────────
-  // Adding a new client (inline form, replaces the search/list area).
-  const [isAddingNewClient, setIsAddingNewClient] = React.useState(false);
-  const [newClientDraft, setNewClientDraft] = React.useState({
-    name: "",
-    email: "",
-    phone: "",
-  });
-  // Adding a new pet (inline form below the pet grid).
-  const [isAddingNewPet, setIsAddingNewPet] = React.useState(false);
-  const [newPetDraft, setNewPetDraft] = React.useState<{
-    name: string;
-    breed: string;
-    size: string;
-    coatType: string;
-    ageMonths: string;
-    weight: string;
-  }>({
-    name: "",
-    breed: "",
-    size: "",
-    coatType: "",
-    ageMonths: "",
-    weight: "",
-  });
-
-  const [savingClient, setSavingClient] = React.useState(false);
-  const [savingPet, setSavingPet] = React.useState(false);
-
-  const handleSubmitNewClient = async () => {
-    if (!onAddClient || savingClient) return;
-    const name = newClientDraft.name.trim();
-    const email = newClientDraft.email.trim();
-    if (!name || !email) return;
-    setSavingClient(true);
-    const newId = await onAddClient({
-      name,
-      email,
-      phone: newClientDraft.phone.trim(),
-    }).finally(() => setSavingClient(false));
-    if (newId === null) return;
-    setSelectedClientId(newId);
-    setSelectedPetIds([]);
-    setNewClientDraft({ name: "", email: "", phone: "" });
-    setIsAddingNewClient(false);
-    // Newly-created client has no pets — drop the user straight into the
-    // "Add new pet" form so the wizard can move forward.
-    setIsAddingNewPet(true);
-  };
-
-  const handleCancelNewClient = () => {
-    setNewClientDraft({ name: "", email: "", phone: "" });
-    setIsAddingNewClient(false);
-  };
-
-  const handleSubmitNewPet = async () => {
-    if (!onAddPet || selectedClientId === null || savingPet) return;
-    const name = newPetDraft.name.trim();
-    if (!name || !newPetDraft.size) return;
-    const ageMonthsNum = newPetDraft.ageMonths.trim()
-      ? Math.max(0, Number(newPetDraft.ageMonths))
-      : undefined;
-    const weightNum = newPetDraft.weight.trim()
-      ? Math.max(0, Number(newPetDraft.weight))
-      : undefined;
-    setSavingPet(true);
-    const newId = await onAddPet(selectedClientId, {
-      name,
-      breed: newPetDraft.breed.trim(),
-      size: newPetDraft.size,
-      coatType: newPetDraft.coatType || undefined,
-      ageMonths: ageMonthsNum,
-      weight: weightNum,
-    }).finally(() => setSavingPet(false));
-    if (newId === null) return;
-    setSelectedPetIds((prev) => [...prev, newId]);
-    setNewPetDraft({
-      name: "",
-      breed: "",
-      size: "",
-      coatType: "",
-      ageMonths: "",
-      weight: "",
-    });
-    setIsAddingNewPet(false);
-  };
-
-  const handleCancelNewPet = () => {
-    setNewPetDraft({
-      name: "",
-      breed: "",
-      size: "",
-      coatType: "",
-      ageMonths: "",
-      weight: "",
-    });
-    setIsAddingNewPet(false);
-  };
-
   // Check if service requires evaluation
   const serviceRequiresEvaluation = React.useMemo(() => {
     const config = configs[selectedService as "daycare" | "boarding"];
@@ -756,118 +624,13 @@ export function ClientPetStep({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">{t("selectClient")}</h3>
-              {onAddClient && !isAddingNewClient && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => setIsAddingNewClient(true)}
-                >
-                  <UserPlus className="size-3.5" />
-                  {t("addNewClient")}
-                </Button>
-              )}
+              {/* No "Add a client" here. A client is created on the Clients
+                  screen, which asks for what a client record actually needs;
+                  this offered a name, a phone and an email in the middle of a
+                  booking and then dropped you into a pet form. Two ways to
+                  make a client, one of them worse, is a choice nobody should
+                  have to make mid-booking. */}
             </div>
-
-            {/* Inline new-client quick-create form */}
-            {isAddingNewClient && (
-              <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/40 p-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-                    <UserPlus className="size-4 text-blue-600" />
-                    {t("newClient")}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={handleCancelNewClient}
-                    className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
-                  >
-                    <ArrowLeft className="size-3" />
-                    {t("searchInstead")}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2 sm:col-span-1">
-                    <Label className="flex items-center gap-1.5 text-xs">
-                      <User className="size-3" />
-                      {t("fullName")}{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      autoFocus
-                      value={newClientDraft.name}
-                      onChange={(e) =>
-                        setNewClientDraft((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                      placeholder={t("fullNamePlaceholder")}
-                      className="mt-1 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <Label className="flex items-center gap-1.5 text-xs">
-                      <Phone className="size-3" />
-                      {t("phone")}
-                    </Label>
-                    <Input
-                      value={newClientDraft.phone}
-                      onChange={(e) =>
-                        setNewClientDraft((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      placeholder="(514) 555-0100"
-                      className="mt-1 bg-white"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="flex items-center gap-1.5 text-xs">
-                      <Mail className="size-3" />
-                      {t("email")} <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="email"
-                      value={newClientDraft.email}
-                      onChange={(e) =>
-                        setNewClientDraft((prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
-                      }
-                      placeholder={t("ownerEmailPlaceholder")}
-                      className="mt-1 bg-white"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelNewClient}
-                  >
-                    {t("cancel")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => void handleSubmitNewClient()}
-                    disabled={
-                      savingClient ||
-                      !newClientDraft.name.trim() ||
-                      !newClientDraft.email.trim()
-                    }
-                    aria-busy={savingClient}
-                  >
-                    {savingClient ? t("savingBooking") : t("addClient")}
-                  </Button>
-                </div>
-              </div>
-            )}
 
             {/* Search */}
             <div className="relative">
@@ -1053,176 +816,6 @@ export function ClientPetStep({
           </div>
           {selectedClient ? (
             <div className="space-y-3">
-              {/* Inline new-pet quick-create form */}
-              {isAddingNewPet && onAddPet && (
-                <div className="space-y-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-                      <PawPrint className="size-4 text-violet-600" />
-                      {t("newPetFor").replace("{client}", selectedClient.name)}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={handleCancelNewPet}
-                      className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[11px]"
-                    >
-                      <ArrowLeft className="size-3" />
-                      {t("cancel")}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">
-                        {t("petName")}{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        autoFocus
-                        value={newPetDraft.name}
-                        onChange={(e) =>
-                          setNewPetDraft((prev) => ({
-                            ...prev,
-                            name: e.target.value,
-                          }))
-                        }
-                        placeholder={t("petNamePlaceholder")}
-                        className="mt-1 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">{t("breed")}</Label>
-                      <Input
-                        value={newPetDraft.breed}
-                        onChange={(e) =>
-                          setNewPetDraft((prev) => ({
-                            ...prev,
-                            breed: e.target.value,
-                          }))
-                        }
-                        placeholder={t("breedPlaceholder")}
-                        className="mt-1 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">
-                        {t("size")} <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={newPetDraft.size}
-                        onValueChange={(v) =>
-                          setNewPetDraft((prev) => ({ ...prev, size: v }))
-                        }
-                      >
-                        <SelectTrigger className="mt-1 bg-white">
-                          <SelectValue placeholder={t("selectSize")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="small">
-                            {t("sizeSmall")}
-                          </SelectItem>
-                          <SelectItem value="medium">
-                            {t("sizeMedium")}
-                          </SelectItem>
-                          <SelectItem value="large">
-                            {t("sizeLarge")}
-                          </SelectItem>
-                          <SelectItem value="giant">
-                            {t("sizeGiant")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">{t("coatType")}</Label>
-                      <Select
-                        value={newPetDraft.coatType}
-                        onValueChange={(v) =>
-                          setNewPetDraft((prev) => ({ ...prev, coatType: v }))
-                        }
-                      >
-                        <SelectTrigger className="mt-1 bg-white">
-                          <SelectValue placeholder={t("selectCoat")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(
-                            [
-                              "short",
-                              "medium",
-                              "long",
-                              "wire",
-                              "curly",
-                              "double",
-                            ] as const
-                          ).map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {t(
-                                `coat${c.charAt(0).toUpperCase()}${c.slice(1)}`,
-                              )}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">{t("ageMonths")}</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={newPetDraft.ageMonths}
-                        onChange={(e) =>
-                          setNewPetDraft((prev) => ({
-                            ...prev,
-                            ageMonths: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g. 24"
-                        className="mt-1 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">{t("weightLbs")}</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={newPetDraft.weight}
-                        onChange={(e) =>
-                          setNewPetDraft((prev) => ({
-                            ...prev,
-                            weight: e.target.value,
-                          }))
-                        }
-                        placeholder="e.g. 45"
-                        className="mt-1 bg-white"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCancelNewPet}
-                    >
-                      {t("cancel")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => void handleSubmitNewPet()}
-                      disabled={
-                        savingPet ||
-                        !newPetDraft.name.trim() ||
-                        !newPetDraft.size
-                      }
-                      aria-busy={savingPet}
-                    >
-                      {savingPet ? t("savingBooking") : t("addPet")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {selectedClient.pets.length > 0 ? (
                 <div className="max-h-[400px] overflow-y-auto">
                   <div className="grid grid-cols-2 gap-3 pr-2">
@@ -1351,16 +944,6 @@ export function ClientPetStep({
                         </div>
                       );
                     })}
-                    {onAddPet && !isAddingNewPet && (
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingNewPet(true)}
-                        className="hover:border-primary/50 hover:bg-muted/40 flex min-h-[96px] items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm font-medium text-violet-700 dark:text-violet-300"
-                      >
-                        <Plus className="size-4" />
-                        {t("addNewPet")}
-                      </button>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -1368,18 +951,9 @@ export function ClientPetStep({
                   <p className="text-muted-foreground text-sm">
                     {t("clientHasNoPets")}
                   </p>
-                  {onAddPet && !isAddingNewPet && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 gap-1.5"
-                      onClick={() => setIsAddingNewPet(true)}
-                    >
-                      <Plus className="size-3.5" />
-                      {t("addAPet")}
-                    </Button>
-                  )}
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {t("addPetsOnClientProfile")}
+                  </p>
                 </div>
               )}
             </div>

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useRooms } from "@/hooks/use-rooms";
-import { useSettings } from "@/hooks/use-settings";
+import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import { trainingQueries } from "@/lib/api/training";
 import type { PackageModule } from "@/lib/api/prepaid-packages";
@@ -21,7 +21,7 @@ import { NO_ITEMS } from "@/lib/no-items";
 //
 //   grooming  its grooming menu (grooming_services)
 //   boarding  its boarding room categories, at their default nightly price
-//   daycare   a full day, at the daycare base price (daycare_config)
+//   daycare   its own rate cards (daycare_rates), at their base price
 //   training  each course it runs a series of, at the per-session price of
 //             its cheapest running series
 //
@@ -36,7 +36,6 @@ export interface PackageServiceOption {
 
 export function usePackageServiceOptions(
   module: PackageModule,
-  labels: { fullDay: string },
 ): PackageServiceOption[] {
   const { data: groomingServices } = useQuery({
     ...groomingCatalogueQueries.services(),
@@ -47,7 +46,7 @@ export function usePackageServiceOptions(
     enabled: module === "training",
   });
   const { categories } = useRooms();
-  const { daycare } = useSettings();
+  const { rates: daycareRates } = useDaycareRates();
 
   return useMemo(() => {
     if (module === "grooming") {
@@ -65,13 +64,18 @@ export function usePackageServiceOptions(
         }));
     }
     if (module === "daycare") {
-      return [
-        {
-          id: "daycare-full-day",
-          name: labels.fullDay,
-          basePrice: daycare.basePrice,
-        },
-      ];
+      // The facility's own rate cards, the way boarding lists its classes and
+      // grooming its menu. This was a single synthetic "full day" option
+      // priced from `daycare_config.basePrice` — a fixture's 35 for any
+      // facility that had not edited it — while the rate card it should have
+      // been reading sat in `daycare_rates`.
+      return daycareRates
+        .filter((rate) => rate.isActive)
+        .map((rate) => ({
+          id: rate.id,
+          name: rate.name,
+          basePrice: rate.basePrice,
+        }));
     }
     const byCourse = new Map<string, PackageServiceOption>();
     for (const s of series ?? NO_ITEMS) {
@@ -92,5 +96,5 @@ export function usePackageServiceOptions(
       }
     }
     return [...byCourse.values()];
-  }, [module, groomingServices, series, categories, daycare, labels.fullDay]);
+  }, [module, groomingServices, series, categories, daycareRates]);
 }

@@ -25,10 +25,11 @@ import { ACCOUNTS, signIn } from "./_auth";
 // modal computed. That needs a UI test through the wizard, and this comment is
 // here so nobody reads a green run as more than it is.
 //
-// What it does catch is the way the fix silently stops applying: the fallback
-// in `boardingNightlyRate` reverts to the flat service rate whenever a class
-// carries no price of its own. A class created without one would put the old
-// behaviour back for that kennel, with nothing on screen to say so.
+// What it does catch is a class created without a price. There is no fallback
+// left to hide one: `boarding.basePrice` went on 2026-09-20 with the rest of
+// the module base prices, so a class with no rate is reported by name and the
+// wizard refuses the booking rather than charging a number nobody set. This
+// file is what stops that state reaching the screen in the first place.
 // ============================================================================
 
 interface Category {

@@ -28,7 +28,6 @@ export default function DaycareSettingsPage() {
   const { daycare, updateDaycare } = useSettings();
   const [formData, setFormData] = useState<ModuleConfig>(daycare);
   const [isEditingBasic, setIsEditingBasic] = useState(false);
-  const [isEditingPricing, setIsEditingPricing] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
   const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
 
@@ -58,7 +57,6 @@ export default function DaycareSettingsPage() {
     setFormData(daycare);
     updateDaycare(daycare);
     if (section === "basic") setIsEditingBasic(false);
-    if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
   };
@@ -66,7 +64,6 @@ export default function DaycareSettingsPage() {
   const handleSave = (section: string) => {
     toast.success("Settings saved successfully");
     if (section === "basic") setIsEditingBasic(false);
-    if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
   };
@@ -160,59 +157,10 @@ export default function DaycareSettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Pricing */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Pricing</CardTitle>
-                <CardDescription>
-                  Base price for the daycare service
-                </CardDescription>
-              </div>
-              {isEditingPricing ? (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancel("pricing")}
-                  >
-                    <X className="mr-2 size-4" />
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={() => handleSave("pricing")}>
-                    <Save className="mr-2 size-4" />
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingPricing(true)}
-                >
-                  <Edit className="mr-2 size-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label>Base Price ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.basePrice}
-                onChange={(e) =>
-                  updateFormData({ basePrice: parseFloat(e.target.value) || 0 })
-                }
-                className="w-32"
-                disabled={!isEditingPricing}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        {/* A "Pricing — Base price for the daycare service" card stood here,
+            one number for the whole service, defaulting to a fixture's. What a
+            daycare costs is set in Daycare → Rates, per rate card,
+            and the booking wizard reads it there. */}
 
         {/* Media */}
         <Card>

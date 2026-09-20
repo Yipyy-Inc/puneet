@@ -1129,7 +1129,14 @@ export const moduleConfigSchema = z.object({
   bannerImage: z.string().optional(),
   /** Hex color used across the system to identify this service (calendar, badges, etc.) */
   color: z.string().optional(),
-  basePrice: z.number(),
+  // `basePrice: z.number()` sat here until 2026-09-20, and the booking wizard
+  // priced a stay, a day, a groom and a class from it whenever the facility's
+  // own rate was missing. It defaulted to a fixture — boarding 45, daycare 35,
+  // grooming 50, training 60 — so every facility that never edited it quoted
+  // numbers nobody there had chosen. A facility's prices live where it sets
+  // them: room categories, daycare rates, grooming services, training series.
+  // Left optional-by-absence rather than deleted from stored rows: a settings
+  // row that still carries the key parses fine and the key is simply unread.
   settings: z.object({
     evaluation: z.object({
       enabled: z.boolean(),

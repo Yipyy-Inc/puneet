@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { trainingQueries } from "@/lib/api/training";
+import { useServiceFromPrices } from "@/lib/api/service-from-prices";
 import type { TrainingCourseType } from "@/lib/training-config";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { addOnsForService } from "@/lib/settings/addons";
@@ -137,10 +138,16 @@ export function ServiceStep({
     }
     return m;
   }, [trainingCourseTypes, trainingSeries]);
-  const trainingFromPrice = useMemo(() => {
-    const vals = Array.from(trainingFromPriceByCourse.values());
-    return vals.length > 0 ? Math.min(...vals) : undefined;
-  }, [trainingFromPriceByCourse]);
+  // ── "From $X", from what the facility SELLS ──────────────────────────
+  //
+  // Training already worked this way — the cheapest live series for the
+  // course. The other three read `config.basePrice` and then the static
+  // SERVICE_CATEGORIES fixture, so a card offered a customer "From $45" for
+  // boarding at a facility whose cheapest kennel was $38, or $125, or which
+  // had not priced boarding at all. Each now reads its own catalogue, and a
+  // service the facility has not priced shows no price rather than a number
+  // from a file.
+  const fromPriceByService = useServiceFromPrices();
 
   type Evaluation = {
     evaluatedAt?: string;
@@ -339,20 +346,21 @@ export function ServiceStep({
             ? evaluationConfig.description
             : (config?.slogan ?? service.description ?? "");
 
-          // #2 — show "Free" instead of "$0"
           const isTraining = service.id === "training";
+          // #2 — show "Free" instead of "$0", and nothing at all where the
+          // facility has set no price for this service.
           const rawPrice = isEvaluation
             ? evaluationConfig.price
-            : isTraining
-              ? (trainingFromPrice ?? config?.basePrice ?? service.basePrice)
-              : (config?.basePrice ?? service.basePrice);
+            : fromPriceByService[service.id];
           const displayPrice =
-            rawPrice === 0
-              ? t("priceFree")
-              : t("priceFrom").replace(
-                  "{amount}",
-                  formatMoney(rawPrice, locale, { whole: true }),
-                );
+            rawPrice === undefined
+              ? null
+              : rawPrice === 0
+                ? t("priceFree")
+                : t("priceFrom").replace(
+                    "{amount}",
+                    formatMoney(rawPrice, locale, { whole: true }),
+                  );
 
           const bannerImg = config?.bannerImage ?? service.image ?? null;
           // #7 — only skip optimization for external URLs

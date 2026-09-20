@@ -52,6 +52,7 @@ import {
   Utensils,
   Scissors,
   ClipboardCheck,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -62,7 +63,6 @@ import { PackagePromptWizardContent } from "./steps/PackagePromptWizardContent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingQueries, resolveEffectivePricing } from "@/lib/api/grooming";
 import { getPetSize } from "@/lib/pet-size";
-import { estimateDobFromMonths } from "@/lib/pet-utils";
 import {
   EVALUATION_OVERRIDE_MIN_REASON,
   EvaluationOverridePanel,
@@ -95,7 +95,10 @@ import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
-import { boardingBasePrice, boardingNightlyRate } from "@/lib/boarding-pricing";
+import { boardingNightlyRate, boardingPricing } from "@/lib/boarding-pricing";
+import { daycareDayRate } from "@/lib/daycare-pricing";
+import { rateGapMessage, type RateGap } from "@/lib/bookings/rate-gap";
+import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { boardingParts, daycareParts } from "@/lib/bookings/booking-parts";
 import { useDaycareLocationPrices } from "@/lib/api/hq-services";
 import {
@@ -132,7 +135,6 @@ import {
 } from "./TrainingEnrollmentCartPanel";
 import type { TrainingSelection } from "./service-details/TrainingScheduleStep";
 import { useEnrollInTrainingSeries } from "@/lib/api/training-series";
-import { useCreateClient, useCreatePet } from "@/lib/api/client";
 
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -376,6 +378,11 @@ export function BookingModal({
   const { categories: roomCategories, rooms: facilityRooms } = useRooms();
   const { currentLocationId } = useLocationContext();
   const { data: daycareLocationPrices = [] } = useDaycareLocationPrices();
+  // The facility's own rate card (daycare_rates). Until 2026-09-20 the wizard
+  // read it only to decide which sections a rate may be booked into, and
+  // priced the day from `daycare_config.basePrice` — so a facility could set
+  // "Full day $38" and watch every booking charge the fixture's 35.
+  const { rates: daycareRateCards } = useDaycareRates();
   const queryClient = useQueryClient();
   const enrollInSeries = useEnrollInTrainingSeries();
   const { mutate: redeemPass } = useRedeemPackagePass();
@@ -505,12 +512,6 @@ export function BookingModal({
     });
   }, []);
 
-  // Quick-create state (declared before prevOpen so the close-side reset
-  // below can clear it). The handler callbacks live further down with the
-  // other action handlers.
-  const [draftClients, setDraftClients] = useState<Client[]>([]);
-  const [addedPets, setAddedPets] = useState<Record<number, Pet[]>>({});
-
   // Multi-dog training: `trainingCart` holds dogs already configured in earlier
   // passes through Steps 1–3; `currentTrainingSelection` is the series chosen
   // for the dog being configured right now (lifted from TrainingScheduleStep).
@@ -535,9 +536,6 @@ export function BookingModal({
       setGeneratedEstimateId(null);
       setSavedEstimate(null);
       setEstimatePricingSnapshot(null);
-      // Reset quick-create drafts so a re-opened wizard starts clean.
-      setDraftClients([]);
-      setAddedPets({});
       // Clear the multi-dog training cart.
       setTrainingCart([]);
       setCurrentTrainingSelection(null);
@@ -633,106 +631,18 @@ export function BookingModal({
         : [],
   );
 
-  // ── A CLIENT OR PET ADDED HERE IS SAVED HERE ─────────────────────────────
+  // ── NEITHER A CLIENT NOR A PET IS CREATED IN THIS WIZARD ─────────────────
   //
-  // These made DRAFTS with negative ids, and the comment said the caller
-  // "decides whether to persist them after submission". No caller did: the
-  // booking went to the server naming client -1, and came back 422 — "No
-  // client -1 you can book for" — after staff had filled in every step. They
-  // are written the moment they are added now, so the booking names real
-  // rows, and a refusal is said while the person is still at the first step.
+  // Both inline quick-create forms lived here and both are gone (2026-09-20,
+  // client feedback). They asked for less than the record needs — no breed
+  // list, a size band where a weight belongs, an age in months with no date
+  // picker — and they duplicated two screens that ask properly: Clients →
+  // New client, and Add a pet on the client's own profile.
   //
-  // Kept in `draftClients` / `addedPets` still, under their REAL ids: the
-  // client list this form was opened with is a snapshot, and would not show
-  // them until it was reopened.
-  const createClient = useCreateClient();
-  const createPet = useCreatePet();
-
-  const handleAddClient = useCallback(
-    async (draft: {
-      name: string;
-      phone: string;
-      email: string;
-    }): Promise<number | null> => {
-      try {
-        const { client } = await createClient.mutateAsync({
-          name: draft.name.trim(),
-          email: draft.email.trim(),
-          phone: draft.phone.trim() || undefined,
-        });
-        setDraftClients((prev) => [
-          { ...client, pets: client.pets ?? [] },
-          ...prev,
-        ]);
-        toast.success(t("clientSaved").replace("{name}", client.name));
-        return client.id;
-      } catch (error) {
-        toast.error(t("clientNotSaved"), {
-          description: error instanceof Error ? error.message : undefined,
-        });
-        return null;
-      }
-    },
-    [createClient, t],
-  );
-
-  const handleAddPet = useCallback(
-    async (
-      clientId: number,
-      draft: {
-        name: string;
-        breed: string;
-        size: string;
-        coatType?: string;
-        ageMonths?: number;
-        weight?: number;
-      },
-    ): Promise<number | null> => {
-      try {
-        const pet = await createPet.mutateAsync({
-          clientId,
-          name: draft.name.trim(),
-          type: "Dog",
-          breed: draft.breed.trim(),
-          // Whole years, the column's own unit, and the birth date the months
-          // imply — which is what every age on screen is read from. This sent
-          // `Math.round(months / 12 * 10) / 10`, so a three-month-old puppy
-          // was `age: 0.3` to an integer column and was never saved.
-          age:
-            draft.ageMonths !== undefined && draft.ageMonths > 0
-              ? Math.floor(draft.ageMonths / 12)
-              : 0,
-          dateOfBirth:
-            draft.ageMonths !== undefined && draft.ageMonths > 0
-              ? estimateDobFromMonths(draft.ageMonths)
-              : undefined,
-          weight: draft.weight ?? 0,
-          coatType: (draft.coatType as Pet["coatType"]) || undefined,
-        });
-        const isAddedClient = draftClients.some((c) => c.id === clientId);
-        if (isAddedClient) {
-          setDraftClients((prev) =>
-            prev.map((c) =>
-              c.id === clientId ? { ...c, pets: [...c.pets, pet] } : c,
-            ),
-          );
-        } else {
-          setAddedPets((prev) => ({
-            ...prev,
-            [clientId]: [...(prev[clientId] ?? []), pet],
-          }));
-        }
-        toast.success(t("petSaved").replace("{pet}", pet.name));
-        return pet.id;
-      } catch (error) {
-        toast.error(t("petNotSaved"), {
-          description: error instanceof Error ? error.message : undefined,
-        });
-        return null;
-      }
-    },
-    [createPet, draftClients, t],
-  );
+  // So step one SELECTS and only selects: search the client list, tick their
+  // pets. A client with no pets on file is told where to add one. The drafts
+  // and merge that existed to fold new rows into the prop list went with
+  // them, since the list is now exactly what the caller passed.
 
   // Service selection state
   const [selectedService, setSelectedService] = useState<string>(
@@ -1136,33 +1046,21 @@ export function BookingModal({
     ],
   );
 
-  // Combined view that folds quick-created drafts into the prop list so the
-  // rest of the wizard (filtered list, selection lookup, room logic) treats
-  // them as first-class clients/pets.
-  const mergedClients = useMemo<Client[]>(() => {
-    const augmented = clients.map((c) => {
-      const extras = addedPets[c.id];
-      if (!extras || extras.length === 0) return c;
-      return { ...c, pets: [...c.pets, ...extras] };
-    });
-    return [...draftClients, ...augmented];
-  }, [clients, draftClients, addedPets]);
-
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return mergedClients;
+    if (!searchQuery.trim()) return clients;
     const query = searchQuery.toLowerCase();
-    return mergedClients.filter(
+    return clients.filter(
       (client) =>
         client.name.toLowerCase().includes(query) ||
         client.email.toLowerCase().includes(query) ||
         client.phone?.includes(query),
     );
-  }, [mergedClients, searchQuery]);
+  }, [clients, searchQuery]);
 
   const selectedClient = useMemo(() => {
-    return mergedClients.find((c) => c.id === selectedClientId);
-  }, [mergedClients, selectedClientId]);
+    return clients.find((c) => c.id === selectedClientId);
+  }, [clients, selectedClientId]);
 
   const petHasValidEvaluation = useCallback((pet: Pet) => {
     const evals: Evaluation[] = pet.evaluations ?? [];
@@ -1540,6 +1438,11 @@ export function BookingModal({
   // Calculate total price with dynamic pricing rules
   const calculatePrice = useMemo(() => {
     let basePrice = 0;
+    // Why this booking cannot be priced from what the facility has set up.
+    // Null is the normal case; anything else stops the booking being taken
+    // and tells staff where to set the rate (§5s — a state the component owns
+    // rather than a silent $0).
+    let rateGap: RateGap = null;
     // Per-pet pricing breakdown — only populated for grooming. Drives the
     // small explainer subline under the service row in ConfirmStep so
     // customers (and staff) understand where the number came from. Does
@@ -1548,28 +1451,36 @@ export function BookingModal({
       [];
 
     if (selectedService === "daycare") {
-      // A branch's own full-day rate, falling back to the facility default —
-      // same resolution boarding uses, one level simpler (no kennel class,
-      // just the branch). Half day stays half of whichever rate applies.
-      const effectiveFullDay =
-        daycareLocationPrices.find((p) => p.locationId === currentLocationId)
-          ?.basePrice ?? daycare.basePrice;
-      const pricePerDay =
-        serviceType === "half_day" ? effectiveFullDay / 2 : effectiveFullDay;
-      basePrice = pricePerDay * daycareSelectedDates.length;
+      // A branch's own rate, then the facility's rate card. Nothing stands in
+      // for a facility that has set neither — see @/lib/daycare-pricing.
+      const pricePerDay = daycareDayRate({
+        branchPrice: daycareLocationPrices.find(
+          (p) => p.locationId === currentLocationId,
+        )?.basePrice,
+        rates: daycareRateCards,
+        half: serviceType === "half_day",
+      });
+      if (pricePerDay === null) {
+        rateGap = { kind: "daycare" };
+      } else {
+        basePrice = pricePerDay * daycareSelectedDates.length;
+      }
     } else if (selectedService === "boarding") {
       // Priced by the KENNEL CLASS the pet is assigned to, not one flat rate.
       // The arithmetic and the reasoning live in `@/lib/boarding-pricing`,
       // because a calculation that decides a charge should be readable without
       // opening this file.
-      basePrice = boardingBasePrice({
+      const stay = boardingPricing({
         categories: roomCategories,
         rooms: facilityRooms,
         roomAssignments,
         nights: boardingNights,
-        fallbackNightlyRate: boarding.basePrice,
         locationId: currentLocationId,
       });
+      basePrice = stay.total;
+      if (stay.unpricedClasses.length > 0) {
+        rateGap = { kind: "boarding", classes: stay.unpricedClasses };
+      }
     } else if (selectedService === "grooming") {
       // Run each selected pet through the shared rate engine so Confirm
       // matches the service-card "Price $X" and the at-pickup PaymentDialog
@@ -1640,17 +1551,22 @@ export function BookingModal({
           return sum + pricing.price;
         }, 0);
       } else {
-        const perPet = pkg ? pkg.sizePricing.small : grooming.basePrice;
+        // No package picked yet: nothing to price. The step cannot be
+        // completed without one, so this is a transient zero, not a charge.
+        const perPet = pkg ? pkg.sizePricing.small : 0;
         basePrice = perPet * Math.max(pricingSelectedPetIds.length, 1);
       }
     } else if (selectedService === "training") {
       // Multi-dog: sum each enrolled dog's series price (cart + current dog).
       // Falls back to the static base price before any series is selected.
       const trainingItems = [...trainingCart, ...currentTrainingLineItems];
-      basePrice =
-        trainingItems.length > 0
-          ? trainingItems.reduce((sum, li) => sum + li.price, 0)
-          : training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
+      if (trainingItems.length > 0) {
+        basePrice = trainingItems.reduce((sum, li) => sum + li.price, 0);
+      } else {
+        // It charged `training.basePrice` × pets here — 60 from a fixture, for
+        // a booking with no class in it.
+        rateGap = { kind: "training" };
+      }
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
     } else if (selectedService && !isBuiltinService(selectedService)) {
@@ -1896,6 +1812,7 @@ export function BookingModal({
 
     return {
       basePrice,
+      rateGap,
       addOnsTotal: pricingComputation.addOnsTotal,
       adjustments,
       discount: totalDiscount,
@@ -1931,18 +1848,15 @@ export function BookingModal({
     roomAssignments,
     checkInTime,
     checkOutTime,
-    boarding.basePrice,
-    // The kennel class is now part of the price, so the categories and rooms
-    // it is read from have to be able to move it.
+    // The kennel class is part of the price, so the categories and rooms it
+    // is read from have to be able to move it.
     roomCategories,
     facilityRooms,
-    daycare.basePrice,
-    // Both branch-price resolutions (boarding's kennel class, daycare's flat
-    // rate) key off the caller's active branch, so a switch has to reprice.
+    // Both branch-price resolutions (boarding's kennel class, daycare's rate)
+    // key off the caller's active branch, so a switch has to reprice.
     currentLocationId,
     daycareLocationPrices,
-    grooming.basePrice,
-    training.basePrice,
+    daycareRateCards,
     getModuleBySlug,
     storedAddOns,
     isEstimateMode,
@@ -2875,10 +2789,9 @@ export function BookingModal({
                 categories: roomCategories,
                 rooms: facilityRooms,
                 roomAssignments: [{ petId: petIds[0], roomId }],
-                fallbackNightlyRate: boarding.basePrice,
                 locationId: currentLocationId,
               })
-            : boarding.basePrice,
+            : 0,
       });
       return parts.length > 1 ? { ...booking, parts } : booking;
     }
@@ -4244,8 +4157,6 @@ export function BookingModal({
                       setGuestPetNames={setGuestPetNamesSynced}
                       guestPetWeights={guestPetWeights}
                       setGuestPetWeights={setGuestPetWeights}
-                      onAddClient={handleAddClient}
-                      onAddPet={handleAddPet}
                     />
                   )}
                   {displayedSteps[currentStep]?.id === "details" && (
@@ -4627,67 +4538,90 @@ export function BookingModal({
             {/* Navigation Buttons */}
             {!(isEstimateMode && estimateCreated) &&
               !(isCustomerMode && bookingRequested) && (
-                <div className="bg-background flex justify-between border-t p-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePrevious}
-                    disabled={currentStep === 0}
-                  >
-                    {t("previous")}
-                  </Button>
-                  <div className="flex gap-2">
+                <div className="bg-background border-t">
+                  {/* A booking the facility has not set a rate for is refused,
+                      and the reason is on screen — not a disabled button with
+                      nothing to read (§5s). */}
+                  {calculatePrice.rateGap && (
+                    <div className="flex items-start gap-2 px-4 pt-4">
+                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-warning text-sm font-semibold">
+                          {t("noRateTitle")}
+                        </p>
+                        <p className="text-warning text-[13.5px]">
+                          {rateGapMessage(calculatePrice.rateGap, t)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-between p-4">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        // If user has made progress, confirm before discarding
-                        if (currentStep > 0 || selectedService) {
-                          setShowCancelConfirm(true);
-                        } else {
-                          onOpenChange(false);
-                        }
-                      }}
+                      onClick={handlePrevious}
+                      disabled={currentStep === 0}
                     >
-                      {t("cancel")}
+                      {t("previous")}
                     </Button>
-                    {currentStep < displayedSteps.length - 1 ||
-                    showingPackagePromptStep ? (
+                    <div className="flex gap-2">
                       <Button
                         type="button"
-                        onClick={handleNext}
-                        disabled={!canProceed}
-                        className={
-                          selectedService && canProceed
-                            ? `${accent.btnBg} text-white`
-                            : ""
-                        }
+                        variant="outline"
+                        onClick={() => {
+                          // If user has made progress, confirm before discarding
+                          if (currentStep > 0 || selectedService) {
+                            setShowCancelConfirm(true);
+                          } else {
+                            onOpenChange(false);
+                          }
+                        }}
                       >
-                        {showingPackagePromptStep ? t("skip") : t("next")}
+                        {t("cancel")}
                       </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() => void handleComplete()}
-                        disabled={!canProceed || submitting || estimateBusy}
-                        aria-busy={submitting || estimateBusy}
-                        className={
-                          selectedService && canProceed
-                            ? `${accent.btnBg} text-white`
-                            : ""
-                        }
-                      >
-                        {submitting
-                          ? t("savingBooking")
-                          : editMode
-                            ? t("saveChanges")
-                            : isEstimateMode
-                              ? t("createEstimate")
-                              : isCustomerMode
-                                ? t("requestBooking")
-                                : t("createBooking")}
-                      </Button>
-                    )}
+                      {currentStep < displayedSteps.length - 1 ||
+                      showingPackagePromptStep ? (
+                        <Button
+                          type="button"
+                          onClick={handleNext}
+                          disabled={!canProceed}
+                          className={
+                            selectedService && canProceed
+                              ? `${accent.btnBg} text-white`
+                              : ""
+                          }
+                        >
+                          {showingPackagePromptStep ? t("skip") : t("next")}
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={() => void handleComplete()}
+                          disabled={
+                            !canProceed ||
+                            submitting ||
+                            estimateBusy ||
+                            !!calculatePrice.rateGap
+                          }
+                          aria-busy={submitting || estimateBusy}
+                          className={
+                            selectedService && canProceed
+                              ? `${accent.btnBg} text-white`
+                              : ""
+                          }
+                        >
+                          {submitting
+                            ? t("savingBooking")
+                            : editMode
+                              ? t("saveChanges")
+                              : isEstimateMode
+                                ? t("createEstimate")
+                                : isCustomerMode
+                                  ? t("requestBooking")
+                                  : t("createBooking")}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

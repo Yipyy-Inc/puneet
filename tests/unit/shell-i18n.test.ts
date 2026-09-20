@@ -44,6 +44,7 @@ const SAME_IN_BOTH = new Set([
   "header.messages", // Messages / Messages
   "notifications.title", // Notifications / Notifications
   "search.actions", // Actions / Actions
+  "booking.moduleActions", // Actions / Actions — a table heading
   "primitives.pagination", // Pagination / Pagination
   "primitives.minute", // "Min" is the abbreviation in both
   "primitives.actions", // Actions / Actions

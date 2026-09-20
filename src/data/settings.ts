@@ -333,7 +333,15 @@ export const bookingRules: BookingRules = {
 export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   evaluationRequired: false,
   hideServicesUntilEvaluationCompleted: false,
-  servicesRequiringEvaluation: ["daycare"],
+  // Empty, because requiring an evaluation is the FACILITY's decision.
+  //
+  // This said ["daycare"], and it is the fallback every facility that has
+  // never saved its booking flow reads — so daycare demanded an evaluation at
+  // facilities that had never asked for one, while Settings → Evaluations
+  // showed "Require an evaluation" switched off. The booking wizard locked
+  // the daycare card with "Needs an evaluation" and there was nothing on the
+  // settings screen to turn off, because nothing there was on.
+  servicesRequiringEvaluation: [],
   hiddenServices: [],
   onlyShowApplicableServices: false,
   evaluationLockedMessage:
@@ -1091,11 +1099,14 @@ export const daycareConfig: ModuleConfig = {
     "Professional daycare services with supervised play, socialization, and personalized care for your furry friends.",
   bannerImage: "/services/daycare.jpg",
   color: "#0284c7",
-  basePrice: 35,
   settings: {
+    // Off, like boarding, grooming and training below. It was
+    // `{enabled: true, optional: false}` — the SECOND fixture demanding an
+    // evaluation for daycare at a facility that had never asked, and the one
+    // the booking wizard reads last (ServiceStep, `requiresEvaluation`).
+    // A facility turns this on in Daycare → Settings when it wants it.
     evaluation: {
-      enabled: true,
-      optional: false,
+      enabled: false,
     },
     careInstructions: {
       feeding: "required",
@@ -1118,7 +1129,6 @@ export const boardingConfig: ModuleConfig = {
     "Comfortable overnight boarding with personalized care, exercise, and attention for your beloved pets.",
   bannerImage: "/services/boarding.jpg",
   color: "#8b5cf6",
-  basePrice: 45,
   settings: {
     evaluation: {
       enabled: false,
@@ -1150,7 +1160,6 @@ export const groomingConfig: ModuleConfig = {
   description:
     "Professional grooming services including bathing, trimming, and styling to keep your pet looking and feeling great.",
   color: "#ec4899",
-  basePrice: 50,
   settings: {
     evaluation: {
       enabled: false,
@@ -1182,7 +1191,6 @@ export const trainingConfig: ModuleConfig = {
   description:
     "Expert training programs to teach obedience, tricks, and behavior modification for well-behaved pets.",
   color: "#f97316",
-  basePrice: 60,
   settings: {
     evaluation: {
       enabled: false,

@@ -1,5 +1,11 @@
 import { Sun, Bed, Scissors, GraduationCap, CheckCircle } from "lucide-react";
 
+// No prices here. Each entry carried one — daycare 35, boarding 45, grooming
+// 40, training 85 — and two service pickers rendered them as "From $45" at a
+// facility whose own cheapest kennel was $38, or $125, or which had not
+// priced boarding at all. A "from" price is read from the facility's own
+// catalogue now (@/lib/api/service-from-prices); this list is seed copy for
+// names, images and what a service includes.
 export const SERVICE_CATEGORIES = [
   {
     id: "daycare",
@@ -9,7 +15,6 @@ export const SERVICE_CATEGORIES = [
     // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description:
       "Full or half day supervised care in a safe, social environment.",
-    basePrice: 35,
     included: [
       "Supervised play",
       "Indoor/outdoor access",
@@ -24,7 +29,6 @@ export const SERVICE_CATEGORIES = [
     icon: Bed,
     // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Overnight stays with full care so your pet feels at home.",
-    basePrice: 45,
     included: [
       "Comfy lodging",
       "Daily feeding",
@@ -40,7 +44,6 @@ export const SERVICE_CATEGORIES = [
     icon: Scissors,
     // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Bath, grooming, and styling services by experienced staff.",
-    basePrice: 40,
     included: ["Bath & dry", "Brush-out", "Nail trim", "Ear check"],
   },
   {
@@ -51,7 +54,6 @@ export const SERVICE_CATEGORIES = [
     icon: GraduationCap,
     // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Obedience and specialized training programs.",
-    basePrice: 85,
     included: ["Certified trainers", "Structured sessions", "Take-home tips"],
   },
   {
@@ -62,7 +64,6 @@ export const SERVICE_CATEGORIES = [
     icon: CheckCircle,
     // french-ok: seed copy for a facility-authored catalogue — Postgres serves the real one
     description: "Assessment to ensure your pet is ready for group services.",
-    basePrice: 0,
     included: [
       "Temperament check",
       "Compatibility assessment",

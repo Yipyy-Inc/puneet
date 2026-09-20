@@ -16,9 +16,19 @@ import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 // Staff quoted the number they could see. The till took the flat one. Nothing
 // errored, and the difference only shows up on a bill.
 //
-// Extracted from `BookingModal` so the arithmetic that decides a charge can be
-// read on its own, rather than sitting inside a 3,700-line component. Pure: it
-// takes the catalogue and the assignments and returns a number.
+// ── AND WHY THERE IS NO LONGER A FALLBACK AT ALL ──────────────────────────
+//
+// That flat rate stayed on as a last resort: a class with no price of its own
+// was charged `boarding.basePrice`, which was 45 — a number from a fixture,
+// the same for every facility in the product, that nobody at the facility had
+// ever chosen. A stay was priced from it and the bill looked deliberate.
+//
+// Removed on 2026-09-20 at the client's instruction: a new facility starts
+// with no prices, and sets its own. So a class with no nightly rate is not
+// worth some other number — it is UNPRICED, and this says so by name rather
+// than guessing. The caller refuses the booking and points at the class.
+//
+// Pure: it takes the catalogue and the assignments and returns the money.
 // ============================================================================
 
 export interface BoardingPriceInput {
@@ -29,11 +39,6 @@ export interface BoardingPriceInput {
   roomAssignments: Array<{ petId: number; roomId: string }>;
   nights: number;
   /**
-   * The service-wide rate, used only where a class carries no price of its
-   * own and before any kennel has been chosen.
-   */
-  fallbackNightlyRate: number;
-  /**
    * The branch this stay is at. A class's own `locationPricing` override for
    * this branch wins over its `defaultBasePrice` -- absent or no override,
    * this resolves exactly as before.
@@ -41,51 +46,98 @@ export interface BoardingPriceInput {
   locationId?: string | null;
 }
 
+export interface BoardingPricing {
+  /** Summed over the DISTINCT rooms the stay occupies. */
+  perNight: number;
+  /** `perNight` × nights, counting a same-day stay as one night. */
+  total: number;
+  /**
+   * The classes in this stay whose nightly rate the facility has not set,
+   * by name and without repeats. Empty means every room in the stay is
+   * priced — which is the only state a booking may be taken in.
+   */
+  unpricedClasses: string[];
+}
+
 /**
- * The nightly total, summed over the DISTINCT rooms the stay occupies.
+ * The class an assignment names.
  *
- * Distinct, not per assignment: a Deluxe Suite holds two pets from one
+ * An assignment holds a room OR A ROOM TYPE: the wizard's cards are types, and
+ * a real room of that type is picked when the booking is saved
+ * (`roomsForAssignments`). Only the room case was resolved here, so a
+ * type-level assignment found no class and fell through to the flat service
+ * rate — which is how a $125 Private Care Suite was charged at $45 with the
+ * per-class pricing supposedly in force.
+ */
+function classOf(
+  roomId: string,
+  roomById: Map<string, FacilityRoom>,
+  categoryById: Map<string, RoomCategory>,
+): RoomCategory | undefined {
+  const room = roomById.get(roomId);
+  return room ? categoryById.get(room.categoryId) : categoryById.get(roomId);
+}
+
+/** A class's nightly rate at this branch, or null when it has none. */
+function classRate(
+  category: RoomCategory | undefined,
+  locationId: string | null | undefined,
+): number | null {
+  if (!category) return null;
+  const branchPrice = locationId
+    ? category.locationPricing.find((p) => p.locationId === locationId)?.price
+    : undefined;
+  return branchPrice ?? category.defaultBasePrice ?? null;
+}
+
+/**
+ * The stay's nightly total and the classes that could not be priced.
+ *
+ * Distinct rooms, not per assignment: a Deluxe Suite holds two pets from one
  * household, and two assignments naming the same room are one room being paid
  * for once. Summing per assignment would double-charge a shared suite.
  */
-export function boardingNightlyRate({
+export function boardingPricing({
   categories,
   rooms,
   roomAssignments,
-  fallbackNightlyRate,
+  nights,
   locationId,
-}: Omit<BoardingPriceInput, "nights">): number {
+}: BoardingPriceInput): BoardingPricing {
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
   const distinctRooms = [...new Set(roomAssignments.map((a) => a.roomId))];
 
-  return distinctRooms.reduce((sum, roomId) => {
-    const room = roomById.get(roomId);
-    const category = room ? categoryById.get(room.categoryId) : undefined;
-    // A branch's own price for this class wins, then the class's own price,
-    // then the service rate rather than nothing — a free night is never the
-    // right guess. `check:pricing` should be the thing that stops a class
-    // existing without a price; this is the last line of defence, not the plan.
-    const branchPrice = locationId
-      ? category?.locationPricing.find((p) => p.locationId === locationId)
-          ?.price
-      : undefined;
-    return (
-      sum + (branchPrice ?? category?.defaultBasePrice ?? fallbackNightlyRate)
-    );
-  }, 0);
+  let perNight = 0;
+  const unpriced = new Set<string>();
+
+  for (const roomId of distinctRooms) {
+    const category = classOf(roomId, roomById, categoryById);
+    const rate = classRate(category, locationId);
+    if (rate === null) {
+      // A room whose class is gone is not a pricing gap the facility can
+      // close, so it is named by what the screen can show.
+      unpriced.add(category?.name ?? roomById.get(roomId)?.name ?? roomId);
+      continue;
+    }
+    perNight += rate;
+  }
+
+  return {
+    perNight,
+    total: perNight * Math.max(nights, 1),
+    unpricedClasses: [...unpriced],
+  };
 }
 
 /**
- * The whole stay, before discounts and surcharges.
+ * One room's nightly rate, for splitting a multi-pet stay across its pets.
  *
- * Before auto-assignment has run there is no kennel to price by, so the flat
- * service rate stands in — which is exactly what the caller charged before
- * this existed, so nothing regresses in that state. The number firms up as
- * soon as a kennel is chosen.
+ * 0 when the class has no rate: a weight, not a charge. The caller divides a
+ * total that was itself refused unless every class was priced.
  */
-export function boardingBasePrice(input: BoardingPriceInput): number {
-  const nights = Math.max(input.nights, 1);
-  const perNight = boardingNightlyRate(input);
-  return (perNight > 0 ? perNight : input.fallbackNightlyRate) * nights;
+export function boardingNightlyRate(
+  input: Omit<BoardingPriceInput, "nights">,
+): number {
+  return boardingPricing({ ...input, nights: 1 }).perNight;
 }
