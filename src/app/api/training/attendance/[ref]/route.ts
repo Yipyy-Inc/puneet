@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
+import { requireCareLogged } from "@/lib/daily-care/require-care";
 import {
   bookingEventContext,
   emitAutomationEvent,
@@ -28,6 +29,8 @@ interface UpdateInput {
   /** Undo a checkout — the wrong dog was collected. */
   reopen?: boolean;
   notes?: string;
+  /** Why today's care is unlogged, when staff choose to go ahead. */
+  careOverrideReason?: string;
 }
 
 async function bookingIdFor(
@@ -77,6 +80,19 @@ export async function PATCH(
       { error: "That booking does not exist, or is not yours." },
       { status: 404 },
     );
+  }
+
+  // The care gate. A training session is not usually a stay with meals, but
+  // a dog on medication is a dog on medication whichever table it sits in —
+  // and the guard no-ops when the booking asks for no care, so this costs a
+  // session that has none nothing.
+  if (body.checkOut) {
+    const refused = await requireCareLogged(
+      supabase,
+      bookingRef,
+      body.careOverrideReason,
+    );
+    if (refused) return refused;
   }
 
   const patch: Record<string, unknown> = {};

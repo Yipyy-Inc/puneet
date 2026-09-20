@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { LiveWriteError } from "@/lib/api/live-fetch";
+import { withCareOverride } from "@/lib/daily-care/care-override-prompt";
 import { withFormOverride } from "@/lib/forms/override-prompt";
 
 import type {
@@ -50,28 +51,36 @@ export function useSetGroomingAppointmentStatus() {
       /** The groomer's ready estimate, "HH:MM" — applied after the status. */
       estimatedReadyTime?: string;
     }) =>
-      // Checking a pet in without a form the facility requires: staff are
-      // asked why, and the change is sent once more with their reason.
-      withFormOverride(async (formOverrideReason) => {
-        const response = await fetch("/api/grooming/appointments", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...input, formOverrideReason }),
-        });
-        if (!response.ok) {
-          const parsed = (await response.json().catch(() => null)) as Record<
-            string,
-            unknown
-          > | null;
-          throw new LiveWriteError(
-            typeof parsed?.error === "string"
-              ? parsed.error
-              : "Could not update that appointment.",
-            response.status,
-            parsed,
-          );
-        }
-      }),
+      // Two questions this write can be refused with, and a groom can need
+      // both: a form required before check-in, and today's care unlogged when
+      // `completed` ends the appointment. Care wraps forms, so whichever the
+      // server asks first is answered and the write is sent once more.
+      withCareOverride((careOverrideReason) =>
+        withFormOverride(async (formOverrideReason) => {
+          const response = await fetch("/api/grooming/appointments", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...input,
+              formOverrideReason,
+              careOverrideReason,
+            }),
+          });
+          if (!response.ok) {
+            const parsed = (await response.json().catch(() => null)) as Record<
+              string,
+              unknown
+            > | null;
+            throw new LiveWriteError(
+              typeof parsed?.error === "string"
+                ? parsed.error
+                : "Could not update that appointment.",
+              response.status,
+              parsed,
+            );
+          }
+        }),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["grooming", "appointments"],

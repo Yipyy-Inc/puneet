@@ -18552,7 +18552,22 @@ Fixed on the way: `useDaycareVisitUpdate` threw a bare `Error`, discarding the
 response body, so even a correct refusal would have lost the list of what was
 unlogged. It throws `LiveWriteError` now, like boarding.
 
-**Still open:** the KIOSK and grooming/training check-outs do not go through
-these two routes, so they are still ungated — the kiosk writes its own arrival
-path and an appointment is not a stay with meals. No screen lists the override
-reasons across bookings; they are still read one booking at a time.
+**Extended to every check-out the same day.** Training
+(`PATCH /api/training/attendance/[ref]`) and grooming
+(`PATCH /api/grooming/appointments` at `completed`, which IS grooming's
+check-out — it has no attendance table) now ask the same question. Applying it
+there costs an ordinary appointment nothing, because the guard returns early
+when the booking asks for no care; and a dog in for a long groom can be on
+medication, which is the case that matters.
+
+Grooming asks BOTH questions now: `withCareOverride` wraps `withFormOverride`,
+so a groom needing a form before check-in and a reason at completion gets each
+in turn.
+
+**A correction, recorded because it was stated wrongly first.** The KIOSK was
+listed here as an ungated check-out. It is not: yipyy-go is an ARRIVALS kiosk
+and never writes a departure — it only renders `presence === "departed"` as a
+status chip. There was nothing to gate. Check before repeating that claim.
+
+**Still open:** no screen lists the override reasons across bookings; they are
+still read one booking at a time.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { withCareOverride } from "@/lib/daily-care/care-override-prompt";
 
 import { LiveWriteError } from "@/lib/api/live-fetch";
 import type { TrainingAttendee } from "@/lib/api/mappers/training-attendance";
@@ -110,15 +111,20 @@ export function useTrainingVisitUpdate() {
       notes?: string;
     }) => {
       const { bookingRef, ...patch } = input;
-      const response = await fetch(`/api/training/attendance/${bookingRef}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (!response.ok) {
-        throw await readError(response, "Could not update that session.");
-      }
-      return bookingRef;
+      const send = async (careOverrideReason?: string) => {
+        const response = await fetch(`/api/training/attendance/${bookingRef}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...patch, careOverrideReason }),
+        });
+        if (!response.ok) {
+          throw await readError(response, "Could not update that session.");
+        }
+        return bookingRef;
+      };
+      // Asked here rather than at each call site, as boarding and daycare do.
+      // A reopen is not a departure and is not gated.
+      return patch.checkOut ? withCareOverride(send) : send();
     },
     onSuccess: invalidate,
   });

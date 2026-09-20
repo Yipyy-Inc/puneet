@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { requireForms } from "@/lib/forms/require-forms";
+import { requireCareLogged } from "@/lib/daily-care/require-care";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
 import {
   activeFacilityIdForStaff,
@@ -186,6 +187,8 @@ export async function PATCH(request: NextRequest) {
     estimatedReadyTime?: string;
     /** Checking in without a form required before check-in: why. */
     formOverrideReason?: string;
+    /** Completing a groom with today's care unlogged: why. */
+    careOverrideReason?: string;
   } | null;
 
   if (!body?.id) {
@@ -319,6 +322,20 @@ export async function PATCH(request: NextRequest) {
         body.formOverrideReason,
       );
       if (refused) return refused;
+    }
+
+    // The care gate. Grooming has no attendance table, so `completed` IS the
+    // check-out (see below) — which makes it the moment to ask, exactly as
+    // boarding and daycare ask on theirs. A dog in for a long groom can be on
+    // medication; the guard no-ops when the booking asks for no care, so an
+    // ordinary appointment pays nothing for this.
+    if (bookingStatus === "completed") {
+      const refusedCare = await requireCareLogged(
+        supabase,
+        ref,
+        body.careOverrideReason,
+      );
+      if (refusedCare) return refusedCare;
     }
 
     // Status only. check_in_at, check_out_at and estimated_ready_at are the
