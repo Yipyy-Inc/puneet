@@ -483,11 +483,9 @@ export function OperationsCalendar() {
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["bookings"] }),
     onError: (error: unknown) =>
-      toast.error("Not saved", {
+      toast.error(calT("notSaved"), {
         description:
-          error instanceof Error
-            ? error.message
-            : "That change did not reach the booking.",
+          error instanceof Error ? error.message : calT("changeDidNotReach"),
       }),
   });
 
@@ -670,7 +668,7 @@ export function OperationsCalendar() {
   const { data: manualEventsData } = useCalendarEvents();
   const manualFacilityEvents = manualEventsData ?? NO_MANUAL_EVENTS;
   const calendarEvents = useCalendarEventMutations();
-  const { t: calT } = useStaffText("opsCalendar");
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const setManualFacilityEvents = (
     update: (previous: ManualFacilityEvent[]) => ManualFacilityEvent[],
   ) =>
@@ -1238,7 +1236,11 @@ export function OperationsCalendar() {
               freshAlerts.push({
                 id: `alert-overdue-${task.id}-${Date.now()}`,
                 type: "overdue",
-                message: `${task.name} for ${task.petName} is overdue (assigned: ${task.assignedToName ?? "Unassigned"})`,
+                message: calFill("taskOverdue", {
+                  task: task.name,
+                  pet: task.petName,
+                  who: task.assignedToName ?? calT("unassigned"),
+                }),
                 createdAt: now.toISOString(),
               });
               auditTrailEvents.push({
@@ -1314,7 +1316,10 @@ export function OperationsCalendar() {
               freshAlerts.push({
                 id: `alert-reminder-${task.id}-${Date.now()}`,
                 type: "reminder",
-                message: `Reminder: ${task.name} for ${task.petName} is still overdue`,
+                message: calFill("taskStillOverdue", {
+                  task: task.name,
+                  pet: task.petName,
+                }),
                 createdAt: now.toISOString(),
               });
               auditTrailEvents.push({
@@ -1629,7 +1634,7 @@ export function OperationsCalendar() {
       );
       if (durationMinutes === 0) continue;
 
-      const label = event.module || event.service || "Unspecified";
+      const label = event.module || event.service || calT("unspecified");
       const key = label.toLowerCase();
       const existing = aggregate.get(key) ?? {
         key,
@@ -1722,7 +1727,7 @@ export function OperationsCalendar() {
       | "audit-log",
   ) => {
     if (!permissions.canViewAudit) {
-      toast.error("Manager or admin access is required to export reports");
+      toast.error(calT("needManagerForReports"));
       return;
     }
 
@@ -1827,7 +1832,7 @@ export function OperationsCalendar() {
     anchor.click();
     window.URL.revokeObjectURL(url);
 
-    toast.success(`Exported ${scope} report`);
+    toast.success(calFill("exportedReport", { scope }));
   };
 
   const updateFilterGroup = (
@@ -1912,7 +1917,7 @@ export function OperationsCalendar() {
 
   const appendCustomEvent = (event: ManualFacilityEvent) => {
     if (!permissions.canCreateCustomEvents) {
-      toast.error("You do not have permission to create custom events");
+      toast.error(calT("noPermCustomEvent"));
       return;
     }
 
@@ -1931,7 +1936,7 @@ export function OperationsCalendar() {
           title: event.title,
           subtype: event.subtype,
         });
-        toast.success("Custom event added to calendar");
+        toast.success(calT("customEventAdded"));
       },
       onError: eventWriteFailed,
     });
@@ -1939,7 +1944,7 @@ export function OperationsCalendar() {
 
   const appendBlockTime = (event: ManualFacilityEvent) => {
     if (!permissions.canCreateBlockTime) {
-      toast.error("You do not have permission to create block time");
+      toast.error(calT("noPermBlockTime"));
       return;
     }
 
@@ -1961,7 +1966,7 @@ export function OperationsCalendar() {
           start: event.start,
           end: event.end,
         });
-        toast.success("Block time created");
+        toast.success(calT("blockTimeCreated"));
       },
       onError: eventWriteFailed,
     });
@@ -1969,13 +1974,13 @@ export function OperationsCalendar() {
 
   const recoverLastDeletedEvent = () => {
     if (!permissions.canRecoverDeletedEvents) {
-      toast.error("Only admins can recover deleted custom events");
+      toast.error(calT("onlyAdminsRecover"));
       return;
     }
 
     const latest = recoverableDeletedEvents[0];
     if (!latest) {
-      toast.info("No deleted events available for recovery");
+      toast.info(calT("noDeletedEvents"));
       return;
     }
 
@@ -1999,7 +2004,7 @@ export function OperationsCalendar() {
             title: latest.title,
             restored: true,
           });
-          toast.success(`Recovered ${latest.title}`);
+          toast.success(calFill("recoveredEvent", { title: latest.title }));
         },
         onError: eventWriteFailed,
       },
@@ -2008,7 +2013,7 @@ export function OperationsCalendar() {
 
   const saveCurrentView = (scope: "personal" | "facility") => {
     if (scope === "facility" && !permissions.canManageFacilitySavedViews) {
-      toast.error("You do not have permission to create facility saved views");
+      toast.error(calT("noPermCreateViews"));
       return;
     }
 
@@ -2051,7 +2056,7 @@ export function OperationsCalendar() {
       name: savedView.name,
       scope: savedView.scope,
     });
-    toast.success("Saved view created");
+    toast.success(calT("savedViewCreated"));
   };
 
   const applySavedView = (savedViewId: string) => {
@@ -2098,7 +2103,7 @@ export function OperationsCalendar() {
       targetView.scope === "facility" &&
       !permissions.canManageFacilitySavedViews
     ) {
-      toast.error("You do not have permission to delete facility saved views");
+      toast.error(calT("noPermDeleteViews"));
       return;
     }
 
@@ -2111,7 +2116,7 @@ export function OperationsCalendar() {
     appendAuditEntry("saved_view_deleted", {
       viewId: savedViewId,
     });
-    toast.success("Saved view deleted");
+    toast.success(calT("savedViewDeleted"));
   };
 
   const handleMarkEventComplete = (event: OperationsCalendarEvent) => {
@@ -2160,7 +2165,7 @@ export function OperationsCalendar() {
             completedByStaffId: userId,
           },
         ]);
-        toast.success(`${addOnName} marked complete`);
+        toast.success(calFill("addOnMarkedComplete", { name: addOnName }));
       }
     }
   };
@@ -2199,7 +2204,7 @@ export function OperationsCalendar() {
     },
   ) => {
     if (!permissions.canCompleteTasks) {
-      toast.error("You do not have permission to complete tasks from calendar");
+      toast.error(calT("noPermCompleteTasks"));
       return;
     }
 
@@ -2234,7 +2239,7 @@ export function OperationsCalendar() {
               completionNote,
             ) ?? "";
           if (!completionNote.trim()) {
-            toast.error("Completion note is required");
+            toast.error(calT("completionNoteRequired"));
             return previous;
           }
         } else if (target.status === "overdue") {
@@ -2250,7 +2255,7 @@ export function OperationsCalendar() {
               "https://",
             ) ?? "";
           if (!photoProofUrl.trim()) {
-            toast.error("Photo proof is required");
+            toast.error(calT("photoProofRequired"));
             return previous;
           }
         }
@@ -2327,7 +2332,7 @@ export function OperationsCalendar() {
       });
     }
 
-    const announce = () => toast.success("Task marked complete");
+    const announce = () => toast.success(calT("taskMarkedComplete"));
     // Written to the task board. A task the calendar made up itself (an
     // escalation, say) has no row and stays local.
     if (UUID.test(taskId)) {
@@ -2358,7 +2363,7 @@ export function OperationsCalendar() {
 
   const markAllBookingTasksComplete = (bookingId: number) => {
     if (!permissions.canCompleteTasks) {
-      toast.error("You do not have permission to complete tasks from calendar");
+      toast.error(calT("noPermCompleteTasks"));
       return;
     }
 
@@ -2367,7 +2372,7 @@ export function OperationsCalendar() {
     );
 
     if (bookingTaskItems.length === 0) {
-      toast.info("No open tasks for this booking");
+      toast.info(calT("noOpenTasks"));
       return;
     }
 
@@ -2396,7 +2401,7 @@ export function OperationsCalendar() {
     secondary?: string,
   ) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to reassign bookings");
+      toast.error(calT("noPermReassign"));
       return;
     }
 
@@ -2415,7 +2420,7 @@ export function OperationsCalendar() {
                 trainerId: secondary || target?.trainerId,
               },
       },
-      { onSuccess: () => toast.success("Staff assignment updated") },
+      { onSuccess: () => toast.success(calT("staffAssignmentUpdated")) },
     );
 
     appendAuditEntry("booking_edited", {
@@ -2428,9 +2433,7 @@ export function OperationsCalendar() {
 
   const addBookingTask = (bookingId: number, task: Partial<FacilityTask>) => {
     if (!permissions.canEditBookings) {
-      toast.error(
-        "You do not have permission to add tasks from booking drawer",
-      );
+      toast.error(calT("noPermAddTasks"));
       return;
     }
 
@@ -2439,7 +2442,7 @@ export function OperationsCalendar() {
 
     const bookingPetId = getPrimaryPetId(booking.petId);
     if (bookingPetId === undefined) {
-      toast.error("Unable to add task: booking is missing a primary pet");
+      toast.error(calT("bookingMissingPet"));
       return;
     }
 
@@ -2474,7 +2477,7 @@ export function OperationsCalendar() {
 
     setTaskRecords((previous) => [nextTask, ...previous]);
     // A task on the board, linked to the booking by its ref. It was pushed onto
-    // local state and toasted "Task linked to booking".
+    // local state and toasted calT("taskLinked").
     const [hours, minutes] = nextTask.scheduledTime.split(":").map(Number);
     const due = parseDateKey(nextTask.scheduledDate) ?? new Date();
     due.setHours(hours || 0, minutes || 0, 0, 0);
@@ -2499,7 +2502,7 @@ export function OperationsCalendar() {
             taskId: nextTask.id,
             taskName: nextTask.name,
           });
-          toast.success("Task linked to booking");
+          toast.success(calT("taskLinked"));
         },
         onError: (error: unknown) => {
           setTaskRecords((previous) =>
@@ -2518,7 +2521,7 @@ export function OperationsCalendar() {
     addOn: BookingDrawerAddOnItem,
   ) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to modify add-ons");
+      toast.error(calT("noPermAddOns"));
       return;
     }
 
@@ -2548,10 +2551,10 @@ export function OperationsCalendar() {
             field: "addon-added",
             addOnName: addOn.name,
           });
-          toast.success(`${addOn.name} added to the booking's bill`);
+          toast.success(calFill("addOnAddedToBill", { name: addOn.name }));
         },
         onError: (error) =>
-          toast.error("The add-on was not added", {
+          toast.error(calT("addOnNotAdded"), {
             description: error instanceof Error ? error.message : undefined,
           }),
       },
@@ -2564,7 +2567,7 @@ export function OperationsCalendar() {
     updates: Partial<BookingDrawerAddOnItem>,
   ) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to modify add-ons");
+      toast.error(calT("noPermAddOns"));
       return;
     }
 
@@ -2591,7 +2594,7 @@ export function OperationsCalendar() {
             completedByStaffId: userId,
           },
         ]);
-        toast.success(`${addOnItem.name} marked complete`);
+        toast.success(calFill("addOnMarkedComplete", { name: addOnItem.name }));
       }
     } else if (updates.status === "pending") {
       // If reverting to pending, remove from completed tracking
@@ -2633,7 +2636,7 @@ export function OperationsCalendar() {
 
   const removeBookingAddOn = (bookingId: number, addOnId: string) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to modify add-ons");
+      toast.error(calT("noPermAddOns"));
       return;
     }
 
@@ -2659,14 +2662,12 @@ export function OperationsCalendar() {
       addOnId,
       addOnName: removedName,
     });
-    toast.success("Add-on removed");
+    toast.success(calT("addOnRemoved"));
   };
 
   const messageCustomer = (bookingId: number) => {
     if (!permissions.canEditBookings) {
-      toast.error(
-        "You do not have permission to message customers from calendar",
-      );
+      toast.error(calT("noPermMessage"));
       return;
     }
 
@@ -2684,7 +2685,11 @@ export function OperationsCalendar() {
       field: "customer-message-opened",
       clientId: booking.clientId,
     });
-    toast.success(`Messaging panel opened for ${customer?.name ?? "customer"}`);
+    toast.success(
+      calFill("messagingOpenedFor", {
+        who: customer?.name ?? calT("customerFallback"),
+      }),
+    );
   };
 
   const updateManualEvent = (
@@ -2692,13 +2697,13 @@ export function OperationsCalendar() {
     updates: Partial<ManualFacilityEvent>,
   ) => {
     if (!permissions.canCreateCustomEvents) {
-      toast.error("You do not have permission to edit custom events");
+      toast.error(calT("noPermEditEvents"));
       return;
     }
 
     const existing = manualFacilityEvents.find((event) => event.id === eventId);
     if (!existing || existing.deletedAt) {
-      toast.error("Event was not found or is already deleted");
+      toast.error(calT("eventNotFound"));
       return;
     }
 
@@ -2722,7 +2727,7 @@ export function OperationsCalendar() {
             title: updates.title ?? existing.title,
             subtype: existing.subtype,
           });
-          toast.success("Event updated");
+          toast.success(calT("eventUpdated"));
         },
         onError: eventWriteFailed,
       },
@@ -2731,13 +2736,13 @@ export function OperationsCalendar() {
 
   const deleteManualEvent = (eventId: string) => {
     if (!permissions.canCreateCustomEvents) {
-      toast.error("You do not have permission to delete custom events");
+      toast.error(calT("noPermDeleteEvents"));
       return;
     }
 
     const existing = manualFacilityEvents.find((event) => event.id === eventId);
     if (!existing || existing.deletedAt) {
-      toast.error("Event was not found or is already deleted");
+      toast.error(calT("eventNotFound"));
       return;
     }
 
@@ -2767,7 +2772,7 @@ export function OperationsCalendar() {
               subtype: existing.subtype,
             },
           );
-          toast.success("Event deleted (recoverable for 30 days)");
+          toast.success(calT("eventDeleted"));
         },
         onError: eventWriteFailed,
       },
@@ -2780,7 +2785,7 @@ export function OperationsCalendar() {
     );
 
     if (!bookingEvent) {
-      toast.error("Linked booking is not visible in this calendar range");
+      toast.error(calT("bookingNotVisible"));
       return;
     }
 
@@ -2822,7 +2827,7 @@ export function OperationsCalendar() {
         (newStaff ? other.staff === newStaff : true),
     );
     if (targetFull) {
-      toast.error("This slot is full.");
+      toast.error(calT("slotFull"));
       return;
     }
 
@@ -2922,10 +2927,10 @@ export function OperationsCalendar() {
   const handleExportDayPdf = () => {
     downloadReportPdf(
       `daily-schedule-${formatDateKey(anchorDate)}`,
-      `Yipyy · Daily Schedule · ${dayPrintDateLabel}`,
+      calFill("printHeading", { date: dayPrintDateLabel }),
       buildDayPdfLines(dayPrintRows),
     );
-    toast.success("Day schedule exported as PDF");
+    toast.success(calT("dayExported"));
   };
 
   // ── AN EMPTY CALENDAR AND AN UNANSWERED ONE ARE DIFFERENT ────────────────
@@ -3031,9 +3036,9 @@ export function OperationsCalendar() {
             {pendingReschedule && (
               <>
                 <DialogHeader>
-                  <DialogTitle>Reschedule appointment?</DialogTitle>
+                  <DialogTitle>{calT("rescheduleTitle")}</DialogTitle>
                   <DialogDescription>
-                    Reschedule{" "}
+                    {calT("rescheduleWord")}{" "}
                     <span className="font-medium text-slate-700">
                       {pendingReschedule.event.petNames[0] ??
                         pendingReschedule.event.customerName ??
@@ -3054,9 +3059,11 @@ export function OperationsCalendar() {
                     })}
                     ?
                     {pendingReschedule.newStaff
-                      ? ` Assigned to ${pendingReschedule.newStaff}.`
+                      ? calFill("assignedTo", {
+                          who: pendingReschedule.newStaff,
+                        })
                       : ""}{" "}
-                    The owner will be notified.
+                    {calT("ownerWillBeNotified")}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="gap-2 sm:justify-between">
@@ -3064,14 +3071,14 @@ export function OperationsCalendar() {
                     variant="ghost"
                     onClick={() => setPendingReschedule(null)}
                   >
-                    Cancel
+                    {calT("cancelWord")}
                   </Button>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       onClick={() => applyReschedule(false)}
                     >
-                      Reschedule Silently
+                      {calT("rescheduleSilently")}
                     </Button>
                     <Button
                       className="bg-emerald-600 text-white hover:bg-emerald-700"

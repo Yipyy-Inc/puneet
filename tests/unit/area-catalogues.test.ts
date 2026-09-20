@@ -34,6 +34,14 @@ const CATALOGUES: Record<string, { en: Areas; fr: Areas }> = {
  * to shorten this list would make the French wrong.
  */
 const SAME_IN_BOTH = new Set([
+  // The operations calendar (2026-09-20) — each the same word in French.
+  "staff.opsCalendar.colService", // Service / Service
+  "staff.opsCalendar.tipService", // Service / Service
+  "staff.opsCalendar.tipNotes", // Notes / Notes
+  "staff.opsCalendar.fNotes", // Notes / Notes
+  "staff.opsCalendar.tabNotes", // Notes / Notes
+  "staff.opsCalendar.fMinutes", // minutes / minutes
+  "staff.opsCalendar.dDate", // Date / Date
   // staff — French cognates and borrowings
   "staff.directory.colServices",
   "staff.shell.tabDocuments",

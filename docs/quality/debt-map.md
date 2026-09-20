@@ -18690,3 +18690,61 @@ means.
 direct booking — it confirms with the balance owed, as a staff-made booking
 does. And no e2e drives the wizard UI to a direct booking; the spec works
 through the API, which is where the decision is made.
+
+## 2026-09-20 — The operations calendar reads in French
+
+The calendar was the largest English surface left in the facility portal: 354
+baselined strings across nine files, described in these notes as "a round of
+its own". It is now **48**, and six of the nine files are at **zero**.
+
+| file                           | before | after |
+| ------------------------------ | -----: | ----: |
+| OperationsCalendarEventDrawer  |    117 |    34 |
+| OperationsCalendarNewEventMenu |     83 |     8 |
+| OperationsCalendar             |     62 |     6 |
+| OperationsCalendarViews        |     33 |     0 |
+| OperationsCalendarFiltersPanel |     16 |     0 |
+| OperationsCalendarSidePanel    |     16 |     0 |
+| OperationsCalendarToolbar      |     11 |     0 |
+| OperationsCalendarPrintSheet   |     10 |     0 |
+| OperationsCalendarContent      |      6 |     0 |
+
+The platform baseline fell from 27,157 to 26,545 (each file is counted on two
+surfaces).
+
+**What was deliberately NOT translated, and this is the useful part.** Three
+kinds of string look identical to the gate and must be left alone:
+
+1. **Stored values.** The escalation task's name and description, the audit
+   note, the `"Pet"` / `"Owner"` / `"New task"` fallbacks that become a task
+   row. These are written to the database. Translating them would freeze
+   whichever language the staff member's browser happened to be in into a
+   record every other reader sees — §5q's rule that a stored value never
+   passes through the locale layer.
+2. **Sentinels.** `UNASSIGNED` is compared against `event.staff`, which holds
+   that exact English string, and `<Select value="Unassigned">` matches a
+   SelectItem value. Translating either silently breaks the match rather than
+   producing French.
+3. **Messages sent to CUSTOMERS.** The reminder text and the appointment-update
+   email are composed here but read by the owner, so they belong in the
+   customer's language, not the staff member's. Leaving them English is not the
+   right answer either — see below.
+
+**Still open:** ~34 in the event drawer, most of them the customer-facing SMS
+and email bodies above. Those want the customer's locale and a template, not a
+staff translator, which is a different change. The rest are inline fragments
+interleaved with values.
+
+**Two real defects fixed on the way**, both invisible until the strings moved:
+`OperationsCalendarPrintSheet` formatted its date with `toLocaleDateString("en-US")`
+on a sheet staff PRINT and hand over, and `OperationsCalendarViews` did the
+same with `toLocaleTimeString("en-US")` for a completion time. Both take the
+reader's locale now.
+
+**And the unit tier caught two things the French gate could not.** A colon
+without its non-breaking space (§5q), and seven strings whose French is
+identical to the English — _Service_, _Notes_, _minutes_, _Date_, which are
+genuinely the same word and are now allowlisted in
+`tests/unit/area-catalogues.test.ts` with the reason beside each. Both were
+found by `bun run test:unit`, and both were invisible to `check:ui-french`,
+which only counts what is still English.

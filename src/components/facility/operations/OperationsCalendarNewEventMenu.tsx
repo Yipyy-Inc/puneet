@@ -180,7 +180,7 @@ export function OperationsCalendarNewEventMenu({
   onCreateBlockTime,
   onRecoverDeleted,
 }: OperationsCalendarNewEventMenuProps) {
-  const { t: calT } = useStaffText("opsCalendar");
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const [mode, setMode] = useState<CreateMode>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -415,25 +415,25 @@ export function OperationsCalendarNewEventMenu({
           onClick={() => openDialog("custom-event")}
         >
           <CalendarPlus className="size-4" />
-          New Event
+          {calT("newEvent")}
         </Button>
       ) : (
         <DropdownMenu open={open} onOpenChange={onOpenChange}>
           <DropdownMenuTrigger asChild>
             <Button className={yipyyPrimaryButtonClass}>
               <CalendarPlus className="size-4" />
-              New
+              {calT("newWord")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Create</DropdownMenuLabel>
+            <DropdownMenuLabel>{calT("createWord")}</DropdownMenuLabel>
             {canCreateCustomEvent && (
               <DropdownMenuItem
                 className="gap-2"
                 onSelect={() => openDialog("custom-event")}
               >
                 <CalendarClock className="size-4 text-slate-600" />
-                Custom event
+                {calT("customEvent")}
               </DropdownMenuItem>
             )}
             {canCreateBlockTime && (
@@ -442,7 +442,7 @@ export function OperationsCalendarNewEventMenu({
                 onSelect={() => openDialog("block-time")}
               >
                 <ShieldMinus className="size-4 text-rose-600" />
-                Block time
+                {calT("blockTimeLabel")}
               </DropdownMenuItem>
             )}
             {canCreateBooking && (
@@ -459,7 +459,7 @@ export function OperationsCalendarNewEventMenu({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2" onSelect={onRecoverDeleted}>
                   <Lock className="size-4 text-slate-600" />
-                  Recover last deleted event
+                  {calT("recoverLastDeleted")}
                 </DropdownMenuItem>
               </>
             )}
@@ -472,10 +472,9 @@ export function OperationsCalendarNewEventMenu({
           {mode === "custom-event" && (
             <>
               <DialogHeader>
-                <DialogTitle>Create Custom Event</DialogTitle>
+                <DialogTitle>{calT("createCustomEvent")}</DialogTitle>
                 <DialogDescription>
-                  Non-booking events for reminders, meetings, and operational
-                  planning.
+                  {calT("createCustomEventHelp")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -488,7 +487,7 @@ export function OperationsCalendarNewEventMenu({
                       title: event.target.value,
                     }))
                   }
-                  placeholder="Name"
+                  placeholder={calT("fName")}
                   className="md:col-span-2"
                 />
 
@@ -500,7 +499,7 @@ export function OperationsCalendarNewEventMenu({
                       details: event.target.value,
                     }))
                   }
-                  placeholder="Details"
+                  placeholder={calT("fDetails")}
                   className="md:col-span-2"
                 />
 
@@ -527,7 +526,7 @@ export function OperationsCalendarNewEventMenu({
                     }))
                   }
                   disabled={customDraft.allDay}
-                  placeholder="Start time"
+                  placeholder={calT("fStartTime")}
                 />
 
                 <Select
@@ -540,7 +539,7 @@ export function OperationsCalendarNewEventMenu({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Assign staff" />
+                    <SelectValue placeholder={calT("fAssignStaff")} />
                   </SelectTrigger>
                   <SelectContent>
                     {staffOptionsWithEmpty.map((staff) => (
@@ -559,7 +558,7 @@ export function OperationsCalendarNewEventMenu({
                       linkedCustomerName: event.target.value,
                     }))
                   }
-                  placeholder="Customer (optional)"
+                  placeholder={calT("fCustomerOptional")}
                 />
 
                 <Input
@@ -570,7 +569,7 @@ export function OperationsCalendarNewEventMenu({
                       linkedPetName: event.target.value,
                     }))
                   }
-                  placeholder="Pet (optional)"
+                  placeholder={calT("fPetOptional")}
                 />
 
                 <div className="relative">
@@ -585,12 +584,12 @@ export function OperationsCalendarNewEventMenu({
                         durationMinutes: Number(event.target.value),
                       }))
                     }
-                    placeholder="Duration"
+                    placeholder={calT("fDuration")}
                     disabled={customDraft.allDay}
                     className="pr-16"
                   />
                   <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-500">
-                    minutes
+                    {calT("fMinutes")}
                   </span>
                 </div>
 
@@ -603,7 +602,7 @@ export function OperationsCalendarNewEventMenu({
                     }))
                   }
                   className="min-h-24 md:col-span-2"
-                  placeholder="Notes"
+                  placeholder={calT("fNotes")}
                 />
 
                 <Select
@@ -616,15 +615,23 @@ export function OperationsCalendarNewEventMenu({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Recurrence" />
+                    <SelectValue placeholder={calT("fRecurrence")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Does not repeat</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="biweekly">Biweekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="custom">Custom interval</SelectItem>
+                    <SelectItem value="none">{calT("recurNone")}</SelectItem>
+                    <SelectItem value="daily">{calT("recurDaily")}</SelectItem>
+                    <SelectItem value="weekly">
+                      {calT("recurWeekly")}
+                    </SelectItem>
+                    <SelectItem value="biweekly">
+                      {calT("recurBiweekly")}
+                    </SelectItem>
+                    <SelectItem value="monthly">
+                      {calT("recurMonthly")}
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      {calT("recurCustom")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -642,13 +649,15 @@ export function OperationsCalendarNewEventMenu({
 
                 {/* Colour picker — chosen colour drives the chip (Task 28) */}
                 <div className="space-y-1.5 md:col-span-2">
-                  <p className="text-xs font-medium text-slate-600">Colour</p>
+                  <p className="text-xs font-medium text-slate-600">
+                    {calT("fColour")}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {EVENT_COLOR_SWATCHES.map((swatch) => (
                       <button
                         key={swatch}
                         type="button"
-                        aria-label={`Colour ${swatch}`}
+                        aria-label={calFill("colourSwatch", { name: swatch })}
                         onClick={() =>
                           setCustomDraft((previous) => ({
                             ...previous,
@@ -677,20 +686,20 @@ export function OperationsCalendarNewEventMenu({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Reminder" />
+                    <SelectValue placeholder={calT("fReminder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No reminder</SelectItem>
-                    <SelectItem value="15m">15 minutes before</SelectItem>
-                    <SelectItem value="30m">30 minutes before</SelectItem>
-                    <SelectItem value="1h">1 hour before</SelectItem>
-                    <SelectItem value="1d">1 day before</SelectItem>
+                    <SelectItem value="none">{calT("remNone")}</SelectItem>
+                    <SelectItem value="15m">{calT("rem15")}</SelectItem>
+                    <SelectItem value="30m">{calT("rem30")}</SelectItem>
+                    <SelectItem value="1h">{calT("rem1h")}</SelectItem>
+                    <SelectItem value="1d">{calT("rem1d")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 {customDraft.reminder !== "none" && (
                   <label className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-700">
-                    Also SMS assigned staff
+                    {calT("alsoSmsStaff")}
                     <Switch
                       checked={customDraft.reminderSmsStaff}
                       onCheckedChange={(checked) =>
@@ -711,7 +720,7 @@ export function OperationsCalendarNewEventMenu({
                       location: event.target.value,
                     }))
                   }
-                  placeholder="Location (optional)"
+                  placeholder={calT("fLocationOptional")}
                 />
 
                 <Select
@@ -724,21 +733,23 @@ export function OperationsCalendarNewEventMenu({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Visibility" />
+                    <SelectValue placeholder={calT("fVisibility")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="internal-only">Internal only</SelectItem>
+                    <SelectItem value="internal-only">
+                      {calT("visInternal")}
+                    </SelectItem>
                     <SelectItem value="all-staff">
-                      Visible to all staff
+                      {calT("visAllStaff")}
                     </SelectItem>
                     <SelectItem value="selected-roles">
-                      Visible to selected roles
+                      {calT("visRoles")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
 
                 <label className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-700">
-                  All day
+                  {calT("allDay")}
                   <Switch
                     checked={customDraft.allDay}
                     onCheckedChange={(checked) =>
@@ -753,7 +764,7 @@ export function OperationsCalendarNewEventMenu({
                 {customDraft.visibility === "selected-roles" && (
                   <div className="space-y-2 rounded-md border border-slate-200 p-3 md:col-span-2">
                     <p className="text-xs font-medium text-slate-700">
-                      Visible roles
+                      {calT("visibleRoles")}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {roleOptions.map((role) => {
@@ -788,9 +799,11 @@ export function OperationsCalendarNewEventMenu({
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  {calT("cancelWord2")}
                 </Button>
-                <Button onClick={createCustomEvent}>Create custom event</Button>
+                <Button onClick={createCustomEvent}>
+                  {calT("createCustomEventBtn")}
+                </Button>
               </DialogFooter>
             </>
           )}
@@ -798,10 +811,9 @@ export function OperationsCalendarNewEventMenu({
           {mode === "block-time" && (
             <>
               <DialogHeader>
-                <DialogTitle>Create Block Time</DialogTitle>
+                <DialogTitle>{calT("createBlockTime")}</DialogTitle>
                 <DialogDescription>
-                  Blocks booking availability for facilities, resources, or
-                  staff.
+                  {calT("createBlockTimeHelp")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -814,7 +826,7 @@ export function OperationsCalendarNewEventMenu({
                       title: event.target.value,
                     }))
                   }
-                  placeholder="Title / reason"
+                  placeholder={calT("fTitleReason")}
                   className="md:col-span-2"
                 />
 
@@ -842,15 +854,23 @@ export function OperationsCalendarNewEventMenu({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Recurrence" />
+                    <SelectValue placeholder={calT("fRecurrence")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Does not repeat</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="biweekly">Biweekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="custom">Custom interval</SelectItem>
+                    <SelectItem value="none">{calT("recurNone")}</SelectItem>
+                    <SelectItem value="daily">{calT("recurDaily")}</SelectItem>
+                    <SelectItem value="weekly">
+                      {calT("recurWeekly")}
+                    </SelectItem>
+                    <SelectItem value="biweekly">
+                      {calT("recurBiweekly")}
+                    </SelectItem>
+                    <SelectItem value="monthly">
+                      {calT("recurMonthly")}
+                    </SelectItem>
+                    <SelectItem value="custom">
+                      {calT("recurCustom")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -874,7 +894,7 @@ export function OperationsCalendarNewEventMenu({
                       startTime: next,
                     }))
                   }
-                  placeholder="Start time"
+                  placeholder={calT("fStartTime")}
                 />
                 <TimePickerLux
                   value={blockDraft.endTime}
@@ -884,7 +904,7 @@ export function OperationsCalendarNewEventMenu({
                       endTime: next,
                     }))
                   }
-                  placeholder="End time"
+                  placeholder={calT("fEndTime")}
                 />
 
                 <Select
@@ -900,9 +920,15 @@ export function OperationsCalendarNewEventMenu({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="facility">Entire facility</SelectItem>
-                    <SelectItem value="resource">Specific resource</SelectItem>
-                    <SelectItem value="staff">Specific staff member</SelectItem>
+                    <SelectItem value="facility">
+                      {calT("affectsFacility")}
+                    </SelectItem>
+                    <SelectItem value="resource">
+                      {calT("affectsResource")}
+                    </SelectItem>
+                    <SelectItem value="staff">
+                      {calT("affectsStaff")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -915,7 +941,7 @@ export function OperationsCalendarNewEventMenu({
                         resource: event.target.value,
                       }))
                     }
-                    placeholder="Resource (kennel, grooming room, pool, yard)"
+                    placeholder={calT("fResource")}
                   />
                 )}
 
@@ -930,7 +956,7 @@ export function OperationsCalendarNewEventMenu({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select staff" />
+                      <SelectValue placeholder={calT("fSelectStaff")} />
                     </SelectTrigger>
                     <SelectContent>
                       {staffOptionsWithEmpty.map((staff) => (
@@ -945,9 +971,11 @@ export function OperationsCalendarNewEventMenu({
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  {calT("cancelWord2")}
                 </Button>
-                <Button onClick={createBlockTime}>Create block time</Button>
+                <Button onClick={createBlockTime}>
+                  {calT("createBlockTime")}
+                </Button>
               </DialogFooter>
             </>
           )}
@@ -973,7 +1001,7 @@ export function OperationsCalendarNewEventMenu({
           className="w-72 space-y-2.5"
         >
           <p className="text-xs font-semibold text-slate-700">
-            Quick add event
+            {calT("quickAddEvent")}
           </p>
           <Input
             autoFocus
@@ -990,7 +1018,7 @@ export function OperationsCalendarNewEventMenu({
                 saveQuickEvent();
               }
             }}
-            placeholder="Event name"
+            placeholder={calT("fEventName")}
           />
           <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <CalendarClock className="size-3.5" />
@@ -1003,7 +1031,7 @@ export function OperationsCalendarNewEventMenu({
                 onClick={openFullFromQuick}
                 className="text-xs font-medium text-sky-600 hover:underline"
               >
-                More options
+                {calT("moreOptions")}
               </button>
               {canCreateBooking && (
                 <button
@@ -1020,7 +1048,7 @@ export function OperationsCalendarNewEventMenu({
               onClick={saveQuickEvent}
               disabled={!customDraft.title.trim()}
             >
-              Save
+              {calT("saveWord")}
             </Button>
           </div>
         </PopoverContent>
@@ -1061,6 +1089,7 @@ function RecurrenceExtras({
   endCount: number;
   onPatch: (patch: Partial<RecurrenceDraft>) => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   if (!recurrence || recurrence === "none") return null;
 
   return (
@@ -1068,7 +1097,9 @@ function RecurrenceExtras({
       {/* Custom interval — "Every [X] [Days/Weeks/Months]" (Task 26) */}
       {recurrence === "custom" && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-600">Every</span>
+          <span className="text-xs font-medium text-slate-600">
+            {calT("everyWord")}
+          </span>
           <Input
             type="number"
             min={1}
@@ -1095,9 +1126,9 @@ function RecurrenceExtras({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="days">Days</SelectItem>
-              <SelectItem value="weeks">Weeks</SelectItem>
-              <SelectItem value="months">Months</SelectItem>
+              <SelectItem value="days">{calT("unitDays")}</SelectItem>
+              <SelectItem value="weeks">{calT("unitWeeks")}</SelectItem>
+              <SelectItem value="months">{calT("unitMonths")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1105,7 +1136,9 @@ function RecurrenceExtras({
 
       {/* End Repeat — Never / On date / After N occurrences (Task 27) */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-slate-700">End repeat</p>
+        <p className="text-xs font-medium text-slate-700">
+          {calT("endRepeat")}
+        </p>
         <Select
           value={endType}
           onValueChange={(value) =>
@@ -1116,9 +1149,9 @@ function RecurrenceExtras({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="never">Never</SelectItem>
-            <SelectItem value="on">On date</SelectItem>
-            <SelectItem value="after">After N occurrences</SelectItem>
+            <SelectItem value="never">{calT("endNever")}</SelectItem>
+            <SelectItem value="on">{calT("endOnDate")}</SelectItem>
+            <SelectItem value="after">{calT("endAfterN")}</SelectItem>
           </SelectContent>
         </Select>
 
@@ -1134,7 +1167,7 @@ function RecurrenceExtras({
         )}
         {endType === "after" && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600">After</span>
+            <span className="text-xs text-slate-600">{calT("afterWord")}</span>
             <Input
               type="number"
               min={1}
@@ -1149,7 +1182,9 @@ function RecurrenceExtras({
               }
               className="w-20"
             />
-            <span className="text-xs text-slate-600">occurrences</span>
+            <span className="text-xs text-slate-600">
+              {calT("occurrencesWord")}
+            </span>
           </div>
         )}
       </div>

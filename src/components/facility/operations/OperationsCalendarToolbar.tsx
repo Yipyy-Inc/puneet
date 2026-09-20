@@ -83,7 +83,7 @@ export function OperationsCalendarToolbar({
               onClick={onToday}
               className="h-9 rounded-full border-slate-200/60 bg-white/80 px-5 font-medium text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:text-slate-900 hover:shadow-md active:scale-95"
             >
-              Today
+              {t("today")}
             </Button>
           </div>
 
@@ -96,7 +96,7 @@ export function OperationsCalendarToolbar({
               <Input
                 value={searchTerm}
                 onChange={(event) => onSearchTermChange(event.target.value)}
-                placeholder="Search..."
+                placeholder={t("searchPlaceholder")}
                 className="h-10 w-full rounded-full border-slate-200/60 bg-slate-50/50 pl-10 font-medium shadow-inner transition-all duration-300 placeholder:font-normal placeholder:text-slate-400 focus-visible:border-indigo-400 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-indigo-500/10"
               />
             </div>
@@ -113,7 +113,7 @@ export function OperationsCalendarToolbar({
               <Filter
                 className={`size-4 ${showFilters ? "text-slate-300" : "text-slate-400"}`}
               />
-              <span className="font-medium">Filters</span>
+              <span className="font-medium">{t("filters")}</span>
               {activeFilterCount > 0 && (
                 <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1.5 text-[11px] font-bold text-white shadow-inner">
                   {activeFilterCount}
@@ -172,7 +172,7 @@ export function OperationsCalendarToolbar({
                   className="h-8 gap-2 rounded-full border-slate-200/60 bg-white/80 px-4 text-[13px] text-slate-600 hover:bg-white hover:text-slate-900"
                 >
                   <Filter className="size-3.5" />
-                  Staff
+                  {t("staff")}
                   <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[11px] font-bold text-slate-600 tabular-nums">
                     {staffOptions.length - hiddenStaff.length}/
                     {staffOptions.length}
@@ -183,7 +183,7 @@ export function OperationsCalendarToolbar({
                 align="start"
                 className="max-h-72 w-56 overflow-y-auto"
               >
-                <DropdownMenuLabel>Show staff</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("showStaff")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {staffOptions.map((name) => (
                   <DropdownMenuCheckboxItem
@@ -211,7 +211,7 @@ export function OperationsCalendarToolbar({
             }`}
           >
             <Gauge className="size-4" />
-            Capacity View
+            {t("capacityView")}
           </Button>
 
           {/* Capacity heat legend (only in Capacity View) */}
@@ -219,7 +219,7 @@ export function OperationsCalendarToolbar({
             <div className="flex items-center gap-3 rounded-full border border-slate-200/60 bg-white/80 px-3 py-1.5 text-[11px] font-medium text-slate-500">
               <span className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-emerald-400/70" />
-                Available
+                {t("capacityAvailable")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-amber-400/80" />
@@ -227,7 +227,7 @@ export function OperationsCalendarToolbar({
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-red-500/70" />
-                Full
+                {t("capacityFull")}
               </span>
             </div>
           )}
@@ -246,17 +246,17 @@ export function OperationsCalendarToolbar({
                 className="h-8 gap-1.5 rounded-full border-slate-200/60 bg-white/80 px-4 text-[13px] text-slate-600 hover:bg-white hover:text-slate-900"
               >
                 <Printer className="size-4" />
-                Print Day
+                {t("printDay")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem className="gap-2" onClick={onPrintDay}>
                 <Printer className="size-4" />
-                Print
+                {t("print")}
               </DropdownMenuItem>
               <DropdownMenuItem className="gap-2" onClick={onExportDayPdf}>
                 <FileDown className="size-4" />
-                Export as PDF
+                {t("exportPdf")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

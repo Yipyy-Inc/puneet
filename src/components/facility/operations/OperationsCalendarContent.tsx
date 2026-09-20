@@ -10,6 +10,7 @@ import {
   type EventRenderSettings,
 } from "@/components/facility/operations/OperationsCalendarViews";
 import { Button } from "@/components/ui/button";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   type OperationsCalendarEvent,
@@ -60,6 +61,7 @@ export function OperationsCalendarContent({
   onEventReschedule,
   showCapacityHeat,
 }: OperationsCalendarContentProps) {
+  const { t, fill } = useStaffText("opsCalendar");
   return (
     <Card className="animate-in slide-in-from-bottom-6 fade-in overflow-hidden rounded-3xl border border-white/80 bg-white/70 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.05)] ring-1 ring-slate-900/5 backdrop-blur-xl transition-all duration-700 ease-out">
       <CardHeader className="relative z-10 border-b border-slate-100/60 bg-white/40 pb-4 backdrop-blur-md">
@@ -69,7 +71,7 @@ export function OperationsCalendarContent({
               <CalendarClock className="size-5" />
             </div>
             <span className="text-slate-900 drop-shadow-sm">
-              Client Schedule
+              {t("clientSchedule")}
             </span>
           </CardTitle>
           <div className="flex flex-wrap items-center gap-4 text-[13px] font-medium text-slate-500">
@@ -80,14 +82,14 @@ export function OperationsCalendarContent({
                   <span className="relative inline-flex size-2 rounded-full bg-indigo-500"></span>
                 </div>
                 <span className="font-semibold">
-                  {visibleEvents.length} active events
+                  {fill("activeEvents", { count: visibleEvents.length })}
                 </span>
               </div>
             </div>
             <span className="animate-in fade-in hidden font-medium tracking-wide text-slate-400/90 delay-500 duration-500 sm:inline-block">
               {axisMode === "resource"
-                ? `Resource View${resourceTypeLabel ? ` • ${resourceTypeLabel}` : ""}`
-                : "Click any date & time to create a quick appointment."}
+                ? `${t("resourceView")}${resourceTypeLabel ? ` • ${resourceTypeLabel}` : ""}`
+                : t("clickToCreate")}
             </span>
           </div>
         </div>
@@ -106,11 +108,10 @@ export function OperationsCalendarContent({
 
               <div className="max-w-sm space-y-2.5 text-center">
                 <h3 className="text-xl font-bold tracking-tight text-slate-800">
-                  Your schedule is clear
+                  {t("scheduleClear")}
                 </h3>
                 <p className="text-body-strong/relaxed font-medium text-slate-500 drop-shadow-sm">
-                  You&apos;re perfectly caught up. Select a different date or
-                  add a new luxury appointment above to get started.
+                  {t("scheduleClearHelp")}
                 </p>
               </div>
 
@@ -121,7 +122,7 @@ export function OperationsCalendarContent({
                   onClick={onClearAllFilters}
                   className="mt-2 h-9 rounded-full border-slate-200 bg-white/80 px-6 font-medium text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md active:scale-95"
                 >
-                  Clear {activeFilterCount} active filters
+                  {fill("clearFilters", { count: activeFilterCount })}
                 </Button>
               )}
             </div>

@@ -267,6 +267,7 @@ export function OperationsCalendarEventDrawer({
   bookingActions,
   canCreateBooking,
 }: OperationsCalendarEventDrawerProps) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const panelRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const capturedLeads = useCapturedLeads();
@@ -318,10 +319,10 @@ export function OperationsCalendarEventDrawer({
     (tab) => tab.id !== "addons" || showAddOnsTab !== false,
   );
   if (isTransportEvent) {
-    tabs.splice(1, 0, { id: "tasks", label: "Route" });
+    tabs.splice(1, 0, { id: "tasks", label: calT("tabRoute") });
   }
   if (isGroupEvent) {
-    tabs.splice(1, 0, { id: "pet-details", label: "Attendees" });
+    tabs.splice(1, 0, { id: "pet-details", label: calT("tabAttendees") });
   }
   const effectiveTab = tabs.some((tab) => tab.id === activeTab)
     ? activeTab
@@ -354,8 +355,10 @@ export function OperationsCalendarEventDrawer({
     : undefined;
   const handleConvertToBooking = () => {
     convertLeadToBooking(event);
-    toast.success("Converted to booking", {
-      description: `${lead?.name ?? event.customerName ?? "The lead"} is now a Yipyy booking.`,
+    toast.success(calT("convertedToBooking"), {
+      description: calFill("leadIsNowBooking", {
+        who: lead?.name ?? event.customerName ?? calT("theLead"),
+      }),
     });
     onClose();
   };
@@ -383,7 +386,7 @@ export function OperationsCalendarEventDrawer({
   const petName = pet?.name ?? event.petNames[0] ?? "-";
   const ownerName = client?.name ?? event.customerName ?? "-";
   const staffName =
-    event.staff && event.staff !== "Unassigned" ? event.staff : "Unassigned";
+    event.staff && event.staff !== UNASSIGNED ? event.staff : UNASSIGNED;
 
   // External (synced) events are never mutated from here.
   const isReadOnlyEvent = readOnlyMode || event.external?.readOnly === true;
@@ -532,7 +535,7 @@ export function OperationsCalendarEventDrawer({
           key={event.id}
           lead={lead}
           source={event.external?.sourceLabel}
-          fallbackName={event.customerName ?? "New lead"}
+          fallbackName={event.customerName ?? calT("newLead")}
         />
       )}
 
@@ -730,6 +733,7 @@ function DrawerHeaderMenu({
   onRebookBooking: (bookingId: number) => void;
   onCloseDrawer: () => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const router = useRouter();
   const { t, fill } = useStaffText("bookingActions");
   const [recurringCancelOpen, setRecurringCancelOpen] = useState(false);
@@ -774,7 +778,7 @@ function DrawerHeaderMenu({
               onClick={() => setSmsOpen(true)}
             >
               <MessageSquare className="size-4" />
-              Send Reminder SMS
+              {calT("sendReminderSms")}
             </DropdownMenuItem>
           )}
 
@@ -785,7 +789,7 @@ function DrawerHeaderMenu({
               onClick={() => router.push(ownerHref)}
             >
               <User className="size-4" />
-              View Client Profile
+              {calT("viewClientProfile")}
             </DropdownMenuItem>
           )}
           {petHref && (
@@ -794,7 +798,7 @@ function DrawerHeaderMenu({
               onClick={() => router.push(petHref)}
             >
               <PawPrint className="size-4" />
-              View Pet Profile
+              {calT("viewPetProfile")}
             </DropdownMenuItem>
           )}
 
@@ -856,11 +860,12 @@ function RecurringCancelDialog({
   event: OperationsCalendarEvent;
   onCloseDrawer: () => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const pattern = recurrencePatternLabel(event.recurrence, event.start);
 
   const cancelThis = () => {
     cancelOccurrence(event.id);
-    toast.success("This occurrence was cancelled");
+    toast.success(calT("occurrenceCancelled"));
     onOpenChange(false);
     onCloseDrawer();
   };
@@ -869,7 +874,7 @@ function RecurringCancelDialog({
     if (event.recurrenceSeriesId) {
       cancelSeriesFrom(event.recurrenceSeriesId, event.start);
     }
-    toast.success("All future occurrences cancelled");
+    toast.success(calT("futureOccurrencesCancelled"));
     onOpenChange(false);
     onCloseDrawer();
   };
@@ -878,9 +883,9 @@ function RecurringCancelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cancel recurring event</DialogTitle>
+          <DialogTitle>{calT("cancelRecurring")}</DialogTitle>
           <DialogDescription>
-            {pattern ?? "This event repeats."} Choose what to cancel.
+            {pattern ?? calT("eventRepeats")} {calT("chooseWhatToCancel")}
           </DialogDescription>
         </DialogHeader>
 
@@ -890,19 +895,19 @@ function RecurringCancelDialog({
             className="w-full justify-start"
             onClick={cancelThis}
           >
-            Cancel this occurrence only
+            {calT("cancelThisOccurrence")}
           </Button>
           <Button
             className="w-full justify-start bg-red-600 text-white hover:bg-red-700"
             onClick={cancelFuture}
           >
-            Cancel all future occurrences
+            {calT("cancelFutureOccurrences")}
           </Button>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Keep event
+            {calT("keepEvent")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -925,6 +930,7 @@ function SendReminderSmsDialog({
   recipientPhone?: string;
   event: OperationsCalendarEvent;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const messageClient = useMessageClient();
   const defaultMessage = `Hi ${recipientName || "there"}, this is a reminder for your ${event.service} appointment on ${event.start.toLocaleDateString(
     "en-US",
@@ -943,19 +949,19 @@ function SendReminderSmsDialog({
         body: message,
       });
       if (!result.sent) {
-        toast.warning("The reminder was not sent", {
+        toast.warning(calT("reminderNotSent"), {
           description: result.detail,
         });
         return;
       }
-      toast.success("Reminder sent", {
+      toast.success(calT("reminderSent"), {
         description: recipientPhone
           ? `To ${recipientName} (${recipientPhone}).`
           : `To ${recipientName}.`,
       });
       onOpenChange(false);
     } catch (error) {
-      toast.error("The reminder was not sent", {
+      toast.error(calT("reminderNotSent"), {
         description: error instanceof Error ? error.message : undefined,
       });
     }
@@ -965,7 +971,7 @@ function SendReminderSmsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send reminder SMS</DialogTitle>
+          <DialogTitle>{calT("sendReminderSms")}</DialogTitle>
           <DialogDescription>
             {recipientPhone
               ? `To ${recipientName} · ${recipientPhone}`
@@ -979,12 +985,12 @@ function SendReminderSmsDialog({
           onChange={(changeEvent) => setMessage(changeEvent.target.value)}
         />
         <p className="text-[11px] text-slate-400">
-          {message.length} characters · standard SMS rates apply
+          {calFill("charactersAndRates", { count: message.length })}
         </p>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {calT("cancelWord3")}
           </Button>
           <Button
             className="bg-emerald-600 text-white hover:bg-emerald-700"
@@ -997,7 +1003,7 @@ function SendReminderSmsDialog({
             onClick={() => void send()}
           >
             <MessageSquare className="size-3.5" />
-            Send SMS
+            {calT("sendSms")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1024,6 +1030,7 @@ function NotifyComposer({
   recipientEmail?: string;
   senderName: string;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const messageClient = useMessageClient();
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<NotificationChannel>("sms");
@@ -1057,12 +1064,12 @@ function NotifyComposer({
         subject: channel === "email" ? subject.trim() : undefined,
       });
       if (!result.sent) {
-        toast.warning("The message was not sent", {
+        toast.warning(calT("messageNotSent"), {
           description: result.detail,
         });
         return;
       }
-      toast.success(channel === "sms" ? "SMS sent" : "Email sent", {
+      toast.success(channel === "sms" ? calT("smsSent") : calT("emailSent"), {
         description: address
           ? `To ${recipientName} · ${address}`
           : `To ${recipientName}`,
@@ -1070,7 +1077,7 @@ function NotifyComposer({
       setBody("");
       setOpen(false);
     } catch (error) {
-      toast.error("The message was not sent", {
+      toast.error(calT("messageNotSent"), {
         description: error instanceof Error ? error.message : undefined,
       });
     }
@@ -1081,7 +1088,7 @@ function NotifyComposer({
       <PopoverTrigger asChild>
         <Button size="sm" variant="outline" className="gap-1.5">
           <Send className="size-3.5" />
-          Notify
+          {calT("notifyWord")}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-3 p-3">
@@ -1112,7 +1119,9 @@ function NotifyComposer({
 
         {channel === "email" && (
           <div className="space-y-1">
-            <Label className="text-[11px] text-slate-500">Subject</Label>
+            <Label className="text-[11px] text-slate-500">
+              {calT("dSubject")}
+            </Label>
             <Input
               value={subject}
               onChange={(changeEvent) => setSubject(changeEvent.target.value)}
@@ -1124,7 +1133,7 @@ function NotifyComposer({
         {/* INSERT shortcuts */}
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">
-            Insert
+            {calT("insertWord")}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {shortcuts.map((shortcut) => (
@@ -1143,14 +1152,14 @@ function NotifyComposer({
         <Textarea
           rows={4}
           value={body}
-          placeholder="Write a message…"
+          placeholder={calT("writeAMessage")}
           onChange={(changeEvent) => setBody(changeEvent.target.value)}
           className="text-[13px]"
         />
 
         <div className="flex justify-end gap-2">
           <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
+            {calT("cancelWord3")}
           </Button>
           <Button
             size="sm"
@@ -1164,7 +1173,7 @@ function NotifyComposer({
             onClick={() => void send()}
           >
             <Send className="size-3.5" />
-            Send
+            {calT("sendWord")}
           </Button>
         </div>
       </PopoverContent>
@@ -1215,6 +1224,7 @@ function AddOnPicker({
   onSelect: (option: AddOnOption) => void;
   trigger: React.ReactNode;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const { addOns: facilityAddOns } = useServiceAddOns();
   const options = useMemo(
     () => toAddOnOptions(facilityAddOns),
@@ -1226,7 +1236,7 @@ function AddOnPicker({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-0">
         <div className="border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">
-          Add an add-on
+          {calT("addAnAddOn")}
         </div>
         <div className="max-h-64 overflow-y-auto py-1">
           {options.map((option) => (
@@ -1308,7 +1318,7 @@ function DrawerActionBar({
   onConvertToBooking?: () => void;
 }) {
   const { fill } = useStaffText("bookingActions");
-  const { t: calT } = useStaffText("opsCalendar");
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const { href } = usePortalHref();
 
   const addAddOn = (option: AddOnOption) => {
@@ -1331,12 +1341,14 @@ function DrawerActionBar({
             onClick={onConvertToBooking}
           >
             <CalendarPlus className="size-3.5" />
-            Convert to Booking
+            {calT("convertToBooking")}
           </Button>
         )}
         {isReadOnlyEvent && (
           <p className="text-xs text-slate-500">
-            Read-only — synced from {event.external.sourceLabel}.
+            {calFill("readOnlySyncedFrom", {
+              source: event.external.sourceLabel,
+            })}
           </p>
         )}
       </div>
@@ -1363,7 +1375,7 @@ function DrawerActionBar({
         onClick={() => onMarkTaskComplete(event.taskId!)}
       >
         <CheckCircle2 className="size-3.5" />
-        Mark Complete
+        {calT("markComplete")}
       </Button>
     );
   }
@@ -1484,6 +1496,8 @@ function formatDuration(start: Date, end: Date): string {
   return `${hours}h ${rest}m`;
 }
 
+// The stored sentinel, not a label: it is compared against event.staff,
+// which holds this exact English string. Translating it breaks the match.
 const UNASSIGNED = "Unassigned";
 
 function DetailsTab({
@@ -1529,6 +1543,7 @@ function DetailsTab({
   onEditBooking: () => void;
   onMarkComplete: () => void;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const { t } = useStaffText("bookingActions");
   const staffValues = staffOptions.includes(staffName)
     ? staffOptions
@@ -1575,7 +1590,9 @@ function DetailsTab({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                <SelectItem value={UNASSIGNED}>
+                  {calT("unassignedWord")}
+                </SelectItem>
                 {staffValues
                   .filter((name) => name !== UNASSIGNED)
                   .map((name) => (
@@ -1624,7 +1641,7 @@ function DetailsTab({
 
       {event.isWaitlist && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          Waitlisted
+          {calT("waitlistedWord")}
           {event.waitlistPosition
             ? ` · position ${event.waitlistPosition}`
             : ""}
@@ -1635,8 +1652,10 @@ function DetailsTab({
         <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
           <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
           <span>
-            Completed by {event.completedByName ?? "Staff"} at{" "}
-            {formatLocalDateTime(event.completedAt)}
+            {calFill("completedByAtDrawer", {
+              who: event.completedByName ?? calT("staffFallbackDrawer"),
+              when: formatLocalDateTime(event.completedAt),
+            })}
           </span>
         </div>
       )}
@@ -1669,7 +1688,7 @@ function DetailsTab({
               onClick={onMarkComplete}
             >
               <CheckCircle2 className="size-3.5" />
-              Mark Complete
+              {calT("markComplete")}
             </Button>
           )}
         </div>
@@ -1679,6 +1698,7 @@ function DetailsTab({
 }
 
 function RecurrenceSection({ event }: { event: OperationsCalendarEvent }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const [showOccurrences, setShowOccurrences] = useState(false);
   const pattern = recurrencePatternLabel(event.recurrence, event.start);
   const occurrences = computeOccurrences(
@@ -1698,7 +1718,7 @@ function RecurrenceSection({ event }: { event: OperationsCalendarEvent }) {
         onClick={() => setShowOccurrences((previous) => !previous)}
         className="text-xs font-medium text-sky-600 hover:underline"
       >
-        {showOccurrences ? "Hide occurrences" : "View All Occurrences"}
+        {showOccurrences ? calT("hideOccurrences") : calT("viewAllOccurrences")}
       </button>
       {showOccurrences && (
         <ul className="space-y-1 border-t border-slate-100 pt-2">
@@ -1721,7 +1741,7 @@ function RecurrenceSection({ event }: { event: OperationsCalendarEvent }) {
               </span>
               {index === 0 && (
                 <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-                  This occurrence
+                  {calT("thisOccurrence")}
                 </span>
               )}
             </li>
@@ -1799,7 +1819,7 @@ function AddOnsTab({
               disabled={!canEdit}
             >
               <Plus className="size-3" />
-              Add Add-On
+              {calT("addAddOn")}
             </Button>
           }
         />
@@ -1807,7 +1827,7 @@ function AddOnsTab({
 
       {addOns.length === 0 ? (
         <p className="py-6 text-center text-sm text-slate-400">
-          No add-ons for this booking yet.
+          {calT("noAddOnsYet")}
         </p>
       ) : (
         <div className="space-y-1.5">
@@ -1863,7 +1883,7 @@ function AddOnsTab({
       {/* Total + invoice link */}
       <div className="flex items-center justify-between border-t border-slate-100 pt-3">
         <div>
-          <p className="text-xs text-slate-500">Total add-ons</p>
+          <p className="text-xs text-slate-500">{calT("totalAddOns")}</p>
           <p className="text-base font-bold text-slate-900">
             {formatCurrency(total)}
           </p>
@@ -1897,6 +1917,7 @@ function AttendeesTab({
   capacity?: CalendarEventCapacity;
   canCheckIn: boolean;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   // Subscribe to per-dog check-in changes.
   useAttendeeCheckIns();
   const full = isGroupFull(capacity);
@@ -1908,19 +1929,24 @@ function AttendeesTab({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-slate-500">Attendees</p>
+          <p className="text-xs font-medium text-slate-500">
+            {calT("tabAttendees")}
+          </p>
           {capacity && (
             <p className="text-sm font-bold text-slate-900">
-              {capacity.used}/{capacity.total} dogs
+              {calFill("attendeeCount", {
+                used: capacity.used,
+                total: capacity.total,
+              })}
               <span className="ml-1.5 text-xs font-medium text-slate-400">
-                · {checkedInCount} checked in
+                {calFill("checkedInSuffix", { count: checkedInCount })}
               </span>
             </p>
           )}
         </div>
         {full ? (
           <span className="rounded-md bg-red-100 px-2 py-1 text-[11px] font-semibold text-red-700">
-            Slot full
+            {calT("slotFull")}
           </span>
         ) : (
           <Button
@@ -1930,7 +1956,7 @@ function AttendeesTab({
             title="Add a dog to this group"
           >
             <Plus className="size-3" />
-            Add attendee
+            {calT("addAttendee")}
           </Button>
         )}
       </div>
@@ -1973,7 +1999,7 @@ function AttendeesTab({
                     : "bg-slate-100 text-slate-500",
                 )}
               >
-                {checkedIn ? "Checked in" : "Expected"}
+                {checkedIn ? calT("hCheckedIn") : calT("expectedWord")}
               </span>
             </label>
           );
@@ -2002,6 +2028,7 @@ function RouteTab({
   stops: RouteStop[];
   canComplete: boolean;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   useRouteStops();
   const doneCount = stops.filter((stop) =>
     isStopCompleted(eventId, stop.id),
@@ -2012,7 +2039,7 @@ function RouteTab({
       <div className="flex items-center gap-2">
         <Truck className="size-4 shrink-0 text-slate-400" />
         <p className="text-sm font-medium text-slate-700">
-          Route
+          {calT("tabRoute")}
           <span className="ml-1.5 text-xs font-normal text-slate-400">
             {doneCount}/{stops.length} stops done
           </span>
@@ -2062,7 +2089,7 @@ function RouteTab({
                 {completed ? (
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600">
                     <CheckCircle2 className="size-3" />
-                    Done
+                    {calT("doneWord")}
                   </span>
                 ) : (
                   <Button
@@ -2072,7 +2099,7 @@ function RouteTab({
                     disabled={!canComplete}
                     onClick={() => toggleStopCompleted(eventId, stop.id)}
                   >
-                    Mark completed
+                    {calT("markCompleted")}
                   </Button>
                 )}
               </div>
@@ -2116,6 +2143,7 @@ function NotesTab({
   readOnly: boolean;
   onSave: (content: string) => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const [draft, setDraft] = useState(note.content);
   const dirty = draft !== note.content;
 
@@ -2124,7 +2152,7 @@ function NotesTab({
       <textarea
         value={draft}
         readOnly={readOnly}
-        placeholder={readOnly ? "No notes" : "Add booking notes…"}
+        placeholder={readOnly ? calT("noNotes") : calT("addBookingNotes")}
         rows={8}
         className="w-full resize-y rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 read-only:bg-slate-50 read-only:text-slate-500 focus:border-slate-400 focus:outline-none"
         onChange={(changeEvent) => setDraft(changeEvent.currentTarget.value)}
@@ -2142,7 +2170,7 @@ function NotesTab({
             onClick={() => onSave(draft)}
           >
             <Save className="size-3.5" />
-            Save
+            {calT("saveWord3")}
           </Button>
         )}
       </div>
@@ -2229,7 +2257,11 @@ function mapAuditType(
   }
 }
 
+// Takes the translator: these rows are BUILT for display, not read from a
+// stored record, so they are the reader's language.
 function buildHistoryRows(
+  t: (key: string) => string,
+  fill: (key: string, values: Record<string, string | number>) => string,
   event: OperationsCalendarEvent,
   booking: Booking | undefined,
   addOns: BookingDrawerAddOnItem[],
@@ -2241,7 +2273,7 @@ function buildHistoryRows(
   const start = event.start;
   const invoice = booking?.invoice;
   const primaryStaff =
-    event.staff && event.staff !== "Unassigned" ? event.staff : "Front desk";
+    event.staff && event.staff !== UNASSIGNED ? event.staff : "Front desk";
 
   // Created
   const createdAudit = invoice?.auditTrail?.find(
@@ -2254,7 +2286,7 @@ function buildHistoryRows(
   rows.push({
     id: "created",
     icon: CalendarPlus,
-    description: "Booking created",
+    description: t("hBookingCreated"),
     staff: createdAudit?.staffName ?? creatorLabel(event, primaryStaff),
     at: createdAt,
     tone: "default",
@@ -2264,7 +2296,7 @@ function buildHistoryRows(
   rows.push({
     id: "confirmed",
     icon: CheckCircle2,
-    description: "Booking confirmed",
+    description: t("hBookingConfirmed"),
     staff: primaryStaff,
     at: shiftMinutes(createdAt, 20),
     tone: "success",
@@ -2275,7 +2307,9 @@ function buildHistoryRows(
     rows.push({
       id: "deposit",
       icon: CreditCard,
-      description: `Deposit collected — ${formatCurrency(invoice.depositCollected)}`,
+      description: fill("hDepositCollected", {
+        amount: formatCurrency(invoice.depositCollected),
+      }),
       staff: invoice.depositCollectedBy ?? primaryStaff,
       at: safeDate(invoice.depositCollectedAt, shiftMinutes(createdAt, 25)),
       tone: "success",
@@ -2287,7 +2321,10 @@ function buildHistoryRows(
     rows.push({
       id: `payment-${index}`,
       icon: CreditCard,
-      description: `Payment received — ${formatCurrency(payment.amount)} (${payment.method})`,
+      description: fill("hPaymentReceived", {
+        amount: formatCurrency(payment.amount),
+        method: payment.method,
+      }),
       staff: payment.collectedBy ?? primaryStaff,
       at: safeDate(payment.date, shiftMinutes(start, 60)),
       tone: "success",
@@ -2313,7 +2350,7 @@ function buildHistoryRows(
     rows.push({
       id: "checkin",
       icon: LogIn,
-      description: "Checked in",
+      description: t("hCheckedIn"),
       staff: primaryStaff,
       at: start,
       tone: "success",
@@ -2327,7 +2364,7 @@ function buildHistoryRows(
       rows.push({
         id: `addon-${addOn.id}`,
         icon: Sparkles,
-        description: `Add-on “${addOn.name}” marked complete`,
+        description: fill("hAddOnComplete", { name: addOn.name }),
         staff: addOn.assignedStaff ?? primaryStaff,
         at: safeDate(addOn.scheduledAt, shiftMinutes(start, 30 * (index + 1))),
         tone: "success",
@@ -2339,7 +2376,7 @@ function buildHistoryRows(
     rows.push({
       id: "checkout",
       icon: LogOut,
-      description: "Checked out — completed",
+      description: t("hCheckedOut"),
       staff: event.completedByName ?? primaryStaff,
       at: safeDate(event.completedAt, shiftMinutes(start, 120)),
       tone: "success",
@@ -2351,7 +2388,7 @@ function buildHistoryRows(
     rows.push({
       id: "note",
       icon: StickyNote,
-      description: "Note added",
+      description: t("hNoteAdded"),
       staff: note.lastEditedBy,
       at: safeDate(note.lastEditedAt, shiftMinutes(start, 130)),
       tone: "default",
@@ -2391,8 +2428,11 @@ function HistoryTab({
   note: NoteSectionState;
   checkedIn: boolean;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const notifications = useEventNotifications(event.id);
   const rows = buildHistoryRows(
+    calT,
+    calFill,
     event,
     booking,
     addOns,
@@ -2404,7 +2444,7 @@ function HistoryTab({
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-slate-400">
-        No activity recorded yet.
+        {calT("noActivityYet")}
       </p>
     );
   }
@@ -2475,6 +2515,7 @@ function LeadReviewBanner({
   source?: string;
   fallbackName: string;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     name: lead?.name ?? fallbackName,
@@ -2501,10 +2542,12 @@ function LeadReviewBanner({
         <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-500" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-800">
-            New Lead from {source ?? "external calendar"}
+            {calFill("newLeadFromWhere", {
+              source: source ?? calT("externalCalendar"),
+            })}
           </p>
           <p className="text-xs text-amber-700">
-            Customer record created — review and confirm.
+            {calT("customerRecordCreated")}
           </p>
           {lead?.possibleDuplicate && (
             <p className="mt-1 text-[11px] font-medium text-amber-800">
@@ -2562,27 +2605,32 @@ function LeadReviewBanner({
           />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-              Cancel
+              {calT("cancelWord3")}
             </Button>
             <Button size="sm" onClick={save}>
-              Save
+              {calT("saveWord3")}
             </Button>
           </div>
         </div>
       ) : (
         <div className="mt-2.5 space-y-1 rounded-md border border-amber-200 bg-white/70 px-3 py-2 text-xs">
-          <LeadRow label="Name" value={lead?.name ?? fallbackName} />
-          {lead?.email && <LeadRow label="Email" value={lead.email} />}
-          {lead?.phone && <LeadRow label="Phone" value={lead.phone} />}
-          {lead?.petName && <LeadRow label="Pet" value={lead.petName} />}
-          <LeadRow label="Status" value={lead?.status ?? "Lead — Unverified"} />
+          <LeadRow label={calT("dName")} value={lead?.name ?? fallbackName} />
+          {lead?.email && <LeadRow label={calT("dEmail")} value={lead.email} />}
+          {lead?.phone && <LeadRow label={calT("dPhone")} value={lead.phone} />}
+          {lead?.petName && (
+            <LeadRow label={calT("dPet")} value={lead.petName} />
+          )}
+          <LeadRow
+            label={calT("dStatus")}
+            value={lead?.status ?? calT("leadUnverified")}
+          />
           <div className="pt-1">
             <button
               type="button"
               onClick={() => setEditing(true)}
               className="text-xs font-semibold text-amber-700 hover:underline"
             >
-              Edit Customer Info
+              {calT("editCustomerInfo")}
             </button>
           </div>
         </div>

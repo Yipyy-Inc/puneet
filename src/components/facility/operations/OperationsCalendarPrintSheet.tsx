@@ -6,6 +6,7 @@ import {
   getEventsForDay,
   type OperationsCalendarEvent,
 } from "@/lib/operations-calendar";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // Scoped print rules — mirrors the Daily Care print sheet. This <style> only
 // exists in the DOM while the calendar is mounted, so the "hide everything but
@@ -60,15 +61,21 @@ export function buildDayPrintRows(
     }));
 }
 
-const PRINT_COLUMNS: Array<{ key: keyof DayPrintRow; label: string }> = [
-  { key: "time", label: "Time" },
-  { key: "pet", label: "Pet" },
-  { key: "owner", label: "Owner" },
-  { key: "service", label: "Service" },
-  { key: "addOns", label: "Add-Ons" },
-  { key: "staff", label: "Staff" },
-  { key: "status", label: "Status" },
-];
+// A function rather than a const: the labels are translated, and a module
+// -level array is evaluated before any translator exists.
+function printColumns(
+  t: (key: string) => string,
+): Array<{ key: keyof DayPrintRow; label: string }> {
+  return [
+    { key: "time", label: t("colTime") },
+    { key: "pet", label: t("colPet") },
+    { key: "owner", label: t("colOwner") },
+    { key: "service", label: t("colService") },
+    { key: "addOns", label: t("colAddOns") },
+    { key: "staff", label: t("colStaff") },
+    { key: "status", label: t("colStatus") },
+  ];
+}
 
 // Flatten the day's rows into text lines for the minimal-PDF generator.
 export function buildDayPdfLines(rows: DayPrintRow[]): string[] {
@@ -106,31 +113,41 @@ export function OperationsCalendarPrintSheet({
   printedBy: string;
   rows: DayPrintRow[];
 }) {
-  const dateLabel = day.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const { t, fill, locale } = useStaffText("opsCalendar");
+  const columns = printColumns(t);
+  // Was "en-US": a French reader got "Monday, September 20" on a sheet they
+  // print and hand to somebody. §5q — the reader's locale, never a literal.
+  const dateLabel = day.toLocaleDateString(
+    locale === "fr" ? "fr-CA" : "en-CA",
+    {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
 
   return (
     <div id="ops-print-sheet" className="hidden text-black print:block">
       <style>{PRINT_CSS}</style>
       <div className="mb-2 border-b border-black pb-1">
         <p className="text-[13px] font-bold">
-          {facilityName} · Daily Schedule · {dateLabel}
+          {facilityName} · {t("dailySchedule")} · {dateLabel}
         </p>
         <p className="text-[10px]">
-          {rows.length} appointment{rows.length === 1 ? "" : "s"} · Printed{" "}
-          {printedAt || "—"}
-          {printedBy ? ` by ${printedBy}` : ""}
+          {fill(rows.length === 1 ? "appointmentsOne" : "appointmentsMany", {
+            count: rows.length,
+          })}
+          {" · "}
+          {fill("printedAtLabel", { when: printedAt || "—" })}
+          {printedBy ? ` ${fill("printedByLabel", { who: printedBy })}` : ""}
         </p>
       </div>
 
       <table className="w-full border-collapse text-[11px] leading-snug">
         <thead>
           <tr>
-            {PRINT_COLUMNS.map((column) => (
+            {columns.map((column) => (
               <th
                 key={column.key}
                 className="border-b border-black p-1 text-left font-bold"
@@ -143,7 +160,7 @@ export function OperationsCalendarPrintSheet({
         <tbody>
           {rows.map((row, index) => (
             <tr key={index} className="align-top">
-              {PRINT_COLUMNS.map((column) => (
+              {columns.map((column) => (
                 <td key={column.key} className="border-b border-black/30 p-1">
                   {row[column.key]}
                 </td>
@@ -152,11 +169,8 @@ export function OperationsCalendarPrintSheet({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td
-                colSpan={PRINT_COLUMNS.length}
-                className="py-4 text-center italic"
-              >
-                No appointments scheduled for this day.
+              <td colSpan={columns.length} className="py-4 text-center italic">
+                {t("noAppointmentsToday")}
               </td>
             </tr>
           )}

@@ -81,16 +81,17 @@ function eventHoverSummary(
   event: OperationsCalendarEvent,
   petLabel: string,
   customerLabel: string,
+  t: (key: string) => string,
 ): string {
   return [
-    `Dog: ${petLabel}`,
-    `Service: ${event.service}`,
-    `Customer: ${customerLabel}`,
-    `Time: ${eventDurationLabel(event)}`,
-    event.staff ? `Staff: ${event.staff}` : "",
-    event.location ? `Location: ${event.location}` : "",
-    event.details ? `Details: ${event.details}` : "",
-    event.notes ? `Notes: ${event.notes}` : "",
+    `${t("tipDog")}: ${petLabel}`,
+    `${t("tipService")}: ${event.service}`,
+    `${t("tipCustomer")}: ${customerLabel}`,
+    `${t("tipTime")}: ${eventDurationLabel(event)}`,
+    event.staff ? `${t("tipStaff")}: ${event.staff}` : "",
+    event.location ? `${t("tipLocation")}: ${event.location}` : "",
+    event.details ? `${t("tipDetails")}: ${event.details}` : "",
+    event.notes ? `${t("tipNotes")}: ${event.notes}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -217,20 +218,25 @@ function capacityHeatClass(used: number, total: number): string {
   return "bg-emerald-400/12";
 }
 
-function capacityHeatTitle(used: number, total: number): string {
-  return `${used} of ${total} slots filled`;
+function capacityHeatTitle(
+  used: number,
+  total: number,
+  fill: (key: string, values: Record<string, string | number>) => string,
+): string {
+  return fill("slotsFilled", { used, total });
 }
 
 // ── Waitlist section (spec 8.4 / Task 44, Table 89) ─────────────────────────
 // Rendered below a day column when at-capacity slots have waiters. Each row is
 // client, pet, service, and "#N in waitlist".
 function WaitlistSection({ entries }: { entries: WaitlistDisplayEntry[] }) {
+  const { t: calT } = useStaffText("opsCalendar");
   if (entries.length === 0) return null;
   return (
     <div className="mt-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-2.5">
       <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-amber-700 uppercase">
         <Hourglass className="size-3" />
-        Waitlist
+        {calT("waitlist")}
         <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-200/70 px-1 text-[10px] text-amber-800">
           {entries.length}
         </span>
@@ -253,7 +259,7 @@ function WaitlistSection({ entries }: { entries: WaitlistDisplayEntry[] }) {
               <span className="truncate">{entry.service}</span>
               {entry.notified && (
                 <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 text-[10px] font-semibold text-emerald-600">
-                  Notified
+                  {calT("notified")}
                 </span>
               )}
             </div>
@@ -280,7 +286,11 @@ export function EventChip({
   // never matched and always rendered as "custom".
   const { addOns: facilityAddOns } = useServiceAddOns();
   const { fill: actFill } = useStaffText("bookingActions");
-  const { t: calT } = useStaffText("opsCalendar");
+  const {
+    t: calT,
+    fill: calFill,
+    locale: calLocale,
+  } = useStaffText("opsCalendar");
   const [open, setOpen] = useState(false);
   const petLabel = formatPetLabel(event.petNames) || event.title;
   // Group / multi-pet module events show the module name + capacity.
@@ -339,7 +349,8 @@ export function EventChip({
           };
 
   const serviceLabel =
-    event.service ?? (event.type === "task" ? "Task" : "Booking");
+    event.service ??
+    (event.type === "task" ? calT("typeTask") : calT("typeBooking"));
 
   // Add-on indicator: only bookings, and only when add-ons render nested (in
   // "separate" mode they surface as their own chips, so the pill is redundant).
@@ -370,7 +381,8 @@ export function EventChip({
           title={eventHoverSummary(
             event,
             petLabel,
-            event.customerName ?? "No customer linked",
+            event.customerName ?? calT("noCustomerLinked"),
+            calT,
           )}
           className={cn(
             "group relative block w-full rounded-xl border px-2.5 py-2 text-left",
@@ -442,7 +454,7 @@ export function EventChip({
                 {isRecurring && (
                   <Repeat
                     className="size-2.5 shrink-0 text-slate-400"
-                    aria-label="Recurring"
+                    aria-label={calT("decorRecurring")}
                   />
                 )}
                 {/* Icon-only chip decorations (spec 8.5 / 8.6) — no colour
@@ -459,7 +471,7 @@ export function EventChip({
                           ? "text-red-500"
                           : "text-amber-500",
                       )}
-                      aria-label="Vaccination warning"
+                      aria-label={calT("decorVaccination")}
                     />
                   </span>
                 )}
@@ -470,18 +482,20 @@ export function EventChip({
                   >
                     <Cake
                       className="size-2.5 text-pink-500"
-                      aria-label="Birthday"
+                      aria-label={calT("decorBirthday")}
                     />
                   </span>
                 )}
                 {event.decorations?.clientAnniversary && (
                   <span
                     className="shrink-0"
-                    title={`Booking anniversary — ${event.customerName ?? "loyal client"}`}
+                    title={calFill("anniversaryTitle", {
+                      who: event.customerName ?? calT("loyalClient"),
+                    })}
                   >
                     <Heart
                       className="size-2.5 fill-rose-500 text-rose-500"
-                      aria-label="Booking anniversary"
+                      aria-label={calT("decorAnniversary")}
                     />
                   </span>
                 )}
@@ -492,7 +506,7 @@ export function EventChip({
                 {isCompletedEvent ? (
                   <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] leading-none font-bold tracking-wide text-slate-400 uppercase">
                     <Check className="size-2.5" />
-                    Done
+                    {calT("done")}
                   </span>
                 ) : (
                   <span
@@ -526,12 +540,15 @@ export function EventChip({
                         : "bg-slate-100 text-slate-600",
                     )}
                   >
-                    {event.capacity.used}/{event.capacity.total} dogs
+                    {calFill("dogsCount", {
+                      used: event.capacity.used,
+                      total: event.capacity.total,
+                    })}
                   </span>
                 )}
                 {groupFull && (
                   <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] leading-none font-bold tracking-wide text-white uppercase">
-                    Full
+                    {calT("groupFull")}
                   </span>
                 )}
                 {isTransport && event.location && (
@@ -548,7 +565,9 @@ export function EventChip({
                         dominantAddOnBucket(facilityAddOns, addOnNames)
                       ],
                     )}
-                    title={`Add-ons: ${addOnNames.join(", ")}`}
+                    title={calFill("addOnsList", {
+                      names: addOnNames.join(", "),
+                    })}
                   >
                     +{bookingAddOns.length}
                   </span>
@@ -635,7 +654,7 @@ export function EventChip({
             <div className="flex items-start gap-2.5 text-[12px] text-slate-600">
               <Sparkles className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
               <span className="line-clamp-2">
-                Add-ons: {addOnNames.join(", ")}
+                {calFill("addOnsList", { names: addOnNames.join(", ") })}
               </span>
             </div>
           )}
@@ -649,10 +668,13 @@ export function EventChip({
             <div className="mt-1 flex items-center gap-2.5 text-[12px] text-emerald-600">
               <Check className="size-3.5 shrink-0 text-emerald-500" />
               <span>
-                Completed by {event.completedByName ?? "Staff"} at{" "}
-                {new Date(event.completedAt).toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
+                {calFill("completedByAt", {
+                  who: event.completedByName ?? calT("staffFallback"),
+                  when: new Date(event.completedAt).toLocaleTimeString(
+                    // Was "en-US": the reader's locale, never a literal (§5q).
+                    calLocale === "fr" ? "fr-CA" : "en-CA",
+                    { hour: "numeric", minute: "2-digit" },
+                  ),
                 })}
               </span>
             </div>
@@ -664,7 +686,7 @@ export function EventChip({
           <div className="border-border border-t bg-emerald-50 px-4 py-2">
             <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-emerald-600">
               <Check className="size-3.5" />
-              Completed
+              {calT("completed")}
             </div>
           </div>
         )}
@@ -715,7 +737,7 @@ export function EventChip({
             style={{ backgroundColor: accentColor }}
           >
             <PanelRight className="size-3" />
-            Open Panel
+            {calT("openPanel")}
           </button>
         </div>
       </PopoverContent>
@@ -787,6 +809,7 @@ export function DayTimeline({
   ) => void;
   showCapacityHeat?: boolean;
 }) {
+  const { fill: calFill } = useStaffText("opsCalendar");
   const slotHeight = getTimelineSlotHeight(
     renderSettings.visualConfig.zoomLevel,
   );
@@ -859,7 +882,7 @@ export function DayTimeline({
                 )}
                 title={
                   showCapacityHeat
-                    ? capacityHeatTitle(heatUsed, heatTotal)
+                    ? capacityHeatTitle(heatUsed, heatTotal, calFill)
                     : undefined
                 }
                 style={{ minHeight: slotHeight / 2 }}
@@ -943,6 +966,7 @@ export function DayColumns({
   ) => void;
   showCapacityHeat?: boolean;
 }) {
+  const { t: calT, fill: calFill } = useStaffText("opsCalendar");
   const visibleLimit = getZoomEventLimit(renderSettings.visualConfig.zoomLevel);
   const today = new Date();
   const { hoverKey } = useCalendarDrag();
@@ -1044,7 +1068,7 @@ export function DayColumns({
                 )}
                 title={
                   showCapacityHeat
-                    ? capacityHeatTitle(heatUsed, heatTotal)
+                    ? capacityHeatTitle(heatUsed, heatTotal, calFill)
                     : undefined
                 }
                 onClick={(e) => {
@@ -1087,12 +1111,12 @@ export function DayColumns({
                 ))}
                 {overflowCount > 0 && (
                   <p className="pt-0.5 pl-2 text-[10px] font-semibold text-indigo-400">
-                    +{overflowCount} more
+                    {calFill("moreCount", { count: overflowCount })}
                   </p>
                 )}
                 {dayEvents.length === 0 && (
                   <p className="py-3 text-center text-[10px] text-slate-300 select-none">
-                    No events
+                    {calT("noEvents")}
                   </p>
                 )}
               </div>
@@ -1130,12 +1154,13 @@ export function ResourceColumnsView({
     newStaff?: string,
   ) => void;
 }) {
+  const { t: calT } = useStaffText("opsCalendar");
   const { hoverKey } = useCalendarDrag();
 
   if (resources.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center text-sm text-slate-400">
-        No resources are configured for this resource calendar type.
+        {calT("noResources")}
       </div>
     );
   }
@@ -1232,7 +1257,7 @@ export function ResourceColumnsView({
               ))}
               {laneEvents.length === 0 && (
                 <p className="py-3 text-center text-[10px] text-slate-300">
-                  No events assigned
+                  {calT("noEventsAssigned")}
                 </p>
               )}
             </div>

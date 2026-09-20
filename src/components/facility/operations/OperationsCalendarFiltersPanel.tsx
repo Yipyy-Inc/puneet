@@ -8,6 +8,7 @@ import type {
   OperationsCalendarFilters,
   OperationsCalendarFilterOptions,
 } from "@/lib/operations-calendar";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 type ToggleGroupKey =
   | "modules"
@@ -19,12 +20,17 @@ type ToggleGroupKey =
 
 // Curated booking-status set (spec Table 43). Values match the labels events
 // carry (see BOOKING_STATUS_LABELS): a completed booking reads "Checked-out".
-const STATUS_FILTER_OPTIONS: FilterOption[] = [
-  { value: "Confirmed", label: "Confirmed" },
-  { value: "Checked-in", label: "Checked In" },
-  { value: "Checked-out", label: "Completed" },
-  { value: "Cancelled", label: "Cancelled" },
-];
+// A function, not a const: the labels are translated and a module-level array
+// is built before any translator exists. The VALUES are the stored ones and
+// stay English — they match what an event carries.
+function statusFilterOptions(t: (key: string) => string): FilterOption[] {
+  return [
+    { value: "Confirmed", label: t("statusConfirmed") },
+    { value: "Checked-in", label: t("statusCheckedIn") },
+    { value: "Checked-out", label: t("statusCompleted") },
+    { value: "Cancelled", label: t("statusCancelled") },
+  ];
+}
 
 interface OperationsCalendarFiltersPanelProps {
   open: boolean;
@@ -43,10 +49,13 @@ export function OperationsCalendarFiltersPanel({
   onClearAll,
   onClose,
 }: OperationsCalendarFiltersPanelProps) {
+  // Above the early return: a hook cannot sit behind a condition.
+  const { t } = useStaffText("opsCalendar");
   if (!open) {
     return null;
   }
 
+  const statusOptions = statusFilterOptions(t);
   const selectedLocation = filters.locations[0] ?? "";
   // Location is hidden for single-location facilities (one or no location).
   const showLocation = filterOptions.locations.length > 1;
@@ -54,33 +63,30 @@ export function OperationsCalendarFiltersPanel({
   return (
     <Card className="border-slate-200 bg-slate-50/60">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Filters</CardTitle>
+        <CardTitle className="text-base">{t("filtersTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-slate-600">
-          Service filters include built-in services and active custom modules
-          configured for this facility.
-        </p>
+        <p className="text-xs text-slate-600">{t("filtersHelp")}</p>
         <FilterSection
-          title="Service Type"
+          title={t("serviceType")}
           options={filterOptions.modules}
           selectedValues={filters.modules}
           onToggle={(value) => onToggleGroupValue("modules", value)}
         />
         <FilterSection
-          title="Status"
-          options={STATUS_FILTER_OPTIONS}
+          title={t("filterStatus")}
+          options={statusOptions}
           selectedValues={filters.statuses}
           onToggle={(value) => onToggleGroupValue("statuses", value)}
         />
         <FilterSection
-          title="Staff"
+          title={t("filterStaff")}
           options={filterOptions.staff}
           selectedValues={filters.staff}
           onToggle={(value) => onToggleGroupValue("staff", value)}
         />
         <FilterSection
-          title="Add-Ons"
+          title={t("filterAddOns")}
           options={filterOptions.addOns}
           selectedValues={filters.addOns}
           onToggle={(value) => onToggleGroupValue("addOns", value)}
@@ -88,11 +94,11 @@ export function OperationsCalendarFiltersPanel({
         {showLocation && (
           <div className="space-y-2 rounded-xl border border-slate-200/70 bg-white/90 p-3 shadow-sm">
             <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-              Location
+              {t("filterLocation")}
             </h3>
             <div className="grid gap-1.5">
               <LocationRadio
-                label="All Locations"
+                label={t("allLocations")}
                 checked={selectedLocation === ""}
                 onSelect={() => onToggleGroupValue("locations", "")}
               />
@@ -108,7 +114,7 @@ export function OperationsCalendarFiltersPanel({
           </div>
         )}
         <FilterSection
-          title="Booking Source"
+          title={t("bookingSource")}
           options={filterOptions.bookingSources}
           selectedValues={filters.bookingSources}
           onToggle={(value) => onToggleGroupValue("bookingSources", value)}
@@ -127,7 +133,7 @@ export function OperationsCalendarFiltersPanel({
             className="h-auto px-0 text-slate-500 hover:text-slate-700"
             onClick={onClearAll}
           >
-            Clear All
+            {t("clearAll")}
           </Button>
           <div className="flex items-center gap-2">
             <Button
@@ -136,14 +142,14 @@ export function OperationsCalendarFiltersPanel({
               className="h-auto px-0 text-slate-500 hover:text-slate-700"
               onClick={onClose}
             >
-              Close
+              {t("close")}
             </Button>
             <Button
               size="sm"
               className="bg-emerald-600 text-white hover:bg-emerald-700"
               onClick={onClose}
             >
-              Apply Filters
+              {t("applyFilters")}
             </Button>
           </div>
         </div>

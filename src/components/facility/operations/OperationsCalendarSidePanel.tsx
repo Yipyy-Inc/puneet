@@ -91,7 +91,7 @@ export function OperationsCalendarSidePanel({
 }: OperationsCalendarSidePanelProps) {
   // Two of the four overview tiles are booking STATUSES and take the shared
   // helper; only the panel's own words are keys here.
-  const { t, locale } = useStaffText("opsCalendar");
+  const { t, fill, locale } = useStaffText("opsCalendar");
   // The facility's own extras, so the add-on revenue this panel reports is
   // priced off what the business sells rather than off the seed file.
   const { addOns: facilityAddOns } = useServiceAddOns();
@@ -348,7 +348,7 @@ export function OperationsCalendarSidePanel({
         <button
           type="button"
           onClick={() => setCollapsed(false)}
-          aria-label="Expand sidebar"
+          aria-label={t("expandSidebar")}
           className="flex size-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-800"
         >
           <ChevronRight className="size-4" />
@@ -401,7 +401,10 @@ export function OperationsCalendarSidePanel({
             </div>
           ))}
           <div
-            title={`Revenue: ${formatCurrency(revenueToday.collected)} / ${formatCurrency(revenueToday.expected)}`}
+            title={fill("revenueTitle", {
+              collected: formatCurrency(revenueToday.collected),
+              expected: formatCurrency(revenueToday.expected),
+            })}
             className="flex size-6 items-center justify-center"
           >
             <span className={cn("size-2.5 rounded-full", revenueDot)} />
@@ -424,10 +427,10 @@ export function OperationsCalendarSidePanel({
             </div>
             <div>
               <span className="block text-sm leading-none font-black tracking-tight text-slate-800">
-                Schedule
+                {t("scheduleLabel")}
               </span>
               <span className="mt-0.5 block text-[10px] text-slate-400">
-                Operations Calendar
+                {t("operationsCalendar")}
               </span>
             </div>
           </div>
@@ -435,7 +438,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            aria-label="Collapse sidebar"
+            aria-label={t("collapseSidebar")}
             className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <PanelLeftClose className="size-4" />
@@ -450,7 +453,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={prevMonth}
-            aria-label="Previous month"
+            aria-label={t("previousMonth")}
             className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronLeft className="size-3.5" />
@@ -461,7 +464,7 @@ export function OperationsCalendarSidePanel({
           <button
             type="button"
             onClick={nextMonth}
-            aria-label="Next month"
+            aria-label={t("nextMonth")}
             className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronRight className="size-3.5" />
@@ -529,7 +532,7 @@ export function OperationsCalendarSidePanel({
       {/* Today's stats */}
       <div className="px-4 pt-3 pb-2">
         <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-          Today&apos;s Overview
+          {t("todaysOverview")}
         </p>
         <div className="grid grid-cols-2 gap-2">
           {stats.map((s) => (
@@ -607,11 +610,11 @@ export function OperationsCalendarSidePanel({
           <div className="mx-4 mt-2 mb-0 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-2">
             <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-              Upcoming Today
+              {t("upcomingToday")}
             </p>
             <div className="space-y-1.5">
               {shownUpcoming.map((ev) => {
-                const svc = ev.service ?? "Other";
+                const svc = ev.service ?? t("serviceOther");
                 const color = serviceColorMap[svc] ?? "#64748b";
                 const petName = ev.petNames?.[0] ?? ev.title;
                 const raw = ev.bookingRawStatus ?? "";
@@ -630,7 +633,7 @@ export function OperationsCalendarSidePanel({
                         color: "bg-red-500",
                         label: t("overdueNotCheckedIn"),
                       }
-                    : { color: "bg-sky-500", label: "Confirmed" };
+                    : { color: "bg-sky-500", label: t("statusConfirmed") };
                 return (
                   <button
                     key={ev.id}
@@ -671,7 +674,7 @@ export function OperationsCalendarSidePanel({
                 onClick={() => setShowAllUpcoming(true)}
                 className="mt-2 w-full text-center text-[10px] font-semibold text-sky-600 hover:underline"
               >
-                View all {remainingUpcoming} remaining
+                {fill("viewAllRemaining", { count: remainingUpcoming })}
               </button>
             )}
           </div>
@@ -685,7 +688,7 @@ export function OperationsCalendarSidePanel({
           <div className="px-4 pt-3 pb-2">
             <div className="mb-2.5 flex items-center justify-between">
               <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                Tasks
+                {t("tasksLabel")}
               </p>
               <button
                 type="button"
@@ -732,7 +735,7 @@ export function OperationsCalendarSidePanel({
           <div className="mx-4 mt-2 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-5">
             <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-              Add-Ons Today
+              {t("addOnsToday")}
             </p>
             <div className="space-y-1.5">
               {addOnsToday.rows.map((row) => (
@@ -755,7 +758,7 @@ export function OperationsCalendarSidePanel({
             {/* Total add-on revenue */}
             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
               <span className="text-[10px] font-medium text-slate-500">
-                Add-on revenue today
+                {t("addOnRevenueToday")}
               </span>
               <span className="text-[11px] font-black text-emerald-600 tabular-nums">
                 {formatCurrency(addOnsToday.revenue)}
