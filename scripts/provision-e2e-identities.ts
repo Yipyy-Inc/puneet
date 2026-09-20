@@ -66,6 +66,31 @@ const LOCATION_ID = "a0000000-0000-4000-8000-0000000000c1";
 const CUSTOMER_CLIENT_REF = 15;
 
 /**
+ * The SECOND customer, and the reason there is one.
+ *
+ * `customer@yipyy.dev` is a client of the DEMO facility — the same facility
+ * `getFacilityContext()` falls back to for any caller with no membership. So
+ * every customer spec asking "did this route resolve MY facility?" was reading
+ * the one answer that is right under BOTH the correct resolution and the broken
+ * one. customer-setting-reads.spec.ts was written for precisely that defect and
+ * could not have failed on it.
+ *
+ * This identity is a client of PAWS & CO — DEMO instead, so the two answers
+ * differ and the assertion has something to catch. paws-co-demo is the
+ * sanctioned demo facility (never Doggieville, which is a real business) and it
+ * is fully furnished: rooms, room categories, grooming services, daycare rates,
+ * training programs, its own taxes and its own required forms — including a
+ * before_booking form set to BLOCK, which no other fixture facility has.
+ *
+ * Linked to an EXISTING client rather than a new one, for two reasons: it adds
+ * no test row to the facility the client demos from, and a customer with two
+ * pets and ten bookings exercises the portal the way a real one does. The link
+ * is set explicitly for the same reason Alice's is — her seeded address is
+ * `@example.invalid`, so `link_client_record` would never make it.
+ */
+const PAWS_CO_CLIENT_REF = 92019485; // Geneviève Fortin, 2 pets, 10 bookings
+
+/**
  * One per portal the app exposes, so every gate can be exercised:
  *   platform admin -> /dashboard
  *   owner/manager  -> /facility/dashboard
@@ -110,6 +135,7 @@ const ACCOUNTS = [
     role: "accountant",
   },
   { email: "customer@yipyy.dev", fullName: "Sam Whitlock", role: null },
+  { email: "customer2@yipyy.dev", fullName: "Geneviève Fortin", role: null },
 ] as const satisfies readonly {
   email: string;
   fullName: string;
@@ -326,12 +352,15 @@ async function ensureMembershipAndStaff(
   if (staffError) throw new Error(`staff ${email}: ${staffError.message}`);
 }
 
-/** Point the seeded client record at the customer identity. */
-async function ensureCustomerClientLink(userId: string): Promise<void> {
+/** Point a seeded client record at a customer identity. */
+async function ensureCustomerClientLink(
+  userId: string,
+  clientRef: number,
+): Promise<void> {
   const { error } = await db
     .from("clients")
     .update({ profile_id: userId } as never)
-    .eq("ref", CUSTOMER_CLIENT_REF);
+    .eq("ref", clientRef);
   if (error) throw new Error(`client link: ${error.message}`);
 }
 
@@ -354,7 +383,10 @@ for (const account of ACCOUNTS) {
       );
     }
     if (account.email === "customer@yipyy.dev") {
-      await ensureCustomerClientLink(userId);
+      await ensureCustomerClientLink(userId, CUSTOMER_CLIENT_REF);
+    }
+    if (account.email === "customer2@yipyy.dev") {
+      await ensureCustomerClientLink(userId, PAWS_CO_CLIENT_REF);
     }
     console.log(
       `  ${account.email.padEnd(22)} ${userId}  ${account.role ?? ("isAdmin" in account && account.isAdmin ? "platform admin" : "customer — no membership")}`,

@@ -69,6 +69,15 @@ export const ACCOUNTS = {
   /** Holds view_payroll and NO admin access — the only identity that does. */
   accountant: "accountant@yipyy.dev",
   customer: "customer@yipyy.dev",
+  /**
+   * A customer of PAWS & CO — DEMO, not of the demo facility.
+   *
+   * `customer` above is a client of the facility `getFacilityContext()` falls
+   * back to for anyone with no membership, so a route that resolves the wrong
+   * facility returns the right answer for them anyway. This identity is the
+   * control: the same question asked where the two answers differ.
+   */
+  customerPawsCo: "customer2@yipyy.dev",
 } as const;
 
 /**

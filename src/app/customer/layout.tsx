@@ -5,7 +5,7 @@ import { getBrandingBySlug } from "@/lib/api/facility-branding";
 import { canAccessCustomerPortal } from "@/lib/auth/viewer";
 import { nextQuery } from "@/lib/auth/safe-next";
 import { guardPortal } from "@/lib/auth/portal-gate";
-import { createServerClient } from "@/lib/supabase/server";
+import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { CustomerShell } from "./_shell";
 
 // ============================================================================
@@ -72,8 +72,44 @@ export default async function CustomerLayout({
   //
   // Resolved here rather than in the shell because the answer is a function of
   // the hostname, which the server has and the client would have to be told.
-  // `null` on the apex is the honest answer, not a failure.
-  const branding = slug ? await getBrandingBySlug(slug) : null;
+  //
+  // ── AND ON THE APEX, THE FACILITY THEY ARE A CLIENT OF ──────────────────
+  //
+  // `null` was called the honest answer here. It is not what the reader gets:
+  // the shell's provider falls back to `src/data/facilities.ts[0]`, so every
+  // customer who reached yipyy.com/customer rather than their facility's own
+  // address was told they were at "Paws & Play Daycare" — a fixture business
+  // that exists nowhere, in the sidebar, the header and the welcome line, over
+  // their own real bookings. Exactly the defect CUJ-20 found in 2026-08, half
+  // fixed: the hostname path was corrected and the apex path was not.
+  //
+  // The hostname is not the only thing that names a facility. A signed-in
+  // customer's own client row does too, and it is the same answer — so it is
+  // read the same way /api/clients/me reads it, under the caller's own RLS
+  // (`clients_read` admits a customer only their own record), and turned into
+  // branding through the same projection. First by `ref` for somebody who is a
+  // client at two businesses: the apex cannot know which they mean, and their
+  // oldest is a better guess than a fixture.
+  //
+  // Still `null` for a signed-in stranger with no client record anywhere. That
+  // one is genuinely unanswerable, and it is the case /join exists for.
+  let branding = slug ? await getBrandingBySlug(slug) : null;
+  if (!slug) {
+    const user = await getCurrentUser().catch(() => null);
+    if (user) {
+      const supabase = await createServerClient();
+      const { data: mine } = await supabase
+        .from("clients")
+        .select("facilities!inner(slug)")
+        .eq("profile_id", user.id)
+        .order("ref")
+        .limit(1)
+        .maybeSingle();
+      const own = (mine as { facilities?: { slug: string } } | null)?.facilities
+        ?.slug;
+      if (own) branding = await getBrandingBySlug(own);
+    }
+  }
 
   return (
     <CustomerShell
