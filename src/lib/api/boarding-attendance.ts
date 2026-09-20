@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { withCareOverride } from "@/lib/daily-care/care-override-prompt";
 import { LiveWriteError } from "@/lib/api/live-fetch";
 import type { BoardingArrival } from "@/lib/api/mappers/boarding-arrival";
 import { withFormOverride } from "@/lib/forms/override-prompt";
@@ -115,15 +116,22 @@ export function useBoardingStayUpdate() {
       reopen?: boolean;
     }) => {
       const { bookingRef, ...patch } = input;
-      const response = await fetch(`/api/boarding/attendance/${bookingRef}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (!response.ok) {
-        throw await readError(response, "Could not update that stay.");
-      }
-      return bookingRef;
+      const send = async (careOverrideReason?: string) => {
+        const response = await fetch(`/api/boarding/attendance/${bookingRef}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...patch, careOverrideReason }),
+        });
+        if (!response.ok) {
+          throw await readError(response, "Could not update that stay.");
+        }
+        return bookingRef;
+      };
+      // Wrapped HERE rather than at each call site, so the kennel board, the
+      // daily care board, the calendar and the booking page all ask the same
+      // question without any of them knowing there is one. A reopen is not a
+      // departure and is not gated.
+      return patch.checkOut ? withCareOverride(send) : send();
     },
     onSuccess: invalidate,
   });

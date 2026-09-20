@@ -1,6 +1,15 @@
 import type { FeedingEntry, MedicationEntry } from "@/types/booking";
 import type { Incident } from "@/types/incidents";
 
+/**
+ * The code a check-out is refused with when today's care is unlogged.
+ *
+ * Here rather than beside the server guard so a "use client" module can read
+ * it without pulling `next/server` into the browser bundle — the same reason
+ * FORM_OVERRIDE_REASON_REQUIRED lives in forms/requirements.ts.
+ */
+export const CARE_OVERRIDE_REASON_REQUIRED = "care_override_reason_required";
+
 export interface PendingCareItem {
   kind: "feeding" | "medication" | "incident_care";
   /** "Dinner", "Apoquel 8:00am", etc. */

@@ -17802,8 +17802,9 @@ e2e: `booking-history.spec.ts`.
 
 Still open:
 
-- The gate reads only the booking page's care log. The board's own checkout,
-  the kiosk and the calendar do not ask at all.
+- ~~The gate reads only the booking page's care log. The board's own checkout,
+  the kiosk and the calendar do not ask at all.~~ **Closed 2026-09-20** — it is
+  asked by the ROUTE now; see the entry at the end of this file.
 - No screen lists the reasons across bookings. They are read one booking at a
   time.
 
@@ -18503,3 +18504,55 @@ it would have broken quoting a prospect.
 better" is worth checking twice before acting on it. The test is whether the
 other screen could do this job at all. For a pet on an existing client's file,
 it could. For a prospect who has never been to the facility, it could not.
+
+## 2026-09-20 — The care gate is asked by the route, not by one screen
+
+Checkout is supposed to ask when today's meals or doses are not logged. That
+question ran in `src/app/facility/dashboard/clients/[id]/bookings/[bookingId]/page.tsx`
+and **nowhere else**, so it existed only for staff who checked a guest out from
+that page. The kennel board's own checkout, the daily care board, the kiosk and
+the calendar wrote the departure straight through and never asked — three of
+the four ways a pet actually leaves the building. **A rule enforced by one
+screen is not a rule, it is a habit of that screen.**
+
+`requireCareLogged` (`src/lib/daily-care/require-care.ts`) now runs inside the
+routes that write a departure — `PATCH /api/boarding/attendance/[ref]` and
+`PATCH /api/daycare/attendance/[ref]` — so every surface asks whether it knows
+to or not.
+
+**It calls the same code the screen calls**, and that is the point.
+`bookingCareEntries` + `getPendingCareItems` moved to `src/lib/daily-care/` so
+the server and the page share one answer. The last time this gate was wrong it
+was because two pieces of code disagreed about which fields hold a booking's
+care — the gate read the fixture CHECKLIST fields while the panels read what
+the owner actually gave, so **it never fired on a real booking at all**.
+Re-deriving "what is pending" in SQL would have rebuilt exactly that bug.
+
+**The shape is the one the forms gate already established**, deliberately: the
+route refuses 422 with a code and the pending list; `withCareOverride` retries
+once with the reason staff give; `CareOverrideDialogHost` is mounted at the
+root beside `FormOverrideDialogHost` and renders the dialog the booking page
+already had, already translated. The wrapping sits INSIDE the two mutations
+rather than at each call site, so the boards, the calendar and
+`useBookingArrival` all get it without knowing there is a question.
+
+Three decisions worth knowing:
+
+- **It asks, it does not block.** A reason becomes an append-only override via
+  the existing `record_care_gate_override`, so a stay that left with unlogged
+  doses says who decided that and why. A `reopen` is not a departure and is not
+  gated.
+- **Incidents are excluded.** The booking page reads them as a third source,
+  but in-stay incident care is still fixture-backed, so gating on it would
+  refuse check-outs over care the database does not hold.
+- **The day is the facility's, not the server's.** A 20:00 check-out in
+  Montreal is tomorrow in UTC, and "today's meals" would come back empty.
+
+Fixed on the way: `useDaycareVisitUpdate` threw a bare `Error`, discarding the
+response body, so even a correct refusal would have lost the list of what was
+unlogged. It throws `LiveWriteError` now, like boarding.
+
+**Still open:** the KIOSK and grooming/training check-outs do not go through
+these two routes, so they are still ungated — the kiosk writes its own arrival
+path and an appointment is not a stay with meals. No screen lists the override
+reasons across bookings; they are still read one booking at a time.

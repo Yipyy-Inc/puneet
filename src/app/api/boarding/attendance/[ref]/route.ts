@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { recordArrival } from "@/lib/api/boarding-arrival-write";
+import { requireCareLogged } from "@/lib/daily-care/require-care";
 import {
   bookingEventContext,
   emitAutomationEvent,
@@ -34,6 +35,8 @@ interface UpdateInput {
   checkOut?: boolean;
   /** Undo a checkout — the wrong guest was collected. */
   reopen?: boolean;
+  /** Why today's care is unlogged, when staff choose to go ahead. */
+  careOverrideReason?: string;
 }
 
 function parseRef(ref: string): number | null {
@@ -67,6 +70,20 @@ export async function PATCH(
       { error: "Check out or reopen, not both." },
       { status: 422 },
     );
+  }
+
+  // The care gate, asked HERE rather than on one screen: the kennel board,
+  // the daily care board and the calendar all check out through this route,
+  // and none of them used to ask. A reopen is not a departure, so it is not
+  // gated.
+  if (body.checkOut) {
+    const gate = await createServerClient();
+    const refused = await requireCareLogged(
+      gate,
+      bookingRef,
+      body.careOverrideReason,
+    );
+    if (refused) return refused;
   }
 
   const response = await recordArrival(

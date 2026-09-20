@@ -22,7 +22,7 @@ import { useBookingArrival } from "@/lib/api/booking-arrival";
 import { arrivalFailure } from "@/lib/bookings/arrival-failure";
 import { usePermission } from "@/hooks/use-facility-rbac";
 import { printBookingInvoice } from "./_lib/print-invoice";
-import { bookingCareEntries } from "./_lib/booking-care";
+import { bookingCareEntries } from "@/lib/daily-care/booking-care-entries";
 import { useCancelWithRefund } from "@/components/bookings/use-cancel-with-refund";
 import dynamic from "next/dynamic";
 
@@ -1103,7 +1103,7 @@ export default function ClientBookingDetailPage({
   // 2B) before checkout.
   // Today's meals and doses as the panels show them, and the gate reads the
   // same rows — it read fixture checklist fields no real booking carries, so
-  // it never fired (see _lib/booking-care.ts).
+  // it never fired (see lib/daily-care/booking-care-entries.ts).
   const careEntries = bookingCareEntries(booking, careLog, logDay);
   const careStatus = getPendingCareItems(
     careEntries.feeding,

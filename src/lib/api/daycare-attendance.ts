@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { withCareOverride } from "@/lib/daily-care/care-override-prompt";
 
 import { LiveWriteError } from "@/lib/api/live-fetch";
 import { withFormOverride } from "@/lib/forms/override-prompt";
@@ -152,18 +153,31 @@ export function useDaycareVisitUpdate() {
       rateType?: string;
     }) => {
       const { bookingRef, ...patch } = input;
-      const response = await fetch(`/api/daycare/attendance/${bookingRef}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (!response.ok) {
-        const parsed = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(parsed?.error ?? "Could not update that visit.");
-      }
-      return bookingRef;
+      const send = async (careOverrideReason?: string) => {
+        const response = await fetch(`/api/daycare/attendance/${bookingRef}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...patch, careOverrideReason }),
+        });
+        if (!response.ok) {
+          const parsed = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          // A LiveWriteError, not a bare Error: the care gate refuses with a
+          // body (which meals, which doses) and the dialog needs it. This threw
+          // the sentence away and kept only the message.
+          throw new LiveWriteError(
+            parsed?.error ?? "Could not update that visit.",
+            response.status,
+            parsed as Record<string, unknown> | null,
+          );
+        }
+        return bookingRef;
+      };
+      // Wrapped here, not at each call site: the daily care board and the
+      // calendar both check out through this and neither knows there is a
+      // question to ask. A reopen is not a departure and is not gated.
+      return patch.checkOut ? withCareOverride(send) : send();
     },
     onSuccess: invalidate,
   });

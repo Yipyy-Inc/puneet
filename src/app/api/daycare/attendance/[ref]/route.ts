@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
+import { requireCareLogged } from "@/lib/daily-care/require-care";
 import {
   bookingEventContext,
   emitAutomationEvent,
@@ -28,6 +29,8 @@ interface UpdateInput {
   checkOut?: boolean;
   /** Undo a checkout — the wrong dog was collected. */
   reopen?: boolean;
+  /** Why today's care is unlogged, when staff choose to go ahead. */
+  careOverrideReason?: string;
   playGroup?: string | null;
   notes?: string;
   rateType?: string;
@@ -75,6 +78,18 @@ export async function PATCH(
       { error: "That booking does not exist, or is not yours." },
       { status: 404 },
     );
+  }
+
+  // The care gate, asked HERE rather than on one screen: the daily care board
+  // and the calendar both check out through this route and neither used to
+  // ask. A reopen is not a departure, so it is not gated.
+  if (body.checkOut) {
+    const refused = await requireCareLogged(
+      supabase,
+      bookingRef,
+      body.careOverrideReason,
+    );
+    if (refused) return refused;
   }
 
   const patch: Record<string, unknown> = {};

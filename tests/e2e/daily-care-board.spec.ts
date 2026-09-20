@@ -348,4 +348,61 @@ test.describe("the daily care board", () => {
       before.map((e) => e.id).sort(),
     );
   });
+
+  // ── THE CARE GATE ─────────────────────────────────────────────────────────
+  //
+  // Last, because it checks the shared stay out and back in again.
+  //
+  // The gate used to live in the booking detail page and nowhere else, so the
+  // kennel board, this board, the kiosk and the calendar all wrote the
+  // departure without asking. It is asked by the ROUTE now, which is why this
+  // can assert it over HTTP rather than by driving a screen.
+  test("a stay with unlogged care is not checked out until somebody says why", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // The stay above carries breakfast at 08:00, dinner at 17:30 and a dose,
+    // and this file logs at most one of them — so something is always pending.
+    await page.request.post("/api/boarding/attendance", {
+      data: { bookingRef },
+    });
+
+    const refused = await page.request.patch(
+      `/api/boarding/attendance/${bookingRef}`,
+      { data: { checkOut: true } },
+    );
+    expect(refused.status(), await refused.text()).toBe(422);
+    const body = (await refused.json()) as {
+      code?: string;
+      pending?: { kind: string; label: string }[];
+    };
+    expect(body.code).toBe("care_override_reason_required");
+    // The list, not just a sentence: the dialog names what was missed.
+    expect(body.pending?.length ?? 0).toBeGreaterThan(0);
+
+    // Still here. A refusal that let the pet go anyway would be worse than no
+    // gate at all, because the screen would say it had asked.
+    const again = await page.request.patch(
+      `/api/boarding/attendance/${bookingRef}`,
+      { data: { checkOut: true } },
+    );
+    expect(again.status(), "still refused, so nothing was written").toBe(422);
+
+    const allowed = await page.request.patch(
+      `/api/boarding/attendance/${bookingRef}`,
+      {
+        data: {
+          checkOut: true,
+          careOverrideReason: "[e2e] owner collected early, meals sent home",
+        },
+      },
+    );
+    expect(allowed.ok(), await allowed.text()).toBe(true);
+
+    // Put the stay back as the rest of the file left it.
+    await page.request.patch(`/api/boarding/attendance/${bookingRef}`, {
+      data: { reopen: true },
+    });
+  });
 });
