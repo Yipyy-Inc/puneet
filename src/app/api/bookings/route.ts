@@ -29,6 +29,7 @@ import {
   shiftDay,
 } from "@/lib/api/booking-list-params";
 import type { NewBooking } from "@/types/booking";
+import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   FORM_REQUIRED,
@@ -426,6 +427,24 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+  // ── DIRECT BOOKING, WHERE THE FACILITY ALLOWS IT ────────────────────────
+  //
+  // Every booking a customer makes arrives as a REQUEST with its price
+  // zeroed — the trigger insists, because the number came from their
+  // browser. A facility can now say a given service needs no approval, and
+  // this is what acts on that.
+  //
+  // It runs AFTER the booking exists and never fails it. Three things must
+  // be true before anything is confirmed: the facility switched that service
+  // on, the server could price it from the facility's own rates, and that
+  // price agreed with what the customer was shown. Otherwise the booking
+  // stays what it already is — a request — which is the behaviour this
+  // replaced, so the failure mode is the old one.
+  //
+  // Staff bookings are already confirmed and are not candidates.
+  const autoConfirmed = await autoConfirmCustomerBookings(
+    created.map((c) => c.booking_id),
+  );
 
   const { data: full } = await supabase
     .from("bookings")
@@ -570,6 +589,9 @@ export async function POST(request: NextRequest) {
             : {}),
           ...(depositRecorded > 0 ? { depositRecorded } : {}),
           ...(depositProblem ? { depositProblem } : {}),
+          // Said, not inferred: the customer's screen tells them whether they
+          // are booked or waiting, and a request is the common answer.
+          ...(autoConfirmed > 0 ? { autoConfirmed } : {}),
         }
       : null,
     { status: 201 },

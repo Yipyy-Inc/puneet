@@ -18626,3 +18626,65 @@ with the same hard-coded sign — left alone because it is pre-existing and not
 what this change was about. And the recovery MESSAGE itself has no e2e: the
 tick is unit-shaped and the send path is the shared messaging one, so what is
 untested is the join between them.
+
+## 2026-09-20 — A facility decides which services need its approval
+
+Every booking a customer makes arrives as a REQUEST with its price zeroed;
+`private.enforce_booking_integrity` insists, because the number came from their
+browser. The client asked for the obvious companion: let a facility say that
+grooming, or daycare, needs no approval.
+
+**This switch existed once and was deleted, which is the important context.**
+It lived in `localStorage`, so it depended on which browser last opened
+Settings, and nothing read it — the database made every customer booking a
+request whatever it said. "Direct booking — customers are confirmed instantly"
+was never true. `lib/settings/booking-approval.ts` still carries the note.
+
+**No migration was needed, and that is worth knowing.** The trigger's first act
+is `if (select auth.jwt()->>'sub') is null then return new; end if` — a write
+with no user behind it is already outside the customer path. So the booking is
+made exactly as before, by the customer under their own RLS, and PROMOTED
+afterwards by the server with the service role. Nothing was cut into the
+trigger and a customer's own session still cannot confirm anything.
+
+**Three things must be true before a booking is confirmed** (`lib/bookings/auto-confirm.ts`):
+the facility switched that service on (read from settings, never from the
+request); the server could price it from the facility's own rates
+(`lib/bookings/price-booking.ts`); and that price AGREES with what the customer
+was shown, which the trigger kept in `details.requestedQuote`. Any failing
+leaves it a request — the behaviour it replaced, so the failure mode is the old
+one. It never fails a booking: the booking exists before this runs.
+
+**Why the quote comparison and not just a server price.** Re-pricing alone
+would let the facility's rates move between the quote and the button and charge
+a number the customer never saw. A mismatch is not an argument to win; it is a
+reason to let staff look.
+
+**Grooming and training are deliberately not priceable here.** Grooming's
+number comes from `resolveEffectivePricing` — size, coat, breed, groomer tier,
+per-pet overrides — and training's from a series enrolment. Re-deriving either
+on the server is where a second implementation of the rules starts, and the
+first bug it causes is a customer charged something other than what they saw
+(exactly the shape of the care-gate defect above). **The switch is still shown
+for them, saying why**, rather than offered as a toggle that decides nothing —
+which is the mistake this very setting made the first time.
+
+The setting is keyed by any service string, not by `APPROVAL_SERVICES`, so a
+custom module gets the same switch: it is a slug in the same `bookings.service`
+text column.
+
+**A bug caught while writing it:** the settings card rebuilt the saved value
+from `responseHours` alone, so saving the hours would have silently cleared
+every switch. The save writes both.
+
+`tests/e2e/booking-auto-confirm.spec.ts` pins: off by default is a request; on
+and priced is confirmed at the SERVER's number; on with a disagreeing quote
+stays a request; and a customer cannot confirm their own booking by asking. It
+restores the setting in `afterAll`, because leaving daycare auto-confirming on
+the shared e2e facility would quietly change what every other booking spec
+means.
+
+**Still open:** grooming and training (above). Deposits are not taken on a
+direct booking — it confirms with the balance owed, as a staff-made booking
+does. And no e2e drives the wizard UI to a direct booking; the spec works
+through the API, which is where the decision is made.

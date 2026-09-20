@@ -5328,7 +5328,14 @@
         "feedingTitle": "Repas en garderie",
         "feedingHelp": "Facturé lorsque des repas sont prévus pendant une visite en garderie. La pension inclut les repas.",
         "feesInvalid": "Vérifiez les frais : les montants vont de 0 à 1 000, et chaque article doit avoir un nom.",
-        "feesSaved": "Frais enregistrés"
+        "feesSaved": "Frais enregistrés",
+        "autoConfirmTitle": "Approbation",
+        "autoConfirmHelp": "Décidez pour chaque service si la réservation d'un client doit être approuvée par vous, ou si elle est confirmée dès qu'il la fait.",
+        "autoConfirmOn": "Confirmée immédiatement",
+        "autoConfirmOff": "Doit être approuvée",
+        "autoConfirmSaved": "Paramètres d'approbation enregistrés",
+        "autoConfirmUnpriceable": "Les réservations pour ce service demandent toujours une approbation : le prix dépend de l'animal, il est donc fixé par une personne.",
+        "autoConfirmNoRates": "Une réservation n'est confirmée que si les tarifs de l'établissement permettent d'en calculer le prix. Sinon, elle arrive pour approbation."
       },
       "form-notifications": {
         "newSubmission": "Nouvelle soumission reçue",
