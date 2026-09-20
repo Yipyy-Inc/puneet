@@ -23,7 +23,6 @@ import { TagList } from "@/components/shared/TagList";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
 import { clientQueries } from "@/lib/api/client";
-import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 import {
   getPetImage,
   type UnifiedBooking,
@@ -207,16 +206,35 @@ export function BookingCard({
     ? `/facility/dashboard/clients/${ownerRef}`
     : undefined;
 
+  // ── WHICH BOOKING THIS CARD OPENS ────────────────────────────────────────
+  //
+  // Its own. That needs saying because it used to be a SEARCH:
+  // `getBookingOverviewHref` scanned the `src/data/bookings` fixture for a row
+  // with the same pet, took the newest, and returned a link to THAT.
+  //
+  // The board reads Postgres. So for every real booking the search matched
+  // nothing, returned null, and the card fell through to the owner's booking
+  // HISTORY — a list of everything they have ever had, with the one thing the
+  // person clicked nowhere in particular. That is what tapping a guest on the
+  // live board did.
+  //
+  // The worse half is the case where it DID match: a pet with a fixture entry
+  // would have opened whichever invented booking the fixture held for it,
+  // which reads as a real record and is not one.
+  //
+  // Nothing had to be looked up. `rawId` IS the booking's ref — it is what
+  // every check-in, check-out and no-show write on this same card already
+  // sends — and `ownerRef` is the client's. The link is those two.
   const handleOpen = () => {
-    const href = getBookingOverviewHref({
-      petId: booking.petId,
-      clientId: booking.ownerId,
-      service: booking.serviceKey,
-    });
-    if (href) {
-      router.push(href);
+    if (ownerRef && Number.isInteger(bookingRef) && bookingRef > 0) {
+      router.push(
+        `/facility/dashboard/clients/${ownerRef}/bookings/${bookingRef}`,
+      );
       return;
     }
+    // A card whose source does not carry the owner, or whose id is not a ref.
+    // The owner's list is a worse answer than the booking, and a better one
+    // than nothing.
     if (ownerRef) {
       router.push(`/facility/dashboard/clients/${ownerRef}/bookings`);
       return;
@@ -334,6 +352,12 @@ export function BookingCard({
       // a WCAG "nested-interactive" failure — the card stays mouse-clickable and
       // keyboard users use the inner links/actions.
       onClick={handleOpen}
+      // The board's own card, nameable by a spec. The customer portal has a
+      // different component under `booking-card`, so this one says which — and
+      // it carries the booking it opens, because a board shows several cards
+      // for the same pet and "the first one" is not an identity.
+      data-slot="dashboard-booking-card"
+      data-booking-ref={Number.isInteger(bookingRef) ? bookingRef : undefined}
       className={cn(
         // flex-wrap + a full-width action row below sm: on a phone the card is
         // ~358px, and an inline action column left only ~199px for the details,

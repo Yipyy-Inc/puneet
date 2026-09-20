@@ -372,6 +372,40 @@ test.describe("the facility home board", () => {
     ).toBeVisible({ timeout: 60_000 });
   });
 
+  test("clicking a guest opens THAT booking, not the owner's history", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const room = await freeRoom(page);
+    const created = await createBooking(page, boardingBody(room));
+
+    await page.goto("/facility/dashboard");
+    // By its ref, not by the pet: the board carries several of Buddy's cards
+    // and "the first one" would make the assertion below meaningless.
+    const card = page.locator(
+      `[data-slot="dashboard-booking-card"][data-booking-ref="${created.id}"]`,
+    );
+    await expect(card).toBeVisible({ timeout: 60_000 });
+    await card.click();
+
+    // ── WHAT THIS CATCHES ─────────────────────────────────────────────────
+    //
+    // The card used to resolve its destination by searching the
+    // `src/data/bookings` FIXTURE for a row with the same pet. The board reads
+    // Postgres, so a real booking matched nothing, the helper returned null,
+    // and the click fell through to `/clients/<ref>/bookings` — the owner's
+    // whole history, with the booking the person clicked nowhere in
+    // particular. The ref in the URL is what separates the two.
+    await page.waitForURL(/\/clients\/\d+\/bookings\/\d+/, {
+      timeout: 30_000,
+    });
+    expect(
+      new URL(page.url()).pathname,
+      "the board opened a list, or somebody else's booking",
+    ).toMatch(new RegExp(`/bookings/${created.id}$`));
+  });
+
   test("checking in from the dashboard reaches the database", async ({
     page,
   }) => {
