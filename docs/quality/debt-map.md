@@ -14300,9 +14300,11 @@ delay. So "Direct booking — customers are confirmed instantly" was never true.
 The switch, the delay and their copy are gone; the booking form sends a
 customer's booking as a request, always, which is what the database did anyway.
 
-**Still open.** A real "direct booking" would have to price the booking on the
-server first — an owner's insert is zeroed today, so confirming it would confirm
-an unpriced stay. Not attempted. `InStayCareTab` and
+**Direct booking was BUILT on 2026-09-20** — see the entry at the end of this
+file. The reasoning here was right and is what shaped it: the price has to come
+from the server, so it does, and it is confirmed only when it also agrees with
+what the customer was shown. Grooming and training are still excluded, because
+their price depends on the pet. `InStayCareTab` and
 `lib/incidents/incident-billing.ts` still read the fixture's medication fee
 and incident-charge switch; they move with the in-stay care conversion (the
 incident mapper returns no care actions at all yet). The "how is it given"
