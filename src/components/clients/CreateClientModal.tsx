@@ -55,6 +55,7 @@ import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import { AdditionalContactsManager } from "@/components/clients/AdditionalContactsManager";
 import type { AdditionalContact } from "@/types/client";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 
 // ========================================
 // Types
@@ -1039,11 +1040,22 @@ export function CreateClientModal({
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               {t("address")}
             </p>
+            {/* Choosing a suggestion fills the three fields below it, which is
+                the whole point: city, province and postal code are where a
+                typed address goes wrong, and a wrong postcode is a route the
+                van drives twice. Typing straight past the list still works —
+                see AddressAutocomplete on why nothing here can block a save. */}
             <Field label={t("street")} required error={errors.street}>
-              <Input
+              <AddressAutocomplete
                 value={client.street}
-                onChange={(e) => updateClient("street", e.target.value)}
-                placeholder={t("streetPlaceholder")}
+                onValueChange={(street) => updateClient("street", street)}
+                onSelect={(suggestion) => {
+                  updateClient("city", suggestion.city);
+                  updateClient("state", suggestion.province);
+                  updateClient("zip", suggestion.postalCode);
+                }}
+                placeholder={t("streetPlaceholderSuggest")}
+                hintText={t("addressSuggestions")}
               />
             </Field>
             <div className="grid grid-cols-3 gap-4">

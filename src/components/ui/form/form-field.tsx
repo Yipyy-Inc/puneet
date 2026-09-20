@@ -2,6 +2,7 @@
 
 import type { AnyFieldApi } from "@tanstack/react-form";
 
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -58,5 +59,62 @@ function FormField({ form, name, label, ...inputProps }: FormFieldProps) {
   );
 }
 
-export { FormField, FormFieldError };
+/**
+ * A street field that offers real addresses, and fills its neighbours.
+ *
+ * ── WHY IT TAKES THE OTHER FIELDS' NAMES ──────────────────────────────────
+ *
+ * Choosing a suggestion is worth far more than saving keystrokes on the
+ * street: city, province and postal code are where a typed address actually
+ * goes wrong, and a wrong postcode is a van driving to the wrong end of the
+ * island. So the caller names the three companion fields and this sets them
+ * through the form's own API — no shared state, and a form that does not have
+ * one of them simply does not name it.
+ */
+function FormAddressField({
+  form,
+  name,
+  label,
+  hintText,
+  cityName,
+  provinceName,
+  postalCodeName,
+  ...inputProps
+}: FormFieldProps & {
+  /** Read by a screen reader when the list of addresses opens. */
+  hintText: string;
+  cityName?: string;
+  provinceName?: string;
+  postalCodeName?: string;
+}) {
+  return (
+    <form.Field name={name}>
+      {(field: AnyFieldApi) => (
+        <div className="space-y-2">
+          <Label htmlFor={field.name}>{label}</Label>
+          <AddressAutocomplete
+            id={field.name}
+            value={(field.state.value as string) ?? ""}
+            onValueChange={(street) => field.handleChange(street)}
+            onSelect={(suggestion) => {
+              if (cityName) form.setFieldValue(cityName, suggestion.city);
+              if (provinceName) {
+                form.setFieldValue(provinceName, suggestion.province);
+              }
+              if (postalCodeName) {
+                form.setFieldValue(postalCodeName, suggestion.postalCode);
+              }
+            }}
+            hintText={hintText}
+            placeholder={inputProps.placeholder as string | undefined}
+            disabled={inputProps.disabled}
+          />
+          <FormFieldError field={field} />
+        </div>
+      )}
+    </form.Field>
+  );
+}
+
+export { FormAddressField, FormField, FormFieldError };
 export type { AnyReactFormApi, FormFieldProps };

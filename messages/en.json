@@ -1678,7 +1678,9 @@
         "acTags": "Tags",
         "acTagPickup": "Pickup",
         "acTagDropoff": "Drop-off",
-        "acTagEmergency": "Emergency"
+        "acTagEmergency": "Emergency",
+        "addressSuggestions": "Address suggestions",
+        "streetPlaceholderSuggest": "Start typing the street address"
       },
       "bookingDetail": {
         "bookingUpdated": "{ref} updated",

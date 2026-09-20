@@ -1678,7 +1678,9 @@
         "acTags": "Étiquettes",
         "acTagPickup": "Récupération",
         "acTagDropoff": "Dépôt",
-        "acTagEmergency": "Urgence"
+        "acTagEmergency": "Urgence",
+        "addressSuggestions": "Suggestions d’adresse",
+        "streetPlaceholderSuggest": "Commencez à taper l’adresse"
       },
       "bookingDetail": {
         "bookingUpdated": "{ref} mise à jour",

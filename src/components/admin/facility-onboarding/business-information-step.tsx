@@ -5,7 +5,7 @@ import type { AnyFieldApi } from "@tanstack/react-form";
 import { Check } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
-import { FormField } from "@/components/ui/form/form-field";
+import { FormAddressField, FormField } from "@/components/ui/form/form-field";
 import { FormSelect } from "@/components/ui/form/form-select";
 import { FormFieldError } from "@/components/ui/form/form-field";
 import { cn } from "@/lib/utils";
@@ -67,11 +67,18 @@ export function BusinessInformationStep({
         />
       </div>
 
-      <FormField
+      {/* The placeholder promised this before anything did it: the field has
+          said "Start typing an address…" since the wizard shipped, with no
+          lookup behind it. Choosing a row fills the three fields below. */}
+      <FormAddressField
         form={form}
         name="address"
         label="Address"
         placeholder="Start typing an address…"
+        hintText="Address suggestions"
+        cityName="city"
+        provinceName="province"
+        postalCodeName="postalCode"
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
