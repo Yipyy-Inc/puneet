@@ -84,6 +84,9 @@ const draftSchema = z
     preSelectedSpecialRequests: z.string().max(4000).optional(),
     preSelectedNotificationEmail: z.boolean().optional(),
     preSelectedNotificationSMS: z.boolean().optional(),
+    // Which sub-step of Details they were on. `step` alone returns them to
+    // the right SCREEN; this returns them to the right question on it.
+    preSelectedSubStep: z.number().int().min(0).max(20).optional(),
   })
   .strip();
 
@@ -158,6 +161,7 @@ export function rowToUnfinishedBooking(
     specialRequests: d.preSelectedSpecialRequests,
     notificationEmail: d.preSelectedNotificationEmail,
     notificationSMS: d.preSelectedNotificationSMS,
+    subStep: d.preSelectedSubStep,
     ...(row.recovery_outcome && row.recovery_resolved_at
       ? {
           recovery: {

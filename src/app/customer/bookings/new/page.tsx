@@ -145,6 +145,11 @@ export default function NewBookingPage() {
           preSelectedSpecialRequests={
             resumePreselection?.preSelectedSpecialRequests
           }
+          // The step they left on. Without this the wizard guesses one from
+          // what is preselected, which sends somebody who left on Review back
+          // to Details to click forward again.
+          preSelectedStep={resumePreselection?.preSelectedStep}
+          preSelectedSubStep={resumePreselection?.preSelectedSubStep}
           preSelectedNotificationEmail={
             resumePreselection?.preSelectedNotificationEmail
           }

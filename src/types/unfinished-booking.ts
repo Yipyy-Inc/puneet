@@ -98,6 +98,8 @@ export interface UnfinishedBooking {
   abandonedAt: string;
   /** The step in the booking wizard where they dropped off */
   abandonmentStep: AbandonmentStep;
+  /** The sub-step within that step, where the step has them (Details does). */
+  subStep?: number;
   status: UnfinishedBookingStatus;
   lastContactedAt?: string;
   /** Chronological staff notes with timestamps */

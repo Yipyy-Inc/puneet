@@ -37,6 +37,8 @@ import {
 import { useFollowUpUnfinishedBooking } from "@/lib/api/unfinished-bookings";
 import { AbandonmentRecoverySettings } from "@/components/bookings/AbandonmentRecoverySettings";
 import { UnfinishedBookingDetailSheet } from "@/components/bookings/UnfinishedBookingDetailSheet";
+import { formatMoney } from "@/lib/i18n/format";
+import { useShellLocale } from "@/lib/shell/use-shell-text";
 
 interface Props {
   data: UnfinishedBooking[];
@@ -98,6 +100,7 @@ export function UnfinishedBookingsTable({
   data: initialData,
   onSchedule,
 }: Props) {
+  const locale = useShellLocale();
   // The facility's own, from Postgres; a change is saved and the list re-reads.
   const records = initialData;
   const followUp = useFollowUpUnfinishedBooking();
@@ -235,10 +238,13 @@ export function UnfinishedBookingsTable({
       defaultVisible: true,
       sortable: true,
       sortValue: (r) => r.estimatedValue ?? 0,
+      // `${v.toFixed(0)}` until 2026-09-20 — a hard-coded sign and no
+      // locale, so a French reader got "$38" where the rest of the product
+      // says "38 $". §5q: always Intl, never a format string.
       render: (r) =>
         r.estimatedValue != null ? (
-          <span className="price-value font-semibold">
-            ${r.estimatedValue.toFixed(0)}
+          <span className="price-value font-semibold tabular-nums">
+            {formatMoney(r.estimatedValue, locale, { whole: true })}
           </span>
         ) : (
           <span className="text-muted-foreground text-xs">—</span>

@@ -15,6 +15,7 @@ import type {
   MedicationItem,
 } from "@/types/booking";
 import type { Client } from "@/types/client";
+import type { ResumeStepId } from "@/lib/resume-booking";
 
 interface BookingModalConfig {
   clients: Client[];
@@ -45,6 +46,9 @@ interface BookingModalConfig {
   preSelectedSpecialRequests?: string;
   preSelectedNotificationEmail?: boolean;
   preSelectedNotificationSMS?: boolean;
+  /** Resume: the step the draft was left on, and the sub-step within it. */
+  preSelectedStep?: ResumeStepId;
+  preSelectedSubStep?: number;
   onCreateBooking: (booking: BookingData) => void;
   isEstimateMode?: boolean;
   isCustomerMode?: boolean;
@@ -127,6 +131,8 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedSpecialRequests={config.preSelectedSpecialRequests}
           preSelectedNotificationEmail={config.preSelectedNotificationEmail}
           preSelectedNotificationSMS={config.preSelectedNotificationSMS}
+          preSelectedStep={config.preSelectedStep}
+          preSelectedSubStep={config.preSelectedSubStep}
           estimateMode={config.isEstimateMode ?? false}
           isCustomerMode={config.isCustomerMode ?? false}
           passRedemption={config.passRedemption}

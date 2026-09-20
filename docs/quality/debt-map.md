@@ -18412,10 +18412,15 @@ Three times in one day `bun run test:unit` reported a single failure, and every
 time the run that failed took **20–25 seconds against a normal 0.7** — a
 thirty-fold slowdown, each time while a Playwright suite or a `next build` was
 still using the disk. Seven consecutive runs immediately afterwards passed in
-~700 ms. The failing test's name was not captured on any of the three
-occasions, which is the first thing to fix if it happens again:
+~700 ms. The failing test's name has not been captured on any of the FOUR
+occasions (a fourth followed on 2026-09-20), and re-running afterwards cannot
+get it: by then the contention is gone and six consecutive runs pass in ~700ms.
+Re-running is the wrong instrument. **Capture the failing run itself:**
 
-    for i in 1 2 3 4 5; do bun test 2>&1 | grep -A4 "(fail)"; done
+    bun run test:unit 2>&1 | tee /tmp/unit.log      # then read the log
+
+That is now the habit for this command, because the only run that can name the
+test is the one that fails, and it is not repeatable on demand.
 
 **This tier is meant to be immune to that.** [AGENTS.md](../../AGENTS.md)
 describes it as pure logic, no browser, no database — a shape that should not
@@ -18571,3 +18576,53 @@ status chip. There was nothing to gate. Check before repeating that claim.
 
 **Still open:** no screen lists the override reasons across bookings; they are
 still read one booking at a time.
+
+## 2026-09-20 — An unfinished booking comes back where it was left
+
+The abandoned-cart feature was **far more real than it looked** — the table has
+RLS and a trigger, the customer wizard saves a draft on every step forward and
+on `visibilitychange`/`pagehide` with `keepalive: true` (the one mechanism that
+survives a tab closing on a phone), the facility and customer lists read real
+rows, the resume link checks ownership, and `recovery-tick.ts` queues the
+follow-up through the ordinary messaging pipeline with suppression, quiet hours
+and a once-only claim. None of that needed rebuilding.
+
+**What was wrong was small and exactly the thing the feature is for.** `step`
+was written on every save and **never read back**. `buildResumePreselection`
+restored every FIELD and then let the wizard infer a step from whatever
+happened to be preselected — client + pet + service → Details. So somebody who
+left on **Confirm** came back to **Details** and clicked forward again, and the
+one promise the feature makes ("carry on where you left off") was the one it
+did not keep.
+
+The four steps the customer form writes map 1:1 onto the wizard's own
+(`client-pet`, `service`, `details`, `confirm`), so **no migration was needed** —
+`resumeStepFor()` in `src/lib/resume-booking.ts` maps them, `preSelectedStep`
+carries it, and `initialStepIndex` honours it ahead of the inference. The three
+steps only a longer flow would reach (`add_ons`, `forms`, `payment`) are mapped
+anyway so an unknown value lands somewhere sensible rather than at the start.
+
+Also fixed: the **sub-step** was never saved, so Details — five sub-steps for
+boarding — restarted at the top; it rides in the draft now. **`estimatedValue`**
+was never written, so the facility's "Est. Value" column could only ever be
+empty; the wizard sends the price it had computed, as an INDICATION recorded at
+the moment they left. Nothing prices a booking from it and the wizard re-prices
+on resume — rates can change while a cart sits.
+
+And the cell rendered `${v.toFixed(0)}`: a hard-coded sign and no locale, so a
+French reader got "$38" where the rest of the product says "38 $". §5q.
+
+**The real risk was that none of it was covered.** A table, four routes, a
+recovery tick and two screens, and **no e2e spec at all**.
+`tests/e2e/unfinished-bookings.spec.ts` now runs the round trip: leaving twice
+moves the step rather than adding a row; the draft carries the pets, the
+special requests, the sub-step and the value; resuming opens on Confirm and
+mid-Details on Feeding; a draft for a client the caller does not own is refused
+(the POST scopes by `profile_id`, not by the id in the body); the facility sees
+it; and recovering takes it off the list, which is also the cleanup.
+
+**Still open:** the wizard header renders `${calculatePrice.total.toFixed(2)}`
+with the same hard-coded sign — left alone because it is pre-existing and not
+what this change was about. And the recovery MESSAGE itself has no e2e: the
+tick is unit-shaped and the send path is the shared messaging one, so what is
+untested is the join between them.

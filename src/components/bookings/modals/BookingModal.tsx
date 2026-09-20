@@ -4,6 +4,7 @@ import {
   saveUnfinishedBookingOnLeave,
   useSaveUnfinishedBooking,
 } from "@/lib/api/unfinished-bookings";
+import type { ResumeStepId } from "@/lib/resume-booking";
 import { formatDateLocal } from "@/lib/shift-recurrence";
 
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
@@ -211,6 +212,9 @@ export interface NewBookingModalProps {
   preSelectedSpecialRequests?: string;
   preSelectedNotificationEmail?: boolean;
   preSelectedNotificationSMS?: boolean;
+  /** Resume: the step the customer left on, and the sub-step within it. */
+  preSelectedStep?: ResumeStepId;
+  preSelectedSubStep?: number;
   booking?: Booking;
   /** When true, the wizard is being used by a customer making a booking request (not facility staff). */
   isCustomerMode?: boolean;
@@ -332,6 +336,8 @@ export function BookingModal({
   preSelectedSpecialRequests,
   preSelectedNotificationEmail,
   preSelectedNotificationSMS,
+  preSelectedStep,
+  preSelectedSubStep,
   booking,
   isCustomerMode = false,
   bookingRequestMessage,
@@ -585,6 +591,14 @@ export function BookingModal({
   const initialStepIndex = (() => {
     // Edit mode always starts at the details step (first step after filtering)
     if (editMode) return 0;
+    // RESUMING: open on the step the draft was left on. Everything below is a
+    // guess from what happens to be preselected — good enough for a deep link,
+    // wrong for a resume, because a customer who left on Review has all three
+    // preselected and would land on Details and click forward again.
+    if (preSelectedStep) {
+      const saved = displayedSteps.findIndex((s) => s.id === preSelectedStep);
+      if (saved >= 0) return saved;
+    }
     if (preSelectedClientId && preSelectedPetId && preSelectedService) {
       return Math.max(
         0,
@@ -600,7 +614,11 @@ export function BookingModal({
     return 0;
   })();
   const [currentStep, setCurrentStep] = useState(initialStepIndex);
-  const [currentSubStep, setCurrentSubStep] = useState(0);
+  // Seeded from the draft when resuming: `step` returns them to the right
+  // SCREEN, this to the right question on it.
+  const [currentSubStep, setCurrentSubStep] = useState(
+    preSelectedStep && preSelectedSubStep ? preSelectedSubStep : 0,
+  );
 
   // Reset the main content scroll position when moving between wizard steps
   // or sub-steps. Without this, scroll carries over from the previous step —
@@ -2894,6 +2912,12 @@ export function BookingModal({
       step,
       requestedStart: day(startDate),
       requestedEnd: day(endDate),
+      // What the booking WOULD have been worth, so the facility can see which
+      // abandoned carts are worth following up. An indication only, recorded
+      // at the moment they left: rates can change before they come back, and
+      // nothing prices a booking from this — the wizard re-prices on resume.
+      estimatedValue:
+        calculatePrice.total > 0 ? calculatePrice.total : undefined,
       draft: {
         preSelectedPetId: firstPet?.id,
         preSelectedPetIds: selectedPets.map((pet) => pet.id),
@@ -2909,6 +2933,10 @@ export function BookingModal({
         preSelectedSpecialRequests: specialRequests || undefined,
         preSelectedNotificationEmail: notificationEmail,
         preSelectedNotificationSMS: notificationSMS,
+        // Which question on the Details screen they were on. Saved with the
+        // step rather than instead of it: the step gets them back to the
+        // screen, this to the place on it.
+        preSelectedSubStep: currentSubStep,
       },
     } as const;
   };
