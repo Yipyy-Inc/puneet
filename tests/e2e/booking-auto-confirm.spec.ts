@@ -36,6 +36,19 @@ const ALICE = { client: 15, pet: 1 };
 /** What the e2e facility's daycare rate card charges for a full day. */
 const FULL_DAY = 38;
 
+// ── GROOMING'S NUMBER, AND WHERE EACH HALF COMES FROM ─────────────────────
+//
+// Buddy weighs 25 lb. The facility's `grooming_config.pet_size_tiers` puts
+// anything over 15 and up to 35 in "medium", and Basic Bath's medium price is
+// 35. So create_booking resolves the size, and the server prices it from the
+// facility's own `grooming_service_size_prices` row for that pairing.
+//
+// Written out rather than read from the database at runtime BECAUSE it is the
+// assertion: a spec that asked the same tables the code asks would agree with
+// itself no matter what either did.
+const GROOM_SERVICE = "groom-pkg-001"; // Basic Bath
+const GROOM_MEDIUM = 35;
+
 const made: number[] = [];
 
 function day(offset: number): string {
@@ -70,6 +83,28 @@ async function setAutoConfirm(page: Page, value: Record<string, boolean>) {
 }
 
 /** A customer's daycare booking, quoting `total`. */
+async function bookGroomingAsCustomer(page: Page, total: number) {
+  return page.request.post("/api/bookings", {
+    data: {
+      clientId: ALICE.client,
+      petId: ALICE.pet,
+      service: "grooming",
+      startDate: day(15),
+      endDate: day(15),
+      checkInTime: "10:00",
+      checkOutTime: "11:00",
+      status: "confirmed",
+      basePrice: total,
+      discount: 0,
+      totalCost: total,
+      specialRequests: MARKER,
+      // The RPC takes the service from `serviceType` (groomingFor() in the
+      // route) — the payload carries CHOICES, never money.
+      serviceType: GROOM_SERVICE,
+    },
+  });
+}
+
 async function bookAsCustomer(page: Page, total: number) {
   return page.request.post("/api/bookings", {
     data: {
@@ -185,6 +220,70 @@ test.describe("a facility decides which services need its approval", () => {
       booking.status,
       "a price the server did not derive is never confirmed",
     ).toBe("request_submitted");
+  });
+
+  test("grooming confirms at the size the database picked", async ({
+    page,
+  }) => {
+    // The gap the client asked about: the switch was offered for every service
+    // and grooming could never act on it, because the server returned
+    // `cannot_price`. It reads the size create_booking already chose now.
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setAutoConfirm(staff, { grooming: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookGroomingAsCustomer(page, GROOM_MEDIUM);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number };
+    made.push(booking.id);
+
+    const read = await page.request.get(`/api/bookings?ref=${booking.id}`);
+    const [row] = (await read.json()) as Array<{
+      status: string;
+      totalCost: number;
+    }>;
+    expect(row?.status, "grooming still arrived as a request").toBe(
+      "confirmed",
+    );
+    // The facility's medium price, not the number the customer posted — they
+    // agree here, and the point is which one was written.
+    expect(row?.totalCost).toBe(GROOM_MEDIUM);
+  });
+
+  test("grooming at the WRONG price stays a request", async ({ page }) => {
+    // The safety property. The server knows less than the wizard — no coat, no
+    // breed, no groomer tier — so a facility using those gets a disagreement,
+    // and a disagreement must never confirm. Posting a small-dog price for a
+    // medium dog is the same shape of disagreement.
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setAutoConfirm(staff, { grooming: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookGroomingAsCustomer(page, 30);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number };
+    made.push(booking.id);
+
+    const read = await page.request.get(`/api/bookings?ref=${booking.id}`);
+    const [row] = (await read.json()) as Array<{
+      status: string;
+      totalCost: number;
+    }>;
+    expect(
+      row?.status,
+      "a grooming price the server did not derive was confirmed",
+    ).toBe("request_submitted");
+    expect(row?.totalCost, "and nothing was charged for it").toBe(0);
   });
 
   test("a customer cannot confirm their own booking by asking", async ({

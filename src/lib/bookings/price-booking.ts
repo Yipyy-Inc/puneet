@@ -35,13 +35,30 @@ import { isBuiltinService } from "@/lib/service-registry";
 //
 // ── WHAT IT WILL NOT PRICE ────────────────────────────────────────────────
 //
-// Grooming and training return `cannot_price` deliberately. Grooming's number
-// comes from `resolveEffectivePricing` — size, coat, breed, groomer tier, and
-// per-pet overrides — and training's from a series enrolment. Re-deriving
-// either here is where a second implementation would start, and the first bug
-// it would cause is a customer charged something other than what they saw. A
-// facility can still switch them on; the booking simply arrives as a request,
-// which is what it does today.
+// TRAINING returns `cannot_price`. Its number comes from a series enrolment,
+// which is a different object from the booking and is not created until staff
+// place the pet in a series. There is nothing here to read back.
+//
+// GROOMING no longer does, and the reason is worth reading before changing it.
+// The objection was that re-deriving grooming's price would be a SECOND
+// implementation of `resolveEffectivePricing` — size, coat, breed, groomer
+// tier, per-pet overrides — and the first bug would be charging somebody a
+// number they never saw. That objection still stands, so this does not
+// re-derive anything.
+//
+// `public.create_booking` ALREADY resolves the service, reads the pet's weight,
+// picks the size tier from `grooming_config.pet_size_tiers` and looks up
+// `grooming_service_size_prices` — and then writes `case when v_is_staff then
+// v_price else 0 end`, so for a customer the number it worked out is thrown
+// away while the SIZE IT CHOSE is kept on the appointment. This reads that
+// size back and asks the facility what it charges for it. One implementation,
+// the database's, consulted twice.
+//
+// It deliberately knows LESS than the wizard: no coat, no breed, no groomer
+// tier, no per-pet override. A facility using any of those gets a number that
+// disagrees with the customer's quote, and the mismatch check below turns the
+// booking into a request — which is exactly what it does today. So this can
+// only ever confirm bookings where the simple rule and the rich one agree.
 // ============================================================================
 
 export type ServerQuote =
@@ -62,6 +79,8 @@ export type ServerQuoteRefusal =
 
 export interface PriceRequest {
   facilityId: string;
+  /** Needed by grooming, which reads back the appointment row. */
+  bookingId?: string;
   service: string;
   /** ISO days. */
   startDate?: string;
@@ -170,6 +189,98 @@ async function priceCustomModule(input: PriceRequest): Promise<ServerQuote> {
 }
 
 /**
+ * What the facility charges for the size the DATABASE already picked.
+ *
+ * See the header. This reads `grooming_appointments` — written by
+ * create_booking, which resolved the service and the size tier from the pet's
+ * weight — and then asks `grooming_service_size_prices` for that pairing,
+ * falling back to the service's own base price when the facility prices one
+ * size for everybody. Add-ons are looked up the same way: the appointment
+ * records WHICH add-ons, and the facility's own row says what each costs.
+ */
+async function priceGrooming(input: PriceRequest): Promise<ServerQuote> {
+  if (!input.bookingId) return { ok: false, reason: "cannot_price" };
+  const admin = createAdminClient();
+
+  const { data: appointment } = await admin
+    .from("grooming_appointments")
+    .select("service_id, size_label")
+    .eq("booking_id", input.bookingId)
+    .maybeSingle();
+
+  const serviceId = (appointment as { service_id?: string } | null)?.service_id;
+  if (!serviceId) return { ok: false, reason: "cannot_price" };
+  const size = (appointment as { size_label?: string | null } | null)
+    ?.size_label;
+
+  const { data: service } = await admin
+    .from("grooming_services")
+    .select("base_price")
+    .eq("id", serviceId)
+    .maybeSingle();
+
+  let price = Number(
+    (service as { base_price?: number | string | null } | null)?.base_price ??
+      NaN,
+  );
+
+  if (size) {
+    const { data: sized } = await admin
+      .from("grooming_service_size_prices")
+      .select("price")
+      .eq("service_id", serviceId)
+      .eq("size_label", size)
+      .maybeSingle();
+    const sizedPrice = Number(
+      (sized as { price?: number | string | null } | null)?.price ?? NaN,
+    );
+    // A size with its own price wins, exactly as create_booking has it.
+    if (Number.isFinite(sizedPrice)) price = sizedPrice;
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    return { ok: false, reason: "no_rate" };
+  }
+
+  // Add-ons: the appointment says which, the catalogue says what they cost.
+  // The stored `price` on the appointment's own add-on rows is zeroed for a
+  // customer by the same branch that zeroes the service, so it is not read.
+  const { data: chosen } = await admin
+    .from("grooming_appointment_add_ons")
+    .select("add_on_id")
+    .eq("booking_id", input.bookingId);
+
+  const addOnIds = ((chosen ?? []) as Array<{ add_on_id: string | null }>)
+    .map((row) => row.add_on_id)
+    .filter((id): id is string => Boolean(id));
+
+  let addOns = 0;
+  if (addOnIds.length > 0) {
+    const { data: catalogue } = await admin
+      .from("grooming_add_ons")
+      .select("id, price")
+      .in("id", addOnIds);
+    const byId = new Map(
+      ((catalogue ?? []) as Array<{ id: string; price: number | string }>).map(
+        (row) => [row.id, Number(row.price)],
+      ),
+    );
+    for (const id of addOnIds) {
+      const each = byId.get(id);
+      // An add-on the catalogue no longer holds cannot be priced, and
+      // confirming without it would undercharge the facility.
+      if (each === undefined || !Number.isFinite(each)) {
+        return { ok: false, reason: "no_rate" };
+      }
+      addOns += each;
+    }
+  }
+
+  const total = price + addOns;
+  return { ok: true, basePrice: total, total };
+}
+
+/**
  * The price the SERVER is willing to confirm, or why it will not.
  *
  * A refusal is never an error to show a customer — the caller turns it into a
@@ -186,7 +297,9 @@ export async function priceCustomerBooking(
       ? await priceBoarding(input)
       : input.service === "daycare"
         ? await priceDaycare(input)
-        : { ok: false, reason: "cannot_price" };
+        : input.service === "grooming"
+          ? await priceGrooming(input)
+          : { ok: false, reason: "cannot_price" };
 
   if (!priced.ok) return priced;
 

@@ -123,6 +123,7 @@ export async function autoConfirmCustomerBookings(
         service: row.service!,
         startDate: isoDay(row.start_at),
         endDate: isoDay(row.end_at),
+        bookingId: row.id,
         roomCategoryId:
           (row.details?.["roomCategoryId"] as string | undefined) ?? null,
         quotedTotal: quoted,
