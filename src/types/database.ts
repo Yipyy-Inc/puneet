@@ -2253,6 +2253,7 @@ export type Database = {
         Row: {
           address: Json | null;
           allow_customer_signup: boolean;
+          archived_at: string | null;
           business_types: string[];
           created_at: string;
           description: string | null;
@@ -2273,6 +2274,7 @@ export type Database = {
         Insert: {
           address?: Json | null;
           allow_customer_signup?: boolean;
+          archived_at?: string | null;
           business_types?: string[];
           created_at?: string;
           description?: string | null;
@@ -2293,6 +2295,7 @@ export type Database = {
         Update: {
           address?: Json | null;
           allow_customer_signup?: boolean;
+          archived_at?: string | null;
           business_types?: string[];
           created_at?: string;
           description?: string | null;

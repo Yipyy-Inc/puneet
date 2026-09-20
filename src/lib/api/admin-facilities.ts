@@ -53,7 +53,12 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
     await Promise.all([
       supabase
         .from("facilities")
+        // Archived facilities are out of sight, not gone (20260920213428).
+        // A facility that has taken money cannot be deleted — payments is
+        // append-only AND holds a foreign key to this table — so this list is
+        // where "remove it" actually happens for a reader.
         .select("id, name, slug, created_at, business_types")
+        .is("archived_at", null)
         .order("created_at"),
       supabase
         .from("facility_subscriptions")

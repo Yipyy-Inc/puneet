@@ -301,6 +301,11 @@ export async function myFacilities(): Promise<
     .from("facilities")
     .select("id, name, slug")
     .in("id", ids)
+    // Archived (20260920213428). The SWITCHER only — `chooseAmongMemberships`
+    // below deliberately does not filter, so somebody whose only membership is
+    // at an archived facility keeps working there rather than being locked out
+    // of a facility nobody deleted.
+    .is("archived_at", null)
     .order("name");
   return (data ?? []).map((f) => ({
     id: f.id,
