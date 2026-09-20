@@ -35,13 +35,15 @@ interface FacilityHeaderProps {
   facilityId?: number;
 }
 
-// Maps a `/services/<slug>` path segment to the BookingModal service key.
-// Limited to modules the wizard knows how to render details for — others
-// fall through to the unfiltered Service step.
+// Maps a `/services/<slug>` path segment to the BookingModal service key —
+// the service to START on, never the only one on offer. Limited to the
+// bookable modules the wizard renders a detail step for; anywhere else the
+// wizard opens on no service at all, which is equally fine.
 const SERVICE_SECTION_SLUGS: Record<string, string> = {
   grooming: "grooming",
   daycare: "daycare",
   boarding: "boarding",
+  training: "training",
 };
 
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
@@ -49,9 +51,19 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const { openBookingModal } = useBookingModal();
   const pathname = usePathname();
 
-  // When staff hit "+ New Booking" from inside a service section, pre-select
-  // that service and skip the Service step so they don't have to re-pick the
-  // module they're already working in.
+  // ── THE ONE BUTTON THAT BOOKS ANYTHING ───────────────────────────────────
+  //
+  // "+ New" is the top bar's, so it means the same thing on every page. It
+  // used to pass `lockService` alongside this, and `lockService` does not
+  // filter the Service step — it REMOVES it (BookingModal, displayedSteps).
+  // So from the boarding module the button booked boarding and nothing else,
+  // from grooming only grooming, with no way back to the service list; only
+  // the modules missing from the map below worked properly, which is what
+  // gave it away as an oversight rather than a decision.
+  //
+  // The service the page is about is still worth starting on — that is what
+  // the daycare module's own Book button has always done — so it stays as a
+  // PRE-SELECTION, and every other service is one click away.
   const sectionService = useMemo(() => {
     const match = pathname?.match(/^\/facility\/dashboard\/services\/([^/]+)/);
     const slug = match?.[1];
@@ -204,7 +216,6 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                       profile.businessName || t("yourFacilityLower"),
                     onCreateBooking: handleCreateBooking,
                     preSelectedService: sectionService,
-                    lockService: !!sectionService,
                   })
                 }
               >
@@ -239,7 +250,6 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                     onCreateBooking: handleCreateBooking,
                     isEstimateMode: true,
                     preSelectedService: sectionService,
-                    lockService: !!sectionService,
                   });
                 }}
               >
