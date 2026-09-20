@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
+import { useShellText } from "@/lib/shell/use-shell-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +46,7 @@ import {
   MoreVertical,
   Shield,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
@@ -72,9 +74,10 @@ export default function IntakeFormsPage() {
   // handlers mutated in place, with a `refreshKey` counter bumped afterwards
   // to force React to notice. The counter is gone: the query is the source of
   // truth and every mutation invalidates it.
+  const t = useShellText("shared");
   const formsQuery = useQuery(liveFormQueries.all());
   const allForms = useMemo(
-    () => (formsQuery.data ?? []).map((row) => toFlatForm(row)),
+    () => (formsQuery.data?.forms ?? []).map((row) => toFlatForm(row)),
     [formsQuery.data],
   );
   const formsInCategory =
@@ -126,6 +129,17 @@ export default function IntakeFormsPage() {
         defaultCategory={category === "templates" ? "intake" : category}
       />
 
+      {/* Said out loud rather than left to be inferred: a list cut at an
+          arbitrary row invites the reader to conclude the rest do not exist.
+          Same shape as the submissions screen next door. This read every form
+          with no limit until 2026-09-20, so PostgREST capped it at 1,000 and
+          said nothing. */}
+      {formsQuery.data?.truncated && (
+        <p className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <AlertCircle className="size-4 shrink-0" />
+          {t("formsTruncated").replace("{count}", String(allForms.length))}
+        </p>
+      )}
       <Tabs
         value={category}
         onValueChange={(v) => setCategory(v as CategoryTab)}

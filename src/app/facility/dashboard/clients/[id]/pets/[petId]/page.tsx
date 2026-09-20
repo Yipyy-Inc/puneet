@@ -280,7 +280,7 @@ export default function PetDetailPage({
   );
   const reports = petReportCards;
 
-  const petApplicableForms = (liveForms ?? [])
+  const petApplicableForms = (liveForms?.forms ?? [])
     .map((row) => toFlatForm(row))
     .filter(
       (f) =>

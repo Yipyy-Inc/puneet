@@ -8882,7 +8882,8 @@
       "noteInternalDone": "Note rendue interne",
       "noteNotSaved": "La note n’a pas été enregistrée",
       "badgeFromClient": "Du client",
-      "badgeChangeDates": "Demande de changer les dates"
+      "badgeChangeDates": "Demande de changer les dates",
+      "formsTruncated": "Les {count} premiers sont affichés. Vous avez plus de formulaires que cette page ne peut en afficher."
     },
     "messaging": {
       "scheduleSend": "Programmer l’envoi",

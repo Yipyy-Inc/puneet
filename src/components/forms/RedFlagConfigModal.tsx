@@ -68,7 +68,7 @@ export function RedFlagConfigModal({
         ) : (
           <RedFlagEditor
             initial={redFlags}
-            forms={forms.data!.map((row) => toFlatForm(row))}
+            forms={forms.data!.forms.map((row) => toFlatForm(row))}
             onClose={() => onOpenChange(false)}
           />
         )}

@@ -186,7 +186,7 @@ export default function SubmissionsInboxPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All forms</SelectItem>
-                {(forms ?? []).map((f) => (
+                {(forms?.forms ?? []).map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.name}
                   </SelectItem>

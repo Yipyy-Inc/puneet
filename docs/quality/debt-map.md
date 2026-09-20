@@ -18349,15 +18349,12 @@ separate things were true, and only the last one is fixed.
 2026-08-20; nothing had ever taken its forms. All 1,076 were on the demo
 facility — no real business was involved.
 
-**`GET /api/forms` sets no limit, so PostgREST capped the answer at 1,000.**
+**`GET /api/forms` set no limit, so PostgREST capped the answer at 1,000.**
 That is the actual reason the test failed: sorted by name, the new
 `[e2e] screen <timestamp>` sorted past the cap and never reached the browser.
-**This is a product defect, not a test one, and it is NOT fixed.** A facility
-with more than a thousand forms loses the rest with no indication — no count,
-no "showing 1,000 of N", no paging. **Do instead:** when that route is next
-touched, page it or bound it explicitly, the way
-`check:unbounded-booking-reads` already requires of bookings. A silent cap is
-worse than a refusal because the screen looks complete.
+It was a product defect, not a test one — a facility with more than a thousand
+forms lost the rest with no count, no "showing 1,000 of N" and no paging.
+**Fixed the same day; see the entry below.**
 
 **`public.purge_e2e_forms()`** (migration 20260920122748) now removes them, and
 `bun run e2e:purge` calls it beside the bookings and report cards — the command
@@ -18433,3 +18430,76 @@ clothes.
 Until then the practical rule, learned the expensive way: **do not run
 `test:unit` while a suite or a build is running.** Every observed failure has
 been under that contention and none outside it.
+
+## 2026-09-20 — A form list that was capped at 1,000 and did not say so
+
+`GET /api/forms` ran two unbounded queries, so PostgREST applied its own limit
+to both and neither said anything. Fixed at the root rather than by raising a
+number.
+
+**The versions query was the dangerous one.** It read `form_versions` whole,
+but `toFormRow()` keeps exactly two per form — the highest-numbered PUBLISHED
+version and the highest-numbered DRAFT — and discards the rest. A version is
+frozen on publish and a new one written on every edit, so the discarded pile
+only grows: a form edited fifty times shipped fifty schemas to render two. And
+past the cap a form came back with NO version attached and rendered as
+**"0 questions"** — a form that looks EMPTY rather than one that looks missing,
+which is the worse of the two lies.
+
+`public.form_versions_current` (migration 20260920125726) is
+`DISTINCT ON (form_id, published-ness)`, so it yields at most two rows per
+form. The row count is bounded by how many forms exist rather than by their
+edit history, which a plain `.limit()` could not do: ordered by version, one
+form with fifty edits eats the budget and every form after it gets nothing.
+The route bounds it at `2 x PAGE` so it can never bite before the forms query
+does.
+
+`security_invoker = true`, like all nine views already in this schema, so
+`form_versions_read` still decides what comes back. **A view is a new way to
+reach a table and therefore a new way to get RLS wrong**, so
+`supabase/tests/form-versions-current.sql` asserts it: through the view a
+groomer sees the published version and NOT the draft, with somebody holding
+`settings_manage_forms` as the positive control.
+
+**Both queries are bounded and the cap is reported.** `PAGE = 500`, matching
+the submissions route next door, and the payload carries `truncated` so the
+screen can say the list is partial instead of showing a partial list as whole.
+`liveFormQueries.all()` returns the payload rather than the array, which is how
+all seven consumers were found.
+
+**Two things worth knowing for next time.**
+
+The route's own comment cited "a facility with 525 forms" as the reason for an
+earlier optimisation. That facility was the DEMO one, with e2e pollution — its
+forms began 2026-08-23 and were purged the same day this was fixed. Real
+facilities hold 39 and 2. A measurement taken against a shared database can be
+measuring the suite.
+
+`src/types/database.ts` was **hand-edited** to add the view, not regenerated.
+The generator emits relationship metadata the committed file does not carry, so
+a full regeneration is a ~2,600-line diff of unrelated churn. **Do instead:** if
+you regenerate it, do so as its own commit with nothing else in it.
+
+Not done: the forms screen still has no search and no paging — it groups by
+category and filters client-side. At 500 forms that is a usability problem
+rather than a correctness one, and the notice now tells the reader the truth.
+
+## 2026-09-20 — The estimate wizard creates no pet either
+
+`EstimateWizard` carried the same inline pet quick-create the booking wizard
+had — `newPetDraft` with a free-text breed, a free-text age and a weight — plus
+the negative-placeholder-id machinery (`petTempSeq`, `addedPets`) that existed
+only to turn those drafts into real pets at submit. Removed, 208 lines.
+
+**What was KEPT, and why the first reading of this file was wrong.** It looked
+like the wizard also had a duplicate new-client form. It does not. The guest
+path takes a name, an email, a phone and pet names, with an optional "create an
+account" tick that converts the guest into a client so the estimate can later
+become a booking. That is not a worse copy of Clients → New client; **it is the
+reason estimates exist** — you quote somebody who is not a client yet. Removing
+it would have broken quoting a prospect.
+
+**Do instead:** "this screen creates a record that another screen creates
+better" is worth checking twice before acting on it. The test is whether the
+other screen could do this job at all. For a pet on an existing client's file,
+it could. For a prospect who has never been to the facility, it could not.

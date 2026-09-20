@@ -12230,6 +12230,19 @@ export type Database = {
           },
         ];
       };
+      form_versions_current: {
+        Row: {
+          created_at: string | null;
+          created_by: string | null;
+          facility_id: string | null;
+          form_id: string | null;
+          id: string | null;
+          published_at: string | null;
+          schema: Json | null;
+          version_number: number | null;
+        };
+        Relationships: [];
+      };
       customer_package_pool_status: {
         Row: {
           client_id: string | null;

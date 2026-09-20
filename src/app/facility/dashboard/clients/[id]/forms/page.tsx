@@ -47,7 +47,7 @@ export default function ClientFormsPage({
   const { data: liveForms } = useQuery(liveFormQueries.all());
   const forms = useMemo(
     () =>
-      (liveForms ?? [])
+      (liveForms?.forms ?? [])
         .map((row) => toFlatForm(row))
         .filter((f) => !f.internal && f.status === "published"),
     [liveForms],

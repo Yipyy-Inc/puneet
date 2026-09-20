@@ -373,6 +373,37 @@ test.describe("forms", () => {
     await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
   });
 
+  test("the list says whether it is all of them, and brings each form's questions", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    const name = freshName("payload");
+    const form = await createForm(page, name);
+
+    const res = await page.request.get(FORMS);
+    expect(res.status()).toBe(200);
+    const body = (await res.json()) as {
+      forms: { id: string; draftVersion: unknown }[];
+      truncated: boolean;
+    };
+
+    // Both queries behind this route were unbounded until 2026-09-20, so
+    // PostgREST capped them at 1,000 rows and said nothing. They are bounded
+    // now and the cap is REPORTED, so a screen can say a list is partial
+    // rather than showing a partial list as if it were whole.
+    expect(body.truncated).toBe(false);
+
+    // Versions arrive through `form_versions_current`, which yields at most
+    // the latest published and the latest draft per form. This is the half
+    // that failed WORSE when it was unbounded: past the cap a form came back
+    // with no version attached and rendered as "0 questions" — a form that
+    // looks empty rather than one that looks missing.
+    const mine = body.forms.find((f) => f.id === form.id);
+    expect(mine, "the form just created is in the list").toBeTruthy();
+    expect(mine?.draftVersion, "its first version is a draft").toBeTruthy();
+  });
+
   test("a submission with no customer can be filed under one", async ({
     page,
   }) => {

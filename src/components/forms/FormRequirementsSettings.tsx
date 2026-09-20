@@ -139,7 +139,7 @@ function FormRequirementsEditor({ initial }: { initial: FormRequirements }) {
   );
   const { data: liveForms } = useQuery(liveFormQueries.all());
   const availableForms = liveForms
-    ? liveForms.map((f) => ({ id: f.id, name: f.name }))
+    ? liveForms.forms.map((f) => ({ id: f.id, name: f.name }))
     : NO_FORMS;
   const [preview, setPreview] = useState<{ id: string; name: string } | null>(
     null,

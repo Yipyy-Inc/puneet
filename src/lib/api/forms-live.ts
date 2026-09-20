@@ -7,6 +7,7 @@ import type {
   FormVersionRow,
   SubmissionRow,
 } from "@/lib/api/mappers/form";
+import type { FormsPayload } from "@/app/api/forms/route";
 import type { SubmissionsPayload } from "@/app/api/forms/submissions/route";
 import type { SubmitFormResult } from "@/app/api/forms/[id]/submit/route";
 import type { PublicFormResponse } from "@/app/api/forms/by-slug/[slug]/route";
@@ -76,9 +77,15 @@ async function send<T>(
 }
 
 export const liveFormQueries = {
+  /**
+   * The facility's forms, and whether the list is all of them.
+   *
+   * Returns the PAYLOAD rather than the array it used to, so a screen can say
+   * when the cap bit instead of showing a partial list as if it were whole.
+   */
   all: () => ({
     queryKey: ["forms-live", "list"] as const,
-    queryFn: async () => (await get<{ forms: FormRow[] }>("/api/forms")).forms,
+    queryFn: async () => await get<FormsPayload>("/api/forms"),
   }),
 
   detail: (id: string | undefined) => ({

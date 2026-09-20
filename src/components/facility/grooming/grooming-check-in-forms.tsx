@@ -56,7 +56,7 @@ export function GroomingCheckInForms() {
   // the fixture's forms for a facility that is not this one — so a check-in
   // form built in the form builder never appeared here.
   const { data: rows, isLoading } = useQuery(liveFormQueries.all());
-  const forms = (rows ?? []).map((row) => toFlatForm(row, true));
+  const forms = (rows?.forms ?? []).map((row) => toFlatForm(row, true));
 
   // Forms bound to grooming — either by service type or an explicit apply-to.
   const groomingForms = forms.filter(

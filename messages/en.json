@@ -8882,7 +8882,8 @@
       "noteInternalDone": "Note made internal",
       "noteNotSaved": "The note was not saved",
       "badgeFromClient": "From the client",
-      "badgeChangeDates": "Asks to change dates"
+      "badgeChangeDates": "Asks to change dates",
+      "formsTruncated": "Showing the first {count}. You have more forms than this page can list."
     },
     "messaging": {
       "scheduleSend": "Schedule send",
