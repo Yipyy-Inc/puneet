@@ -311,7 +311,7 @@ export function BrandingSettings() {
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="branding-email">{t("supportEmail")}</Label>
                     <Input

@@ -95,7 +95,7 @@ export function NotificationRow({
           )}
           <span
             className={cn(
-              "text-foreground min-w-0 text-sm break-words",
+              "text-foreground min-w-0 text-sm wrap-break-word",
               n.read ? "font-normal" : "font-semibold",
             )}
           >
@@ -103,7 +103,7 @@ export function NotificationRow({
           </span>
         </span>
         {detail && (
-          <span className="text-ink-secondary mt-0.5 block text-[13.5px] break-words">
+          <span className="text-ink-secondary mt-0.5 block text-[13.5px] wrap-break-word">
             {detail}
           </span>
         )}

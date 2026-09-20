@@ -28,13 +28,10 @@ import {
   computeSlotGrid,
   getAppointmentsForStylistOnDate,
   getStylistWorkWindow,
-  appointmentAddressSeed,
   type DayDensity,
 } from "@/lib/grooming-scheduling";
-import { pseudoCoord } from "@/lib/route-planning";
 import { DensityCalendar } from "./density-calendar";
 import { SlotGrid } from "./slot-grid";
-import { MobileRouteMapPreview } from "./mobile-route-map-preview";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
 import {
@@ -856,12 +853,6 @@ export function NewAppointmentDialog({
       existingAppointments: allAppointments,
       smartSchedulingEnabled,
       bufferMin: defaultBufferMin,
-      mobile: form.isMobile
-        ? {
-            newAddressSeed,
-            facilityBaseSeed: "facility-home-base",
-          }
-        : undefined,
     });
   }, [
     form.stylistId,
@@ -953,37 +944,6 @@ export function NewAppointmentDialog({
     smartSchedulingEnabled,
     defaultBufferMin,
     effectiveSlotGrid,
-  ]);
-
-  // Route preview data — the stylist's confirmed stops on the chosen date,
-  // plus the tentative new stop hashed from `newAddressSeed`.
-  const routePreviewData = useMemo(() => {
-    if (!form.isMobile || !form.stylistId || !form.date) return null;
-    const confirmed = getAppointmentsForStylistOnDate(
-      form.stylistId,
-      form.date,
-      allAppointments,
-    );
-    const stops = confirmed.map((a, idx) => ({
-      coord: pseudoCoord(appointmentAddressSeed(a)),
-      label: idx + 1,
-      petName: a.petName,
-    }));
-    const tentativeStop = newAddressSeed
-      ? {
-          coord: pseudoCoord(newAddressSeed),
-          label: stops.length + 1,
-          petName: form.petName || "New appointment",
-        }
-      : undefined;
-    return { stops, tentativeStop };
-  }, [
-    form.isMobile,
-    form.stylistId,
-    form.date,
-    form.petName,
-    allAppointments,
-    newAddressSeed,
   ]);
 
   // Auto-suggest a groomer once a service is picked (Step 2 — item #9).
@@ -2597,25 +2557,14 @@ export function NewAppointmentDialog({
                   )}
                 </div>
 
-                {/* Mobile-grooming route preview (Step 3 — items #5 / #6). */}
-                {form.isMobile &&
-                  routePreviewData &&
-                  form.date &&
-                  form.stylistId && (
-                    <div className="col-span-2">
-                      <MobileRouteMapPreview
-                        vanColor={
-                          stylistsData.find((s) => s.id === form.stylistId)
-                            ?.calendarColor ?? "#ec4899"
-                        }
-                        stops={routePreviewData.stops}
-                        tentativeStop={routePreviewData.tentativeStop}
-                        caption={`Route preview for ${form.date}${
-                          form.startTime ? ` · arriving ${form.startTime}` : ""
-                        }`}
-                      />
-                    </div>
-                  )}
+                {/* The mobile route preview is gone. It drew pins at
+                    pseudoCoord(petName-ownerName-ownerPhone) — a hash of the
+                    DOG'S NAME, not a position — and its own caption said it
+                    was there so staff could "sanity-check drive time before
+                    committing". A map of noise is worse than no map, because
+                    it invites exactly that judgement. §6. Debt map, and
+                    types/client.ts now carries a real latitude and longitude
+                    for addresses chosen from the geocoder. */}
               </div>
             </section>
 

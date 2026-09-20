@@ -228,9 +228,7 @@ export function YipyyPayLanding({
                 <Icon className="size-5" />
               </span>
               <p className="leading-tight font-semibold">{t(title)}</p>
-              <p className="text-ink-tertiary text-[14.5px]/relaxed">
-                {t(body)}
-              </p>
+              <p className="text-ink-tertiary text-body/relaxed">{t(body)}</p>
             </CardContent>
           </Card>
         ))}

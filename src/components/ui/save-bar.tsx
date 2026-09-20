@@ -101,7 +101,7 @@ export function SaveBar({
         sticky
           ? // Pinned to the viewport, and pulled out to the page gutter so the
             // rule runs the full width of the content column.
-            "bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-[var(--z-sticky)] -mx-6 px-6 backdrop-blur-sm"
+            "bg-background/95 supports-backdrop-filter:bg-background/60 sticky bottom-0 z-(--z-sticky) -mx-6 px-6 backdrop-blur-sm"
           : // Inside a card: no pinning, no layer, no blur — it is simply the
             // card's footer, and a card that scrolls off takes its own save
             // with it, which is correct when the save belongs to that card.

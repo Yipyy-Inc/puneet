@@ -555,7 +555,7 @@ function FormRequirementsEditor({ initial }: { initial: FormRequirements }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(
               ["before_booking", "before_approval", "before_checkin"] as const
             ).map((stage) => {

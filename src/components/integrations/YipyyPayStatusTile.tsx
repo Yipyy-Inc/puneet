@@ -81,9 +81,7 @@ export function YipyyPayStatusTile() {
               <Badge variant="outline">{t("notSetUp")}</Badge>
             )}
           </div>
-          <p className="text-ink-tertiary text-[14.5px]/relaxed">
-            {t("payHelp")}
-          </p>
+          <p className="text-ink-tertiary text-body/relaxed">{t("payHelp")}</p>
         </div>
 
         <Button asChild variant="outline" size="sm">

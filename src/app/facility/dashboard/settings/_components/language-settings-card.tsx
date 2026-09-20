@@ -61,7 +61,7 @@ export function LanguageSettingsCard() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="primary-language">{t("primaryLanguage")}</Label>
               <Select

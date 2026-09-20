@@ -479,9 +479,7 @@ function EarlyCheckoutSummary({
             {earlyText("earlyCheckoutNotApplied")}
           </p>
           {customerNote && (
-            <p className="text-ink-secondary text-xs leading-snug">
-              {customerNote}
-            </p>
+            <p className="text-ink-secondary text-xs/snug">{customerNote}</p>
           )}
         </>
       )}

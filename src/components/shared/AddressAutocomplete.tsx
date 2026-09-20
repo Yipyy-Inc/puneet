@@ -190,7 +190,7 @@ export function AddressAutocomplete({
             aria-label={hintText}
             // z from the token scale (§1): a dropdown is 300 and no component
             // writes its own number.
-            className="bg-popover text-popover-foreground absolute top-full right-0 left-0 z-[var(--z-dropdown)] mt-1 max-h-72 overflow-y-auto rounded-2xl border p-1 shadow-md"
+            className="bg-popover text-popover-foreground absolute top-full right-0 left-0 z-(--z-dropdown) mt-1 max-h-72 overflow-y-auto rounded-2xl border p-1 shadow-md"
           >
             {suggestions.map((suggestion, index) => (
               <li

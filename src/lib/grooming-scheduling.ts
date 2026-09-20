@@ -172,16 +172,12 @@ export interface ComputeSlotGridArgs {
   smartSchedulingEnabled: boolean;
   /** Minutes of free space required before AND after the slot when smart is on. */
   bufferMin: number;
-  /**
-   * When provided, each available slot gets a drive-time annotation from the
-   * prior stop. `newAddressSeed` is hashed via pseudoCoord (matches the
-   * route planner's synthetic coord scheme) so drive estimates stay stable.
-   */
-  mobile?: {
-    newAddressSeed: string;
-    /** Falls back to this when the slot has no prior appointment on the route. */
-    facilityBaseSeed?: string;
-  };
+  // `mobile` is gone. It carried `newAddressSeed` and `facilityBaseSeed`,
+  // which were hashed into positions to annotate each slot with a drive time
+  // from the prior stop — and the seed was `petName-ownerName-ownerPhone`, so
+  // the annotation was a hash of the dog's name. The annotation is removed,
+  // and config that feeds nothing goes with it rather than waiting to be
+  // mistaken for a feature.
 }
 
 /** Minimum gap (minutes) before/after a neighbouring appointment below which
@@ -198,7 +194,6 @@ export function computeSlotGrid(args: ComputeSlotGridArgs): SlotEntry[] {
     existingAppointments,
     smartSchedulingEnabled,
     bufferMin,
-    mobile,
   } = args;
 
   const stylistAppts = getAppointmentsForStylistOnDate(
@@ -263,30 +258,10 @@ export function computeSlotGrid(args: ComputeSlotGridArgs): SlotEntry[] {
       }
       slot.shortGap = nearestGap < SHORT_GAP_MINUTES;
 
-      if (mobile) {
-        // Previous stop on the route = the latest appointment that ends at
-        // or before this slot starts. Fall back to the facility base if
-        // this is the first stop.
-        const prev = [...stylistAppts]
-          .filter((a) => timeToMin(a.endTime) <= start)
-          .sort((a, b) => b.endTime.localeCompare(a.endTime))[0];
-        // ── THE DRIVE TIME IS GONE, AND WHY ─────────────────────────────
-        //
-        // It was `driveMinutes(pseudoCoord(prevSeed), pseudoCoord(newSeed))`,
-        // and `prevSeed` was `petName-ownerName-ownerPhone`. So the minutes a
-        // groomer read between two stops were a hash of THE DOG'S NAME. Not a
-        // rough estimate of a real distance — no distance was involved at any
-        // point, and renaming a pet changed the answer.
-        //
-        // Nothing is put in its place here because nothing can be yet: the
-        // appointment shape carries no coordinates, and an address only gained
-        // a latitude and longitude on 2026-09-20 (types/client.ts), so only
-        // clients entered since have one. A real drive time needs both stops
-        // to be real, and a route is only as honest as its least-known stop.
-        // Showing an invented number while a groomer plans a day is worse than
-        // showing none — §6, and the debt map entry that goes with this.
-        void prev;
-      }
+      // A mobile block sat here that annotated the slot with a drive time from
+      // the previous stop. It is gone: the "position" of each stop was
+      // `pseudoCoord(petName-ownerName-ownerPhone)`, so the minutes were a hash
+      // of the dog's name and no address took part. See ComputeSlotGridArgs.
     }
 
     slots.push(slot);

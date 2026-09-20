@@ -39,7 +39,7 @@ export function HqSection() {
         </CardHeader>
         <CardContent>
           <p className="text-ink-tertiary text-[13.5px]">{t("intro")}</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {links.map((link) => (
               <Link
                 key={link.href}

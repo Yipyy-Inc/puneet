@@ -49,7 +49,6 @@ import {
 } from "@/components/ui/select";
 import { DensityCalendar } from "@/components/facility/grooming/density-calendar";
 import { SlotGrid } from "@/components/facility/grooming/slot-grid";
-import { MobileRouteMapPreview } from "@/components/facility/grooming/mobile-route-map-preview";
 import {
   groomingQueries,
   resolveEffectivePricing,
@@ -60,12 +59,9 @@ import {
 import {
   computeDayDensity,
   computeSlotGrid,
-  getAppointmentsForStylistOnDate,
   getStylistWorkWindow,
-  appointmentAddressSeed,
   type DayDensity,
 } from "@/lib/grooming-scheduling";
-import { pseudoCoord } from "@/lib/route-planning";
 import { isStationEligibleForPetSize } from "@/components/rooms/GroomingStationsClient";
 import { checkPostalCodeOnDay } from "@/lib/service-areas";
 import { GroomingWaitlistDialog } from "./GroomingWaitlistDialog";
@@ -86,12 +82,7 @@ import { coatTypeEnum, type AppointmentStage } from "@/types/grooming";
 import type { GroomingStationPetSize } from "@/types/rooms";
 import type { ServiceAddOn } from "@/types/facility";
 import { useShellText, useShellLocale } from "@/lib/shell/use-shell-text";
-import {
-  formatDateLong,
-  formatDuration,
-  formatMoney,
-  formatTimeOfDay,
-} from "@/lib/i18n/format";
+import { formatDateLong, formatDuration, formatMoney } from "@/lib/i18n/format";
 
 const NO_GROOMING_ADD_ONS: GroomingAddOnOption[] = [];
 
@@ -1271,9 +1262,6 @@ function GroomingSchedule({
       existingAppointments: allAppointments,
       smartSchedulingEnabled,
       bufferMin: defaultBufferMin,
-      mobile: isMobile
-        ? { newAddressSeed, facilityBaseSeed: "facility-home-base" }
-        : undefined,
     });
   }, [
     stylistId,
@@ -1286,37 +1274,6 @@ function GroomingSchedule({
     smartSchedulingEnabled,
     defaultBufferMin,
     newAddressSeed,
-  ]);
-
-  // Mobile route preview — show the day's stops + the tentative new one.
-  const routePreviewData = useMemo(() => {
-    if (!isMobile || !stylistId || !startDate) return null;
-    const confirmed = getAppointmentsForStylistOnDate(
-      stylistId,
-      startDate,
-      allAppointments,
-    );
-    const stops = confirmed.map((a, idx) => ({
-      coord: pseudoCoord(appointmentAddressSeed(a)),
-      label: idx + 1,
-      petName: a.petName,
-    }));
-    const tentativeStop = newAddressSeed
-      ? {
-          coord: pseudoCoord(newAddressSeed),
-          label: stops.length + 1,
-          petName: primaryPet?.name ?? t("newAppointment"),
-        }
-      : undefined;
-    return { stops, tentativeStop };
-  }, [
-    isMobile,
-    stylistId,
-    startDate,
-    primaryPet,
-    allAppointments,
-    newAddressSeed,
-    t,
   ]);
 
   // Pick a sensible default min-date for the calendar — today, in local tz.
@@ -1644,22 +1601,14 @@ function GroomingSchedule({
         </div>
       )}
 
-      {/* Mobile route preview — drops the new stop onto the groomer's day so
-          staff can sanity-check drive time before committing. */}
-      {isMobile && routePreviewData && (
-        <MobileRouteMapPreview
-          vanColor={vanColorForStylist}
-          stops={routePreviewData.stops}
-          tentativeStop={routePreviewData.tentativeStop}
-          caption={
-            checkInTime
-              ? t("routePreviewArriving")
-                  .replace("{date}", startDate)
-                  .replace("{time}", formatTimeOfDay(checkInTime, locale))
-              : t("routePreviewFor").replace("{date}", startDate)
-          }
-        />
-      )}
+      {/* The mobile route preview is gone. It drew pins at
+          pseudoCoord(petName-ownerName-ownerPhone) — a hash of the
+          DOG'S NAME, not a position — and its own caption said it
+          was there so staff could "sanity-check drive time before
+          committing". A map of noise is worse than no map, because
+          it invites exactly that judgement. §6. Debt map, and
+          types/client.ts now carries a real latitude and longitude
+          for addresses chosen from the geocoder. */}
 
       {/* Mobile: arrival-window picker. Salon: time selection is baked into
           the calendar above via showTimeSelection. */}

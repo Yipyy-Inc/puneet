@@ -140,7 +140,7 @@ function IncidentReportingEditor({
           </div>
 
           {charge.enabled && (
-            <div className="grid gap-3 border-t pt-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+            <div className="grid gap-3 border-t pt-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-[13.5px] font-medium">
                   {t("feeType")}

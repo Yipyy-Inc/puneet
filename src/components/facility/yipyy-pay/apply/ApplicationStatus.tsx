@@ -157,7 +157,7 @@ export function ApplicationStatus({
             <h3 className="text-xl font-semibold">
               {t(presentation.headline)}
             </h3>
-            <p className="text-[14.5px]/relaxed">{t(presentation.body)}</p>
+            <p className="text-body/relaxed">{t(presentation.body)}</p>
           </div>
 
           {application.statusDetail && (
