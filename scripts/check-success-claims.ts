@@ -88,7 +88,6 @@ const BASELINE = new Set<string>([
   // infrastructure. The flow is gone and the screen now says it is not
   // available yet, which is true.
   "src/components/facility/FacilityRolesStudio.tsx",
-  "src/components/facility/ImpersonationBanner.tsx",
 
   // ── REVEALED BY MATCHING BOTH WORD ORDERS ──────────────────────────────
   //

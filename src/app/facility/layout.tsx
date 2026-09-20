@@ -24,7 +24,6 @@ import { SupportFab } from "@/components/layout/SupportFab";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
 import { FacilityOnboardingBanner } from "@/components/facility/onboarding/facility-onboarding-banner";
-import { ImpersonationBanner } from "@/components/facility/ImpersonationBanner";
 import { AnnouncementBanner } from "@/components/facility/announcement-banner";
 import { LoyaltyProgramProvider } from "@/hooks/use-loyalty-program";
 import { CallAvailabilityProvider } from "@/hooks/use-call-availability";
@@ -118,7 +117,22 @@ export default async function FacilityLayout({
                           grids in bookings-board.tsx and
                           SmartInsightsWidget.tsx. */}
                       <main className="min-w-0 flex-1 overflow-x-clip">
-                        <ImpersonationBanner />
+                        {/* The "Yipyy admin mode — you are viewing <facility>
+                            as <admin>" banner stood here. It was a LABEL: a
+                            browser-local session (localStorage, started by an
+                            ?impersonate= token) that no read or write ever
+                            consulted. Every API call resolved the facility from
+                            the signed-in session, so the screen underneath was
+                            the viewer's OWN facility the whole time — its
+                            settings, its bookings, its rooms — under another
+                            business's name. A support person testing through it
+                            was reading the wrong facility and could not tell.
+
+                            The button that started one went on 2026-09-19 with
+                            round 4; a session already in a browser outlived it,
+                            because localStorage does. Nothing renders it now.
+                            Real server-side impersonation is still unbuilt — see
+                            the debt map. */}
                         <AnnouncementBanner />
                         <FacilityOnboardingBanner />
                         {children}
