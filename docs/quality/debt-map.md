@@ -18894,3 +18894,58 @@ The list takes `{ includeArchived }` now and the by-id lookup passes true.
 in the 33-spec push gate, so the filter shipped and deployed green and the
 regression surfaced the next morning — which is exactly what the docs say the
 nightly is for, working as intended.
+
+## 2026-09-21 — The customer dashboard, swept: what a real customer is told
+
+The fixture-money find above prompted a read of every fixture the customer
+portal imports. The facility-scoped ones are all on facility 11 and so render
+empty, which is correct. **Six carry no `facilityId` at all**, and a fixture
+with no facility cannot be filtered by one — only the `clientId === customer.id`
+half of the filter applies, and that half matches constantly because real refs
+run through the fixture's id range.
+
+Two of them reach the screen.
+
+### 🔴 Every real customer is told their pets are unvaccinated
+
+`src/app/customer/dashboard/page.tsx` raises an "Action needed" card per pet per
+missing vaccine, from two fixtures at once:
+
+- the REQUIRED list is `facilityConfig.vaccinationRequirements` — the shipped
+  file, not the facility's own `vaccination_rules`, which it has configured and
+  which `CreateClientModal` already reads;
+- the HAS-IT check is `vaccinationRecords.filter(v => v.petId === pet.id)`,
+  keyed by fixture pet ids 1, 2, 3, 5, 13 and 14.
+
+So it is wrong in both directions. A real pet whose ref is outside that set
+matches nothing and is reported missing EVERY required vaccine, always —
+photographed on 2026-09-21: Geneviève Fortin's dashboard showed "Vaccination
+missing for Caramel" three times (Rabies, DHPP, Bordetella) for a pet whose ref
+is 13685. And a real pet whose ref IS in that set — Buddy is 1, Whiskers is 2 —
+is credited with a fixture animal's vaccination history.
+
+An alert that fires for every pet every time is not a warning, it is noise
+customers learn to scroll past, which costs more than showing nothing.
+
+**Both real sources exist.** `pet_vaccinations` is a real table with
+`/api/vaccinations` (RLS-scoped, filterable by `pets.clients.ref`), and
+`vaccination_rules` is a real settings domain. **But the rules are not in
+`private.customer_visible_setting_domains()`**, so a customer cannot read what
+their facility requires — fixing this properly needs that domain added, which is
+a migration.
+
+### 🔴 Fixture loyalty points, rendered
+
+`customerLoyaltyData.find(l => l.clientId === customerId)` — no facility filter,
+and the fixture holds `clientId: 15`, which is Alice Johnson's real ref. Her
+dashboard renders that row's points, tier name and progress to the next tier.
+`/api/customer/loyalty` exists and returns real balances and the tier the
+customer actually qualifies for; the dashboard does not call it.
+
+### The pattern worth naming
+
+`use-customer-facility.tsx` explains that the facility-id mismatch is what keeps
+fixture rows off a real customer's screen. That protection only works on
+fixtures that HAVE a facility id. For the six that do not, there was never any
+protection — and nothing said so, which is why both of these have been rendering
+to real people.
