@@ -30,6 +30,7 @@ import { useAssignedScope } from "@/lib/facility-permissions";
 import { useStylistIdForStaff } from "@/lib/api/stylists";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import { balanceOf } from "@/lib/api/booking-money";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { GroomingAppointment } from "@/types/grooming";
@@ -171,9 +172,18 @@ export function MarkReadyDialog({
       amountDue: booked,
       amountPaid: paid,
     }) + finalChargesTotal;
+  // The BALANCE splits by the service's own tax flag; the charges being added
+  // right now are extras and are taxed whatever the service is — the same rule
+  // the retail counter applies to a non-taxable product in a taxable cart.
   const tax = taxConfig.pricesIncludeTax
     ? { lines: [], totalCents: 0 }
-    : computeTax(Math.round(preTaxSubtotal * 100), taxConfig);
+    : computeTax(
+        taxableOwedForBooking(
+          { totalCost: apt.totalPrice, extrasTotal: 0, taxable: apt.taxable },
+          Math.round((preTaxSubtotal - finalChargesTotal) * 100),
+        ) + Math.round(finalChargesTotal * 100),
+        taxConfig,
+      );
   const taxAmount = tax.totalCents / 100;
   const grandTotal = preTaxSubtotal + taxAmount;
 

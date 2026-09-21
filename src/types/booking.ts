@@ -559,6 +559,19 @@ export const estimateLineItemSchema = z.object({
   amount: z.number(),
   quantity: z.number(),
   total: z.number(),
+  /**
+   * Whether this line is charged the facility's tax.
+   *
+   * PER LINE, not per estimate. A booking splits cleanly because it has
+   * `total_cost` and `extras_total` as separate columns; an estimate's
+   * `line_items` is one flat array, so there is no service/extras boundary for
+   * an estimate-level flag to apply to. Retail already prices this way per
+   * product.
+   *
+   * Optional, and absent means TAXED — the same direction as every other
+   * `taxable` in the app. See lib/payments/service-tax.ts.
+   */
+  taxable: z.boolean().optional(),
 });
 export type EstimateLineItem = z.infer<typeof estimateLineItemSchema>;
 
@@ -820,6 +833,17 @@ export const bookingSchema = newBookingSchema.extend({
    * add-ons, a late fee. DERIVED from `booking_line_items` (20260806820000).
    */
   extrasTotal: z.number().optional(),
+  /**
+   * Whether this booking's OWN service price is taxed.
+   *
+   * Written by the server from the rate that priced it, and pinned to true for
+   * anything a customer inserts (20260921171524). Extras are taxed regardless
+   * — a tax-free service does not make a bag of food tax-free.
+   *
+   * Optional and absent means TAXED, like every other `taxable` in the app.
+   * See lib/payments/service-tax.ts.
+   */
+  taxable: z.boolean().optional(),
   /**
    * What the booking COSTS in total: `totalCost + extrasTotal`.
    *

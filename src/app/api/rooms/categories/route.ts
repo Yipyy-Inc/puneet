@@ -93,6 +93,8 @@ export async function POST(request: NextRequest) {
       sort_order: (count ?? 0) + 1,
       default_capacity: input.defaultCapacity ?? 1,
       default_base_price: input.defaultBasePrice ?? null,
+      // Only an explicit false stops the tax — see lib/payments/service-tax.ts.
+      taxable: input.taxable !== false,
       // A daycare play area closes for the season; a boarding category never
       // has, so this defaults to true and boarding never sends it.
       active: input.active ?? true,

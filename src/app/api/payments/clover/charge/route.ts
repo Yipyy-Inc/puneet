@@ -98,7 +98,9 @@ export async function POST(request: NextRequest) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, facility_id, client_id, amount_due, amount_paid, status")
+    .select(
+      "id, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable, status",
+    )
     .eq("id", parsed.data.bookingId)
     .maybeSingle();
 
@@ -192,6 +194,7 @@ export async function POST(request: NextRequest) {
   const taxCents = taxToAddCents(
     await facilityTaxConfig(createAdminClient(), booking.facility_id),
     owedCents,
+    booking,
   );
 
   const outcome = await chargeCard({

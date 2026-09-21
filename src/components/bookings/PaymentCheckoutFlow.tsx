@@ -32,6 +32,7 @@ import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { useReceiptFacility } from "@/hooks/use-receipt-facility";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import { formatDateLong, formatMoney, formatPercent } from "@/lib/i18n/format";
 import { escapeHtml } from "@/lib/email/shell";
 import { useResolvedTerminal } from "@/lib/api/terminals";
@@ -98,6 +99,14 @@ interface PaymentCheckoutFlowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   amountDue: number;
+  /**
+   * The booking's own split, for tax.
+   *
+   * REQUIRED, not optional: a facility can mark a service tax-free since
+   * 2026-09-21, and an optional prop would let a caller that was never updated
+   * go on charging tax on it with nothing to notice. See service-tax.ts.
+   */
+  taxableBill: { totalCost?: number; extrasTotal?: number; taxable?: boolean };
   depositPaid: number;
   invoiceTotal: number;
   /**
@@ -179,6 +188,7 @@ export function PaymentCheckoutFlow({
   open,
   onOpenChange,
   amountDue,
+  taxableBill,
   depositPaid,
   invoiceTotal,
   receiptLines,
@@ -253,8 +263,11 @@ export function PaymentCheckoutFlow({
   // figure would print "$49.01" on its own button while the customer was asked
   // for $56.35. Computed on the discounted amount, because a discount reduces
   // the price of the supply and therefore the tax on it.
+  // Only the taxable part of what is owed. The terminal route applies the
+  // same split server-side, so the figure on this button is the figure the
+  // card is asked for.
   const taxOnDue = computeTax(
-    Math.round(netAmountDue * 100),
+    taxableOwedForBooking(taxableBill, Math.round(netAmountDue * 100)),
     facilitySettings.settings.tax_config.value as TaxConfig,
   );
   const taxDue = facilitySettings.settings.tax_config.value.pricesIncludeTax

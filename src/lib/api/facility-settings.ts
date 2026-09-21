@@ -6,6 +6,7 @@ import type { CareTaskFeedback } from "@/lib/settings/care-task-feedback";
 
 import type { GiftCardConfig } from "@/lib/settings/gift-cards";
 import type { DaycareRatesConfig } from "@/lib/settings/daycare-rates";
+import type { SpeciesConfig } from "@/lib/settings/species";
 import type { RetailConfig } from "@/data/retail-config";
 import type { GroomingServiceChargesConfig } from "@/lib/settings/grooming-service-charges";
 import type { TrainingProgramsConfig } from "@/lib/settings/training-programs";
@@ -137,6 +138,8 @@ export interface FacilitySettings {
   care_fees: SettingState<CareFees>;
   /** Which vaccines are required, of which species, for which services. */
   vaccination_rules: SettingState<VaccinationRules>;
+  /** Which animals this facility takes — a fixture until 2026-09-21. */
+  species_config: SettingState<SpeciesConfig>;
   /** How estimates are numbered, when they expire, who may accept one. */
   estimate_settings: SettingState<EstimateSettings>;
   /** What a deposit, a check-in and a checkout do to a booking's status. */
@@ -563,6 +566,57 @@ export function useVaccinationRules(): {
   return {
     rules: settings.vaccination_rules.value,
     configured: settings.vaccination_rules.configured,
+    isPending,
+  };
+}
+
+/**
+ * Which animals this facility takes, and what it calls them.
+ *
+ * A fixture until 2026-09-21 — `facilitySpeciesConfig` in src/data/settings.ts,
+ * ["Dog", "Cat"] for every facility in the product.
+ */
+export function useSpeciesConfig(): {
+  config: SpeciesConfig;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    config: settings.species_config.value,
+    configured: settings.species_config.configured,
+    isPending,
+  };
+}
+
+/**
+ * What this facility charges in tax, and whether it has said so at all.
+ *
+ * `configured` is the point of exposing this separately: a rate editor offering
+ * "charge tax on this service" is offering a choice that decides nothing until
+ * somebody has set a tax up, and a switch that decides nothing is the defect
+ * `check:inert-permissions` exists to catch elsewhere. The editors say so
+ * instead of pretending. See lib/settings/tax.ts for why the default is no tax.
+ */
+export function useTaxConfig(): {
+  config: TaxConfig;
+  /** False means no row — the app's "no tax", not the facility's choice. */
+  configured: boolean;
+  /** Whether any tax would actually be charged on a service today. */
+  chargesAnything: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  const config = settings.tax_config.value;
+  return {
+    config,
+    configured: settings.tax_config.configured,
+    // `products_only` is excluded for the same reason computeTax excludes it:
+    // a retail-only tax is not charged on a booking, so a service editor must
+    // not claim one would be.
+    chargesAnything: config.taxes.some(
+      (t) => t.enabled && t.rate > 0 && t.appliesTo !== "products_only",
+    ),
     isPending,
   };
 }

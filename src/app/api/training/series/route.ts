@@ -33,7 +33,7 @@ export const dynamic = "force-dynamic";
 const SERIES_SELECT = `
   id, facility_id, location_id, staff_id, name, course_type_name,
   day_of_week, start_time, duration_minutes, start_date, number_of_sessions,
-  capacity, total_price, status, created_at, updated_at,
+  capacity, total_price, taxable, status, created_at, updated_at,
   locations(name), staff(first_name, last_name)
 `;
 
@@ -51,6 +51,7 @@ interface SeriesRow {
   number_of_sessions: number;
   capacity: number;
   total_price: number;
+  taxable: boolean | null;
   status: RealTrainingSeries["status"];
   created_at: string;
   updated_at: string;
@@ -129,6 +130,7 @@ function toApi(
     numberOfSessions: row.number_of_sessions,
     capacity: row.capacity,
     totalPrice: row.total_price,
+    taxable: row.taxable !== false,
     status: row.status,
     enrolledCount: bucket.enrolled,
     waitlistedCount: bucket.waitlisted,
@@ -209,8 +211,38 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const seriesId = (data as { id: string }).id;
+
+  // ── TAX, SET AFTER THE FACT AND ON PURPOSE ──────────────────────────────
+  //
+  // `create_training_series` materialises every session of the series in one
+  // transaction, and widening its signature to carry a flag that changes no
+  // row it writes would mean re-issuing a function the whole training module
+  // depends on. The column defaults to TRUE, so the only case that needs a
+  // second statement is a facility explicitly turning tax off — and if that
+  // statement fails, the series is taxed, which is the safe direction.
+  //
+  // And REPORTED rather than swallowed. `create_training_series` is SECURITY
+  // DEFINER while this update is judged by RLS, so somebody allowed to create a
+  // series may not be allowed to edit one — in which case the series exists and
+  // the facility's "do not charge tax" did not take. Silently returning 201
+  // there would let a facility believe a service was tax-free and keep charging
+  // tax on it, which is the one outcome worth a sentence on the screen.
+  let taxProblem: string | undefined;
+  if (input.taxable === false) {
+    const { data: saved } = await supabase
+      .from("training_series")
+      .update({ taxable: false } as never)
+      .eq("id", seriesId)
+      .select("id");
+    if (!saved || saved.length === 0) {
+      taxProblem =
+        "The series was created, but tax could not be switched off for it. Edit the series to try again.";
+    }
+  }
+
   return NextResponse.json(
-    { id: (data as { id: string }).id },
+    { id: seriesId, ...(taxProblem ? { taxProblem } : {}) },
     { status: 201 },
   );
 }

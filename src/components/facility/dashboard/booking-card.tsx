@@ -559,6 +559,11 @@ export function BookingCard({
                       (pendingLateFee?.amount ?? 0) -
                       (booking.amountPaid ?? 0),
                   )}
+                  taxableBill={{
+                    totalCost: booking.price,
+                    extrasTotal: booking.extrasTotal,
+                    taxable: booking.taxable,
+                  }}
                   depositPaid={booking.amountPaid ?? 0}
                   invoiceTotal={
                     (booking.amountDue ?? booking.price ?? 0) +

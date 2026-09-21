@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import { balanceOf } from "@/lib/api/booking-money";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
@@ -208,11 +209,14 @@ export function PaymentDialog({
   const tax = taxConfig.pricesIncludeTax
     ? { lines: [], totalCents: 0 }
     : computeTax(
-        Math.round(
-          Math.max(
-            0,
-            preTaxSubtotal - packagePassDiscount - loyaltyDiscountAmount,
-          ) * 100,
+        taxableOwedForBooking(
+          { totalCost: apt.totalPrice, extrasTotal, taxable: apt.taxable },
+          Math.round(
+            Math.max(
+              0,
+              preTaxSubtotal - packagePassDiscount - loyaltyDiscountAmount,
+            ) * 100,
+          ),
         ),
         taxConfig,
       );

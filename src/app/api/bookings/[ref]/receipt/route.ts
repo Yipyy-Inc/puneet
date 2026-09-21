@@ -37,6 +37,9 @@ interface BookingRow {
   service_type: string | null;
   base_price: number | string | null;
   discount: number | string | null;
+  total_cost: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   payment_status: string | null;
   facility_id: string;
   clients: { name: string | null; email: string | null } | null;
@@ -108,7 +111,7 @@ export async function POST(
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, service, service_type, base_price, discount, payment_status, facility_id, clients(name, email), booking_pets(pets(name)), facilities(name, address, phone, email, website, logo_url, timezone)",
+      "id, ref, service, service_type, base_price, discount, total_cost, extras_total, taxable, payment_status, facility_id, clients(name, email), booking_pets(pets(name)), facilities(name, address, phone, email, website, logo_url, timezone)",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
@@ -169,6 +172,9 @@ export async function POST(
       ),
       basePrice: number(booking.base_price),
       discount: number(booking.discount),
+      totalCost: number(booking.total_cost),
+      extrasTotal: number(booking.extras_total),
+      taxable: booking.taxable !== false,
       clientName: booking.clients?.name ?? null,
       petNames: (booking.booking_pets ?? [])
         .map((bp) => bp.pets?.name)

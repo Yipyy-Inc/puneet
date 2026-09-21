@@ -742,6 +742,15 @@ export const groomingAppointmentSchema = z.object({
   // fixtures predate both.
   amountDue: z.number().optional(),
   amountPaid: z.number().optional(),
+  /**
+   * What was added at the counter, and whether the SERVICE is taxed.
+   *
+   * Carried so the grooming till applies the same tax the booking page does: a
+   * facility can mark a service tax-free (2026-09-21), and a dialog that did
+   * not know would charge tax on it. Absent means taxed — service-tax.ts.
+   */
+  extrasTotal: z.number().optional(),
+  taxable: z.boolean().optional(),
   /** ISO timestamp of payment confirmation. */
   paidAt: z.string().optional(),
   /** Method used at pickup. */
@@ -957,6 +966,13 @@ export const groomingPackageSchema = z.object({
   includes: z.array(z.string()),
   isActive: z.boolean(),
   isPopular: z.boolean().optional(),
+  /**
+   * Whether this service is charged the facility's tax.
+   *
+   * Optional here and `not null default true` in Postgres: absent means TAXED.
+   * See lib/payments/service-tax.ts for why the default runs that way round.
+   */
+  taxable: z.boolean().optional(),
   purchaseCount: z.number(),
   createdAt: z.string(),
   assignedStylistIds: z.array(z.string()).optional(),

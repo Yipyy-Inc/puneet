@@ -121,6 +121,7 @@ export async function PATCH(
     patch.default_capacity = input.defaultCapacity;
   if (input.defaultBasePrice !== undefined && !locationId) {
     patch.default_base_price = input.defaultBasePrice ?? null;
+    if (input.taxable !== undefined) patch.taxable = input.taxable !== false;
   }
   if (input.visibleToClients !== undefined) {
     patch.visible_to_clients = input.visibleToClients;

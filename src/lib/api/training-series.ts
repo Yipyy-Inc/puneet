@@ -77,14 +77,21 @@ export function useTrainingSeriesEnrollments(
 }
 
 export function useCreateTrainingSeries(): UseMutationResult<
-  { id: string },
+  // `taxProblem` when the series was created but its tax switch was refused —
+  // see the route. The dialog says so rather than toasting an unqualified
+  // success.
+  { id: string; taxProblem?: string },
   Error,
   CreateTrainingSeriesInput
 > {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateTrainingSeriesInput) =>
-      liveWrite<{ id: string }>("/api/training/series", "POST", input),
+      liveWrite<{ id: string; taxProblem?: string }>(
+        "/api/training/series",
+        "POST",
+        input,
+      ),
     onSuccess: () =>
       client.invalidateQueries({ queryKey: realTrainingSeriesKeys.all }),
   });
@@ -97,6 +104,7 @@ export interface UpdateTrainingSeriesInput {
   staffId?: string | null;
   capacity?: number;
   totalPrice?: number;
+  taxable?: boolean;
 }
 
 /** Edits name/staff/location/capacity/price -- the schedule is immutable

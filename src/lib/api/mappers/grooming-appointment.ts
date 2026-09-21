@@ -140,6 +140,8 @@ export interface AppointmentRow {
   base_price: number;
   total_cost: number;
   amount_due: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   amount_paid: number | string | null;
   tip_amount: number | null;
   special_requests: string | null;
@@ -370,6 +372,8 @@ export function rowToGroomingAppointment(
     // charge the balance rather than the list price — the difference is a
     // deposit already taken, or a bag of food added at the counter.
     amountDue: Number(row.amount_due ?? row.total_cost),
+    extrasTotal: Number(row.extras_total ?? 0),
+    taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     ...(row.tip_amount != null ? { tipAmount: Number(row.tip_amount) } : {}),
 
@@ -488,6 +492,7 @@ export function rowToGroomingAppointment(
  *  drift — a column added here without a field there fails to compile. */
 export const APPOINTMENT_SELECT = `
   id, ref, status, start_at, end_at, payment_status, base_price, total_cost,
+  extras_total, taxable,
   amount_due, amount_paid,
   tip_amount, special_requests, created_at,
   assigned_staff_id, assigned_staff_name,

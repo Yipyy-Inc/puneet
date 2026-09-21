@@ -70,6 +70,7 @@ import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { careGuestFromBooking } from "@/lib/daily-care/care-guest";
 import { getPetSize } from "@/lib/pet-size";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { Booking } from "@/types/booking";
 import { usePortalHref } from "@/lib/nav/use-portal-href";
@@ -538,8 +539,15 @@ export default function ClientBookingDetailPage({
   const taxOnSupply = (amount: number) =>
     facilityTaxConfig.pricesIncludeTax
       ? 0
-      : computeTax(Math.round(amount * 100), facilityTaxConfig).totalCents /
-        100;
+      : // Only the taxable part of the supply. A deposit on a tax-free service
+        // carries no tax; one on a booking with taxable extras carries its
+        // share — service-tax.ts.
+        computeTax(
+          // `booking` is still loading on the first render; an unknown
+          // booking is taxed, which is the safe direction.
+          taxableOwedForBooking(booking ?? {}, Math.round(amount * 100)),
+          facilityTaxConfig,
+        ).totalCents / 100;
   // ── WHAT GOES ON A PRINTED RECEIPT ──────────────────────────────────────
   //
   // The same rows the Payment Summary panel shows, so the paper a customer
@@ -1602,6 +1610,7 @@ export default function ClientBookingDetailPage({
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
           clientStoreCreditBalance={storeCreditBalance}
+          taxableBill={booking}
           giftCardTender
           // What the customer is being charged FOR. The printed receipt used to
           // show a single "Amount" line — a total with no evidence behind it.

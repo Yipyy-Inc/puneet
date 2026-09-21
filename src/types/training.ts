@@ -286,6 +286,17 @@ export const trainingPackageSchema = z
     validityDays: z.number(),
     isActive: z.boolean(),
     popular: z.boolean().optional(),
+    /**
+     * Whether this program is charged the facility's tax.
+     *
+     * OPTIONAL, and absent means TAXED — the direction matters. A program saved
+     * before this field existed must keep parsing, because `settingsFromRows`
+     * DROPS a settings domain whose stored value stops parsing, so a required
+     * field here would delete every facility's rate card on deploy. And a
+     * missing flag must never read as tax-free: uncollected tax is the
+     * facility's own money at year end. See lib/payments/service-tax.ts.
+     */
+    taxable: z.boolean().optional(),
     includes: z.array(z.string()),
     color: z.string().optional(),
     /** IDs of ServiceAddOns included free of charge with this package */

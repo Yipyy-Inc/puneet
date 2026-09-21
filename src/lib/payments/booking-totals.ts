@@ -1,5 +1,6 @@
 import { balanceOf } from "@/lib/api/booking-money";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 
 // ============================================================================
 // A booking's total and balance, one answer for every place that shows them.
@@ -23,6 +24,10 @@ export interface BookingMoneyInput {
   amountDue?: number;
   amountPaid?: number;
   tipAmount?: number;
+  /** What was added at the counter. Taxed even when the service is not. */
+  extrasTotal?: number;
+  /** Whether the SERVICE is taxed. Absent means it is — see service-tax.ts. */
+  taxable?: boolean;
 }
 
 export interface BookingTotals {
@@ -45,7 +50,14 @@ export function bookingTotals(
   const paid = booking.amountPaid ?? 0;
   const owed = balanceOf(booking);
   const tip = booking.tipAmount ?? 0;
-  const taxCents = computeTax(cents(owed), taxConfig).totalCents;
+  // Only the taxable part of the balance: a facility can mark a service
+  // tax-free (2026-09-21), and extras added at the counter stay taxed. This is
+  // the one place several screens get their tax from, so the split belongs
+  // here rather than in each of them.
+  const taxCents = computeTax(
+    taxableOwedForBooking(booking, cents(owed)),
+    taxConfig,
+  ).totalCents;
   const added = taxConfig.pricesIncludeTax ? 0 : taxCents;
   return {
     cost,

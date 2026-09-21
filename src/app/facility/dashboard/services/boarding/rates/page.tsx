@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,7 @@ const EMPTY_RATE = {
   name: "",
   description: "",
   basePrice: 0,
+  taxable: true,
   isActive: true,
 };
 
@@ -140,6 +142,7 @@ export default function BoardingRatesPage() {
       name: rate.name,
       description: rate.description ?? "",
       basePrice: rate.defaultBasePrice ?? 0,
+      taxable: rate.taxable !== false,
       isActive: rate.active,
     });
     setIsRateModalOpen(true);
@@ -152,6 +155,7 @@ export default function BoardingRatesPage() {
         name: rateForm.name,
         description: rateForm.description,
         defaultBasePrice: rateForm.basePrice,
+        taxable: rateForm.taxable,
         active: rateForm.isActive,
       });
     } else {
@@ -170,6 +174,7 @@ export default function BoardingRatesPage() {
           rules: [],
           defaultCapacity: 1,
           defaultBasePrice: rateForm.basePrice,
+          taxable: rateForm.taxable,
           visibleToClients: true,
           active: rateForm.isActive,
           locationPricing: [],
@@ -471,6 +476,11 @@ export default function BoardingRatesPage() {
                   Charged per night for every kennel in this class.
                 </p>
               </div>
+              {/* Tax, per kennel class — asked for 2026-09-21. */}
+              <ServiceTaxToggle
+                taxable={rateForm.taxable}
+                onChange={(taxable) => setRateForm({ ...rateForm, taxable })}
+              />
               <div className="flex items-center justify-between">
                 <Label>Active</Label>
                 <Switch

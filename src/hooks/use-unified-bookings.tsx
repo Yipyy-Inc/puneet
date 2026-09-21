@@ -125,6 +125,15 @@ export interface UnifiedBooking {
    */
   amountDue?: number;
   amountPaid?: number;
+  /**
+   * What was added at the counter, and whether the SERVICE is taxed.
+   *
+   * Carried so the board's till applies the same tax the booking page does: a
+   * facility can mark a service tax-free (2026-09-21), and a board that did
+   * not know would charge tax on it. Absent means taxed — service-tax.ts.
+   */
+  extrasTotal?: number;
+  taxable?: boolean;
   totalNights?: number;
   groupNote?: string;
 }
@@ -266,6 +275,8 @@ function normalizeBoarding(g: BoardingArrival): UnifiedBooking {
     price: g.totalCost,
     amountDue: g.amountDue,
     amountPaid: g.amountPaid,
+    extrasTotal: g.extrasTotal,
+    taxable: g.taxable,
     totalNights: g.nights,
   };
 }
@@ -302,6 +313,8 @@ function normalizeDaycare(d: DaycareCheckIn): UnifiedBooking {
     ...(d.totalCost !== undefined ? { price: d.totalCost } : {}),
     ...(d.amountDue !== undefined ? { amountDue: d.amountDue } : {}),
     ...(d.amountPaid !== undefined ? { amountPaid: d.amountPaid } : {}),
+    ...(d.extrasTotal !== undefined ? { extrasTotal: d.extrasTotal } : {}),
+    ...(d.taxable !== undefined ? { taxable: d.taxable } : {}),
   };
 }
 
@@ -322,6 +335,15 @@ interface MinimalGroomingAppt {
   totalPrice: number;
   amountDue?: number;
   amountPaid?: number;
+  /**
+   * What was added at the counter, and whether the SERVICE is taxed.
+   *
+   * Carried so a till away from the booking page applies the same tax: a
+   * facility can mark a service tax-free (2026-09-21). Absent means taxed —
+   * lib/payments/service-tax.ts.
+   */
+  extrasTotal?: number;
+  taxable?: boolean;
   checkInTime: string | null;
   checkOutTime: string | null;
   notes: string;
@@ -365,6 +387,8 @@ function normalizeGrooming(a: MinimalGroomingAppt): UnifiedBooking {
     price: a.totalPrice,
     amountDue: a.amountDue ?? a.totalPrice,
     amountPaid: a.amountPaid ?? 0,
+    extrasTotal: a.extrasTotal,
+    taxable: a.taxable,
   };
 }
 

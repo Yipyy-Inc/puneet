@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/mappers/booking";
 import { writeFailure } from "@/lib/api/write-failure";
 import { staffForStylist } from "@/lib/api/stylist-staff";
+import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import {
   checkStatusTransition,
   isPresenceTracked,
@@ -315,6 +316,19 @@ export async function PATCH(
         );
       }
     }
+  }
+
+  // ── A BOOKING MOVED TO ANOTHER SERVICE IS A DIFFERENT SUPPLY ────────────
+  //
+  // `bookings.taxable` is pinned at creation so that a facility editing a RATE
+  // does not retroactively re-tax stays already taken under it. Editing the
+  // BOOKING is the opposite case: a stay moved from a taxed kennel class to an
+  // exempt one is now the exempt one, and the flag has to follow.
+  //
+  // Only when the service itself changed — a rename, a note or a staff
+  // reassignment leaves the supply exactly as it was.
+  if (row.service !== undefined || row.service_type !== undefined) {
+    await stampBookingTaxable([stored.id]);
   }
 
   return NextResponse.json(updated ? rowToBooking(updated) : null);

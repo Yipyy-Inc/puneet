@@ -41,7 +41,7 @@ import type { PetSize } from "@/types/base";
 export const SERVICE_SELECT = `
   id, legacy_id, name, description, base_price, duration_min,
   coat_adjustments, coat_adjustment_mode, matted_surcharge_default,
-  includes, is_active, is_popular,
+  includes, is_active, is_popular, taxable,
   eligible_pet_sizes, eligible_coat_types, eligible_breeds,
   required_skill_level, min_booking_notice_hours, max_per_day,
   display_order, color, image_url, created_at,
@@ -70,6 +70,7 @@ export interface ServiceRow {
   includes: string[] | null;
   is_active: boolean;
   is_popular: boolean;
+  taxable: boolean | null;
   eligible_pet_sizes: string[] | null;
   eligible_coat_types: string[] | null;
   eligible_breeds: string[] | null;
@@ -198,6 +199,9 @@ export function rowToService(
     includes: row.includes ?? [],
     isActive: row.is_active,
     isPopular: row.is_popular,
+    // Null (a row read back before the column existed) is not a decision to
+    // stop charging tax.
+    taxable: row.taxable !== false,
     // See the header: 0 is the honest answer until the sales history is real.
     purchaseCount: 0,
     createdAt: row.created_at,
@@ -236,6 +240,7 @@ export function serviceToRow(
   if (input.includes !== undefined) row.includes = input.includes;
   if (input.isActive !== undefined) row.is_active = input.isActive;
   if (input.isPopular !== undefined) row.is_popular = input.isPopular;
+  if (input.taxable !== undefined) row.taxable = input.taxable !== false;
   if (input.eligiblePetSizes !== undefined)
     row.eligible_pet_sizes = input.eligiblePetSizes;
   if (input.eligibleCoatTypes !== undefined)

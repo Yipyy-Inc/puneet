@@ -8,7 +8,11 @@ import {
   expandBookingParts,
   MAX_BOOKING_PARTS,
 } from "@/lib/bookings/booking-parts";
-import { facilityTaxConfig, taxToAddCents } from "@/lib/payments/booking-tax";
+import {
+  facilityTaxConfig,
+  taxToAddCents,
+  type BookingBill,
+} from "@/lib/payments/booking-tax";
 import type { Json } from "@/types/database";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import {
@@ -30,6 +34,7 @@ import {
 } from "@/lib/api/booking-list-params";
 import type { NewBooking } from "@/types/booking";
 import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
+import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   FORM_REQUIRED,
@@ -442,6 +447,17 @@ export async function POST(request: NextRequest) {
   // replaced, so the failure mode is the old one.
   //
   // Staff bookings are already confirmed and are not candidates.
+  // ── WHETHER THE SERVICE IS TAXED, RECORDED ON THE BOOKING ───────────────
+  //
+  // BEFORE auto-confirm, because a booking that confirms and is paid for in
+  // the same minute must already know. `bookings.taxable` defaults to true and
+  // this only ever turns it off, so a failure here leaves the booking taxed —
+  // which is what every booking did before the column existed.
+  //
+  // It runs for STAFF bookings too, not only customers': a facility's own
+  // front desk booking a tax-free service must not charge tax on it either.
+  await stampBookingTaxable(created.map((c) => c.booking_id));
+
   const autoConfirmed = await autoConfirmCustomerBookings(
     created.map((c) => c.booking_id),
   );
@@ -662,10 +678,35 @@ async function recordDeposit(
     supabase as unknown as SupabaseClient,
     deposit.sessionFacilityId,
   );
+
+  // ── A DEPOSIT ON A TAX-FREE SERVICE CARRIES NO TAX ──────────────────────
+  //
+  // Read back rather than taken from the request: `stampBookingTaxable` has
+  // just written the answer for these very rows, and the deposit is the FIRST
+  // money taken on them, so getting it wrong here is the one tax error a
+  // customer sees before anything else.
+  const { data: billRows } = await supabase
+    .from("bookings")
+    .select("id, total_cost, extras_total, taxable")
+    .in(
+      "id",
+      deposit.bookings.map((b) => b.id),
+    );
+  // `as unknown as` because src/types/database.ts has not been regenerated
+  // since `bookings.taxable` was added (20260921171524) and still reports the
+  // column as absent. The same cast the neighbouring routes already use.
+  const billById = new Map(
+    ((billRows ?? []) as unknown as Array<BookingBill & { id: string }>).map(
+      (b) => [b.id, b],
+    ),
+  );
+
   let recorded = 0;
   for (const [i, share] of shares.entries()) {
     if (share <= 0) continue;
-    const tax = taxToAddCents(taxConfig, Math.round(share * 100)) / 100;
+    // A booking whose row could not be read is taxed — the safe direction.
+    const bill = billById.get(deposit.bookings[i].id) ?? {};
+    const tax = taxToAddCents(taxConfig, Math.round(share * 100), bill) / 100;
     const total = Math.round((share + tax) * 100) / 100;
     const { error } = await supabase.rpc("record_payment", {
       p_facility_id: deposit.sessionFacilityId,

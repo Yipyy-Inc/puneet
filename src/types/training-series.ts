@@ -36,6 +36,14 @@ export interface RealTrainingSeries {
   numberOfSessions: number;
   capacity: number;
   totalPrice: number;
+  /**
+   * Whether enrolment in this series is charged the facility's tax.
+   *
+   * On the SERIES rather than only the program: total_price here is what
+   * actually prices a training booking, and a series carries no reference to
+   * the program it was modelled on. See lib/payments/service-tax.ts.
+   */
+  taxable: boolean;
   status: TrainingSeriesStatus;
   enrolledCount: number;
   waitlistedCount: number;
@@ -69,6 +77,8 @@ export interface RealTrainingSeriesEnrollment {
 }
 
 export interface CreateTrainingSeriesInput {
+  /** Absent means taxed — see lib/payments/service-tax.ts. */
+  taxable?: boolean;
   name: string;
   dayOfWeek: number;
   startTime: string;

@@ -513,6 +513,71 @@ exception when others then
   reset role; perform pg_temp.t('T18 customer note edit', false, sqlerrm);
 end $$;
 
+
+-- ── T19/T20: a customer does not decide whether their booking is taxed ──────
+--
+-- 20260921171524 added `bookings.taxable` so a facility can mark a service
+-- tax-free. `details` would have been the cheaper place to keep it and is the
+-- wrong one: read the customer INSERT branch of enforce_booking_integrity and
+-- note that `new.details` is passed through untouched, so a customer posting
+-- {"taxable": false} in their own booking's details would be believed.
+--
+-- The negative control was run before the fix landed: a customer INSERT with
+-- `taxable => false` kept it, while the same statement's price was correctly
+-- zeroed and its status forced to request_submitted.
+do $$
+declare r record; v_booking uuid;
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.bookings
+    (facility_id, client_id, service, start_at, end_at, base_price, total_cost, taxable)
+  values
+    ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000d1',
+     'daycare', now() + interval '3 days', now() + interval '3 days 4 hours', 60, 60, false)
+  returning id into v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T19 a customer cannot insert their booking tax-free',
+            r.taxable is true,
+            format('taxable=%s status=%s total=%s', r.taxable, r.status, r.total_cost));
+
+  -- And cannot flip it afterwards either, the way they can still cancel.
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000000c1', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  update public.bookings set taxable = false where id = v_booking;
+  reset role;
+
+  select * into r from public.bookings where id = v_booking;
+  perform pg_temp.t('T20 a customer cannot turn tax off on an existing booking',
+            r.taxable is true, format('taxable=%s', r.taxable));
+exception when others then
+  reset role; perform pg_temp.t('T19/T20 customer tax pinning', false, sqlerrm);
+end $$;
+
+-- ── T21: the default is TAXED, in every table that now carries the flag ─────
+--
+-- Not symmetry for its own sake. Tax charged that was not owed is a refund;
+-- tax NOT charged that was owed is the facility's own money, paid to the
+-- government at year end for every booking since the mistake. So a column that
+-- defaulted to false — or that a migration left nullable — is the one failure
+-- mode worth a test of its own.
+do $$
+declare v_bad text;
+begin
+  select string_agg(format('%s.%s', c.table_name, c.column_name), ', ')
+    into v_bad
+    from information_schema.columns c
+   where c.table_schema = 'public'
+     and c.column_name = 'taxable'
+     and c.table_name in ('bookings', 'room_categories', 'grooming_services', 'training_series')
+     and (c.is_nullable <> 'NO' or c.column_default is distinct from 'true');
+
+  perform pg_temp.t('T21 taxable defaults to true and is not null everywhere',
+            v_bad is null, coalesce(v_bad, 'all four columns correct'));
+end $$;
+
 -- ── Report ─────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result,
        name, detail

@@ -74,6 +74,9 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     paymentStatus: row.payment_status as Booking["paymentStatus"],
     amountPaid: Number(row.amount_paid),
     extrasTotal: Number(row.extras_total),
+    // Absent on a row read before the column existed, which is not a decision
+    // to stop charging tax.
+    taxable: (row as { taxable?: boolean | null }).taxable !== false,
     // What it COSTS, price plus extras. Not the same as totalCost the moment
     // anything is added at the counter — see 20260806820000.
     amountDue: Number(row.amount_due),
@@ -134,6 +137,10 @@ const COLUMN_FIELDS = [
   "amountPaid",
   "extrasTotal",
   "amountDue",
+  // Listed so it is not swept into `details`. Only ever WRITTEN by the server
+  // (lib/payments/booking-service-tax.ts) — a PATCH sends only the columns it
+  // changed, and a screen never changes this one.
+  "taxable",
   "startDate",
   "endDate",
   "checkInTime",

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +78,8 @@ export function RealSeriesEditDialog({
   const [staffId, setStaffId] = useState(editing?.staffId ?? "");
   const [capacity, setCapacity] = useState(editing?.capacity ?? 8);
   const [totalPrice, setTotalPrice] = useState(editing?.totalPrice ?? 0);
+  // Absent means taxed — see lib/payments/service-tax.ts.
+  const [taxable, setTaxable] = useState(editing?.taxable !== false);
 
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [startTime, setStartTime] = useState("17:00");
@@ -97,6 +100,7 @@ export function RealSeriesEditDialog({
     setStaffId(editing.staffId ?? "");
     setCapacity(editing.capacity);
     setTotalPrice(editing.totalPrice);
+    setTaxable(editing.taxable !== false);
   }
 
   function save() {
@@ -117,6 +121,7 @@ export function RealSeriesEditDialog({
             staffId: staffId || null,
             capacity,
             totalPrice,
+            taxable,
           },
         },
         {
@@ -146,12 +151,18 @@ export function RealSeriesEditDialog({
         numberOfSessions,
         capacity,
         totalPrice,
+        taxable,
         locationId: locationId || null,
         staffId: staffId || null,
       },
       {
-        onSuccess: () => {
-          toast.success("Series created");
+        onSuccess: (created) => {
+          // Truthful: the series can exist while its tax switch did not take —
+          // the create RPC is SECURITY DEFINER, the tax write is judged by RLS.
+          const problem = (created as { taxProblem?: string } | undefined)
+            ?.taxProblem;
+          if (problem) toast.warning(problem);
+          else toast.success("Series created");
           onOpenChange(false);
         },
         onError: (err: Error) => setError(err.message),
@@ -340,6 +351,12 @@ export function RealSeriesEditDialog({
               </p>
             </div>
           </div>
+
+          {/* Tax, per series. The Rates tab's programs carry the same switch,
+              but a series is created standalone with its own price and no
+              reference back to a program — so this is the one a booking is
+              actually resolved against. */}
+          <ServiceTaxToggle taxable={taxable} onChange={setTaxable} />
 
           {error && (
             <p className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-sm">

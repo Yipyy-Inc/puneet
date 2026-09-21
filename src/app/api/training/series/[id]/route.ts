@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const SERIES_SELECT = `
   id, facility_id, location_id, staff_id, name, course_type_name,
   day_of_week, start_time, duration_minutes, start_date, number_of_sessions,
-  capacity, total_price, status, created_at, updated_at,
+  capacity, total_price, taxable, status, created_at, updated_at,
   locations(name), staff(first_name, last_name), facilities(timezone)
 `;
 
@@ -32,6 +32,7 @@ interface SeriesRow {
   number_of_sessions: number;
   capacity: number;
   total_price: number;
+  taxable: boolean | null;
   status: RealTrainingSeries["status"];
   created_at: string;
   updated_at: string;
@@ -115,6 +116,7 @@ export async function GET(
     numberOfSessions: row.number_of_sessions,
     capacity: row.capacity,
     totalPrice: row.total_price,
+    taxable: row.taxable !== false,
     status: row.status,
     enrolledCount: counts.enrolled,
     waitlistedCount: counts.waitlisted,
@@ -149,6 +151,8 @@ interface SeriesPatchInput {
   staffId?: string | null;
   capacity?: number;
   totalPrice?: number;
+  /** Absent means taxed — see lib/payments/service-tax.ts. */
+  taxable?: boolean;
 }
 
 /**
@@ -197,6 +201,7 @@ export async function PATCH(
   if (input.staffId !== undefined) patch.staff_id = input.staffId;
   if (input.capacity !== undefined) patch.capacity = input.capacity;
   if (input.totalPrice !== undefined) patch.total_price = input.totalPrice;
+  if (input.taxable !== undefined) patch.taxable = input.taxable !== false;
 
   const supabase = await createServerClient();
   const { data, error } = await supabase

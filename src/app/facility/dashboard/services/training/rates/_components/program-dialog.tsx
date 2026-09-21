@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -53,6 +54,7 @@ export interface ProgramFormState {
   validityDays: number;
   isActive: boolean;
   popular: boolean;
+  taxable: boolean;
   includes: string;
   prerequisitePackageIds: string[];
   graduateIntoPackageId: string;
@@ -71,6 +73,7 @@ const EMPTY_PROGRAM: ProgramFormState = {
   validityDays: 90,
   isActive: true,
   popular: false,
+  taxable: true,
   includes: "",
   prerequisitePackageIds: [],
   graduateIntoPackageId: "",
@@ -90,6 +93,9 @@ function seedFromPackage(pkg: TrainingPackage): ProgramFormState {
     validityDays: pkg.validityDays,
     isActive: pkg.isActive,
     popular: pkg.popular ?? false,
+    // Absent means taxed — a program saved before the field existed keeps
+    // charging tax, which is what it did yesterday.
+    taxable: pkg.taxable !== false,
     includes: pkg.includes.join("\n"),
     prerequisitePackageIds: pkg.prerequisitePackageIds ?? [],
     graduateIntoPackageId: pkg.graduateIntoPackageId ?? "",
@@ -529,6 +535,16 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
             <Switch
               checked={form.popular}
               onCheckedChange={(v) => setForm({ ...form, popular: v })}
+            />
+          </div>
+
+          {/* Tax, per program. Asked for on 2026-09-21 — a facility sells some
+              courses it must charge tax on and some it must not, and the tax
+              config was all-or-nothing for the whole business. */}
+          <div className="rounded-lg border px-3 py-2">
+            <ServiceTaxToggle
+              taxable={form.taxable}
+              onChange={(taxable) => setForm({ ...form, taxable })}
             />
           </div>
         </div>

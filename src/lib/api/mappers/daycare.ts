@@ -73,6 +73,8 @@ export interface DaycareBookingRow {
   service_type: string | null;
   total_cost: number | string;
   amount_due: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
   booking_pets:
@@ -91,7 +93,7 @@ export interface DaycareBookingRow {
 
 export const DAYCARE_BOOKING_SELECT = `
   id, ref, start_at, end_at, status, service_type,
-  total_cost, amount_due, amount_paid,
+  total_cost, amount_due, amount_paid, extras_total, taxable,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, weight, image_url ) ),
   daycare_attendance ( booking_id, checked_in_at, checked_out_at, status,
@@ -142,6 +144,8 @@ export function rowToDaycareCheckIn(
     // without this gets string concatenation and a bill of "4545".
     totalCost: Number(row.total_cost),
     amountDue: Number(row.amount_due ?? row.total_cost),
+    extrasTotal: Number(row.extras_total ?? 0),
+    taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     notes: attendance?.notes ?? "",
     playGroup: attendance?.play_group ?? null,

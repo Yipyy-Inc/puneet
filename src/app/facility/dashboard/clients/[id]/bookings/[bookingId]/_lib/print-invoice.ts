@@ -4,6 +4,7 @@ import type { InvoiceTemplate } from "@/types/invoice-template";
 import { formatCalendarDayLong, formatDateLong } from "@/lib/i18n/format";
 import type { AppLocale } from "@/lib/language-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -83,7 +84,13 @@ export function printBookingInvoice(input: PrintInvoiceInput): void {
     }));
 
   const subtotal = booking.amountDue ?? booking.totalCost;
-  const tax = computeTax(Math.round(subtotal * 100), taxConfig);
+  // Only the taxable part. A facility can mark a service tax-free
+  // (2026-09-21) and extras stay taxed — service-tax.ts splits in proportion,
+  // the same way the screen this paper is printed from does.
+  const tax = computeTax(
+    taxableOwedForBooking(booking, Math.round(subtotal * 100)),
+    taxConfig,
+  );
   const tipTotal = booking.tipAmount ?? 0;
   const total = taxConfig.pricesIncludeTax
     ? subtotal + tipTotal

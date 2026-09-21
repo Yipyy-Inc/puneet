@@ -20,6 +20,7 @@ import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DollarSign,
+  Receipt,
   Clock,
   Edit,
   Trash2,
@@ -42,13 +43,19 @@ import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
 import { cn } from "@/lib/utils";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
+import { maxRateHours } from "@/lib/daycare-pricing";
+import { useSpeciesConfig } from "@/lib/api/facility-settings";
+import { sameSpecies } from "@/lib/settings/species";
+import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 
 const EMPTY_RATE = {
   name: "",
-  type: "hourly" as "hourly" | "half-day" | "full-day",
   basePrice: 0,
   description: "",
-  durationHours: 1,
+  durationHours: 8,
+  maxDurationHours: 8,
+  species: [] as string[],
+  taxable: true,
   isActive: true,
   color: "#0284c7",
   sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
@@ -73,6 +80,8 @@ export default function DaycareRatesPage() {
     );
   };
   const { areas, sections } = useDaycareAreas();
+  // Which animals this facility takes — the list a rate picks from.
+  const { config: speciesConfig } = useSpeciesConfig();
   const activeSections = sections.filter((s) => s.isActive);
 
   // The facility's own extras. The comment this replaces said it reloaded
@@ -105,10 +114,12 @@ export default function DaycareRatesPage() {
     setEditingRate(rate);
     setRateForm({
       name: rate.name,
-      type: rate.type,
       basePrice: rate.basePrice,
       description: rate.description,
       durationHours: rate.durationHours,
+      maxDurationHours: maxRateHours(rate),
+      species: rate.species ?? [],
+      taxable: rate.taxable !== false,
       isActive: rate.isActive,
       color: rate.color ?? "#0284c7",
       sizePricing: { ...rate.sizePricing },
@@ -158,40 +169,34 @@ export default function DaycareRatesPage() {
       ),
     },
     {
-      key: "type",
-      label: "Type",
-      defaultVisible: true,
-      render: (item) => (
-        <Badge
-          variant={
-            item.type === "full-day"
-              ? "default"
-              : item.type === "half-day"
-                ? "secondary"
-                : "outline"
-          }
-        >
-          {item.type.replace("-", " ")}
-        </Badge>
-      ),
-    },
-    {
       key: "basePrice",
       label: "Base Price",
       icon: DollarSign,
       defaultVisible: true,
       render: (item) => (
-        <span className="font-semibold">${item.basePrice}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">${item.basePrice}</span>
+          {/* Said on the row, not only in the dialog: a facility with six rates
+              should not have to open each one to see which are tax-free. A
+              glyph beside the words, because colour is never the only channel
+              (§3) — and it is a MARK on its own wash, not a tint fill (§6.2). */}
+          {item.taxable === false && (
+            <span className="text-ink-tertiary inline-flex items-center gap-1 text-[12px] font-bold tracking-[0.06em] uppercase">
+              <Receipt className="size-3" />
+              {tRates("noTax")}
+            </span>
+          )}
+        </div>
       ),
     },
     {
       key: "durationHours",
-      label: "Duration",
+      label: tRates("maxDurationColumn"),
       icon: Clock,
       defaultVisible: true,
       render: (item) => (
         <span>
-          {item.durationHours} {item.durationHours === 1 ? "hour" : "hours"}
+          {maxRateHours(item)} {maxRateHours(item) === 1 ? "hour" : "hours"}
         </span>
       ),
     },
@@ -360,17 +365,7 @@ export default function DaycareRatesPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{rate.name}</CardTitle>
-                  <Badge
-                    variant={
-                      rate.type === "full-day"
-                        ? "default"
-                        : rate.type === "half-day"
-                          ? "secondary"
-                          : "outline"
-                    }
-                  >
-                    {rate.type.replace("-", " ")}
-                  </Badge>
+                  <Badge variant="outline">≤ {maxRateHours(rate)}h</Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -380,7 +375,7 @@ export default function DaycareRatesPage() {
                       ${rate.basePrice}
                     </span>
                     <span className="text-muted-foreground">
-                      / {rate.durationHours}h
+                      / {maxRateHours(rate)}h
                     </span>
                   </div>
                   <p className="text-muted-foreground text-sm">
@@ -564,23 +559,6 @@ export default function DaycareRatesPage() {
                     placeholder="e.g., Full Day Daycare"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <select
-                    className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
-                    value={rateForm.type}
-                    onChange={(e) =>
-                      setRateForm({
-                        ...rateForm,
-                        type: e.target.value as typeof rateForm.type,
-                      })
-                    }
-                  >
-                    <option value="hourly">Hourly</option>
-                    <option value="half-day">Half-Day</option>
-                    <option value="full-day">Full-Day</option>
-                  </select>
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -597,21 +575,100 @@ export default function DaycareRatesPage() {
                     placeholder="0.00"
                   />
                 </div>
+                {/*
+                  MAX duration, and it decides the price now.
+
+                  This field existed and was read by nothing — it sat beside
+                  the price on the rates screen while `daycareDayRate` picked a
+                  rate by its TYPE. So a facility could say "5 hours" and watch
+                  a full day look for a rate typed "full-day", find none, and
+                  report having no rate card at all.
+
+                  Both numbers are written so a rate saved here still prices on
+                  an older build; `maxRateHours` prefers the new one.
+                */}
                 <div className="space-y-2">
-                  <Label>Duration (hours)</Label>
+                  <Label>{tRates("maxDurationLabel")}</Label>
                   <Input
                     type="number"
-                    value={rateForm.durationHours}
-                    onChange={(e) =>
+                    value={rateForm.maxDurationHours}
+                    onChange={(e) => {
+                      const hours = parseInt(e.target.value) || 1;
                       setRateForm({
                         ...rateForm,
-                        durationHours: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    placeholder="1"
+                        maxDurationHours: hours,
+                        durationHours: hours,
+                      });
+                    }}
+                    placeholder="8"
                   />
                 </div>
               </div>
+              {/*
+                WHICH ANIMALS THIS RATE IS FOR.
+
+                The list comes from Settings → Species, so a facility that
+                takes rabbits offers rabbits. Nothing selected means EVERY
+                species — the safe default, because the alternative is a rate
+                that matches no pet and a booking that cannot be priced.
+
+                Hidden entirely when the facility lists fewer than two species:
+                a dogs-only business is asked nothing, because there is no
+                choice to make.
+              */}
+              {speciesConfig.species.length > 1 && (
+                <div className="space-y-2">
+                  <Label>{tRates("forWhichAnimals")}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {speciesConfig.species.map((name) => {
+                      const chosen = rateForm.species.some((s) =>
+                        sameSpecies(s, name),
+                      );
+                      return (
+                        <Button
+                          key={name.toLowerCase()}
+                          type="button"
+                          variant={chosen ? "default" : "outline"}
+                          size="sm"
+                          aria-pressed={chosen}
+                          onClick={() =>
+                            setRateForm({
+                              ...rateForm,
+                              species: chosen
+                                ? rateForm.species.filter(
+                                    (s) => !sameSpecies(s, name),
+                                  )
+                                : [...rateForm.species, name],
+                            })
+                          }
+                        >
+                          {chosen && <Check className="mr-1 size-3.5" />}
+                          {name}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-ink-tertiary text-[13.5px]">
+                    {rateForm.species.length === 0
+                      ? tRates("everyAnimal")
+                      : tRates("onlySelected")}
+                  </p>
+                </div>
+              )}
+
+              {/*
+                TAX, PER SERVICE.
+
+                Asked for on 2026-09-21 in the same message as max duration and
+                the species picker. It sits after the price and the animals
+                because it is a property of what is being SOLD, not of how the
+                rate is matched to a booking.
+              */}
+              <ServiceTaxToggle
+                taxable={rateForm.taxable}
+                onChange={(taxable) => setRateForm({ ...rateForm, taxable })}
+              />
+
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea

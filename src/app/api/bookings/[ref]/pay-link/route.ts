@@ -40,6 +40,10 @@ interface BookingRow {
   facility_id: string;
   amount_due: number | string | null;
   amount_paid: number | string | null;
+  /** The split between the service and what was added — see BookingBill. */
+  total_cost: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   clients: {
     name: string;
     email: string | null;
@@ -87,7 +91,7 @@ export async function POST(
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, amount_due, amount_paid, clients ( name, email, phone, preferred_language ), facilities ( name, slug )",
+      "id, ref, facility_id, amount_due, amount_paid, total_cost, extras_total, taxable, clients ( name, email, phone, preferred_language ), facilities ( name, slug )",
     )
     .eq("ref", Number(ref))
     .eq("facility_id", context.facilityId)
@@ -154,6 +158,7 @@ export async function POST(
       booking.facility_id,
     ),
     owedCents,
+    booking,
   );
   const french = booking.clients.preferred_language?.startsWith("fr");
   const amount = formatMoney(

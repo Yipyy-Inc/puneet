@@ -1,5 +1,6 @@
 import type { ReceiptInput, ReceiptLine } from "@/lib/clover/receipt";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 
 // ============================================================================
 // A SETTLED BOOKING'S RECEIPT, FROM ITS LEDGER.
@@ -23,6 +24,14 @@ export interface ReceiptBookingRow {
   serviceLabel: string;
   basePrice: number;
   discount: number;
+  /**
+   * The split between the service and what was added, and whether the SERVICE
+   * is taxed. Used only to name the tax lines correctly — the AMOUNT of tax
+   * comes from the payment, which recorded what was actually collected.
+   */
+  totalCost?: number;
+  extrasTotal?: number;
+  taxable?: boolean;
   clientName: string | null;
   petNames: string[];
 }
@@ -122,8 +131,19 @@ export function bookingReceiptInput(input: {
     });
   }
 
+  // Split first: a tax-free service with taxable extras collected tax on the
+  // extras alone, so re-deriving from the whole subtotal would not reproduce
+  // the figure on the payment and the named GST/QST lines would be dropped for
+  // a single unlabelled one.
   const byName = computeTax(
-    taxConfig.pricesIncludeTax ? subtotalCents + taxCents : subtotalCents,
+    taxableOwedForBooking(
+      {
+        totalCost: booking.totalCost,
+        extrasTotal: booking.extrasTotal,
+        taxable: booking.taxable,
+      },
+      taxConfig.pricesIncludeTax ? subtotalCents + taxCents : subtotalCents,
+    ),
     taxConfig,
   );
   const taxLines =

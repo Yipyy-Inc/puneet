@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 export const ROOM_CATEGORY_SELECT =
-  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, visible_to_clients, image_url, rules, active, room_category_location_prices ( location_id, price )";
+  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, taxable, visible_to_clients, image_url, rules, active, room_category_location_prices ( location_id, price )";
 
 export const FACILITY_ROOM_SELECT =
   "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order, description, color, rules";
@@ -34,6 +34,7 @@ export interface RoomCategoryRow {
   sort_order: number;
   default_capacity: number;
   default_base_price: number | null;
+  taxable: boolean | null;
   visible_to_clients: boolean;
   image_url: string | null;
   rules: RoomRule[] | null;
@@ -99,6 +100,9 @@ export function rowToRoomCategory(
       row.default_base_price === null
         ? undefined
         : Number(row.default_base_price),
+    // A row read back before the column existed answers null, which is not a
+    // decision to stop charging tax.
+    taxable: row.taxable !== false,
     visibleToClients: row.visible_to_clients,
     imageUrl: row.image_url ?? undefined,
     active: row.active,

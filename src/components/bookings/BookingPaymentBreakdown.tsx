@@ -11,6 +11,7 @@ import { balanceOf } from "@/lib/api/booking-money";
 import { bookingMoney, paymentQueries } from "@/lib/api/payments";
 import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { computeTax, type TaxConfig } from "@/lib/settings/tax";
+import { taxableOwedForBooking } from "@/lib/payments/service-tax";
 import { bookingTotals } from "@/lib/payments/booking-totals";
 import type { BookingLineItem } from "@/app/api/bookings/[ref]/line-items/route";
 import type { Booking } from "@/types/booking";
@@ -177,7 +178,12 @@ export function BookingPaymentBreakdown({
   // whole bill, or a part-paid booking would be taxed twice. The lines are
   // listed here; the total and the balance are bookingTotals(), which the
   // page header reads too, so the two figures on one screen cannot disagree.
-  const tax = computeTax(Math.round(outstanding * 100), taxConfig);
+  // Only the taxable part — the same split bookingTotals() applies below, so
+  // the LINES and the TOTAL on one screen cannot disagree.
+  const tax = computeTax(
+    taxableOwedForBooking(booking, Math.round(outstanding * 100)),
+    taxConfig,
+  );
   const totals = bookingTotals(booking, taxConfig);
   const taxRate = (rate: number) => {
     const pct = Number((rate * 100).toFixed(3));

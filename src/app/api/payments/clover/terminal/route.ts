@@ -27,6 +27,7 @@ import {
   type ComputedTax,
   type TaxConfig,
 } from "@/lib/settings/tax";
+import { taxableOwedOf } from "@/lib/payments/booking-tax";
 import {
   emailItemisedReceipt,
   smsItemisedReceipt,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       // the business, its address and how to reach it is the difference between
       // a record and a note. These columns exist on `facilities`
       // (20260809120000) and were simply never read here.
-      "id, ref, facility_id, client_id, amount_due, amount_paid, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
+      "id, ref, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -181,7 +182,13 @@ export async function POST(request: NextRequest) {
   // marked price, so nothing is added and the receipt only says how much of the
   // total was tax.
   const bill = await billFor(booking as unknown as BookingForReceipt, supabase);
-  const taxOnCharge = computeTax(owedCents, bill.taxConfig);
+  // Only the TAXABLE part of what is owed. A facility can mark a service
+  // tax-free since 2026-09-21, and extras added at the counter stay taxed —
+  // lib/payments/service-tax.ts splits a mixed balance in proportion.
+  const taxOnCharge = computeTax(
+    taxableOwedOf(booking as unknown as BookingForReceipt, owedCents),
+    bill.taxConfig,
+  );
   // A tax-inclusive facility's tax is already inside the price, so nothing is
   // added to what is collected — the receipt only says how much of the total
   // was tax.
@@ -478,6 +485,10 @@ interface BookingForReceipt {
   base_price: number | string;
   discount: number | string | null;
   tip_amount: number | string | null;
+  /** The split between the service and what was added — see BookingBill. */
+  total_cost: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   facilities: {
     name: string;
     timezone: string | null;

@@ -6,6 +6,7 @@ import {
   taxConfigSchema,
   type TaxConfig,
 } from "@/lib/settings/tax";
+import { taxableOwedCents } from "@/lib/payments/service-tax";
 
 // ============================================================================
 // The tax a card payment on a booking ADDS to what is owed.
@@ -44,7 +45,49 @@ export async function facilityTaxConfig(
   return parsed.success ? parsed.data : NO_TAX;
 }
 
-export function taxToAddCents(config: TaxConfig, owedCents: number): number {
+/**
+ * The booking's own money, as far as tax is concerned.
+ *
+ * Three columns, and every caller already has them: `total_cost` is the
+ * service the facility priced, `extras_total` is what was added at the counter,
+ * and `taxable` is whether the SERVICE is taxed (extras always are).
+ */
+export interface BookingBill {
+  total_cost?: number | string | null;
+  extras_total?: number | string | null;
+  taxable?: boolean | null;
+}
+
+function num(value: number | string | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** The part of a balance the facility's tax applies to. */
+export function taxableOwedOf(bill: BookingBill, owedCents: number): number {
+  return taxableOwedCents(owedCents, {
+    totalCost: num(bill.total_cost),
+    extrasTotal: num(bill.extras_total),
+    // Null is a row read before the column existed, which is not a decision to
+    // stop charging tax.
+    serviceTaxable: bill.taxable !== false,
+  });
+}
+
+/**
+ * The tax a payment of `owedCents` adds.
+ *
+ * `bill` is REQUIRED rather than optional, and that is the point: a facility
+ * can mark a service tax-free since 2026-09-21, and an optional argument would
+ * have let every call site that was not updated go on charging tax on it with
+ * no error anywhere. Making it required turns "a checkout nobody remembered"
+ * into a compile failure.
+ */
+export function taxToAddCents(
+  config: TaxConfig,
+  owedCents: number,
+  bill: BookingBill,
+): number {
   if (config.pricesIncludeTax || owedCents <= 0) return 0;
-  return computeTax(owedCents, config).totalCents;
+  return computeTax(taxableOwedOf(bill, owedCents), config).totalCents;
 }

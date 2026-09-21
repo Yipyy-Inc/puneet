@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -527,6 +528,8 @@ export function ServiceDialog({
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(60);
   const [isActive, setIsActive] = useState(true);
+  // Absent means taxed — see lib/payments/service-tax.ts.
+  const [taxable, setTaxable] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [requiresEval, setRequiresEval] = useState(false);
   const [assignedStylistIds, setAssignedStylistIds] = useState<string[]>([]);
@@ -608,6 +611,7 @@ export function ServiceDialog({
       setDescription(editingPackage.description);
       setDuration(editingPackage.duration);
       setIsActive(editingPackage.isActive);
+      setTaxable(editingPackage.taxable !== false);
       setIsOnline(true);
       setRequiresEval(editingPackage.requiresEvaluation ?? false);
       setAssignedStylistIds(editingPackage.assignedStylistIds ?? []);
@@ -652,6 +656,7 @@ export function ServiceDialog({
       setDescription("");
       setDuration(60);
       setIsActive(true);
+      setTaxable(true);
       setIsOnline(true);
       setRequiresEval(false);
       setAssignedStylistIds([]);
@@ -769,6 +774,7 @@ export function ServiceDialog({
           : undefined,
       includes: editingPackage?.includes ?? [],
       isActive,
+      taxable,
       isPopular: editingPackage?.isPopular,
       purchaseCount: editingPackage?.purchaseCount ?? 0,
       createdAt: editingPackage?.createdAt ?? new Date().toISOString(),
@@ -1836,6 +1842,11 @@ export function ServiceDialog({
               </p>
             </div>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
+          </div>
+
+          {/* ── Tax, per service ── asked for by the client 2026-09-21. */}
+          <div className="rounded-lg border px-4 py-3">
+            <ServiceTaxToggle taxable={taxable} onChange={setTaxable} />
           </div>
         </div>
 

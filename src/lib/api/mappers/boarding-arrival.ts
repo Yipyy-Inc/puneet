@@ -61,6 +61,15 @@ export interface BoardingArrival {
   totalCost: number;
   amountDue: number;
   amountPaid: number;
+  /**
+   * What was added at the counter, and whether the SERVICE is taxed.
+   *
+   * Carried so a till away from the booking page applies the same tax: a
+   * facility can mark a service tax-free (2026-09-21). Absent means taxed —
+   * lib/payments/service-tax.ts.
+   */
+  extrasTotal?: number;
+  taxable?: boolean;
   nights: number;
   isArrivingToday: boolean;
   isDepartingToday: boolean;
@@ -94,6 +103,8 @@ export interface BoardingArrivalRow {
   status: string;
   total_cost: number | string;
   amount_due: number | string | null;
+  extras_total: number | string | null;
+  taxable: boolean | null;
   amount_paid: number | string | null;
   clients: { ref: number; name: string; phone: string | null } | null;
   booking_pets:
@@ -111,7 +122,7 @@ export interface BoardingArrivalRow {
 
 export const BOARDING_ARRIVAL_SELECT = `
   id, ref, start_at, end_at, status,
-  total_cost, amount_due, amount_paid,
+  total_cost, amount_due, amount_paid, extras_total, taxable,
   clients ( ref, name, phone ),
   booking_pets ( pets ( ref, name, breed, species ) ),
   boarding_stays ( room_id, checked_in_at, checked_out_at, status, released_at,
@@ -179,6 +190,8 @@ export function rowToBoardingArrival(
     // Numeric columns come over PostgREST as strings.
     totalCost: Number(row.total_cost),
     amountDue: Number(row.amount_due ?? row.total_cost),
+    extrasTotal: Number(row.extras_total ?? 0),
+    taxable: row.taxable !== false,
     amountPaid: Number(row.amount_paid ?? 0),
     nights,
     isArrivingToday: sameDay(row.start_at, day),

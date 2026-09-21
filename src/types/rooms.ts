@@ -50,6 +50,13 @@ export interface RoomCategory {
   /** Default capacity per unit (can be overridden per unit) */
   defaultCapacity: number;
   defaultBasePrice?: number;
+  /**
+   * Whether a stay in this class is charged the facility's tax.
+   *
+   * Optional here and `not null default true` in Postgres: absent means TAXED,
+   * everywhere, in every direction. See lib/payments/service-tax.ts.
+   */
+  taxable?: boolean;
   /** Whether this category is shown in the client-facing booking flow */
   visibleToClients: boolean;
   /** Cover photo shown to clients in booking flow */

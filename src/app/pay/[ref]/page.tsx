@@ -66,6 +66,10 @@ interface BookingRow {
   status: string;
   amount_due: number | null;
   amount_paid: number | null;
+  /** The split between the service and what was added — see BookingBill. */
+  total_cost: number | null;
+  extras_total: number | null;
+  taxable: boolean | null;
   /** The tip the booking carries: the owner's pledge, or one added when booking. */
   tip_amount: number | string | null;
   facilities: { name: string; timezone: string | null } | null;
@@ -101,7 +105,7 @@ export default async function PayBookingPage({
   const { data } = await supabase
     .from("bookings")
     .select(
-      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, tip_amount, facilities ( name, timezone )",
+      "id, ref, facility_id, client_id, service, service_type, start_at, status, amount_due, amount_paid, total_cost, extras_total, taxable, tip_amount, facilities ( name, timezone )",
     )
     .eq("ref", bookingRef)
     .maybeSingle();
@@ -196,6 +200,7 @@ export default async function PayBookingPage({
   const taxCents = taxToAddCents(
     await facilityTaxConfig(createAdminClient(), booking.facility_id),
     owedCents,
+    booking,
   );
 
   const connection = await chargeableConnection(booking.facility_id);

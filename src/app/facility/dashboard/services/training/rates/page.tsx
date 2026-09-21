@@ -117,6 +117,10 @@ export default function TrainingRatesPage() {
       validityDays: form.validityDays,
       isActive: form.isActive,
       popular: form.popular || undefined,
+      // Written only when it is FALSE. An absent field already means taxed, so
+      // storing `true` on every program would bloat the settings document to
+      // say what its absence says.
+      taxable: form.taxable ? undefined : false,
       includes: form.includes
         .split("\n")
         .map((l) => l.trim())
