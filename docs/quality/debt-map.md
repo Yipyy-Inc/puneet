@@ -19263,3 +19263,45 @@ empty client still deletes, confirmed delete really does cascade.
 
 **Nothing in the app called this route.** It was a loaded route with no trigger
 attached, which is the cheapest possible moment to have found it.
+
+### Fixed 2026-09-21 — a second record for one person is asked about first
+
+`POST /api/clients` now looks for a client at the same facility with the same
+name (case- and accent-folded) or the same phone, and refuses with **422**
+naming what it found, unless the caller repeats it with `?confirm=duplicate`.
+
+**The NAME leads, and that is measured rather than chosen.** Refs 855 and
+92037410 shared a name; 855 carried a phone and 92037410 did not. **A
+phone-based check would have missed the duplicate that prompted all this.**
+
+**A question, never a block.** Two people really can share a name, so the rule
+can only ask somebody who can see both records. `possible-duplicate.test.ts`
+asserts both directions, including the trap that would make it useless: an
+empty phone folded to `""` matching every other empty phone, which would flag
+every client with no number on file.
+
+**An exact email match is deliberately NOT reported here** — that is a
+unique-index refusal with its own clearer sentence, and one mistake should not
+get two different answers.
+
+### What is deliberately NOT covered, and why
+
+**Customer self-registration.** The same check on `/join` would tell a stranger
+"there is already a Parminder Singh here", which discloses a facility's client
+list to anyone who can guess a name. Staff already read that list; a registering
+customer does not. So the duplicate a customer creates for themselves still
+gets made, and the place to surface it is the facility's own screens —
+unbuilt.
+
+**A phone stored in a different FORMAT.** The route matches the stored string
+exactly (`.eq`), because normalising digits across the table needs SQL rather
+than a PostgREST filter. `foldPhone` normalises on the way IN, so a supplied
+"(514) 690-8911" still matches a stored "(514) 690-8911" but not a stored
+"5146908911". The name match carries most of the weight and did here.
+
+### The record itself
+
+Ref 92037410 (`admin@yipyy.com`, created 2026-09-21, no bookings, payments,
+forms, waivers or report cards) was set to **inactive**, not deleted: the
+account may still be mid-test, and inactive is reversible where a delete would
+cascade its duplicate pet. Ref 855 keeps the six bookings and the real history.

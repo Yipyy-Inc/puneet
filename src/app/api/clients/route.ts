@@ -13,6 +13,11 @@ import {
 } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
 import type { Client } from "@/types/client";
+import {
+  describeCandidates,
+  possibleDuplicates,
+  type DuplicateCandidate,
+} from "@/lib/clients/possible-duplicate";
 
 // ============================================================================
 // Clients, with their pets nested — the shape Client already has.
@@ -92,6 +97,68 @@ export async function POST(request: NextRequest) {
   const facility = await getFacilityContext();
   if (!facility) {
     return NextResponse.json({ error: "Facility not found." }, { status: 500 });
+  }
+
+  // ── ALREADY A CLIENT HERE, UNDER ANOTHER ADDRESS? ───────────────────────
+  //
+  // A facility cannot hold two clients with the same email, so every duplicate
+  // that gets made has a DIFFERENT address on it — which is the one case
+  // nothing could see. One happened on 2026-09-21 at doggieville-mtl: refs 855
+  // and 92037410, both "Parminder Singh", each with a dog called Bubu, made
+  // while working around a login problem.
+  //
+  // A question, never a block: two people really can share a name, so this
+  // asks somebody who can see both records and then does as it is told.
+  //
+  // Matched case- and accent-insensitively on the NAME, and on the phone when
+  // there is one. The name leads because it is what actually matched in the
+  // case above — 855 carries a phone and 92037410 does not, so a phone-only
+  // check would have missed it. A phone stored in a different FORMAT is not
+  // caught here; that needs normalising in SQL, and the debt map says so.
+  const confirmed = request.nextUrl.searchParams.get("confirm") === "duplicate";
+
+  if (!confirmed) {
+    const byName = await supabase
+      .from("clients")
+      .select("ref, name, email, phone")
+      .match(inFacility(facility.facilityId))
+      .ilike("name", input.name.trim());
+
+    const phone = (input.phone ?? "").trim();
+    const byPhone = phone
+      ? await supabase
+          .from("clients")
+          .select("ref, name, email, phone")
+          .match(inFacility(facility.facilityId))
+          .eq("phone", phone)
+      : { data: [] as NonNullable<typeof byName.data> };
+
+    const seen = new Map<number, DuplicateCandidate>();
+    for (const row of [...(byName.data ?? []), ...(byPhone.data ?? [])]) {
+      seen.set(row.ref, row);
+    }
+
+    const candidates = possibleDuplicates(
+      { name: input.name, email: input.email, phone: input.phone },
+      [...seen.values()],
+    );
+
+    if (candidates.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `${describeCandidates(candidates)} ` +
+            `${candidates.length === 1 ? "is" : "are"} already a client here, ` +
+            "under a different email address.",
+          reason:
+            "If this is the same person, open that record and correct its " +
+            "email instead. If it is somebody else, repeat this with " +
+            "?confirm=duplicate.",
+          candidates,
+        },
+        { status: 422 },
+      );
+    }
   }
 
   // The facility comes from the server's context, never from the request.
