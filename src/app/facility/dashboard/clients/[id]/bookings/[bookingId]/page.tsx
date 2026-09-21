@@ -1,7 +1,11 @@
 "use client";
 
 import { use, useState, useMemo } from "react";
-import { useDepositRules, usePricingRules } from "@/lib/api/facility-settings";
+import {
+  useDepositRules,
+  useFacilityHours,
+  usePricingRules,
+} from "@/lib/api/facility-settings";
 import Link from "next/link";
 import { CreditCard, CircleAlert, CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -96,9 +100,11 @@ import {
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
 import {
-  computeLatePickupFee,
-  type LateFeeResult,
-} from "@/lib/late-pickup-fee";
+  computeTimeFees,
+  timeFeesTotal,
+  type TimeFeeResult,
+} from "@/lib/policies/time-fee";
+import { facilityHoursForDate } from "@/lib/settings/facility-hours";
 import { MoveBookingLocationDialog } from "@/components/bookings/modals/MoveBookingLocationDialog";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { toast } from "sonner";
@@ -175,6 +181,9 @@ export default function ClientBookingDetailPage({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
+  // A time fee set to `basedOn: "business_hours"` measures from these.
+  const { weekly: facilityWeeklyHours, overrides: scheduleOverrides } =
+    useFacilityHours();
   // The facility's deposit terms. This page called loadDepositRules() at
   // checkout — localStorage, falling back to the seed file — so what a customer
   // was asked for at the desk depended on the browser in front of them.
@@ -303,9 +312,7 @@ export default function ClientBookingDetailPage({
     subtotal: booking?.totalCost ?? 0,
     serviceType: booking?.service?.toLowerCase(),
   });
-  const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
-    null,
-  );
+  const [pendingTimeFees, setPendingTimeFees] = useState<TimeFeeResult[]>([]);
   // ── THE MEMBERSHIP DISCOUNT COMES OFF THE BILL ─────────────────────────
   //
   // A member was sold "10% off" and nothing on the facility side ever took it
@@ -607,8 +614,8 @@ export default function ClientBookingDetailPage({
   const checkout = useBookingCheckout({
     booking,
     clientRef: clientId,
-    lateFee: pendingLateFee,
-    clearLateFee: () => setPendingLateFee(null),
+    timeFees: pendingTimeFees,
+    clearTimeFees: () => setPendingTimeFees([]),
     loyaltyDiscount,
     consumeLoyaltyDiscount,
     releaseLoyaltyDiscount,
@@ -1061,24 +1068,43 @@ export default function ClientBookingDetailPage({
     }
 
     const scheduledEndIso = `${booking.endDate}T${booking.checkOutTime ?? "12:00"}:00`;
+    const scheduledStartIso = `${booking.startDate}T${booking.checkInTime ?? "08:00"}:00`;
     const petCount = Array.isArray(booking.petId) ? booking.petId.length : 1;
-    const fee = computeLatePickupFee({
-      rules: pricingRules,
+    // Both conditions, and the arrival time comes from presence
+    // (`arrivedAt`) rather than the booked one — "how early were they" is a
+    // question only the building can answer.
+    const fees = computeTimeFees({
+      fees: pricingRules.latePickupFees,
       serviceId: booking.service.toLowerCase(),
-      scheduledEndIso,
-      actualEndIso: new Date().toISOString(),
       petCount,
-      basePrice: booking.basePrice,
+      perUnitBase: booking.basePrice,
+      scheduledCheckInTime: scheduledStartIso,
+      scheduledCheckOutTime: scheduledEndIso,
+      actualCheckInTime: booking.arrivedAt ?? scheduledStartIso,
+      actualCheckOutTime: new Date().toISOString(),
+      checkInDayHours: facilityHoursForDate(
+        booking.startDate,
+        facilityWeeklyHours,
+        scheduleOverrides,
+      ),
+      checkOutDayHours: facilityHoursForDate(
+        booking.endDate,
+        facilityWeeklyHours,
+        scheduleOverrides,
+      ),
     });
-    if (fee) {
+    for (const fee of fees) {
       toast.warning(
-        detailFill("latePickupFee", {
-          minutes: fee.minutesLate,
-          amount: formatMoneyIn(fee.amount, detailLocale),
-        }),
+        detailFill(
+          fee.condition === "late_pickup" ? "latePickupFee" : "earlyDropoffFee",
+          {
+            minutes: fee.minutesOver,
+            amount: formatMoneyIn(fee.amount, detailLocale),
+          },
+        ),
       );
     }
-    setPendingLateFee(fee);
+    setPendingTimeFees(fees);
     setCheckoutOpen(true);
   };
 
@@ -1628,14 +1654,12 @@ export default function ClientBookingDetailPage({
                   : item.name,
               amount: item.price,
             })),
-            ...(pendingLateFee
-              ? [
-                  {
-                    label: detailT("latePickupLine"),
-                    amount: pendingLateFee.amount,
-                  },
-                ]
-              : []),
+            ...pendingTimeFees.map((fee) => ({
+              // The facility's own name for the rule where it gave one, so the
+              // line on the invoice matches the line in the editor.
+              label: fee.label || detailT("latePickupLine"),
+              amount: fee.amount,
+            })),
           ]}
           // ── THE LEDGER, NOT THE INVOICE BLOB, AND NEVER THE PRICE ────────
           //
@@ -1660,13 +1684,13 @@ export default function ClientBookingDetailPage({
           // A pending late fee IS added on top: it is not a row until the
           // checkout writes it. (Fixture "incident care" used to be added here
           // too and was never billed — it is sample data, and it is gone.)
-          amountDue={balanceOf(booking) + (pendingLateFee?.amount ?? 0)}
+          amountDue={balanceOf(booking) + timeFeesTotal(pendingTimeFees)}
           // What they actually handed over, so "Amount Due" and the deduction
           // above it reconcile to the balance rather than to two sources.
           depositPaid={booking.amountPaid ?? 0}
           invoiceTotal={
             (booking.amountDue ?? booking.totalCost + addedSubtotal) +
-            (pendingLateFee?.amount ?? 0)
+            timeFeesTotal(pendingTimeFees)
           }
           clientRowId={
             (booking as { clientRowId?: string }).clientRowId ?? null

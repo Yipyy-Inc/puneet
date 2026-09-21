@@ -1820,6 +1820,7 @@
         "careNotRecorded": "The care entry was not recorded",
         "loadingFees": "One moment — this facility’s fees are loading.",
         "latePickupFee": "Late pickup: {minutes} min over — {amount} fee added",
+        "earlyDropoffFee": "Early drop-off: {minutes} min early — {amount} fee added",
         "halfOfTotal": "50% of the total ({amount})",
         "latePickupLine": "Late pickup fee",
         "staffFallback": "Staff",

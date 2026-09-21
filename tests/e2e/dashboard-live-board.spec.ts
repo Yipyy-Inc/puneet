@@ -194,20 +194,41 @@ const EMPTY_PRICING_RULES = {
   serviceBundles: [],
 };
 
-/** $10 per 30 minutes after 15 minutes' grace — enough to show on a bill. */
-const LATE_FEE_RULE = {
-  id: "e2e-late-pickup",
-  name: "Late Pickup Fee",
-  enabled: true,
-  condition: "late_pickup",
-  graceMinutes: 15,
-  feeType: "per_30min",
-  amount: 10,
-  maxFee: 50,
-  scope: "per_pet",
-  basedOn: "business_hours",
-  applicableServices: ["boarding", "daycare"],
-};
+/**
+ * $10 per 30 minutes after 15 minutes' grace — enough to show on a bill.
+ *
+ * ── TWO DELIBERATE CHOICES, BOTH LOAD-BEARING ─────────────────────────────
+ *
+ * `applicableServices: ["all"]` is the sentinel the time-fee editor writes for
+ * "All services", and until 2026-09-21 the till matched it with a plain
+ * `.includes(serviceId)` — so the scope a facility is most likely to pick
+ * charged nobody. This rule is scoped that way ON PURPOSE: with the old
+ * evaluator no fee reaches the bill and the assertion at the foot of the
+ * checkout test fails. A named list is covered by the unit tests.
+ *
+ * `basedOn` is `custom_time` pinned to the booking's own check-out time. It
+ * used to say `business_hours` and behaved identically to the booked time,
+ * because business hours were never read. They are read now, so leaving it
+ * would have made this test depend on what time of day CI happens to run:
+ * a guest collected at 14:00 is two hours past their booked 12:00 and not
+ * late at all against an 18:00 closing time.
+ */
+function lateFeeRule(bookedCheckOutTime: string) {
+  return {
+    id: "e2e-late-pickup",
+    name: "Late Pickup Fee",
+    enabled: true,
+    condition: "late_pickup",
+    graceMinutes: 15,
+    feeType: "per_30min",
+    amount: 10,
+    maxFee: 50,
+    scope: "per_pet",
+    basedOn: "custom_time",
+    customTime: bookedCheckOutTime,
+    applicableServices: ["all"],
+  };
+}
 
 async function createBooking(
   page: import("@playwright/test").Page,
@@ -519,19 +540,22 @@ test.describe("the facility home board", () => {
     // test than the one it replaces: it now proves the whole chain — a row in
     // facility_settings reaching the booking card and landing on the bill —
     // where before it proved that a seed file had a number in it.
+    // The booking's body is built first so the rule can be pinned to the same
+    // check-out time the booking carries, rather than to whatever hour CI runs.
+    const room = await freeRoom(page);
+    const body = departingTodayBody(room);
     const savedRule = await page.request.patch("/api/facility/settings", {
       data: {
         domain: "pricing_rules",
         value: {
           ...EMPTY_PRICING_RULES,
-          latePickupFees: [LATE_FEE_RULE],
+          latePickupFees: [lateFeeRule(body.checkOutTime)],
         },
       },
     });
     expect(savedRule.status(), await savedRule.text()).toBe(200);
 
-    const room = await freeRoom(page);
-    const created = await createBooking(page, departingTodayBody(room));
+    const created = await createBooking(page, body);
     const arrived = await page.request.post("/api/boarding/attendance", {
       data: { bookingRef: created.id },
     });

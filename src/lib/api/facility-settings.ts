@@ -402,6 +402,26 @@ export function usePricingRules(): {
 }
 
 /**
+ * When this facility is open, weekly plus any one-day overrides.
+ *
+ * Pair them with `facilityHoursForDate()` — the override for a date wins over
+ * that date's weekday. A time fee set to `basedOn: "business_hours"` needs
+ * exactly this, and read nothing at all until 2026-09-21.
+ */
+export function useFacilityHours(): {
+  weekly: BusinessHours;
+  overrides: ScheduleTimeOverride[];
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    weekly: settings.business_hours.value,
+    overrides: settings.schedule_time_overrides.value,
+    isPending,
+  };
+}
+
+/**
  * The facility's deposit terms.
  *
  * A named hook rather than four call sites reaching into

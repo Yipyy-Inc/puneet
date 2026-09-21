@@ -21,7 +21,7 @@ import { useEarnLoyaltyPoints } from "@/lib/api/loyalty-ledger";
 import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
 import { useChargeOnTerminal } from "@/lib/api/terminals";
 import { planSplit, type PlannedPart } from "@/lib/checkout/plan-split";
-import type { LateFeeResult } from "@/lib/late-pickup-fee";
+import { timeFeesTotal, type TimeFeeResult } from "@/lib/policies/time-fee";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -62,8 +62,12 @@ interface Discount {
 export function useBookingCheckout(input: {
   booking: (Booking & { rowId?: string }) | undefined;
   clientRef: number;
-  lateFee: LateFeeResult | null;
-  clearLateFee: () => void;
+  /**
+   * Late-pickup and early-drop-off fees, from `computeTimeFees()`. At most one
+   * of each — a booking can be both dropped off early and collected late.
+   */
+  timeFees: TimeFeeResult[];
+  clearTimeFees: () => void;
   loyaltyDiscount: Discount | null | undefined;
   consumeLoyaltyDiscount: (bookingRef: number) => Promise<unknown>;
   releaseLoyaltyDiscount: () => Promise<unknown>;
@@ -97,7 +101,8 @@ export function useBookingCheckout(input: {
   return async (payment) => {
     const booking = input.booking;
     if (!booking) throw new Error("The booking is still loading.");
-    const lateFee = input.lateFee;
+    const timeFees = input.timeFees ?? [];
+    const timeFeeTotal = timeFeesTotal(timeFees);
     const reward = input.loyaltyDiscount ?? null;
     const memberOff = input.membershipDiscount ?? null;
 
@@ -135,19 +140,24 @@ export function useBookingCheckout(input: {
       }
     }
 
-    // ── 3. The late fee and the reward go on the bill — every tender ─────
+    // ── 3. The time fees and the reward go on the bill — every tender ────
     const lines: {
       kind: "item" | "fee";
       name: string;
       unitPrice: number;
       quantity: number;
+      sourceId?: string;
     }[] = [];
-    if (lateFee && lateFee.amount > 0) {
+    for (const fee of timeFees) {
+      if (fee.amount <= 0) continue;
       lines.push({
         kind: "fee",
-        name: lateFee.label,
-        unitPrice: lateFee.amount,
+        name: fee.label,
+        unitPrice: fee.amount,
         quantity: 1,
+        // Which rule charged this, so "why was I charged $18" has an answer
+        // the facility can look up rather than reconstruct.
+        sourceId: fee.ruleId,
       });
     }
     if (reward && reward.amount > 0) {
@@ -181,7 +191,7 @@ export function useBookingCheckout(input: {
       amountDue: Math.max(
         0,
         (booking.amountDue ?? booking.totalCost) +
-          (lateFee?.amount ?? 0) -
+          timeFeeTotal -
           (reward?.amount ?? 0) -
           (memberOff?.amount ?? 0),
       ),
@@ -346,7 +356,7 @@ export function useBookingCheckout(input: {
         return fail(error);
       }
     }
-    input.clearLateFee();
+    input.clearTimeFees();
 
     const stillOwed = Math.max(
       0,

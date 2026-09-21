@@ -1820,6 +1820,7 @@
         "careNotRecorded": "Le soin n’a pas été enregistré",
         "loadingFees": "Un instant — les frais de l’établissement se chargent.",
         "latePickupFee": "Départ tardif : {minutes} min de retard — frais de {amount} ajoutés",
+        "earlyDropoffFee": "Arrivée hâtive : {minutes} min d’avance — frais de {amount} ajoutés",
         "halfOfTotal": "50 % du total ({amount})",
         "latePickupLine": "Frais de départ tardif",
         "staffFallback": "Personnel",

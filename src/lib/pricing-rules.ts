@@ -15,6 +15,13 @@ import type {
 } from "@/types/boarding";
 import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
+import {
+  appliesToService,
+  computeTimeFees,
+  isWithinTimeWindow,
+  parseTimeToMinutes,
+  type FacilityDayHours,
+} from "@/lib/policies/time-fee";
 
 export const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
 
@@ -109,6 +116,14 @@ export interface ApplyPricingRulesInput {
   scheduledCheckOutTime?: string;
   actualCheckInTime?: string;
   actualCheckOutTime?: string;
+  /**
+   * The facility's hours on the arrival and departure dates, from
+   * `facilityHoursForDate()`. A time fee set to `basedOn: "business_hours"`
+   * measures from these; with none it falls back to the booked time, which is
+   * what shipped before the setting was read at all.
+   */
+  checkInDayHours?: FacilityDayHours | null;
+  checkOutDayHours?: FacilityDayHours | null;
   isNewCustomer?: boolean;
   newPetIds?: number[];
   customer?: PricingContextCustomer;
@@ -203,14 +218,6 @@ function normalizeServices(applicableServices?: string[]): string[] {
     : Array.from(new Set(applicableServices));
 }
 
-function appliesToService(
-  serviceId: string,
-  applicableServices?: string[],
-): boolean {
-  const normalized = normalizeServices(applicableServices);
-  return normalized.includes("all") || normalized.includes(serviceId);
-}
-
 function normalizeExtraServices(services: ExtraService[]): ExtraService[] {
   const map = new Map<string, ExtraService>();
 
@@ -239,41 +246,12 @@ function normalizeExtraServices(services: ExtraService[]): ExtraService[] {
   return Array.from(map.values());
 }
 
-function parseTimeToMinutes(value?: string): number | null {
-  if (!value) return null;
-  const timeMatch = value.match(/(\d{1,2}):(\d{2})/);
-  if (!timeMatch) return null;
-
-  let hours = Number(timeMatch[1]);
-  const minutes = Number(timeMatch[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-
-  const upper = value.toUpperCase();
-  if (upper.includes("PM") && hours < 12) hours += 12;
-  if (upper.includes("AM") && hours === 12) hours = 0;
-
-  return hours * 60 + minutes;
-}
-
-function isWithinTimeWindow(
-  appointmentMinutes: number,
-  windowStart?: string,
-  windowEnd?: string,
-): boolean {
-  const start = parseTimeToMinutes(windowStart);
-  const end = parseTimeToMinutes(windowEnd);
-
-  if (start == null && end == null) return true;
-  if (start != null && end == null) return appointmentMinutes >= start;
-  if (start == null && end != null) return appointmentMinutes <= end;
-  if (start == null || end == null) return true;
-
-  if (start <= end) {
-    return appointmentMinutes >= start && appointmentMinutes <= end;
-  }
-
-  return appointmentMinutes >= start || appointmentMinutes <= end;
-}
+/*
+ * `parseTimeToMinutes`, `isWithinTimeWindow` and `appliesToService` used to be
+ * defined here as well as in the time-fee evaluator. They are imported from
+ * `@/lib/policies/time-fee` now — one implementation, and the `"all"` sentinel
+ * the editors write can no longer be honoured in one file and not the other.
+ */
 
 function parseIsoDateOnly(value?: string): Date | null {
   if (!value) return null;
@@ -552,36 +530,6 @@ function findTierForPetIndex(
     .find((tier) => petIndex >= tier.petCount);
 }
 
-function computeTimeWindowDeltaMinutes(
-  condition: LatePickupFee["condition"],
-  baselineMinutes: number,
-  actualMinutes: number,
-): number {
-  return condition === "late_pickup"
-    ? actualMinutes - baselineMinutes
-    : baselineMinutes - actualMinutes;
-}
-
-function computeTimeFeeVariableAmount(
-  feeType: LatePickupFee["feeType"],
-  amount: number,
-  billableMinutes: number,
-  perUnitBase: number,
-): number {
-  switch (feeType) {
-    case "flat":
-      return amount;
-    case "per_hour":
-      return Math.ceil(billableMinutes / 60) * amount;
-    case "per_30min":
-      return Math.ceil(billableMinutes / 30) * amount;
-    case "per_minute":
-      return billableMinutes * amount;
-    case "extra_night":
-      return perUnitBase;
-  }
-}
-
 function combineDateAndTime(dateIso?: string, time?: string): Date | null {
   if (!dateIso || !time) return null;
   const date = new Date(`${dateIso}T${time}`);
@@ -791,64 +739,46 @@ export function applyDynamicPricingRules(
     });
   }
 
-  // Late pickup / early drop-off fees
-  for (const fee of rules.latePickupFees) {
-    if (!fee.enabled) continue;
-    if (!appliesToService(input.serviceId, fee.applicableServices)) continue;
+  // ── NOBODY IS LATE WHILE THE BOOKING IS STILL BEING MADE ────────────────
+  //
+  // The New booking form and the grooming flow both pass the BOOKED times as
+  // the actual ones, meaning "nothing has been observed yet" — and that is the
+  // only honest thing they can pass, because the guest has not arrived.
+  //
+  // Against a baseline of the booked time that came to zero and no fee, so the
+  // branch looked dead. It was not: a rule with `basedOn: "custom_time"` and a
+  // custom time earlier than the booked check-out charged a late fee THE
+  // MOMENT THE BOOKING WAS QUOTED, on a guest who had not been born late yet.
+  // Making `business_hours` real would have added a second way in — book a
+  // pickup after closing and the quote invents a late fee.
+  //
+  // So a time fee needs an observation, and identical times are not one. The
+  // over-24h fee below still reads them: the length of the BOOKED window is a
+  // legitimate thing to quote on.
+  const nothingObserved =
+    input.actualCheckOutTime === input.scheduledCheckOutTime &&
+    input.actualCheckInTime === input.scheduledCheckInTime;
 
-    const baselineTime =
-      fee.basedOn === "custom_time"
-        ? fee.customTime
-        : fee.condition === "late_pickup"
-          ? input.scheduledCheckOutTime
-          : input.scheduledCheckInTime;
-    const actualTime =
-      fee.condition === "late_pickup"
-        ? input.actualCheckOutTime
-        : input.actualCheckInTime;
-
-    const baselineMinutes = parseTimeToMinutes(baselineTime);
-    const actualMinutes = parseTimeToMinutes(actualTime);
-    if (baselineMinutes == null || actualMinutes == null) continue;
-
-    if (
-      (fee.applyFromTime || fee.applyUntilTime) &&
-      !isWithinTimeWindow(actualMinutes, fee.applyFromTime, fee.applyUntilTime)
-    ) {
-      continue;
-    }
-
-    const rawDelta = computeTimeWindowDeltaMinutes(
-      fee.condition,
-      baselineMinutes,
-      actualMinutes,
-    );
-    const billableMinutes = rawDelta - Math.max(0, fee.graceMinutes);
-    if (billableMinutes <= 0) continue;
-
-    let feeAmount = computeTimeFeeVariableAmount(
-      fee.feeType,
-      Math.max(0, fee.amount),
-      billableMinutes,
-      perUnitBase,
-    );
-    if (fee.maxFee != null) {
-      feeAmount = Math.min(feeAmount, Math.max(0, fee.maxFee));
-    }
-    if (feeAmount <= 0) continue;
-
-    const scopeMultiplier =
-      fee.scope === "per_pet" ? input.selectedPetIds.length : 1;
-    feeAmount = feeAmount * Math.max(1, scopeMultiplier);
-
+  // The shared evaluator, which the till also calls. It reads `basedOn`,
+  // `customTime` and the apply-window, honours the `"all"` service sentinel,
+  // and returns at most one fee per condition rather than the sum of every
+  // overlapping rule.
+  for (const fee of computeTimeFees({
+    fees: nothingObserved ? [] : rules.latePickupFees,
+    serviceId: input.serviceId,
+    petCount: input.selectedPetIds.length,
+    perUnitBase,
+    scheduledCheckInTime: input.scheduledCheckInTime,
+    scheduledCheckOutTime: input.scheduledCheckOutTime,
+    actualCheckInTime: input.actualCheckInTime,
+    actualCheckOutTime: input.actualCheckOutTime,
+    checkInDayHours: input.checkInDayHours,
+    checkOutDayHours: input.checkOutDayHours,
+  })) {
     adjustments.push({
-      id: fee.id,
-      label:
-        fee.name ||
-        (fee.condition === "late_pickup"
-          ? "Late Pickup Fee"
-          : "Early Drop-off Fee"),
-      amount: feeAmount,
+      id: fee.ruleId,
+      label: fee.label,
+      amount: fee.amount,
       source: "time_fee",
     });
   }

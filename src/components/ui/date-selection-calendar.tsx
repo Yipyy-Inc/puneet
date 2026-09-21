@@ -23,6 +23,7 @@ import { useShellText } from "@/lib/shell/use-shell-text";
 import { useAppLocale } from "@/hooks/use-app-locale";
 import { monthNames, weekdayNames } from "@/lib/dates/calendar-names";
 import { dayClearsMinimum } from "@/lib/bookings/advance-notice";
+import { facilityHoursForDate } from "@/lib/settings/facility-hours";
 
 // Types
 export type SelectionMode = "single" | "multi" | "range" | "recurring";
@@ -240,30 +241,12 @@ export function DateSelectionCalendar({
   const effectiveDefaultCheckOutTime =
     defaultCheckOutTime || getDefaultTimes(facilityHours).checkOut;
 
-  // Get facility hours for a specific date (one-day override takes precedence)
-  const getFacilityHoursForDate = (date: Date) => {
-    const dateStr = formatDateString(date);
-    const override = scheduleTimeOverrides?.find((o) => o.date === dateStr);
-    if (override) {
-      return {
-        isOpen: true,
-        openTime: override.openTime,
-        closeTime: override.closeTime,
-      };
-    }
-    if (!facilityHours) return null;
-    const days = [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ];
-    const dayName = days[date.getDay()];
-    return facilityHours[dayName];
-  };
+  // Get facility hours for a specific date (one-day override takes precedence).
+  // The resolver itself is shared with the time-fee evaluator, whose
+  // `basedOn: "business_hours"` setting needs this same answer — see
+  // `@/lib/settings/facility-hours`.
+  const getFacilityHoursForDate = (date: Date) =>
+    facilityHoursForDate(date, facilityHours, scheduleTimeOverrides);
 
   const getDropOffPickUpForDate = (date: Date) => {
     if (!dropOffPickUpWindowsByDate) return null;

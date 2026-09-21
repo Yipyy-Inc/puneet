@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { usePricingRules } from "@/lib/api/facility-settings";
+import { useFacilityHours, usePricingRules } from "@/lib/api/facility-settings";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -35,9 +35,11 @@ import {
 } from "@/components/facility/dashboard/check-out-dialog";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import {
-  computeLatePickupFee,
-  type LateFeeResult,
-} from "@/lib/late-pickup-fee";
+  computeTimeFees,
+  timeFeesTotal,
+  type TimeFeeResult,
+} from "@/lib/policies/time-fee";
+import { facilityHoursForDate } from "@/lib/settings/facility-hours";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { balanceOf } from "@/lib/api/booking-money";
@@ -136,6 +138,9 @@ export function BookingCard({
   // These used to come from localStorage, so what a customer was charged
   // depended on which browser took the booking.
   const { rules: pricingRules, isPending: pricingPending } = usePricingRules();
+  // A time fee set to `basedOn: "business_hours"` measures from these.
+  const { weekly: facilityHours, overrides: scheduleOverrides } =
+    useFacilityHours();
   const { updateStatus } = useUnifiedBookings();
   const {
     discount: loyaltyDiscount,
@@ -153,9 +158,7 @@ export function BookingCard({
     timestamp: string;
     earlyCheckout?: EarlyCheckoutAdjustment;
   } | null>(null);
-  const [pendingLateFee, setPendingLateFee] = useState<LateFeeResult | null>(
-    null,
-  );
+  const [pendingTimeFees, setPendingTimeFees] = useState<TimeFeeResult[]>([]);
   const ownerRef = useOwnerRef(booking);
 
   // Training and custom services have no booking row to charge against.
@@ -184,8 +187,8 @@ export function BookingCard({
         } as unknown as Booking)
       : undefined,
     clientRef: ownerRef ?? 0,
-    lateFee: pendingLateFee,
-    clearLateFee: () => setPendingLateFee(null),
+    timeFees: pendingTimeFees,
+    clearTimeFees: () => setPendingTimeFees([]),
     loyaltyDiscount,
     consumeLoyaltyDiscount,
     releaseLoyaltyDiscount,
@@ -272,20 +275,38 @@ export function BookingCard({
     timestamp: string;
     earlyCheckout?: EarlyCheckoutAdjustment;
   }) => {
-    const lateFee = computeLatePickupFee({
-      rules: pricingRules,
+    // Both ends, not just the late one: an early drop-off fee was authored,
+    // stored, shown in the editor and skipped outright by the old till.
+    // The arrival time comes from presence (`actualStart`) rather than the
+    // booked one, because "how early were they" is a question only the
+    // building can answer.
+    const timeFees = computeTimeFees({
+      fees: pricingRules.latePickupFees,
       serviceId: booking.serviceKey,
-      scheduledEndIso: booking.scheduledEnd,
-      actualEndIso: timestamp,
-      basePrice: booking.price ?? 0,
+      petCount: 1, // a board row is one pet: `petId` is a number, not a list
+      perUnitBase: booking.price ?? 0,
+      scheduledCheckInTime: booking.scheduledStart,
+      scheduledCheckOutTime: booking.scheduledEnd,
+      actualCheckInTime: booking.actualStart ?? booking.scheduledStart,
+      actualCheckOutTime: timestamp,
+      checkInDayHours: facilityHoursForDate(
+        booking.scheduledStart.slice(0, 10),
+        facilityHours,
+        scheduleOverrides,
+      ),
+      checkOutDayHours: facilityHoursForDate(
+        booking.scheduledEnd.slice(0, 10),
+        facilityHours,
+        scheduleOverrides,
+      ),
     });
-    if (lateFee) {
+    for (const fee of timeFees) {
       toast.warning(
-        `Late pickup: ${lateFee.minutesLate} min over — a $${lateFee.amount.toFixed(2)} fee goes on the bill at payment`,
+        `${fee.label}: ${fee.minutesOver} min — $${fee.amount.toFixed(2)} goes on the bill at payment`,
       );
     }
     setPendingCheckout({ timestamp, earlyCheckout });
-    setPendingLateFee(lateFee);
+    setPendingTimeFees(timeFees);
     setCheckOutOpen(false);
     setPaymentOpen(true);
   };
@@ -303,7 +324,7 @@ export function BookingCard({
       earlyCheckout: pendingCheckout?.earlyCheckout,
     });
     setPendingCheckout(null);
-    setPendingLateFee(null);
+    setPendingTimeFees([]);
   };
 
   /**
@@ -332,7 +353,7 @@ export function BookingCard({
       totalCost: booking.price ?? 0,
       amountDue:
         (booking.amountDue ?? booking.price ?? 0) +
-        (pendingLateFee?.amount ?? 0),
+        timeFeesTotal(pendingTimeFees),
       amountPaid: booking.amountPaid ?? 0,
     });
     if (owed <= 0) {
@@ -556,7 +577,7 @@ export function BookingCard({
                   amountDue={Math.max(
                     0,
                     (booking.amountDue ?? booking.price ?? 0) +
-                      (pendingLateFee?.amount ?? 0) -
+                      timeFeesTotal(pendingTimeFees) -
                       (booking.amountPaid ?? 0),
                   )}
                   taxableBill={{
@@ -567,7 +588,7 @@ export function BookingCard({
                   depositPaid={booking.amountPaid ?? 0}
                   invoiceTotal={
                     (booking.amountDue ?? booking.price ?? 0) +
-                    (pendingLateFee?.amount ?? 0)
+                    timeFeesTotal(pendingTimeFees)
                   }
                   loyaltyDiscount={loyaltyDiscount ?? undefined}
                   pledgedTip={tipStillToCollect(

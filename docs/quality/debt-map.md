@@ -19490,3 +19490,120 @@ And one more instance of the ratchet doing its job: the four strings this added
 to `EstimateWizard.tsx` were raw English, in a file `check:ui-french` baselines.
 They went through the existing `estimateActions` catalogue in en and fr instead,
 leaving the file four strings LOWER than its baseline rather than higher.
+
+## 2026-09-21 — The time fee: two evaluators, and the one at the till was wrong
+
+Late-pickup and early-drop-off fees were ~70% built — a full editor
+(`pricing-rules/time-fee-modal.tsx`), a rich schema (`latePickupFeeSchema`,
+`src/types/boarding.ts`) modelling more than the competitor does, and a path to
+the bill. What it did not have was ONE evaluator. There were two, and they
+disagreed about nearly everything:
+
+- `src/lib/late-pickup-fee.ts` decided the fee **at the till**
+- `src/lib/pricing-rules.ts` decided it again **when quoting a booking**
+
+The till's copy was the poorer of the two, which is the wrong way round for the
+one that takes money. Measured against the code as it shipped, by extracting the
+deleted file from git and running it:
+
+```
+a rule scoped ["all"]                     ->  NO FEE
+an early_dropoff rule                     ->  NO FEE
+basedOn: "business_hours", closes 18:00,
+booked noon, collected 19:00              ->  $70   (should be $10)
+```
+
+Three separate defects, and the third is the one worth remembering.
+
+### `["all"]` is a sentinel, and a plain `.includes` cannot see it
+
+The editor writes `applicableServices: ["all"]` when a facility picks "All
+services" — which is the scope a facility is most likely to pick. The till did
+`applicableServices.includes(serviceId)`, so the most common configuration
+matched nothing and charged nobody. `pricing-rules.ts` had a `normalizeServices`
+helper that got this right; the till had never heard of it.
+
+### `condition` was filtered down to one value
+
+`if (fee.condition !== "late_pickup") continue`. Every early-drop-off rule a
+facility had authored was stored, displayed in the editor, shown back to them as
+configured — and skipped outright at checkout. **A feature can be complete on
+every screen and still be absent from the only file that matters.**
+
+### `basedOn: "business_hours"` was not an inert switch — it was a 7x overcharge
+
+This is the correction worth carrying. The survey recorded it as "business hours
+are never consulted", which reads as a setting that decides nothing. It is
+worse: the setting existed, staff chose it, and the evaluator substituted the
+BOOKED CHECK-OUT TIME for the closing time. A facility that closes at 18:00 and
+books a guest out at noon charged a guest collected at 19:00 for **seven hours**
+of overrun instead of one.
+
+The real resolver already existed and was a closure inside
+`date-selection-calendar.tsx` — `getFacilityHoursForDate`, with the right
+precedence (a one-day `schedule_time_overrides` entry beats the weekly
+`business_hours`) and reachable by nothing else. Lifted to
+`src/lib/settings/facility-hours.ts`; both call it now.
+
+**A value that is unreachable is a value that will be re-derived wrongly.** The
+second derivation is never announced — it just quietly disagrees.
+
+### Two things the unification nearly broke, found by testing rather than by reading
+
+- **The quote compared CLOCK MINUTES; the till compared TIMESTAMPS.** For a
+  boarding stay booked out at noon and collected at 9am the next morning, clock
+  minutes say "three hours EARLY" and the calendar says "twenty-one hours
+  late" — so unifying on the quote's arithmetic would have turned a late fee
+  into an early-drop-off refund on exactly the overnight stays boarding is made
+  of. The evaluator now compares moments where both sides carry a date and
+  clock times where they do not.
+- **`new Date().toISOString()` carries a `Z`.** Reading the clock out of that
+  string gives UTC, and measuring it against a local "we close at 18:00" is a
+  four-hour error in Montreal — a fee on a guest who was on time. Clock minutes
+  come from the local moment now, never from the digits in the string.
+
+### Nobody is late while the booking is still being made
+
+The New booking form and `GroomingBookingFlow` both pass the BOOKED times as the
+actual ones, meaning "nothing observed yet" — the only honest thing they can
+pass. Against a baseline of the booked time that comes to zero, so the branch
+looked dead. It was not: a `custom_time` rule set earlier than the booked
+check-out charged a late fee **the moment the booking was quoted**, on a guest
+who had not arrived. Making `business_hours` real would have opened a second
+door — book a pickup after closing, and the quote invents a fee.
+
+So a time fee now requires an observation, and identical times are not one. The
+over-24h fee still reads those inputs: the length of the BOOKED window is a
+legitimate thing to quote on, which is why they could not simply be removed.
+
+### One rule wins per condition
+
+The quote charged the SUM of every overlapping rule; the till charged whichever
+was first in the array. The same booking cost different amounts on two screens
+and neither was defensible. One wins now — the rule whose baseline the guest
+crossed LAST (a 6pm rule and an 8pm rule, a 9pm pickup, the 8pm one applies),
+mirrored for early drop-off. It can never total more than the old sum.
+
+### What was NOT the bug it looked like
+
+The survey recorded that `booking-card.tsx` omitted `petCount`, so
+`scope: "per_pet"` was "silently ignored there". Checked against the data: a
+`UnifiedBooking` carries `petId: number`, not a list — the board is one row per
+pet, so 1 is the correct multiplier and the omission changed nothing. It is
+passed explicitly now with a comment saying why, because the next reader will
+have the same suspicion.
+
+### Coverage, stated honestly
+
+`tests/unit/time-fee.test.ts` — 28 tests over the evaluator, plus a negative
+control run against the deleted file to prove each defect was real.
+`dashboard-live-board.spec.ts`'s checkout test now scopes its rule `["all"]`,
+which makes an EXISTING passing test fail against the old evaluator, and pins
+its baseline to `custom_time` — it said `business_hours`, which was harmless
+only while business hours were ignored and would otherwise have made the test
+depend on what hour CI runs.
+
+**Early drop-off has unit coverage and no e2e coverage.** Staging one through
+the live board needs a booking that both ends today and has a check-in later
+than now, which the board's fixtures cannot express without contradicting
+themselves. Said here rather than left to be assumed from a green suite.
