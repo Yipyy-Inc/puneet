@@ -23,7 +23,10 @@ import { useShellText } from "@/lib/shell/use-shell-text";
 import { useAppLocale } from "@/hooks/use-app-locale";
 import { monthNames, weekdayNames } from "@/lib/dates/calendar-names";
 import { dayClearsMinimum } from "@/lib/bookings/advance-notice";
-import { facilityHoursForDate } from "@/lib/settings/facility-hours";
+// Aliased: this file already calls three locals `facilityHoursForDate` (the
+// RESULT for one date), so importing the resolver under that name shadows it
+// inside those blocks and a later call there would resolve to the value.
+import { facilityHoursForDate as resolveFacilityHours } from "@/lib/settings/facility-hours";
 
 // Types
 export type SelectionMode = "single" | "multi" | "range" | "recurring";
@@ -246,7 +249,7 @@ export function DateSelectionCalendar({
   // `basedOn: "business_hours"` setting needs this same answer — see
   // `@/lib/settings/facility-hours`.
   const getFacilityHoursForDate = (date: Date) =>
-    facilityHoursForDate(date, facilityHours, scheduleTimeOverrides);
+    resolveFacilityHours(date, facilityHours, scheduleTimeOverrides);
 
   const getDropOffPickUpForDate = (date: Date) => {
     if (!dropOffPickUpWindowsByDate) return null;
