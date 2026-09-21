@@ -369,7 +369,7 @@ still absolute for **new** code: white, or a solid.
     `bun run test:e2e:ci` locally too — the whole suite, by hand, before you
     push. CI itself runs only the 33-spec gate on a push (the authorisation
     boundary and money) and the full suite NIGHTLY and on demand (paused
-    2026-09-17 → 18 for egress, see AGENTS.md) — because 131 specs is ~45
+    2026-09-17 → 18 for egress, see AGENTS.md) — because 132 specs is ~45
     minutes and GitHub holds one pending run per branch: with two people
     pushing, every queued run was cancelled by the next push and nothing
     finished. `bun run check:doc-counts` derives both numbers from package.json

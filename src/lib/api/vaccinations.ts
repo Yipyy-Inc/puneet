@@ -23,12 +23,23 @@ import type {
 type Scope =
   | { kind: "facility" }
   | { kind: "client"; ref: number }
-  | { kind: "pet"; ref: number };
+  | { kind: "pet"; ref: number }
+  /**
+   * The CUSTOMER's own, through their own route.
+   *
+   * A separate URL and not a fourth query parameter: `/api/vaccinations` takes
+   * its facility from `getFacilityContext()`, which answers a customer with
+   * the DEMO facility, and `check:customer-routes` forbids the customer portal
+   * from going near it. The customer route is scoped by who is asking, so it
+   * carries no ref at all — there is nothing to pass and nothing to forge.
+   */
+  | { kind: "mine" };
 
 function urlFor(scope: Scope): string {
   if (scope.kind === "client")
     return `/api/vaccinations?clientRef=${scope.ref}`;
   if (scope.kind === "pet") return `/api/vaccinations?petRef=${scope.ref}`;
+  if (scope.kind === "mine") return "/api/customer/vaccinations";
   return "/api/vaccinations";
 }
 
@@ -37,10 +48,16 @@ export const vaccinationQueries = {
     queryKey: [
       "vaccinations",
       scope.kind,
-      scope.kind === "facility" ? null : scope.ref,
+      scope.kind === "facility" || scope.kind === "mine" ? null : scope.ref,
     ] as const,
     queryFn: async (): Promise<Vaccination[]> => {
-      if (scope.kind !== "facility" && !(scope.ref > 0)) return [];
+      if (
+        scope.kind !== "facility" &&
+        scope.kind !== "mine" &&
+        !(scope.ref > 0)
+      ) {
+        return [];
+      }
       const response = await fetch(urlFor(scope));
       if (response.status === 401) return [];
       if (!response.ok) {
@@ -77,6 +94,17 @@ export function useClientVaccinations(clientRef: number) {
 /** Every record for one pet. */
 export function usePetVaccinations(petRef: number) {
   return useScoped({ kind: "pet", ref: petRef });
+}
+
+/**
+ * The signed-in CUSTOMER's own pets' records.
+ *
+ * The customer portal read `vaccinationRecords` from `@/data/pet-data` on three
+ * screens until 2026-09-21, keyed by fixture pet ids, so every real customer
+ * was told every required vaccine was missing for every pet.
+ */
+export function useMyVaccinations(enabled = true) {
+  return useScoped({ kind: "mine" }, enabled);
 }
 
 async function send<T>(

@@ -1,0 +1,21 @@
+{
+  "src/app/customer/cameras/page.tsx": 3,
+  "src/app/customer/dashboard/page.tsx": 3,
+  "src/app/customer/documents/page.tsx": 2,
+  "src/app/customer/gift-cards/_components/ReceivedGiftCardsList.tsx": 2,
+  "src/app/customer/gift-cards/redeem/_components/RedeemFlow.tsx": 1,
+  "src/app/customer/pets/[petId]/page.tsx": 3,
+  "src/app/customer/rewards/page.tsx": 1,
+  "src/app/customer/settings/_components/use-customer-settings-form.ts": 1,
+  "src/app/customer/training/_components/customer-my-pets-tab.tsx": 1,
+  "src/components/customer/CustomerHeader.tsx": 1,
+  "src/components/customer/CustomerSidebar.tsx": 1,
+  "src/components/customer/PetComplianceChecklist.tsx": 3,
+  "src/components/customer/billing/BalanceSummaryCards.tsx": 3,
+  "src/components/customer/billing/BalancesTab.tsx": 3,
+  "src/components/customer/billing/BookingInvoicesTab.tsx": 3,
+  "src/components/customer/billing/InvoicesTab.tsx": 2,
+  "src/components/customer/billing/PackagesTab.tsx": 3,
+  "src/components/customer/billing/PaymentMethodsTab.tsx": 1,
+  "src/components/customer/messaging/CustomerMessageCenter.tsx": 1
+}

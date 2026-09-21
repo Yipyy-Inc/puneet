@@ -18989,3 +18989,130 @@ reach a built server only after `bun run build`, so the "before" and "after"
 runs were executing the same old bundle, and the fix appeared not to work. Check
 what is actually listening (`Get-CimInstance Win32_Process`) before reading a
 local e2e result as evidence: `next dev` hot-reloads, `next start` does not.
+
+## 2026-09-21 — The customer portal, counted: 38 fixture reads keyed by a real id
+
+The loyalty and vaccination finds above were made by reading. `bun run
+check:customer-fixtures` counts them instead, and the count is **38 across 19
+files** — an order of magnitude more than two.
+
+**The mechanism, once more, because it is the whole of it.** Real client refs
+start at 15 and run straight through the fixture id range, so
+`row.clientId === customer.id` matches CONSTANTLY: fixture client 15 and the
+real Alice Johnson are the same number. Pet ids collide the same way. The only
+thing keeping most of these rows off a real screen is an accident —
+`useCustomerFacility` defaults to fixture facility 1 while the mapper stamps
+real rows 11 — and **a fixture with no `facilityId` was never covered by it at
+all**.
+
+**21 of the 38 have no facility in their predicate.** Four verified by hand:
+
+| Where                                    | What a real customer is shown                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| `billing/PaymentMethodsTab.tsx:63`       | a saved **Visa ending 4242, cardholder "Alice Johnson"**                              |
+| `billing/InvoicesTab.tsx:386`            | "Pay Now" toasts _"Paying $X with card on file (•••• 4242)"_ and charges nothing      |
+| `messaging/CustomerMessageCenter.tsx:13` | **20 invented message threads** (`clientCommunications` holds 20 rows for refs 15/16) |
+| `CustomerSidebar.tsx:139`                | membership plan ids from a fixture — a plan they do not hold                          |
+
+The payment one is the worst of them: a payment surface showing a fabricated
+saved card under somebody else's name.
+
+**The gate is a per-file ratchet with no writer command**, the same decision
+`check:ui-french` made: the only direction 38 moves by hand is down. It reports
+the EXPOSED ones separately so the next person fixes those first, and it skips
+`import type` — a type is erased and decides nothing. Negative control run: an
+added read took `CustomerHeader.tsx` to `2 (baseline 1)` and failed.
+
+### It also found a fourth vaccination screen
+
+`PetComplianceChecklist.tsx:29` reads `vaccinationRecords`, and BOTH pets pages
+render it. The by-hand sweep had found three. That is the argument for the gate
+in one line.
+
+### And it broke `check:doc-counts`, which was the right outcome
+
+The control-heights claims matched a bare `/Ratcheted PER FILE at (\d+) across
+\d+ files/` — the FIRST such sentence in AGENTS.md. Documenting a SECOND
+per-file ratchet made those two claims silently measure the wrong row and fail
+for a reason that was not true. Both patterns are now anchored to their own
+`check:` name, and the new ratchet's headline is derived from its baseline file
+the same way. A guard that reads the wrong row is worse than no guard.
+
+## 2026-09-21 — `src/types/database.ts` is stale, and it is hiding four type errors
+
+Regenerating it against the live database (MCP `generate_typescript_types`)
+while adding `my_pet_vaccinations` produced **2,645 insertions and 1,860
+deletions** — 355 definitions against the committed file's 335. Nothing was
+lost; it is a superset plus a reordering. The committed file simply has not
+been regenerated for ~20 migrations.
+
+**Typechecking against the truth fails, in four places:**
+
+| Where                                       | What the real schema says                             |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `api/customer/yipyy-go/photos/route.ts:122` | the insert omits `facility_id`, which is **required** |
+| `api/retail/promo-quote/route.ts:52`        | `string \| null` assigned to `string`                 |
+| `api/retail/sales/route.ts:137,140`         | `string \| null` assigned to `string \| undefined`    |
+
+The first is the one to look at first: an insert that omits a required column
+either fails at runtime or is being rescued by a trigger nobody has checked.
+
+**Not fixed here, and the regeneration was REVERTED**, with only the one
+function hand-added. Bundling a 4,505-line type regeneration and four unrelated
+fixes into a commit about vaccination records is the same mistake as the
+`lint:fix` sweep that pulled in 13 unrelated files — the fix then was to
+disclose rather than ship a misleading commit, and the better fix is not to mix
+them at all. A hand-added function type is safe: the function now exists in the
+database, so the next regeneration keeps it.
+
+**This wants its own change**: regenerate, then fix the four, each on its own
+merits.
+
+## 2026-09-21 — A local e2e run died because the server did, and reported 396 failures
+
+The full local suite reported 308 passed, 11 skipped, **182 did not run**, and
+396 failing artifacts. **Every one of the 396 was `ERR_CONNECTION_REFUSED`** —
+the `next start` on port 3000 was killed about 36 minutes in, and every test
+after that failed identically and instantly.
+
+Nothing was wrong with the code. The likely cause is memory: 45 Playwright
+Chromium processes, the server, and a production build plus repeated
+typechecks all running at once on 32 GB — free memory was 6.8 GB with 25
+ORPHANED chrome processes still alive after the run, and killing them returned
+4.7 GB.
+
+**What to do differently:**
+
+- Check `ERR_CONNECTION_REFUSED` before reading a local suite's failures as
+  findings. `grep -l ERR_CONNECTION_REFUSED test-results/*/error-context.md |
+wc -l` against the artifact count answers it in one line.
+- Do not run `bun run build` or repeated typechecks against the same machine
+  during a full local suite. They are not database load — which is what
+  [[no-local-e2e-during-ci]] is about — but they compete for the memory the
+  browsers need.
+- Kill orphaned browsers between runs; Playwright does not always reap them.
+- **Do not pipe the run through `tail`.** The output file held 62 lines and the
+  failure detail was gone; the diagnosis had to be rebuilt from
+  `test-results/*/error-context.md`. Redirect the whole thing and tail the FILE.
+
+### 2026-09-21 — occurrences five and six, and the instrument was there all along
+
+Twice more, both while the local Playwright suite was running: **15.4s and
+28.4s against a normal 0.8s**, one failure each, no name. The correlation with
+a 20–35x slowdown now holds across six occurrences and is the most reliable
+fact about it.
+
+**Both times the name was lost the same way, and the entry above already said
+how not to lose it.** The runs were piped through `tail`, which keeps the
+summary and discards the `(fail)` line naming the test. `tee` was written down
+here on 2026-09-20 for exactly this and was not used.
+
+**Nine attempts to reproduce it failed** — six idle (~850 ms) and three under a
+concurrent `lint` + `typecheck` (~940 ms). So ordinary CPU contention is NOT
+enough; both real occurrences had a Playwright suite doing heavy disk and
+memory work alongside. That narrows it toward I/O starvation rather than CPU,
+which slightly favours the "bun runner under starvation" limb over the "impure
+test" one — but it does not settle it, and a name still would.
+
+**Do instead:** `bun run test:unit 2>&1 | tee` — never `| tail` — and treat a
+red unit run during an e2e suite as the one chance to name it.

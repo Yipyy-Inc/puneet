@@ -248,17 +248,40 @@ const CLAIMS: Claim[] = [
   // per-file entry that came DOWN left this sentence behind, because nothing
   // derived it. A ratchet's headline number is exactly the kind that only
   // ever moves by hand, which is why it goes stale.
+  //
+  // ANCHORED to their own row since 2026-09-21. The patterns used to be a bare
+  // /Ratcheted PER FILE at (\d+) across \d+ files/, which matches the FIRST
+  // such sentence in the file — so the day a SECOND per-file ratchet was
+  // documented (check:customer-fixtures), these two silently started measuring
+  // it against the control-heights baseline and failed. A guard that reads the
+  // wrong row is worse than no guard: it fails for a reason that is not true.
   {
     file: "AGENTS.md",
-    pattern: /Ratcheted PER FILE at (\d+) across \d+ files/,
+    pattern: /check:control-heights[\s\S]*?Ratcheted PER FILE at (\d+) across/,
     label: "check:control-heights baseline total",
     actual: controlHeightsBaseline().total,
   },
   {
     file: "AGENTS.md",
-    pattern: /Ratcheted PER FILE at \d+ across (\d+) files/,
+    pattern:
+      /check:control-heights[\s\S]*?Ratcheted PER FILE at \d+ across (\d+) files/,
     label: "check:control-heights baselined files",
     actual: controlHeightsBaseline().files,
+  },
+  // ── and the customer-fixtures ratchet, the same way ─────────────────────
+  {
+    file: "AGENTS.md",
+    pattern:
+      /check:customer-fixtures[\s\S]*?Ratcheted PER FILE at (\d+) across/,
+    label: "check:customer-fixtures baseline total",
+    actual: customerFixturesBaseline().total,
+  },
+  {
+    file: "AGENTS.md",
+    pattern:
+      /check:customer-fixtures[\s\S]*?Ratcheted PER FILE at \d+ across (\d+) files/,
+    label: "check:customer-fixtures baselined files",
+    actual: customerFixturesBaseline().files,
   },
 ];
 
@@ -300,6 +323,26 @@ function controlHeightsBaseline(): { total: number; files: number } {
   const entries = [...src.matchAll(/\["[^"]+\.tsx?\",\s*(\d+)\]/g)];
   return {
     total: entries.reduce((sum, m) => sum + Number(m[1]), 0),
+    files: entries.length,
+  };
+}
+
+/**
+ * The customer-fixtures ratchet, summed out of its baseline FILE.
+ *
+ * Unlike control-heights, this ratchet keeps its baseline in JSON beside the
+ * script rather than inside it — but the reason for deriving the headline is
+ * identical: a per-file number that only ever moves by hand is exactly the
+ * kind that goes stale the first time an entry comes down.
+ */
+function customerFixturesBaseline(): { total: number; files: number } {
+  const raw = readFileSync(
+    join("scripts", "check-customer-fixtures.baseline.json"),
+    "utf8",
+  );
+  const entries = Object.values(JSON.parse(raw) as Record<string, number>);
+  return {
+    total: entries.reduce((sum, n) => sum + n, 0),
     files: entries.length,
   };
 }

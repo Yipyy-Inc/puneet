@@ -9,7 +9,9 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { bookings } from "@/data/bookings";
 import { liveFormQueries } from "@/lib/api/forms-live";
 import { answeredQuestions } from "@/components/forms/submission-shape";
-import { petPhotos, vaccinationRecords } from "@/data/pet-data";
+import { petPhotos } from "@/data/pet-data";
+import { facilityConfig } from "@/data/facility-config";
+import type { VaccinationRecord } from "@/types/pet";
 import { useQuery } from "@tanstack/react-query";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import { sectionsOf } from "@/lib/report-cards/sections";
@@ -50,7 +52,6 @@ import {
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
-import { facilityConfig } from "@/data/facility-config";
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
@@ -63,6 +64,15 @@ import {
   formatWeightFromLb,
 } from "@/lib/i18n/format";
 import { serviceTypeLabel, statusLabel } from "@/lib/i18n/labels";
+import {
+  daysUntilIso,
+  expiryState,
+  localToday,
+  recordMatchesRule,
+} from "@/lib/vaccinations";
+import { useMyVaccinations } from "@/lib/api/vaccinations";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 interface Pet {
   id: number;
@@ -121,47 +131,53 @@ export default function CustomerPetDetailPage({
     null,
   );
 
-  // Get facility vaccination requirements (must be before early return to avoid conditional hook)
-  const facilityRequirements = useMemo(() => {
-    return facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
-      (v) => v.required,
-    );
-  }, []);
-
-  // Compute vaccinations before early return so getVaccinationCompliance hook is unconditional
-  const vaccinations = useMemo(
-    () => (pet ? vaccinationRecords.filter((v) => v.petId === pet.id) : []),
-    [pet],
+  // ── WHAT THIS FACILITY REQUIRES OF THIS SPECIES ───────────────────────
+  //
+  // Both halves were fixtures until 2026-09-21: the requirement list came from
+  // `facilityConfig` (the shipped file, not the facility's own
+  // `vaccination_rules`) and it ignored SPECIES, so a cat was asked for a
+  // dog's vaccines. The records came from `vaccinationRecords` keyed by
+  // fixture pet ids, so a real pet showed none — or wore a fixture animal's.
+  //
+  // `useVaccinationRules()` reads /api/customer/settings here (the customer
+  // shell sets audience="customer"), never the staff route, which answers a
+  // customer with the demo facility's settings.
+  const { rules: vaccinationRules } = useVaccinationRules();
+  const facilityRequirements = useMemo(
+    () =>
+      vaccinationRules.filter(
+        (rule) =>
+          rule.required &&
+          rule.species.toLowerCase() === (pet?.type ?? "").toLowerCase(),
+      ),
+    [vaccinationRules, pet],
   );
 
-  const getVaccinationStatus = (
-    vaccination: (typeof vaccinationRecords)[0],
-  ) => {
-    const expiryDate = new Date(vaccination.expiryDate);
-    const nowDate = new Date();
-    const daysUntilExpiry = Math.floor(
-      (expiryDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
+  // Computed before the early return so the hooks below stay unconditional.
+  const isMounted = useHydrated();
+  const today = isMounted ? localToday() : "";
+  const { vaccinations: myVaccinations } = useMyVaccinations();
+  const vaccinations = useMemo(
+    () => (pet ? myVaccinations.filter((v) => v.petId === pet.id) : []),
+    [myVaccinations, pet],
+  );
 
-    if (daysUntilExpiry < 0) {
-      return {
-        status: "expired",
-        color: "destructive",
-        days: Math.abs(daysUntilExpiry),
-      };
-    } else if (daysUntilExpiry <= 30) {
-      return {
-        status: "expiring-soon",
-        color: "warning",
-        days: daysUntilExpiry,
-      };
-    } else {
-      return {
-        status: "valid",
-        color: "success",
-        days: daysUntilExpiry,
-      };
+  // A calendar day, compared as a calendar day. This was
+  // `new Date(v.expiryDate).getTime() - Date.now()`, which measures a UTC
+  // midnight against the current instant and calls a certificate expired on
+  // the last day it is still good — all day, in every timezone west of UTC.
+  const getVaccinationStatus = (vaccination: { expiryDate: string }) => {
+    if (!today) return { status: "valid", color: "success", days: 0 };
+    const days = daysUntilIso(vaccination.expiryDate, today);
+    const state = expiryState(vaccination.expiryDate, today);
+
+    if (state === "expired") {
+      return { status: "expired", color: "destructive", days: Math.abs(days) };
     }
+    if (state === "expiring") {
+      return { status: "expiring-soon", color: "warning", days };
+    }
+    return { status: "valid", color: "success", days };
   };
 
   // Check vaccination status against facility requirements
@@ -181,23 +197,22 @@ export default function CustomerPetDetailPage({
     };
 
     facilityRequirements.forEach((req) => {
-      compliance.required.push(req.name);
+      compliance.required.push(req.vaccineName);
+      // A refused certificate is not cover, whatever its date says.
       const petVaccination = vaccinations.find(
-        (v) =>
-          v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
-          req.name.toLowerCase().includes(v.vaccineName.toLowerCase()),
+        (v) => v.status !== "rejected" && recordMatchesRule(v, req.vaccineName),
       );
 
       if (!petVaccination) {
-        compliance.missing.push(req.name);
+        compliance.missing.push(req.vaccineName);
       } else {
         const status = getVaccinationStatus(petVaccination);
         if (status.status === "expired") {
-          compliance.expired.push(req.name);
+          compliance.expired.push(req.vaccineName);
         } else if (status.status === "expiring-soon") {
-          compliance.expiringSoon.push(req.name);
+          compliance.expiringSoon.push(req.vaccineName);
         } else {
-          compliance.upToDate.push(req.name);
+          compliance.upToDate.push(req.vaccineName);
         }
       }
     });
@@ -299,7 +314,7 @@ export default function CustomerPetDetailPage({
   };
 
   const handleAddVaccination = async (
-    newVaccinations: Array<Omit<(typeof vaccinationRecords)[0], "id">>,
+    newVaccinations: Array<Omit<VaccinationRecord, "id">>,
   ) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -690,7 +705,7 @@ export default function CustomerPetDetailPage({
   const PetIcon = pet.type === "Cat" ? Cat : Dog;
 
   // Vaccination columns
-  const vaccinationColumns: ColumnDef<(typeof vaccinationRecords)[0]>[] = [
+  const vaccinationColumns: ColumnDef<VaccinationRecord>[] = [
     {
       key: "vaccineName",
       label: t("colVaccine"),

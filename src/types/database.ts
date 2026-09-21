@@ -13440,6 +13440,20 @@ export type Database = {
         Returns: number;
       };
       my_client_at: { Args: { p_facility_slug: string }; Returns: string };
+      my_pet_vaccinations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          pet_ref: number;
+          vaccine_name: string;
+          administered_on: string | null;
+          expires_on: string | null;
+          veterinarian_name: string | null;
+          veterinary_clinic: string | null;
+          document_url: string | null;
+          status: string;
+        }[];
+      };
       my_store_credit: {
         Args: Record<PropertyKey, never>;
         Returns: {

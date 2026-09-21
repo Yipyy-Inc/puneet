@@ -18,7 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Search, Dog, Cat, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { vaccinationRecords } from "@/data/pet-data";
+import { expiryState, localToday } from "@/lib/vaccinations";
+import { useMyVaccinations } from "@/lib/api/vaccinations";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { TagList } from "@/components/shared/TagList";
 import { PetAvatar } from "@/components/ui/pet-avatar";
@@ -65,23 +67,37 @@ export default function CustomerPetsPage() {
     enabled: customerId != null,
   });
 
+  // Their pets' real certificates, through the customer's own route.
+  const isMounted = useHydrated();
+  const today = isMounted ? localToday() : "";
+  const { vaccinations: myVaccinations } = useMyVaccinations();
+
   // Get pet statistics
   const getPetStats = (petId: number) => {
     const petBookings = myBookings.filter(
       (b) => b.petId === petId && b.status === "completed",
     );
-    const petVaccinations = vaccinationRecords.filter((v) => v.petId === petId);
+    // The pet's OWN records. This filtered `vaccinationRecords` from
+    // `@/data/pet-data` until 2026-09-21 — fixture rows keyed by fixture pet
+    // ids — so a real pet counted a stranger's certificates or, far more often,
+    // none at all.
+    //
+    // And the comparisons were `new Date(v.expiryDate) < new Date()`: a
+    // calendar day parsed as UTC midnight against the current instant, which
+    // calls a certificate expired on the last day it is still good, all day, in
+    // every timezone west of UTC. `expiryState` compares `YYYY-MM-DD` strings.
+    // `today` is empty until hydration — the calendar day is the READER's, and
+    // the server does not have one. `addDaysIso("")` throws a RangeError, so
+    // this counts nothing rather than guessing a day.
+    const petVaccinations = today
+      ? myVaccinations.filter((v) => v.petId === petId)
+      : [];
     const expiredVaccinations = petVaccinations.filter(
-      (v) => new Date(v.expiryDate) < new Date(),
+      (v) => expiryState(v.expiryDate, today) === "expired",
     );
-    const upcomingVaccinations = petVaccinations.filter((v) => {
-      const expiryDate = new Date(v.expiryDate);
-      const now = new Date();
-      const sixtyDaysFromNow = new Date(
-        now.getTime() + 60 * 24 * 60 * 60 * 1000,
-      );
-      return expiryDate <= sixtyDaysFromNow && expiryDate > now;
-    });
+    const upcomingVaccinations = petVaccinations.filter(
+      (v) => expiryState(v.expiryDate, today, 60) === "expiring",
+    );
 
     return {
       totalStays: petBookings.length,

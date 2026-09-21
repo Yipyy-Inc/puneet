@@ -28,6 +28,23 @@ export function addDaysIso(day: string, days: number): string {
   return next.toISOString().slice(0, 10);
 }
 
+/**
+ * Whole calendar days from `today` to `day`. Negative once `day` is past.
+ *
+ * Both sides are parsed as UTC midnight so the subtraction is exact — the
+ * header's warning applies here more than anywhere: the customer dashboard
+ * counted this with `new Date(expiry).getTime() - Date.now()`, which mixes a
+ * calendar day against an instant and is off by one for most of the day in
+ * every timezone west of UTC. "Expired 1 day ago" on the morning it lapses.
+ */
+export function daysUntilIso(day: string, today: string): number {
+  const atUtc = (s: string) => {
+    const [y, m, d] = s.slice(0, 10).split("-").map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((atUtc(day) - atUtc(today)) / 86_400_000);
+}
+
 export function expiryState(
   expiryDate: string | undefined,
   today: string,

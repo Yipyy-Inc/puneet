@@ -41,16 +41,21 @@ import {
 import Link from "next/link";
 import { useMyEstimates } from "@/lib/api/estimates";
 import { businessProfile } from "@/data/settings";
-import { vaccinationRecords } from "@/data/pet-data";
 import { payments, invoices } from "@/data/payments";
-import { facilityConfig } from "@/data/facility-config";
 import { clientCommunications } from "@/data/communications";
 import { useQuery } from "@tanstack/react-query";
 import { reportCardQueries } from "@/lib/api/report-cards";
 import { groomingQueries } from "@/lib/api/grooming";
 import { customerBookingQueries } from "@/lib/api/customer-bookings";
 import { bookingTiming } from "@/lib/bookings/booking-timing";
-import { localToday } from "@/lib/vaccinations";
+import {
+  daysUntilIso,
+  expiryState,
+  localToday,
+  recordMatchesRule,
+} from "@/lib/vaccinations";
+import { useMyVaccinations } from "@/lib/api/vaccinations";
+import { useVaccinationRules } from "@/lib/api/facility-settings";
 import type { Booking } from "@/types/booking";
 
 const NO_BOOKINGS: Booking[] = [];
@@ -236,6 +241,33 @@ export default function CustomerDashboardPage() {
   // page's fixtures off a real customer's screen; a fixture with no facility
   // was never protected by it at all.
   const { data: wallet } = useQuery(customerLoyaltyQueries.mine());
+
+  // ── WHAT THIS FACILITY REQUIRES, AND WHAT THESE PETS HOLD ──────────────
+  //
+  // `useVaccinationRules()` reads /api/customer/settings here, not the staff
+  // route: the customer shell mounts SettingsProviderWrapper with
+  // audience="customer" (src/app/customer/_shell.tsx), and the staff route
+  // answers a customer with the DEMO facility's settings.
+  //
+  // `vaccination_rules` reached the customer-visible domains in 20260921113000;
+  // before it, RLS withheld the row and this fell back to the SHIPPED list,
+  // which is the deliberate fallback for this domain (an unset requirement
+  // fails open — see lib/settings/vaccinations.ts).
+  //
+  // And `configured` GATES the customer's alerts, which is a narrower rule
+  // than the facility's. The domain's fallback is deliberately the SHIPPED
+  // list rather than an empty one, because an unset requirement fails OPEN and
+  // an animal is admitted unvaccinated — that reasoning is about the STAFF
+  // check at the door, and it is untouched here. Telling a CUSTOMER their dog
+  // is missing a vaccine their facility never asked for is a different claim,
+  // made on Yipyy's default rather than on their business's decision. So the
+  // door keeps failing safe and the nag waits until somebody has chosen.
+  const {
+    rules: vaccinationRules,
+    configured: vaccinationRulesConfigured,
+    isPending: vaccinationRulesPending,
+  } = useVaccinationRules();
+  const { vaccinations: myVaccinations } = useMyVaccinations();
   const loyaltyData = useMemo(() => customerStanding(wallet), [wallet]);
 
   // The worded claim is counted in points; a tier measured in visits or spend
@@ -366,74 +398,105 @@ export default function CustomerDashboardPage() {
       });
     }
 
-    // Check for expired vaccinations
-    customerPets.forEach((pet) => {
-      const petVaccinations = vaccinationRecords.filter(
-        (v) => v.petId === pet.id,
-      );
-      const requiredVaccines =
-        facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
-          (v) => v.required,
+    // ── VACCINATIONS, FROM THE FACILITY'S RULES AND THE PET'S OWN RECORDS ─
+    //
+    // Both halves were fixtures until 2026-09-21, and it showed. The REQUIRED
+    // list came from `facilityConfig.vaccinationRequirements` — the shipped
+    // file, not the facility's `vaccination_rules` — and the HAS-IT check from
+    // `vaccinationRecords` keyed by fixture pet ids 1, 2, 3, 5, 13 and 14. A
+    // real pet matches none of those, so this raised "Vaccination missing" for
+    // every required vaccine, for every pet, every time. A real customer was
+    // shown it three times over for one dog on 2026-09-20.
+    //
+    // It was wrong in the other direction too, twice: a real pet whose ref
+    // happens to be 1 or 2 was credited with a fixture animal's certificate,
+    // and the requirement list ignored SPECIES, so a cat was asked for a dog's
+    // vaccines. `missingRequired` has always been species-aware; nothing here
+    // was using it.
+    //
+    // While the rules are still loading, nothing is raised — an alert that
+    // appears and then withdraws itself is worse than one that arrives a beat
+    // late, and the rules arriving empty is not the same as nothing required.
+    if (!vaccinationRulesPending && vaccinationRulesConfigured && today) {
+      customerPets.forEach((pet) => {
+        const petRecords = myVaccinations.filter((v) => v.petId === pet.id);
+        const required = vaccinationRules.filter(
+          (rule) =>
+            rule.required &&
+            rule.species.toLowerCase() === (pet.type ?? "").toLowerCase(),
         );
 
-      requiredVaccines.forEach((req) => {
-        const vaccination = petVaccinations.find(
-          (v) =>
-            v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
-            req.name.toLowerCase().includes(v.vaccineName.toLowerCase()),
-        );
+        required.forEach((rule) => {
+          // Every certificate that answers this requirement and was not
+          // refused; the one that protects them longest is the one that counts.
+          const answering = petRecords
+            .filter(
+              (rec) =>
+                rec.status !== "rejected" &&
+                recordMatchesRule(rec, rule.vaccineName),
+            )
+            .sort((a, b) => (b.expiryDate || "").localeCompare(a.expiryDate));
+          const best = answering[0];
 
-        if (!vaccination) {
-          actions.push({
-            type: "vaccination_expired",
-            priority: "high",
-            title: fill("vaccineMissingTitle", { pet: pet.name }),
-            message: fill("vaccineMissingMessage", { vaccine: req.name }),
-            actionLabel: t("uploadVaccination"),
-            actionLink: `/customer/pets/${pet.id}`,
-            petName: pet.name,
-          });
-        } else {
-          const expiryDate = new Date(vaccination.expiryDate);
-          const now = new Date();
-          const daysUntilExpiry = Math.floor(
-            (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          if (!best) {
+            actions.push({
+              type: "vaccination_expired",
+              priority: "high",
+              title: fill("vaccineMissingTitle", { pet: pet.name }),
+              message: fill("vaccineMissingMessage", {
+                vaccine: rule.vaccineName,
+              }),
+              actionLabel: t("uploadVaccination"),
+              actionLink: `/customer/pets/${pet.id}`,
+              petName: pet.name,
+            });
+            return;
+          }
+
+          // The facility sets its own warning window per vaccine.
+          const state = expiryState(
+            best.expiryDate,
+            today,
+            rule.expiryWarningDays,
           );
+          if (state === "none" || state === "current") return;
 
-          if (daysUntilExpiry < 0) {
+          const days = daysUntilIso(best.expiryDate, today);
+          if (state === "expired") {
+            const late = Math.abs(days);
             actions.push({
               type: "vaccination_expired",
               priority: "high",
               title: fill("vaccineExpiredTitle", { pet: pet.name }),
               message: fill(
-                Math.abs(daysUntilExpiry) === 1
+                late === 1
                   ? "vaccineExpiredMessageOne"
                   : "vaccineExpiredMessageMany",
-                { vaccine: req.name, days: Math.abs(daysUntilExpiry) },
+                { vaccine: rule.vaccineName, days: late },
               ),
               actionLabel: t("uploadVaccination"),
               actionLink: `/customer/pets/${pet.id}`,
               petName: pet.name,
             });
-          } else if (daysUntilExpiry <= 30) {
+          } else {
             actions.push({
               type: "vaccination_expiring",
               priority: "medium",
               title: fill("vaccineExpiringTitle", { pet: pet.name }),
               message: fill(
-                daysUntilExpiry === 1
+                days === 1
                   ? "vaccineExpiringMessageOne"
                   : "vaccineExpiringMessageMany",
-                { vaccine: req.name, days: daysUntilExpiry },
+                { vaccine: rule.vaccineName, days },
               ),
               actionLabel: t("updateVaccination"),
               actionLink: `/customer/pets/${pet.id}`,
               petName: pet.name,
             });
           }
-        }
+        });
       });
-    });
+    }
 
     // Check for pending booking requests
     const pendingBookings = customerBookings.filter(
@@ -509,6 +572,11 @@ export default function CustomerDashboardPage() {
     customerBookings,
     upcomingBookings,
     selectedFacility,
+    myVaccinations,
+    vaccinationRules,
+    vaccinationRulesPending,
+    vaccinationRulesConfigured,
+    today,
     t,
     fill,
     locale,
