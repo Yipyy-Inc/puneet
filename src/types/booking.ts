@@ -285,6 +285,20 @@ export const newBookingSchema = z.object({
       quotedAt: z.string().optional(),
     })
     .optional(),
+  /**
+   * The deposit the facility asks for on this booking, in dollars.
+   *
+   * Written by `autoConfirmCustomerBookings` when a facility has BOTH a
+   * deposit rule for the service and instant booking switched on — the two
+   * used to not meet, so an online booking confirmed with the whole balance
+   * owed and the facility's own policy went unmentioned.
+   *
+   * RECORDED, NEVER CHARGED. It is a number the customer is then asked for
+   * through the pay link, not money taken at confirmation. Server-set.
+   */
+  depositRequired: z.number().optional(),
+  /** Which deposit rule asked for it, as the facility labelled it. Server-set. */
+  depositRuleLabel: z.string().optional(),
   /** A customer's own cancellation, written by the database alone
    * (enforce_booking_integrity, 20260919162510): who, when, why, and whether
    * it fell inside the facility's notice window. Server-set. */

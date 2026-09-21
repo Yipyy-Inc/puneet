@@ -10223,7 +10223,9 @@
         "notesLoadFailed": "Notes did not load. Try again in a moment.",
         "notesEmpty": "No notes on this booking yet.",
         "askToChangeDates": "Ask to change dates",
-        "leaveNote": "Leave a note"
+        "leaveNote": "Leave a note",
+        "depositDue": "Deposit to hold your spot",
+        "depositStillDue": "Pay the {amount} deposit"
       },
       "pets": {
         "pageTitle": "My pets",

@@ -42,7 +42,20 @@ function monthlyEquivalent(cents: number, cycle: string): number {
   return Math.round(perMonth) / 100;
 }
 
-export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
+export async function listFacilitiesForAdmin(
+  options: {
+    /**
+     * Include facilities that have been archived.
+     *
+     * FALSE for the platform's facility LIST, which is where "remove it"
+     * actually happens for a reader. TRUE for a lookup BY ID — see
+     * getFacilityForAdmin. Archiving hides a facility from a list; it does not
+     * make it unreachable, and the two are the whole difference between
+     * archived and deleted (migration 20260920213428).
+     */
+    includeArchived?: boolean;
+  } = {},
+): Promise<AdminFacilityRow[]> {
   const supabase = await createServerClient();
 
   // Five reads and a stitch, rather than one join returning a row per
@@ -51,15 +64,18 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
   // facility owner who finds the URL.
   const [facilities, subscriptions, locations, memberships, clients, staff] =
     await Promise.all([
-      supabase
-        .from("facilities")
+      (() => {
         // Archived facilities are out of sight, not gone (20260920213428).
         // A facility that has taken money cannot be deleted — payments is
         // append-only AND holds a foreign key to this table — so this list is
         // where "remove it" actually happens for a reader.
-        .select("id, name, slug, created_at, business_types")
-        .is("archived_at", null)
-        .order("created_at"),
+        const query = supabase
+          .from("facilities")
+          .select("id, name, slug, created_at, business_types");
+        return options.includeArchived
+          ? query.order("created_at")
+          : query.is("archived_at", null).order("created_at");
+      })(),
       supabase
         .from("facility_subscriptions")
         .select(
@@ -193,7 +209,18 @@ export async function listFacilitiesForAdmin(): Promise<AdminFacilityRow[]> {
 export async function getFacilityForAdmin(
   facilityId: string,
 ): Promise<AdminFacilityRow | null> {
-  const all = await listFacilitiesForAdmin();
+  // ── ARCHIVED IS NOT DELETED, AND THIS IS WHERE THAT BROKE ───────────────
+  //
+  // This is built on the LIST, so the list's archived filter came through it
+  // for free and made an archived facility unreachable by id — its whole
+  // /dashboard/facilities/<id> page rendered nothing. Found by the nightly on
+  // 2026-09-21 (admin-bookings.spec.ts, which opens that page by id and is
+  // not in the push gate), one run after the filter landed.
+  //
+  // Hiding a facility from a list is what was asked for. Making it unopenable
+  // is a delete wearing a softer word, which is the one thing migration
+  // 20260920213428 says this flag must never be.
+  const all = await listFacilitiesForAdmin({ includeArchived: true });
   return all.find((facility) => facility.id === facilityId) ?? null;
 }
 

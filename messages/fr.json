@@ -10223,7 +10223,9 @@
         "notesLoadFailed": "Les notes ne se sont pas chargées. Réessayez dans un instant.",
         "notesEmpty": "Aucune note sur cette réservation pour l’instant.",
         "askToChangeDates": "Demander de changer les dates",
-        "leaveNote": "Laisser une note"
+        "leaveNote": "Laisser une note",
+        "depositDue": "Dépôt pour garder votre place",
+        "depositStillDue": "Payer le dépôt de {amount}"
       },
       "pets": {
         "pageTitle": "Mes animaux",

@@ -49,7 +49,49 @@ const FULL_DAY = 38;
 const GROOM_SERVICE = "groom-pkg-001"; // Basic Bath
 const GROOM_MEDIUM = 35;
 
+/** Half of a $38 full day. Percentage, so the maths is the code's not mine. */
+const DEPOSIT_PERCENT = 50;
+const DEPOSIT_ON_FULL_DAY = FULL_DAY / 2;
+const DEPOSIT_LABEL = "[e2e] daycare deposit";
+
 const made: number[] = [];
+
+/** The facility's deposit rules, as they were before this spec ran. */
+let priorDeposits: unknown = null;
+
+async function depositSetting(page: Page): Promise<Record<string, unknown>> {
+  const res = await page.request.get("/api/facility/settings");
+  expect(res.ok(), await res.text()).toBe(true);
+  const all = (await res.json()) as Record<string, { value?: unknown }>;
+  return (all.deposit_rules?.value ?? {}) as Record<string, unknown>;
+}
+
+async function writeDeposits(page: Page, value: unknown) {
+  const res = await page.request.patch("/api/facility/settings", {
+    data: { domain: "deposit_rules", value },
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+}
+
+/** One enabled daycare rule, every other rule left exactly as it was. */
+async function setDaycareDeposit(page: Page, percent: number | null) {
+  const current = await depositSetting(page);
+  if (priorDeposits === null) priorDeposits = structuredClone(current);
+
+  const rules = ((current.rules ?? []) as Array<Record<string, unknown>>).map(
+    (rule) =>
+      rule.scope === "service" && rule.serviceType === "daycare"
+        ? {
+            ...rule,
+            enabled: percent !== null,
+            amountType: "percentage",
+            amount: percent ?? 0,
+            label: DEPOSIT_LABEL,
+          }
+        : rule,
+  );
+  await writeDeposits(page, { ...current, rules });
+}
 
 function day(offset: number): string {
   const d = new Date();
@@ -132,6 +174,9 @@ test.describe("a facility decides which services need its approval", () => {
       // The setting first: a spec that leaves this on changes what every
       // other booking spec means.
       await setAutoConfirm(page, {});
+      // The deposit rules as they were — a spec that leaves one enabled asks
+      // every later booking on this facility for money nobody configured.
+      if (priorDeposits !== null) await writeDeposits(page, priorDeposits);
 
       let cancelled = 0;
       for (const ref of made) {
@@ -284,6 +329,80 @@ test.describe("a facility decides which services need its approval", () => {
       "a grooming price the server did not derive was confirmed",
     ).toBe("request_submitted");
     expect(row?.totalCost, "and nothing was charged for it").toBe(0);
+  });
+
+  test("a confirmed booking records the deposit the facility asks for", async ({
+    page,
+  }) => {
+    // The gap: a facility could set a deposit policy AND switch instant
+    // booking on, and the two never met — the booking confirmed with the whole
+    // balance owed and nothing said a deposit was due, so the policy was
+    // silently ignored for every online booking.
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setDaycareDeposit(staff, DEPOSIT_PERCENT);
+      await setAutoConfirm(staff, { daycare: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookAsCustomer(page, FULL_DAY);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number };
+    made.push(booking.id);
+
+    const read = await page.request.get(`/api/bookings?ref=${booking.id}`);
+    const [row] = (await read.json()) as Array<{
+      status: string;
+      totalCost: number;
+      amountPaid?: number;
+      depositRequired?: number;
+      depositRuleLabel?: string;
+    }>;
+
+    expect(row?.status).toBe("confirmed");
+    expect(
+      row?.depositRequired,
+      "the facility's deposit was not recorded",
+    ).toBe(DEPOSIT_ON_FULL_DAY);
+    expect(row?.depositRuleLabel).toBe(DEPOSIT_LABEL);
+
+    // RECORDED, NOT CHARGED. This is the assertion that keeps the feature
+    // honest: confirming a booking and taking money in the same breath,
+    // without the customer pressing pay, is how a chargeback starts.
+    expect(
+      row?.amountPaid ?? 0,
+      "a deposit was taken, not just asked for",
+    ).toBe(0);
+  });
+
+  test("no deposit rule, nothing recorded", async ({ page }) => {
+    // The other direction. A facility with no policy must not acquire one
+    // because the feature shipped.
+    const staff = await page.context().browser()!.newPage();
+    try {
+      await signIn(staff, ACCOUNTS.owner);
+      await setDaycareDeposit(staff, null);
+      await setAutoConfirm(staff, { daycare: true });
+    } finally {
+      await staff.close();
+    }
+
+    await signIn(page, ACCOUNTS.customer);
+    const res = await bookAsCustomer(page, FULL_DAY);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number };
+    made.push(booking.id);
+
+    const read = await page.request.get(`/api/bookings?ref=${booking.id}`);
+    const [row] = (await read.json()) as Array<{
+      status: string;
+      depositRequired?: number;
+    }>;
+    expect(row?.status).toBe("confirmed");
+    expect(row?.depositRequired ?? 0).toBe(0);
   });
 
   test("a customer cannot confirm their own booking by asking", async ({

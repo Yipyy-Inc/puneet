@@ -99,6 +99,18 @@ export function BookingMoneyCard({ booking }: { booking: Booking }) {
           value={owed > 0 ? money(owed) : money(0)}
           strong
         />
+        {/* The facility asks a deposit for this service and instant booking
+            confirmed it, so the number is recorded on the booking rather than
+            charged — see autoConfirmCustomerBookings. Shown only while it is
+            still owed: once enough has been paid, naming it again would read
+            as a second charge. */}
+        {(booking.depositRequired ?? 0) > 0 &&
+          paid < booking.depositRequired! && (
+            <Line
+              label={booking.depositRuleLabel || t("depositDue")}
+              value={money(booking.depositRequired!)}
+            />
+          )}
       </dl>
       {payable ? (
         <Button asChild className="mt-4 w-full sm:w-auto">

@@ -18801,3 +18801,96 @@ appointment shape to carry the client's coordinates and a decision about what
 to show when one stop on a route has none — a route is only as honest as its
 least-known stop. That is a round of its own, and it is now unblocked rather
 than done.
+
+## 2026-09-21 — The abandoned-cart recovery works, and nothing had ever run it
+
+The client asked for abandoned-cart behaviour and it was built: a trigger
+stamps `recovery_not_before` when a customer leaves the wizard, the messaging
+tick queues the step's message once, and the send pass applies suppression,
+quiet hours and the cap like any other marketing message. Both ends were
+tested — `recoveryDueAt` and `recoveryPlan` in the unit tier, the tick's
+REFUSALS in `messaging-tick.spec.ts` — and the middle never was.
+
+`tests/e2e/abandonment-recovery-send.spec.ts` runs it: the facility turns
+recovery on with `delayHours: 0` for one step, a customer leaves a booking at
+that step, the tick runs with its bearer token, `recovered` counts up, and a
+SECOND tick queues nothing — the `recovery_resolved_at is null -> now()` claim
+holding, which is what stops somebody who abandons four times hearing four
+times. Measured 2026-09-21: it passes.
+
+### 🔴 It skips in CI, and that is why the gap lasted
+
+The tick needs `CRON_SECRET`, and ci.yml says in its own comment that the
+secret is **runtime-only** — a root-owned `.env` on the VPS, not in the
+workflow and not in `.env.local`. Without it the route answers 503 rather than
+run unguarded, which is correct, and means the spec skips everywhere except a
+machine that has deliberately set one.
+
+So the whole recovery path was untestable by construction, and nothing said so.
+Putting `CRON_SECRET` in the e2e job's environment is a secrets change rather
+than a code one; until somebody makes it, **a skip on this file means "not
+measured", not "passed"**. The spec's header and its skip message both say so,
+because a green suite with a silent skip in it is the more expensive mistake.
+
+Two smaller things found on the way: the tick is a **GET** (a POST answers 405),
+and `bookings` has no deposit column at all — a deposit is only ever a
+`payments` row, so "take a deposit on a direct booking" is a feature with a
+product decision in it (what happens when it goes unpaid?), not a wiring gap.
+
+## 2026-09-21 — A real customer was shown fixture money, and the map said it could not be
+
+The customer billing screens still read `src/data/payments`, filtered as
+`row.clientId === customer.id && row.facilityId === selectedFacility.id`.
+`customer.id` is the REAL client's ref — /api/clients/me resolves the signed-in
+person — and real refs run straight through the fixture's own id range, so the
+CLIENT half matches constantly. Fixture client 15 and real client 15 are the
+same number.
+
+`use-customer-facility.tsx` records why that was survivable: the FACILITY half
+never matched, because the provider defaults to facility 1 and every
+customer-facing fixture row carries facility 11. Its own words: "an accident,
+not a design, so it is written down rather than relied on quietly."
+
+**It was relied on quietly, and it was not true.** `src/data/payments.ts` held
+FIVE rows on facility 1: `inv-010` (client 15, sent), `inv-011` (client 15,
+**overdue**), `inv-012` (client 15, paid), `credit-001` (client 15, $40
+remaining) and `credit-002` (client 16, $25). Signed in as the real Alice
+Johnson — ref 15, the demo customer account, the one a client would be handed
+— the billing page added $40 of store credit she does not have, listed an
+invoice #10026 that does not exist, and her dashboard raised a PAYMENT OVERDUE
+alert from a fixture row.
+
+The five rows are on facility 11 now, and the invariant is MEASURED rather than
+believed: `tests/unit/customer-fixture-isolation.test.ts` fails if any row in
+`invoices`, `customerCredits`, `giftCards` or `payments` sits on the facility
+the provider defaults to. It also asserts the id ranges still overlap, because
+if they ever stop, the whole file should be deleted rather than left passing
+for the wrong reason.
+
+**Its own negative control found a hole in it.** The first run of the control
+PASSED when it should have failed: the row it flipped back was in `payments`,
+which the test did not look at — and `payments` is the array the dashboard
+raises a failed-payment alert from. Four arrays are checked now.
+
+The real fix is these screens reading Postgres. Until then the fixtures are
+load-bearing for privacy, which is worth saying out loud.
+
+## 2026-09-21 — Archiving a facility made it unreachable, not hidden
+
+Twelve hours after `archived_at` landed, the nightly caught what the push gate
+could not: `admin-bookings.spec.ts` opens `/dashboard/facilities/<id>` by id and
+timed out at two minutes waiting for a booking that was never rendered.
+
+`getFacilityForAdmin(id)` is built on `listFacilitiesForAdmin()`, so the list's
+`archived_at is null` filter came through it for free and an archived facility
+returned `null` — its whole detail page rendered nothing. Hiding a facility from
+a list is what was asked for; making it unopenable is a delete wearing a softer
+word, which is the one thing migration 20260920213428 says the flag must never
+be.
+
+The list takes `{ includeArchived }` now and the by-id lookup passes true.
+
+**Worth noting where it was caught.** `admin-bookings` is in `test:e2e:ci`, not
+in the 33-spec push gate, so the filter shipped and deployed green and the
+regression surfaced the next morning — which is exactly what the docs say the
+nightly is for, working as intended.

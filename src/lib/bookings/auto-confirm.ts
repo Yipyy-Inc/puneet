@@ -6,6 +6,11 @@ import {
   DEFAULT_BOOKING_APPROVAL,
 } from "@/lib/settings/booking-approval";
 import { priceCustomerBooking } from "@/lib/bookings/price-booking";
+import {
+  computeDepositAmount,
+  depositConfigSchema,
+  findApplicableDepositRule,
+} from "@/lib/settings/deposits";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
 // ============================================================================
@@ -95,17 +100,33 @@ export async function autoConfirmCustomerBookings(
       const parsed = bookingApprovalSchema.safeParse(value);
       return parsed.success ? parsed.data : DEFAULT_BOOKING_APPROVAL;
     };
+    // The facility's deposit rules, read in the same pass.
+    const deposits = new Map<
+      string,
+      ReturnType<typeof depositConfigSchema.parse>["rules"]
+    >();
     for (const facilityId of new Set(candidates.map((c) => c.facility_id))) {
-      const { data: setting } = await admin
+      const { data: rows } = await admin
         .from("facility_settings")
-        .select("value")
+        .select("domain, value")
         .eq("facility_id", facilityId)
-        .eq("domain", "booking_approval")
-        .maybeSingle();
-      approvals.set(
-        facilityId,
-        approvalOf((setting as { value?: unknown } | null)?.value),
+        .in("domain", ["booking_approval", "deposit_rules"]);
+
+      const byDomain = new Map(
+        ((rows ?? []) as Array<{ domain: string; value: unknown }>).map((r) => [
+          r.domain,
+          r.value,
+        ]),
       );
+      approvals.set(facilityId, approvalOf(byDomain.get("booking_approval")));
+
+      // A facility that has never configured deposits asks for nothing, and a
+      // stored value that no longer matches its schema is treated the same
+      // way — never as a reason to invent a figure.
+      const parsed = depositConfigSchema.safeParse(
+        byDomain.get("deposit_rules"),
+      );
+      deposits.set(facilityId, parsed.success ? parsed.data.rules : []);
     }
 
     let confirmed = 0;
@@ -118,6 +139,18 @@ export async function autoConfirmCustomerBookings(
       // not a booking to confirm silently.
       if (quoted === null) continue;
 
+      // ── THE FACILITY'S DEPOSIT, RECORDED AND NOT CHARGED ────────────────
+      //
+      // A facility can set a deposit policy AND switch instant booking on, and
+      // until now the two did not meet: the booking confirmed with the whole
+      // balance owed and nothing said a deposit was due, so their own policy
+      // was silently ignored for every online booking.
+      //
+      // It is RECORDED, never taken. Confirming a booking and charging a card
+      // in the same breath — without the customer pressing pay — is how a
+      // chargeback starts, and card-on-file capture wants its own flow with
+      // its own consent. What this writes is a number the customer is then
+      // ASKED for, through the pay link that already exists.
       const priced = await priceCustomerBooking({
         facilityId: row.facility_id,
         service: row.service!,
@@ -130,12 +163,32 @@ export async function autoConfirmCustomerBookings(
       });
       if (!priced.ok) continue;
 
+      const rule = findApplicableDepositRule(
+        row.service!,
+        priced.total,
+        deposits.get(row.facility_id) ?? [],
+      );
+      const depositRequired = rule
+        ? computeDepositAmount(rule, priced.total)
+        : 0;
+
       const { error } = await admin
         .from("bookings")
         .update({
           status: "confirmed",
           base_price: priced.basePrice,
           total_cost: priced.total,
+          // MERGED, not replaced: `details` already holds requestedQuote, and
+          // overwriting it would lose the number this confirmation agreed with.
+          ...(depositRequired > 0
+            ? {
+                details: {
+                  ...(row.details ?? {}),
+                  depositRequired,
+                  depositRuleLabel: rule!.label,
+                },
+              }
+            : {}),
         })
         .eq("id", row.id)
         // Belt and braces: only ever promote a row still sitting as a request,

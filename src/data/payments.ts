@@ -430,7 +430,7 @@ export const invoices: Invoice[] = [
   {
     id: "inv-010",
     invoiceNumber: "10026",
-    facilityId: 1,
+    facilityId: 11,
     clientId: 15,
     bookingId: 3,
     status: "sent",
@@ -471,7 +471,7 @@ export const invoices: Invoice[] = [
   {
     id: "inv-011",
     invoiceNumber: "10027",
-    facilityId: 1,
+    facilityId: 11,
     clientId: 15,
     bookingId: 5,
     status: "overdue",
@@ -506,7 +506,7 @@ export const invoices: Invoice[] = [
   {
     id: "inv-012",
     invoiceNumber: "10028",
-    facilityId: 1,
+    facilityId: 11,
     clientId: 15,
     bookingId: 6,
     status: "paid",
@@ -734,7 +734,7 @@ export const giftCards: GiftCard[] = [
 export const customerCredits: CustomerCredit[] = [
   {
     id: "credit-001",
-    facilityId: 1,
+    facilityId: 11,
     clientId: 15,
     amount: 50,
     remainingAmount: 40,
@@ -752,7 +752,7 @@ export const customerCredits: CustomerCredit[] = [
   },
   {
     id: "credit-002",
-    facilityId: 1,
+    facilityId: 11,
     clientId: 16,
     amount: 25,
     remainingAmount: 25,
