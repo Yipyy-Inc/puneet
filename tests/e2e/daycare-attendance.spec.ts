@@ -86,9 +86,18 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const all = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+    // The shape is CHECKED, not assumed. This was a bare cast, and when the
+    // list answered with an `{error}` object instead `for...of` threw "all is
+    // not iterable" inside `afterAll` — so the cleanup below cancelled
+    // nothing, reverted nothing, and left its rows on the shared database.
+    const listed = await page.request.get("/api/bookings");
+    const body = listed.ok() ? await listed.json().catch(() => null) : null;
+    const all: BookingPayload[] = Array.isArray(body) ? body : [];
+    if (!Array.isArray(body)) {
+      console.log(
+        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+      );
+    }
     let cancelled = 0;
     let reverted = 0;
     for (const b of all) {

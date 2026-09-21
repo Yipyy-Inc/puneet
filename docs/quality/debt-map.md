@@ -19688,15 +19688,31 @@ bookings on the shared database.
 
 **`booking-payment-screens.spec.ts` already carried a comment explaining this
 exact failure**, with the `Array.isArray` guard applied. The lesson was learned
-in one file and never propagated, so it was sitting in four more.
+in one file and never propagated.
 
-Audited all nine sites that iterate a `?? []`. Three were already safe — the
-Supabase client's `{ data }` is typed array-or-null, and `schedule-audit-trail`
-destructures a documented `{ shifts }` after checking `res.ok()`. A fourth,
-`listBookings` in `booking-checkout-truth`, already checks `Array.isArray` and
-retries. The two that shared the broken shape — `client-balance` and
-`client-pet-write-path` — are guarded now, and all of them SAY SO when the list
-cannot be read rather than reporting the zero they did.
+### The first audit was too narrow, in the same way as the bug
+
+Grepping `for (const .* of .* ?? \[\])` found nine sites, four of which were
+already safe. That grep matched a SYNTAX, and the third instance —
+`daycare-attendance.spec.ts:94` — was `for (const b of all)`, where the `?? []`
+had been spent on the line above. It failed twenty minutes after the "audit"
+that was supposed to have found it.
+
+Enumerated properly: walk every `afterAll`/`afterEach` block by brace depth and
+flag any that parses JSON and then iterates it with no `Array.isArray` anywhere
+in the block. **Thirty-five teardowns qualify.** That is an upper bound on risk
+rather than a count of broken ones — some destructure a documented object shape
+and are fine — but it is the right denominator, and it is not four.
+
+Fixed here: the three that actually threw today (`booking-payment-ledger`,
+`daycare-attendance`) plus the two that shared the broken shape exactly
+(`client-balance`, `client-pet-write-path`). Each one now SAYS so when the list
+cannot be read, rather than reporting the zero it did.
+
+**The remaining ~30 are open, and a grep will not hold them.** This wants a
+`check:teardown-shape` gate with a per-file baseline, the way
+`check:customer-fixtures` holds its 38 — proposed, not built, because adding a
+fortieth gate is its own change and not this one.
 
 This is the third time in one day that a cleanup reported success having done
 nothing. The rule has not changed and is worth restating: **cleanup is not
