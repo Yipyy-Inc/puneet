@@ -1,1 +1,26 @@
+# ── WHAT THIS STANDS BETWEEN, AND WHY IT GREW ─────────────────────────────
+#
+# A push to `main` is a deploy. `image` builds only once typecheck, lint,
+# format, unit, checks, sql and build have all passed — seven gates — and this
+# hook mirrored exactly ONE of them.
+#
+# On 2026-09-21 a deploy was blocked by two bullet characters. `docs/quality/
+# debt-map.md` had `*` where Prettier writes `-`, CI failed on `format`, and
+# `image` and `deploy` were skipped: the whole batch sat unshipped over a
+# character that `bun run format` fixes without being asked. Nothing local had
+# a reason to notice, because the hook only typechecks.
+#
+# So `format:check` joins it. It is the cheapest of the six missing gates and
+# the only one that failed that day. `--cache` (in the script, so CI and this
+# hook stay the SAME command) takes it from ~60s to ~10s after the first run;
+# CI's runner has no cache and so still checks every file.
+#
+# NOT added, deliberately: `lint`, `build`, `sql` and the e2e suites, which are
+# minutes each and would make pushing something people avoid. `test:unit` is
+# under a second and is the obvious next candidate — propose it separately
+# rather than folding it in here.
+#
+# A hook is a convenience, never the authority. CI is the authority, and
+# nothing here may be weakened to make a push go through.
 bun run typecheck
+bun run format:check

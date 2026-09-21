@@ -14,7 +14,7 @@
     "lint": "eslint --cache",
     "lint:clean": "eslint --no-cache",
     "lint:fix": "eslint --cache --fix",
-    "format:check": "prettier -c .",
+    "format:check": "prettier --cache -c .",
     "format": "prettier --cache -w .",
     "prune": "knip",
     "audit:facility": "bun scripts/audit-facility-surface.ts",
