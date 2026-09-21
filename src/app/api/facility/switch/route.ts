@@ -17,6 +17,19 @@ import {
 // Choosing grants nothing. POST refuses a facility the caller is not a member
 // of, and even a hand-written cookie can only pick among the caller's own
 // memberships, because that is all `getFacilityContext()` ever chooses from.
+//
+// ── THE TWO LISTS ARE DIFFERENT QUESTIONS ─────────────────────────────────
+//
+// GET leaves archived facilities out: it is a list of places to offer, and an
+// archived one is out of sight by definition. POST asks `includeArchived`,
+// because it is answering "may this person work here?" — and until 2026-09-21
+// it used the SAME filtered list, so a member of an archived facility was told
+// "You are not a member of that facility". They were. `chooseAmongMemberships`
+// would have honoured that membership on the very next request, which is what
+// made the refusal incoherent as well as untrue.
+//
+// Three of the four facilities were archived on 2026-09-20, the e2e owner's
+// among them, so this was not hypothetical.
 // ============================================================================
 
 export async function GET() {
@@ -45,7 +58,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
     facilityId?: string;
   } | null;
-  const facilities = await myFacilities();
+  const facilities = await myFacilities({ includeArchived: true });
   const chosen = facilities.find((f) => f.id === body?.facilityId);
 
   if (!chosen) {

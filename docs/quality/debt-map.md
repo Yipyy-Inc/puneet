@@ -18949,3 +18949,43 @@ fixture rows off a real customer's screen. That protection only works on
 fixtures that HAVE a facility id. For the six that do not, there was never any
 protection — and nothing said so, which is why both of these have been rendering
 to real people.
+
+## 2026-09-21 — Archiving a facility answered a question it was never asked
+
+`facilities.archived_at` (20260920213428) exists because a facility that has
+taken money cannot be deleted, so it is put out of sight instead. Three of the
+four were archived on 2026-09-20.
+
+**Out of sight is a question about LISTS. Twice now it was used to answer a
+question about ACCESS, and both times it took something real away.**
+
+1. `getFacilityForAdmin()` inherited the list's `archived_at is null` filter, so
+   an archived facility was unreachable BY ID — `/api/facilities/[id]` answered
+   404 and the superadmin's facility page called `notFound()`. Caught by the
+   nightly (`admin-bookings.spec.ts`), not by the push gate, and fixed in
+   42b5dbfb.
+2. `POST /api/facility/switch` validated the chosen facility against
+   `myFacilities()`, which filters archived — so a member of an archived
+   facility was told **"You are not a member of that facility."** They were.
+   `chooseAmongMemberships` would have honoured that same membership on the very
+   next request, which made the refusal incoherent as well as untrue. The e2e
+   owner's only facility is archived, so this was live, not hypothetical.
+
+`myFacilities()` now takes `{ includeArchived }` the way `listFacilitiesForAdmin`
+does. **The rule: filter archived where you are offering somewhere to GO; never
+where you are deciding what someone MAY DO.** `chooseAmongMemberships` has
+always had this right and says so in its own comment — the two callers that got
+it wrong both filtered a list and then used that list as a permission check.
+
+Locked in by two tests in `facility-identity.spec.ts`, which is in the PUSH
+gate — deliberately, because the first instance of this bug was only caught by
+the nightly and shipped in the meantime.
+
+### The negative control nearly lied, and why
+
+The first control run showed 403 and looked like proof. It was run against
+`next start` on port 3000 — a PRODUCTION BUILD, not `next dev`. Source edits
+reach a built server only after `bun run build`, so the "before" and "after"
+runs were executing the same old bundle, and the fix appeared not to work. Check
+what is actually listening (`Get-CimInstance Win32_Process`) before reading a
+local e2e result as evidence: `next dev` hot-reloads, `next start` does not.

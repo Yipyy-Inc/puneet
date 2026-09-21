@@ -289,28 +289,40 @@ export function inFacility(facilityId: string | null): Record<string, string> {
   return facilityId ? { facility_id: facilityId } : {};
 }
 
-/** The caller's own facilities, for the switcher. Empty for non-members. */
-export async function myFacilities(): Promise<
-  { id: string; name: string; slug: string }[]
-> {
+/**
+ * The caller's own facilities. Empty for non-members.
+ *
+ * Archived ones are left OUT by default, because the switcher is a list of
+ * places to go and an archived facility is one nobody should be offered. They
+ * are still MEMBERSHIPS, though, which is a different question and the reason
+ * for the flag: `chooseAmongMemberships` below deliberately does not filter, so
+ * somebody whose only membership is at an archived facility keeps working there
+ * rather than being locked out of a facility nobody deleted (20260920213428).
+ *
+ * Pass `includeArchived` wherever the question is "may this person work here?"
+ * rather than "where should we offer to take them?". Answering the first with
+ * the filtered list tells a real member they are not a member — which is both a
+ * refusal they should not get and a sentence that is not true.
+ */
+export async function myFacilities(
+  options: { includeArchived?: boolean } = {},
+): Promise<{ id: string; name: string; slug: string; archived: boolean }[]> {
   const viewer = await getViewer().catch(() => null);
   const ids = (viewer?.memberships ?? []).map((m) => m.facilityId);
   if (ids.length === 0) return [];
   const supabase = await createServerClient();
-  const { data } = await supabase
+  const query = supabase
     .from("facilities")
-    .select("id, name, slug")
-    .in("id", ids)
-    // Archived (20260920213428). The SWITCHER only — `chooseAmongMemberships`
-    // below deliberately does not filter, so somebody whose only membership is
-    // at an archived facility keeps working there rather than being locked out
-    // of a facility nobody deleted.
-    .is("archived_at", null)
-    .order("name");
+    .select("id, name, slug, archived_at")
+    .in("id", ids);
+  const { data } = await (options.includeArchived
+    ? query.order("name")
+    : query.is("archived_at", null).order("name"));
   return (data ?? []).map((f) => ({
     id: f.id,
     name: f.name,
     slug: f.slug ?? "",
+    archived: f.archived_at !== null,
   }));
 }
 

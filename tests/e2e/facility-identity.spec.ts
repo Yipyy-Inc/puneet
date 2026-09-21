@@ -100,3 +100,54 @@ test.describe("facility portal identity", () => {
     expect(map.manage_roles).toBe("none");
   });
 });
+
+// ============================================================================
+// ARCHIVING A FACILITY MUST NOT LOCK ITS OWN MEMBERS OUT.
+//
+// `facilities.archived_at` (20260920213428) puts a facility out of sight,
+// because a facility that has taken money cannot be deleted. Out of sight is a
+// question about LISTS. Membership is a different question, and answering it
+// with the filtered list told a real member "You are not a member of that
+// facility" — of a facility they own.
+//
+// Three of the four facilities were archived on 2026-09-20 and the e2e owner's
+// is one of them, so this test runs against exactly that case: it would have
+// failed with 403 before the fix, and it stops being a real negative control
+// the day that facility is restored. `activeId` is read back from the API
+// rather than hardcoded, so it follows whichever facility the owner is in.
+// ============================================================================
+
+test.describe("a facility nobody deleted still admits its members", () => {
+  test("the owner can choose their own facility, archived or not", async ({
+    page,
+  }) => {
+    await signIn(page, "owner@yipyy.dev");
+
+    const listed = (await (
+      await page.request.get("/api/facility/switch")
+    ).json()) as { activeId: string | null };
+    expect(
+      listed.activeId,
+      "the owner resolved to no facility at all",
+    ).toBeTruthy();
+
+    const chosen = await page.request.post("/api/facility/switch", {
+      data: { facilityId: listed.activeId },
+      failOnStatusCode: false,
+    });
+    expect(chosen.status(), await chosen.text()).toBe(204);
+  });
+
+  test("and a facility they are not a member of is still refused", async ({
+    page,
+  }) => {
+    await signIn(page, "owner@yipyy.dev");
+    const refused = await page.request.post("/api/facility/switch", {
+      // A well-formed id that is nobody's — the refusal must come from
+      // membership, not from the id failing to parse.
+      data: { facilityId: "00000000-0000-4000-8000-000000000000" },
+      failOnStatusCode: false,
+    });
+    expect(refused.status()).toBe(403);
+  });
+});
