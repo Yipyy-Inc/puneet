@@ -55,7 +55,8 @@ import type { Booking } from "@/types/booking";
 
 const NO_BOOKINGS: Booking[] = [];
 import { useCurrentCustomer } from "@/lib/api/current-customer";
-import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
+import { customerLoyaltyQueries } from "@/lib/api/loyalty-ledger";
+import { customerStanding } from "@/lib/loyalty/customer-standing";
 import { ABANDONMENT_STEP_LABELS } from "@/data/unfinished-bookings";
 import { unfinishedBookingQueries } from "@/lib/api/unfinished-bookings";
 import type { UnfinishedBooking } from "@/types/unfinished-booking";
@@ -222,37 +223,27 @@ export default function CustomerDashboardPage() {
     };
   }, [myReportCards]);
 
-  // Get loyalty data
-  const loyaltyData = useMemo(() => {
-    const customerLoyalty = customerLoyaltyData.find(
-      (l) => l.clientId === customerId,
-    );
-    if (!customerLoyalty) return null;
+  // ── THE CUSTOMER'S OWN LOYALTY STANDING, FROM POSTGRES ─────────────────
+  //
+  // This read `customerLoyaltyData.find(l => l.clientId === customerId)` until
+  // 2026-09-21 — a fixture with NO facility id, holding `clientId: 15`, which
+  // is Alice Johnson's real ref. So the real Alice was shown invented points
+  // and an invented tier, on a ladder from one global `loyaltySettings` fixture
+  // that no facility had configured, while `/api/customer/loyalty` had been
+  // sitting unused one import away since 2026-08-22.
+  //
+  // The facility half of the fixture filter is what keeps the rest of this
+  // page's fixtures off a real customer's screen; a fixture with no facility
+  // was never protected by it at all.
+  const { data: wallet } = useQuery(customerLoyaltyQueries.mine());
+  const loyaltyData = useMemo(() => customerStanding(wallet), [wallet]);
 
-    const currentTier = loyaltySettings.tiers.find(
-      (t) => t.id === customerLoyalty.tier,
-    );
-    const nextTier = loyaltySettings.tiers.find(
-      (t) => t.minPoints > customerLoyalty.points,
-    );
-    const pointsToNextTier = nextTier
-      ? nextTier.minPoints - customerLoyalty.points
-      : 0;
-    const currentTierMaxPoints = nextTier ? nextTier.minPoints : Infinity;
-    const currentTierMinPoints = currentTier?.minPoints || 0;
-    const progressInTier = customerLoyalty.points - currentTierMinPoints;
-    const tierRange = currentTierMaxPoints - currentTierMinPoints;
-    const progressPercentage =
-      tierRange > 0 ? (progressInTier / tierRange) * 100 : 0;
-
-    return {
-      ...customerLoyalty,
-      currentTier,
-      nextTier,
-      pointsToNextTier,
-      progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
-    };
-  }, [customerId]);
+  // The worded claim is counted in points; a tier measured in visits or spend
+  // is a real configuration and "200 points away" would be a lie about it. The
+  // bar has no dimension, so it stays either way (§6 — what cannot be true is
+  // hidden, not left fake). The rewards page phrases every unit; this card has
+  // never had the copy for it.
+  const tierGapIsPoints = loyaltyData?.nextTier?.thresholdType === "points";
 
   // Estimates awaiting this customer's answer, from Postgres (their own only).
   const { estimates: myEstimates } = useMyEstimates();
@@ -997,11 +988,9 @@ export default function CustomerDashboardPage() {
                   <div className="mb-2 text-sm font-medium text-slate-900">
                     {loyaltyData.currentTier?.name || t("tierFallback")}
                     {loyaltyData.nextTier &&
+                      tierGapIsPoints &&
                       ` · ${fill("pointsToTier", {
-                        points: formatNumber(
-                          loyaltyData.pointsToNextTier,
-                          locale,
-                        ),
+                        points: formatNumber(loyaltyData.toNextTier, locale),
                         tier: loyaltyData.nextTier.name,
                       })}`}
                   </div>
@@ -1011,16 +1000,21 @@ export default function CustomerDashboardPage() {
                         value={loyaltyData.progressPercentage}
                         className="mb-1 h-2"
                       />
-                      <div className="text-xs text-slate-700">
-                        {fill("pointsProgress", {
-                          points: formatNumber(loyaltyData.points, locale),
-                          target: formatNumber(
-                            loyaltyData.nextTier.minPoints,
-                            locale,
-                          ),
-                          tier: loyaltyData.nextTier.name,
-                        })}
-                      </div>
+                      {tierGapIsPoints && (
+                        <div className="text-xs text-slate-700">
+                          {fill("pointsProgress", {
+                            points: formatNumber(
+                              loyaltyData.towardNextTier,
+                              locale,
+                            ),
+                            target: formatNumber(
+                              loyaltyData.nextTier.thresholdValue,
+                              locale,
+                            ),
+                            tier: loyaltyData.nextTier.name,
+                          })}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

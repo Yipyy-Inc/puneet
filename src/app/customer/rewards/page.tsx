@@ -64,6 +64,7 @@ import {
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { customerLoyaltyQueries } from "@/lib/api/loyalty-ledger";
+import { customerStanding } from "@/lib/loyalty/customer-standing";
 import { RedeemPointsDialog } from "@/components/customer/RedeemPointsDialog";
 import { LoyaltyTransactionHistory } from "@/components/loyalty/LoyaltyTransactionHistory";
 import { BadgeCelebration } from "@/components/customer/BadgeCelebration";
@@ -186,57 +187,11 @@ export default function CustomerRewardsPage() {
   // screen was gated behind a `customerLoyaltyData` row that a real customer
   // would never have.
   //
-  // A threshold is measured on its OWN dimension: points, spend, or visits. The
-  // old arithmetic assumed points for every tier, which would have told a
-  // customer they were "200 points away" from a tier that actually wanted
-  // twenty visits.
-  const loyaltyData = useMemo(() => {
-    if (!wallet?.enabled) return null;
-
-    const points = loyaltyAccount?.pointsBalance ?? 0;
-    const creditBalance = loyaltyAccount?.creditBalance ?? 0;
-    const tiers = wallet.tiers;
-
-    const reached = (tier: (typeof tiers)[number]): number => {
-      switch (tier.thresholdType) {
-        case "spend":
-          return loyaltyAccount?.totalSpend ?? 0;
-        case "visits":
-          return loyaltyAccount?.totalVisits ?? 0;
-        default:
-          return loyaltyAccount?.lifetimePointsEarned ?? 0;
-      }
-    };
-
-    const currentTier =
-      tiers.find((tier) => tier.id === loyaltyAccount?.currentTierId) ?? null;
-    // The first tier they do not yet meet. Tiers arrive lowest-first.
-    const nextTier =
-      tiers.find((tier) => reached(tier) < tier.thresholdValue) ?? null;
-
-    const have = nextTier ? reached(nextTier) : 0;
-    const need = nextTier?.thresholdValue ?? 0;
-    const floor =
-      currentTier &&
-      nextTier &&
-      currentTier.thresholdType === nextTier.thresholdType
-        ? currentTier.thresholdValue
-        : 0;
-    const span = need - floor;
-    const progressPercentage = span > 0 ? ((have - floor) / span) * 100 : 0;
-
-    return {
-      points,
-      creditBalance,
-      currentTier,
-      nextTier,
-      /** How much more, on the NEXT tier's own dimension. */
-      toNextTier: nextTier ? Math.max(0, need - have) : 0,
-      /** What they have on that dimension, for the "x / y" line. */
-      towardNextTier: have,
-      progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
-    };
-  }, [wallet, loyaltyAccount]);
+  // The arithmetic moved to `@/lib/loyalty/customer-standing` on 2026-09-21,
+  // unchanged and unit-tested, because the DASHBOARD needed the same answer and
+  // was still giving a fixture one. Two screens deriving a tier separately is
+  // how they start disagreeing.
+  const loyaltyData = useMemo(() => customerStanding(wallet), [wallet]);
 
   // Get referral codes for this customer
   const customerReferralCodes = useMemo(() => {
