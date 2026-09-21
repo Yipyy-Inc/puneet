@@ -19607,3 +19607,98 @@ depend on what hour CI runs.
 the live board needs a booking that both ends today and has a check-in later
 than now, which the board's fixtures cannot express without contradicting
 themselves. Said here rather than left to be assumed from a green suite.
+
+## 2026-09-21 — A daycare rate's DESCRIPTION became a booking blocker
+
+Found by the full e2e suite, not by reading: four specs in `booking-form-saves`
+and one in `booking-wizard` could not click **Create booking**. The button was
+disabled, `aria-busy="false"` ruled out the loading states, and what remained
+was `calculatePrice.rateGap`.
+
+The chain, in one line: **the New Booking form defaults a daycare day to the
+facility's whole open window, and yesterday's rate matcher treats a rate's
+hours as a ceiling that refuses.**
+
+The e2e facility is open 07:00–19:00 — twelve hours — and carries the stock
+rate card every facility started from:
+
+```
+Half day  $24   durationHours: 5    "Up to 5 hours, morning or afternoon."
+Full day  $38   durationHours: 10   "Up to 10 hours of supervised play, a nap and a snack."
+```
+
+Twelve hours is longer than either, so `daycareDayRate` returned null, the form
+reported a rate gap, and daycare could not be booked AT ALL. Every default
+booking, at a facility with a perfectly ordinary rate card.
+
+### Why this is the same bug it was written to fix
+
+`daycare-pricing.ts` exists because the client complained twice on 2026-09-21
+that a facility which had just saved a rate card was told "This facility has no
+daycare rate yet". The fix made rates match by hours instead of by type — and
+then re-created the symptom one field further along, because the DEFAULT stay
+length is the open window and no rate claimed to cover it.
+
+**A fix that moves a symptom one field along is not finished, and only the
+default case shows you.** The unit tests all built rates with an explicit
+`maxDurationHours`, so the path that actually shipped — legacy rates, a long
+open day — had no test at all.
+
+### What decided it: where the ceiling came from
+
+`maxRateHours` reads three sources in order, and they are not equal in
+authority:
+
+- `maxDurationHours` — asked for in plain words by the rate editor. A facility
+  that filled it in has SAID where its service stops.
+- `durationHours` — **display-only prose until 2026-09-21**, sitting beside the
+  price. The module's own header says so: "`durationHours` was shown beside the
+  price and never read."
+- the `type`'s guess — never the facility's words at all.
+
+Promoting the second into a hard cutoff puts words in a facility's mouth. So an
+INFERRED ceiling now selects a rate and never withholds one: where nothing
+covers the stay, the longest inferred rate prices it (cheapest among ties), and
+a guest who stayed past it is what late-pickup fees are for — which, as of the
+same day, actually work. An EXPLICIT `maxDurationHours` still refuses, because
+that one the facility really did set.
+
+### Blast radius, measured rather than assumed
+
+Two facilities on the platform have daycare rates at all, and both are
+ARCHIVED — the e2e tenant and a demo. Doggieville, the live one, has no
+`daycare_rates` row, so no real customer was blocked. **It was a trap rather
+than an outage**, and it was armed: the client is actively configuring daycare
+rates, which is why the module was written the day before.
+
+## 2026-09-21 — A teardown that throws is a teardown that did nothing
+
+Second finding from the same run, and a repeat. `booking-payment-ledger`'s
+`afterAll` did:
+
+```ts
+const bookings = (await res.json()) as BookingPayload[] | null;
+for (const b of bookings ?? []) { ... }
+```
+
+`?? []` guards null. What arrived was an OBJECT, so `for...of` threw
+`object is not iterable` inside `afterAll` — and the cleanup that had been
+carefully written reversed nothing, cancelled nothing, and left its paid
+bookings on the shared database.
+
+**`booking-payment-screens.spec.ts` already carried a comment explaining this
+exact failure**, with the `Array.isArray` guard applied. The lesson was learned
+in one file and never propagated, so it was sitting in four more.
+
+Audited all nine sites that iterate a `?? []`. Three were already safe — the
+Supabase client's `{ data }` is typed array-or-null, and `schedule-audit-trail`
+destructures a documented `{ shifts }` after checking `res.ok()`. A fourth,
+`listBookings` in `booking-checkout-truth`, already checks `Array.isArray` and
+retries. The two that shared the broken shape — `client-balance` and
+`client-pet-write-path` — are guarded now, and all of them SAY SO when the list
+cannot be read rather than reporting the zero they did.
+
+This is the third time in one day that a cleanup reported success having done
+nothing. The rule has not changed and is worth restating: **cleanup is not
+verified by having been written.** Read the database back, or print what it
+could not do.

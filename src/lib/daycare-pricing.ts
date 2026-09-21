@@ -53,6 +53,21 @@ const LEGACY_HOURS: Record<string, number> = {
  * newest meaning first: the explicit hours the facility typed, then what its
  * type implied.
  */
+/**
+ * Did the facility SET a ceiling, or are we inferring one from old copy?
+ *
+ * The distinction decides whether a stay nothing covers is a real gap.
+ * `maxDurationHours` is asked for in plain words by the rate editor, so a
+ * facility that filled it in has said where its service stops. `durationHours`
+ * was DISPLAY-ONLY until 2026-09-21 — it sat beside the price as prose, and
+ * the fixture every facility started from carried "Up to 10 hours of
+ * supervised play, a nap and a snack" — so reading it as a hard cutoff puts
+ * words in a facility's mouth that it never said.
+ */
+export function ceilingWasSet(rate: DaycareRate): boolean {
+  return typeof rate.maxDurationHours === "number" && rate.maxDurationHours > 0;
+}
+
 export function maxRateHours(rate: DaycareRate): number {
   if (typeof rate.maxDurationHours === "number" && rate.maxDurationHours > 0) {
     return rate.maxDurationHours;
@@ -113,7 +128,42 @@ export function daycareRateForHours(
           return max <= 0 || max >= hours;
         });
 
-  if (covering.length === 0) return null;
+  if (covering.length === 0) {
+    // ── NOTHING COVERS THE STAY. IS THAT A GAP, OR AN OLD DESCRIPTION? ────
+    //
+    // Where the facility SET a ceiling, it is a gap and the caller says so:
+    // a business that priced up to ten hours has not priced twelve.
+    //
+    // Where the ceiling was only INFERRED — `durationHours`, display-only
+    // prose until 2026-09-21, or the type's guess — blocking is the older bug
+    // wearing new clothes. The New Booking form defaults a daycare day to the
+    // facility's whole open window, so a facility open 07:00-19:00 carrying
+    // the stock "Full day ... up to 10 hours" description could not book
+    // daycare AT ALL: every default booking asked for twelve hours, no rate
+    // claimed to cover it, and Create booking sat disabled. That is the exact
+    // complaint this module was written to answer — "I set a rate and it says
+    // I have none" — reappearing one field further along.
+    //
+    // So an inferred ceiling selects a rate and never withholds one: the
+    // longest rate prices the day, and a guest who stayed past it is what
+    // late-pickup fees are for (see @/lib/policies/time-fee).
+    const inferred = active.filter((rate) => !ceilingWasSet(rate));
+    if (inferred.length === 0) return null;
+
+    const longestHours = inferred.reduce(
+      (longest, rate) => Math.max(longest, maxRateHours(rate)),
+      0,
+    );
+    // Cheapest among the longest, for the same reason `covering` picks the
+    // cheapest: two rates that both cover a stay are two prices for it, and
+    // charging the dearer because it was listed first is nobody's rule.
+    return inferred
+      .filter((rate) => maxRateHours(rate) === longestHours)
+      .reduce((cheapest, rate) =>
+        rate.basePrice < cheapest.basePrice ? rate : cheapest,
+      );
+  }
+
   return covering.reduce((cheapest, rate) =>
     rate.basePrice < cheapest.basePrice ? rate : cheapest,
   );

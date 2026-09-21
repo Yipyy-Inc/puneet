@@ -137,13 +137,22 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const bookings = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[] | null;
+    // The shape is CHECKED, not assumed. `?? []` guards null; a 500 answers
+    // with an `{error}` object, and `for...of` on that throws inside
+    // `afterAll` — turning a reporting failure into a cleanup that silently
+    // does nothing and leaves paid bookings on the shared database.
+    const listed = await page.request.get("/api/bookings");
+    const body = listed.ok() ? await listed.json().catch(() => null) : null;
+    const bookings: BookingPayload[] = Array.isArray(body) ? body : [];
+    if (!Array.isArray(body)) {
+      console.log(
+        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+      );
+    }
 
     let reversed = 0;
     let cancelled = 0;
-    for (const b of bookings ?? []) {
+    for (const b of bookings) {
       if (!b.specialRequests?.includes(MARKER)) continue;
       if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
 

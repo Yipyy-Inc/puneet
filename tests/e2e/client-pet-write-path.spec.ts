@@ -75,12 +75,22 @@ test.describe("client and pet write path", () => {
       // booking — writing `outstandingBalance: 0` here would be teardown that
       // silently does nothing, and the next run would start with a client who
       // already owes money and a test that "passes" for the wrong reason.
-      const bookings = (await (
-        await page.request.get("/api/bookings")
-      ).json()) as
-        | { id: string; status?: string; specialRequests?: string }[]
-        | null;
-      for (const b of bookings ?? []) {
+      // The shape is CHECKED, not assumed: a 500 answers with an `{error}`
+      // object, and `for...of` on that throws inside teardown — a cleanup
+      // that does nothing while looking like one that found nothing.
+      const listed = await page.request.get("/api/bookings");
+      const body = listed.ok() ? await listed.json().catch(() => null) : null;
+      const bookings: {
+        id: string;
+        status?: string;
+        specialRequests?: string;
+      }[] = Array.isArray(body) ? body : [];
+      if (!Array.isArray(body)) {
+        console.log(
+          `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+        );
+      }
+      for (const b of bookings) {
         if (!b.specialRequests?.includes(MARKER)) continue;
         if (b.status === "cancelled") continue;
         await page.request.patch(`/api/bookings/${b.id}`, {

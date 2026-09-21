@@ -352,7 +352,51 @@ describe("rate cards saved before hours were asked for", () => {
     const stored = [legacyRate("half-day", 45, 5)];
     expect(maxRateHours(stored[0])).toBe(5);
     expect(daycareDayRate({ rates: stored, hours: 5 })).toBe(45);
-    expect(daycareDayRate({ rates: stored, hours: 6 })).toBeNull();
+  });
+
+  // ── AN INFERRED CEILING SELECTS A RATE, IT NEVER WITHHOLDS ONE ──────────
+  //
+  // This asserted `null` for a stay longer than the only rate, and that
+  // reintroduced the bug this module exists to fix, one field further along.
+  // The New Booking form defaults a daycare day to the facility's whole open
+  // window, so the e2e facility — open 07:00-19:00 with the stock "Full day
+  // ... up to 10 hours" description — asked for twelve hours on EVERY default
+  // booking, matched no rate, and left Create booking disabled. Four specs in
+  // `booking-form-saves` found it.
+  //
+  // `durationHours` was prose until 2026-09-21. Prose does not get to block a
+  // booking; an explicit `maxDurationHours` does.
+  it("prices a longer day from the longest legacy rate rather than refusing", () => {
+    const stored = [legacyRate("half-day", 45, 5)];
+    expect(daycareDayRate({ rates: stored, hours: 6 })).toBe(45);
+    expect(daycareDayRate({ rates: stored, hours: 12 })).toBe(45);
+  });
+
+  it("the facility's own stored card prices its own open day", () => {
+    // Facility 11's actual rows, against its actual hours: open 07:00-19:00.
+    const stored = [
+      legacyRate("half-day", 24, 5),
+      legacyRate("full-day", 38, 10),
+    ];
+    expect(daycareDayRate({ rates: stored, hours: 5 })).toBe(24);
+    expect(daycareDayRate({ rates: stored, hours: 10 })).toBe(38);
+    // Twelve hours: longer than either, priced at the longest rather than
+    // refused. The overage is a late-pickup fee's job, not a booking blocker.
+    expect(daycareDayRate({ rates: stored, hours: 12 })).toBe(38);
+  });
+
+  it("but a ceiling the facility actually SET is still a gap", () => {
+    // `rate()` sets maxDurationHours, which is what the editor writes now.
+    const priced = [rate("Full day", 38, 10)];
+    expect(daycareDayRate({ rates: priced, hours: 10 })).toBe(38);
+    expect(daycareDayRate({ rates: priced, hours: 12 })).toBeNull();
+  });
+
+  it("a set ceiling does not drag an unset one down with it", () => {
+    // One rate says where it stops, the other never did. The stay exceeds
+    // both: the explicit one is a gap, the legacy one still prices.
+    const mixed = [rate("Full day", 60, 8), legacyRate("half-day", 45, 5)];
+    expect(daycareDayRate({ rates: mixed, hours: 12 })).toBe(45);
   });
 
   it("falls back to what the type implied when no hours were saved", () => {
