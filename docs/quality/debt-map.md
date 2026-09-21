@@ -19206,9 +19206,60 @@ facility gets a SECOND client record for one person. The client had exactly
 that on 2026-09-21 — refs 855 and 92037410, both "Parminder Singh", each with a
 dog called Bubu. Detecting that safely means matching on something weaker than
 an address (a shared phone number, say) and showing it as a QUESTION for staff
-rather than merging anything. **Not built.** A merge is also not available:
-facilities-cannot-be-deleted applies to clients for the same reason — the
-ledger points at them.
+rather than merging anything. **Not built.**
+
+> **Correction, same day.** This paragraph first said "a merge is also not
+> available: facilities-cannot-be-deleted applies to clients for the same
+> reason — the ledger points at them." **That is wrong**, and measured below.
+> Only `payments` and `store_credit_entries` RESTRICT. Of the 34 foreign keys
+> into `clients`, most CASCADE — `bookings` among them. A client is deletable
+> whenever they have never paid.
+
+### 🔴 DELETING A CLIENT DESTROYS THEIR BOOKING HISTORY, SILENTLY
+
+Measured 2026-09-21 from `pg_constraint`: 34 tables reference `public.clients`.
+`payments` and `store_credit_entries` are `on delete restrict`; `call_record`,
+`estimates`, `incidents`, `gift_cards`, `retail_sales`, `message_sends`,
+`payment_intents`, `promo_code_redemptions` and `grooming_waitlist_entries` are
+`set null`. **Everything else cascades** — `bookings`, `pets`,
+`loyalty_accounts`, `report_cards`, `waiver_signatures`, `form_submissions`,
+`customer_packages`, `customer_memberships`, `saved_cards` and the whole
+training set.
+
+`DELETE /api/clients/[ref]` is live, gated by `delete_clients`. Its comment
+notes that PETS cascade and calls that the right shape. It does not mention
+bookings, and nothing warns the person pressing the button.
+
+So the RESTRICT on `payments` protects a client who has paid — by accident,
+and only then. Client 855 has **6 bookings and no payments**: deleting it
+succeeds and takes all six with it, plus any report cards, waivers and signed
+forms. There is no confirmation naming what is about to go.
+
+**This matters most because "delete the duplicate" is the obvious answer to the
+problem above, and it is the dangerous operation.** Any duplicate handling must
+MOVE rows to the survivor and deactivate the loser — never delete.
 
 **Also not built:** the same indicator on the client LIST, which would let a
 facility find every unclaimed record at once rather than one at a time.
+
+### Fixed 2026-09-21 — the delete now names what it would destroy
+
+`DELETE /api/clients/[ref]` counts the cascading history first — bookings,
+report cards, signed waivers, submitted forms — and refuses with **422** and
+the numbers unless the caller repeats it with `?confirm=history`.
+
+**Not a trigger, deliberately.** `forms.sql` and `waivers.sql` both assert that
+"an erasure request has to be able to complete": a person's record must be
+destroyable on request, history and all. So the rule cannot be "never". It is
+"not without having been told what goes", and a confirmation belongs in the
+layer that can ask.
+
+**An unreadable table counts as 1, not 0.** Unknown must not read as "nothing
+to lose". That deliberate bias is also the way this guard could go wrong — it
+would warn about every client alive and make the route useless — so
+`client-delete-guard.spec.ts` asserts the complementary case too: a client with
+no history still deletes with no ceremony. Three tests: refused with the count,
+empty client still deletes, confirmed delete really does cascade.
+
+**Nothing in the app called this route.** It was a loaded route with no trigger
+attached, which is the cheapest possible moment to have found it.

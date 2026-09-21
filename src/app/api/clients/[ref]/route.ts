@@ -160,8 +160,56 @@ export async function PATCH(
   );
 }
 
+/**
+ * What deleting this client would take with it.
+ *
+ * Measured 2026-09-21 from `pg_constraint`: 34 foreign keys point at
+ * `public.clients`. Only `payments` and `store_credit_entries` are
+ * `on delete restrict`. Almost everything else CASCADES — `bookings`,
+ * `report_cards`, `waiver_signatures`, `form_submissions`,
+ * `customer_packages`, `saved_cards` and the whole training set.
+ *
+ * So the restrict on `payments` protects a client who has PAID, by accident
+ * and only then. A client with six unpaid bookings deleted cleanly and took
+ * all six with them, their signed waivers included, and nothing said so.
+ *
+ * Counted rather than guessed, because the number is what makes the warning
+ * worth reading: "this will delete 6 bookings and 2 signed waivers" is a
+ * different sentence from "are you sure?".
+ */
+async function historyOf(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  clientId: string,
+): Promise<{ total: number; counts: Record<string, number> }> {
+  const TABLES = [
+    "bookings",
+    "report_cards",
+    "waiver_signatures",
+    "form_submissions",
+  ] as const;
+
+  const counted = await Promise.all(
+    TABLES.map(async (table) => {
+      const { count, error } = await supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId);
+      // A table this caller cannot read counts as UNKNOWN, not as zero — and
+      // unknown must not read as "nothing to lose". One is enough to warn.
+      if (error) return [table, 1] as const;
+      return [table, count ?? 0] as const;
+    }),
+  );
+
+  const counts = Object.fromEntries(counted.filter(([, n]) => n > 0));
+  return {
+    total: counted.reduce((sum, [, n]) => sum + n, 0),
+    counts,
+  };
+}
+
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ ref: string }> },
 ) {
   const user = await getCurrentUser().catch(() => null);
@@ -176,6 +224,50 @@ export async function DELETE(
   }
 
   const supabase = await createServerClient();
+
+  // The row, through a read this caller has to be able to make — so a client
+  // at another facility is "not found" here rather than becoming an RLS
+  // refusal further down that says less.
+  const { data: target } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("ref", numericRef)
+    .maybeSingle();
+
+  if (!target) {
+    return NextResponse.json({ error: "Client not found." }, { status: 404 });
+  }
+
+  // ── NOT BY ACCIDENT ─────────────────────────────────────────────────────
+  //
+  // Deliberately NOT a trigger. `supabase/tests/forms.sql` and `waivers.sql`
+  // both assert, in as many words, that "an erasure request has to be able to
+  // complete" — a person's record must be destroyable on request, history and
+  // all. That is an obligation, not an oversight, so the rule here is not
+  // "never" but "not without having been told what goes".
+  //
+  // A confirmation belongs in the layer that can ask. `?confirm=history` is
+  // the caller saying they have seen the counts below.
+  const confirmed = request.nextUrl.searchParams.get("confirm") === "history";
+
+  if (!confirmed) {
+    const { total, counts } = await historyOf(supabase, target.id);
+    if (total > 0) {
+      return NextResponse.json(
+        {
+          error:
+            `${target.name} has records that would be destroyed with them: ` +
+            describe(counts) +
+            ". Deleting a client cannot be undone.",
+          reason:
+            "Mark the client inactive instead, or repeat this with " +
+            "?confirm=history if the record really must go.",
+          destroys: counts,
+        },
+        { status: 422 },
+      );
+    }
+  }
 
   // `clients_delete` needs delete_clients — a permission distinct from
   // edit_clients precisely because this is not an edit. A customer cannot
@@ -215,4 +307,20 @@ export async function DELETE(
   }
 
   return new NextResponse(null, { status: 204 });
+}
+
+/** "6 bookings, 2 signed waivers" — the plural handled, because it is read. */
+function describe(counts: Record<string, number>): string {
+  const LABEL: Record<string, [string, string]> = {
+    bookings: ["booking", "bookings"],
+    report_cards: ["report card", "report cards"],
+    waiver_signatures: ["signed waiver", "signed waivers"],
+    form_submissions: ["submitted form", "submitted forms"],
+  };
+  return Object.entries(counts)
+    .map(([table, n]) => {
+      const [one, many] = LABEL[table] ?? [table, table];
+      return `${n} ${n === 1 ? one : many}`;
+    })
+    .join(", ");
 }
