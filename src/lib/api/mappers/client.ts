@@ -63,6 +63,10 @@ export function rowToClient(row: ClientRow, facilityName: string): Client {
     lastVisitDate: row.last_visit_date ?? undefined,
     outstandingBalance: Number(row.outstanding_balance),
     noShowCount: row.no_show_count,
+    // Already on the row — `CLIENT_SELECT` is `*` — and thrown away until
+    // 2026-09-21. As a boolean, never the id: see the field's note in
+    // types/client.ts.
+    hasPortalAccount: row.profile_id !== null,
     pets: (row.pets ?? []).map(rowToPet),
   } as Client;
 }

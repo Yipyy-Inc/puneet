@@ -64,6 +64,7 @@ import {
   ArrowLeft,
   Building,
   Mail,
+  Link as LinkIcon,
   Phone,
   Heart,
   FileText,
@@ -737,8 +738,18 @@ export default function ClientDetailPage({
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
-          {/* Contact & Info Section */}
-          <div className="grid grid-cols-3 gap-4">
+          {/*
+            Contact & Info. THREE columns only from 1024px (§6 rule 6's own
+            breakpoint): `grid-cols-3` with no qualifier held three columns at
+            every width, so at 599px each card was about 90px wide — the French
+            copy broke to one word per line and the emergency contact's email
+            ran outside its card. The same file already does this correctly at
+            line ~1049.
+
+            Found by looking at 599px, which §6 rule 7 asks for and which is
+            the only reason anybody would see it: it reads perfectly at 1440.
+          */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -815,6 +826,54 @@ export default function ClientDetailPage({
                       <span className="text-sm font-medium">
                         {maskContact(client.email)}
                       </span>
+                    </div>
+                    {/*
+                      WHETHER THIS RECORD REACHES A LOGIN.
+
+                      A record is claimed by MATCHING THE EMAIL ABOVE
+                      (`private.link_client_at`), and nothing anywhere showed
+                      whether that had happened. A customer who signs in with a
+                      different address than the desk recorded is never linked:
+                      the portal shows them no pets and tells them "no pet
+                      added" when they try to book, and the facility could not
+                      see why. It cost the client a day on 2026-09-21.
+
+                      The remedy is one field away — correct the address and the
+                      next visit claims the record — so the two sit together.
+
+                      §3: the word carries the state, not the ink alone. §2b:
+                      not-connected is WARNING, not error; a client the desk
+                      entered this morning has no account yet and nothing is
+                      wrong with that.
+                    */}
+                    <div className="bg-muted/50 flex items-start gap-3 rounded-lg p-2.5">
+                      <LinkIcon
+                        className={cn(
+                          "mt-0.5 size-4 shrink-0",
+                          client.hasPortalAccount
+                            ? "text-success"
+                            : "text-warning",
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <span
+                          className={cn(
+                            "text-sm font-medium",
+                            client.hasPortalAccount
+                              ? "text-success"
+                              : "text-warning",
+                          )}
+                        >
+                          {client.hasPortalAccount
+                            ? profileT("portalAccountConnected")
+                            : profileT("portalAccountMissing")}
+                        </span>
+                        {!client.hasPortalAccount && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {profileT("portalAccountHelp")}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     {client.phone && (
                       <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">

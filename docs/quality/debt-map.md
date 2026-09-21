@@ -19162,3 +19162,53 @@ risking leaving it unlinked for every other spec.
 
 **Workaround while unshipped:** use the facility's own address
 (`<slug>.yipyy.com`), where the existing heal already runs.
+
+## 2026-09-21 — The address IS the credential, so a wrong address is invisible
+
+The apex fix above links a customer to the record a facility already made for
+them. It matches **the email on that record** against the email they sign in
+with (`private.link_client_at`), and that is the whole of the mechanism.
+
+**So when the two addresses differ, nothing links and nothing ever will.** The
+customer sees no pets and is told "no pet added" when they book; the facility
+sees a client record that looks completely normal. Neither side can see the
+cause.
+
+### It cannot be closed by guessing, and that is the point
+
+[onboarding-and-roles.md](../product/onboarding-and-roles.md) states the model:
+**"the address is the credential"**. Staff and owner invitations carry no token
+at all, precisely so that a forwarded email grants nothing. Matching a client
+record on name, or phone, or anything a stranger could also know, would hand
+that stranger somebody's pets, bookings and balance — which is the guarantee
+the whole model exists to make.
+
+**The remedy already existed and was invisible.** Staff holding `edit_clients`
+bypass the identity guards in `client_pet_write_integrity`, so correcting the
+email on the record has always worked, and the next `/api/clients/me` claims it.
+Nothing said so, and nothing showed whether a record had been claimed:
+`clients.profile_id` was SELECTED on every read (`CLIENT_SELECT` is `*`) and
+dropped by `rowToClient`.
+
+So the fix is to show the state where the remedy lives — `hasPortalAccount` on
+the client record, as a boolean beside the email that decides it, with the one
+sentence that matters: _they claim this record by signing in with the address
+above; if they use a different one, change it here._
+
+**A boolean, never the id.** `profile_id` is an opaque WorkOS subject, staff
+have no use for it, and `profiles_read` admits only the caller's own row — so
+the address behind it cannot be read from a facility screen anyway.
+
+### The harm it leaves behind, which is NOT fixed
+
+A customer who cannot claim does the obvious thing: they register, and the
+facility gets a SECOND client record for one person. The client had exactly
+that on 2026-09-21 — refs 855 and 92037410, both "Parminder Singh", each with a
+dog called Bubu. Detecting that safely means matching on something weaker than
+an address (a shared phone number, say) and showing it as a QUESTION for staff
+rather than merging anything. **Not built.** A merge is also not available:
+facilities-cannot-be-deleted applies to clients for the same reason — the
+ledger points at them.
+
+**Also not built:** the same indicator on the client LIST, which would let a
+facility find every unclaimed record at once rather than one at a time.

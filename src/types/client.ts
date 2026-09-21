@@ -177,6 +177,22 @@ export const clientSchema = z.object({
    */
   outstandingBalance: z.number().optional(),
   noShowCount: z.number().optional(),
+  /**
+   * Whether this record is connected to a customer login yet.
+   *
+   * `clients.profile_id`, as a yes/no. The id itself is deliberately NOT
+   * exposed: it is an opaque WorkOS subject, staff have no use for it, and
+   * `profiles_read` admits only the caller's own row, so the address behind it
+   * cannot be read here anyway.
+   *
+   * It exists because a record is claimed by MATCHING THE EMAIL ADDRESS ON IT
+   * (`private.link_client_at`), and nothing showed whether that had happened.
+   * A customer who signs in with a different address than the front desk
+   * recorded is never linked, sees no pets, and is told "no pet added" when
+   * they try to book — and the facility had no way to see the cause. It cost
+   * the client a day on 2026-09-21.
+   */
+  hasPortalAccount: z.boolean().optional(),
   /** Saved card-on-file records — surfaced as one-tap "charge this card"
    *  options on the at-pickup payment screen. Real card numbers never live
    *  here; only the brand + last 4 + expiry come back from the gateway. */

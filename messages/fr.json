@@ -2546,7 +2546,10 @@
         "noGiftCards": "Ce client n’a acheté aucune carte-cadeau.",
         "settledOne": "{amount} enregistré sur {n} réservation",
         "settledMany": "{amount} enregistré sur {n} réservations",
-        "settleFailed": "Rien n’a été enregistré"
+        "settleFailed": "Rien n’a été enregistré",
+        "portalAccountConnected": "Compte client connecté",
+        "portalAccountMissing": "Aucun compte client pour l’instant",
+        "portalAccountHelp": "Cette fiche est associée au compte lorsque la personne se connecte avec l’adresse ci-dessus. Si elle en utilise une autre, modifiez-la ici."
       },
       "clientDocuments": {
         "title": "Documents et ententes",

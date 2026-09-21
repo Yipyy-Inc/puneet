@@ -141,6 +141,33 @@ test("the apex claims the record a facility already made for them", async ({
   ).toBeTruthy();
 });
 
+test("the facility can see that the record has no login attached", async ({
+  page,
+}) => {
+  // ── WHY THIS IS IN THIS FILE ──────────────────────────────────────────
+  //
+  // It is the same fact from the other side. A record is claimed by matching
+  // the EMAIL ON IT, so a customer who signs in with a different address is
+  // never linked — and until 2026-09-21 nothing showed the facility whether a
+  // record had been claimed, so the cause was invisible from the only screen
+  // that can fix it. `clients.profile_id` was being SELECTED (`CLIENT_SELECT`
+  // is `*`) and dropped by the mapper.
+  //
+  // This runs BEFORE the claim below and after the one above, so it reads a
+  // record that is already linked. The unclaimed half is asserted in
+  // beforeAll's own read — see the first test — and the boolean is what staff
+  // are shown either way.
+  await signIn(page, ACCOUNTS.owner);
+  const res = await page.request.get(`/api/clients/${clientRef}`);
+  expect(res.status(), await res.text()).toBe(200);
+  const client = (await res.json()) as { hasPortalAccount?: boolean };
+
+  expect(
+    client.hasPortalAccount,
+    "the facility cannot tell whether this record reaches a login",
+  ).toBe(true);
+});
+
 test("and asking twice does not claim a second record", async ({ page }) => {
   await signIn(page, ACCOUNTS.caretaker);
   const res = await page.request.get("/api/clients/me");

@@ -2546,7 +2546,10 @@
         "noGiftCards": "This client has not bought a gift card.",
         "settledOne": "{amount} recorded on {n} booking",
         "settledMany": "{amount} recorded across {n} bookings",
-        "settleFailed": "Nothing was recorded"
+        "settleFailed": "Nothing was recorded",
+        "portalAccountConnected": "Portal account connected",
+        "portalAccountMissing": "No portal account yet",
+        "portalAccountHelp": "They claim this record by signing in with the address above. If they use a different one, change it here."
       },
       "clientDocuments": {
         "title": "Documents and agreements",
