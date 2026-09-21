@@ -180,6 +180,16 @@ export default function CustomerEstimateViewPage() {
                           {li.description}
                         </span>
                       )}
+                      {/* Said on the line, because this is the document the
+                          customer keeps: a total that does not equal
+                          subtotal x rate has to explain itself. Only where the
+                          estimate charges tax at all — otherwise every line
+                          carries it and the marker says nothing. */}
+                      {estimate.taxRate > 0 && li.taxable === false && (
+                        <span className="text-ink-tertiary ml-1.5 text-[12px] font-bold tracking-[0.06em] uppercase">
+                          {t("noTaxLine")}
+                        </span>
+                      )}
                     </div>
                     <span className="font-semibold tabular-nums">
                       {formatMoney(li.total, locale)}

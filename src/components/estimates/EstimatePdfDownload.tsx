@@ -57,7 +57,7 @@ export function EstimatePdfDownload({
       .map(
         (li) =>
           `<tr>
-            <td style="padding:8px 0;border-bottom:1px solid #f1f5f9">${li.label}${li.description ? `<br><span style="color:#94a3b8;font-size:12px">${li.description}</span>` : ""}</td>
+            <td style="padding:8px 0;border-bottom:1px solid #f1f5f9">${li.label}${li.description ? `<br><span style="color:#94a3b8;font-size:12px">${li.description}</span>` : ""}${e.taxRate > 0 && li.taxable === false ? `<br><span style="color:#677382;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">${t("noTaxLine")}</span>` : ""}</td>
             <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:center">${li.quantity}</td>
             <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right">${money(li.amount)}</td>
             <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${money(li.total)}</td>

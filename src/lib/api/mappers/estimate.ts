@@ -194,6 +194,19 @@ export const lineItemSchema = z.object({
   description: z.string().trim().max(500).optional(),
   amount: z.number().finite().min(-1_000_000).max(1_000_000),
   quantity: z.number().finite().min(0).max(10_000),
+  /**
+   * Whether this line is charged the facility's tax.
+   *
+   * PER LINE, not per estimate. A booking splits cleanly because it has
+   * `total_cost` and `extras_total` as separate columns; an estimate's
+   * `line_items` is one flat array, so there is no service/extras boundary for
+   * an estimate-level flag to apply to. Retail already prices this way per
+   * product.
+   *
+   * Optional, and absent means TAXED — the same direction as every other
+   * `taxable` in the app. See lib/payments/service-tax.ts.
+   */
+  taxable: z.boolean().optional(),
 });
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -252,22 +265,45 @@ export const estimateCreateSchema = estimateBodySchema
  * the screen's arithmetic is a preview, the row's is the quote.
  */
 export function estimateTotals(body: {
-  lineItems: { amount: number; quantity: number }[];
+  lineItems: { amount: number; quantity: number; taxable?: boolean }[];
   discount: number;
   taxRate: number;
 }) {
   const round = (n: number) => Math.round(n * 100) / 100;
-  const subtotal = round(
-    body.lineItems.reduce((s, l) => s + l.amount * l.quantity, 0),
-  );
+  const lineTotal = (l: { amount: number; quantity: number }) =>
+    l.amount * l.quantity;
+  const subtotal = round(body.lineItems.reduce((s, l) => s + lineTotal(l), 0));
   const discount = round(Math.min(body.discount, Math.max(subtotal, 0)));
-  const taxable = Math.max(subtotal - discount, 0);
+
+  // ── ONLY THE TAXABLE LINES ARE TAXED ──────────────────────────────────
+  //
+  // A facility can mark a service tax-free (2026-09-21), and an estimate is a
+  // document the customer keeps and can download — tax shown on an exempt
+  // supply reads as a compliance error, not a rounding one.
+  //
+  // Absent means taxed, so an estimate written before the field existed, or by
+  // a screen that does not set it, quotes exactly what it quoted yesterday.
+  const taxableGross = round(
+    body.lineItems
+      .filter((l) => l.taxable !== false)
+      .reduce((s, l) => s + lineTotal(l), 0),
+  );
+
+  // The discount comes off the taxable share in PROPORTION, the same
+  // allocation the retail counter uses — a discount reduces the price of every
+  // supply it covers, not only the taxed ones.
+  const netOfDiscount = Math.max(subtotal - discount, 0);
+  const taxable =
+    subtotal <= 0
+      ? 0
+      : round(netOfDiscount * Math.min(1, taxableGross / subtotal));
+
   const taxAmount = round(taxable * body.taxRate);
   return {
     subtotal: Math.max(subtotal, 0),
     discount,
     taxAmount,
-    total: round(taxable + taxAmount),
+    total: round(netOfDiscount + taxAmount),
   };
 }
 

@@ -19305,3 +19305,188 @@ Ref 92037410 (`admin@yipyy.com`, created 2026-09-21, no bookings, payments,
 forms, waivers or report cards) was set to **inactive**, not deleted: the
 account may still be mid-test, and inactive is reversible where a delete would
 cascade its duplicate pet. Ref 855 keeps the six bookings and the real history.
+
+## 2026-09-21 — A switch that decides nothing, four times over: tax per service
+
+The client, looking at the daycare rate dialog: _"Then choose taxes if they want
+to skip taxes for any service we can unselect taxes."_ The facility's tax config
+had been all-or-nothing for the whole business since it became real — a facility
+charging GST charged it on everything it sold.
+
+The interesting part is not the feature. It is what looking for a place to put
+it turned up.
+
+### Custom modules already had the switch, and nothing read it
+
+`pricing.taxable` has been in the custom-service wizard since custom services
+were written. It is rendered in **four** places — `PricingStep`,
+`WizardReviewPanel`, `CustomModuleDetailDrawer`, and the module's own settings
+page — and the only thing that ever consulted it was `lib/invoice-generator.ts`,
+the FIXTURE invoice builder. Every route that takes money ignored it.
+
+So a facility could build a service, switch tax off, see "Taxable: No" on the
+review panel and on the detail drawer, and be charged tax on every booking of
+it. This is the same defect class `check:inert-permissions` exists to catch in
+the role editor, and there was no equivalent guard for money.
+
+**`ServiceTaxToggle` now says so out loud in the one case where it genuinely
+decides nothing**: a facility that has configured no taxes at all sees "This
+facility charges no tax yet, so this changes nothing" and a link to the screen
+that would fix it, rather than a switch that looks meaningful.
+
+### Two services do not price from the thing their editor edits
+
+This is the trap, and both halves cost a wrong first implementation:
+
+- **BOARDING.** `details.roomCategoryId` is what the CUSTOMER wizard sends and
+  what `priceCustomerBooking` reads. It is absent on all 410 staff-made boarding
+  bookings in the database — `details` there holds `unitAssignment`. The class a
+  stay belongs to is reachable only as
+  `boarding_stays.room_id → facility_rooms.category_id → room_categories`.
+  A resolver trusting the detail key would have resolved **none** of them and
+  looked like it worked.
+- **TRAINING.** The Rates tab's programs look like the priced thing and are not.
+  `training_series.total_price` is what a training booking is actually charged,
+  a series is created standalone, and `training_series` carries **no column
+  pointing back at the program it was modelled on**. A flag on the program alone
+  would have been read by nothing. Both now carry it; bookings resolve against
+  the series.
+
+**The general rule: ask where a service's PRICE comes from, not where its editor
+is.** They are the same thing for daycare and grooming and different for the
+other two.
+
+### The default runs one way only
+
+`taxable` is optional in every schema and `not null default true` in every
+table, and absent always means TAXED. Charging tax that was not owed is a
+refund; NOT charging tax that was owed is the facility's own money, paid to the
+government at year end, for every booking since the mistake. So nothing is ever
+tax-free by omission — only by somebody saying so. `taxableOwedCents` returns
+the input unchanged at a fraction of 1, so the overwhelming majority of bookings
+cannot move by a rounding error.
+
+`taxToAddCents(config, owedCents, bill)` takes the bill as a **required** third
+argument for the same reason. An optional one would have let every call site
+nobody remembered go on taxing an exempt service with no error anywhere — the
+compiler found all four instead.
+
+### The customer had a vote, and the negative control proved it
+
+`bookings.taxable` is a COLUMN and not a key in `details` because the customer
+INSERT branch of `private.enforce_booking_integrity` passes `new.details`
+through untouched. Run before the fix, against the real database:
+
+```
+NEGATIVE CONTROL: taxable=f status=request_submitted total_cost=0.00
+```
+
+The trigger correctly zeroed the price and forced the status — and kept the
+customer's own `taxable => false`. After the fix, the same statement returns
+`taxable=t`, a customer UPDATE cannot move it, and a server write still can.
+`supabase/tests/booking-write-integrity.sql` T19–T21.
+
+### Regenerating src/types/database.ts found a bug nobody was looking for
+
+The generated types were stale enough to report `bookings.taxable` as absent on
+a column that exists, which is what forced the regeneration. It surfaced four
+type errors the stale file had been hiding, and one was live:
+
+**`POST /api/customer/yipyy-go/photos` inserted into `yipyy_go_photos` without
+`facility_id`**, which is `not null` with no default. That insert could never
+have succeeded. The customer saw "This form can no longer take photos" — a 403
+branch written for a policy refusal, reached by a constraint violation instead.
+The other three were `string | null` passed to RPC parameters the generator
+renders as `string` or `string | undefined`; both functions accept null in SQL.
+
+**Read this as a standing cost: a stale generated type file does not fail, it
+hides.** Regenerate it when a migration adds a column, not when something
+breaks.
+
+### A teardown that restored nothing, and passed (2026-09-21)
+
+The throwaway spec that verified the tax switch set GST on the demo facility and
+restored it in `afterAll`:
+
+```ts
+const body = await res.json() as { settings?: Record<string, {value?: unknown}> };
+originalTax = body.settings?.tax_config?.value ?? null;
+...
+if (originalTax !== null) await writeTax(page, originalTax);
+```
+
+`originalTax` came back **null** — the response shape did not match — so the
+guard skipped the restore, the test reported `1 passed`, and `zz-gst` was left
+on `Yipyy Demo Facility` in the shared database. It was found by querying
+Postgres for the marker afterwards, not by the run.
+
+**Two rules come out of it, and the second is the general one:**
+
+1. A teardown guarded by `if (captured)` fails OPEN. When the capture is what
+   breaks, the guard reads as "nothing to restore" and the run stays green.
+   Either assert the capture (`expect(originalTax).not.toBeNull()`) or make
+   teardown write a known-good value unconditionally.
+2. **Cleanup is not verified by having been written.** Same shape as the revoke
+   rule above and the stale-build negative control: the only proof a spec left
+   nothing behind is reading the database back for its marker. A temporary spec
+   that touches shared data gets that query, by hand, before it is deleted.
+
+The marker is what made this recoverable — `id: "zz-gst"` was greppable in
+`facility_settings.value`, so one query found it and one deleted it. A test
+fixture with a realistic-looking id would have been indistinguishable from the
+facility's own configuration.
+
+### Estimates quoted a rate the column could not hold (2026-09-21)
+
+Found while deciding whether estimates should honour the per-service tax flag.
+They should — but this was the worse bug sitting next to it, and it had nothing
+to do with the new feature.
+
+`estimates.tax_rate` was `numeric(6,3)`. The schema documents the column as a
+FRACTION — "0.05 for 5 %" — and Quebec's combined GST (5 %) and QST (9.975 %) is
+**0.14975**, which three decimal places store as **0.150**:
+
+```
+tax on a $2,000 estimate:   $299.50 owed   →   $300.00 quoted
+```
+
+`EstimateWizard` derives the rate by measuring `computeTax(1_000_000)`, so it
+has always produced the exact 0.14975. The column was the only thing rounding
+it, on every estimate, at every facility whose combined rate has more than three
+decimals — which is every Quebec facility, because QST is 9.975 %. Widened to
+`numeric(8,5)` (20260921190000).
+
+**The eight estimates already stored are deliberately not rewritten.** They were
+SENT at the number they show; silently changing a quote's total after the
+customer has it is worse than the half-dollar it corrects.
+
+**Read this as a units problem, not a rounding problem.** A column holding a
+FRACTION needs the precision of the fraction, and 3 decimals is the precision of
+a PERCENTAGE — `14.975` fits `numeric(6,3)` perfectly. The type was right for
+the units it was not storing.
+
+### Per line, because an estimate has no service/extras boundary
+
+Worth recording because the booking answer does not transfer. A booking splits
+cleanly: `total_cost` and `extras_total` are separate columns, so "service
+exempt, extras taxed" is two numbers and one flag. An estimate's `line_items` is
+a single flat jsonb array of `{label, description, amount, quantity}` — free
+text with a number, no reference to a rate — so there is nothing for an
+estimate-level flag to apply to. The flag goes per line, which is also what the
+retail counter already does per product.
+
+Two things that would have made it inert:
+
+* **The wizard did its own arithmetic.** It computed `taxable × rate` locally
+  while `POST /api/estimates` recomputes and stores from `estimateTotals` —
+  fine while both were the same formula, and the moment lines could differ the
+  facility would have seen one total and the customer received another. The
+  wizard calls `estimateTotals` now.
+* **The payload dropped the field.** `lineItems.map()` sent only
+  `{label, description, amount, quantity}`, so a line marked tax-free would have
+  been silently taxed on save. Found by reading the request body, not by a test.
+
+And one more instance of the ratchet doing its job: the four strings this added
+to `EstimateWizard.tsx` were raw English, in a file `check:ui-french` baselines.
+They went through the existing `estimateActions` catalogue in en and fr instead,
+leaving the file four strings LOWER than its baseline rather than higher.

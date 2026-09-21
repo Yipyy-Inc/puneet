@@ -28,6 +28,7 @@ import {
   Clock,
   Plus,
   Trash2,
+  Receipt,
   Mail,
   Phone,
   PawPrint,
@@ -43,7 +44,8 @@ import { trainingQueries } from "@/lib/api/training";
 import { useRooms } from "@/hooks/use-rooms";
 import { useServiceFromPrices } from "@/lib/api/service-from-prices";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
-import { daycareDayRate } from "@/lib/daycare-pricing";
+import { daycareDayRate, daycareRateForHours } from "@/lib/daycare-pricing";
+import { estimateTotals } from "@/lib/api/mappers/estimate";
 import type { TrainingPackage } from "@/types/training";
 import { clientQueries, useCreateClient } from "@/lib/api/client";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
@@ -297,9 +299,8 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     if (selectedService === "boarding" && startDate && endDate) {
       // The chosen class's own nightly rate. No class, or a class the
       // facility has not priced, quotes nothing — staff add the line.
-      const nightlyRate = boardingClasses.find(
-        (c) => c.name === roomType,
-      )?.defaultBasePrice;
+      const boardingClass = boardingClasses.find((c) => c.name === roomType);
+      const nightlyRate = boardingClass?.defaultBasePrice;
       if (nightlyRate == null) return [];
       const nights = nightsBetween();
       items.push({
@@ -308,12 +309,20 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         amount: nightlyRate,
         quantity: nights,
         total: nightlyRate * nights,
+        // The kennel class's own answer, so a quote for a tax-free class does
+        // not show tax the booking will never charge.
+        taxable: boardingClass?.taxable !== false,
       });
     } else if (selectedService === "daycare") {
       // The facility's rate card, through the same resolver the booking
       // wizard uses (@/lib/daycare-pricing).
-      const price = daycareDayRate({ rates: daycareRateCards, half: false });
+      const price = // An estimate names no hours, so every active rate is a candidate and the
+        // cheapest wins — the same answer the wizard gives before a day is picked.
+        daycareDayRate({ rates: daycareRateCards });
       if (price == null) return [];
+      // The SAME resolver picks the rate whose tax answer this is, so the line
+      // and its price can never come from different rates.
+      const daycareRate = daycareRateForHours(daycareRateCards);
       const days = daycareMode === "multi" && endDate ? nightsBetween() + 1 : 1;
       items.push({
         label: "Daycare",
@@ -321,6 +330,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         amount: price,
         quantity: days,
         total: price * days,
+        taxable: daycareRate?.taxable !== false,
       });
     } else if (selectedService === "training") {
       const program = trainingPrograms.find((p) => p.id === trainingProgramId);
@@ -333,6 +343,7 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
         amount: perSession,
         quantity: sessions,
         total: perSession * sessions,
+        taxable: program.taxable !== false,
       });
     } else {
       // Grooming and the rest are priced from a menu this wizard does not
@@ -371,9 +382,20 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
     ? 0
     : computeTax(1_000_000, taxConfig).totalCents / 1_000_000;
   const taxRatePct = taxRate * 100;
-  const taxable = Math.max(0, subtotal - discountAmount);
-  const taxAmount = taxable * taxRate;
-  const total = taxable + taxAmount;
+  // ── THE SAME ARITHMETIC THE ROW IS STORED FROM ──────────────────────────
+  //
+  // `estimateTotals` is what POST /api/estimates recomputes the quote with —
+  // a client-sent total is never stored. This screen used to do its own sum,
+  // which was fine while both were `taxable × rate` and stopped being fine the
+  // moment lines could be individually tax-free: the facility would have seen
+  // one total and the customer received another.
+  const preview = estimateTotals({
+    lineItems: allLineItems,
+    discount: discountAmount,
+    taxRate,
+  });
+  const taxAmount = preview.taxAmount;
+  const total = preview.total;
 
   // Deposit — the FACILITY's rules, through the same two functions the booking
   // flow uses. This read `defaultDepositRules` (the seed file), inlined its own
@@ -532,6 +554,10 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
       description: li.description,
       amount: li.amount,
       quantity: li.quantity,
+      // Sent only when it is FALSE. The server recomputes the quote from these
+      // lines (`estimateTotals`), and absent already means taxed — so writing
+      // `true` on every line would store a field to say what its absence says.
+      ...(li.taxable === false ? { taxable: false } : {}),
     })),
     discount: discountAmount,
     discountReason: discountType
@@ -1630,6 +1656,45 @@ export function EstimateWizard({ open, onOpenChange }: EstimateWizardProps) {
                         <span className="w-20 text-right text-sm font-semibold tabular-nums">
                           ${li.total.toFixed(2)}
                         </span>
+                        {/* ── TAX, PER LINE ──────────────────────────────
+                            Visible and editable, not only derived. Editing any
+                            line replaces the whole auto-generated array
+                            (`lineItems.length > 0 ? lineItems : autoLineItems`),
+                            so a flag that only ever came from the rate would be
+                            lost the first time somebody touched the estimate.
+
+                            Shown only where the facility charges tax at all —
+                            otherwise it is a control that decides nothing. */}
+                        {taxRate > 0 && (
+                          <button
+                            type="button"
+                            aria-pressed={li.taxable !== false}
+                            aria-label={wizFill(
+                              li.taxable !== false
+                                ? "lineTaxedA11y"
+                                : "lineNotTaxedA11y",
+                              { label: li.label },
+                            )}
+                            title={
+                              li.taxable !== false
+                                ? wizT("lineTaxed")
+                                : wizT("lineNotTaxed")
+                            }
+                            onClick={() =>
+                              updateLineItem(i, {
+                                taxable: li.taxable === false,
+                              })
+                            }
+                            className={
+                              li.taxable !== false
+                                ? "text-ink-tertiary hover:text-ink-body inline-flex min-h-10 items-center gap-1 rounded-full px-2 text-[12px] font-bold tracking-[0.06em] uppercase max-lg:min-h-12"
+                                : "text-ink-tertiary hover:text-ink-body inline-flex min-h-10 items-center gap-1 rounded-full px-2 text-[12px] font-bold tracking-[0.06em] uppercase line-through max-lg:min-h-12"
+                            }
+                          >
+                            <Receipt className="size-3" />
+                            {wizT("lineTaxLabel")}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeLineItem(i)}
