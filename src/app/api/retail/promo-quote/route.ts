@@ -49,7 +49,12 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase.rpc("quote_promo_code", {
     p_facility_id: facility.facilityId,
     p_code: body.code,
-    p_client_id: clientId,
+    // `p_client_id uuid` is nullable but has NO default, so it must be sent
+    // and it may be null — a quote for a walk-in with no client record. The
+    // generated types render a nullable-without-default parameter as plain
+    // `string`, which is the one shape they cannot express; the cast says so
+    // rather than hiding it behind a non-null assertion.
+    p_client_id: clientId as unknown as string,
     p_service: "retail",
     p_amount: Number(body.amount),
   });

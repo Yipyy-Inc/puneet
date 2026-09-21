@@ -14,324 +14,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      unfinished_bookings: {
-        Row: {
-          abandoned_at: string;
-          client_id: string;
-          created_at: string;
-          draft: Json;
-          estimated_value: number | null;
-          facility_id: string;
-          id: string;
-          last_contacted_at: string | null;
-          notes: Json;
-          recovered_at: string | null;
-          recovery_detail: string | null;
-          recovery_not_before: string;
-          recovery_outcome: string | null;
-          recovery_resolved_at: string | null;
-          requested_end: string | null;
-          requested_start: string | null;
-          service: string | null;
-          status: string;
-          step: string;
-          updated_at: string;
-        };
-        Insert: {
-          abandoned_at?: string;
-          client_id: string;
-          created_at?: string;
-          draft?: Json;
-          estimated_value?: number | null;
-          facility_id: string;
-          id?: string;
-          last_contacted_at?: string | null;
-          notes?: Json;
-          recovered_at?: string | null;
-          recovery_detail?: string | null;
-          recovery_not_before?: string;
-          recovery_outcome?: string | null;
-          recovery_resolved_at?: string | null;
-          requested_end?: string | null;
-          requested_start?: string | null;
-          service?: string | null;
-          status?: string;
-          step: string;
-          updated_at?: string;
-        };
-        Update: {
-          abandoned_at?: string;
-          client_id?: string;
-          created_at?: string;
-          draft?: Json;
-          estimated_value?: number | null;
-          facility_id?: string;
-          id?: string;
-          last_contacted_at?: string | null;
-          notes?: Json;
-          recovered_at?: string | null;
-          recovery_detail?: string | null;
-          recovery_not_before?: string;
-          recovery_outcome?: string | null;
-          recovery_resolved_at?: string | null;
-          requested_end?: string | null;
-          requested_start?: string | null;
-          service?: string | null;
-          status?: string;
-          step?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "unfinished_bookings_client_id_fkey";
-            columns: ["client_id"];
-            isOneToOne: false;
-            referencedRelation: "clients";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "unfinished_bookings_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      yipyy_go_charges: {
-        Row: {
-          add_on_id: string | null;
-          booking_id: string;
-          charge_key: string;
-          created_at: string;
-          facility_id: string;
-          id: string;
-          kind: string;
-          line_item_id: string | null;
-          name: string;
-          quantity: number;
-          submission_id: string | null;
-          unit_price: number;
-          updated_at: string;
-        };
-        Insert: {
-          add_on_id?: string | null;
-          booking_id: string;
-          charge_key: string;
-          created_at?: string;
-          facility_id: string;
-          id?: string;
-          kind: string;
-          line_item_id?: string | null;
-          name: string;
-          quantity: number;
-          submission_id?: string | null;
-          unit_price: number;
-          updated_at?: string;
-        };
-        Update: {
-          add_on_id?: string | null;
-          booking_id?: string;
-          charge_key?: string;
-          created_at?: string;
-          facility_id?: string;
-          id?: string;
-          kind?: string;
-          line_item_id?: string | null;
-          name?: string;
-          quantity?: number;
-          submission_id?: string | null;
-          unit_price?: number;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      yipyy_go_check_in_passes: {
-        Row: {
-          booking_id: string;
-          facility_id: string;
-          issued_at: string;
-          issued_by: string | null;
-          rotations: number;
-          token_expires_at: string;
-          token_hash: string;
-        };
-        Insert: {
-          booking_id: string;
-          facility_id: string;
-          issued_at?: string;
-          issued_by?: string | null;
-          rotations?: number;
-          token_expires_at: string;
-          token_hash: string;
-        };
-        Update: {
-          booking_id?: string;
-          facility_id?: string;
-          issued_at?: string;
-          issued_by?: string | null;
-          rotations?: number;
-          token_expires_at?: string;
-          token_hash?: string;
-        };
-        Relationships: [];
-      };
-      yipyy_go_desk_checks: {
-        Row: {
-          belongings_confirmed: boolean;
-          booking_id: string;
-          created_at: string;
-          facility_id: string;
-          form_missing: boolean;
-          form_status: string;
-          id: string;
-          medications_confirmed: boolean;
-          override_reason: string | null;
-          pet_id: string;
-          recorded_by: string | null;
-          recorded_by_name: string | null;
-          requirement: string | null;
-          source: string;
-        };
-        Insert: {
-          belongings_confirmed?: boolean;
-          booking_id: string;
-          created_at?: string;
-          facility_id: string;
-          form_missing: boolean;
-          form_status: string;
-          id?: string;
-          medications_confirmed?: boolean;
-          override_reason?: string | null;
-          pet_id: string;
-          recorded_by?: string | null;
-          recorded_by_name?: string | null;
-          requirement?: string | null;
-          source: string;
-        };
-        Update: {
-          belongings_confirmed?: boolean;
-          booking_id?: string;
-          created_at?: string;
-          facility_id?: string;
-          form_missing?: boolean;
-          form_status?: string;
-          id?: string;
-          medications_confirmed?: boolean;
-          override_reason?: string | null;
-          pet_id?: string;
-          recorded_by?: string | null;
-          recorded_by_name?: string | null;
-          requirement?: string | null;
-          source?: string;
-        };
-        Relationships: [];
-      };
-      yipyy_go_photos: {
-        Row: {
-          content_type: string;
-          created_at: string;
-          created_by: string | null;
-          facility_id: string;
-          id: string;
-          item_ref: string | null;
-          kind: string;
-          size_bytes: number;
-          storage_path: string;
-          submission_id: string;
-        };
-        Insert: {
-          content_type: string;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id?: string;
-          id?: string;
-          item_ref?: string | null;
-          kind: string;
-          size_bytes: number;
-          storage_path: string;
-          submission_id: string;
-        };
-        Update: {
-          content_type?: string;
-          created_at?: string;
-          created_by?: string | null;
-          facility_id?: string;
-          id?: string;
-          item_ref?: string | null;
-          kind?: string;
-          size_bytes?: number;
-          storage_path?: string;
-          submission_id?: string;
-        };
-        Relationships: [];
-      };
-      yipyy_go_submissions: {
-        Row: {
-          add_on_requests: Json;
-          answers: Json;
-          booking_id: string;
-          changes_message: string | null;
-          client_id: string;
-          completed_at: string | null;
-          completed_by_name: string | null;
-          completed_reason: string | null;
-          created_at: string;
-          facility_id: string;
-          id: string;
-          pet_id: string;
-          reviewed_at: string | null;
-          reviewed_by_name: string | null;
-          status: string;
-          submitted_at: string | null;
-          submitted_by_name: string | null;
-          tip_choice: Json | null;
-          updated_at: string;
-        };
-        Insert: {
-          add_on_requests?: Json;
-          answers?: Json;
-          booking_id: string;
-          changes_message?: string | null;
-          client_id?: string;
-          completed_at?: string | null;
-          completed_by_name?: string | null;
-          completed_reason?: string | null;
-          created_at?: string;
-          facility_id?: string;
-          id?: string;
-          pet_id: string;
-          reviewed_at?: string | null;
-          reviewed_by_name?: string | null;
-          status?: string;
-          submitted_at?: string | null;
-          submitted_by_name?: string | null;
-          tip_choice?: Json | null;
-          updated_at?: string;
-        };
-        Update: {
-          add_on_requests?: Json;
-          answers?: Json;
-          booking_id?: string;
-          changes_message?: string | null;
-          client_id?: string;
-          completed_at?: string | null;
-          completed_by_name?: string | null;
-          completed_reason?: string | null;
-          created_at?: string;
-          facility_id?: string;
-          id?: string;
-          pet_id?: string;
-          reviewed_at?: string | null;
-          reviewed_by_name?: string | null;
-          status?: string;
-          submitted_at?: string | null;
-          submitted_by_name?: string | null;
-          tip_choice?: Json | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       audit_log: {
         Row: {
           action: string;
@@ -444,6 +126,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "automation_events_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -617,6 +306,13 @@ export type Database = {
             foreignKeyName: "boarding_stays_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "boarding_stays_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -694,6 +390,13 @@ export type Database = {
             foreignKeyName: "booking_line_items_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_line_items_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -725,6 +428,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_pets_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -804,6 +514,13 @@ export type Database = {
             foreignKeyName: "booking_tip_allocations_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "booking_tip_allocations_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -853,6 +570,7 @@ export type Database = {
           special_requests: string | null;
           start_at: string;
           status: Database["public"]["Enums"]["booking_status"];
+          taxable: boolean;
           tip_amount: number | null;
           total_cost: number;
           training_series_session_id: string | null;
@@ -880,6 +598,7 @@ export type Database = {
           special_requests?: string | null;
           start_at: string;
           status?: Database["public"]["Enums"]["booking_status"];
+          taxable?: boolean;
           tip_amount?: number | null;
           total_cost?: number;
           training_series_session_id?: string | null;
@@ -907,6 +626,7 @@ export type Database = {
           special_requests?: string | null;
           start_at?: string;
           status?: Database["public"]["Enums"]["booking_status"];
+          taxable?: boolean;
           tip_amount?: number | null;
           total_cost?: number;
           training_series_session_id?: string | null;
@@ -1162,6 +882,13 @@ export type Database = {
             foreignKeyName: "call_record_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "call_record_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -1250,6 +977,68 @@ export type Database = {
           },
         ];
       };
+      care_gate_overrides: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          has_critical: boolean;
+          id: string;
+          items: Json;
+          reason: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          has_critical?: boolean;
+          id?: string;
+          items?: Json;
+          reason: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          has_critical?: boolean;
+          id?: string;
+          items?: Json;
+          reason?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "care_gate_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "care_gate_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "care_gate_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "care_gate_overrides_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       care_log_entries: {
         Row: {
           booking_id: string;
@@ -1311,6 +1100,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "care_log_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -1749,13 +1545,6 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: "customer_memberships_plan_id_fkey";
-            columns: ["plan_id"];
-            isOneToOne: false;
-            referencedRelation: "membership_plans";
-            referencedColumns: ["id"];
-          },
-          {
             foreignKeyName: "customer_memberships_client_id_fkey";
             columns: ["client_id"];
             isOneToOne: false;
@@ -1767,6 +1556,13 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_memberships_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "membership_plans";
             referencedColumns: ["id"];
           },
         ];
@@ -1993,6 +1789,13 @@ export type Database = {
             foreignKeyName: "daycare_attendance_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "daycare_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -2145,7 +1948,7 @@ export type Database = {
           discount_reason?: string | null;
           duplicated_from?: string | null;
           end_date?: string | null;
-          estimate_number?: string;
+          estimate_number: string;
           expires_at?: string | null;
           facility_id: string;
           guest?: Json | null;
@@ -2158,7 +1961,7 @@ export type Database = {
           room_type?: string | null;
           sent_at?: string | null;
           sent_via?: string | null;
-          seq?: number;
+          seq: number;
           service: string;
           service_type?: string | null;
           start_date?: string | null;
@@ -2225,6 +2028,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "clients";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "estimates_converted_booking_id_fkey";
+            columns: ["converted_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "estimates_converted_booking_id_fkey";
+            columns: ["converted_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
           },
           {
             foreignKeyName: "estimates_converted_booking_id_fkey";
@@ -3417,6 +3234,85 @@ export type Database = {
           },
         ];
       };
+      form_requirement_overrides: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          form_id: string;
+          id: string;
+          pet_id: string | null;
+          reason: string;
+          stage: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          form_id: string;
+          id?: string;
+          pet_id?: string | null;
+          reason: string;
+          stage: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          form_id?: string;
+          id?: string;
+          pet_id?: string | null;
+          reason?: string;
+          stage?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "form_requirement_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "form_requirement_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "form_requirement_overrides_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_requirement_overrides_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_requirement_overrides_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_requirement_overrides_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       form_submissions: {
         Row: {
           answers: Json;
@@ -3428,6 +3324,7 @@ export type Database = {
           form_version_id: string;
           id: string;
           pet_id: string | null;
+          review_note: string | null;
           score: number | null;
           score_details: Json | null;
           score_outcome: string | null;
@@ -3448,6 +3345,7 @@ export type Database = {
           form_version_id: string;
           id?: string;
           pet_id?: string | null;
+          review_note?: string | null;
           score?: number | null;
           score_details?: Json | null;
           score_outcome?: string | null;
@@ -3468,6 +3366,7 @@ export type Database = {
           form_version_id?: string;
           id?: string;
           pet_id?: string | null;
+          review_note?: string | null;
           score?: number | null;
           score_details?: Json | null;
           score_outcome?: string | null;
@@ -3498,6 +3397,13 @@ export type Database = {
             columns: ["form_version_id"];
             isOneToOne: false;
             referencedRelation: "form_versions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_submissions_form_version_id_fkey";
+            columns: ["form_version_id"];
+            isOneToOne: false;
+            referencedRelation: "form_versions_current";
             referencedColumns: ["id"];
           },
         ];
@@ -4006,6 +3912,13 @@ export type Database = {
             foreignKeyName: "grooming_appointments_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "grooming_appointments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -4415,6 +4328,7 @@ export type Database = {
           min_booking_notice_hours: number | null;
           name: string;
           required_skill_level: string | null;
+          taxable: boolean;
           updated_at: string;
         };
         Insert: {
@@ -4441,6 +4355,7 @@ export type Database = {
           min_booking_notice_hours?: number | null;
           name: string;
           required_skill_level?: string | null;
+          taxable?: boolean;
           updated_at?: string;
         };
         Update: {
@@ -4467,6 +4382,7 @@ export type Database = {
           min_booking_notice_hours?: number | null;
           name?: string;
           required_skill_level?: string | null;
+          taxable?: boolean;
           updated_at?: string;
         };
         Relationships: [
@@ -5105,6 +5021,13 @@ export type Database = {
             foreignKeyName: "incidents_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "incidents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -5402,6 +5325,13 @@ export type Database = {
             foreignKeyName: "loyalty_transactions_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "loyalty_transactions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -5498,6 +5428,13 @@ export type Database = {
             columns: ["used_on_booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "loyalty_vouchers_used_on_booking_id_fkey";
+            columns: ["used_on_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -6206,6 +6143,7 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           created_by_name: string | null;
+          customer_request: string | null;
           edit_history: Json;
           entity_id: string;
           facility_id: string;
@@ -6222,6 +6160,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           created_by_name?: string | null;
+          customer_request?: string | null;
           edit_history?: Json;
           entity_id: string;
           facility_id: string;
@@ -6238,6 +6177,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           created_by_name?: string | null;
+          customer_request?: string | null;
           edit_history?: Json;
           entity_id?: string;
           facility_id?: string;
@@ -6983,6 +6923,13 @@ export type Database = {
             foreignKeyName: "package_pass_entries_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "package_pass_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -7174,6 +7121,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -7381,6 +7335,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -7985,6 +7946,20 @@ export type Database = {
             foreignKeyName: "promo_code_redemptions_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -8014,6 +7989,13 @@ export type Database = {
             columns: ["promo_code_id"];
             isOneToOne: false;
             referencedRelation: "promo_codes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "promo_code_redemptions_retail_sale_id_fkey";
+            columns: ["retail_sale_id"];
+            isOneToOne: false;
+            referencedRelation: "retail_sales";
             referencedColumns: ["id"];
           },
         ];
@@ -8314,6 +8296,13 @@ export type Database = {
             foreignKeyName: "report_cards_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "report_cards_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -8448,7 +8437,7 @@ export type Database = {
           id?: string;
           items?: Json;
           notes?: string;
-          number?: number;
+          number?: never;
           received_at?: string | null;
           status?: string;
           supplier_id?: string | null;
@@ -8463,7 +8452,7 @@ export type Database = {
           id?: string;
           items?: Json;
           notes?: string;
-          number?: number;
+          number?: never;
           received_at?: string | null;
           status?: string;
           supplier_id?: string | null;
@@ -9300,6 +9289,7 @@ export type Database = {
           rules: Json;
           service: Database["public"]["Enums"]["service_module"];
           sort_order: number;
+          taxable: boolean;
           updated_at: string;
           visible_to_clients: boolean;
         };
@@ -9318,6 +9308,7 @@ export type Database = {
           rules?: Json;
           service: Database["public"]["Enums"]["service_module"];
           sort_order?: number;
+          taxable?: boolean;
           updated_at?: string;
           visible_to_clients?: boolean;
         };
@@ -9336,6 +9327,7 @@ export type Database = {
           rules?: Json;
           service?: Database["public"]["Enums"]["service_module"];
           sort_order?: number;
+          taxable?: boolean;
           updated_at?: string;
           visible_to_clients?: boolean;
         };
@@ -10212,6 +10204,114 @@ export type Database = {
           },
         ];
       };
+      staff_notification_preferences: {
+        Row: {
+          email: Json;
+          facility_id: string;
+          in_app: Json;
+          membership_id: string;
+          profile_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          email?: Json;
+          facility_id: string;
+          in_app?: Json;
+          membership_id: string;
+          profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          email?: Json;
+          facility_id?: string;
+          in_app?: Json;
+          membership_id?: string;
+          profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_notification_preferences_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_notification_preferences_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: true;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      staff_notifications: {
+        Row: {
+          archived_at: string | null;
+          category: string;
+          created_at: string;
+          dedupe_key: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          link: string | null;
+          membership_id: string;
+          params: Json;
+          read_at: string | null;
+          recipient_profile_id: string;
+          source_id: string | null;
+          urgent: boolean;
+        };
+        Insert: {
+          archived_at?: string | null;
+          category: string;
+          created_at?: string;
+          dedupe_key: string;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          link?: string | null;
+          membership_id: string;
+          params?: Json;
+          read_at?: string | null;
+          recipient_profile_id: string;
+          source_id?: string | null;
+          urgent?: boolean;
+        };
+        Update: {
+          archived_at?: string | null;
+          category?: string;
+          created_at?: string;
+          dedupe_key?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          link?: string | null;
+          membership_id?: string;
+          params?: Json;
+          read_at?: string | null;
+          recipient_profile_id?: string;
+          source_id?: string | null;
+          urgent?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_notifications_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "staff_notifications_membership_id_fkey";
+            columns: ["membership_id"];
+            isOneToOne: false;
+            referencedRelation: "facility_memberships";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       staff_permissions: {
         Row: {
           permission_key: string;
@@ -10585,114 +10685,6 @@ export type Database = {
           },
         ];
       };
-      staff_notification_preferences: {
-        Row: {
-          email: Json;
-          facility_id: string;
-          in_app: Json;
-          membership_id: string;
-          profile_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          email?: Json;
-          facility_id: string;
-          in_app?: Json;
-          membership_id: string;
-          profile_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          email?: Json;
-          facility_id?: string;
-          in_app?: Json;
-          membership_id?: string;
-          profile_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "staff_notification_preferences_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "staff_notification_preferences_membership_id_fkey";
-            columns: ["membership_id"];
-            isOneToOne: true;
-            referencedRelation: "facility_memberships";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      staff_notifications: {
-        Row: {
-          archived_at: string | null;
-          category: string;
-          created_at: string;
-          dedupe_key: string;
-          facility_id: string;
-          id: string;
-          kind: string;
-          link: string | null;
-          membership_id: string;
-          params: Json;
-          read_at: string | null;
-          recipient_profile_id: string;
-          source_id: string | null;
-          urgent: boolean;
-        };
-        Insert: {
-          archived_at?: string | null;
-          category: string;
-          created_at?: string;
-          dedupe_key: string;
-          facility_id: string;
-          id?: string;
-          kind: string;
-          link?: string | null;
-          membership_id: string;
-          params?: Json;
-          read_at?: string | null;
-          recipient_profile_id: string;
-          source_id?: string | null;
-          urgent?: boolean;
-        };
-        Update: {
-          archived_at?: string | null;
-          category?: string;
-          created_at?: string;
-          dedupe_key?: string;
-          facility_id?: string;
-          id?: string;
-          kind?: string;
-          link?: string | null;
-          membership_id?: string;
-          params?: Json;
-          read_at?: string | null;
-          recipient_profile_id?: string;
-          source_id?: string | null;
-          urgent?: boolean;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "staff_notifications_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "staff_notifications_membership_id_fkey";
-            columns: ["membership_id"];
-            isOneToOne: false;
-            referencedRelation: "facility_memberships";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       store_credit_entries: {
         Row: {
           amount: number;
@@ -10739,6 +10731,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: false;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "store_credit_entries_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -10969,9 +10968,9 @@ export type Database = {
           booking_id: string;
           checked_in_at: string | null;
           checked_out_at: string | null;
+          conditions: Json | null;
           created_at: string;
           created_by: string | null;
-          conditions: Json | null;
           exercises: Json;
           facility_id: string;
           mark: string | null;
@@ -10984,9 +10983,9 @@ export type Database = {
           booking_id: string;
           checked_in_at?: string | null;
           checked_out_at?: string | null;
+          conditions?: Json | null;
           created_at?: string;
           created_by?: string | null;
-          conditions?: Json | null;
           exercises?: Json;
           facility_id: string;
           mark?: string | null;
@@ -10999,9 +10998,9 @@ export type Database = {
           booking_id?: string;
           checked_in_at?: string | null;
           checked_out_at?: string | null;
+          conditions?: Json | null;
           created_at?: string;
           created_by?: string | null;
-          conditions?: Json | null;
           exercises?: Json;
           facility_id?: string;
           mark?: string | null;
@@ -11015,6 +11014,13 @@ export type Database = {
             columns: ["booking_id"];
             isOneToOne: true;
             referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_attendance_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
@@ -11250,7 +11256,85 @@ export type Database = {
           status?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "training_makeups_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_host_booking_id_fkey";
+            columns: ["host_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_makeups_host_booking_id_fkey";
+            columns: ["host_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_makeups_host_booking_id_fkey";
+            columns: ["host_booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_host_session_id_fkey";
+            columns: ["host_session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_missed_booking_id_fkey";
+            columns: ["missed_booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_makeups_missed_booking_id_fkey";
+            columns: ["missed_booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "training_makeups_missed_booking_id_fkey";
+            columns: ["missed_booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_missed_session_id_fkey";
+            columns: ["missed_session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_series_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_makeups_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       training_notes: {
         Row: {
@@ -11373,6 +11457,7 @@ export type Database = {
           start_date: string;
           start_time: string;
           status: string;
+          taxable: boolean;
           total_price: number;
           updated_at: string;
         };
@@ -11391,6 +11476,7 @@ export type Database = {
           start_date: string;
           start_time: string;
           status?: string;
+          taxable?: boolean;
           total_price?: number;
           updated_at?: string;
         };
@@ -11409,6 +11495,7 @@ export type Database = {
           start_date?: string;
           start_time?: string;
           status?: string;
+          taxable?: boolean;
           total_price?: number;
           updated_at?: string;
         };
@@ -11722,6 +11809,90 @@ export type Database = {
           },
         ];
       };
+      unfinished_bookings: {
+        Row: {
+          abandoned_at: string;
+          client_id: string;
+          created_at: string;
+          draft: Json;
+          estimated_value: number | null;
+          facility_id: string;
+          id: string;
+          last_contacted_at: string | null;
+          notes: Json;
+          recovered_at: string | null;
+          recovery_detail: string | null;
+          recovery_not_before: string;
+          recovery_outcome: string | null;
+          recovery_resolved_at: string | null;
+          requested_end: string | null;
+          requested_start: string | null;
+          service: string | null;
+          status: string;
+          step: string;
+          updated_at: string;
+        };
+        Insert: {
+          abandoned_at?: string;
+          client_id: string;
+          created_at?: string;
+          draft?: Json;
+          estimated_value?: number | null;
+          facility_id: string;
+          id?: string;
+          last_contacted_at?: string | null;
+          notes?: Json;
+          recovered_at?: string | null;
+          recovery_detail?: string | null;
+          recovery_not_before?: string;
+          recovery_outcome?: string | null;
+          recovery_resolved_at?: string | null;
+          requested_end?: string | null;
+          requested_start?: string | null;
+          service?: string | null;
+          status?: string;
+          step: string;
+          updated_at?: string;
+        };
+        Update: {
+          abandoned_at?: string;
+          client_id?: string;
+          created_at?: string;
+          draft?: Json;
+          estimated_value?: number | null;
+          facility_id?: string;
+          id?: string;
+          last_contacted_at?: string | null;
+          notes?: Json;
+          recovered_at?: string | null;
+          recovery_detail?: string | null;
+          recovery_not_before?: string;
+          recovery_outcome?: string | null;
+          recovery_resolved_at?: string | null;
+          requested_end?: string | null;
+          requested_start?: string | null;
+          service?: string | null;
+          status?: string;
+          step?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "unfinished_bookings_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "unfinished_bookings_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_passkeys: {
         Row: {
           backed_up: boolean;
@@ -12015,6 +12186,13 @@ export type Database = {
             foreignKeyName: "workflow_enrollments_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "workflow_enrollments_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -12185,8 +12363,418 @@ export type Database = {
           },
         ];
       };
+      yipyy_go_charges: {
+        Row: {
+          add_on_id: string | null;
+          booking_id: string;
+          charge_key: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          kind: string;
+          line_item_id: string | null;
+          name: string;
+          quantity: number;
+          submission_id: string | null;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          add_on_id?: string | null;
+          booking_id: string;
+          charge_key: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          kind: string;
+          line_item_id?: string | null;
+          name: string;
+          quantity: number;
+          submission_id?: string | null;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: {
+          add_on_id?: string | null;
+          booking_id?: string;
+          charge_key?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          kind?: string;
+          line_item_id?: string | null;
+          name?: string;
+          quantity?: number;
+          submission_id?: string | null;
+          unit_price?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "yipyy_go_charges_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_charges_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_charges_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_charges_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_charges_line_item_id_fkey";
+            columns: ["line_item_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_line_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_charges_submission_id_fkey";
+            columns: ["submission_id"];
+            isOneToOne: false;
+            referencedRelation: "yipyy_go_submissions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      yipyy_go_check_in_passes: {
+        Row: {
+          booking_id: string;
+          facility_id: string;
+          issued_at: string;
+          issued_by: string | null;
+          rotations: number;
+          token_expires_at: string;
+          token_hash: string;
+        };
+        Insert: {
+          booking_id: string;
+          facility_id: string;
+          issued_at?: string;
+          issued_by?: string | null;
+          rotations?: number;
+          token_expires_at: string;
+          token_hash: string;
+        };
+        Update: {
+          booking_id?: string;
+          facility_id?: string;
+          issued_at?: string;
+          issued_by?: string | null;
+          rotations?: number;
+          token_expires_at?: string;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "yipyy_go_check_in_passes_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_check_in_passes_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_check_in_passes_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_check_in_passes_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      yipyy_go_desk_checks: {
+        Row: {
+          belongings_confirmed: boolean;
+          booking_id: string;
+          created_at: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id: string;
+          medications_confirmed: boolean;
+          override_reason: string | null;
+          pet_id: string;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          requirement: string | null;
+          source: string;
+        };
+        Insert: {
+          belongings_confirmed?: boolean;
+          booking_id: string;
+          created_at?: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id?: string;
+          medications_confirmed?: boolean;
+          override_reason?: string | null;
+          pet_id: string;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          requirement?: string | null;
+          source: string;
+        };
+        Update: {
+          belongings_confirmed?: boolean;
+          booking_id?: string;
+          created_at?: string;
+          facility_id?: string;
+          form_missing?: boolean;
+          form_status?: string;
+          id?: string;
+          medications_confirmed?: boolean;
+          override_reason?: string | null;
+          pet_id?: string;
+          recorded_by?: string | null;
+          recorded_by_name?: string | null;
+          requirement?: string | null;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "yipyy_go_desk_checks_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_desk_checks_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_desk_checks_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_desk_checks_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_desk_checks_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      yipyy_go_photos: {
+        Row: {
+          content_type: string;
+          created_at: string;
+          created_by: string | null;
+          facility_id: string;
+          id: string;
+          item_ref: string | null;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+          submission_id: string;
+        };
+        Insert: {
+          content_type: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id: string;
+          id?: string;
+          item_ref?: string | null;
+          kind: string;
+          size_bytes: number;
+          storage_path: string;
+          submission_id: string;
+        };
+        Update: {
+          content_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          facility_id?: string;
+          id?: string;
+          item_ref?: string | null;
+          kind?: string;
+          size_bytes?: number;
+          storage_path?: string;
+          submission_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "yipyy_go_photos_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_photos_submission_id_fkey";
+            columns: ["submission_id"];
+            isOneToOne: false;
+            referencedRelation: "yipyy_go_submissions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      yipyy_go_submissions: {
+        Row: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+        Insert: {
+          add_on_requests?: Json;
+          answers?: Json;
+          booking_id: string;
+          changes_message?: string | null;
+          client_id: string;
+          completed_at?: string | null;
+          completed_by_name?: string | null;
+          completed_reason?: string | null;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          pet_id: string;
+          reviewed_at?: string | null;
+          reviewed_by_name?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          submitted_by_name?: string | null;
+          tip_choice?: Json | null;
+          updated_at?: string;
+        };
+        Update: {
+          add_on_requests?: Json;
+          answers?: Json;
+          booking_id?: string;
+          changes_message?: string | null;
+          client_id?: string;
+          completed_at?: string | null;
+          completed_by_name?: string | null;
+          completed_reason?: string | null;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          pet_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by_name?: string | null;
+          status?: string;
+          submitted_at?: string | null;
+          submitted_by_name?: string | null;
+          tip_choice?: Json | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "yipyy_go_submissions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_presence";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_submissions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_submissions_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_submissions_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_submissions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "yipyy_go_submissions_pet_id_fkey";
+            columns: ["pet_id"];
+            isOneToOne: false;
+            referencedRelation: "pets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
+      booking_presence: {
+        Row: {
+          arrived_at: string | null;
+          booking_id: string | null;
+          departed_at: string | null;
+          presence: string | null;
+          source: string | null;
+        };
+        Relationships: [];
+      };
       booking_yipyy_go: {
         Row: {
           booking_id: string | null;
@@ -12195,16 +12783,6 @@ export type Database = {
           requirement: string | null;
           satisfied: boolean | null;
           status: string | null;
-        };
-        Relationships: [];
-      };
-      booking_presence: {
-        Row: {
-          arrived_at: string | null;
-          booking_id: string | null;
-          departed_at: string | null;
-          presence: string | null;
-          source: string | null;
         };
         Relationships: [];
       };
@@ -12232,19 +12810,6 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
-      };
-      form_versions_current: {
-        Row: {
-          created_at: string | null;
-          created_by: string | null;
-          facility_id: string | null;
-          form_id: string | null;
-          id: string | null;
-          published_at: string | null;
-          schema: Json | null;
-          version_number: number | null;
-        };
-        Relationships: [];
       };
       customer_package_pool_status: {
         Row: {
@@ -12301,6 +12866,34 @@ export type Database = {
             columns: ["facility_id"];
             isOneToOne: false;
             referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      form_versions_current: {
+        Row: {
+          created_at: string | null;
+          created_by: string | null;
+          facility_id: string | null;
+          form_id: string | null;
+          id: string | null;
+          published_at: string | null;
+          schema: Json | null;
+          version_number: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "form_versions_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "form_versions_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
             referencedColumns: ["id"];
           },
         ];
@@ -12409,6 +13002,13 @@ export type Database = {
             foreignKeyName: "payment_intents_booking_id_fkey";
             columns: ["booking_id"];
             isOneToOne: false;
+            referencedRelation: "booking_yipyy_go";
+            referencedColumns: ["booking_id"];
+          },
+          {
+            foreignKeyName: "payment_intents_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -12430,6 +13030,10 @@ export type Database = {
       };
     };
     Functions: {
+      accept_platform_invitation: {
+        Args: { p_profile_id: string; p_token_hash: string };
+        Returns: Json;
+      };
       active_platform_announcements: {
         Args: { p_facility_id: string };
         Returns: {
@@ -12443,176 +13047,9 @@ export type Database = {
           title: string;
         }[];
       };
-      status_page_maintenance: {
-        Args: never;
-        Returns: {
-          body: string;
-          id: string;
-          published_at: string;
-          title: string;
-        }[];
-      };
-      complete_yipyy_go_by_staff: {
-        Args: {
-          p_booking_id: string;
-          p_by_name?: string;
-          p_pet_id: string;
-          p_reason: string;
-        };
-        Returns: {
-          add_on_requests: Json;
-          answers: Json;
-          booking_id: string;
-          changes_message: string | null;
-          client_id: string;
-          completed_at: string | null;
-          completed_by_name: string | null;
-          completed_reason: string | null;
-          created_at: string;
-          facility_id: string;
-          id: string;
-          pet_id: string;
-          reviewed_at: string | null;
-          reviewed_by_name: string | null;
-          status: string;
-          submitted_at: string | null;
-          submitted_by_name: string | null;
-          tip_choice: Json | null;
-          updated_at: string;
-        };
-      };
-      issue_yipyy_go_check_in_pass: {
-        Args: { p_booking_id: string; p_token_hash: string };
+      add_owner_booking_note: {
+        Args: { p_content: string; p_kind: string; p_ref: number };
         Returns: string;
-      };
-      record_yipyy_go_desk_check: {
-        Args: {
-          p_booking_id: string;
-          p_by_name?: string;
-          p_pets: Json;
-          p_source: string;
-        };
-        Returns: {
-          belongings_confirmed: boolean;
-          booking_id: string;
-          created_at: string;
-          facility_id: string;
-          form_missing: boolean;
-          form_status: string;
-          id: string;
-          medications_confirmed: boolean;
-          override_reason: string | null;
-          pet_id: string;
-          recorded_by: string | null;
-          recorded_by_name: string | null;
-          requirement: string | null;
-          source: string;
-        }[];
-      };
-      resolve_yipyy_go_check_in_pass: {
-        Args: { p_token: string };
-        Returns: { booking_id: string; booking_ref: number }[];
-      };
-      review_yipyy_go_submission: {
-        Args: {
-          p_action: string;
-          p_by_name?: string;
-          p_message?: string;
-          p_submission_id: string;
-        };
-        Returns: {
-          add_on_requests: Json;
-          answers: Json;
-          booking_id: string;
-          changes_message: string | null;
-          client_id: string;
-          completed_at: string | null;
-          completed_by_name: string | null;
-          completed_reason: string | null;
-          created_at: string;
-          facility_id: string;
-          id: string;
-          pet_id: string;
-          reviewed_at: string | null;
-          reviewed_by_name: string | null;
-          status: string;
-          submitted_at: string | null;
-          submitted_by_name: string | null;
-          tip_choice: Json | null;
-          updated_at: string;
-        };
-      };
-      save_yipyy_go_draft: {
-        Args: {
-          p_add_on_requests?: Json;
-          p_answers: Json;
-          p_booking_id: string;
-          p_pet_id: string;
-        };
-        Returns: {
-          add_on_requests: Json;
-          answers: Json;
-          booking_id: string;
-          changes_message: string | null;
-          client_id: string;
-          completed_at: string | null;
-          completed_by_name: string | null;
-          completed_reason: string | null;
-          created_at: string;
-          facility_id: string;
-          id: string;
-          pet_id: string;
-          reviewed_at: string | null;
-          reviewed_by_name: string | null;
-          status: string;
-          submitted_at: string | null;
-          submitted_by_name: string | null;
-          tip_choice: Json | null;
-          updated_at: string;
-        };
-      };
-      submit_yipyy_go_form: {
-        Args: {
-          p_add_on_requests?: Json;
-          p_answers: Json;
-          p_booking_id: string;
-          p_pet_id: string;
-          p_tip?: Json;
-        };
-        Returns: Json;
-      };
-      yipyy_go_arrivals: {
-        Args: { p_facility_id: string; p_query?: string };
-        Returns: {
-          booking_id: string;
-          booking_ref: number;
-          client_name: string;
-          end_at: string;
-          form_status: string;
-          pets: Json;
-          presence: string;
-          requirement: string;
-          satisfied: boolean;
-          service: string;
-          start_at: string;
-          status: string;
-        }[];
-      };
-      yipyy_go_form_state: {
-        Args: { p_booking_id: string };
-        Returns: Json;
-      };
-      yipyy_go_offered_add_ons: {
-        Args: { p_booking_id: string };
-        Returns: Json;
-      };
-      yipyy_go_staff_recipients: {
-        Args: { p_submission_id: string };
-        Returns: { email: string; full_name: string }[];
-      };
-      accept_platform_invitation: {
-        Args: { p_profile_id: string; p_token_hash: string };
-        Returns: Json;
       };
       adjust_gift_card: {
         Args: { p_amount: number; p_gift_card_id: string; p_reason: string };
@@ -12783,6 +13220,68 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      booking_client_summary: {
+        Args: { p_facility_id: string };
+        Returns: {
+          booking_count: number;
+          client_ref: number;
+          first_day: string;
+          has_active: boolean;
+          last_day: string;
+          rebooked_within_60_days: boolean;
+          services: string[];
+        }[];
+      };
+      booking_facility_totals: {
+        Args: {
+          p_facility_id: string;
+          p_location_id?: string;
+          p_staff_id?: string;
+        };
+        Returns: {
+          paid_revenue: number;
+          pending: number;
+          pending_revenue: number;
+          today: number;
+          total: number;
+          upcoming: number;
+        }[];
+      };
+      booking_missing_forms: {
+        Args: { p_booking_id: string; p_stage: string };
+        Returns: {
+          enforcement: string;
+          form_id: string;
+          form_name: string;
+          form_slug: string;
+          pet_id: string;
+          pet_name: string;
+        }[];
+      };
+      booking_search_names: {
+        Args: { b: Database["public"]["Tables"]["bookings"]["Row"] };
+        Returns: string;
+      };
+      cancel_my_booking: {
+        Args: { p_reason?: string; p_ref: number };
+        Returns: Json;
+      };
+      client_missing_forms: {
+        Args: {
+          p_client_id: string;
+          p_pet_ids: string[];
+          p_service: string;
+          p_stage: string;
+        };
+        Returns: {
+          enforcement: string;
+          form_id: string;
+          form_name: string;
+          form_slug: string;
+          pet_id: string;
+          pet_name: string;
+        }[];
+      };
       close_payment_intent: {
         Args: {
           p_failure_code?: string;
@@ -12807,6 +13306,41 @@ export type Database = {
       compile_audience: {
         Args: { p_facility_id: string; p_filters: Json };
         Returns: string[];
+      };
+      complete_yipyy_go_by_staff: {
+        Args: {
+          p_booking_id: string;
+          p_by_name?: string;
+          p_pet_id: string;
+          p_reason: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "yipyy_go_submissions";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       consume_loyalty_voucher: {
         Args: { p_booking_id?: string; p_voucher_id: string };
@@ -12850,9 +13384,9 @@ export type Database = {
       create_bookings: {
         Args: { p_items: Json };
         Returns: {
-          item_index: number;
           booking_id: string;
           booking_ref: number;
+          item_index: number;
         }[];
       };
       create_training_series: {
@@ -12885,12 +13419,43 @@ export type Database = {
           start_date: string;
           start_time: string;
           status: string;
+          taxable: boolean;
           total_price: number;
           updated_at: string;
         };
         SetofOptions: {
           from: "*";
           to: "training_series";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      decline_training_makeup: {
+        Args: { p_makeup_id: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_makeups";
           isOneToOne: true;
           isSetofReturn: false;
         };
@@ -13022,6 +13587,13 @@ export type Database = {
         Args: { p_facility_id: string; p_months?: number };
         Returns: Json;
       };
+      facility_staff_recipients: {
+        Args: { p_facility_id: string };
+        Returns: {
+          email: string;
+          full_name: string;
+        }[];
+      };
       facility_takings: {
         Args: {
           p_facility_id: string;
@@ -13063,6 +13635,16 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      gift_card_totals: {
+        Args: {
+          p_facility_id: string;
+          p_redeem_from?: string;
+          p_redeem_to?: string;
+          p_sales_from?: string;
+          p_sales_to?: string;
+        };
+        Returns: Json;
       };
       grant_platform_role: {
         Args: {
@@ -13128,6 +13710,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      issue_yipyy_go_check_in_pass: {
+        Args: { p_booking_id: string; p_token_hash: string };
+        Returns: string;
+      };
       lapsed_clients: {
         Args: {
           p_facility_id: string;
@@ -13154,221 +13740,14 @@ export type Database = {
         Args: { p_facility_slug: string };
         Returns: string;
       };
-      link_my_client_record: {
-        Args: Record<PropertyKey, never>;
-        Returns: string;
-      };
+      link_my_client_record: { Args: never; Returns: string };
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;
       };
-      decline_training_makeup: {
-        Args: { p_makeup_id: string };
-        Returns: {
-          answered_at: string | null;
-          client_id: string;
-          created_at: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          facility_id: string;
-          host_booking_id: string | null;
-          host_session_id: string | null;
-          id: string;
-          ineligible_reason: string | null;
-          missed_booking_id: string;
-          missed_session_id: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_id: string;
-          requested_at: string | null;
-          status: string;
-          updated_at: string;
-        };
-      };
-      mark_training_makeup_ineligible: {
-        Args: {
-          p_by_name?: string;
-          p_missed_booking_id: string;
-          p_reason: string;
-        };
-        Returns: {
-          answered_at: string | null;
-          client_id: string;
-          created_at: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          facility_id: string;
-          host_booking_id: string | null;
-          host_session_id: string | null;
-          id: string;
-          ineligible_reason: string | null;
-          missed_booking_id: string;
-          missed_session_id: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_id: string;
-          requested_at: string | null;
-          status: string;
-          updated_at: string;
-        };
-      };
-      offer_training_makeup: {
-        Args: {
-          p_by_name?: string;
-          p_host_session_id: string;
-          p_missed_booking_id: string;
-        };
-        Returns: {
-          answered_at: string | null;
-          client_id: string;
-          created_at: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          facility_id: string;
-          host_booking_id: string | null;
-          host_session_id: string | null;
-          id: string;
-          ineligible_reason: string | null;
-          missed_booking_id: string;
-          missed_session_id: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_id: string;
-          requested_at: string | null;
-          status: string;
-          updated_at: string;
-        };
-      };
-      request_training_makeup: {
-        Args: { p_missed_booking_id: string; p_note?: string };
-        Returns: {
-          answered_at: string | null;
-          client_id: string;
-          created_at: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          facility_id: string;
-          host_booking_id: string | null;
-          host_session_id: string | null;
-          id: string;
-          ineligible_reason: string | null;
-          missed_booking_id: string;
-          missed_session_id: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_id: string;
-          requested_at: string | null;
-          status: string;
-          updated_at: string;
-        };
-      };
-      skip_training_makeup: {
-        Args: { p_missed_booking_id: string };
-        Returns: {
-          answered_at: string | null;
-          client_id: string;
-          created_at: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          facility_id: string;
-          host_booking_id: string | null;
-          host_session_id: string | null;
-          id: string;
-          ineligible_reason: string | null;
-          missed_booking_id: string;
-          missed_session_id: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_id: string;
-          requested_at: string | null;
-          status: string;
-          updated_at: string;
-        };
-      };
-      training_attendance_history: {
-        Args: { p_facility_id?: string; p_pet_ref?: number };
-        Returns: {
-          booking_id: string;
-          booking_ref: number;
-          checked_in_at: string | null;
-          checked_out_at: string | null;
-          conditions: Json;
-          enrollment_id: string;
-          exercises: Json;
-          facility_id: string;
-          makeup: boolean;
-          mark: string | null;
-          pet_name: string;
-          pet_ref: number;
-          recorded_at: string | null;
-          series_id: string;
-          session_end_at: string;
-          session_id: string;
-          session_notes: string | null;
-          session_number: number;
-          session_start_at: string;
-          timezone: string | null;
-          updated_at: string | null;
-        }[];
-      };
-      training_makeup_host_sessions: {
-        Args: { p_missed_booking_id: string };
-        Returns: {
-          end_at: string;
-          location_name: string | null;
-          seats_left: number;
-          series_id: string;
-          series_name: string;
-          session_id: string;
-          session_number: number;
-          start_at: string;
-          trainer_name: string | null;
-        }[];
-      };
-      training_missed_sessions: {
-        Args: { p_facility_id?: string };
-        Returns: {
-          answered_at: string | null;
-          booking_id: string;
-          booking_ref: number;
-          booking_status: string;
-          client_email: string | null;
-          client_name: string;
-          client_phone: string | null;
-          client_ref: number;
-          course_name: string;
-          decided_at: string | null;
-          decided_by_name: string | null;
-          enrollment_id: string | null;
-          enrollment_status: string | null;
-          facility_id: string;
-          host_booking_ref: number | null;
-          host_booking_status: string | null;
-          host_series_id: string | null;
-          host_series_name: string | null;
-          host_session_id: string | null;
-          host_session_number: number | null;
-          host_start_at: string | null;
-          ineligible_reason: string | null;
-          makeup_id: string | null;
-          makeup_status: string | null;
-          offered_at: string | null;
-          offered_by_name: string | null;
-          owner_note: string | null;
-          pet_name: string;
-          pet_ref: number;
-          requested_at: string | null;
-          series_id: string;
-          series_name: string;
-          session_id: string;
-          session_number: number;
-          session_start_at: string;
-        }[];
+      location_booking_counts: {
+        Args: { p_facility_id: string };
+        Returns: Json;
       };
       log_homework_practice: {
         Args: { p_homework_id: string; p_practice_date: string };
@@ -13390,6 +13769,10 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      mark_all_my_notifications_read: {
+        Args: { p_facility_id: string };
+        Returns: number;
       };
       mark_report_card_viewed: {
         Args: { p_card_id: string };
@@ -13435,31 +13818,78 @@ export type Database = {
         };
         Returns: number;
       };
+      mark_training_makeup_ineligible: {
+        Args: {
+          p_by_name?: string;
+          p_missed_booking_id: string;
+          p_reason: string;
+        };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_makeups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       migrate_profile_subject: {
         Args: { p_new_id: string; p_old_id: string };
         Returns: undefined;
       };
-      mark_all_my_notifications_read: {
-        Args: { p_facility_id: string };
-        Returns: number;
-      };
+      my_booking_cancel_terms: { Args: { p_ref: number }; Returns: Json };
       my_client_at: { Args: { p_facility_slug: string }; Returns: string };
-      my_pet_vaccinations: {
-        Args: Record<PropertyKey, never>;
+      my_notification_preferences: {
+        Args: { p_facility_id: string };
         Returns: {
+          email: Json;
+          in_app: Json;
+          membership_id: string;
+          role: string;
+        }[];
+      };
+      my_permissions: {
+        Args: never;
+        Returns: {
+          permission_key: string;
+          scope: Database["public"]["Enums"]["access_scope"];
+        }[];
+      };
+      my_pet_vaccinations: {
+        Args: never;
+        Returns: {
+          administered_on: string;
+          document_url: string;
+          expires_on: string;
           id: string;
           pet_ref: number;
-          vaccine_name: string;
-          administered_on: string | null;
-          expires_on: string | null;
-          veterinarian_name: string | null;
-          veterinary_clinic: string | null;
-          document_url: string | null;
           status: string;
+          vaccine_name: string;
+          veterinarian_name: string;
+          veterinary_clinic: string;
         }[];
       };
       my_store_credit: {
-        Args: Record<PropertyKey, never>;
+        Args: never;
         Returns: {
           balance: number;
           entry_count: number;
@@ -13480,14 +13910,9 @@ export type Database = {
           reason: string;
         }[];
       };
-      my_notification_preferences: {
-        Args: { p_facility_id: string };
-        Returns: {
-          email: Json;
-          in_app: Json;
-          membership_id: string;
-          role: string;
-        }[];
+      name_intent_order: {
+        Args: { p_intent_id: string; p_order_id: string };
+        Returns: undefined;
       };
       notify_staff: {
         Args: {
@@ -13513,25 +13938,6 @@ export type Database = {
           send_email: boolean;
         }[];
       };
-      save_my_notification_preferences: {
-        Args: { p_email: Json; p_facility_id: string; p_in_app: Json };
-        Returns: undefined;
-      };
-      set_my_notification_state: {
-        Args: { p_archived?: boolean; p_id: string; p_read?: boolean };
-        Returns: boolean;
-      };
-      my_permissions: {
-        Args: never;
-        Returns: {
-          permission_key: string;
-          scope: Database["public"]["Enums"]["access_scope"];
-        }[];
-      };
-      name_intent_order: {
-        Args: { p_intent_id: string; p_order_id: string };
-        Returns: undefined;
-      };
       offboard_staff: {
         Args: {
           p_last_day?: string;
@@ -13541,7 +13947,40 @@ export type Database = {
         };
         Returns: Json;
       };
-      onboarding_by_token: { Args: { p_token: string }; Returns: Json };
+      offer_training_makeup: {
+        Args: {
+          p_by_name?: string;
+          p_host_session_id: string;
+          p_missed_booking_id: string;
+        };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_makeups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       offered_custom_services: {
         Args: { p_facility_id: string };
         Returns: Json;
@@ -13550,6 +13989,7 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: Json;
       };
+      onboarding_by_token: { Args: { p_token: string }; Returns: Json };
       open_payment_intent: {
         Args: {
           p_amount_cents: number;
@@ -13563,6 +14003,16 @@ export type Database = {
           p_kind: string;
         };
         Returns: string;
+      };
+      pay_booking_with_gift_card: {
+        Args: {
+          p_amount: number;
+          p_booking_ref: number;
+          p_code: string;
+          p_note?: string;
+          p_tax?: number;
+        };
+        Returns: Json;
       };
       payment_access_token: {
         Args: { p_facility_id: string; p_processor?: string };
@@ -13594,6 +14044,21 @@ export type Database = {
           sessions: number;
           staff_id: string;
           unpriced_minutes: number;
+        }[];
+      };
+      platform_booking_volume: {
+        Args: { p_weeks?: number };
+        Returns: {
+          bookings: number;
+          week_start: string;
+        }[];
+      };
+      platform_facility_volume: {
+        Args: { p_days?: number };
+        Returns: {
+          facility_id: string;
+          made_last_period: number;
+          made_this_period: number;
         }[];
       };
       provision_facility: {
@@ -13634,11 +14099,12 @@ export type Database = {
         Returns: string;
       };
       purge_e2e_bookings: { Args: never; Returns: number };
+      purge_e2e_forms: { Args: never; Returns: number };
       purge_e2e_report_cards: { Args: never; Returns: number };
       quote_promo_code: {
         Args: {
           p_amount: number;
-          p_client_id: string | null;
+          p_client_id: string;
           p_code: string;
           p_facility_id: string;
           p_lock?: boolean;
@@ -13741,6 +14207,10 @@ export type Database = {
         Args: { p_action: string; p_booking_ref: number };
         Returns: string;
       };
+      record_care_gate_override: {
+        Args: { p_booking_id: string; p_items?: Json; p_reason: string };
+        Returns: string;
+      };
       record_clover_payment: {
         Args: {
           p_auth_code?: string;
@@ -13768,6 +14238,10 @@ export type Database = {
           p_row_count: number;
         };
         Returns: string;
+      };
+      record_form_requirement_override: {
+        Args: { p_booking_id: string; p_reason: string; p_stage: string };
+        Returns: number;
       };
       record_membership_grant: {
         Args: { p_expires_at?: string; p_staff_legacy_id: string };
@@ -13825,14 +14299,14 @@ export type Database = {
       record_retail_sale: {
         Args: {
           p_cashier_name?: string;
-          p_client_id?: string | null;
+          p_client_id?: string;
           p_discount: number;
           p_facility_id: string;
           p_items: Json;
           p_note?: string;
           p_payment_ids?: string[];
           p_payments?: Json;
-          p_promo_code?: string | null;
+          p_promo_code?: string;
           p_subtotal: number;
           p_tax: number;
           p_tender: string;
@@ -13863,6 +14337,36 @@ export type Database = {
           p_tip_cents?: number;
         };
         Returns: string;
+      };
+      record_yipyy_go_desk_check: {
+        Args: {
+          p_booking_id: string;
+          p_by_name?: string;
+          p_pets: Json;
+          p_source: string;
+        };
+        Returns: {
+          belongings_confirmed: boolean;
+          booking_id: string;
+          created_at: string;
+          facility_id: string;
+          form_missing: boolean;
+          form_status: string;
+          id: string;
+          medications_confirmed: boolean;
+          override_reason: string | null;
+          pet_id: string;
+          recorded_by: string | null;
+          recorded_by_name: string | null;
+          requirement: string | null;
+          source: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "yipyy_go_desk_checks";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       redeem_gift_card: {
         Args: {
@@ -13907,10 +14411,6 @@ export type Database = {
         };
         Returns: number;
       };
-      redeem_promo_code: {
-        Args: { p_booking_id: string; p_code: string };
-        Returns: Json;
-      };
       redeem_loyalty_points: {
         Args: {
           p_account_id: string;
@@ -13952,6 +14452,10 @@ export type Database = {
           p_service_label?: string;
         };
         Returns: number;
+      };
+      redeem_promo_code: {
+        Args: { p_booking_id: string; p_code: string };
+        Returns: Json;
       };
       register_client: {
         Args: { p_facility_slug: string; p_name: string; p_phone?: string };
@@ -14056,11 +14560,87 @@ export type Database = {
           staff_name: string;
         }[];
       };
+      request_training_makeup: {
+        Args: { p_missed_booking_id: string; p_note?: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_makeups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       reset_facility_modules: {
         Args: { p_facility_id: string };
         Returns: number;
       };
+      resolve_yipyy_go_check_in_pass: {
+        Args: { p_token: string };
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+        }[];
+      };
+      respond_to_estimate: {
+        Args: { p_action: string; p_estimate_id: string; p_reason?: string };
+        Returns: Json;
+      };
       review_request_by_token: { Args: { p_token: string }; Returns: Json };
+      review_yipyy_go_submission: {
+        Args: {
+          p_action: string;
+          p_by_name?: string;
+          p_message?: string;
+          p_submission_id: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "yipyy_go_submissions";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       revoke_facility_owner_invite: {
         Args: { p_facility_id: string };
         Returns: Json;
@@ -14074,6 +14654,10 @@ export type Database = {
         Returns: Json;
       };
       revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
+      save_my_notification_preferences: {
+        Args: { p_email: Json; p_facility_id: string; p_in_app: Json };
+        Returns: undefined;
+      };
       save_onboarding_section: {
         Args: {
           p_data: Json;
@@ -14083,6 +14667,41 @@ export type Database = {
           p_token: string;
         };
         Returns: boolean;
+      };
+      save_yipyy_go_draft: {
+        Args: {
+          p_add_on_requests?: Json;
+          p_answers: Json;
+          p_booking_id: string;
+          p_pet_id: string;
+        };
+        Returns: {
+          add_on_requests: Json;
+          answers: Json;
+          booking_id: string;
+          changes_message: string | null;
+          client_id: string;
+          completed_at: string | null;
+          completed_by_name: string | null;
+          completed_reason: string | null;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          pet_id: string;
+          reviewed_at: string | null;
+          reviewed_by_name: string | null;
+          status: string;
+          submitted_at: string | null;
+          submitted_by_name: string | null;
+          tip_choice: Json | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "yipyy_go_submissions";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       set_booking_tip_split: {
         Args: { p_allocations: Json; p_booking_ref: number; p_method: string };
@@ -14110,6 +14729,10 @@ export type Database = {
       set_facility_owner_email: {
         Args: { p_email: string; p_facility_id: string };
         Returns: Json;
+      };
+      set_my_notification_state: {
+        Args: { p_archived?: boolean; p_id: string; p_read?: boolean };
+        Returns: boolean;
       };
       set_onboarding_account_complete: {
         Args: { p_token: string };
@@ -14164,6 +14787,45 @@ export type Database = {
           p_receipt_channels?: string[];
         };
         Returns: Json;
+      };
+      skip_training_makeup: {
+        Args: { p_missed_booking_id: string };
+        Returns: {
+          answered_at: string | null;
+          client_id: string;
+          created_at: string;
+          decided_at: string | null;
+          decided_by_name: string | null;
+          facility_id: string;
+          host_booking_id: string | null;
+          host_session_id: string | null;
+          id: string;
+          ineligible_reason: string | null;
+          missed_booking_id: string;
+          missed_session_id: string | null;
+          offered_at: string | null;
+          offered_by_name: string | null;
+          owner_note: string | null;
+          pet_id: string;
+          requested_at: string | null;
+          status: string;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "training_makeups";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      status_page_maintenance: {
+        Args: never;
+        Returns: {
+          body: string;
+          id: string;
+          published_at: string;
+          title: string;
+        }[];
       };
       stop_workflow_enrollment: {
         Args: { p_enrollment_id: string; p_reason?: string };
@@ -14225,6 +14887,16 @@ export type Database = {
         };
         Returns: Json;
       };
+      submit_yipyy_go_form: {
+        Args: {
+          p_add_on_requests?: Json;
+          p_answers: Json;
+          p_booking_id: string;
+          p_pet_id: string;
+          p_tip?: Json;
+        };
+        Returns: Json;
+      };
       time_off_shift_conflicts: {
         Args: { p_request_id: string };
         Returns: {
@@ -14233,9 +14905,118 @@ export type Database = {
           starts_at: string;
         }[];
       };
+      training_attendance_history: {
+        Args: { p_facility_id?: string; p_pet_ref?: number };
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+          checked_in_at: string;
+          checked_out_at: string;
+          conditions: Json;
+          enrollment_id: string;
+          exercises: Json;
+          facility_id: string;
+          makeup: boolean;
+          mark: string;
+          pet_name: string;
+          pet_ref: number;
+          recorded_at: string;
+          series_id: string;
+          session_end_at: string;
+          session_id: string;
+          session_notes: string;
+          session_number: number;
+          session_start_at: string;
+          timezone: string;
+          updated_at: string;
+        }[];
+      };
+      training_makeup_host_sessions: {
+        Args: { p_missed_booking_id: string };
+        Returns: {
+          end_at: string;
+          location_name: string;
+          seats_left: number;
+          series_id: string;
+          series_name: string;
+          session_id: string;
+          session_number: number;
+          start_at: string;
+          trainer_name: string;
+        }[];
+      };
+      training_missed_sessions: {
+        Args: { p_facility_id?: string };
+        Returns: {
+          answered_at: string;
+          booking_id: string;
+          booking_ref: number;
+          booking_status: string;
+          client_email: string;
+          client_name: string;
+          client_phone: string;
+          client_ref: number;
+          course_name: string;
+          decided_at: string;
+          decided_by_name: string;
+          enrollment_id: string;
+          enrollment_status: string;
+          facility_id: string;
+          host_booking_ref: number;
+          host_booking_status: string;
+          host_series_id: string;
+          host_series_name: string;
+          host_session_id: string;
+          host_session_number: number;
+          host_start_at: string;
+          ineligible_reason: string;
+          makeup_id: string;
+          makeup_status: string;
+          offered_at: string;
+          offered_by_name: string;
+          owner_note: string;
+          pet_name: string;
+          pet_ref: number;
+          requested_at: string;
+          series_id: string;
+          series_name: string;
+          session_id: string;
+          session_number: number;
+          session_start_at: string;
+        }[];
+      };
       withdraw_from_training_series: {
         Args: { p_enrollment_id: string };
         Returns: undefined;
+      };
+      yipyy_go_arrivals: {
+        Args: { p_facility_id: string; p_query?: string };
+        Returns: {
+          booking_id: string;
+          booking_ref: number;
+          client_name: string;
+          end_at: string;
+          form_status: string;
+          pets: Json;
+          presence: string;
+          requirement: string;
+          satisfied: boolean;
+          service: string;
+          start_at: string;
+          status: string;
+        }[];
+      };
+      yipyy_go_form_state: { Args: { p_booking_id: string }; Returns: Json };
+      yipyy_go_offered_add_ons: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      yipyy_go_staff_recipients: {
+        Args: { p_submission_id: string };
+        Returns: {
+          email: string;
+          full_name: string;
+        }[];
       };
     };
     Enums: {

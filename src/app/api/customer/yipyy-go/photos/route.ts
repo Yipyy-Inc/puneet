@@ -121,6 +121,12 @@ export async function POST(request: NextRequest) {
     .from("yipyy_go_photos")
     .insert({
       submission_id: submission.id,
+      // `yipyy_go_photos.facility_id` is not null and has no default, so this
+      // insert could never have succeeded — the row was rejected and the
+      // customer was told their form could not take photos. It was invisible
+      // because src/types/database.ts was stale and did not know the column
+      // was required. Found when regenerating it on 2026-09-21.
+      facility_id: submission.facility_id,
       kind,
       item_ref:
         typeof itemRef === "string" && itemRef.trim()

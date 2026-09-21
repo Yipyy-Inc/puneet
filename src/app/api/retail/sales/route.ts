@@ -134,10 +134,13 @@ export async function POST(request: NextRequest) {
     p_tip: Number(body.tip ?? 0),
     p_total: Number(body.total),
     p_tender: String(body.tender ?? "cash"),
-    p_client_id: clientId,
+    // `undefined` rather than `null`: both of these parameters are
+    // `DEFAULT NULL` in SQL, so omitting them and sending null are the same
+    // thing, and omitting is what the generated types describe.
+    p_client_id: clientId ?? undefined,
     p_payment_ids: body.paymentIds ?? [],
     p_payments: body.payments ?? [],
-    p_promo_code: body.promoCode?.trim() || null,
+    p_promo_code: body.promoCode?.trim() || undefined,
     p_note: body.note ?? "",
     p_cashier_name: body.cashierName ?? "",
   });
