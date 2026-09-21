@@ -1,6 +1,5 @@
 "use client";
 
-import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { ExerciseLibrarySection } from "@/components/facility/training/exercise-library-section";
 import { TrainingModuleSettings } from "@/components/facility/training/training-module-settings";
@@ -27,7 +26,6 @@ export function TrainingSection() {
           [
             ["#exercise-library", "jumpLibrary"],
             ["#module-settings", "jumpModule"],
-            ["#service-color", "jumpColour"],
           ] as const
         ).map(([href, key]) => (
           <a
@@ -42,9 +40,6 @@ export function TrainingSection() {
       <ExerciseLibrarySection />
       <section id="module-settings" className="scroll-mt-24">
         <TrainingModuleSettings />
-      </section>
-      <section id="service-color" className="scroll-mt-24">
-        <ServiceColorCard service="Training" />
       </section>
     </div>
   );
