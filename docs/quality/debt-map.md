@@ -19477,12 +19477,12 @@ retail counter already does per product.
 
 Two things that would have made it inert:
 
-* **The wizard did its own arithmetic.** It computed `taxable × rate` locally
+- **The wizard did its own arithmetic.** It computed `taxable × rate` locally
   while `POST /api/estimates` recomputes and stores from `estimateTotals` —
   fine while both were the same formula, and the moment lines could differ the
   facility would have seen one total and the customer received another. The
   wizard calls `estimateTotals` now.
-* **The payload dropped the field.** `lineItems.map()` sent only
+- **The payload dropped the field.** `lineItems.map()` sent only
   `{label, description, amount, quantity}`, so a line marked tax-free would have
   been silently taxed on save. Found by reading the request body, not by a test.
 
