@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 
 import { boardingPricing, boardingNightlyRate } from "@/lib/boarding-pricing";
-import { daycareDayRate } from "@/lib/daycare-pricing";
+import {
+  daycareDayRate,
+  daycareRateForHours,
+  maxRateHours,
+} from "@/lib/daycare-pricing";
 import type { DaycareRate } from "@/types/daycare";
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 
@@ -216,64 +220,206 @@ describe("boardingPricing", () => {
   });
 });
 
-function rate(type: string, basePrice: number, isActive = true): DaycareRate {
+/**
+ * A rate as the screen saves one: a name the facility chose, a price, and how
+ * many hours it runs to.
+ */
+function rate(
+  name: string,
+  basePrice: number,
+  maxDurationHours: number,
+  isActive = true,
+): DaycareRate {
   return {
-    id: `rate-${type}`,
-    name: type,
-    type,
+    id: `rate-${name}`,
+    name,
     basePrice,
     description: "",
-    durationHours: type === "half-day" ? 5 : 10,
+    durationHours: maxDurationHours,
+    maxDurationHours,
     isActive,
     sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
   } as DaycareRate;
 }
 
-describe("daycareDayRate", () => {
-  const RATES = [rate("full-day", 38), rate("half-day", 24)];
+/** A rate card saved BEFORE the screen could say how long a rate runs. */
+function legacyRate(
+  type: string,
+  basePrice: number,
+  durationHours?: number,
+): DaycareRate {
+  return {
+    id: `legacy-${type}`,
+    name: type,
+    type,
+    basePrice,
+    description: "",
+    ...(durationHours === undefined ? {} : { durationHours }),
+    isActive: true,
+    sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
+  } as unknown as DaycareRate;
+}
 
-  it("uses the facility's own full-day rate", () => {
-    expect(daycareDayRate({ rates: RATES, half: false })).toBe(38);
+// ============================================================================
+// WHICH RATE PRICES A DAY.
+//
+// It used to be decided by a LABEL — a half day asked for a rate typed
+// "half-day". Half a day is five hours at one business and three at another,
+// and the type said neither, so a facility's own hours were ignored.
+//
+// The case that broke, and the first test below: Doggieville set ONE rate,
+// "Daycare Half Day, $45, 5 hours". Every full-day booking asked for a
+// "full-day" rate, found none, and the wizard told them they had "no daycare
+// rate yet" — a facility that had saved a rate card minutes earlier.
+// ============================================================================
+describe("which daycare rate covers a stay", () => {
+  it("prices the stay Doggieville's single rate actually covers", () => {
+    // The real card: one rate, five hours, $45.
+    const theirs = [rate("Daycare Half Day", 45, 5)];
+
+    expect(daycareDayRate({ rates: theirs, hours: 4 })).toBe(45);
+    expect(daycareDayRate({ rates: theirs, hours: 5 })).toBe(45);
   });
 
-  it("uses the facility's own half-day rate rather than halving", () => {
-    expect(daycareDayRate({ rates: RATES, half: true })).toBe(24);
+  it("refuses a stay longer than any rate covers, rather than stretching one", () => {
+    // The honest answer, and a different sentence from "no rates at all": the
+    // facility has rates, none of them covers nine hours.
+    const theirs = [rate("Daycare Half Day", 45, 5)];
+    expect(daycareDayRate({ rates: theirs, hours: 9 })).toBeNull();
+    expect(daycareRateForHours(theirs, 9)).toBeNull();
   });
 
-  it("halves the full day when there is no half-day rate", () => {
-    expect(daycareDayRate({ rates: [rate("full-day", 38)], half: true })).toBe(
-      19,
-    );
+  it("takes the cheapest rate that covers the stay, not the first", () => {
+    // Two rates both cover four hours. Charging the dearer because it was
+    // listed first is not a rule anybody agreed to.
+    const rates = [rate("Full day", 60, 10), rate("Half day", 35, 6)];
+    expect(daycareDayRate({ rates, hours: 4 })).toBe(35);
+    expect(daycareRateForHours(rates, 4)?.name).toBe("Half day");
+
+    // And a stay only the longer one covers still prices.
+    expect(daycareDayRate({ rates, hours: 8 })).toBe(60);
+  });
+
+  it("names the rate it chose, for the receipt", () => {
+    const rates = [rate("School run", 22, 4), rate("Full day", 48, 10)];
+    expect(daycareRateForHours(rates, 3)?.name).toBe("School run");
+    expect(daycareRateForHours(rates, 7)?.name).toBe("Full day");
   });
 
   it("ignores a rate the facility has turned off", () => {
     expect(
-      daycareDayRate({ rates: [rate("full-day", 38, false)], half: false }),
+      daycareDayRate({ rates: [rate("Full day", 38, 10, false)], hours: 4 }),
     ).toBeNull();
+  });
+
+  it("considers every active rate when the length is unknown", () => {
+    const rates = [rate("Full day", 60, 10), rate("Half day", 35, 6)];
+    expect(daycareDayRate({ rates })).toBe(35);
   });
 
   it("lets a branch's own price beat the rate card", () => {
-    expect(daycareDayRate({ branchPrice: 44, rates: RATES, half: false })).toBe(
-      44,
-    );
-    expect(daycareDayRate({ branchPrice: 44, rates: RATES, half: true })).toBe(
-      22,
-    );
+    const rates = [rate("Full day", 38, 10)];
+    expect(daycareDayRate({ branchPrice: 44, rates, hours: 4 })).toBe(44);
+    // NOT halved for a short stay any more: one number cannot say what a
+    // shorter day costs, and halving it was arithmetic nobody configured.
+    expect(daycareDayRate({ branchPrice: 44, rates, hours: 2 })).toBe(44);
   });
 
   it("is null when the facility has set no daycare price at all", () => {
-    expect(daycareDayRate({ rates: [], half: false })).toBeNull();
-    expect(daycareDayRate({ rates: [], half: true })).toBeNull();
-    expect(
-      daycareDayRate({ branchPrice: null, rates: [], half: false }),
-    ).toBeNull();
+    expect(daycareDayRate({ rates: [], hours: 4 })).toBeNull();
+    expect(daycareDayRate({ branchPrice: null, rates: [] })).toBeNull();
   });
 
   // Zero is a price a facility may genuinely set; null is the absence of one.
   it("keeps a free day distinct from an unpriced one", () => {
-    expect(daycareDayRate({ rates: [rate("full-day", 0)], half: false })).toBe(
+    expect(daycareDayRate({ rates: [rate("Free day", 0, 10)], hours: 4 })).toBe(
       0,
     );
-    expect(daycareDayRate({ branchPrice: 0, rates: [], half: false })).toBe(0);
+    expect(daycareDayRate({ branchPrice: 0, rates: [] })).toBe(0);
+  });
+});
+
+// ============================================================================
+// A RATE CARD SAVED BEFORE ANY OF THIS STILL PRICES.
+//
+// `settingsFromRows` DROPS a settings domain whose stored value stops parsing,
+// so a required new field would have deleted every facility's rate card on
+// deploy, silently. Nothing is rewritten; the old fields are read instead.
+// ============================================================================
+describe("rate cards saved before hours were asked for", () => {
+  it("believes the hours the facility typed over the type's guess", () => {
+    // Doggieville's actual stored row: type half-day, durationHours 5.
+    const stored = [legacyRate("half-day", 45, 5)];
+    expect(maxRateHours(stored[0])).toBe(5);
+    expect(daycareDayRate({ rates: stored, hours: 5 })).toBe(45);
+    expect(daycareDayRate({ rates: stored, hours: 6 })).toBeNull();
+  });
+
+  it("falls back to what the type implied when no hours were saved", () => {
+    expect(maxRateHours(legacyRate("hourly", 12))).toBe(1);
+    expect(maxRateHours(legacyRate("half-day", 24))).toBe(5);
+    expect(maxRateHours(legacyRate("full-day", 38))).toBe(10);
+  });
+
+  it("treats a rate that says nothing at all as covering anything", () => {
+    // Mid-migration, an unknown length must not price NOTHING — that would
+    // take a working facility's rates away on the deploy that added the field.
+    const mystery = legacyRate("", 30);
+    expect(maxRateHours(mystery)).toBe(0);
+    expect(daycareDayRate({ rates: [mystery], hours: 99 })).toBe(30);
+  });
+});
+
+// ============================================================================
+// A RATE OFFERED TO SOME ANIMALS AND NOT OTHERS.
+//
+// `pets.species` is free text and already disagrees with itself — Pawradise
+// holds one pet recorded "dog" and another "Dog" — so a rate set for Dogs must
+// still match both, or it silently excludes half its animals.
+// ============================================================================
+describe("which animals a daycare rate is for", () => {
+  const dogsOnly = { ...rate("Dog day", 30, 10), species: ["Dog"] };
+  const catsOnly = { ...rate("Cat day", 20, 10), species: ["Cat"] };
+  const anyAnimal = rate("Any day", 50, 10);
+
+  it("offers a species-limited rate only to that species", () => {
+    const rates = [dogsOnly, catsOnly];
+    expect(daycareRateForHours(rates, 4, "Dog")?.name).toBe("Dog day");
+    expect(daycareRateForHours(rates, 4, "Cat")?.name).toBe("Cat day");
+  });
+
+  it("matches however the pet's record spells it", () => {
+    // The real data: one facility holds "dog" and "Dog".
+    expect(daycareRateForHours([dogsOnly], 4, "dog")?.name).toBe("Dog day");
+    expect(daycareRateForHours([dogsOnly], 4, " DOG ")?.name).toBe("Dog day");
+  });
+
+  it("refuses a rate that is not for this animal", () => {
+    expect(daycareRateForHours([dogsOnly], 4, "Rabbit")).toBeNull();
+    expect(
+      daycareDayRate({ rates: [dogsOnly], hours: 4, species: "Cat" }),
+    ).toBeNull();
+  });
+
+  it("treats a rate naming no species as being for every animal", () => {
+    // The default, and the only safe one: a facility that never touches the
+    // field keeps every rate working.
+    expect(daycareRateForHours([anyAnimal], 4, "Rabbit")?.name).toBe("Any day");
+    expect(
+      daycareRateForHours([{ ...anyAnimal, species: [] }], 4, "Cat"),
+    ).toBeTruthy();
+  });
+
+  it("considers every rate when the animal is unknown", () => {
+    // A caller that does not know the species must not be told there is no
+    // rate — that is a different answer from "none applies".
+    expect(daycareRateForHours([dogsOnly, catsOnly], 4)?.name).toBe("Cat day");
+  });
+
+  it("still takes the cheapest of the rates that DO apply", () => {
+    const rates = [anyAnimal, dogsOnly];
+    // $50 is open to all and $30 is dogs-only; a dog pays 30, a rabbit 50.
+    expect(daycareDayRate({ rates, hours: 4, species: "Dog" })).toBe(30);
+    expect(daycareDayRate({ rates, hours: 4, species: "Rabbit" })).toBe(50);
   });
 });

@@ -54,6 +54,24 @@ interface Promotable {
   details: Record<string, unknown> | null;
 }
 
+/**
+ * How many hours a booking runs, from its own timestamps.
+ *
+ * Daycare rates are chosen by the length of the day now, so the server needs
+ * the same number the wizard used, or the two totals disagree and nothing
+ * auto-confirms.
+ */
+function stayHours(
+  startAt?: string | null,
+  endAt?: string | null,
+): number | undefined {
+  if (!startAt || !endAt) return undefined;
+  const a = Date.parse(startAt);
+  const b = Date.parse(endAt);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return undefined;
+  return (b - a) / 3_600_000;
+}
+
 function isoDay(value: string | null): string | undefined {
   return value ? value.slice(0, 10) : undefined;
 }
@@ -92,6 +110,38 @@ export async function autoConfirmCustomerBookings(
       (row) => row.status === "request_submitted" && row.service,
     );
     if (candidates.length === 0) return 0;
+
+    // ── WHICH ANIMAL EACH BOOKING IS FOR ──────────────────────────────
+    //
+    // A daycare rate may be offered to some species rather than all, so the
+    // server has to know the same thing the wizard did or the two totals
+    // disagree and nothing auto-confirms.
+    //
+    // ONE read for the batch, not one per booking. And only where every pet
+    // on a booking is the same species: a dog and a cat on one booking have
+    // no single answer, so it passes none and every rate stays a candidate —
+    // the same thing an unknown species has always meant.
+    const speciesByBooking = new Map<string, string | undefined>();
+    const { data: petRows } = await admin
+      .from("booking_pets")
+      .select("booking_id, pets!inner(species)")
+      .in(
+        "booking_id",
+        candidates.map((c) => c.id),
+      );
+    for (const row of (petRows ?? []) as unknown as Array<{
+      booking_id: string;
+      pets: { species: string | null } | null;
+    }>) {
+      const species = row.pets?.species?.trim();
+      if (!species) continue;
+      const seen = speciesByBooking.get(row.booking_id);
+      if (seen === undefined && !speciesByBooking.has(row.booking_id)) {
+        speciesByBooking.set(row.booking_id, species);
+      } else if (seen && seen.toLowerCase() !== species.toLowerCase()) {
+        speciesByBooking.set(row.booking_id, undefined);
+      }
+    }
 
     // One read per facility, not per booking: a multi-day request is many rows
     // of one facility.
@@ -159,6 +209,11 @@ export async function autoConfirmCustomerBookings(
         bookingId: row.id,
         roomCategoryId:
           (row.details?.["roomCategoryId"] as string | undefined) ?? null,
+        // Daycare rates are chosen by the length of the day, so the server
+        // needs the same number the wizard used. start_at/end_at ARE that
+        // number — the booking already carries it.
+        hours: stayHours(row.start_at, row.end_at),
+        species: speciesByBooking.get(row.id),
         quotedTotal: quoted,
       });
       if (!priced.ok) continue;

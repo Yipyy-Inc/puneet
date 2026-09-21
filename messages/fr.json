@@ -2633,7 +2633,12 @@
         "reasonNotConfigured": "l’envoi de courriels n’est pas configuré",
         "reasonFailed": "le service de courriel ne l’a pas acceptée",
         "clientAttached": "{name} a été ajouté comme client, pour pouvoir l’ouvrir après s’être connecté.",
-        "noPrograms": "Cet établissement n’a pas encore de programmes de dressage. Ajoutez-les sous Dressage → Tarifs, puis proposez-en un ici."
+        "noPrograms": "Cet établissement n’a pas encore de programmes de dressage. Ajoutez-les sous Dressage → Tarifs, puis proposez-en un ici.",
+        "lineTaxLabel": "Taxe",
+        "lineTaxed": "La taxe est facturée sur cette ligne",
+        "lineNotTaxed": "Aucune taxe sur cette ligne",
+        "lineTaxedA11y": "{label} : taxable",
+        "lineNotTaxedA11y": "{label} : non taxable"
       },
       "formBuilder": {
         "savedToast": "« {name} » est enregistré",
@@ -2771,7 +2776,13 @@
         "noneYet": "Aucun forfait pour l’instant."
       },
       "daycareRates": {
-        "notSaved": "Les tarifs n’ont pas été enregistrés"
+        "notSaved": "Les tarifs n’ont pas été enregistrés",
+        "maxDurationColumn": "Durée maximale",
+        "maxDurationLabel": "Durée maximale (heures)",
+        "forWhichAnimals": "Pour quels animaux",
+        "everyAnimal": "Offert à tous les animaux que cet établissement accueille.",
+        "onlySelected": "Seuls les animaux sélectionnés ci-dessus peuvent être réservés à ce tarif.",
+        "noTax": "Sans taxe"
       },
       "trainingRates": {
         "notSaved": "Les programmes n’ont pas été enregistrés"
@@ -3882,6 +3893,13 @@
         "useAnother": "Utiliser un autre terminal",
         "default": "par défaut",
         "sticky": "Cette caisse garde celui que vous choisissez."
+      },
+      "serviceTax": {
+        "label": "Facturer la taxe sur ce service",
+        "onHelp": "Les taxes de l'établissement sont ajoutées à ce service au paiement.",
+        "offHelp": "Aucune taxe n'est ajoutée à ce service. Ce qui est ajouté au comptoir reste taxable.",
+        "noTaxes": "Cet établissement ne facture encore aucune taxe : ceci ne change rien.",
+        "noTaxesLink": "Configurer les taxes"
       }
     }
   },
@@ -4204,7 +4222,8 @@
       "integrations": "Intégrations",
       "smart-insights": "Analyses intelligentes",
       "mobile-app": "Application mobile",
-      "audit": "Journal d'audit"
+      "audit": "Journal d'audit",
+      "species": "Espèces"
     },
     "index": {
       "title": "Paramètres",
@@ -7825,6 +7844,18 @@
         "rowBreeds": "{n} races",
         "rowNoConditions": "Aucune condition définie",
         "sbValueDollarsLabel": "Valeur ($)"
+      },
+      "species": {
+        "title": "Espèces",
+        "description": "Les animaux que cet établissement accueille. Un tarif de garderie peut être offert à certains d'entre eux plutôt qu'à tous.",
+        "nounLabel": "Comment cet établissement appelle ses animaux",
+        "nounHelp": "Affiché partout où un écran dit « vos animaux ». Un établissement réservé aux chiens peut écrire chiens.",
+        "nounPlaceholder": "animaux",
+        "speciesLabel": "Espèces",
+        "speciesPlaceholder": "Lapin",
+        "add": "Ajouter",
+        "remove": "Retirer",
+        "emptyWarning": "Aucune espèce indiquée. Un tarif réservé à une espèce ne correspondra à aucun animal tant qu'aucune n'est ajoutée."
       }
     }
   },
@@ -9100,7 +9131,9 @@
       "csvOwed": "Solde dû",
       "csvPayment": "État du paiement",
       "csvCheckIn": "Heure d’arrivée",
-      "csvCheckOut": "Heure de départ"
+      "csvCheckOut": "Heure de départ",
+      "noHoursTitle": "Heures d’ouverture non définies",
+      "noHoursBody": "Les heures d’arrivée et de départ suivent la journée par défaut de Yipyy, de 7 h à 19 h. Définissez les vôtres dans Réglages → Heures d’ouverture et les réservations les suivront."
     },
     "meta": {
       "rootTitle": "Yipyy — Services pour animaux",
@@ -9821,7 +9854,8 @@
       "estimatedTotal": "Total estimé",
       "depositRequired": "Dépôt requis",
       "expiresOn": "Cette estimation expire le {date}",
-      "poweredByYipyy": "Propulsé par Yipyy"
+      "poweredByYipyy": "Propulsé par Yipyy",
+      "noTaxLine": "Sans taxe"
     },
     "dashboard": {
       "loadingToday": "Chargement des chiffres du jour",

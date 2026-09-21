@@ -2633,7 +2633,12 @@
         "reasonNotConfigured": "email sending is not set up",
         "reasonFailed": "the email service did not accept it",
         "clientAttached": "{name} was added as a client, so they can open it after signing in.",
-        "noPrograms": "This facility has no training programs yet. Add them under Training → Rates, then quote one here."
+        "noPrograms": "This facility has no training programs yet. Add them under Training → Rates, then quote one here.",
+        "lineTaxLabel": "Tax",
+        "lineTaxed": "Tax is charged on this line",
+        "lineNotTaxed": "No tax on this line",
+        "lineTaxedA11y": "{label}: taxed",
+        "lineNotTaxedA11y": "{label}: not taxed"
       },
       "formBuilder": {
         "savedToast": "“{name}” is saved",
@@ -2771,7 +2776,13 @@
         "noneYet": "No packages yet."
       },
       "daycareRates": {
-        "notSaved": "The rates were not saved"
+        "notSaved": "The rates were not saved",
+        "maxDurationColumn": "Max duration",
+        "maxDurationLabel": "Max duration (hours)",
+        "forWhichAnimals": "For which animals",
+        "everyAnimal": "Available to every animal this facility takes.",
+        "onlySelected": "Only the animals selected above can be booked on this rate.",
+        "noTax": "No tax"
       },
       "trainingRates": {
         "notSaved": "The programs were not saved"
@@ -3882,6 +3893,13 @@
         "useAnother": "Use a different terminal",
         "default": "default",
         "sticky": "This till keeps using whichever you pick."
+      },
+      "serviceTax": {
+        "label": "Charge tax on this service",
+        "onHelp": "This facility's taxes are added to this service at checkout.",
+        "offHelp": "No tax is added to this service. Anything added at the counter is still taxed.",
+        "noTaxes": "This facility charges no tax yet, so this changes nothing.",
+        "noTaxesLink": "Set up taxes"
       }
     }
   },
@@ -4204,7 +4222,8 @@
       "integrations": "Integrations",
       "smart-insights": "Smart insights",
       "mobile-app": "Mobile app",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "species": "Species"
     },
     "index": {
       "title": "Settings",
@@ -7825,6 +7844,18 @@
         "rowBreeds": "{n} breeds",
         "rowNoConditions": "No conditions set",
         "sbValueDollarsLabel": "Value ($)"
+      },
+      "species": {
+        "title": "Species",
+        "description": "The animals this facility takes. A daycare rate can be offered to some of them rather than all.",
+        "nounLabel": "What this facility calls its animals",
+        "nounHelp": "Shown wherever a screen says \"your pets\". A dog-only business might say dogs.",
+        "nounPlaceholder": "pets",
+        "speciesLabel": "Species",
+        "speciesPlaceholder": "Rabbit",
+        "add": "Add",
+        "remove": "Remove",
+        "emptyWarning": "No species listed. Rates offered to a particular species will match no pet until one is added."
       }
     }
   },
@@ -9100,7 +9131,9 @@
       "csvOwed": "Owed",
       "csvPayment": "Payment status",
       "csvCheckIn": "Check-in time",
-      "csvCheckOut": "Check-out time"
+      "csvCheckOut": "Check-out time",
+      "noHoursTitle": "Opening hours not set yet",
+      "noHoursBody": "Check-in and check-out times are following Yipyy's default day, 7:00 AM to 7:00 PM. Set your own in Settings → Business hours and bookings will follow them."
     },
     "meta": {
       "rootTitle": "Yipyy - Pet Services",
@@ -9821,7 +9854,8 @@
       "estimatedTotal": "Estimated total",
       "depositRequired": "Deposit required",
       "expiresOn": "This estimate expires on {date}",
-      "poweredByYipyy": "Powered by Yipyy"
+      "poweredByYipyy": "Powered by Yipyy",
+      "noTaxLine": "No tax"
     },
     "dashboard": {
       "loadingToday": "Loading today’s numbers",

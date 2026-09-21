@@ -37,6 +37,7 @@ import {
   daycareRatesSchema,
   NO_DAYCARE_RATES,
 } from "@/lib/settings/daycare-rates";
+import { speciesConfigSchema, DEFAULT_SPECIES } from "@/lib/settings/species";
 import {
   NO_TRAINING_PROGRAMS,
   trainingProgramsSchema,
@@ -559,6 +560,16 @@ export const SETTING_DOMAINS = {
   // until 2026-09-11. Money, so the fallback is empty; see the banner in
   // lib/settings/daycare-rates.ts.
   daycare_rates: { schema: daycareRatesSchema, fallback: NO_DAYCARE_RATES },
+  // ── WHICH ANIMALS THIS FACILITY TAKES ──────────────────────────────────
+  //
+  // A fixture until 2026-09-21 — `["Dog", "Cat"]` for every facility in the
+  // product, with no screen. It became a domain because a daycare rate can now
+  // say which animals it is for, and that is only a real question if a
+  // facility can say which animals it takes.
+  //
+  // The fallback is NOT empty. An empty list means "takes no animals", which
+  // is never true and would hide every species-limited rate from every pet.
+  species_config: { schema: speciesConfigSchema, fallback: DEFAULT_SPECIES },
   // ── TRAINING PROGRAMS ──────────────────────────────────────────────────
   //
   // The priced offers on the training Rates tab. Written into the query cache

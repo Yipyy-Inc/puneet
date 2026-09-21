@@ -364,6 +364,7 @@ export function BookingModal({
     bookingFlow,
     serviceNotifDefaults,
     evaluation: evaluationConfig,
+    hoursConfigured,
   } = useSettings();
   // The facility's own surcharges and discounts, from `facility_settings`.
   // These used to come from localStorage, so what a customer was charged
@@ -1105,6 +1106,24 @@ export function BookingModal({
     );
   }, [selectedClient, selectedPetIds]);
 
+  /**
+   * The species of the pets chosen, when they are all the same one.
+   *
+   * A daycare rate can be offered to some animals rather than all, and the
+   * pet's own record is the only thing that says which it is. `pet.type` is
+   * the species column — "Dog", "Cat" — and it is free text, so nothing here
+   * compares it with === (see lib/settings/species).
+   */
+  const soleSelectedSpecies = useMemo(() => {
+    const kinds = new Set(
+      selectedPets
+        .map((p) => (p.type ?? "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    if (kinds.size !== 1) return undefined;
+    return selectedPets.find((p) => (p.type ?? "").trim())?.type;
+  }, [selectedPets]);
+
   // One enrollment line item per selected dog for the in-progress training
   // selection. Multiple pets picked in Step 1 all share the same series; a
   // different series per dog comes from the "Enroll another dog" loop, which
@@ -1232,6 +1251,27 @@ export function BookingModal({
   const sortedDaycareDays = daycareSelectedDates
     .map((d) => d.toISOString().split("T")[0])
     .sort();
+
+  /**
+   * The longest daycare day chosen, in hours, or undefined before any times
+   * are set.
+   *
+   * A rate is chosen by what it COVERS, so the stay that has to be covered is
+   * the longest one. Undefined while the wizard has no times yet, which means
+   * "any rate" rather than "no rate" — a price appears as soon as a day is
+   * picked and narrows when its hours are set.
+   */
+  const longestDaycareDayHours = daycareDateTimes.reduce<number | undefined>(
+    (longest, slot) => {
+      const [inH, inM] = slot.checkInTime.split(":").map(Number);
+      const [outH, outM] = slot.checkOutTime.split(":").map(Number);
+      if (![inH, inM, outH, outM].every(Number.isFinite)) return longest;
+      const hours = (outH * 60 + outM - (inH * 60 + inM)) / 60;
+      if (!(hours > 0)) return longest;
+      return longest === undefined || hours > longest ? hours : longest;
+    },
+    undefined,
+  );
   const assignFrom =
     selectedService === "boarding"
       ? boardingRangeStart?.toISOString().split("T")[0]
@@ -1476,7 +1516,15 @@ export function BookingModal({
           (p) => p.locationId === currentLocationId,
         )?.basePrice,
         rates: daycareRateCards,
-        half: serviceType === "half_day",
+        // The LONGEST day chosen. A rate has to cover the stay, and pricing a
+        // three-hour Monday and a ten-hour Tuesday from the shorter of the two
+        // would undercharge the Tuesday — the one direction a pricing bug must
+        // not go.
+        hours: longestDaycareDayHours,
+        // Only when every pet chosen is one species: a dog and a cat on one
+        // booking have no single answer, so none is passed and every rate
+        // stays a candidate.
+        species: soleSelectedSpecies,
       });
       if (pricePerDay === null) {
         rateGap = { kind: "daycare" };
@@ -4576,6 +4624,26 @@ export function BookingModal({
                   {/* A booking the facility has not set a rate for is refused,
                       and the reason is on screen — not a disabled button with
                       nothing to read (§5s). */}
+                  {/* The same shape as the rate gap beside it, and for the same
+                      reason: a default that looks like a decision. The
+                      check-in/check-out slider is built from the facility's
+                      opening hours, and a facility that has never saved any is
+                      shown the shipped 07:00-19:00 — which reads as "the
+                      product knows my hours" until somebody books a day that
+                      is nothing like theirs (§5s). */}
+                  {!hoursConfigured && (
+                    <div className="flex items-start gap-2 px-4 pt-4">
+                      <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-warning text-sm font-semibold">
+                          {t("noHoursTitle")}
+                        </p>
+                        <p className="text-warning text-[13.5px]">
+                          {t("noHoursBody")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {calculatePrice.rateGap && (
                     <div className="flex items-start gap-2 px-4 pt-4">
                       <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />

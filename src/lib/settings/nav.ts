@@ -28,6 +28,7 @@ import {
   Package,
   Palette,
   PawPrint,
+  Shapes,
   Percent,
   Plug,
   QrCode,
@@ -491,6 +492,20 @@ export const SETTINGS_NAV: SettingsGroup[] = [
   {
     label: "Pets & records",
     leaves: [
+      {
+        // WHICH ANIMALS, above which BREEDS of them — the same subject, one
+        // level up, so the two sit together. A fixture until 2026-09-21:
+        // ["Dog", "Cat"] for every facility in the product, with no screen.
+        //
+        // Not PawPrint: that glyph is Pet breeds' and §5b1 gives one glyph
+        // one meaning. `Shapes` is the kinds of a thing, which is what a
+        // species list is.
+        id: "species",
+        segment: "species",
+        label: "Species",
+        icon: Shapes,
+        access: "settings_general",
+      },
       {
         id: "pet-breeds",
         segment: "pet-breeds",

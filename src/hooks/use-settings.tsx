@@ -55,6 +55,19 @@ interface SettingsContextValue {
   evaluationFormTemplate: EvaluationFormTemplate;
   evaluationReportCard: EvaluationReportCardConfig;
   hours: BusinessHours;
+  /**
+   * Whether the facility has SAVED its opening hours, or is being shown the
+   * shipped 07:00-19:00 default.
+   *
+   * The value alone cannot say: a fallback and a real choice arrive looking
+   * identical. That matters because the booking wizard builds its check-in and
+   * check-out slider out of these hours, so a facility that never opened the
+   * screen watches every booking default to somebody else's day and
+   * reasonably assumes the product knows their hours. Reported by the client
+   * on 2026-09-21, and the provider note below records the same default
+   * confusing an owner once before.
+   */
+  hoursConfigured: boolean;
   profile: BusinessProfile;
   rules: BookingRules;
   bookingFlow: FacilityBookingFlowConfig;
@@ -167,6 +180,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const facilitySettings = useFacilitySettings();
   const saveSetting = useSaveFacilitySetting();
   const hours = facilitySettings.settings.business_hours.value;
+  const hoursConfigured = facilitySettings.settings.business_hours.configured;
   const rules = facilitySettings.settings.booking_rules.value;
   const groomingScheduling =
     facilitySettings.settings.grooming_scheduling.value;
@@ -356,6 +370,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         evaluationFormTemplate: evalFormTemplateData,
         evaluationReportCard: evaluationReportCardData,
         hours,
+        hoursConfigured,
         profile,
         rules,
         bookingFlow,

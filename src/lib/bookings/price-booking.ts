@@ -87,6 +87,23 @@ export interface PriceRequest {
   endDate?: string;
   /** Daycare: the days actually chosen, when the wizard sent them. */
   daycareDates?: string[];
+  /**
+   * Daycare: how long the stay runs, in hours.
+   *
+   * The rate card is chosen by the length of the day now, not by a label, so
+   * the SERVER has to know it too — a quote the wizard worked out from the
+   * booked hours and a server total worked out from the cheapest rate would
+   * disagree, and a disagreement here does not overcharge anybody, it just
+   * stops every customer booking auto-confirming for a reason nobody can see.
+   */
+  hours?: number;
+  /**
+   * Daycare: the animal being booked, when every pet on it is one species.
+   *
+   * A rate may be offered to some species rather than all. Undefined leaves
+   * every rate a candidate — the same answer as a rate that names none.
+   */
+  species?: string;
   /** Boarding: the room category the customer chose. */
   roomCategoryId?: string | null;
   /** What the customer was shown. The quote this must agree with. */
@@ -153,7 +170,12 @@ async function priceDaycare(input: PriceRequest): Promise<ServerQuote> {
   );
   const rates = parsed.success ? parsed.data.rates : [];
 
-  const perDay = daycareDayRate({ branchPrice: null, rates, half: false });
+  const perDay = daycareDayRate({
+    branchPrice: null,
+    rates,
+    hours: input.hours,
+    species: input.species,
+  });
   if (perDay === null) return { ok: false, reason: "no_rate" };
 
   const days = input.daycareDates?.length
