@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useShellText } from "@/lib/shell/use-shell-text";
 import { useAppLocale } from "@/hooks/use-app-locale";
 import { monthNames, weekdayNames } from "@/lib/dates/calendar-names";
+import { dayClearsMinimum } from "@/lib/bookings/advance-notice";
 
 // Types
 export type SelectionMode = "single" | "multi" | "range" | "recurring";
@@ -335,7 +336,7 @@ export function DateSelectionCalendar({
   };
 
   const isDateDisabled = (date: Date): boolean => {
-    if (effectiveMinDate && date < effectiveMinDate) return true;
+    if (!dayClearsMinimum(date, effectiveMinDate)) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
     if (
       enableAvailabilityRules &&
@@ -363,7 +364,7 @@ export function DateSelectionCalendar({
     )
       return "Facility closed";
     // Before minimum advance
-    if (effectiveMinDate && date < effectiveMinDate)
+    if (!dayClearsMinimum(date, effectiveMinDate))
       return "Too soon — advance booking required";
     // After maximum advance
     if (effectiveMaxDate && date > effectiveMaxDate)
@@ -452,7 +453,11 @@ export function DateSelectionCalendar({
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
-    if (effectiveMinDate && lastDayOfMonth < effectiveMinDate) {
+    // By the month's LAST INSTANT, for the same reason `isDateDisabled` uses
+    // the day's: a month whose final day is still selectable must stay
+    // reachable, or the grid offers a date the month picker says is out of
+    // bounds.
+    if (!dayClearsMinimum(lastDayOfMonth, effectiveMinDate)) {
       return false;
     }
 
