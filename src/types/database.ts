@@ -13154,6 +13154,10 @@ export type Database = {
         Args: { p_facility_slug: string };
         Returns: string;
       };
+      link_my_client_record: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       link_staff_invite: {
         Args: { p_profile_id: string; p_staff_legacy_id: string };
         Returns: Json;

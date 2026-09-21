@@ -19116,3 +19116,49 @@ test" one — but it does not settle it, and a name still would.
 
 **Do instead:** `bun run test:unit 2>&1 | tee` — never `| tail` — and treat a
 red unit run during an e2e suite as the one chance to name it.
+
+## 2026-09-21 — A customer at yipyy.com could never be linked to their own record
+
+Reported by the client as three complaints: booking says "no pet added", "Add
+a pet" will not work, and a pet the FACILITY added does not appear in the
+customer portal. **All three are one missing link.**
+
+`/api/clients/me` heals a null `clients.profile_id` by matching the caller's
+profile email against `clients.email` — but only inside
+`if (!row && slug)`, and `proxy.ts` stamps `x-facility-slug` as an EMPTY
+STRING on the apex. So the heal ran on `<facility>.yipyy.com` and never on
+`yipyy.com`, which is the address a customer is most likely to be given.
+
+With no client record: the portal has no pets, the wizard says "no pet added",
+and the add-pet page posts `clientId: undefined`, which `/api/pets` correctly
+refuses 422 "A pet needs an owner" — a true sentence about a false premise.
+
+**How it was proved, which is the transferable part.** Client ref 855 at
+doggieville-mtl carried `singhparminder360@gmail.com`, a dog, and a null
+`profile_id`; a profile with that exact address existed with zero linked client
+rows. The row was **still unclaimed after the client had tried** — which is
+what distinguishes "the heal never ran" from "the heal ran and failed", and it
+is the only piece of evidence that does.
+
+### The fix claims at most one, deliberately
+
+`public.link_my_client_record()` (20260921143000) heals the apex case, and
+claims **only when exactly one unclaimed row carries that address**. The
+unscoped version that claimed at every facility at once is the defect spec 002
+phase 5 removed: a facility that mistypes an address creates a row addressed to
+somebody else, and claiming it hands that stranger the row's pets and bookings.
+Two matches is ambiguous, claims nothing, and falls through to the same
+`{ linked: false }` as before.
+
+### It only works when the two addresses agree
+
+The heal matches the SIGN-IN email against the RECORDED one. Where a facility
+recorded a different address, nothing links and nothing will. The seeded e2e
+customers are exactly that case — `customer@yipyy.dev` signs in against a
+client row addressed `alice@example.com` — which is why
+`customer-apex-link.spec.ts` builds a record of its own rather than unlinking a
+seeded one, and why unlinking one to test would have proved nothing while
+risking leaving it unlinked for every other spec.
+
+**Workaround while unshipped:** use the facility's own address
+(`<slug>.yipyy.com`), where the existing heal already runs.

@@ -391,7 +391,7 @@ jobs:
   # to run. The suite length was the cause; everything else was a symptom.
   #
   # So this job now runs the 33 specs that guard the two things worth blocking
-  # a push over: the authorisation boundary, and money. The other 99 still run,
+  # a push over: the authorisation boundary, and money. The other 100 still run,
   # nightly and on demand, in this same job below — the coverage is not
   # dropped, it is rescheduled. (Paused 2026-09-17 → 18 for egress; see `on:`.)
   # ── WHAT CHANGED, SO A MARKDOWN COMMIT DOES NOT COST A SUITE RUN ────────
@@ -628,7 +628,7 @@ jobs:
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # A manual workflow_dispatch runs all 132. So does the nightly. The
+        # A manual workflow_dispatch runs all 133. So does the nightly. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
         # is still the command to run by hand before anything that matters.
         #
@@ -636,7 +636,7 @@ jobs:
         # server build and purge, and the two would have drifted.
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Full suite (132 specs)."
+            echo "Full suite (133 specs)."
             bun run test:e2e:ci
           else
             echo "Gate (33 specs: access & money). The full suite runs nightly."

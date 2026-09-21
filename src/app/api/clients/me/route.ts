@@ -88,13 +88,30 @@ export async function GET() {
       // Unlinked HERE. Claim a record this facility already created for their
       // address, then read again — the RPC returns the id but not the row, and
       // re-reading keeps a single mapping path rather than two.
-      //
-      // Only when a facility is named. Without one there is nothing to claim
-      // AT, and the unscoped version of this call is exactly the defect phase 5
-      // removed: it claimed across every facility at once.
       const { error: linkError } = await supabase.rpc("link_client_record", {
         p_facility_slug: slug,
       });
+      if (linkError) {
+        return NextResponse.json({ error: linkError.message }, { status: 500 });
+      }
+      row = await readOwn();
+    } else if (!row) {
+      // ── AND ON THE APEX, WHERE NO FACILITY IS NAMED ─────────────────────
+      //
+      // This branch did not exist until 2026-09-21, and its absence read as
+      // three unrelated bugs. `proxy.ts` stamps an EMPTY slug on yipyy.com, so
+      // the heal above never ran there — a customer whose record a facility had
+      // already created got `{ linked: false }` forever, which the portal shows
+      // as no pets, which the booking wizard shows as "no pet added", and which
+      // makes "Add a pet" post `clientId: undefined` and be refused 422 "A pet
+      // needs an owner". Three complaints, one missing link.
+      //
+      // NOT the unscoped claim phase 5 removed: `link_my_client_record()`
+      // claims AT MOST ONE row and only when exactly one unclaimed record
+      // carries their address. Two matches is ambiguous, claims nothing, and
+      // falls through to the same `{ linked: false }` as before — see the
+      // migration for why an ambiguous claim is the one that can be wrong.
+      const { error: linkError } = await supabase.rpc("link_my_client_record");
       if (linkError) {
         return NextResponse.json({ error: linkError.message }, { status: 500 });
       }
