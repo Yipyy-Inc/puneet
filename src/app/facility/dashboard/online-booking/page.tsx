@@ -47,6 +47,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomerRequestsTab } from "./_components/customer-requests-tab";
+import { usePendingCustomerRequests } from "@/lib/api/customer-requests";
+import { useSettingsText } from "@/lib/settings/use-settings-text";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -273,6 +276,12 @@ export default function OnlineBookingPage() {
   );
   const { data: facilityClients = [] } = useQuery(clientQueries.all());
   const decide = useDecideRequest();
+  // The badge on the tab. A failed read shows no number rather than a zero —
+  // "none waiting" and "could not ask" are different answers.
+  const asksCount = usePendingCustomerRequests().data?.length ?? 0;
+  // Through the catalogue, not a literal: this page is ratcheted at 28 English
+  // strings and the only direction that number moves is down.
+  const asksLabel = useSettingsText().section("customer-requests")("heading");
   const createBooking = useCreateBookingFromModal();
 
   const bookingsById = React.useMemo(
@@ -516,6 +525,11 @@ export default function OnlineBookingPage() {
                 label: "Unfinished",
                 count: abandonedCount,
               },
+              {
+                value: "asks",
+                label: asksLabel,
+                count: asksCount,
+              },
               { value: "settings", label: "Settings", count: 0 },
             ] as const
           ).map((t) => {
@@ -634,6 +648,10 @@ export default function OnlineBookingPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="asks" className="mt-4 space-y-4">
+          <CustomerRequestsTab />
         </TabsContent>
 
         <TabsContent value="unfinished" className="mt-4">

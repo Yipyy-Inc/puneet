@@ -6144,6 +6144,9 @@ export type Database = {
           created_by: string | null;
           created_by_name: string | null;
           customer_request: string | null;
+          customer_request_decided_at: string | null;
+          customer_request_decided_by: string | null;
+          customer_request_decision: string | null;
           edit_history: Json;
           entity_id: string;
           facility_id: string;
@@ -6161,6 +6164,9 @@ export type Database = {
           created_by?: string | null;
           created_by_name?: string | null;
           customer_request?: string | null;
+          customer_request_decided_at?: string | null;
+          customer_request_decided_by?: string | null;
+          customer_request_decision?: string | null;
           edit_history?: Json;
           entity_id: string;
           facility_id: string;
@@ -6178,6 +6184,9 @@ export type Database = {
           created_by?: string | null;
           created_by_name?: string | null;
           customer_request?: string | null;
+          customer_request_decided_at?: string | null;
+          customer_request_decided_by?: string | null;
+          customer_request_decision?: string | null;
           edit_history?: Json;
           entity_id?: string;
           facility_id?: string;
