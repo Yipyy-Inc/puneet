@@ -579,3 +579,96 @@ describe("the facility's timezone, not the browser's", () => {
     expect(withDefault[0].minutesOver).toBe(60);
   });
 });
+
+describe("stacking, when the facility opts in", () => {
+  // MoéGo's default is one fee per pickup and stacking is an opt-in their
+  // support has to switch on, because the whole point of the default is that
+  // "this keeps invoices predictable and prevents accidental overcharging".
+  // So the interesting assertions are that the SAME booking costs different
+  // amounts with the flag on and off, and that off is the default.
+  const two = [
+    fee({ id: "six", customTime: "18:00", feeType: "flat", amount: 10 }),
+    fee({ id: "eight", customTime: "20:00", feeType: "flat", amount: 25 }),
+  ];
+  const pickedUpAt2100 = {
+    serviceId: "boarding",
+    scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+    actualCheckOutTime: "2026-09-21T21:00:00-04:00",
+  };
+
+  test("off, one fee — the last threshold crossed", () => {
+    const fees = computeTimeFees({ fees: two, ...pickedUpAt2100 });
+    expect(fees).toHaveLength(1);
+    expect(timeFeesTotal(fees)).toBe(25);
+  });
+
+  test("on, every rule the pickup passed", () => {
+    const fees = computeTimeFees({ fees: two, stack: true, ...pickedUpAt2100 });
+    expect(fees).toHaveLength(2);
+    expect(timeFeesTotal(fees)).toBe(35);
+  });
+
+  test("absent means off — a stored blob written before the flag existed", () => {
+    const fees = computeTimeFees({
+      fees: two,
+      stack: undefined,
+      ...pickedUpAt2100,
+    });
+    expect(timeFeesTotal(fees)).toBe(25);
+  });
+
+  test("stacking charges no rule the pickup did not pass", () => {
+    // 19:00 clears the 18:00 rule and not the 20:00 one. Stacking widens
+    // which MATCHING rules charge; it does not invent a match.
+    const fees = computeTimeFees({
+      fees: two,
+      stack: true,
+      serviceId: "boarding",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
+    });
+    expect(fees).toHaveLength(1);
+    expect(fees[0].ruleId).toBe("six");
+  });
+
+  test("the order is stable, so an invoice reads the same twice", () => {
+    const forwards = computeTimeFees({
+      fees: two,
+      stack: true,
+      ...pickedUpAt2100,
+    });
+    const backwards = computeTimeFees({
+      fees: [...two].reverse(),
+      stack: true,
+      ...pickedUpAt2100,
+    });
+    expect(forwards.map((f) => f.ruleId)).toEqual(["six", "eight"]);
+    expect(backwards.map((f) => f.ruleId)).toEqual(["six", "eight"]);
+  });
+
+  test("an early drop-off and a late pickup still both charge, either way", () => {
+    // Two conditions were never in competition with each other — one fee of
+    // each is the un-stacked answer too.
+    const both = [
+      fee({ id: "late", customTime: "18:00", feeType: "flat", amount: 10 }),
+      fee({
+        id: "early",
+        condition: "early_dropoff",
+        customTime: "08:00",
+        feeType: "flat",
+        amount: 7,
+      }),
+    ];
+    const input = {
+      serviceId: "boarding",
+      scheduledCheckInTime: "2026-09-20T08:00:00-04:00",
+      actualCheckInTime: "2026-09-20T06:30:00-04:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
+    };
+    expect(timeFeesTotal(computeTimeFees({ fees: both, ...input }))).toBe(17);
+    expect(
+      timeFeesTotal(computeTimeFees({ fees: both, stack: true, ...input })),
+    ).toBe(17);
+  });
+});

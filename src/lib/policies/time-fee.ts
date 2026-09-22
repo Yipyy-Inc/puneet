@@ -84,6 +84,13 @@ export interface FacilityDayHours {
 export interface TimeFeeInput {
   fees: LatePickupFee[] | undefined;
   serviceId: string;
+  /**
+   * Charge EVERY matching rule instead of only the threshold crossed.
+   *
+   * Off unless the facility turned it on. See `computeTimeFees` — the default
+   * is one fee per pickup, and stacking is the deliberate exception.
+   */
+  stack?: boolean;
   /** How many pets this bill covers. `scope: "per_pet"` multiplies by it. */
   petCount?: number;
   /** What one billable unit costs — the only input `feeType: "extra_night"` reads. */
@@ -366,28 +373,50 @@ function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
 /**
  * Every time fee this booking owes — at most one late pickup and one early
  * drop-off. Empty is the ordinary answer and means no fee, never a default fee.
+ *
+ * ── UNLESS THE FACILITY ASKED FOR STACKING ────────────────────────────────
+ *
+ * `stack` makes every matching rule charge instead of only the threshold
+ * actually crossed. It is OFF by default and has to be turned on deliberately,
+ * which is not timidity: one pickup at 19:30 against rules at 18:00 and 19:00
+ * costs one fee normally and TWO with this on, and the facility is the only
+ * party who can say which they meant. MoéGo gates the same switch behind
+ * contacting their support, for the same reason — their words, "this keeps
+ * invoices predictable and prevents accidental overcharging".
+ *
+ * Order is kept deterministic so an invoice reads the same twice: early
+ * drop-offs first, each group by the baseline crossed.
  */
 export function computeTimeFees(input: TimeFeeInput): TimeFeeResult[] {
   if (!input.fees?.length) return [];
 
-  let latest: Candidate | null = null; // late pickup: the last baseline crossed
-  let earliest: Candidate | null = null; // early drop-off: the mirror
+  const early: Candidate[] = [];
+  const late: Candidate[] = [];
 
   for (const fee of input.fees) {
     const candidate = evaluate(fee, input);
     if (!candidate) continue;
-
-    if (candidate.result.condition === "late_pickup") {
-      if (!latest || candidate.baselineMinutes > latest.baselineMinutes) {
-        latest = candidate;
-      }
-    } else if (
-      !earliest ||
-      candidate.baselineMinutes < earliest.baselineMinutes
-    ) {
-      earliest = candidate;
-    }
+    (candidate.result.condition === "late_pickup" ? late : early).push(
+      candidate,
+    );
   }
+
+  if (input.stack) {
+    early.sort((a, b) => a.baselineMinutes - b.baselineMinutes);
+    late.sort((a, b) => a.baselineMinutes - b.baselineMinutes);
+    return [...early, ...late].map((candidate) => candidate.result);
+  }
+
+  // The threshold actually crossed: the EARLIEST opening a drop-off beat, and
+  // the LATEST closing a pickup ran past.
+  const earliest = early.reduce<Candidate | null>(
+    (best, c) => (!best || c.baselineMinutes < best.baselineMinutes ? c : best),
+    null,
+  );
+  const latest = late.reduce<Candidate | null>(
+    (best, c) => (!best || c.baselineMinutes > best.baselineMinutes ? c : best),
+    null,
+  );
 
   const fees: TimeFeeResult[] = [];
   if (earliest) fees.push(earliest.result);

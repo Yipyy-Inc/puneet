@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -204,6 +205,9 @@ export function PricingRulesPanel({
   const [stacking, setStacking] = useState<DiscountStackingMode>(
     (rules?.discountStacking as DiscountStackingMode) ?? "best_only",
   );
+  const [timeFeeStacking, setTimeFeeStacking] = useState<boolean>(
+    rules?.timeFeeStacking === true,
+  );
   const [multiNight, setMultiNight] = useState<MultiNightDiscount[]>(
     (rules?.multiNightDiscounts ?? []) as MultiNightDiscount[],
   );
@@ -239,6 +243,7 @@ export function PricingRulesPanel({
       discountStacking: stacking,
       multiPetDiscounts: multiPet,
       latePickupFees: timeFees,
+      timeFeeStacking,
       exceed24Hour: exceed24h,
       customFees,
       multiNightDiscounts: multiNight,
@@ -252,6 +257,7 @@ export function PricingRulesPanel({
     stacking,
     multiPet,
     timeFees,
+    timeFeeStacking,
     exceed24h,
     customFees,
     multiNight,
@@ -1181,6 +1187,25 @@ export function PricingRulesPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            {/* One pickup at 19:30 against rules at 18:00 and 19:00 costs one
+                fee off and TWO on, so this is off until somebody says
+                otherwise — and the sentence below says what it will do. */}
+            <label className="flex items-start gap-2 pb-1">
+              <Checkbox
+                checked={timeFeeStacking}
+                onCheckedChange={(checked) =>
+                  setTimeFeeStacking(checked === true)
+                }
+              />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-medium">
+                  {t("tfStackTitle")}
+                </span>
+                <span className="text-meta text-ink-tertiary block">
+                  {timeFeeStacking ? t("tfStackOn") : t("tfStackOff")}
+                </span>
+              </span>
+            </label>
             {filteredTimeFees.length === 0 ? (
               <p className="text-muted-foreground text-xs">
                 {t("listTimeFeesEmpty")}

@@ -66,6 +66,15 @@ export const pricingRulesSchema = z.object({
     .default("best_only"),
   multiPetDiscounts: z.array(multiPetDiscountRuleSchema).default([]),
   latePickupFees: z.array(latePickupFeeSchema).default([]),
+  /**
+   * Charge every matching late-pickup / early-drop-off rule, not only the
+   * threshold crossed.
+   *
+   * Defaults FALSE, and the default is the safe direction: one pickup at 19:30
+   * against rules at 18:00 and 19:00 costs one fee off and two on. A facility
+   * turns it on deliberately, per `computeTimeFees`.
+   */
+  timeFeeStacking: z.boolean().default(false),
   exceed24Hour: exceed24HourFeeSchema.default({
     id: "exceed-24h",
     enabled: false,

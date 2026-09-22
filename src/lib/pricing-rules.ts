@@ -43,6 +43,8 @@ export interface StoredPricingRules {
   discountStacking: DiscountStackingMode;
   multiPetDiscounts: MultiPetDiscountRule[];
   latePickupFees: LatePickupFee[];
+  /** Charge every matching time-fee rule, not only the threshold crossed. */
+  timeFeeStacking?: boolean;
   exceed24Hour: Exceed24HourFee;
   customFees: CustomFee[];
   multiNightDiscounts: MultiNightDiscount[];
@@ -734,6 +736,7 @@ export function applyDynamicPricingRules(
   for (const fee of computeTimeFees({
     fees: nothingObserved ? [] : rules.latePickupFees,
     serviceId: input.serviceId,
+    stack: rules.timeFeeStacking === true,
     petCount: input.selectedPetIds.length,
     perUnitBase,
     scheduledCheckInTime: input.scheduledCheckInTime,
