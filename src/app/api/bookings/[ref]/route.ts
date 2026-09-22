@@ -12,6 +12,7 @@ import {
 import { writeFailure } from "@/lib/api/write-failure";
 import { staffForStylist } from "@/lib/api/stylist-staff";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
+import { returnPassUnlessForfeited } from "@/lib/policies/return-pass-on-cancel";
 import {
   checkStatusTransition,
   isPresenceTracked,
@@ -285,6 +286,24 @@ export async function PATCH(
   // cancelling one is not. The facility comes from the booking row, never from
   // getFacilityContext(), which answers the demo facility for a customer.
   if (nextStatus === "cancelled" && currentStatus !== "cancelled") {
+    // ── THE PASS ────────────────────────────────────────────────────────
+    //
+    // Read through `booking_cancel_terms`, which wraps the SAME evaluator the
+    // customer preview and the cancel dialog read, so the counter cannot
+    // return a pass the policy says is forfeited. The trigger does not record
+    // the terms on a staff cancel — it returns early for staff by design — so
+    // unlike the customer route this has to ask.
+    const { data: staffTerms } = await (
+      supabase.rpc.bind(supabase) as unknown as (
+        fn: "booking_cancel_terms",
+        args: Record<string, unknown>,
+      ) => PromiseLike<{ data: unknown; error: unknown }>
+    )("booking_cancel_terms", { p_ref: bookingRef });
+    await returnPassUnlessForfeited(
+      bookingRef,
+      (staffTerms as { charge?: string } | null)?.charge,
+    );
+
     const viewer = await getViewer().catch(() => null);
     if (viewer && viewer.memberships.length === 0) {
       const { data: booked } = await supabase

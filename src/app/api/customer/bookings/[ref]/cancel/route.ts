@@ -2,6 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { notifyStaff } from "@/lib/notifications/notify-staff";
+import { returnPassUnlessForfeited } from "@/lib/policies/return-pass-on-cancel";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================
@@ -143,6 +144,14 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // The pass, before the notice: `cancel_my_booking` returns the terms the
+  // trigger recorded, so the charge kind is the database's own answer rather
+  // than anything this route worked out. Awaited, not deferred — a customer
+  // who cancelled in time should see the pass back when the page refreshes,
+  // and a failure here must not be invisible.
+  const terms = data as { charge?: string } | null;
+  const pass = await returnPassUnlessForfeited(ref, terms?.charge);
+
   const { data: booked } = await supabase
     .from("bookings")
     .select("id, facility_id, service, start_at, clients ( name )")
@@ -174,5 +183,5 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ cancellation: data });
+  return NextResponse.json({ cancellation: data, pass });
 }

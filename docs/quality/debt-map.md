@@ -20087,3 +20087,31 @@ The spec needs `CRON_SECRET`, which is runtime-only and absent in CI, so it
 SKIPS there — its own header says to read a skip as "not measured", never as
 "passed". This machine is the only place it runs. Putting `CRON_SECRET` in the
 e2e job's env was already carried debt; its cost is now measured.
+
+## 2026-09-22 — The 25 redemptions that came before the link can never be reversed
+
+`reverse_package_pass` finds the pass a booking spent by
+`package_pass_entries.booking_id`. Every entry written before 2026-09-22 has
+that column NULL — 25 of 25, measured — because the column and the RPC
+parameter both existed and none of the three call sites ever passed one.
+
+So those redemptions are unreversible by design: there is no way to tell which
+booking spent them, and guessing from pet and timestamp would hand a pass back
+against the wrong visit. They are left alone. New redemptions carry the link.
+
+**Do instead:** if one of them must be put right, correct it as an
+`adjustment` entry — the `reason` CHECK already admits it and it carries no
+claim about which booking it belongs to — never by inventing a `booking_id`.
+
+### And the feature is still dormant
+
+`forfeit_pass` cannot reach a customer today, measured the same day: **every**
+customer package belongs to an ARCHIVED facility (Paws & Co — Demo 7, Yipyy
+Demo Facility 1), Doggieville Mtl is the only live one and holds none, and no
+facility anywhere has written a `cancellation_policies` row. Both conditions
+must hold for a pass to be forfeited.
+
+That is why this was built rather than hot-fixed: it is a trap for the day a
+live facility sells its first package, not an outage. The same shape as the
+daycare rate ceiling a day earlier — worth measuring before calling anything
+urgent.

@@ -514,6 +514,9 @@ function BookWithPassButton({
               customerPackageId: purchase.id,
               serviceId: purchase.serviceId,
               serviceLabel: purchase.serviceLabel,
+              // What it was spent on, so it can be given back if the booking
+              // is cancelled under a policy that does not forfeit it.
+              bookingId: ctx.bookingRef,
               petId: ctx.petId,
               petName: ctx.petName,
             });

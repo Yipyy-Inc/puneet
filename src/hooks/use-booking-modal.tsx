@@ -49,7 +49,19 @@ interface BookingModalConfig {
   /** Resume: the step the draft was left on, and the sub-step within it. */
   preSelectedStep?: ResumeStepId;
   preSelectedSubStep?: number;
-  onCreateBooking: (booking: BookingData) => void;
+  /**
+   * Mirrors BookingModal's own prop. Typed `=> void` until 2026-09-22, which
+   * typechecked while silently discarding what the handler returned — and the
+   * created booking's ref is exactly what a pass redemption needs to say what
+   * it was spent on.
+   */
+  onCreateBooking: (
+    booking: BookingData,
+  ) =>
+    | void
+    | boolean
+    | { ref: number }
+    | Promise<void | boolean | { ref: number }>;
   isEstimateMode?: boolean;
   isCustomerMode?: boolean;
   /** Pass-redemption mode: no payment step; on confirm the pass is auto-applied
@@ -62,7 +74,12 @@ interface BookingModalConfig {
   passRedemption?: {
     serviceLabel: string;
     category: string;
-    onRedeem: (ctx: { petId?: number; petName?: string }) => Promise<{
+    onRedeem: (ctx: {
+      petId?: number;
+      petName?: string;
+      /** The booking the pass is being spent on, when the caller knows it. */
+      bookingRef?: number;
+    }) => Promise<{
       ok: boolean;
       passesLeft: number;
       error?: string;

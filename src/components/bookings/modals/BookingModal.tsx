@@ -178,9 +178,20 @@ export interface NewBookingModalProps {
    * it was not saved — having said why — and the form stays as it was.
    * Anything else closes it. See `handleComplete`.
    */
+  /**
+   * Anything but `false` means the booking was saved. A caller that knows the
+   * created booking's ref returns it, and then a pass redeemed for this
+   * booking can be attributed to it — which is what makes giving one back
+   * possible at all. A caller that does not is unchanged, and its redemption
+   * is simply unlinked, exactly as every one of them was before.
+   */
   onCreateBooking: (
     booking: NewBooking,
-  ) => void | boolean | Promise<void | boolean>;
+  ) =>
+    | void
+    | boolean
+    | { ref: number }
+    | Promise<void | boolean | { ref: number }>;
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   /** Every pet to start with, as a resumed draft had; wins over preSelectedPetId. */
@@ -232,7 +243,12 @@ export interface NewBookingModalProps {
   passRedemption?: {
     serviceLabel: string;
     category: string;
-    onRedeem: (ctx: { petId?: number; petName?: string }) => Promise<{
+    onRedeem: (ctx: {
+      petId?: number;
+      petName?: string;
+      /** The booking the pass is being spent on, when the caller knows it. */
+      bookingRef?: number;
+    }) => Promise<{
       ok: boolean;
       passesLeft: number;
       error?: string;
@@ -2392,14 +2408,26 @@ export function BookingModal({
 
   // The caller saves the booking. It answers `false` — or throws — when it did
   // not, having said why; anything else means it is saved.
-  const saveThrough = async (booking: NewBooking): Promise<boolean> => {
+  /**
+   * `ok` is the answer every call site already used; `ref` is new and is
+   * undefined for a caller that does not return one. Both redemption paths
+   * below run AFTER this resolves — "once the booking exists" — so the ref is
+   * available to them for the first time.
+   */
+  const saveThrough = async (
+    booking: NewBooking,
+  ): Promise<{ ok: boolean; ref?: number }> => {
     try {
-      return (await onCreateBooking(booking)) !== false;
+      const outcome = await onCreateBooking(booking);
+      if (outcome === false) return { ok: false };
+      return typeof outcome === "object" && outcome !== null
+        ? { ok: true, ref: outcome.ref }
+        : { ok: true };
     } catch (error) {
       toast.error(t("bookingNotSaved"), {
         description: error instanceof Error ? error.message : undefined,
       });
-      return false;
+      return { ok: false };
     }
   };
 
@@ -2686,7 +2714,8 @@ export function BookingModal({
     }
 
     if (isCustomerMode) {
-      if (!(await saveThrough(withBookingParts(booking)))) return false;
+      const requested = await saveThrough(withBookingParts(booking));
+      if (!requested.ok) return false;
       // Pass-redemption booking: apply one prepaid pass once the booking
       // exists, and say how many are left.
       if (passRedemption) {
@@ -2695,6 +2724,9 @@ export function BookingModal({
         const result = await passRedemption.onRedeem({
           petId: primaryPetId,
           petName: primaryPet?.name,
+          // Which booking spent it. Null here is why no pass has ever been
+          // returnable: the ledger could not say what it was spent on.
+          bookingRef: requested.ref,
         });
         if (result.ok) {
           toast.success(t("bookingConfirmed"), {
@@ -2759,7 +2791,7 @@ export function BookingModal({
         if (made === 0 && dropIns.length === 0) return false;
       }
       if (dropIns.length === 0) return true;
-      const saved = await saveThrough({
+      const savedDropIns = await saveThrough({
         ...booking,
         petId: dropIns.length === 1 ? dropIns[0].petId : petId,
         parts: dropIns.map((li) => ({
@@ -2774,13 +2806,13 @@ export function BookingModal({
           trainingSessionId: li.sessionId,
         })),
       });
-      return saved;
+      return savedDropIns.ok;
     }
 
     const saved = await saveThrough(
       editMode ? booking : withBookingParts(booking, bookedRooms),
     );
-    if (!saved) return false;
+    if (!saved.ok) return false;
 
     // An EDIT creates no evaluation and redeems no pass — those describe a
     // new booking. The caller reports what the edit itself did.
@@ -2794,7 +2826,7 @@ export function BookingModal({
 
     if (redeemedPackageId) {
       const primaryPetId = Array.isArray(petId) ? petId[0] : petId;
-      redeemSelectedPackage(redeemedPackageId, primaryPetId);
+      redeemSelectedPackage(redeemedPackageId, primaryPetId, saved.ref);
     }
 
     return true;
@@ -2867,8 +2899,15 @@ export function BookingModal({
     return booking;
   };
 
-  // A session taken from a package, once the booking exists.
-  const redeemSelectedPackage = (packageId: string, primaryPetId: number) => {
+  // A session taken from a package, once the booking exists — and, since
+  // 2026-09-22, ATTRIBUTED to it. `bookingRef` is undefined when the caller
+  // did not return one, which leaves the entry unlinked exactly as all 25
+  // existing redemptions are; it is never guessed.
+  const redeemSelectedPackage = (
+    packageId: string,
+    primaryPetId: number,
+    bookingRef?: number,
+  ) => {
     const legacyPkg = selectedClient?.packages?.find((p) => p.id === packageId);
     if (legacyPkg) {
       toast.success(t("sessionRedeemed").replace("{name}", legacyPkg.name), {
@@ -2898,6 +2937,7 @@ export function BookingModal({
         customerPackageId: prepaid.id,
         serviceId: pool.packageId,
         serviceLabel: pool.serviceName,
+        bookingId: bookingRef,
         petId: primaryPetId,
         petName: primaryPet?.name,
       },

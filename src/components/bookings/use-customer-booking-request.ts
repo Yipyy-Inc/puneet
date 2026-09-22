@@ -32,8 +32,17 @@ export function useCustomerBookingRequest(options?: {
   const { selectedFacility } = useCustomerFacility();
   const queryClient = useQueryClient();
 
-  /** Resolves true when the request was written, false when it was not. */
-  return async (booking: NewBooking): Promise<boolean> => {
+  /**
+   * Resolves FALSE when the request was not written, and the created booking's
+   * ref when it was.
+   *
+   * It returned a bare `true`, and the ref went in the toast and nowhere else.
+   * Every caller tests `!== false`, so an object is as true as `true` was —
+   * but a pass redeemed against this booking can now say WHICH booking spent
+   * it. Without that, `package_pass_entries.booking_id` stays null (25 of 25
+   * rows, measured 2026-09-22) and nothing can ever give a pass back.
+   */
+  return async (booking: NewBooking): Promise<false | { ref: number }> => {
     if (!customer || !selectedFacility) return false;
 
     const petId = Array.isArray(booking.petId)
@@ -87,7 +96,7 @@ export function useCustomerBookingRequest(options?: {
       );
 
       options?.onSent?.();
-      return true;
+      return { ref: created.id };
     } catch (error) {
       // The facility requires forms before booking. Name them, and open the
       // first in a new tab so this booking stays as it is.
