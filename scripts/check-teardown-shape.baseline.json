@@ -4,7 +4,6 @@
   "tests/e2e/booking-actions-truth.spec.ts": 1,
   "tests/e2e/booking-detail-redirect.spec.ts": 1,
   "tests/e2e/booking-line-items.spec.ts": 1,
-  "tests/e2e/booking-presence.spec.ts": 1,
   "tests/e2e/booking-tip-split.spec.ts": 1,
   "tests/e2e/booking-write-integrity.spec.ts": 1,
   "tests/e2e/clover-pay.spec.ts": 1,

@@ -70,9 +70,21 @@ async function readBooking(
   // The `.find` stays as a belt: the route filters server-side now, so this
   // runs over one row, but if the param were ever dropped the helper would
   // still answer with the right booking rather than the newest one.
-  const all = (await (
-    await page.request.get(`/api/bookings${bookingListSearch({ ref })}`)
-  ).json()) as BookingPayload[];
+  // Loudly, not silently. The same cast here produced `TypeError: all is not
+  // iterable` when the server was failing, which names neither the status nor
+  // what came back — thirty minutes of a run were spent working out that the
+  // server had died rather than that a test was wrong. A helper is not a
+  // teardown: it SHOULD stop the test, but with the answer in the message.
+  const res = await page.request.get(
+    `/api/bookings${bookingListSearch({ ref })}`,
+  );
+  const body = (await res.json().catch(() => null)) as unknown;
+  if (!Array.isArray(body)) {
+    throw new Error(
+      `GET /api/bookings answered ${res.status()} with no list: ${JSON.stringify(body)?.slice(0, 200)}`,
+    );
+  }
+  const all = body as BookingPayload[];
   return all.find((b) => b.id === ref);
 }
 
@@ -82,9 +94,20 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const all = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+    // A CAST IS A CLAIM, and this one was false on 2026-09-22: the server was
+    // failing, `/api/bookings` answered something that was not a list, and
+    // `for...of` threw "all is not iterable" INSIDE afterAll — so this cleanup
+    // cancelled nothing and left its rows on the shared database while the run
+    // still looked like it had tidied up. Same shape as the neighbour in
+    // daycare-attendance.spec.ts, and what `check:teardown-shape` is for.
+    const listed = await page.request.get("/api/bookings");
+    const body = listed.ok() ? await listed.json().catch(() => null) : null;
+    const all: BookingPayload[] = Array.isArray(body) ? body : [];
+    if (!Array.isArray(body)) {
+      console.log(
+        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+      );
+    }
     let cancelled = 0;
     for (const b of all) {
       if (!b.specialRequests?.includes(MARKER)) continue;

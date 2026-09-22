@@ -19920,3 +19920,96 @@ A `next start` means rebuild, or start `next dev` on another port and point
 under the French settings spec above: in both cases the browser faithfully
 photographed a server that was not the one under test, and the diagnosis cost
 more than the check would have.
+
+## 2026-09-22 — A full local e2e run died twice, and the failures all lied
+
+Two attempts at `bun run test:e2e:ci` on this machine ended the same way: the
+server went away partway through, and every remaining test failed against
+nothing. The first reported **391 failures**; **409 of its 412 error contexts
+were `ECONNREFUSED`**. The number that mattered was 2.
+
+Three separate traps, each of which produced a confidently wrong answer.
+
+### 1. The failure marker is `x`, not the tick
+
+Playwright's list reporter falls back to ASCII on this console, so a filter
+written for `✘` matches nothing and a failing run reads as silent. Counting
+`grep -c "not ok|✘"` returned **0 while 391 tests were failing**, and that
+zero was reported three times before anyone looked at the actual prefixes:
+
+```
+grep -oE '^  [^ ]+' run.log | sort | uniq -c    # -> 474 "-", 391 "x", 225 "ok"
+```
+
+**Do instead:** count `^  x ` and `^  ok `, and before trusting any pass/fail
+number from a log, print the prefix distribution once. A silent watch is not
+evidence of a clean run.
+
+### 2. A detached server does not stay running here
+
+`Invoke-CimMethod Win32_Process Create` — the method the repo's own notes
+recommend — did **not** keep a `next start` alive across the run. Both times
+the whole tree vanished with no exit logged: the supervisor `cmd.exe` was gone
+from the process table, having written its "starting" line and never its own
+"EXITED" line, with 14 GB of memory free. A supervisor that restarts on
+_exit_ does not help, because the process is killed rather than exiting.
+
+**Do instead: let Playwright own the server.** `playwright.config.ts` has a
+`webServer` block that starts it and supervises it for the run's lifetime,
+which is what CI uses and what finally produced a complete run here (76
+passed, 2 flaky, 45 minutes).
+
+### 3. `E2E_BASE_URL` silently disables that
+
+```ts
+const REMOTE = process.env.E2E_BASE_URL?.trim();
+webServer: REMOTE ? undefined : { … }
+```
+
+Setting it **at all** — including to `http://localhost:3000` — makes the run
+"remote" and skips the `webServer` block, so Playwright manages nothing and
+the server becomes yours to keep alive. AGENTS.md's suggested invocation
+(`E2E_BASE_URL=http://localhost:3000 bun run test:e2e:ci` against a
+hand-started server) is exactly the arrangement that failed twice.
+
+**Do instead:** for a local run, set nothing. `PORT` is 3000 in the config and
+Playwright starts `bun run dev` there itself.
+
+### 4. Port 3100 on this machine belongs to another project
+
+`playwright.shots.config.ts` defaults to `http://localhost:3100`, and a
+`next dev -p 3100` from `C:\Users\Tech-Space\cheminement` is listening on it.
+With `reuseExistingServer`, a run that defaulted there would have tested a
+**different application** and reported the failures as this one's. Check what
+owns the port before believing a result:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3100 -State Listen |
+  ForEach-Object { (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)").CommandLine }
+```
+
+### What the runs actually found, once the noise was removed
+
+One real failure, pre-existing and unrelated to the work in flight:
+`abandonment-recovery-send` — "the tick found nothing to recover, with a
+zero-delay draft waiting". It is reproducible, and the database dates it
+precisely, because `recovery_outcome` is written the moment `evaluateOne`
+touches a row:
+
+| draft abandoned                 | `recovery_outcome` |
+| ------------------------------- | ------------------ |
+| 09-21 18:41                     | `queued`           |
+| 09-21 21:24                     | `queued`           |
+| 09-22 09:50 onward (5 attempts) | **NULL**           |
+
+NULL means the tick never evaluated those rows at all, so it broke between
+**2026-09-21 21:24 and 2026-09-22 09:50**. Ruled out: the service-role key is
+present in `.env.local`, and `TICK_BATCH` is 100 against 0 competing rows, so
+it is not starvation.
+
+**Nothing could have caught it.** The spec needs `CRON_SECRET`, which is
+runtime-only and absent in CI, so it SKIPS there — and its own header says to
+read a skip as "not measured", never as "passed". This machine is the only
+place it runs. That is the `CRON_SECRET`-in-CI debt already on the books,
+now with a measured cost: a shipped feature stopped working and only a manual
+local run could tell.
