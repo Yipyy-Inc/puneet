@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
+import { SWEEPABLE_STATUSES } from "./_sweep";
 
 // ============================================================================
 // The Kennels board shows a booked guest, and moving one reaches the database.
@@ -95,9 +98,21 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const all = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+
+    // Narrowed and guarded, for the reason spelled out in
+    // boarding-arrival.spec.ts's own teardown: the unbounded read times out
+    // at this table's size, the cast turns `{error}` into "all is not
+    // iterable", and the kennels stay held for whatever runs next.
+    const listed = await page.request.get(
+      `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+    );
+    const body = listed.ok() ? await listed.json().catch(() => null) : null;
+    const all: BookingPayload[] = Array.isArray(body) ? body : [];
+    if (!Array.isArray(body)) {
+      console.log(
+        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+      );
+    }
 
     let cleared = 0;
     let cancelled = 0;

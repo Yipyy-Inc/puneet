@@ -63,9 +63,6 @@ const DIR = "tests/e2e";
  * somebody noticing them. See docs/quality/debt-map.md, 2026-09-17.
  */
 const BASELINE: Record<string, number> = {
-  "boarding-arrival.spec.ts": 1,
-  "boarding-kennel-board.spec.ts": 1,
-  "boarding-occupancy.spec.ts": 2,
   "booking-detail-redirect.spec.ts": 1,
   "booking-line-items.spec.ts": 1,
   "booking-payment-ledger.spec.ts": 1,

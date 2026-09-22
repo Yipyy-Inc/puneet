@@ -20258,3 +20258,53 @@ that second failure carries no new information.
 **Do instead:** treat this as a finding to reproduce, not a flake to re-run. A
 booking disappearing from a shared production database is worth understanding
 even though the spec's own assertions all passed.
+
+## 2026-09-22 — An unbounded read broke three specs, exactly as its gate predicted
+
+`check-unbounded-booking-reads.ts` was written on 2026-09-17, measured the
+problem, and baselined the 18 files that already had it. Its header says why:
+
+> An unbounded read is a spec that gets slower every night until it fails for
+> a reason that has nothing to do with what it asserts.
+
+On 2026-09-22 that came true, in the first three files of its own baseline.
+
+### The chain, observed end to end
+
+`boarding-arrival`'s teardown asked `GET /api/bookings` with no narrowing —
+**2,084 rows**, up from the 1,499 measured five days earlier, because teardowns
+cancel rather than delete and the payment ledger pins the rows. At that size it
+exceeds the statement timeout; the route answers `{error}`; the unguarded cast
+turns that into `TypeError: all is not iterable` INSIDE `afterAll`.
+
+So the cleanup cancelled nothing and left its kennels held. Then:
+
+- `boarding-kennel-board` — same shape, failed the same way, left more held
+- `boarding-occupancy` — `Expected: undefined, Received: 2084`, because its
+  own unbounded read returned `{error}` and `(before ?? []).length` on an
+  error object is `undefined`
+
+Five of the nine failures in that run were one defect wearing three costumes.
+
+### The fix, and why it was already written
+
+`tests/e2e/_sweep.ts` had solved this: `SWEEPABLE_STATUSES` (the enum minus
+`cancelled`, so the request and the filter cannot drift) plus
+`bookingListSearch`. The three files were hand-rolling the read instead.
+
+After: `check:unbounded-booking-reads` 21 reads/18 files → **17/15**;
+`check:teardown-shape` 33 → **31**. Re-run clean: **21 passed, 0 failed**, and
+the teardowns that had been silently doing nothing reported `12 stay(s)
+cleared, 12 cancelled` and `9 stay(s) cleared, 9 cancelled`.
+
+### What to take from it
+
+**A baselined gate is a dated prediction, not a filing cabinet.** Both of these
+baselines named these files. Nobody was wrong; the work had simply not been
+done yet, and the table kept growing. When a spec fails for a reason unrelated
+to its subject, check whether a gate already has it baselined before
+investigating the spec.
+
+**And the remaining 15 files will come due the same way.** The table grows
+every run. `bun run e2e:purge` only removes cancelled, money-free rows, so it
+shrinks the debris and not the floor.

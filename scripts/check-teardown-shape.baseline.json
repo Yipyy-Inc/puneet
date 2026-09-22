@@ -1,6 +1,4 @@
 {
-  "tests/e2e/boarding-arrival.spec.ts": 1,
-  "tests/e2e/boarding-kennel-board.spec.ts": 1,
   "tests/e2e/booking-actions-truth.spec.ts": 1,
   "tests/e2e/booking-detail-redirect.spec.ts": 1,
   "tests/e2e/booking-line-items.spec.ts": 1,

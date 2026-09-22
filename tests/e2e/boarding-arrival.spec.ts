@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
+import { SWEEPABLE_STATUSES } from "./_sweep";
 
 // ============================================================================
 // The boarding check-in board, which used to be the daycare one.
@@ -149,9 +152,31 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const all = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+
+    // ── ASK FOR WHAT THIS FILTERS FOR ──────────────────────────────────
+    //
+    // This was an unbounded `GET /api/bookings`, which on 2026-09-22 read
+    // 2,084 rows — up from the 1,499 measured a week earlier, because every
+    // run cancels rather than deletes. At that size it exceeds the statement
+    // timeout, the route answers `{error}`, and the cast below turned that
+    // into `TypeError: all is not iterable` INSIDE afterAll: the cleanup
+    // cancelled nothing, left its kennels held, and boarding-kennel-board and
+    // boarding-occupancy then failed for reasons that had nothing to do with
+    // what they assert.
+    //
+    // `SWEEPABLE_STATUSES` is the same predicate the loop applies — every
+    // status but `cancelled`, derived from the enum — so the request and the
+    // filter cannot drift.
+    const listed = await page.request.get(
+      `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
+    );
+    const body = listed.ok() ? await listed.json().catch(() => null) : null;
+    const all: BookingPayload[] = Array.isArray(body) ? body : [];
+    if (!Array.isArray(body)) {
+      console.log(
+        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
+      );
+    }
 
     let cleared = 0;
     let cancelled = 0;

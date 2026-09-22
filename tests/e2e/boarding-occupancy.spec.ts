@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
 
+import { bookingListSearch } from "@/lib/api/booking-list-params";
+
 import { ACCOUNTS, signIn } from "./_auth";
-import { cancelBookingsMarked } from "./_sweep";
+import { cancelBookingsMarked, SWEEPABLE_STATUSES } from "./_sweep";
 
 // ============================================================================
 // A kennel holds one booking at a time, over real HTTP.
@@ -110,9 +112,31 @@ test.describe("boarding occupancy", () => {
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
-    const before = (await (await page.request.get("/api/bookings")).json()) as
-      | unknown[]
-      | null;
+    // ── COUNT WHAT CAN CHANGE, NOT EVERY ROW EVER ──────────────────────
+    //
+    // Both reads were unbounded. On 2026-09-22 the first one timed out, the
+    // route answered `{error}`, the `as unknown[]` cast let it through, and
+    // the assertion failed with `Expected: undefined, Received: 2084` — the
+    // count of a table that has grown from 1,499 in a week and will keep
+    // growing, because teardowns cancel rather than delete.
+    //
+    // A refusal that created nothing cannot have created a CANCELLED row, so
+    // counting the sweepable ones answers the same question on one round trip
+    // instead of two. Both sides use the same narrowing, so the comparison is
+    // like for like.
+    const openOnly = bookingListSearch({ statuses: SWEEPABLE_STATUSES });
+    const countOpen = async (): Promise<number | null> => {
+      const res = await page.request.get(`/api/bookings${openOnly}`);
+      if (!res.ok()) return null;
+      const body = await res.json().catch(() => null);
+      return Array.isArray(body) ? body.length : null;
+    };
+
+    const before = await countOpen();
+    expect(
+      before,
+      "the list could not be read before the attempt",
+    ).not.toBeNull();
 
     const res = await page.request.post("/api/bookings", {
       data: stayBody(),
@@ -126,10 +150,12 @@ test.describe("boarding occupancy", () => {
     expect(body.error).not.toContain("constraint");
 
     // And the refusal left nothing behind — the whole reason this is one RPC.
-    const after = (await (await page.request.get("/api/bookings")).json()) as
-      | unknown[]
-      | null;
-    expect((after ?? []).length).toBe((before ?? []).length);
+    const after = await countOpen();
+    expect(
+      after,
+      "the list could not be read after the attempt",
+    ).not.toBeNull();
+    expect(after).toBe(before);
   });
 
   test("another kennel on the same nights is fine", async ({ page }) => {
