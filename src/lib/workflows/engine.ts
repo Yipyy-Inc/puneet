@@ -7,6 +7,7 @@ import {
 } from "@/lib/messaging/dispatch";
 import { resolveTemplate } from "@/lib/messaging/render";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { databaseNow } from "@/lib/supabase/db-clock";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -286,7 +287,10 @@ export async function advanceDueEnrollments(): Promise<EngineResult> {
     )
     .eq("status", "active")
     .not("next_run_at", "is", null)
-    .lte("next_run_at", new Date().toISOString())
+    // `next_run_at` is written by the database, so the bound comes from its
+    // clock. Against `new Date()` a host running behind holds every enrolment
+    // at its current step for the length of its own skew.
+    .lte("next_run_at", (await databaseNow(db)).toISOString())
     .order("next_run_at", { ascending: true })
     .limit(BATCH);
 

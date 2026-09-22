@@ -22,6 +22,7 @@ import {
 } from "@/lib/settings/messaging-policy";
 import { DEFAULT_TIMEZONE, wallClockParts } from "@/lib/time/facility-time";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { databaseNow } from "@/lib/supabase/db-clock";
 import { enrolFromEvent } from "@/lib/workflows/engine";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -755,12 +756,18 @@ export async function sendDueMessages(): Promise<DispatchResult> {
   }
   const db = createAdminClient();
   const result: DispatchResult = { ...EMPTY, problems: [] };
+  // `scheduled_for` is a database timestamp, so the bound has to come from the
+  // database's clock. Judged against `new Date()`, a host running behind holds
+  // every queued message back by its own skew — silently, because nothing
+  // reports a message that was simply not selected. Read once, so the whole
+  // batch is judged against one instant.
+  const now = await databaseNow(db);
 
   const { data: due, error: dueError } = await db
     .from("message_sends")
     .select("id")
     .eq("status", "queued")
-    .lte("scheduled_for", new Date().toISOString())
+    .lte("scheduled_for", now.toISOString())
     .order("scheduled_for", { ascending: true })
     .limit(TICK_BATCH);
 
@@ -787,7 +794,7 @@ export async function sendDueMessages(): Promise<DispatchResult> {
     if (!message) continue;
 
     try {
-      await sendOneQueued(db, message, result);
+      await sendOneQueued(db, message, result, now);
     } catch (error) {
       // Never throw out of the tick: one bad row must not strand the other
       // forty-nine in 'sending', where only the reaper can free them.
@@ -893,6 +900,13 @@ async function sendOneQueued(
   db: SupabaseClient,
   message: QueuedRow,
   result: DispatchResult,
+  /**
+   * The tick's clock, from the database. Passed in rather than read here:
+   * per-message would be a round trip per message, and would judge two rows
+   * of one batch against two different instants — which is the bug this is
+   * fixing, in a smaller place.
+   */
+  now: Date,
 ): Promise<void> {
   const policy = await loadMessagingPolicy(db, message.facility_id);
   // A reminder about a form the business requires is transactional: a
@@ -900,7 +914,6 @@ async function sendOneQueued(
   const transactional =
     message.source_kind === "form_reminder" ||
     (await ruleIsTransactional(db, message.source_id));
-  const now = new Date();
   const scheduledFor = new Date(message.scheduled_for);
 
   // ── TOO LATE TO BE WORTH SENDING ────────────────────────────────────────

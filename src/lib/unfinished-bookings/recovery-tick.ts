@@ -8,6 +8,7 @@ import {
   abandonmentRecoverySchema,
 } from "@/lib/settings/abandonment-recovery";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { databaseNow } from "@/lib/supabase/db-clock";
 import {
   fillRecoveryTags,
   recoveryDueAt,
@@ -77,7 +78,14 @@ export async function queueDueRecoveryMessages(): Promise<RecoveryTickResult> {
     return result;
   }
   const db = createAdminClient();
-  const now = new Date();
+  // The DATABASE's clock, not this process's. `recovery_not_before` is set by
+  // a trigger to the database's `now()`, so judging it against `new Date()`
+  // compares two clocks: on 2026-09-22 this machine ran 1.664s behind and a
+  // draft created moments earlier was stamped in the tick's own future, so
+  // the query below returned nothing and `recovery_outcome` stayed null.
+  // Read once and threaded down, so every row in a batch is judged against
+  // one instant.
+  const now = await databaseNow(db);
 
   const { data: due, error } = await db
     .from("unfinished_bookings")

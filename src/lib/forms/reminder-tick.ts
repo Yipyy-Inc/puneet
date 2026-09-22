@@ -9,6 +9,7 @@ import {
 } from "@/lib/forms/reminder";
 import type { MissingForm } from "@/lib/forms/requirements";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { databaseNow } from "@/lib/supabase/db-clock";
 import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 
 // ============================================================================
@@ -52,7 +53,10 @@ export async function queueDueFormReminders(): Promise<FormReminderTickResult> {
     return result;
   }
   const db = createAdminClient();
-  const now = new Date();
+  // `start_at` is a database timestamp and the window below is built FROM
+  // this value, so a skewed machine clock slides both edges of the window
+  // rather than just one — a booking can fall out of it in either direction.
+  const now = await databaseNow(db);
 
   const { data: bookings, error } = await db
     .from("bookings")

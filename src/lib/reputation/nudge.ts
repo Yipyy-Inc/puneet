@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { databaseNow } from "@/lib/supabase/db-clock";
 import { resolveTemplate, UNRESOLVED_TAG } from "@/lib/messaging/render";
 import { loadMessageContext } from "@/lib/messaging/dispatch";
 import { facilityCustomerOrigin } from "@/lib/app-host";
@@ -87,13 +88,18 @@ export async function evaluateDueReviewNudges(): Promise<NudgeResult> {
   }
   const db = createAdminClient();
   const result: NudgeResult = { ...EMPTY, problems: [] };
+  // `nudge_due_at` and `expires_at` are both database timestamps, so both the
+  // filter below and the expiry branch in `resolveOne` judge against the
+  // database's clock. Read once: two rows of one batch measured against two
+  // different instants is the same bug in miniature.
+  const now = await databaseNow(db);
 
   const { data: due, error } = await db
     .from("review_requests")
     .select(
       "id, facility_id, location_id, client_id, business_day, state, channel, expires_at, nudge_due_at, escalation_threshold, booking_ids",
     )
-    .lte("nudge_due_at", new Date().toISOString())
+    .lte("nudge_due_at", now.toISOString())
     .is("nudge_resolved_at", null)
     .order("nudge_due_at", { ascending: true })
     .limit(TICK_BATCH);
@@ -107,7 +113,7 @@ export async function evaluateDueReviewNudges(): Promise<NudgeResult> {
 
   for (const row of (due ?? []) as DueRow[]) {
     try {
-      await resolveOne(db, row, result);
+      await resolveOne(db, row, result, now);
     } catch (failure) {
       // Never throw out of the tick: one bad request must not strand the other
       // forty-nine with their budget already spent and nothing sent.
@@ -123,6 +129,8 @@ async function resolveOne(
   db: ReturnType<typeof createAdminClient>,
   row: DueRow,
   result: NudgeResult,
+  /** The tick's clock, from the database — see the caller. */
+  now: Date,
 ): Promise<void> {
   // ── The claim ────────────────────────────────────────────────────────────
   //
@@ -160,8 +168,6 @@ async function resolveOne(
   }
   if (!claimed || claimed.length === 0) return;
   result.evaluated += 1;
-
-  const now = new Date();
 
   // ── Branch 1: too late to be worth sending ──────────────────────────────
   if (now > new Date(row.expires_at)) {

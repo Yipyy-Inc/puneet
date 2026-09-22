@@ -20115,3 +20115,45 @@ That is why this was built rather than hot-fixed: it is a trap for the day a
 live facility sells its first package, not an outage. The same shape as the
 daycare rate ceiling a day earlier — worth measuring before calling anything
 urgent.
+
+## 2026-09-22 — The schedulers read the database's clock now (the entry above, closed)
+
+Fixed the same day it was recorded, and worth reading with that entry rather
+than instead of it — the measurement and the proof are there.
+
+`public.db_now()` plus `databaseNow(db)` in `src/lib/supabase/db-clock.ts`.
+Each tick reads it ONCE and threads the value down, so every row in a batch is
+judged against one instant; calling it per row would be a round trip per row
+and would reintroduce the bug in miniature.
+
+All five: `messaging/dispatch.ts` (the send pass, filter and the staleness
+branch in `sendOneQueued`), `workflows/engine.ts`, `reputation/nudge.ts`
+(filter and the expiry branch in `resolveOne`), `forms/reminder-tick.ts` (whose
+window is built FROM `now`, so a skew slid both edges), and
+`unfinished-bookings/recovery-tick.ts` (filter and `evaluateOne`'s
+`dueAt > now`, which is why the one-line `lte.now` cast would not have been
+enough).
+
+### What it is proved by
+
+`abandonment-recovery-send` — red all day, green on the first run after the
+change, with no other edit. And the database agrees, in the column that
+diagnosed it: `recovery_outcome` was `queued` on 09-21, NULL for all five
+attempts from 09-22 09:50, and `queued` again at 14:42.
+
+### The fallback is deliberate, and deliberately loud
+
+If `db_now()` cannot be read, `databaseNow` returns the machine's clock rather
+than throwing: a tick on a possibly-skewed clock is what ran for months, and a
+tick that does not run at all is worse. It logs `[clock]` when it does, so the
+fallback is not mistaken for the fixed behaviour — and `db-clock.sql` asserts
+the `service_role` grant precisely because losing it would put all five
+schedulers back on the machine clock with nothing else reporting it.
+
+### Still true
+
+WRITING a timestamp — `sent_at`, `completed_at`, `scheduled_for`,
+`nudge_resolved_at` — still uses `new Date()` in several places. Those are
+records rather than decisions, so a skew makes them slightly wrong rather than
+making a scheduler act on the wrong set. Left alone on purpose; the ones that
+DECIDE are what mattered.
