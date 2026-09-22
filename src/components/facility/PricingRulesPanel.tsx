@@ -60,6 +60,7 @@ import {
   latestYearFromIsoDates,
   buildHolidayDateList,
   fetchHolidayCatalog,
+  peakRepeatSummary,
 } from "@/components/facility/pricing-rules/shared";
 import type {
   ServiceOption,
@@ -128,8 +129,17 @@ export function PricingRulesPanel({
   showSections,
   hideSectionHeader = false,
 }: PricingRulesPanelProps) {
-  const { t, money, percent, adjustment, plural, range, services, country } =
-    usePricingLabels();
+  const {
+    t,
+    money,
+    percent,
+    adjustment,
+    plural,
+    range,
+    services,
+    country,
+    locale,
+  } = usePricingLabels();
   const sections = showSections ?? ALL_SECTIONS;
   const { activeModules } = useCustomServices();
   // The extras this facility sells. Read from localStorage until 2026-09-05,
@@ -1076,6 +1086,31 @@ export function PricingRulesPanel({
                           .replace("{to}", rule.endDate)}
                       </p>
                     )}
+                    {/* The span alone is a lie for these two. A repeat rule
+                        reads "1 Jan → 31 Dec" while covering about a
+                        hundred nights, and a rule with several ranges shows
+                        the bracket around them rather than the ranges. */}
+                    {rule.dateMode === "repeat" && rule.repeatPattern && (
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {peakRepeatSummary(rule.repeatPattern, locale, plural)}
+                      </p>
+                    )}
+                    {rule.dateMode !== "holiday" &&
+                      (rule.dateRanges?.length ?? 0) > 1 && (
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {rule
+                            .dateRanges!.slice(0, 3)
+                            .map((span) =>
+                              t("rowDateRange")
+                                .replace("{from}", span.start)
+                                .replace("{to}", span.end),
+                            )
+                            .join(" · ")}
+                          {rule.dateRanges!.length > 3
+                            ? ` ${t("psAndMore").replace("{n}", String(rule.dateRanges!.length - 3))}`
+                            : ""}
+                        </p>
+                      )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch

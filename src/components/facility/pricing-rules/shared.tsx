@@ -19,7 +19,10 @@
  */
 
 import { cn } from "@/lib/utils";
+import { weekdayNames } from "@/lib/dates/calendar-names";
+import type { AppLocale } from "@/lib/language-settings";
 import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
+import type { PeakRepeatPattern } from "@/types/boarding";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -194,4 +197,32 @@ export async function fetchHolidayCatalog(
       dates: Array.from(dates).sort(),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * "Fri, Sat · every 2 weeks" — what a repeat rule actually covers.
+ *
+ * The list row shows a rule's `startDate → endDate`, which for a repeat rule
+ * is its WINDOW: a Friday-and-Saturday rule running all year reads as "1 Jan
+ * → 31 Dec" and looks like it surcharges every night. This says the rest.
+ *
+ * Day names come from `weekdayNames`, Sunday-first and addressed by the same
+ * 0-6 number stored in `daysOfWeek` (§5q — never a hardcoded English array).
+ */
+export function peakRepeatSummary(
+  pattern: PeakRepeatPattern,
+  locale: AppLocale,
+  plural: (n: number, one: string, other: string) => string,
+): string {
+  const names = weekdayNames(locale, "short");
+  const days = [...pattern.daysOfWeek]
+    .sort((a, b) => a - b)
+    .map((day) => names[day])
+    .filter(Boolean);
+  const cadence = plural(
+    Math.max(1, pattern.everyXWeeks),
+    "psEveryWeekOne",
+    "psEveryWeekOther",
+  );
+  return days.length > 0 ? `${days.join(", ")} · ${cadence}` : cadence;
 }
