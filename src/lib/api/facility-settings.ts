@@ -66,6 +66,7 @@ import type {
   DepositRefundPolicy,
   DepositRuleSet,
 } from "@/lib/settings/deposits";
+import type { CancellationPolicies } from "@/lib/settings/cancellation";
 import type { VaccinationRules } from "@/lib/settings/vaccinations";
 import type { EstimateSettings } from "@/lib/settings/estimates";
 import type { BookingStatusRules } from "@/lib/settings/booking-statuses";
@@ -134,6 +135,8 @@ export interface FacilitySettings {
   pricing_rules: SettingState<PricingRules>;
   /** What is asked for up front, and what happens to it on a cancellation. */
   deposit_rules: SettingState<DepositConfig>;
+  /** What a cancellation costs, per service, in tiers of notice. */
+  cancellation_policies: SettingState<CancellationPolicies>;
   booking_approval: SettingState<BookingApproval>;
   care_fees: SettingState<CareFees>;
   /** Which vaccines are required, of which species, for which services. */
@@ -397,6 +400,26 @@ export function usePricingRules(): {
   return {
     rules: settings.pricing_rules.value,
     configured: settings.pricing_rules.configured,
+    isPending,
+  };
+}
+
+/**
+ * What a cancellation costs, per service, in tiers of notice.
+ *
+ * `configured: false` means nobody has authored a policy — which is NOT the
+ * same as a policy that charges nothing, and the screen says which. Nothing
+ * reads this to take money yet; the engine lands separately.
+ */
+export function useCancellationPolicies(): {
+  policies: CancellationPolicies;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    policies: settings.cancellation_policies.value,
+    configured: settings.cancellation_policies.configured,
     isPending,
   };
 }

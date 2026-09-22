@@ -3,6 +3,7 @@ import {
   Bell,
   Briefcase,
   CalendarCheck,
+  CalendarX,
   Building2,
   Calculator,
   CircleDot,
@@ -377,6 +378,13 @@ export const SETTINGS_NAV: SettingsGroup[] = [
         segment: "deposit-rules",
         label: "Deposit rules",
         icon: DollarSign,
+        access: "manage_rates",
+      },
+      {
+        id: "cancellation-policies",
+        segment: "cancellation-policies",
+        label: "Cancellation policies",
+        icon: CalendarX,
         access: "manage_rates",
       },
       {

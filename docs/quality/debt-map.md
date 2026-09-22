@@ -19806,3 +19806,30 @@ it is worth more than a stronger-sounding scenario checked loosely.**
 The suite now pins the browser to the facility's clock
 (`test.use({ timezoneId: FACILITY_TZ })`), which is the condition the product
 actually runs in, and the timezone gap is recorded here instead.
+
+## 2026-09-22 — The tool for "verify by eye" could only photograph a desktop
+
+`AGENTS.md` requires interface work to be checked "at 599px as well as at
+desktop", and at its longest real French string. `bun run shoot`, which exists
+precisely so that rule stops being skipped, could do neither: no viewport, no
+language.
+
+`SHOOT_WIDTH` closes half of it — `SHOOT_WIDTH=599 bun run shoot owner <path>`,
+and the file is named `…-599w.png` so the two cannot be confused.
+
+**The French half is still open, after two failed attempts.** Setting
+`NEXT_LOCALE` — the cookie `use-app-locale` reads — rendered English. So did
+setting it alongside `APP_LANG_SECONDARY` and `APP_LANG_SECONDARY_ENABLED`,
+which is what `resolveLocaleForSettings` consults before honouring a viewer's
+choice. Stopped there rather than pushing a third guess through, per the
+two-attempt rule.
+
+Worth knowing for whoever picks it up: the resolver returns the viewer's
+preferred locale ONLY if that locale is enabled for the facility, and falls
+back to `primaryLocale` otherwise — so English is what you see both when
+French is off and when the translation is missing. Those two are
+indistinguishable from a screenshot, which is its own small trap.
+
+Until it is closed, a French check needs a person and the language switcher,
+and a screen whose French has not been looked at should say so rather than be
+assumed.

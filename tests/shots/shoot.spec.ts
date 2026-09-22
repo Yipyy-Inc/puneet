@@ -44,6 +44,21 @@ const ACCOUNT = process.env.SHOOT_ACCOUNT ?? "admin";
 const PATHS = (process.env.SHOOT_PATHS ?? "").split("\n").filter(Boolean);
 const AS_API = process.env.SHOOT_API === "1";
 const SETTLE_MS = Number(process.env.SHOOT_SETTLE ?? 600);
+/**
+ * A viewport width — `SHOOT_WIDTH=599 bun run shoot owner /some/path`.
+ *
+ * The design system asks for interface work to be checked "at 599px as well as
+ * at desktop", and this could only ever photograph a desktop, so the rule was
+ * unfollowable with the tool built to follow it. 599 rather than 375 is §6
+ * rule 7's point: a tablet held by somebody standing up is the hard case.
+ *
+ * There is NO locale knob, and that is a gap rather than an omission. Two
+ * attempts failed: setting `NEXT_LOCALE`, and setting it alongside the
+ * APP_LANG trio that `resolveLocaleForSettings` consults. The page rendered
+ * English both times, so the French half of the same rule still needs a person
+ * and a language switcher. See the debt map, 2026-09-22.
+ */
+const WIDTH = Number(process.env.SHOOT_WIDTH ?? 0);
 
 function resolveEmail(account: string): string {
   if (account.includes("@")) return account;
@@ -58,6 +73,12 @@ function resolveEmail(account: string): string {
 }
 
 /** A filename that sorts sensibly and says what it is. */
+function suffix(): string {
+  const parts: string[] = [];
+  if (WIDTH > 0) parts.push(`${WIDTH}w`);
+  return parts.length > 0 ? `-${parts.join("-")}` : "";
+}
+
 function fileNameFor(path: string, dark: boolean): string {
   const slug =
     path
@@ -66,7 +87,7 @@ function fileNameFor(path: string, dark: boolean): string {
       .replace(/\//g, "-")
       .replace(/-+/g, "-")
       .replace(/-$/, "") || "root";
-  return `${slug}${dark ? "-dark" : ""}.png`;
+  return `${slug}${suffix()}${dark ? "-dark" : ""}.png`;
 }
 
 test("shoot", async ({ page }, testInfo) => {
@@ -89,6 +110,9 @@ test("shoot", async ({ page }, testInfo) => {
   });
   page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
 
+  if (WIDTH > 0) {
+    await page.setViewportSize({ width: WIDTH, height: 900 });
+  }
   const email = resolveEmail(ACCOUNT);
   await signIn(page, email);
   console.log(`signed in as ${email}`);

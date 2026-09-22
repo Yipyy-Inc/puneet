@@ -91,6 +91,10 @@ import {
 import { NO_PRICING_RULES, pricingRulesSchema } from "@/lib/settings/pricing";
 import { depositConfigSchema, NO_DEPOSITS } from "@/lib/settings/deposits";
 import {
+  cancellationPolicySchema,
+  NO_CANCELLATION_POLICIES,
+} from "@/lib/settings/cancellation";
+import {
   bookingApprovalSchema,
   DEFAULT_BOOKING_APPROVAL,
 } from "@/lib/settings/booking-approval";
@@ -420,6 +424,16 @@ export const SETTING_DOMAINS = {
   // any browser that had never opened the settings screen was taking those off
   // real cards. See the banner in lib/settings/deposits.ts.
   deposit_rules: { schema: depositConfigSchema, fallback: NO_DEPOSITS },
+  // What a cancellation costs, per service, in tiers of notice. Authored by
+  // the facility and READ BY NOTHING YET — the engine lands separately, so a
+  // policy saved here cannot move money until it does. Empty fallback, and
+  // here that means every cancellation is free and fully refunded: a policy
+  // that fails to load must never invent a charge. See lib/settings/
+  // cancellation.ts.
+  cancellation_policies: {
+    schema: cancellationPolicySchema,
+    fallback: NO_CANCELLATION_POLICIES,
+  },
   // The wait a customer is told to expect after asking for a booking. It was a
   // localStorage map with a switch the server never read — see the banner in
   // lib/settings/booking-approval.ts.
