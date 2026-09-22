@@ -20204,3 +20204,57 @@ Four tests were added that could not have passed before, the load-bearing one
 being two facilities evaluated against the SAME two instants: 19:00 in
 Vancouver is 22:00 in Toronto, so one is an hour late and the other four. Both
 cannot pass unless the zone is genuinely consulted.
+
+## 2026-09-22 — Next.js restarts the dev server on memory pressure, mid-suite
+
+A full-suite run prints this and carries on:
+
+```
+[WebServer] ⚠ Server is approaching the used memory threshold, restarting...
+```
+
+That is Next.js's own watchdog, not a crash. Requests in flight during the
+window get `ECONNREFUSED`, and any spec unlucky enough to be mid-request fails
+for a reason that has nothing to do with what it asserts. Measured over one
+49-minute run: **two restarts, one of which took a spec down with it** — and
+that spec failed on its RETRY too, because the retry landed in the same window.
+
+So a `ECONNREFUSED ::1:3000` in an e2e log is not evidence of a bug and not
+evidence of a dead server. Check for the restart line before believing either.
+
+**This does NOT explain the two runs that died earlier the same day.** Those
+were `next start` (production, not dev), the node process was gone from the
+process table entirely, and the supervising `cmd.exe` had vanished with it,
+having logged "starting" and never its own "EXITED" line. A watchdog restart
+leaves a running server behind; that did not. Two different things, and only
+this one is understood — the entry above them should be read with that
+correction.
+
+**Do instead:** when an e2e failure is a connection error, `grep "memory
+threshold"` the log first. If a restart is near it, re-run that spec alone
+before investigating the assertion. `retries: 1` is not always enough, because
+the restart can outlast the gap between attempts.
+
+## 2026-09-22 — customer-booking-actions' bookings vanish from the table mid-run
+
+Its `afterAll` cancels what it made and asserts nothing was refused. On
+2026-09-22 two of its bookings came back `{"error":"Booking not found."}`, and
+a direct query confirmed the rows were **gone from `bookings` entirely** — not
+cancelled, not hidden by RLS, absent.
+
+What is known: `book()` asserts 201, so they were created; the 404 comes from
+the route's own `maybeSingle()` read, before anything else; all six of the
+spec's actual tests passed. What is not known: what removed them. The only
+thing in the suite that deletes bookings by marker is
+`yipyy-go-charges.spec.ts:273` (`delete().eq("special_requests", MARKER)`), and
+it was not in that run; the markers of the specs that WERE in it are all
+distinct; and `bookings_client_id_fkey` is `ON DELETE CASCADE`, but no spec in
+the run deletes a client.
+
+Worth knowing before chasing it: `made` is module-level and never reset, so
+once one ref goes missing the RETRY fails identically and deterministically —
+that second failure carries no new information.
+
+**Do instead:** treat this as a finding to reproduce, not a flake to re-run. A
+booking disappearing from a shared production database is worth understanding
+even though the spec's own assertions all passed.
