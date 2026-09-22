@@ -40,8 +40,25 @@ export interface CancelTerms {
   withdrawal: boolean;
   started: boolean;
   late: boolean;
+  /**
+   * The RULE'S THRESHOLD in hours — the configured window under the old flat
+   * rule, the winning tier's minimum under a policy. Not the notice given:
+   * that is `noticeGivenHours`, and the two carried one key until 2026-09-22.
+   */
   noticeHours: number | null;
+  noticeGivenHours?: number | null;
   feePercentage: number | null;
+  /** Where the answer came from. `none` means the facility has set nothing. */
+  source?: "policy" | "booking_rules" | "none";
+  tierId?: string | null;
+  /** The facility's own words for this tier, when they gave it any. */
+  tierLabel?: string | null;
+  charge?: "none" | "keep_deposit" | "percentage" | "flat" | "forfeit_pass";
+  /** What it costs, in dollars. Computed by the database, never by a screen. */
+  amount?: number | null;
+  refund?: "none" | "original" | "store_credit";
+  forfeitsPass?: boolean;
+  customerMayCancel?: "instant" | "request";
 }
 
 async function signedIn() {

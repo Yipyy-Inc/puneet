@@ -3255,7 +3255,13 @@
         "cancelledRefundedCard": "{ref} is cancelled — {amount} refunded to the card",
         "cancelledRefundedCash": "{ref} is cancelled — {amount} refunded in cash",
         "cancelledRefundedCredit": "{ref} is cancelled — {amount} refunded as store credit",
-        "notMessaged": "The customer has not been messaged."
+        "notMessaged": "The customer has not been messaged.",
+        "cancelPolicyTitle": "This facility’s cancellation policy",
+        "cancelPolicyKeeps": "The policy keeps {amount} of this booking.",
+        "cancelPolicyKeepsLabelled": "{label} — the policy keeps {amount} of this booking.",
+        "cancelPolicyFree": "The policy charges nothing for this cancellation.",
+        "cancelPolicyPass": "The policy takes one pass from the client’s package.",
+        "cancelFeeLineName": "Cancellation fee"
       },
       "moduleTasks": {
         "catSetup": "Setup",
@@ -10192,7 +10198,13 @@
         "noteSend": "Send the note",
         "noteSent": "Note saved on the booking",
         "noteFailed": "The note was not saved",
-        "noteClose": "Close without sending"
+        "noteClose": "Close without sending",
+        "cancelKeeps": "This is a late cancellation. The facility’s policy keeps {amount} of this booking.",
+        "cancelKeepsLabelled": "{label} — the facility’s policy keeps {amount} of this booking.",
+        "cancelForfeitsPass": "This is a late cancellation. It uses one pass from your package.",
+        "cancelBackOriginal": "Anything else you paid goes back the way you paid it.",
+        "cancelBackCredit": "Anything else you paid is added to your account as credit.",
+        "cancelBackNone": "Nothing else is refunded."
       },
       "bookingDetail": {
         "notFound": "Booking not found",

@@ -194,6 +194,29 @@ select pg_temp.t(
   (pg_temp.terms(current_setting('yipyy.test_facility')::uuid, 'training',
                  interval '2 hours')->>'amount')::numeric = 50);
 
+-- ── C8  The doors onto the evaluator ──────────────────────────────────────
+--
+-- `public`, `anon` and `authenticated` are three different grants. A revoke
+-- naming a privilege the role does not hold succeeds silently and looks
+-- exactly like one that worked, so the state is read back rather than assumed.
+select pg_temp.t(
+  'C8 the evaluator itself is nobody''s to call',
+  not has_function_privilege('authenticated',
+        'private.cancellation_terms(public.bookings)', 'execute')
+  and not has_function_privilege('anon',
+        'private.cancellation_terms(public.bookings)', 'execute')
+  and not has_function_privilege('authenticated',
+        'private.deposit_for_booking(public.bookings)', 'execute'));
+
+select pg_temp.t(
+  'C8 staff have a door, anon does not',
+  has_function_privilege('authenticated',
+        'public.booking_cancel_terms(bigint)', 'execute')
+  and not has_function_privilege('anon',
+        'public.booking_cancel_terms(bigint)', 'execute')
+  and not has_function_privilege('anon',
+        'public.my_booking_cancel_terms(bigint)', 'execute'));
+
 select n, name, ok, detail from tap order by n;
 
 rollback;

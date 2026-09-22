@@ -9,6 +9,7 @@ import {
   useRefundBooking,
   useRefundBookingToCard,
 } from "@/lib/api/booking-money";
+import { useAddLineItems } from "@/lib/api/booking-line-items";
 import { formatBookingRef } from "@/lib/booking-id";
 import { formatMoney } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
@@ -28,6 +29,7 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // ============================================================================
 
 export function useCancelWithRefund() {
+  const addLineItems = useAddLineItems();
   const cancelBooking = useCancelBooking();
   const refundBooking = useRefundBooking();
   const refundToCard = useRefundBookingToCard();
@@ -39,9 +41,38 @@ export function useCancelWithRefund() {
     reason: string,
     refundMethod: CancelRefundMethod,
     refundAmount: number,
+    /**
+     * What the facility's policy keeps that it does not ALREADY hold.
+     *
+     * Money already paid is kept simply by refunding less of it — no row
+     * needed, it is theirs. A shortfall is different: the policy says the
+     * facility is owed something the customer never handed over, and the only
+     * honest way to record that is a line on the bill. Visible, chaseable, and
+     * on the invoice, rather than a number somebody remembers.
+     */
+    fee?: { amount: number; name: string } | null,
   ): Promise<void> => {
     const ref = formatBookingRef(bookingId);
     let refunded = 0;
+
+    // FIRST, and before anything moves: if this fails nothing has happened
+    // yet, and the dialog stays open with the reason. Writing a line item
+    // needs `retail_process_sale` rather than `edit_bookings`, so somebody who
+    // may cancel a booking may still be refused here — which must surface, not
+    // vanish.
+    if (fee && fee.amount > 0) {
+      await addLineItems.mutateAsync({
+        bookingRef: bookingId,
+        items: [
+          {
+            kind: "fee",
+            name: fee.name,
+            unitPrice: Math.round(fee.amount * 100) / 100,
+            quantity: 1,
+          },
+        ],
+      });
+    }
     if (refundAmount > 0) {
       if (refundMethod === "original") {
         const result = await refundToCard.mutateAsync({

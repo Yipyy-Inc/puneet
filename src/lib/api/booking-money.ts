@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { bookingMutations } from "./booking";
 
@@ -729,6 +729,61 @@ export function useEmailReceipt() {
         throw new Error(body?.error ?? `Request failed (${response.status})`);
       }
       return { sent: Boolean(body?.sent), detail: body?.detail, to: body?.to };
+    },
+  });
+}
+
+// ============================================================================
+// What a cancellation costs, for the front desk.
+//
+// The SAME figure the customer's own preview shows — one evaluator in the
+// database (`private.cancellation_terms`), two doors onto it. A screen that
+// worked the number out for itself would be a second answer, and two answers
+// to "what does cancelling cost" is somebody's refund.
+//
+// Read only while the dialog is open: a booking list does not need the
+// cancellation terms of every row on it.
+// ============================================================================
+
+export interface BookingCancelTerms {
+  status: string;
+  cancellable: boolean;
+  withdrawal: boolean;
+  started: boolean;
+  late: boolean;
+  /** The RULE'S THRESHOLD, not the notice given — see `noticeGivenHours`. */
+  noticeHours: number | null;
+  noticeGivenHours: number | null;
+  feePercentage: number | null;
+  source: "policy" | "booking_rules" | "none";
+  tierId: string | null;
+  tierLabel: string | null;
+  charge: "none" | "keep_deposit" | "percentage" | "flat" | "forfeit_pass";
+  /** Dollars. Computed by the database; never recomputed on a screen. */
+  amount: number;
+  refund: "none" | "original" | "store_credit";
+  forfeitsPass: boolean;
+  customerMayCancel: "instant" | "request";
+  totalCost: number;
+  amountPaid: number;
+}
+
+export function useBookingCancelTerms(bookingRef: number | null) {
+  return useQuery({
+    queryKey: ["bookings", bookingRef, "cancel-terms"],
+    enabled: bookingRef != null,
+    queryFn: async (): Promise<BookingCancelTerms | null> => {
+      const response = await fetch(`/api/bookings/${bookingRef}/cancel-terms`);
+      if (response.status === 404) return null;
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          body?.error ?? "Could not read the cancellation terms.",
+        );
+      }
+      return (await response.json()) as BookingCancelTerms;
     },
   });
 }

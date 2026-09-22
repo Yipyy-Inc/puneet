@@ -18,6 +18,7 @@ import { AlertTriangle, Banknote, CreditCard, Wallet } from "lucide-react";
 import type { Booking } from "@/types/booking";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useDepositRules } from "@/lib/api/facility-settings";
+import { useBookingCancelTerms } from "@/lib/api/booking-money";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { formatDateShort, formatMoney, formatTime } from "@/lib/i18n/format";
 
@@ -46,6 +47,8 @@ interface CancelBookingModalProps {
     cancellationReason: string,
     refundMethod: CancelRefundMethod,
     refundAmount: number,
+    /** A charge the facility is owed and does not already hold. */
+    fee?: { amount: number; name: string } | null,
   ) => Promise<void>;
 }
 
@@ -66,6 +69,19 @@ export function CancelBookingModal({
   const { refundPolicy } = useDepositRules();
   const { t, fill, locale } = useStaffText("cancelBooking");
   const money = (n: number) => formatMoney(n, locale);
+
+  // ── WHAT THE FACILITY'S OWN POLICY SAYS ────────────────────────────────
+  //
+  // The SAME figure the customer is shown, from the same evaluator in the
+  // database — `private.cancellation_terms`, reached through
+  // `booking_cancel_terms`. Two screens working the number out separately is
+  // how a customer and a counter end up quoting different refunds. Read only
+  // while the dialog is open.
+  const { data: terms } = useBookingCancelTerms(open ? booking.id : null);
+  const fromPolicy = terms?.source === "policy";
+  const policyKeeps = fromPolicy ? (terms?.amount ?? 0) : 0;
+  const policyRefund = fromPolicy ? terms?.refund : undefined;
+
   const [cancellationReason, setCancellationReason] = useState("");
   // Held as null until somebody chooses, and DERIVED below rather than seeded:
   // the policy arrives over the network, so a useState default would capture
@@ -73,14 +89,33 @@ export function CancelBookingModal({
   // shape check:settings-seeding exists for.
   const [chosenRefundMethod, setChosenRefundMethod] =
     useState<CancelRefundMethod | null>(null);
+  // The facility's cancellation policy wins where it has one; the older
+  // deposit refund policy is the fallback for a facility that has written none.
   const refundMethod: CancelRefundMethod =
     chosenRefundMethod ??
-    (refundPolicy.type === "credit" ? "store_credit" : "original");
+    (policyRefund === "store_credit"
+      ? "store_credit"
+      : policyRefund === "original"
+        ? "original"
+        : refundPolicy.type === "credit"
+          ? "store_credit"
+          : "original");
   const setRefundMethod = setChosenRefundMethod;
   // What was PAID, from the ledger — not the price. Defaulting to the price
   // offered to refund money that was never taken.
   const paid = booking.amountPaid ?? 0;
-  const [refundAmount, setRefundAmount] = useState(paid);
+
+  // DERIVED, not seeded: the terms arrive over the network, and a `useState`
+  // default would capture what was assumed before they landed and never
+  // correct itself — the shape `check:settings-seeding` exists for, and the
+  // reason `chosenRefundMethod` above is held as null.
+  const [chosenRefundAmount, setChosenRefundAmount] = useState<number | null>(
+    null,
+  );
+  const refundAmount =
+    chosenRefundAmount ??
+    Math.max(0, Math.round((paid - policyKeeps) * 100) / 100);
+  const setRefundAmount = setChosenRefundAmount;
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -114,11 +149,24 @@ export function CancelBookingModal({
     setBusy(true);
     setProblem(null);
     try {
+      // Only the SHORTFALL becomes a line on the bill. What the customer has
+      // already paid, the facility keeps by refunding less of it — writing a
+      // fee for that too would charge them twice for one cancellation.
+      const shortfall = Math.max(
+        0,
+        Math.round((policyKeeps - paid) * 100) / 100,
+      );
       await onConfirm(
         booking.id,
         cancellationReason,
         refundMethod,
         canRefund ? refundAmount : 0,
+        shortfall > 0
+          ? {
+              amount: shortfall,
+              name: terms?.tierLabel || t("cancelFeeLineName"),
+            }
+          : null,
       );
     } catch (error) {
       setProblem(error instanceof Error ? error.message : t("notCancelled"));
@@ -128,7 +176,11 @@ export function CancelBookingModal({
     }
     onOpenChange(false);
     setCancellationReason("");
-    setRefundAmount(paid);
+    // Back to null, not to a number: the next booking's terms decide the next
+    // default, and leaving a figure here would carry this booking's refund
+    // over to the next one.
+    setRefundAmount(null);
+    setChosenRefundMethod(null);
   };
 
   // Anything paid can be given back — a part-paid booking too, which used to
@@ -154,6 +206,32 @@ export function CancelBookingModal({
             <AlertTitle>{t("warningTitle")}</AlertTitle>
             <AlertDescription>{t("warningBody")}</AlertDescription>
           </Alert>
+
+          {/* The facility's own cancellation policy, where it has written one.
+              The deposit refund policy below is what a facility that has not
+              is still running on, so both can be true at once and the screen
+              says which is which rather than merging them. */}
+          {fromPolicy && (
+            <Alert>
+              <Wallet className="size-4" />
+              <AlertTitle>{t("cancelPolicyTitle")}</AlertTitle>
+              <AlertDescription>
+                {terms?.forfeitsPass
+                  ? t("cancelPolicyPass")
+                  : policyKeeps > 0
+                    ? fill(
+                        terms?.tierLabel
+                          ? "cancelPolicyKeepsLabelled"
+                          : "cancelPolicyKeeps",
+                        {
+                          label: terms?.tierLabel ?? "",
+                          amount: money(policyKeeps),
+                        },
+                      )
+                    : t("cancelPolicyFree")}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Deposit refund policy from Deposit Rules settings */}
           <Alert>

@@ -23,7 +23,7 @@ import {
   useCancelMyBooking,
 } from "@/lib/api/customer-bookings";
 import { useCustomerText } from "@/lib/customer/use-customer-text";
-import { formatDateLong } from "@/lib/i18n/format";
+import { formatDateLong, formatMoney } from "@/lib/i18n/format";
 import { serviceTypeLabel } from "@/lib/i18n/labels";
 
 // ============================================================================
@@ -119,13 +119,34 @@ export function CancelBookingDialog({
                     className="mt-0.5 size-4 shrink-0"
                     aria-hidden
                   />
+                  {/* ── A FIGURE, NOT A PERCENTAGE ──────────────────────
+                       This said "a fee of 50% of the booking" and left the
+                       customer to work out what that meant. The database
+                       computes the amount now (private.cancellation_terms),
+                       so the page states it — in the facility's own words for
+                       the tier, where they wrote any. The percentage wording
+                       survives only for a facility still on the old flat rule
+                       with no total to price from. */}
                   <span>
-                    {data.feePercentage
-                      ? fill("cancelLateWithFee", {
-                          hours: data.noticeHours ?? 0,
-                          fee: data.feePercentage,
-                        })
-                      : fill("cancelLate", { hours: data.noticeHours ?? 0 })}
+                    {data.forfeitsPass
+                      ? t("cancelForfeitsPass")
+                      : (data.amount ?? 0) > 0
+                        ? data.tierLabel
+                          ? fill("cancelKeepsLabelled", {
+                              label: data.tierLabel,
+                              amount: formatMoney(data.amount ?? 0, locale),
+                            })
+                          : fill("cancelKeeps", {
+                              amount: formatMoney(data.amount ?? 0, locale),
+                            })
+                        : data.feePercentage
+                          ? fill("cancelLateWithFee", {
+                              hours: data.noticeHours ?? 0,
+                              fee: data.feePercentage,
+                            })
+                          : fill("cancelLate", {
+                              hours: data.noticeHours ?? 0,
+                            })}
                   </span>
                 </p>
               ) : data.noticeHours ? (
@@ -137,7 +158,18 @@ export function CancelBookingDialog({
                 !withdrawal &&
                 booking.paymentStatus !== undefined &&
                 booking.paymentStatus !== "pending" && (
-                  <p>{t("cancelRefundNote")}</p>
+                  // Where the rest of their money goes, when the facility has
+                  // said. `cancelRefundNote` is the older, vaguer sentence and
+                  // stays for a facility that has written no policy.
+                  <p>
+                    {data.refund === "store_credit"
+                      ? t("cancelBackCredit")
+                      : data.refund === "none"
+                        ? t("cancelBackNone")
+                        : data.source === "policy"
+                          ? t("cancelBackOriginal")
+                          : t("cancelRefundNote")}
+                  </p>
                 )}
             </div>
           </AlertDialogDescription>

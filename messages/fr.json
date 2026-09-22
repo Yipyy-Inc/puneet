@@ -3255,7 +3255,13 @@
         "cancelledRefundedCard": "{ref} est annulée — {amount} remboursé sur la carte",
         "cancelledRefundedCash": "{ref} est annulée — {amount} remboursé en argent comptant",
         "cancelledRefundedCredit": "{ref} est annulée — {amount} remboursé en crédit en magasin",
-        "notMessaged": "Le client n’a pas été avisé."
+        "notMessaged": "Le client n’a pas été avisé.",
+        "cancelPolicyTitle": "Politique d’annulation de l’établissement",
+        "cancelPolicyKeeps": "La politique retient {amount} de cette réservation.",
+        "cancelPolicyKeepsLabelled": "{label} — la politique retient {amount} de cette réservation.",
+        "cancelPolicyFree": "La politique ne facture rien pour cette annulation.",
+        "cancelPolicyPass": "La politique prend un passage de la carte du client.",
+        "cancelFeeLineName": "Frais d’annulation"
       },
       "moduleTasks": {
         "catSetup": "Préparation",
@@ -10192,7 +10198,13 @@
         "noteSend": "Envoyer la note",
         "noteSent": "Note enregistrée sur la réservation",
         "noteFailed": "La note n’a pas été enregistrée",
-        "noteClose": "Fermer sans envoyer"
+        "noteClose": "Fermer sans envoyer",
+        "cancelKeeps": "C’est une annulation tardive. La politique de l’établissement retient {amount} de cette réservation.",
+        "cancelKeepsLabelled": "{label} — la politique de l’établissement retient {amount} de cette réservation.",
+        "cancelForfeitsPass": "C’est une annulation tardive. Elle utilise un passage de votre carte.",
+        "cancelBackOriginal": "Le reste de ce que vous avez payé est remboursé sur le moyen de paiement utilisé.",
+        "cancelBackCredit": "Le reste de ce que vous avez payé est ajouté à votre compte en crédit.",
+        "cancelBackNone": "Rien d’autre n’est remboursé."
       },
       "bookingDetail": {
         "notFound": "Réservation introuvable",
