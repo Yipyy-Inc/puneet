@@ -370,6 +370,26 @@ test.afterAll(async ({ browser }) => {
 test.describe("the facility home board", () => {
   test.slow();
 
+  // ── THE BROWSER SITS WHERE THE FACILITY DOES ────────────────────────────
+  //
+  // The till computes a time fee IN THE BROWSER, and a rule's `customTime` or
+  // business hours are the facility's wall clock — but the booking's times
+  // arrive as instants. Placing a facility clock time onto a calendar day
+  // therefore needs the facility's timezone, and `computeTimeFees` uses the
+  // BROWSER's. Those agree for staff standing in the building, which is the
+  // case this suite is here to verify, and they do not for a runner in UTC.
+  //
+  // Found on 2026-09-22 by the early-drop-off test below, on a machine at
+  // UTC+1: a three-hour early arrival came out as two hours LATE, and no fee
+  // was charged. The late-pickup test had been hiding the same five-hour skew
+  // for as long as it existed, because it asserts only that the bill GREW —
+  // a fee five hours too large passes that.
+  //
+  // So this pins the browser to the facility's clock, and the gap it leaves —
+  // a till open in another timezone charges the wrong fee — is recorded in
+  // the debt map rather than papered over here.
+  test.use({ timezoneId: FACILITY_TZ });
+
   test("a guest booked through the API appears on the dashboard", async ({
     page,
   }) => {
@@ -645,6 +665,130 @@ test.describe("the facility home board", () => {
       Number(after?.amountPaid ?? 0),
       "and the payment covered the whole of it",
     ).toBeCloseTo(Number(after?.amountDue ?? 0), 2);
+  });
+
+  // ── THE OTHER HALF OF THE TIME FEE ───────────────────────────────────────
+  //
+  // An early drop-off fee was authored, stored, shown back in the editor, and
+  // skipped outright by the till: `if (fee.condition !== "late_pickup")
+  // continue`. That line is gone (2026-09-21), but this test could not be
+  // written until the day after, because the BOARD could not express the
+  // state: `normalizeDaycare` put one field in both `scheduledStart` and
+  // `actualStart`, so an arrival was always compared against itself.
+  //
+  // Daycare rather than boarding, because a boarding stay that can be checked
+  // out today started yesterday, and "arrived before they were due" needs a
+  // booking whose due time is still ahead — which only a same-day service has.
+  test("an early drop-off is charged, measured from the booked arrival", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // Booked to arrive three hours from now and leave six — so arriving NOW is
+    // three hours early, and leaving now is not late. One fee, not two.
+    const { date, minutesIntoDay } = facilityClock();
+    const clock = (mins: number) =>
+      `${String(Math.floor(mins / 60) % 24).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    const dueIn = minutesIntoDay + 180;
+    const dueOut = minutesIntoDay + 360;
+    test.skip(
+      dueOut >= 24 * 60,
+      "it is too late in the facility's day for a booking due six hours from now",
+    );
+
+    const bookedIn = clock(dueIn);
+    const savedRule = await page.request.patch("/api/facility/settings", {
+      data: {
+        domain: "pricing_rules",
+        value: {
+          ...EMPTY_PRICING_RULES,
+          latePickupFees: [
+            {
+              id: "e2e-early-dropoff",
+              name: "Early Drop-off Fee",
+              enabled: true,
+              condition: "early_dropoff",
+              graceMinutes: 15,
+              feeType: "flat",
+              amount: 14,
+              scope: "per_booking",
+              // Pinned to the booked arrival, for the same reason the late
+              // rule above is: business hours would make the assertion depend
+              // on what time of day CI runs.
+              basedOn: "custom_time",
+              customTime: bookedIn,
+              applicableServices: ["all"],
+            },
+          ],
+        },
+      },
+    });
+    expect(savedRule.status(), await savedRule.text()).toBe(200);
+
+    const created = await createBooking(page, {
+      clientId: CLIENT_REF,
+      petId: PET_REF,
+      facilityId: 11,
+      service: "daycare",
+      startDate: date,
+      endDate: date,
+      checkInTime: bookedIn,
+      checkOutTime: clock(dueOut),
+      status: "confirmed",
+      basePrice: 45,
+      discount: 0,
+      totalCost: 45,
+      specialRequests: MARKER,
+    });
+
+    // The arrival is stamped `now()` by the server — three hours before they
+    // were due, which is the whole point. It is presence, not a dialog input.
+    const arrived = await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: created.id },
+    });
+    expect(arrived.status(), await arrived.text()).toBe(201);
+
+    const before = await readBooking(page, created.id);
+    const due = Number(before?.amountDue ?? 0);
+    expect(due, "the booking has a bill").toBeGreaterThan(0);
+
+    await page.goto("/facility/dashboard");
+    await selectTile(page, /going home today/i);
+
+    const card = await cardFor(page, created.id);
+    await card
+      .getByRole("button", { name: /check out/i })
+      .first()
+      .click();
+
+    const checkOut = page.getByRole("dialog").filter({ hasText: /check out/i });
+    await expect(checkOut).toBeVisible({ timeout: 15_000 });
+    await checkOut.getByRole("button", { name: /^check .+ out$/i }).click();
+
+    // e-transfer, for the reasons the late-pickup test sets out at length.
+    const payment = page
+      .getByRole("dialog")
+      .filter({ hasText: /take payment/i });
+    await expect(payment).toBeVisible({ timeout: 15_000 });
+    await payment.getByRole("button", { name: /^e-transfer$/i }).click();
+    await payment.getByRole("button", { name: /^charge /i }).click();
+    await payment.getByRole("button", { name: /confirm and charge/i }).click();
+
+    await expect
+      .poll(async () => (await readBooking(page, created.id))?.paymentStatus, {
+        timeout: 30_000,
+        message: "the payment reached the ledger",
+      })
+      .toBe("paid");
+
+    // THE ASSERTION THAT FAILS WITHOUT THE FIX. Before 2026-09-21 the till
+    // skipped every early-drop-off rule, and before 2026-09-22 the board had
+    // no booked arrival to measure against — either way the bill did not move.
+    const after = await readBooking(page, created.id);
+    expect(
+      Number(after?.amountDue ?? 0),
+      "the early drop-off fee joined the bill",
+    ).toBeCloseTo(due + 14, 2);
   });
 
   test("a no-show is a booking transition, not a departure", async ({

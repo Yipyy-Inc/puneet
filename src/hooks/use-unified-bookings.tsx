@@ -303,8 +303,17 @@ function normalizeDaycare(d: DaycareCheckIn): UnifiedBooking {
     ownerName: d.ownerName,
     ownerPhone: d.ownerPhone,
     status,
-    scheduledStart: d.checkInTime,
-    actualStart: d.checkInTime || null,
+    // ── TWO TIMES, NOT ONE READ TWICE ────────────────────────────────────
+    //
+    // Both of these were `d.checkInTime`, which is the ACTUAL arrival once a
+    // dog is here and the booked start before that. Putting it in both slots
+    // cost two things: the card showed an arrival in the place meaning
+    // "scheduled", so staff could not see what time the dog was booked for;
+    // and the time-fee evaluator compared the value to itself, so an
+    // early-drop-off fee could never fire for daycare however the facility
+    // configured it. `scheduledCheckIn` carries the booked time now.
+    scheduledStart: d.scheduledCheckIn ?? d.checkInTime,
+    actualStart: d.status === "scheduled" ? null : d.checkInTime || null,
     scheduledEnd: d.scheduledCheckOut,
     actualEnd: d.checkOutTime ?? null,
     isGoingHomeToday: status === "checked-in",

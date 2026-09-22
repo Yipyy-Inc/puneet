@@ -37,6 +37,25 @@ import type { LatePickupFee } from "@/types/boarding";
 //
 // Late pickup and early drop-off are different events, so a booking can owe
 // one of each. At most two fees come back.
+//
+// ── IT USES THE BROWSER'S TIMEZONE, AND THAT IS A KNOWN LIMIT ─────────────
+//
+// A rule's `customTime` and a facility's business hours are WALL CLOCK times
+// — "we close at 18:00". A booking's times arrive as instants. Putting a wall
+// clock onto a calendar day therefore needs a timezone, and `atClock` below
+// uses `setHours`, which is the BROWSER's.
+//
+// That is right for staff standing in the building, which is every till this
+// runs on today, and wrong for anyone opening it from another timezone: the
+// baseline shifts by the offset, so a guest can be charged for hours they
+// were not here, or not charged at all. Measured 2026-09-22 at UTC+1 against
+// an America/Toronto facility — a three-hour early arrival read as two hours
+// late and no fee was charged.
+//
+// Fixing it properly needs the facility's timezone CLIENT-SIDE, which nothing
+// exposes yet — `facility.timezone` lives in `src/lib/api/facility-context.ts`
+// and that is server-only. Recorded in the debt map; not papered over here,
+// because a wrong fee is worse than a missing one.
 // ============================================================================
 
 export interface TimeFeeResult {

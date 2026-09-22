@@ -19736,3 +19736,73 @@ customer can see, which is why they went unnoticed. Open, unfixed.
 And an interrupted run cleans up nothing at all: killing the full suite at
 620/711 left **96 bookings, a report card and 16 forms** behind, because a
 teardown that never runs and a teardown that throws leave identical residue.
+
+## 2026-09-22 — A daycare card showed the arrival where the booking should be
+
+The early-drop-off e2e test could not be written, and that turned out to be the
+finding rather than an obstacle.
+
+`src/lib/api/mappers/daycare.ts` carried ONE field for two meanings:
+
+```
+checkInTime: attendance?.checked_in_at ?? row.start_at   // actual, or booked
+scheduledCheckOut: row.end_at                            // check-OUT had both
+```
+
+Check-out always had a booked time and an actual one. Check-in had a single
+field that silently changed meaning the moment a dog walked in — and
+`normalizeDaycare` then put it into BOTH `scheduledStart` and `actualStart`.
+
+Two consequences, and the one without money attached is the one staff would
+have noticed:
+
+- **The board showed a daycare guest's ACTUAL arrival in the slot labelled
+  "Arrives"**, and the check-in dialog's "Scheduled" line did the same. Once a
+  dog was here, what time they had been booked for was unrecoverable.
+- An early-drop-off fee compared the arrival against itself, so it could never
+  fire for daycare however the facility configured it. The feature revived the
+  day before was inert for that service.
+
+`row.start_at` was right there. `scheduledCheckIn` carries it now.
+
+**Custom services have the identical collapsed shape and are deliberately left
+alone**: the board reads them from `@/data/custom-service-checkins` held in
+`useState`, a fixture that writes nowhere. Reshaping a fixture for a path with
+no backend is churn — revisit it when custom services get a table.
+
+## 2026-09-22 — The time fee uses the BROWSER's timezone, and a loose assertion hid it
+
+Writing the early-drop-off test surfaced a second defect, this one in the
+evaluator shipped the day before.
+
+A rule's `customTime`, and a facility's business hours, are WALL CLOCK times —
+"we close at 18:00". A booking's times arrive as instants. Placing a wall clock
+onto a calendar day needs a timezone, and `atClock` uses `setHours`, which is
+the browser's.
+
+Measured at UTC+1 against an America/Toronto facility: a three-hour early
+arrival was evaluated as two hours LATE, and no fee was charged. The offset
+lands straight on the baseline, so a till open in another timezone charges for
+hours the guest was not here, or charges nothing.
+
+**It works in production** because staff are standing in the building. It is a
+robustness gap, not a live overcharge — but it is a five-hour one, and the fix
+needs the facility's timezone CLIENT-SIDE, which nothing exposes:
+`facility.timezone` lives in `src/lib/api/facility-context.ts` and that is
+server-only. Open.
+
+### Why nothing caught it for a day
+
+`dashboard-live-board`'s late-pickup test asserts `amountDue` is
+`toBeGreaterThan(due)`. A fee five hours too large passes that. The assertion
+had been true and useless since it was written.
+
+The early-drop-off test asserts an EXACT figure — `toBeCloseTo(due + 14, 2)` —
+which is only drift-proof because the rule is a FLAT fee; a `per_30min` rule
+moves between tiers while the test runs, which is why the late-pickup one was
+written loosely in the first place. **Where an exact assertion is affordable,
+it is worth more than a stronger-sounding scenario checked loosely.**
+
+The suite now pins the browser to the facility's clock
+(`test.use({ timezoneId: FACILITY_TZ })`), which is the condition the product
+actually runs in, and the timezone gap is recorded here instead.

@@ -134,6 +134,11 @@ export function rowToDaycareCheckIn(
     // a scheduled row should show.
     checkInTime: attendance?.checked_in_at ?? row.start_at,
     checkOutTime: attendance?.checked_out_at ?? null,
+    // The booked start, kept whatever the attendance says. Carrying only the
+    // line above lost it the moment a dog arrived — `scheduledCheckOut` had
+    // always been separate, and check-IN being the odd one out is what let a
+    // daycare card show an arrival as though it were the booking.
+    scheduledCheckIn: row.start_at,
     scheduledCheckOut: row.end_at,
     rateType: (attendance?.rate_type ??
       row.service_type ??

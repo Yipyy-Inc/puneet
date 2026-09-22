@@ -41,8 +41,29 @@ export const daycareCheckInSchema = z
     ownerId: z.number(),
     ownerName: z.string(),
     ownerPhone: z.string(),
+    /**
+     * One field, two meanings: the ACTUAL arrival once they are here, and the
+     * booked start before that (`attendance?.checked_in_at ?? row.start_at`).
+     *
+     * Kept that way because every screen showing "checked in at" reads it, but
+     * it is why `scheduledCheckIn` exists below — collapsing both into this
+     * one made the booked time unrecoverable the moment a dog walked in.
+     */
     checkInTime: z.string(),
     checkOutTime: z.string().nullable(),
+    /**
+     * When they were DUE, always — never overwritten by the arrival.
+     *
+     * Check-OUT always had both (`checkOutTime` and `scheduledCheckOut`) and
+     * check-IN had one, which is the asymmetry that hid two defects: the board
+     * showed a daycare guest's ACTUAL arrival in the slot meaning "scheduled",
+     * and an early-drop-off fee compared the arrival to itself, so it could
+     * never fire for daycare however the facility configured it (2026-09-22).
+     *
+     * Optional because the fixtures predate it; every row from Postgres
+     * carries it.
+     */
+    scheduledCheckIn: z.string().optional(),
     scheduledCheckOut: z.string(),
     rateType: daycareRateTypeEnum,
     status: daycareCheckInStatusEnum,
