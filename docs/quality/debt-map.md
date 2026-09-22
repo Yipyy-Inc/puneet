@@ -20013,3 +20013,77 @@ read a skip as "not measured", never as "passed". This machine is the only
 place it runs. That is the `CRON_SECRET`-in-CI debt already on the books,
 now with a measured cost: a shipped feature stopped working and only a manual
 local run could tell.
+
+## 2026-09-22 — Every scheduler compares a MACHINE clock to DATABASE timestamps
+
+`abandonment-recovery-send` began failing between 2026-09-21 21:24 UTC and
+2026-09-22 09:50 UTC. No commit in that window touches recovery, messaging or
+unfinished bookings. **Nothing was changed. The clock drifted.**
+
+### The measurement
+
+This machine runs **1.664 s behind** the Supabase instance, stable across three
+rounds at 120 ms round trip. That is enough, and here is the proof, run against
+a seeded row and cleaned up after:
+
+```
+seeded, recovery_not_before (DB clock) = 2026-09-22 14:00:48.429562+00
+the tick's new Date()                  = 2026-09-22T14:00:46.885Z
+rows the tick would find NOW           : 0
+rows it would find with a +5s allowance: 1
+```
+
+`recovery_not_before` is set by a trigger to the database's `now()`. The tick
+then filters `.lte("recovery_not_before", new Date().toISOString())` — **the
+Node process's clock**. A draft created moments earlier is therefore stamped in
+the tick's own future, and the query does not return it. `recovery_outcome`
+stays NULL, which is how the failure is datable at all: that column is written
+the instant `evaluateOne` touches a row, and it reads `queued` for every
+attempt on 09-21 and NULL for all five since.
+
+### It is not one function
+
+Five schedulers do the same thing:
+
+| file                                           | line | column                                     |
+| ---------------------------------------------- | ---- | ------------------------------------------ |
+| `src/lib/messaging/dispatch.ts`                | 763  | `scheduled_for` — **the send pass itself** |
+| `src/lib/workflows/engine.ts`                  | 289  | `next_run_at` — the workflow scheduler     |
+| `src/lib/reputation/nudge.ts`                  | 96   | `nudge_due_at`                             |
+| `src/lib/forms/reminder-tick.ts`               | 62   | `start_at`                                 |
+| `src/lib/unfinished-bookings/recovery-tick.ts` | 87   | `recovery_not_before`                      |
+
+Every one of them runs late by whatever the host's skew happens to be.
+
+### Why production has not noticed
+
+Cron re-runs these on an interval, so a 1.6 s skew costs one tick, not a
+message. The failure only becomes visible where the delay is configured as
+**zero** — which is a legitimate configuration the schema accepts, and exactly
+what the spec sets up. So this is a latent flaw that a test found before a
+customer did, which is the good outcome; it is written down here rather than
+fixed in passing because it governs customer messaging across five surfaces.
+
+### What a fix looks like
+
+PostgREST accepts the literal `now` and lets Postgres cast it, verified against
+the live API:
+
+```
+GET /rest/v1/unfinished_bookings?recovery_not_before=lte.now   ->  200, rows
+```
+
+So `.lte("recovery_not_before", "now")` moves the comparison to the database's
+own clock and is a one-line change per scheduler. **It is not sufficient on its
+own for recovery**: `evaluateOne` separately compares
+`recoveryDueAt(row.abandoned_at, delayHours) > now` with the machine clock, so
+a zero-delay row would still be deferred. Doing this properly means taking the
+tick's `now` from the database once and threading it through — which is the
+scoped task, not a drive-by.
+
+### And nothing could have caught it
+
+The spec needs `CRON_SECRET`, which is runtime-only and absent in CI, so it
+SKIPS there — its own header says to read a skip as "not measured", never as
+"passed". This machine is the only place it runs. Putting `CRON_SECRET` in the
+e2e job's env was already carried debt; its cost is now measured.
