@@ -20504,3 +20504,52 @@ and **passed on retry**. That is worse news than a hard failure: the remaining
 baselined files will fail INTERMITTENTLY, which is exactly how a real defect
 gets waved off as flake. Its read is narrowed now, taking the baselines to 16
 reads in 14 files and 30 teardowns.
+
+## 2026-09-22 — Rebuilding under `next start` breaks sign-in, and looks like your code
+
+**This corrects the two entries above.** They conclude that a built server
+"cannot be changed underneath a running suite, which is the other half of the
+lesson". That is true of SOURCE edits and exactly wrong about builds, and
+somebody reading it would make the mistake it appears to rule out.
+
+### What happened
+
+A built server was started at 21:40. `bun run build` ran at 22:15, **while it
+was still serving**. `next start` serves a fixed `.next`; the rebuild replaced
+that directory underneath it. Pages still rendered — they are server-rendered
+— but the client chunks the HTML referenced no longer existed, so nothing on
+the page could hydrate.
+
+The visible symptom is not an error. It is the Sign in form doing nothing when
+you press the button. `_auth.ts`'s `signIn` then polls `/api/permissions` for
+sixty seconds and throws, and every hook and test in the file burns its own
+timeout on the way down. A five-test spec took **16.1 minutes** and reported
+four failures, all of them screenshotting a perfectly rendered sign-in page.
+
+### Why it cost an hour
+
+The first suspect was the new spec, because it was the new thing. It was
+innocent, and the way that got established is worth keeping:
+
+**Run a KNOWN-GOOD spec against the same server.** `tag-catalogue` passed in
+the full suite ninety minutes earlier; against the stale build it failed the
+same way. That is one command, and it moves the question from "what is wrong
+with my code" to "what is wrong with the machine" before any code is read.
+
+After a restart on the current build, the new spec went **7 passed in 33
+seconds** — the same file, untouched.
+
+### The rule
+
+**Rebuild and restart together, or not at all.**
+
+```
+bun run build && <stop the server> && <start it again>
+```
+
+Never `bun run build` while a `next start` is live, even "just to check
+something compiles" — `next build` writes `.next` whatever it was run for.
+
+And read a mass sign-in failure as INFRASTRUCTURE first. A page that renders
+but cannot hydrate looks identical to correct software; the tell is that the
+failures are not about the thing being tested.
