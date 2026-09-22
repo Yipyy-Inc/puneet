@@ -20,8 +20,16 @@ import {
 //   * a plain `.includes(serviceId)` with no `"all"` sentinel, while the
 //     editor writes `applicableServices: ["all"]` for "All services" — so a
 //     fee scoped to everything matched nothing.
-//   * `basedOn`, `customTime`, the apply-window and `taxRate` were never read
-//     at all: four fields the facility can set that decided nothing.
+//   * `basedOn`, `customTime` and the apply-window were never read at all:
+//     three fields the facility can set that decided nothing.
+//
+// A fourth, `taxRate`, was the same shape and is GONE rather than fixed. It
+// was a labelled input on three fee editors, persisted, and read by nothing —
+// a facility could type 5 into it and believe tax was being charged. Making it
+// work would have meant a second tax authority beside the facility's own, with
+// no name, no registration number and no place on a receipt. A fee is taxed
+// with the booking it sits on; that is coherent, and this field only ever
+// implied otherwise. Removed 2026-09-22.
 //
 // This module is the only evaluator now. `pricing-rules.ts` calls it, the till
 // calls it, and they cannot drift because there is nothing left to drift from.
@@ -73,7 +81,6 @@ export interface TimeFeeResult {
   minutesOver: number;
   /** Minutes actually charged for, after grace. */
   billableMinutes: number;
-  taxRate?: number;
 }
 
 export interface FacilityDayHours {
@@ -365,7 +372,6 @@ function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
       condition: fee.condition,
       minutesOver: Math.round(minutesOver),
       billableMinutes: Math.round(billableMinutes),
-      taxRate: fee.taxRate,
     },
   };
 }

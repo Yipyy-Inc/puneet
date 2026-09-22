@@ -63,7 +63,6 @@ export function TimeFeeModal({
     customTime: "",
     applyFromTime: "",
     applyUntilTime: "",
-    taxRate: undefined as number | undefined,
     applicableServices: normalizeApplicableServices(
       serviceType === "all" ? ["all"] : [serviceType],
     ),
@@ -85,7 +84,6 @@ export function TimeFeeModal({
         customTime: editing.customTime ?? "",
         applyFromTime: editing.applyFromTime ?? "",
         applyUntilTime: editing.applyUntilTime ?? "",
-        taxRate: editing.taxRate,
         applicableServices: normalizeApplicableServices(
           editing.applicableServices,
         ),
@@ -103,7 +101,6 @@ export function TimeFeeModal({
         customTime: "",
         applyFromTime: "",
         applyUntilTime: "",
-        taxRate: undefined,
         applicableServices: normalizeApplicableServices(
           serviceType === "all" ? ["all"] : [serviceType],
         ),
@@ -316,24 +313,6 @@ export function TimeFeeModal({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>{t("taxRate")}</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.taxRate ?? ""}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  taxRate: e.target.value
-                    ? parseFloat(e.target.value)
-                    : undefined,
-                }))
-              }
-              placeholder={t("facilityDefault")}
-            />
-          </div>
-          <div className="space-y-2">
             <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
               <label className="flex items-center gap-2">
@@ -414,7 +393,6 @@ export function TimeFeeModal({
                   form.basedOn === "custom_time" ? form.customTime : undefined,
                 applyFromTime: form.applyFromTime || undefined,
                 applyUntilTime: form.applyUntilTime || undefined,
-                taxRate: form.taxRate,
                 applicableServices: normalizeApplicableServices(
                   form.applicableServices,
                 ),

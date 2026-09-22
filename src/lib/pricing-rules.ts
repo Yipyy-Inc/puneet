@@ -58,6 +58,21 @@ export interface PricingRuleAdjustment {
   id: string;
   label: string;
   amount: number;
+  /**
+   * Which rule produced this line.
+   *
+   * ── `custom_fee` USED TO MEAN THREE DIFFERENT THINGS ────────────────────
+   *
+   * `BookingModal` pushed the mobile-grooming travel surcharge and the package
+   * pass redemption under `custom_fee` too. Nothing branched on `source`, so
+   * nothing noticed — but the moment anything filters custom fees out of
+   * `total_cost` to bill them separately, that filter takes the travel
+   * surcharge with it (revenue gone) and the pass discount with it (the
+   * customer charged for a pass they already own).
+   *
+   * They have their own names now. The union is exhaustive on purpose: adding
+   * a member here surfaces every switch that has to answer for it.
+   */
   source:
     | "multi_pet"
     | "multi_night"
@@ -67,7 +82,22 @@ export interface PricingRuleAdjustment {
     | "room_type"
     | "grooming_condition"
     | "service_bundle"
-    | "custom_fee";
+    | "custom_fee"
+    | "travel_zone"
+    | "package_redemption";
+  /**
+   * The rule's OWN id, where one exists — never parsed back out of `id`.
+   *
+   * `id` is a composite (`${fee.id}-${fee.autoApply}`) built for React keys.
+   * A fee that has to be recognised on a bill needs the real thing.
+   */
+  feeId?: string;
+  /** What one unit costs, before `quantity`. */
+  unitAmount?: number;
+  /** How many units — pets, nights — `unitAmount` was multiplied by. */
+  quantity?: number;
+  /** Which direction this moves the bill. `amount`'s sign already says, but a line item's does not. */
+  adjustmentKind?: "fee" | "discount";
 }
 
 export interface PricingRuleComputation {
@@ -1060,19 +1090,29 @@ export function applyDynamicPricingRules(
         ? "discount"
         : "fee");
 
+    // ── `scope` WAS IGNORED FOR EVERY ADD-ON-TRIGGERED FEE ────────────────
+    //
+    // The old guard was `fee.autoApply !== "addon_purchase"`, which forced
+    // `multiplier = 1` on all of them. That is only right when the fee WAIVES
+    // add-ons, because then the amount already derives from real add-on rows
+    // and multiplying by the pet count would count them twice. A flat "$5
+    // because they bought a bath" fee scoped per-pet was silently per-booking.
+    const derivesFromAddOnRows =
+      fee.autoApply === "addon_purchase" && hasWaiveTargets;
+
     let multiplier = 1;
     if (fee.autoApply === "new_pet") {
       multiplier = fee.scope === "per_pet" ? newPetIds.length : 1;
-    } else if (fee.autoApply !== "addon_purchase") {
+    } else if (!derivesFromAddOnRows) {
       multiplier =
         fee.scope === "per_pet" ? Math.max(1, input.selectedPetIds.length) : 1;
     }
 
     if (multiplier <= 0) continue;
 
-    let feeTotal = 0;
+    let unitAmount = 0;
 
-    if (fee.autoApply === "addon_purchase" && hasWaiveTargets) {
+    if (derivesFromAddOnRows) {
       const waivedBase = computeWaivedAddOnTotal(
         fee,
         normalizedMergedExtraServices,
@@ -1080,14 +1120,27 @@ export function applyDynamicPricingRules(
       );
       const waivePct =
         Math.min(100, Math.max(0, fee.waivePercentage ?? 100)) / 100;
-      feeTotal = waivedBase * waivePct;
+      unitAmount = waivedBase * waivePct;
     } else {
+      // ── THE BASE IS THE SERVICE, NOT "THE TOTAL SO FAR" ─────────────────
+      //
+      // `basePrice + addOnsTotal` is fixed for the whole loop, so two
+      // percentage fees cannot compound into each other and the answer does
+      // not depend on which order the facility happened to author them in.
       const percentageBase = basePrice + addOnsTotal;
-      feeTotal =
+      unitAmount =
         fee.feeType === "percentage"
           ? (percentageBase * Math.max(0, fee.amount)) / 100
           : Math.max(0, fee.amount);
-      feeTotal *= multiplier;
+    }
+
+    let feeTotal = unitAmount * multiplier;
+
+    // A percentage of a three-week boarding stay is unbounded without this.
+    // `maxFee` caps the WHOLE line, not the unit, which is what a facility
+    // means by "never more than $50".
+    if (fee.maxFee != null && fee.maxFee > 0) {
+      feeTotal = Math.min(feeTotal, fee.maxFee);
     }
 
     if (feeTotal <= 0) continue;
@@ -1097,6 +1150,10 @@ export function applyDynamicPricingRules(
       label: fee.name,
       amount: adjustmentKind === "discount" ? -feeTotal : feeTotal,
       source: "custom_fee",
+      feeId: fee.id,
+      unitAmount,
+      quantity: multiplier,
+      adjustmentKind,
     });
   }
 

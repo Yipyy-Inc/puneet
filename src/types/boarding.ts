@@ -364,7 +364,6 @@ export const latePickupFeeSchema = z.object({
   ]),
   amount: z.number(),
   maxFee: z.number().optional(),
-  taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   basedOn: z.enum(["business_hours", "custom_time"]),
   customTime: z.string().optional(),
@@ -379,7 +378,6 @@ export const exceed24HourFeeSchema = z.object({
   name: z.string().optional(),
   enabled: z.boolean(),
   amount: z.number(),
-  taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   description: z.string().optional(),
 });
@@ -392,7 +390,14 @@ export const customFeeSchema = z.object({
   amount: z.number(),
   feeType: z.enum(["flat", "percentage"]),
   adjustmentKind: z.enum(["fee", "discount"]).optional(),
-  taxRate: z.number().optional(),
+  /**
+   * The most this fee can ever come to, whole line.
+   *
+   * Only percentage fees need it, and they need it badly: 10% of a three-week
+   * boarding stay had nothing stopping it. Named and shaped like
+   * `latePickupFeeSchema.maxFee` so the two read the same.
+   */
+  maxFee: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   autoApply: z.enum([
     "none",

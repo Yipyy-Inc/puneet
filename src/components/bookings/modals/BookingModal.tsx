@@ -1858,7 +1858,7 @@ export function BookingModal({
             zoneBreakdown.zone.label,
           ),
           amount: zoneBreakdown.zoneSurcharge,
-          source: "custom_fee",
+          source: "travel_zone",
         });
       }
     }
@@ -1877,7 +1877,7 @@ export function BookingModal({
         id: "package_redemption",
         label: t("packagePassApplied"),
         amount: -passDiscount,
-        source: "custom_fee",
+        source: "package_redemption",
       });
       subtotal = Math.max(0, subtotal);
     }

@@ -1943,24 +1943,6 @@ export function PricingRulesPanel({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{t("taxRate")}</Label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={exceed24h.taxRate ?? ""}
-                onChange={(e) =>
-                  setExceed24h((prev) => ({
-                    ...prev,
-                    taxRate: e.target.value
-                      ? parseFloat(e.target.value)
-                      : undefined,
-                  }))
-                }
-                placeholder={t("facilityDefault")}
-              />
-            </div>
-            <div className="space-y-2">
               <Label>{t("exceedDescription")}</Label>
               <Textarea
                 value={exceed24h.description ?? ""}

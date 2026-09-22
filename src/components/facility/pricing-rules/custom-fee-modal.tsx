@@ -54,9 +54,9 @@ export function CustomFeeModal({
     name: "",
     description: "",
     amount: 0,
+    maxFee: undefined as number | undefined,
     feeType: "flat" as "flat" | "percentage",
     adjustmentKind: "fee" as "fee" | "discount",
-    taxRate: undefined as number | undefined,
     scope: "per_pet" as "per_booking" | "per_pet",
     autoApply: "none" as
       | "none"
@@ -87,9 +87,9 @@ export function CustomFeeModal({
         name: editing.name,
         description: editing.description ?? "",
         amount: editing.amount,
+        maxFee: editing.maxFee,
         feeType: editing.feeType,
         adjustmentKind: editing.adjustmentKind ?? "fee",
-        taxRate: editing.taxRate,
         scope: editing.scope,
         autoApply: editing.autoApply,
         autoApplyCareTypes: editing.autoApplyCareTypes ?? [],
@@ -109,9 +109,9 @@ export function CustomFeeModal({
         name: "",
         description: "",
         amount: 0,
+        maxFee: undefined,
         feeType: "flat",
         adjustmentKind: "fee",
-        taxRate: undefined,
         scope: "per_pet",
         autoApply: "none",
         autoApplyCareTypes: [],
@@ -190,6 +190,29 @@ export function CustomFeeModal({
                 </SelectContent>
               </Select>
             </div>
+            {/* Only a percentage needs a ceiling. A flat fee already has one:
+                itself. Offering the field on both would invite a cap that
+                can never bind and read as clutter. */}
+            {form.feeType === "percentage" ? (
+              <div className="space-y-2">
+                <Label>{t("cfCap")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.maxFee ?? ""}
+                  placeholder={t("cfCapNone")}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      maxFee: e.target.value
+                        ? parseFloat(e.target.value)
+                        : undefined,
+                    }))
+                  }
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label>{t("cfEffect")}</Label>
               <Select
@@ -232,24 +255,6 @@ export function CustomFeeModal({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>{t("taxRate")}</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.taxRate ?? ""}
-              onChange={(e) =>
-                setForm((p) => ({
-                  ...p,
-                  taxRate: e.target.value
-                    ? parseFloat(e.target.value)
-                    : undefined,
-                }))
-              }
-              placeholder={t("facilityDefault")}
-            />
           </div>
           <div className="space-y-2">
             <Label>{t("whereApplies")}</Label>
@@ -588,9 +593,9 @@ export function CustomFeeModal({
                 name: form.name,
                 description: form.description || undefined,
                 amount: form.amount,
+                maxFee: form.feeType === "percentage" ? form.maxFee : undefined,
                 feeType: form.feeType,
                 adjustmentKind: form.adjustmentKind,
-                taxRate: form.taxRate,
                 scope: form.scope,
                 autoApply: form.autoApply,
                 autoApplyCareTypes:
