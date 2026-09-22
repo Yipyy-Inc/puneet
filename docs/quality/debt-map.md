@@ -19718,3 +19718,21 @@ This is the third time in one day that a cleanup reported success having done
 nothing. The rule has not changed and is worth restating: **cleanup is not
 verified by having been written.** Read the database back, or print what it
 could not do.
+
+### `e2e:purge` is not the safety net it looks like
+
+Worth writing down because assuming otherwise is easy. `purge_e2e_bookings()`
+deletes only rows that are ALREADY CANCELLED and hold no money — it never
+cancels anything itself. So it cleans up after specs that did their job, and a
+spec which leaves a row `confirmed` is left exactly where it is, for ever.
+
+Read the database back after a run rather than the purge's count: on
+2026-09-22, immediately after a purge that removed 96 rows, seven live e2e
+bookings remained, from three specs that never cancelled their own —
+`booking-wizard` (3), `booking-lifecycle` (2) and `booking-auto-confirm` (2),
+the oldest from 2026-09-20. All seven sit on an ARCHIVED facility, so nothing a
+customer can see, which is why they went unnoticed. Open, unfixed.
+
+And an interrupted run cleans up nothing at all: killing the full suite at
+620/711 left **96 bookings, a report card and 16 forms** behind, because a
+teardown that never runs and a teardown that throws leave identical residue.
