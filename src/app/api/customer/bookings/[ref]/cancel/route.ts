@@ -117,10 +117,26 @@ export async function POST(
   });
   if (error) {
     if (error.code === "P0002") return NOT_FOUND();
-    // Started, or no longer open: the booking is past what the owner may do.
+    // Started, or no longer open, or a service the facility cancels itself:
+    // the booking is past what the owner may do.
+    //
+    // WHICH of those it is decides what the portal says next, and the trigger
+    // cannot say — 42501 already means "you may only cancel this booking".
+    // So the terms are read back, from the same evaluator that refused, on
+    // the error path only. Guessing from the message text would break the
+    // first time somebody reworded an exception.
     if (error.code === "55000" || error.code === "42501") {
+      const { data: terms } = await rpc("my_booking_cancel_terms", {
+        p_ref: ref,
+      });
+      const t = terms as CancelTerms | null;
+      const mustAsk =
+        t?.customerMayCancel === "request" && t?.withdrawal === false;
       return NextResponse.json(
-        { error: error.message, reason: "not_cancellable" },
+        {
+          error: error.message,
+          reason: mustAsk ? "approval_required" : "not_cancellable",
+        },
         { status: 409 },
       );
     }

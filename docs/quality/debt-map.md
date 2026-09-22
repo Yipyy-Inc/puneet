@@ -19833,3 +19833,60 @@ indistinguishable from a screenshot, which is its own small trap.
 Until it is closed, a French check needs a person and the language switcher,
 and a screen whose French has not been looked at should say so rather than be
 assumed.
+
+## 2026-09-22 — "Ask us before cancelling" has no approve/deny surface, on purpose
+
+`cancellation_policies.services.<service>.customerMayCancel` can say `request`,
+and as of `a_customer_asks_the_facility_to_cancel` it decides something:
+`private.enforce_booking_integrity` refuses a customer's cancel for that
+service, and the portal offers a `cancel_request` note instead.
+
+**The note IS the request.** There is no queue, no approve button and no deny
+button. Staff get a notice (`booking_cancel_requested`, urgent, gated on
+`edit_bookings`), a badge on the note, and the ordinary Cancel booking they
+already had. Nothing tracks whether they answered.
+
+That is a deliberate stop, not an oversight. The plan for this work assumed it
+could reuse a customer-requests-and-facility-approves flow already built for
+date changes — **and that flow does not exist**; `change_dates` is the same
+shape, a note and a notice. Building the request/approve surface is an adjacent
+feature with its own states, its own permissions and its own history, and half
+of one would be worse than a request the desk can read: a "pending" badge that
+nothing ever clears teaches people to ignore badges.
+
+**Do instead:** if you build the approve/deny surface, build it for all three
+kinds at once (`note`, `change_dates`, `cancel_request`) — they already share a
+column, a rail and a notification category. Do not special-case cancellation.
+
+### The refusal is in the trigger because a hidden button is not a rule
+
+`cancel_my_booking` is **not** `SECURITY DEFINER`: it updates `bookings` as the
+caller, and the trigger is what decides. So the refusal went there, next to the
+already-started check, and `cancellation-request.sql` asserts it through both
+doors — the RPC _and_ a plain `update`, which is what a customer reaches
+through PostgREST if they skip the screen.
+
+The same file's R0 runs FIRST and asserts the opposite: with no policy written,
+the cancel still works. Both directions in one run, because a refusal gate that
+is only tested for refusing passes just as well when it refuses everybody.
+
+### A withdrawal is exempt, in the trigger and in the dialog
+
+`withdrawal` means the facility has not accepted the booking yet. "Ask us
+first" is about a booking that was agreed; making somebody request permission
+to take back a request nobody has looked at is a worse product, not a safer
+one. Both the trigger and `CancelBookingDialog` carry that exemption, and R3
+asserts it — if you touch one, the other is a `grep` away.
+
+### A near-miss worth writing down: the new branch ate the old one
+
+The ask copy was first added as another arm of `CancelBookingDialog`'s existing
+`terms.isPending ? … : withdrawal ? … : data.late ? …` chain. It typechecked,
+it rendered, and it silently removed the **fee** sentence for exactly the
+customers whose facility charges one — because a ternary arm is an `else`, and
+"who cancels" and "what it costs" are two independent facts. It is now its own
+paragraph above the chain.
+
+**Do instead:** when adding a case to a rendering ternary, ask whether the new
+fact _replaces_ the others or _accompanies_ them. In a dialog that states terms,
+it almost always accompanies them.

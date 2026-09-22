@@ -101,6 +101,23 @@ export const NOTIFICATION_KINDS = {
     mandatory: false,
     urgent: false,
   },
+  /**
+   * A customer asked the facility to cancel, because the facility's own
+   * cancellation policy says this service is theirs to cancel
+   * (`customerMayCancel: "request"`). Nothing has happened to the booking:
+   * somebody has to cancel it, so it reaches whoever may edit bookings.
+   *
+   * `urgent` on purpose, and it is the only one of the three customer-request
+   * kinds that is. A note can wait and a date change can wait; a cancellation
+   * cannot, because every hour it sits there is an hour the room is held for
+   * somebody who has said they are not coming.
+   */
+  booking_cancel_requested: {
+    category: "bookings",
+    permission: "edit_bookings",
+    mandatory: false,
+    urgent: true,
+  },
   form_submitted: {
     category: "forms",
     permission: "view_clients",

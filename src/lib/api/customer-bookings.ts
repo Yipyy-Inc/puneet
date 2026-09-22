@@ -112,15 +112,21 @@ export const customerBookingQueries = {
 };
 
 /**
- * A note on the customer's own booking, or a request to change its dates
- * (POST …/notes). Resolves once the note is saved, so the toast is true.
+ * A note on the customer's own booking, a request to change its dates, or a
+ * request to cancel it (POST …/notes). Resolves once the note is saved, so
+ * the toast is true.
+ *
+ * `cancel_request` is for a service the facility's policy says it cancels
+ * itself (`customerMayCancel: "request"`). The note IS the request: nothing
+ * about the booking changes until somebody at the facility acts on it, and
+ * the words say so rather than implying an approval queue that does not exist.
  */
 export function useAddBookingNote() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       ref: number;
-      kind: "note" | "change_dates";
+      kind: "note" | "change_dates" | "cancel_request";
       content: string;
     }) =>
       readJson<{ id: string }>(

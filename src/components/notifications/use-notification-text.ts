@@ -44,6 +44,7 @@ function keysFor(n: StaffNotification): { title: string; detail?: string } {
     case "booking_cancelled":
     case "booking_customer_note":
     case "booking_change_requested":
+    case "booking_cancel_requested":
       return { title: `kind_${n.kind}`, detail: "kind_booking_detail" };
     case "form_submitted":
     case "pre_arrival_submitted":

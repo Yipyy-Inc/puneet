@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   CalendarClock,
+  CalendarX,
   Eye,
   MessageSquare,
   EyeOff,
@@ -52,6 +53,37 @@ const SUBTYPE_STYLES: Record<
   feeding: { labelKey: "noteFeeding", variant: "success" },
 };
 
+// What the client asked for, when they asked for anything (add_owner_booking_
+// note). A table rather than nested ternaries because there are three kinds
+// now: `cancel_request` arrived when a facility gained the ability to say a
+// service is theirs to cancel, and the desk has to be able to tell at a glance
+// which of the three is sitting on the booking.
+//
+// Each carries a GLYPH as well as an ink — §3, and `check:badge-glyph`: a
+// reader who cannot separate the reds from the browns still reads the word and
+// the mark. `destructive` is deliberately the same ink the customer's own
+// Cancel button wears, so one meaning keeps one colour across both portals.
+const REQUEST_STYLES: Record<
+  string,
+  {
+    labelKey: string;
+    variant: "info" | "warning" | "destructive";
+    Glyph: typeof MessageSquare;
+  }
+> = {
+  note: { labelKey: "badgeFromClient", variant: "info", Glyph: MessageSquare },
+  change_dates: {
+    labelKey: "badgeChangeDates",
+    variant: "warning",
+    Glyph: CalendarClock,
+  },
+  cancel_request: {
+    labelKey: "badgeAsksToCancel",
+    variant: "destructive",
+    Glyph: CalendarX,
+  },
+};
+
 export function NoteCard({
   note,
   onEdit,
@@ -69,6 +101,9 @@ export function NoteCard({
     isLong && !expanded ? note.content.slice(0, 200) + "..." : note.content;
   const hasEdits = note.editHistory.length > 0;
   const subtypeStyle = note.subType ? SUBTYPE_STYLES[note.subType] : null;
+  const requestStyle = note.customerRequest
+    ? (REQUEST_STYLES[note.customerRequest] ?? REQUEST_STYLES.note)
+    : null;
 
   return (
     <div
@@ -93,23 +128,13 @@ export function NoteCard({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {note.customerRequest && (
+          {requestStyle && (
             <Badge
-              variant={
-                note.customerRequest === "change_dates" ? "warning" : "info"
-              }
+              variant={requestStyle.variant}
               className="gap-0.5 text-[10px]"
             >
-              {note.customerRequest === "change_dates" ? (
-                <CalendarClock className="size-2.5" />
-              ) : (
-                <MessageSquare className="size-2.5" />
-              )}
-              {t(
-                note.customerRequest === "change_dates"
-                  ? "badgeChangeDates"
-                  : "badgeFromClient",
-              )}
+              <requestStyle.Glyph className="size-2.5" />
+              {t(requestStyle.labelKey)}
             </Badge>
           )}
           {subtypeStyle && (

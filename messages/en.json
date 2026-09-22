@@ -3537,7 +3537,8 @@
         "service_training": "Training",
         "fromYipyy": "From Yipyy",
         "kind_booking_customer_note": "{client} left a note on a booking",
-        "kind_booking_change_requested": "{client} asks to change a booking’s dates"
+        "kind_booking_change_requested": "{client} asks to change a booking’s dates",
+        "kind_booking_cancel_requested": "{client} asks you to cancel a booking"
       },
       "notificationRoles": {
         "owner": "Owner",
@@ -9293,6 +9294,7 @@
       "noteNotSaved": "The note was not saved",
       "badgeFromClient": "From the client",
       "badgeChangeDates": "Asks to change dates",
+      "badgeAsksToCancel": "Asks you to cancel",
       "formsTruncated": "Showing the first {count}. You have more forms than this page can list."
     },
     "messaging": {
@@ -10204,7 +10206,13 @@
         "cancelForfeitsPass": "This is a late cancellation. It uses one pass from your package.",
         "cancelBackOriginal": "Anything else you paid goes back the way you paid it.",
         "cancelBackCredit": "Anything else you paid is added to your account as credit.",
-        "cancelBackNone": "Nothing else is refunded."
+        "cancelBackNone": "Nothing else is refunded.",
+        "askCancelTitle": "Ask the facility to cancel {pet}’s {service} on {date}?",
+        "askCancelBody": "This facility cancels this service itself. Send them a request and they will get back to you. The booking stands until they cancel it.",
+        "askCancelLabel": "Tell the facility why",
+        "askCancelSend": "Send the request",
+        "askCancelSent": "Request sent. The facility will get back to you.",
+        "askCancelFailed": "The request was not sent"
       },
       "bookingDetail": {
         "notFound": "Booking not found",

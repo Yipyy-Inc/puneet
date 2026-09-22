@@ -46,7 +46,7 @@ export type NoteRow = {
   updated_by_name: string | null;
   created_at: string;
   updated_at: string;
-  customer_request?: "note" | "change_dates" | null;
+  customer_request?: "note" | "change_dates" | "cancel_request" | null;
 };
 
 export function rowToNote(row: NoteRow, entityRef: number): Note {

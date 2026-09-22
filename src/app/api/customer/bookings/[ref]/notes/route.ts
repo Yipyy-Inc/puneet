@@ -5,12 +5,19 @@ import { notifyStaff } from "@/lib/notifications/notify-staff";
 import { createServerClient } from "@/lib/supabase/server";
 
 // ============================================================================
-// POST /api/customer/bookings/[ref]/notes   { kind: "note" | "change_dates", content }
+// POST /api/customer/bookings/[ref]/notes
+//   { kind: "note" | "change_dates" | "cancel_request", content }
 //
-// A customer leaves a note on their booking, or asks to change its dates. The
-// portal's "Add a note" saved nothing and toasted "Note added", and
-// "Reschedule" opened a blank booking form. Rescheduling stays the facility's
-// to do; the customer asks, and the desk is told.
+// A customer leaves a note on their booking, asks to change its dates, or asks
+// the facility to cancel it. The portal's "Add a note" saved nothing and
+// toasted "Note added", and "Reschedule" opened a blank booking form.
+// Rescheduling stays the facility's to do; the customer asks, and the desk is
+// told.
+//
+// `cancel_request` arrived with per-service cancellation policies: where the
+// facility said `customerMayCancel: "request"`, the database refuses the
+// cancel itself (a_customer_asks_the_facility_to_cancel), and this is the
+// somewhere-to-go-instead. Nothing about the booking changes here.
 //
 // public.add_owner_booking_note (20260919170912) decides everything: their own
 // booking only, still open, 1-1000 characters, ten a day. The note is a shared
@@ -51,7 +58,10 @@ export async function POST(
     kind?: string;
     content?: string;
   };
-  const kind = body.kind === "change_dates" ? "change_dates" : "note";
+  const kind =
+    body.kind === "change_dates" || body.kind === "cancel_request"
+      ? body.kind
+      : "note";
 
   const supabase = await createServerClient();
   const rpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
@@ -86,7 +96,9 @@ export async function POST(
         kind:
           kind === "change_dates"
             ? "booking_change_requested"
-            : "booking_customer_note",
+            : kind === "cancel_request"
+              ? "booking_cancel_requested"
+              : "booking_customer_note",
         params: {
           client: row.clients?.name ?? undefined,
           service: row.service,

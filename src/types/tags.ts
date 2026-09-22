@@ -104,8 +104,12 @@ export const noteSchema = z.object({
   category: noteCategoryEnum,
   subType: petNoteSubTypeEnum.optional(),
   /** Written by the client from their portal (add_owner_booking_note): a
-   * note, or a request to change the booking's dates. Server-set. */
-  customerRequest: z.enum(["note", "change_dates"]).optional(),
+   * note, a request to change the booking's dates, or — where the facility's
+   * cancellation policy says this service is theirs to cancel — a request to
+   * cancel it. Server-set. */
+  customerRequest: z
+    .enum(["note", "change_dates", "cancel_request"])
+    .optional(),
   entityId: z.number(),
   facilityId: z.number().optional(),
   content: z.string(),

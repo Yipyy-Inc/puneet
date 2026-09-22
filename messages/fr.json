@@ -3537,7 +3537,8 @@
         "service_training": "Dressage",
         "fromYipyy": "De Yipyy",
         "kind_booking_customer_note": "{client} a laissé une note sur une réservation",
-        "kind_booking_change_requested": "{client} demande de changer les dates d’une réservation"
+        "kind_booking_change_requested": "{client} demande de changer les dates d’une réservation",
+        "kind_booking_cancel_requested": "{client} vous demande d’annuler une réservation"
       },
       "notificationRoles": {
         "owner": "Propriétaire",
@@ -9293,6 +9294,7 @@
       "noteNotSaved": "La note n’a pas été enregistrée",
       "badgeFromClient": "Du client",
       "badgeChangeDates": "Demande de changer les dates",
+      "badgeAsksToCancel": "Demande d’annuler",
       "formsTruncated": "Les {count} premiers sont affichés. Vous avez plus de formulaires que cette page ne peut en afficher."
     },
     "messaging": {
@@ -10204,7 +10206,13 @@
         "cancelForfeitsPass": "C’est une annulation tardive. Elle utilise un passage de votre carte.",
         "cancelBackOriginal": "Le reste de ce que vous avez payé est remboursé sur le moyen de paiement utilisé.",
         "cancelBackCredit": "Le reste de ce que vous avez payé est ajouté à votre compte en crédit.",
-        "cancelBackNone": "Rien d’autre n’est remboursé."
+        "cancelBackNone": "Rien d’autre n’est remboursé.",
+        "askCancelTitle": "Demander à l’établissement d’annuler {service} de {pet} le {date}?",
+        "askCancelBody": "C’est l’établissement qui annule ce service. Envoyez-lui une demande et il vous répondra. La réservation tient tant qu’il ne l’a pas annulée.",
+        "askCancelLabel": "Dites pourquoi à l’établissement",
+        "askCancelSend": "Envoyer la demande",
+        "askCancelSent": "Demande envoyée. L’établissement vous répondra.",
+        "askCancelFailed": "La demande n’a pas été envoyée"
       },
       "bookingDetail": {
         "notFound": "Réservation introuvable",
