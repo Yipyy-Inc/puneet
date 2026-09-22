@@ -163,11 +163,20 @@ select pg_temp.t('C4  the cancelled bookings are cancelled, and the started one 
   and (select status from public.bookings where ref = (select ref from r where k = 4)) = 'confirmed'
   and (select status from public.bookings where ref = (select ref from r where k = 6)) = 'confirmed');
 
-select pg_temp.t('P1  anon calls neither function; private.cancel_terms is nobody''s',
+-- `private.cancel_terms` was dropped on 2026-09-22: the evaluator takes the
+-- whole booking row now, because the per-service policy needs to know which
+-- service it is looking at. Both roles are named, because `from public`,
+-- `from anon` and `from authenticated` are three different grants and revoking
+-- one leaves the others.
+select pg_temp.t('P1  anon calls neither function; the evaluator is nobody''s',
   not has_function_privilege('anon', 'public.cancel_my_booking(bigint,text)', 'execute')
   and not has_function_privilege('anon', 'public.my_booking_cancel_terms(bigint)', 'execute')
   and not has_function_privilege('authenticated',
-        'private.cancel_terms(uuid,public.booking_status,timestamptz)', 'execute'));
+        'private.cancellation_terms(public.bookings)', 'execute')
+  and not has_function_privilege('anon',
+        'private.cancellation_terms(public.bookings)', 'execute')
+  and not has_function_privilege('authenticated',
+        'private.deposit_for_booking(public.bookings)', 'execute'));
 
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail
   from tap order by n;
