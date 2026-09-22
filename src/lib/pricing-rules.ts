@@ -15,6 +15,7 @@ import type {
 } from "@/types/boarding";
 import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
+import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
 import {
   appliesToService,
   computeTimeFees,
@@ -309,38 +310,6 @@ function buildUnitDates(
   }
 
   return [];
-}
-
-function isDateInRange(
-  dateIso: string,
-  rangeStartIso: string,
-  rangeEndIso: string,
-): boolean {
-  return dateIso >= rangeStartIso && dateIso <= rangeEndIso;
-}
-
-function countPeakUnitsForRule(
-  rule: PeakSurcharge,
-  unitDates: string[],
-): number {
-  if (unitDates.length === 0) return 0;
-
-  if (rule.dateMode === "holiday" && rule.holidayDates?.length) {
-    const holidaySet = new Set(rule.holidayDates);
-    return unitDates.filter((dateIso) => holidaySet.has(dateIso)).length;
-  }
-
-  if (rule.dateRanges?.length) {
-    return unitDates.filter((dateIso) =>
-      rule.dateRanges?.some((range) =>
-        isDateInRange(dateIso, range.start, range.end),
-      ),
-    ).length;
-  }
-
-  return unitDates.filter((dateIso) =>
-    isDateInRange(dateIso, rule.startDate, rule.endDate),
-  ).length;
 }
 
 function resolveBundleAddOn(
@@ -707,41 +676,33 @@ export function applyDynamicPricingRules(
     });
   }
 
-  // Peak-date surcharges
-  for (const rule of rules.peakDateSurcharges) {
-    if (!rule.isActive) continue;
-    if (!appliesToService(input.serviceId, rule.applicableServices)) continue;
+  // ── PEAK-DATE SURCHARGES ────────────────────────────────────────────────
+  //
+  // Resolved a night at a time in `policies/peak-dates.ts`, because the rule
+  // the facility expects — overlapping peak rules charge the HIGHEST, not both
+  // — is a question about a date, not about a rule. See that file's header.
+  //
+  // `chargePerLodging` widens "the first pet" to one per lodging, so the count
+  // is of distinct rooms among the selected pets; with nothing assigned yet it
+  // is one, and one is what `first_pet_only` means without the flag anyway.
+  const peakLodgingCount = Math.max(
+    1,
+    new Set(roomAssignments.map((assignment) => assignment.roomId)).size,
+  );
 
-    const matchedUnits = countPeakUnitsForRule(rule, unitDates);
-    if (matchedUnits <= 0) continue;
-
-    const surchargeType = rule.surchargeType ?? "percentage";
-    let surchargeAmount = 0;
-
-    if (surchargeType === "flat") {
-      const flat = Math.max(
-        0,
-        rule.surchargeAmount ?? rule.surchargePercent ?? 0,
-      );
-      const scopeMultiplier =
-        rule.scope === "first_pet_only" ? 1 : input.selectedPetIds.length;
-      surchargeAmount = flat * matchedUnits * Math.max(1, scopeMultiplier);
-    } else {
-      const pct = Math.max(0, rule.surchargePercent ?? 0) / 100;
-      const unitRatio = matchedUnits / Math.max(1, totalBillableUnits);
-      let baseForSurcharge = basePrice * unitRatio;
-      if (rule.scope === "first_pet_only" && input.selectedPetIds.length > 1) {
-        baseForSurcharge = baseForSurcharge / input.selectedPetIds.length;
-      }
-      surchargeAmount = baseForSurcharge * pct;
-    }
-
-    if (surchargeAmount <= 0) continue;
+  for (const charge of resolvePeakDateCharges(rules.peakDateSurcharges, {
+    serviceId: input.serviceId,
+    unitDates,
+    perUnitBase,
+    petCount,
+    lodgingCount: peakLodgingCount,
+  })) {
+    if (charge.amount <= 0) continue;
 
     adjustments.push({
-      id: rule.id,
-      label: rule.name,
-      amount: surchargeAmount,
+      id: charge.ruleId,
+      label: charge.label,
+      amount: charge.amount,
       source: "peak_date",
     });
   }

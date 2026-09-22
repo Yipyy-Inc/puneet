@@ -20308,3 +20308,68 @@ investigating the spec.
 **And the remaining 15 files will come due the same way.** The table grows
 every run. `bun run e2e:purge` only removes cancelled, money-free rows, so it
 shrinks the debris and not the floor.
+
+## 2026-09-22 — Two schema fields nobody read, and a surcharge that charged twice
+
+`peakSurchargeSchema` gained its "MoéGo parity fields" in a single pass —
+`dateMode`, `dateRanges`, `repeatPattern`, `surchargeType`, `scope`,
+`chargePerLodging`. Writing a Zod field is not implementing it, and the gap
+sat there unmeasured until this change went looking.
+
+### What was declared and what was read
+
+| Field                  | Editor writes it                  | Evaluator reads it |
+| ---------------------- | --------------------------------- | ------------------ |
+| `dateMode: "specific"` | yes                               | yes                |
+| `dateMode: "holiday"`  | yes                               | yes                |
+| `dateMode: "repeat"`   | **never offered in the dropdown** | **no**             |
+| `repeatPattern`        | no                                | **no**             |
+| `dateRanges`           | holiday only                      | yes                |
+| `chargePerLodging`     | no                                | **no**             |
+
+`repeatPattern` was the dangerous one. `countPeakUnitsForRule` had no repeat
+branch, so a repeat rule fell through to its plain `startDate`/`endDate` span:
+"surcharge Friday and Saturday nights, 1 Jan to 31 Dec" would have charged
+**every night of the year**. A seven-night stay at $5 a weekend night billed
+$35 instead of $10.
+
+It never reached a customer for a reason worth noticing — **the editor's
+dropdown offered "Specific" and "Holiday" and silently never offered
+"Repeat"**, so no facility could author the shape that would have broken. The
+one rule in the tree with `dateMode: "repeat"` is a fixture
+(`src/data/boarding.ts` `peak-004`) feeding the QuickBooks catalogue, which
+does not price bookings. A UI gap was the only thing standing in front of a
+money bug, and nothing recorded that it was load-bearing.
+
+### And overlapping rules charged the sum
+
+MoéGo's documented rule is "if multiple Peak Date rules overlap on the same
+date, the system will automatically apply the highest surcharge". The loop
+pushed one adjustment per matching rule, so a guest inside two peak windows
+paid both. The defaults ship `Summer Peak` (20%) and `Holiday Season` (25%)
+with no overlap and `Holiday rush` INACTIVE — activate that third one and
+Christmas night bills 25% **and** $20.
+
+### The fix
+
+`src/lib/policies/peak-dates.ts` walks DATES, not rules: every rule covering a
+night is priced, the dearest wins, and winners are grouped back into one line
+per rule. `tests/unit/peak-dates.test.ts` (23 tests) pins both the new
+behaviour and — first, deliberately — the arithmetic that must NOT have moved,
+because for non-overlapping rules the totals are identical and that equivalence
+is the whole licence for restructuring a live pricing path.
+
+### What to take from it
+
+**A `.optional()` field is a promise, and nothing in this repo checks that
+anyone kept it.** `typecheck` is happy, the editor round-trips the value, and
+the rule looks configured on screen. Three of the six parity fields decided
+nothing, and the only reason that was survivable was an unrelated omission in a
+dropdown.
+
+**`surchargeType` defaults to `"percentage"` and must keep doing so.** MoéGo
+has no percentage surcharge at all, which makes `"flat"` look like the better
+default. It is not: rules stored before the field existed carry a
+`surchargePercent` and no `surchargeType`, so reading those as flat turns
+`surchargePercent: 20` from a fifth of the night into twenty dollars, on live
+rules, with nothing on screen changing.
