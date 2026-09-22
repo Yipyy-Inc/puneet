@@ -20373,3 +20373,77 @@ default. It is not: rules stored before the field existed carry a
 `surchargePercent` and no `surchargeType`, so reading those as flat turns
 `surchargePercent: 20` from a fifth of the night into twenty dollars, on live
 rules, with nothing on screen changing.
+
+## 2026-09-22 — A full local suite on `next dev` is not a measurement
+
+The 135-spec suite had never once completed on this machine. Three attempts
+died, and the third was finally instrumented well enough to say why: it was
+not the specs.
+
+### What the dev server was doing
+
+Seventy specs in, `bun run dev --webpack` held **13,015 MB** of working set. It
+had already restarted itself once at Next's own memory threshold — the
+behaviour the entry above records as benign noise, which it is, right up until
+it is not. Four specs had failed by test 84.
+
+**Not one of them failed on a number.** All three distinct failures were the
+same shape, which is what made it diagnosable:
+
+| spec                          | what the artifact said                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `booking-checkout-truth:214`  | charged, then `payment complete` never appeared; dialog open, "waiting for navigation to finish" |
+| `booking-form-saves:331`      | created, then `2 bookings created` never appeared                                                |
+| `booking-payment-screens:226` | took payment, booking stayed `pending/0` instead of `paid/64`                                    |
+
+The write did not land. Three times, in three different flows. A spec that
+asserts a wrong number has found a defect; a spec that asserts a write that
+never happened has found a server.
+
+### The same suite against `next start`
+
+Rebuilt, served the build, ran the identical command with `E2E_BASE_URL`
+pointed at it:
+
+|                               | `next dev`   | `next start` |
+| ----------------------------- | ------------ | ------------ |
+| memory restarts               | 1            | **0**        |
+| failures by test 84 / 95      | 4            | **1**        |
+| `booking-checkout-truth:214`  | FAILED 40.6s | ok **21.0s** |
+| `booking-form-saves:331`      | FAILED 1.1m  | ok **31.0s** |
+| `booking-payment-screens:226` | FAILED 58.6s | ok **16.4s** |
+
+Roughly twice as fast, and passing. The database was never the problem —
+measured mid-run, `lapsed_clients` answered in 406-869 ms.
+
+### The method error, which cost more than the server did
+
+Source files were edited **while the suite ran against a hot-reloading dev
+server**, including a window where a just-appended helper left a real compile
+error in `pricing-rules/shared.tsx`. Two of the four failures landed inside
+that window, which made them unattributable in either direction: they could
+not be called defects and could not be cleared.
+
+A built server fixes this structurally rather than by resolve. `next start`
+serves a frozen build, so source edits during a run cannot reach it, and the
+run stays a measurement of one commit.
+
+### What to do
+
+**Run the full suite against a built server**, the way AGENTS.md already says
+is fastest — the point is correctness, not speed:
+
+```
+bun run build
+npx next start --port 3000          # detached, outside the IDE tree
+E2E_BASE_URL=http://localhost:3000 bun run test:e2e:ci
+```
+
+`E2E_BASE_URL` set AT ALL makes `playwright.config.ts` treat the run as remote
+and skip its `webServer` block. That is a trap when Playwright should own the
+server and the point when it should not. `_fixtures.ts` still reads a localhost
+URL as a LOCAL run, so the production-identity specs skip rather than fail.
+
+**And read a "write did not land" failure as infrastructure until proven
+otherwise.** Wrong number, real defect. Missing confirmation, missing row,
+`pending/0` — look at the server first.
