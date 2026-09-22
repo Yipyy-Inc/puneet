@@ -71,7 +71,8 @@
     "check:all": "bun scripts/check-all.ts",
     "check:unbounded-booking-reads": "bun scripts/check-unbounded-booking-reads.ts",
     "check:customer-routes": "bun scripts/check-customer-routes.ts",
-    "check:customer-fixtures": "bun scripts/check-customer-fixtures.ts"
+    "check:customer-fixtures": "bun scripts/check-customer-fixtures.ts",
+    "check:teardown-shape": "bun scripts/check-teardown-shape.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.91.1",
