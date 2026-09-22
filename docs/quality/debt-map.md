@@ -20157,3 +20157,50 @@ WRITING a timestamp — `sent_at`, `completed_at`, `scheduled_for`,
 records rather than decisions, so a skew makes them slightly wrong rather than
 making a scheduler act on the wrong set. Left alone on purpose; the ones that
 DECIDE are what mattered.
+
+## 2026-09-22 — The time fee reads the facility's clock now (the entry above, closed)
+
+Recorded on 2026-09-22 as a known limit of `src/lib/policies/time-fee.ts` and
+fixed the same day. The measurement is in that entry: at UTC+1 against an
+America/Toronto facility, a three-hour EARLY arrival read as two hours LATE.
+
+`atClock` used `setHours` and `clockMinutesOf` used `getHours` — both the
+BROWSER's zone — to place a wall-clock rule ("we close at 18:00") onto a day.
+So the fee depended on where the person looking happened to be sitting. Right
+at the desk; wrong for a remote owner, anyone travelling, and any HQ user
+looking at a branch in another zone. It charges money, which is what made it
+worth doing ahead of the cosmetic items.
+
+`TimeFeeInput.timeZone` now carries the facility's zone and every conversion
+goes through `@/lib/time/facility-time`, which the roster and the reminders
+already used and which corrects for landing on the far side of a DST change.
+
+### The zone had to be exposed first
+
+`facilities.timezone` existed and reached no screen: `FACILITY_PROFILE_SELECT`
+did not name it. It is on `BusinessProfile` now, READ-ONLY —
+`businessProfileToRow` does not write it back, so saving an address cannot
+change a facility's zone — with `useFacilityTimeZone()` beside the profile hook
+for call sites.
+
+**Do instead:** never reach for `setHours`/`getHours`/`getMinutes` on a facility
+time. Take `useFacilityTimeZone()` and go through `facility-time`.
+
+### The unit tests were machine-dependent and nobody could tell
+
+All 48 timestamps in `tests/unit/time-fee.test.ts` were zone-naive
+(`"2026-09-21T18:00:00"`), which `new Date` reads in whatever zone the run
+happens to be in. They passed everywhere ONLY because both sides of every
+comparison used that same zone — the bug and the fixture cancelled out. The
+moment the rule was anchored to the facility, 16 of them failed.
+
+They carry an explicit `-04:00` now (Toronto in September), so they assert the
+same thing in every timezone. That is the fixtures being made honest, not the
+assertions being loosened — and it is worth remembering that a green suite
+told us nothing here for as long as the defect and the test shared an
+assumption.
+
+Four tests were added that could not have passed before, the load-bearing one
+being two facilities evaluated against the SAME two instants: 19:00 in
+Vancouver is 22:00 in Toronto, so one is an hour late and the other four. Both
+cannot pass unless the zone is genuinely consulted.

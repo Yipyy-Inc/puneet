@@ -41,8 +41,8 @@ describe("a fee scoped to every service", () => {
     const fees = computeTimeFees({
       fees: [fee({ applicableServices: ["all"] })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     });
     expect(fees).toHaveLength(1);
     expect(fees[0].amount).toBe(10);
@@ -52,8 +52,8 @@ describe("a fee scoped to every service", () => {
     const fees = computeTimeFees({
       fees: [fee({ applicableServices: [] })],
       serviceId: "daycare",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     });
     expect(fees).toHaveLength(1);
   });
@@ -62,8 +62,8 @@ describe("a fee scoped to every service", () => {
     const fees = computeTimeFees({
       fees: [fee({ applicableServices: ["grooming"] })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     });
     expect(fees).toEqual([]);
   });
@@ -85,8 +85,8 @@ describe("an early drop-off fee", () => {
         }),
       ],
       serviceId: "daycare",
-      scheduledCheckInTime: "2026-09-21T08:00:00",
-      actualCheckInTime: "2026-09-21T07:15:00",
+      scheduledCheckInTime: "2026-09-21T08:00:00-04:00",
+      actualCheckInTime: "2026-09-21T07:15:00-04:00",
     });
     expect(fees).toHaveLength(1);
     expect(fees[0].condition).toBe("early_dropoff");
@@ -98,8 +98,8 @@ describe("an early drop-off fee", () => {
     const fees = computeTimeFees({
       fees: [fee({ condition: "early_dropoff", customTime: "08:00" })],
       serviceId: "daycare",
-      scheduledCheckInTime: "2026-09-21T08:00:00",
-      actualCheckInTime: "2026-09-21T08:30:00",
+      scheduledCheckInTime: "2026-09-21T08:00:00-04:00",
+      actualCheckInTime: "2026-09-21T08:30:00-04:00",
     });
     expect(fees).toEqual([]);
   });
@@ -117,10 +117,10 @@ describe("an early drop-off fee", () => {
         }),
       ],
       serviceId: "boarding",
-      scheduledCheckInTime: "2026-09-20T08:00:00",
-      actualCheckInTime: "2026-09-20T06:30:00",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:30:00",
+      scheduledCheckInTime: "2026-09-20T08:00:00-04:00",
+      actualCheckInTime: "2026-09-20T06:30:00-04:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:30:00-04:00",
     });
     expect(fees.map((f) => f.ruleId)).toEqual(["early", "late"]);
     expect(timeFeesTotal(fees)).toBe(32);
@@ -139,8 +139,8 @@ describe("business hours", () => {
       serviceId: "boarding",
       // Booked out at noon, but the facility does not close until 18:00, so a
       // 19:00 pickup is one hour late — not seven.
-      scheduledCheckOutTime: "2026-09-21T12:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T12:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
       checkOutDayHours: { openTime: "07:00", closeTime: "18:00" },
     });
     expect(fees[0].minutesOver).toBe(60);
@@ -158,8 +158,8 @@ describe("business hours", () => {
         }),
       ],
       serviceId: "daycare",
-      scheduledCheckInTime: "2026-09-21T09:00:00",
-      actualCheckInTime: "2026-09-21T06:30:00",
+      scheduledCheckInTime: "2026-09-21T09:00:00-04:00",
+      actualCheckInTime: "2026-09-21T06:30:00-04:00",
       checkInDayHours: { openTime: "07:00", closeTime: "18:00" },
     });
     expect(fees[0].minutesOver).toBe(30);
@@ -173,8 +173,8 @@ describe("business hours", () => {
         fee({ basedOn: "business_hours", feeType: "per_hour", amount: 10 }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T12:00:00",
-      actualCheckOutTime: "2026-09-21T13:00:00",
+      scheduledCheckOutTime: "2026-09-21T12:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T13:00:00-04:00",
       checkOutDayHours: null,
     });
     expect(fees[0].minutesOver).toBe(60);
@@ -213,8 +213,8 @@ describe("the apply-window and the custom time", () => {
         }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     });
     expect(fees).toEqual([]);
   });
@@ -230,8 +230,8 @@ describe("the apply-window and the custom time", () => {
         }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T21:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T21:00:00-04:00",
     });
     expect(fees[0].amount).toBe(25);
   });
@@ -247,8 +247,8 @@ describe("the apply-window and the custom time", () => {
         }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T23:30:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T23:30:00-04:00",
     });
     expect(fees[0].amount).toBe(40);
   });
@@ -259,8 +259,8 @@ describe("the arithmetic", () => {
     const fees = computeTimeFees({
       fees: [fee({ graceMinutes: 15, feeType: "per_minute", amount: 1 })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T18:10:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T18:10:00-04:00",
     });
     expect(fees).toEqual([]);
   });
@@ -269,8 +269,8 @@ describe("the arithmetic", () => {
     const fees = computeTimeFees({
       fees: [fee({ feeType: "per_hour", amount: 10 })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:05:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:05:00-04:00",
     });
     expect(fees[0].amount).toBe(20);
   });
@@ -279,8 +279,8 @@ describe("the arithmetic", () => {
     const fees = computeTimeFees({
       fees: [fee({ feeType: "per_hour", amount: 10, maxFee: 35 })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-22T00:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-22T00:00:00-04:00",
     });
     expect(fees[0].amount).toBe(35);
   });
@@ -289,8 +289,8 @@ describe("the arithmetic", () => {
     const input = {
       serviceId: "boarding",
       petCount: 3,
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     };
     expect(
       computeTimeFees({
@@ -311,8 +311,8 @@ describe("the arithmetic", () => {
       fees: [fee({ feeType: "extra_night" })],
       serviceId: "boarding",
       perUnitBase: 62.5,
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T18:20:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T18:20:00-04:00",
     });
     expect(fees[0].amount).toBe(62.5);
   });
@@ -322,8 +322,8 @@ describe("the arithmetic", () => {
       computeTimeFees({
         fees: [fee({ enabled: false })],
         serviceId: "boarding",
-        scheduledCheckOutTime: "2026-09-21T18:00:00",
-        actualCheckOutTime: "2026-09-21T23:00:00",
+        scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+        actualCheckOutTime: "2026-09-21T23:00:00-04:00",
       }),
     ).toEqual([]);
   });
@@ -333,8 +333,8 @@ describe("the arithmetic", () => {
       computeTimeFees({
         fees: undefined,
         serviceId: "boarding",
-        scheduledCheckOutTime: "2026-09-21T18:00:00",
-        actualCheckOutTime: "2026-09-21T23:00:00",
+        scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+        actualCheckOutTime: "2026-09-21T23:00:00-04:00",
       }),
     ).toEqual([]);
   });
@@ -350,8 +350,8 @@ describe("a stay that runs past midnight", () => {
     const fees = computeTimeFees({
       fees: [fee({ customTime: "12:00", feeType: "per_hour", amount: 5 })],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T12:00:00",
-      actualCheckOutTime: "2026-09-22T09:00:00",
+      scheduledCheckOutTime: "2026-09-21T12:00:00-04:00",
+      actualCheckOutTime: "2026-09-22T09:00:00-04:00",
     });
     expect(fees[0].minutesOver).toBe(21 * 60);
     expect(fees[0].amount).toBe(105);
@@ -379,8 +379,8 @@ describe("two rules that both match", () => {
         fee({ id: "eight", customTime: "20:00", feeType: "flat", amount: 25 }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T21:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T21:00:00-04:00",
     });
     expect(fees).toHaveLength(1);
     expect(fees[0].ruleId).toBe("eight");
@@ -394,8 +394,8 @@ describe("two rules that both match", () => {
         fee({ id: "eight", customTime: "20:00", feeType: "flat", amount: 25 }),
       ],
       serviceId: "boarding",
-      scheduledCheckOutTime: "2026-09-21T18:00:00",
-      actualCheckOutTime: "2026-09-21T19:00:00",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
     });
     expect(fees).toHaveLength(1);
     expect(fees[0].ruleId).toBe("six");
@@ -420,8 +420,8 @@ describe("two rules that both match", () => {
         }),
       ],
       serviceId: "daycare",
-      scheduledCheckInTime: "2026-09-21T08:00:00",
-      actualCheckInTime: "2026-09-21T05:30:00",
+      scheduledCheckInTime: "2026-09-21T08:00:00-04:00",
+      actualCheckInTime: "2026-09-21T05:30:00-04:00",
     });
     expect(fees).toHaveLength(1);
     expect(fees[0].ruleId).toBe("six");
@@ -486,5 +486,96 @@ describe("quoting a booking nobody has arrived for yet", () => {
     );
     expect(charged).toHaveLength(1);
     expect(charged[0].amount).toBe(30);
+  });
+});
+
+describe("the facility's timezone, not the browser's", () => {
+  // ── WHAT THIS PINS ──────────────────────────────────────────────────────
+  //
+  // `customTime` and business hours are WALL CLOCK — "we close at 18:00".
+  // The times a booking carries are INSTANTS. Reconciling them used
+  // `setHours`/`getHours`, which are the zone of whoever opened the screen,
+  // so the same booking cost different amounts at the till and on a remote
+  // owner's laptop. Measured at UTC+1 against an America/Toronto facility: a
+  // three-hour early arrival read as two hours LATE.
+  //
+  // Every timestamp here carries an explicit offset. That is the point: a
+  // naive one means "wherever this test happens to run", which is exactly the
+  // ambiguity being removed — and it is why the fixtures above were made
+  // explicit rather than the assertions being loosened.
+
+  test("a Vancouver facility is measured on Vancouver's clock", () => {
+    const fees = computeTimeFees({
+      fees: [fee({ customTime: "18:00" })],
+      serviceId: "boarding",
+      timeZone: "America/Vancouver",
+      // 18:00 and 19:00 in Vancouver (PDT, UTC-7).
+      scheduledCheckOutTime: "2026-09-21T18:00:00-07:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-07:00",
+    });
+    expect(fees).toHaveLength(1);
+    expect(fees[0].minutesOver).toBe(60);
+  });
+
+  test("the same instants against a Toronto facility are three hours later", () => {
+    // Not a different booking — the SAME two moments. 19:00 in Vancouver is
+    // 22:00 in Toronto, so against an 18:00 Toronto closing time the guest is
+    // four hours late rather than one. The zone is doing real work here; if it
+    // were ignored, both tests could not pass at once.
+    const fees = computeTimeFees({
+      fees: [fee({ customTime: "18:00" })],
+      serviceId: "boarding",
+      timeZone: "America/Toronto",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-07:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-07:00",
+    });
+    expect(fees).toHaveLength(1);
+    expect(fees[0].minutesOver).toBe(4 * 60);
+  });
+
+  test("an early arrival reads as early, whoever is looking", () => {
+    // The regression itself. A guest three hours early against an 08:00
+    // opening, on a facility in Toronto. Before this, a till at UTC+1 scored
+    // it as two hours LATE and charged a late fee on an early arrival.
+    const fees = computeTimeFees({
+      fees: [
+        fee({
+          id: "early",
+          condition: "early_dropoff",
+          customTime: "08:00",
+          feeType: "per_hour",
+          amount: 6,
+        }),
+      ],
+      serviceId: "boarding",
+      timeZone: "America/Toronto",
+      scheduledCheckInTime: "2026-09-21T08:00:00-04:00",
+      actualCheckInTime: "2026-09-21T05:00:00-04:00",
+    });
+    expect(fees).toHaveLength(1);
+    expect(fees[0].condition).toBe("early_dropoff");
+    expect(fees[0].minutesOver).toBe(3 * 60);
+    expect(fees[0].amount).toBe(18);
+  });
+
+  test("no timezone falls back to the default, never to the machine", () => {
+    // A caller that does not know the facility's zone gets America/Toronto —
+    // wrong in a stated, fixable way, where the browser's was wrong in a way
+    // that changed with whoever opened the screen.
+    const withDefault = computeTimeFees({
+      fees: [fee({ customTime: "18:00" })],
+      serviceId: "boarding",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
+    });
+    const explicit = computeTimeFees({
+      fees: [fee({ customTime: "18:00" })],
+      serviceId: "boarding",
+      timeZone: "America/Toronto",
+      scheduledCheckOutTime: "2026-09-21T18:00:00-04:00",
+      actualCheckOutTime: "2026-09-21T19:00:00-04:00",
+    });
+    expect(withDefault).toEqual(explicit);
+    expect(withDefault[0].minutesOver).toBe(60);
   });
 });

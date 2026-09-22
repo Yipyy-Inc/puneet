@@ -60,6 +60,11 @@ export function rowToBusinessProfile(row: FacilityRow): BusinessProfile {
     address: toAddress(row.address),
     logo: row.logo_url ?? "",
     description: row.description ?? "",
+    // Read-only on this shape: `businessProfileToRow` does not write it back,
+    // so the settings screen cannot change a facility's zone by saving its
+    // address. Where the zone is edited is its own question; what the fee
+    // evaluator needed was to be able to READ it.
+    timezone: row.timezone ?? undefined,
     socialMedia: {
       facebook: social.facebook,
       instagram: social.instagram,
@@ -101,4 +106,4 @@ export function businessProfileToRow(
 }
 
 export const FACILITY_PROFILE_SELECT =
-  "id, name, email, phone, website, description, logo_url, address, social_media, preferences" as const;
+  "id, name, email, phone, website, description, logo_url, address, social_media, preferences, timezone" as const;

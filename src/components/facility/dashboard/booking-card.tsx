@@ -40,6 +40,7 @@ import {
   type TimeFeeResult,
 } from "@/lib/policies/time-fee";
 import { facilityHoursForDate } from "@/lib/settings/facility-hours";
+import { useFacilityTimeZone } from "@/lib/api/facility-profile";
 import { useActiveLoyaltyDiscount } from "@/hooks/use-loyalty-discount";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
 import { balanceOf } from "@/lib/api/booking-money";
@@ -141,6 +142,9 @@ export function BookingCard({
   // A time fee set to `basedOn: "business_hours"` measures from these.
   const { weekly: facilityHours, overrides: scheduleOverrides } =
     useFacilityHours();
+  // The facility's clock, not this till's. A wall-clock baseline placed with
+  // the browser's zone charged a remote viewer a different fee than the desk.
+  const facilityTimeZone = useFacilityTimeZone();
   const { updateStatus } = useUnifiedBookings();
   const {
     discount: loyaltyDiscount,
@@ -283,6 +287,7 @@ export function BookingCard({
     const timeFees = computeTimeFees({
       fees: pricingRules.latePickupFees,
       serviceId: booking.serviceKey,
+      timeZone: facilityTimeZone,
       petCount: 1, // a board row is one pet: `petId` is a number, not a list
       perUnitBase: booking.price ?? 0,
       scheduledCheckInTime: booking.scheduledStart,

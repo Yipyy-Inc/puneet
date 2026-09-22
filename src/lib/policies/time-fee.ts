@@ -1,4 +1,9 @@
 import type { LatePickupFee } from "@/types/boarding";
+import {
+  DEFAULT_TIMEZONE,
+  instantFromWallClock,
+  wallClockParts,
+} from "@/lib/time/facility-time";
 
 // ============================================================================
 // What a guest owes for arriving early or leaving late.
@@ -38,24 +43,24 @@ import type { LatePickupFee } from "@/types/boarding";
 // Late pickup and early drop-off are different events, so a booking can owe
 // one of each. At most two fees come back.
 //
-// ── IT USES THE BROWSER'S TIMEZONE, AND THAT IS A KNOWN LIMIT ─────────────
+// ── IT USES THE FACILITY'S TIMEZONE, WHICH IT DID NOT UNTIL 2026-09-22 ────
 //
 // A rule's `customTime` and a facility's business hours are WALL CLOCK times
 // — "we close at 18:00". A booking's times arrive as instants. Putting a wall
-// clock onto a calendar day therefore needs a timezone, and `atClock` below
-// uses `setHours`, which is the BROWSER's.
+// clock onto a calendar day therefore needs a timezone, and this used
+// `setHours` / `getHours`, which are the BROWSER's.
 //
-// That is right for staff standing in the building, which is every till this
-// runs on today, and wrong for anyone opening it from another timezone: the
-// baseline shifts by the offset, so a guest can be charged for hours they
-// were not here, or not charged at all. Measured 2026-09-22 at UTC+1 against
-// an America/Toronto facility — a three-hour early arrival read as two hours
-// late and no fee was charged.
+// So the fee depended on where the person at the till was standing. Right for
+// staff in the building; wrong for a remote owner, anyone travelling, and any
+// multi-location HQ user looking at a branch in another zone. Measured at
+// UTC+1 against an America/Toronto facility: a three-hour EARLY arrival read
+// as two hours LATE, and the fee charged was for hours the guest was not here.
 //
-// Fixing it properly needs the facility's timezone CLIENT-SIDE, which nothing
-// exposes yet — `facility.timezone` lives in `src/lib/api/facility-context.ts`
-// and that is server-only. Recorded in the debt map; not papered over here,
-// because a wrong fee is worse than a missing one.
+// `timeZone` now comes in with the booking and every clock conversion goes
+// through `@/lib/time/facility-time`, which is the same module the roster and
+// the reminders already use and which corrects for landing on the far side of
+// a DST change. Absent, it falls back to `DEFAULT_TIMEZONE` — never to the
+// browser, because the browser is the thing that was wrong.
 // ============================================================================
 
 export interface TimeFeeResult {
@@ -101,6 +106,15 @@ export interface TimeFeeInput {
    * at 14:00 on Sunday. Both come from `facilityHoursForDate()`.
    */
   checkOutDayHours?: FacilityDayHours | null;
+  /**
+   * The FACILITY's zone — `BusinessProfile.timezone`, e.g. "America/Toronto".
+   *
+   * Every clock conversion here is against it. Absent, `DEFAULT_TIMEZONE` is
+   * used: a caller that does not know the zone gets the demo facility's, which
+   * is wrong in a stated, fixable way, where the browser's was wrong in a way
+   * that changed with whoever opened the screen.
+   */
+  timeZone?: string;
 }
 
 /**
@@ -201,11 +215,21 @@ function toMoment(value?: string | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** The same calendar day, at a given number of minutes past midnight. */
-function atClock(day: Date, minutesOfDay: number): Date {
-  const at = new Date(day);
-  at.setHours(Math.floor(minutesOfDay / 60), minutesOfDay % 60, 0, 0);
-  return at;
+/**
+ * The same calendar day IN THE FACILITY'S ZONE, at a given number of minutes
+ * past midnight.
+ *
+ * This was `setHours`, which is the browser's zone, and that is what made a
+ * fee depend on where the till was rather than on when the guest arrived.
+ * `instantFromWallClock` already exists for exactly this and already corrects
+ * for landing on the far side of a DST change, which a hand-rolled offset
+ * would not.
+ */
+function atClock(day: Date, minutesOfDay: number, timeZone: string): Date {
+  const { date } = wallClockParts(day.toISOString(), timeZone);
+  const hh = String(Math.floor(minutesOfDay / 60)).padStart(2, "0");
+  const mm = String(minutesOfDay % 60).padStart(2, "0");
+  return new Date(instantFromWallClock(date, `${hh}:${mm}`, timeZone));
 }
 
 /**
@@ -216,9 +240,18 @@ function atClock(day: Date, minutesOfDay: number): Date {
  * Against a baseline of "we close at 18:00", local, that is a four-hour error
  * in Montreal and a fee on a guest who was on time.
  */
-function clockMinutesOf(value?: string | null): number | null {
+function clockMinutesOf(
+  value: string | null | undefined,
+  timeZone: string,
+): number | null {
   const moment = toMoment(value);
-  if (moment) return moment.getHours() * 60 + moment.getMinutes();
+  if (moment) {
+    // The facility's clock, not the browser's: `getHours()` answered whatever
+    // zone the till happened to be in, so the same instant read as a different
+    // time of day for a remote owner than for the person in the building.
+    const { time } = wallClockParts(moment.toISOString(), timeZone);
+    return parseTimeToMinutes(time);
+  }
   return parseTimeToMinutes(value);
 }
 
@@ -237,11 +270,14 @@ function clockMinutesOf(value?: string | null): number | null {
 function baselineClockFor(
   fee: LatePickupFee,
   scheduled: string | undefined,
+  timeZone: string,
 ): number | null {
   if (fee.basedOn === "custom_time") {
-    return parseTimeToMinutes(fee.customTime) ?? clockMinutesOf(scheduled);
+    return (
+      parseTimeToMinutes(fee.customTime) ?? clockMinutesOf(scheduled, timeZone)
+    );
   }
-  return clockMinutesOf(scheduled);
+  return clockMinutesOf(scheduled, timeZone);
 }
 
 interface Candidate {
@@ -252,6 +288,7 @@ interface Candidate {
 function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
   if (!fee.enabled) return null;
   if (!appliesToService(input.serviceId, fee.applicableServices)) return null;
+  const timeZone = input.timeZone || DEFAULT_TIMEZONE;
 
   const late = fee.condition === "late_pickup";
   const scheduled = late
@@ -264,10 +301,11 @@ function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
     : input.checkInDayHours?.openTime;
   const baselineMinutes =
     fee.basedOn === "business_hours"
-      ? (parseTimeToMinutes(fromHours) ?? baselineClockFor(fee, scheduled))
-      : baselineClockFor(fee, scheduled);
+      ? (parseTimeToMinutes(fromHours) ??
+        baselineClockFor(fee, scheduled, timeZone))
+      : baselineClockFor(fee, scheduled, timeZone);
 
-  const actualMinutes = clockMinutesOf(actualTime);
+  const actualMinutes = clockMinutesOf(actualTime, timeZone);
   if (baselineMinutes == null || actualMinutes == null) return null;
 
   if (
@@ -284,8 +322,8 @@ function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
     scheduledMoment && actualMoment
       ? (late
           ? actualMoment.getTime() -
-            atClock(scheduledMoment, baselineMinutes).getTime()
-          : atClock(scheduledMoment, baselineMinutes).getTime() -
+            atClock(scheduledMoment, baselineMinutes, timeZone).getTime()
+          : atClock(scheduledMoment, baselineMinutes, timeZone).getTime() -
             actualMoment.getTime()) / 60000
       : late
         ? actualMinutes - baselineMinutes

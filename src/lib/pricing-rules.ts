@@ -124,6 +124,13 @@ export interface ApplyPricingRulesInput {
    */
   checkInDayHours?: FacilityDayHours | null;
   checkOutDayHours?: FacilityDayHours | null;
+  /**
+   * The FACILITY's zone, for the wall-clock baselines a time fee measures
+   * from. Absent falls back to `DEFAULT_TIMEZONE` inside the evaluator —
+   * never to the browser, which is what made a fee depend on where the person
+   * quoting it was sitting.
+   */
+  timeZone?: string;
   isNewCustomer?: boolean;
   newPetIds?: number[];
   customer?: PricingContextCustomer;
@@ -774,6 +781,7 @@ export function applyDynamicPricingRules(
     actualCheckOutTime: input.actualCheckOutTime,
     checkInDayHours: input.checkInDayHours,
     checkOutDayHours: input.checkOutDayHours,
+    timeZone: input.timeZone,
   })) {
     adjustments.push({
       id: fee.ruleId,

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { BusinessProfile } from "@/types/facility";
+import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
 
 // ============================================================================
 // The facility's own name, contact details and address.
@@ -71,6 +72,24 @@ export const facilityProfileQueries = {
 export function useFacilityProfile() {
   const { data, isPending, error } = useQuery(facilityProfileQueries.detail());
   return { profile: data ?? emptyBusinessProfile(), isPending, error };
+}
+
+/**
+ * The facility's own zone, for code that has to place a WALL CLOCK time onto
+ * a day — "we close at 18:00", a late-pickup baseline, business hours.
+ *
+ * It exists because the alternative on a screen is the BROWSER's zone, and
+ * that made a time fee depend on where the person looking happened to be:
+ * measured at UTC+1 against an America/Toronto facility, a three-hour early
+ * arrival read as two hours late. Never reach for `setHours`/`getHours` on a
+ * facility time; take this and go through `@/lib/time/facility-time`.
+ *
+ * `DEFAULT_TIMEZONE` while the profile loads or where the row carries none —
+ * wrong in one stated way rather than differently for every viewer.
+ */
+export function useFacilityTimeZone(): string {
+  const { profile } = useFacilityProfile();
+  return profile.timezone || DEFAULT_TIMEZONE;
 }
 
 /** Save part of the profile. The response is the STORED row, not the request. */

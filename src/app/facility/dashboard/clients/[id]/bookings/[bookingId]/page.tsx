@@ -64,7 +64,10 @@ import { bookingMutations } from "@/lib/api/booking";
 import { useBoardingStayUpdate } from "@/lib/api/boarding-attendance";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
-import { useFacilityProfile } from "@/lib/api/facility-profile";
+import {
+  useFacilityProfile,
+  useFacilityTimeZone,
+} from "@/lib/api/facility-profile";
 import {
   formatDateLong as formatDateLongIn,
   formatMoney as formatMoneyIn,
@@ -184,6 +187,9 @@ export default function ClientBookingDetailPage({
   // A time fee set to `basedOn: "business_hours"` measures from these.
   const { weekly: facilityWeeklyHours, overrides: scheduleOverrides } =
     useFacilityHours();
+  // The facility's clock, not this browser's: a wall-clock baseline placed
+  // with the viewer's zone charged a remote owner a different fee.
+  const facilityTimeZone = useFacilityTimeZone();
   // The facility's deposit terms. This page called loadDepositRules() at
   // checkout — localStorage, falling back to the seed file — so what a customer
   // was asked for at the desk depended on the browser in front of them.
@@ -1076,6 +1082,7 @@ export default function ClientBookingDetailPage({
     const fees = computeTimeFees({
       fees: pricingRules.latePickupFees,
       serviceId: booking.service.toLowerCase(),
+      timeZone: facilityTimeZone,
       petCount,
       perUnitBase: booking.basePrice,
       scheduledCheckInTime: scheduledStartIso,

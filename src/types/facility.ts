@@ -267,6 +267,20 @@ export const businessProfileSchema = z.object({
   }),
   logo: z.string(),
   description: z.string(),
+  /**
+   * The facility's own zone — `facilities.timezone`, read-only here.
+   *
+   * It is on the profile because a wall-clock rule ("we close at 18:00") has
+   * to be placed onto a day somewhere, and until 2026-09-22 the only zone
+   * reachable from a screen was the BROWSER's. That made a late-pickup fee
+   * depend on where the person at the till happened to be: measured at UTC+1
+   * against an America/Toronto facility, a three-hour early arrival read as
+   * two hours late.
+   *
+   * Optional because a row may carry none; callers fall back to
+   * `DEFAULT_TIMEZONE`, never to the browser.
+   */
+  timezone: z.string().optional(),
   socialMedia: z.object({
     facebook: z.string().optional(),
     instagram: z.string().optional(),
