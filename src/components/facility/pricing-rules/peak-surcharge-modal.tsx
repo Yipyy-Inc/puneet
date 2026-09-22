@@ -22,7 +22,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Globe2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import type { PeakSurcharge } from "@/types/boarding";
+import type {
+  PeakDateRange,
+  PeakRepeatPattern,
+  PeakSurcharge,
+} from "@/types/boarding";
+import { PeakDateRanges } from "@/components/facility/pricing-rules/peak-date-ranges";
+import { PeakRepeatFields } from "@/components/facility/pricing-rules/peak-repeat-fields";
 import {
   makeId,
   HOLIDAY_SYNC_YEAR_OPTIONS,
@@ -37,6 +43,14 @@ import type {
 import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Peak Surcharge Modal ─────────────────────────────────────────────
+
+/** A pattern that matches nothing until the facility fills it in. */
+const EMPTY_REPEAT_PATTERN: PeakRepeatPattern = {
+  daysOfWeek: [],
+  everyXWeeks: 1,
+  windowStart: "",
+  windowEnd: "",
+};
 
 export function PeakSurchargeModal({
   open,
@@ -59,6 +73,8 @@ export function PeakSurchargeModal({
     dateMode: "specific" as "specific" | "repeat" | "holiday",
     startDate: "",
     endDate: "",
+    dateRanges: [{ start: "", end: "" }] as PeakDateRange[],
+    repeatPattern: EMPTY_REPEAT_PATTERN,
     holidayCountryCode: "US",
     holidayYearsAhead: 3,
     holidayNames: [] as string[],
@@ -69,6 +85,7 @@ export function PeakSurchargeModal({
     surchargePercent: 15,
     surchargeAmount: 0,
     scope: "per_each_pet" as "per_each_pet" | "first_pet_only",
+    chargePerLodging: false,
     applicableServices: normalizeApplicableServices(
       serviceType === "all" ? ["all"] : [serviceType],
     ),
@@ -91,6 +108,13 @@ export function PeakSurchargeModal({
         dateMode: editing.dateMode ?? "specific",
         startDate: editing.startDate,
         endDate: editing.endDate,
+        // A rule saved before the editor could hold several spans has only
+        // `startDate`/`endDate`; show that as the one range it is.
+        dateRanges:
+          editing.dateMode !== "holiday" && editing.dateRanges?.length
+            ? editing.dateRanges
+            : [{ start: editing.startDate, end: editing.endDate }],
+        repeatPattern: editing.repeatPattern ?? EMPTY_REPEAT_PATTERN,
         holidayCountryCode: editing.holidayCountryCode ?? "US",
         holidayYearsAhead: editing.holidayYearsAhead ?? 3,
         holidayNames: editing.holidayNames ?? [],
@@ -104,6 +128,7 @@ export function PeakSurchargeModal({
         surchargePercent: editing.surchargePercent,
         surchargeAmount: editing.surchargeAmount ?? 0,
         scope: editing.scope ?? "per_each_pet",
+        chargePerLodging: editing.chargePerLodging === true,
         applicableServices: normalizeApplicableServices(
           editing.applicableServices,
         ),
@@ -115,6 +140,8 @@ export function PeakSurchargeModal({
         dateMode: "specific",
         startDate: "",
         endDate: "",
+        dateRanges: [{ start: "", end: "" }],
+        repeatPattern: EMPTY_REPEAT_PATTERN,
         holidayCountryCode: "US",
         holidayYearsAhead: 3,
         holidayNames: [],
@@ -125,6 +152,7 @@ export function PeakSurchargeModal({
         surchargePercent: 15,
         surchargeAmount: 0,
         scope: "per_each_pet",
+        chargePerLodging: false,
         applicableServices: normalizeApplicableServices(
           serviceType === "all" ? ["all"] : [serviceType],
         ),
@@ -219,34 +247,24 @@ export function PeakSurchargeModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="specific">{t("psSpecificRange")}</SelectItem>
+                <SelectItem value="repeat">{t("psRepeatDates")}</SelectItem>
                 <SelectItem value="holiday">{t("psHolidaySync")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {form.dateMode !== "holiday" ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>{t("psStartDate")}</Label>
-                <Input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, startDate: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("psEndDate")}</Label>
-                <Input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, endDate: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
+          {form.dateMode === "specific" ? (
+            <PeakDateRanges
+              value={form.dateRanges}
+              onChange={(dateRanges) => setForm((p) => ({ ...p, dateRanges }))}
+            />
+          ) : form.dateMode === "repeat" ? (
+            <PeakRepeatFields
+              value={form.repeatPattern}
+              onChange={(repeatPattern) =>
+                setForm((p) => ({ ...p, repeatPattern }))
+              }
+            />
           ) : (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
               <div className="flex items-center gap-2">
@@ -645,6 +663,31 @@ export function PeakSurchargeModal({
                 </SelectItem>
               </SelectContent>
             </Select>
+            {/* Only under "the first pet only", because that is the only
+                place it means anything: it widens "the first pet" from one
+                per booking to one per lodging. Under "each pet" every pet is
+                already paying. */}
+            {form.scope === "first_pet_only" ? (
+              <label className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  checked={form.chargePerLodging}
+                  onCheckedChange={(checked) =>
+                    setForm((p) => ({
+                      ...p,
+                      chargePerLodging: checked === true,
+                    }))
+                  }
+                />
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-medium">
+                    {t("psChargePerLodging")}
+                  </span>
+                  <span className="text-meta text-ink-tertiary block">
+                    {t("psChargePerLodgingHelp")}
+                  </span>
+                </span>
+              </label>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label>{t("whereApplies")}</Label>
@@ -761,6 +804,7 @@ export function PeakSurchargeModal({
                       ? form.surchargeAmount
                       : undefined,
                   scope: form.scope,
+                  chargePerLodging: form.chargePerLodging,
                   applicableServices: normalizeApplicableServices(
                     form.applicableServices,
                   ),
@@ -769,25 +813,74 @@ export function PeakSurchargeModal({
                 return;
               }
 
-              if (!form.startDate || !form.endDate) {
+              if (form.dateMode === "repeat") {
+                const pattern = form.repeatPattern;
+                if (pattern.daysOfWeek.length === 0) {
+                  toast.error(t("psDaysRequired"));
+                  return;
+                }
+                if (!pattern.windowStart || !pattern.windowEnd) {
+                  toast.error(t("psDatesRequired"));
+                  return;
+                }
+
+                onSave({
+                  id: editing?.id ?? makeId("pds"),
+                  name: form.name,
+                  // The span still has to be written: everything that reads a
+                  // rule without knowing about patterns — the list row, the
+                  // QuickBooks catalogue — reads these two.
+                  startDate: pattern.windowStart,
+                  endDate: pattern.windowEnd,
+                  surchargePercent: form.surchargePercent,
+                  isActive: form.isActive,
+                  dateMode: "repeat",
+                  repeatPattern: pattern,
+                  surchargeType: form.surchargeType,
+                  surchargeAmount:
+                    form.surchargeType === "flat"
+                      ? form.surchargeAmount
+                      : undefined,
+                  scope: form.scope,
+                  chargePerLodging: form.chargePerLodging,
+                  applicableServices: normalizeApplicableServices(
+                    form.applicableServices,
+                  ),
+                });
+
+                return;
+              }
+
+              const dateRanges = form.dateRanges.filter(
+                (range) => range.start && range.end,
+              );
+              if (dateRanges.length === 0) {
                 toast.error(t("psDatesRequired"));
                 return;
               }
 
+              // `startDate`/`endDate` bracket every span, so a reader that
+              // knows nothing about `dateRanges` still sees the whole season
+              // rather than only its first week.
+              const starts = dateRanges.map((range) => range.start).sort();
+              const ends = dateRanges.map((range) => range.end).sort();
+
               onSave({
                 id: editing?.id ?? makeId("pds"),
                 name: form.name,
-                startDate: form.startDate,
-                endDate: form.endDate,
+                startDate: starts[0],
+                endDate: ends[ends.length - 1],
                 surchargePercent: form.surchargePercent,
                 isActive: form.isActive,
                 dateMode: "specific",
+                dateRanges,
                 surchargeType: form.surchargeType,
                 surchargeAmount:
                   form.surchargeType === "flat"
                     ? form.surchargeAmount
                     : undefined,
                 scope: form.scope,
+                chargePerLodging: form.chargePerLodging,
                 applicableServices: normalizeApplicableServices(
                   form.applicableServices,
                 ),
