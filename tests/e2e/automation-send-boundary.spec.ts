@@ -164,7 +164,14 @@ test.describe("the rebook send boundary", () => {
       return;
     }
 
-    expect(response.status()).toBe(200);
+    // ── SAY WHAT THE SERVER SAID ─────────────────────────────────────────
+    //
+    // This asserted a bare status. It failed once with a 400 on 2026-09-22
+    // and the route has TWO of them — "Nobody was named to remind" when the
+    // body did not parse, and the database's own message when
+    // `lapsed_clients` refuses — so which one fired was unknowable after the
+    // fact, and cost a round of probing to still not answer.
+    expect(response.status(), await response.text()).toBe(200);
     const body = (await response.json()) as {
       queued: number;
       duplicates: number;

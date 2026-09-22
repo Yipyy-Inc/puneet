@@ -20447,3 +20447,60 @@ URL as a LOCAL run, so the production-identity specs skip rather than fail.
 **And read a "write did not land" failure as infrastructure until proven
 otherwise.** Wrong number, real defect. Missing confirmation, missing row,
 `pending/0` — look at the server first.
+
+## 2026-09-22 — The server vanishes, and it is not the dev server's fault
+
+**This corrects the entry above.** That one concluded the full suite's failures
+were `next dev`, which is half right and reads as wholly right. Rebuilding and
+running against `next start` let the suite finish for the first time — **682
+passed, 5 failed, 4 flaky, 1.6 h** — and in doing so proved the two problems
+are separate.
+
+### What the built server did fix
+
+Memory restarts went 1 → **0**, and the three money specs that had failed went
+green in roughly half their previous wall-clock. Every one of those failures
+had been a write that never landed. That half of the entry above stands: do
+not measure a full suite on `next dev`.
+
+### What it did not fix
+
+**The server still vanishes.** Twice in one run, at ~45 minutes and again
+after the restart. Same absence of evidence as always: no stack trace in its
+own log, no `FATAL`, no heap-limit message, no Windows Application-Error
+event, 14 GB of RAM free, and the last line written is ordinary traffic. One
+death was caught mid-request — `ECONNRESET` on a `PATCH` — so the process goes
+away while serving, not while idle.
+
+A tempting pattern was `PATCH /api/facility/settings`: the specs around two of
+the deaths write settings. **It does not hold** — `gift-cards.spec.ts` writes
+no settings at all and the server died squarely inside it. Two of three is not
+a cause, and the trigger is still unknown.
+
+### So it is handled rather than explained
+
+`scratchpad/server-watchdog.sh` polls `/api/health` every 10 s, **confirms**
+before acting (a slow answer under load is not a dead server, and restarting a
+live one would bind-conflict and leave nothing listening), restarts, and waits
+for health. Measured: **death at 20:48:17, serving again at 20:48:21** — four
+seconds, about four specs.
+
+It counts and timestamps deaths, because "it died once at 45 minutes" and "it
+dies every 45 minutes" are different problems.
+
+Without it the run ends at test 329 of 651, like the three before it.
+
+### Reading the result
+
+Every one of the five hard failures and three of the four flakes were inside a
+death's blast radius, and **not one was an assertion about behaviour** — all
+`ECONNREFUSED` or `ECONNRESET`. That is the distinction worth keeping from
+both entries: a wrong number is a defect; a connection error is the server.
+
+### The flake that matters more than the failures
+
+`grooming-ready-estimate.spec.ts` failed on the unbounded `/api/bookings` read
+and **passed on retry**. That is worse news than a hard failure: the remaining
+baselined files will fail INTERMITTENTLY, which is exactly how a real defect
+gets waved off as flake. Its read is narrowed now, taking the baselines to 16
+reads in 14 files and 30 teardowns.
