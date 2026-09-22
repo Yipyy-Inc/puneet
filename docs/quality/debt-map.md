@@ -19890,3 +19890,33 @@ paragraph above the chain.
 **Do instead:** when adding a case to a rendering ternary, ask whether the new
 fact _replaces_ the others or _accompanies_ them. In a dialog that states terms,
 it almost always accompanies them.
+
+## 2026-09-22 — `bun run shoot` will photograph a stale build and say 200
+
+`shoot` points Playwright at `E2E_BASE_URL` (default `http://localhost:3100`)
+and saves what comes back. It does not know, and cannot know, whether that
+server is running your working tree.
+
+On 2026-09-22 a `next start --port 3000` from an earlier build was still up.
+`shoot` signed in, loaded both touched settings screens, reported `200`, and
+produced two PNGs of **the code as it was before the edit** — showing the exact
+controls that had just been deleted. Read at face value that is "my change did
+not work", and the obvious next move is to go and break the change that was
+already correct.
+
+`next start` serves a BUILD. It will never pick up a source edit, no matter how
+long you wait. `next dev` will.
+
+**Do instead:** before believing a shot, check what is actually listening —
+
+```
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { $_.CommandLine -match 'next' } |
+  Select-Object ProcessId, CommandLine
+```
+
+A `next start` means rebuild, or start `next dev` on another port and point
+`E2E_BASE_URL` at that. This is the same family as the EADDRINUSE trap recorded
+under the French settings spec above: in both cases the browser faithfully
+photographed a server that was not the one under test, and the diagnosis cost
+more than the check would have.

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useSettings } from "@/hooks/use-settings";
 
 import { SettingsBlock } from "@/components/ui/settings-block";
@@ -8,11 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Switch } from "@/components/ui/switch";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 
 // Booking Rules Component
 export function BookingRulesCard() {
   const t = useSettingsText().section("booking-rules");
+  // The employee shell renders this same component, so the link has to be
+  // built for whichever portal is asking — an absolute /facility/… href is a
+  // silent redirect to the schedule for anyone who is not a facility admin.
+  const settingsPath = useSettingsHref();
   const { rules, updateRules } = useSettings();
 
   return (
@@ -44,36 +51,6 @@ export function BookingRulesCard() {
                   setLocalRules({
                     ...localRules,
                     maximumAdvanceBooking: parseInt(e.target.value),
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("cancellationPolicy")}</Label>
-              <Input
-                type="number"
-                value={localRules.cancelPolicyHours}
-                onChange={(e) =>
-                  setLocalRules({
-                    ...localRules,
-                    cancelPolicyHours: parseInt(e.target.value),
-                  })
-                }
-                readOnly={!isEditing}
-                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("cancellationFee")}</Label>
-              <Input
-                type="number"
-                value={localRules.cancelFeePercentage}
-                onChange={(e) =>
-                  setLocalRules({
-                    ...localRules,
-                    cancelFeePercentage: parseInt(e.target.value),
                   })
                 }
                 readOnly={!isEditing}
@@ -126,6 +103,35 @@ export function BookingRulesCard() {
               readOnly={!isEditing}
               className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
             />
+          </div>
+
+          {/* ── CANCELLATION LEFT THIS CARD ────────────────────────────
+              Two number fields here — a notice window and a fee percentage —
+              were one of FOUR places the product modelled a cancellation
+              policy, and the only one the database read. They are now the
+              FALLBACK that `private.cancellation_terms` uses when a facility
+              has written no policy, which is not something to edit in a
+              second place: a facility that sets 24 hours here and a 72-hour
+              tier next door has two answers to one question.
+
+              Deliberately NOT showing the stored numbers. Once a policy
+              exists they decide nothing, and a value displayed after it stops
+              deciding anything is exactly the inert switch this round of work
+              set out to remove. The cancellation screen seeds itself from
+              them, so nothing is lost and there is one place to look. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+            <div>
+              <div className="font-medium">{t("cancellationMoved")}</div>
+              <div className="text-muted-foreground text-sm">
+                {t("cancellationMovedHelp")}
+              </div>
+            </div>
+            <Link
+              href={settingsPath("cancellation-policies")}
+              className="text-primary shrink-0 font-medium hover:underline"
+            >
+              {t("cancellationMovedLink")}
+            </Link>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-3">

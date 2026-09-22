@@ -1,20 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import {
-  DollarSign,
-  Percent,
-  Sparkles,
-  RotateCcw,
-  AlertTriangle,
-} from "lucide-react";
+import { DollarSign, Percent, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -24,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useFacilitySettings } from "@/lib/api/facility-settings";
 import { ensureAllServiceRules } from "@/lib/settings/deposits";
 import {
   useDepositRules,
@@ -37,9 +29,9 @@ import type {
   DepositRule,
   DepositRuleSet,
   DepositRefundPolicy,
-  DepositRefundType,
 } from "@/types/deposit-rules";
 import { SERVICE_TYPES_FOR_DEPOSITS } from "@/types/deposit-rules";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { SETTINGS_CARD_GRID } from "@/components/ui/settings-card-grid";
 
@@ -145,20 +137,20 @@ function DepositRulesEditor({
   configured: boolean;
 }) {
   const t = useSettingsText().section("deposit-rules");
+  // The employee shell renders this same component; an absolute /facility/…
+  // href is a silent redirect to the schedule for anyone who is not a
+  // facility admin, so the portal has to come from the pathname.
+  const settingsPath = useSettingsHref();
   const saveSetting = useSaveFacilitySetting();
   const [rules, setRules] = useState<DepositRuleSet>(() =>
     ensureAllServiceRules(initialRules),
   );
-  const [refundPolicy, setRefundPolicy] =
-    useState<DepositRefundPolicy>(initialRefundPolicy);
-  const [dirty, setDirty] = useState(false);
-
-  // The free-cancellation window the facility stored in its booking rules — the
-  // deposit refund policy references it so the two don't contradict each other.
-  // It read `facilityConfig` (a fixture's 24 hours), so the "matches your
-  // cancellation policy" hint compared a real policy against an invented one.
-  const { settings } = useFacilitySettings();
-  const freeCancellationHours = settings.booking_rules.value.cancelPolicyHours;
+  // NOT state, and no longer edited here — but still written on every save.
+  // `deposit_rules` is one jsonb document, so a save that dropped this key
+  // would erase the facility's refund terms as a side effect of changing a
+  // deposit percentage. It rides along verbatim until the facility writes a
+  // cancellation policy, which supersedes it.
+  const refundPolicy = initialRefundPolicy;
 
   // One domain, written whole. The API stores `value jsonb` per
   // (facility_id, domain), so a partial write is not a thing that exists here.
@@ -178,11 +170,6 @@ function DepositRulesEditor({
           toast.error(error instanceof Error ? error.message : t("notSaved")),
       },
     );
-  };
-
-  const updateRefundPolicy = (patch: Partial<DepositRefundPolicy>) => {
-    setRefundPolicy((prev) => ({ ...prev, ...patch }));
-    setDirty(true);
   };
 
   const serviceRules = useMemo(
@@ -232,11 +219,6 @@ function DepositRulesEditor({
     persist(next, refundPolicy, message);
   };
 
-  const handleSave = () => {
-    persist(rules, refundPolicy, t("depositRulesSaved"));
-    setDirty(false);
-  };
-
   return (
     <div className={SETTINGS_CARD_GRID}>
       {/* "No deposit" and "not set up yet" look identical on screen, and one of
@@ -251,13 +233,37 @@ function DepositRulesEditor({
           <p className="text-warning text-[13.5px]">{t("noTermsYet")}</p>
         </div>
       )}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-muted-foreground mt-1 text-sm">{t("intro")}</p>
-        </div>
-        <Button onClick={handleSave} disabled={!dirty} className="shrink-0">
-          {dirty ? t("saveChanges") : t("savedState")}
-        </Button>
+      <p className="text-muted-foreground text-sm">{t("intro")}</p>
+
+      {/* ── THE REFUND POLICY LEFT THIS SCREEN ──────────────────────────
+          A radio group here decided what happened to a deposit on
+          cancellation — full refund before N hours, non-refundable, or store
+          credit — and it was the SECOND live shape for that, against
+          `booking_rules`' own notice window. The screen knew: it carried a
+          warning when the two disagreed and a "match it" button to copy one
+          into the other. A button that papers over a contradiction is a sign
+          the contradiction should not exist.
+
+          Both are now the FALLBACK that `private.cancellation_terms` reads
+          when a facility has written no policy, and the cancellation screen
+          seeds itself from them. The stored value is untouched — every save
+          below still writes it back verbatim — it simply stopped being
+          editable in two places.
+
+          The Save button went with it. It was enabled only by `dirty`, and
+          only the refund policy ever set `dirty`; every deposit rule here
+          commits on focus-out. Leaving it would have left a control that can
+          never enable. */}
+      <div className="bg-muted/30 rounded-lg border px-4 py-3 text-sm">
+        <p className="text-muted-foreground">
+          {t("refundsMovedNote")}{" "}
+          <Link
+            href={settingsPath("cancellation-policies")}
+            className="text-primary font-medium hover:underline"
+          >
+            {t("refundsMovedLink")}
+          </Link>
+        </p>
       </div>
 
       <Card>
@@ -301,121 +307,6 @@ function DepositRulesEditor({
           </CardContent>
         </Card>
       )}
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <RotateCcw className="size-4 text-sky-600" />
-            {t("refundPolicy")}
-          </CardTitle>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {/* One sentence, two emphasised values. Split on each placeholder
-                in turn rather than assembled from five JSX fragments — French
-                does not order the clause the way English does. §5q. */}
-            {t("cancellationNote")
-              .split("{policy}")
-              .flatMap((part, index) =>
-                index === 0
-                  ? [part]
-                  : [
-                      <span
-                        key="policy"
-                        className="text-foreground font-medium"
-                      >
-                        {t("cancellationPolicy")}
-                      </span>,
-                      part,
-                    ],
-              )
-              .flatMap((part, index) =>
-                typeof part !== "string"
-                  ? [part]
-                  : part.split("{hours}").flatMap((bit, i) =>
-                      i === 0
-                        ? [bit]
-                        : [
-                            <span
-                              key={`hours-${index}`}
-                              className="text-foreground font-medium"
-                            >
-                              {t("hoursCount").replace(
-                                "{count}",
-                                String(freeCancellationHours),
-                              )}
-                            </span>,
-                            bit,
-                          ],
-                    ),
-              )}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm font-medium">{t("ifCancelled")}</p>
-          <RadioGroup
-            value={refundPolicy.type}
-            onValueChange={(v) =>
-              updateRefundPolicy({ type: v as DepositRefundType })
-            }
-            className="space-y-2"
-          >
-            <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
-              <RadioGroupItem value="full_before_window" id="refund-full" />
-              <div className="flex flex-1 flex-wrap items-center gap-2">
-                <span className="text-sm">{t("fullRefundBefore")}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={refundPolicy.refundBeforeHours}
-                  disabled={refundPolicy.type !== "full_before_window"}
-                  onChange={(e) =>
-                    updateRefundPolicy({
-                      refundBeforeHours: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="h-8 w-20 text-right tabular-nums"
-                />
-                <span className="text-sm">{t("wordHours")}</span>
-              </div>
-            </label>
-            <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
-              <RadioGroupItem value="non_refundable" id="refund-none" />
-              <span className="text-sm">{t("nonRefundable")}</span>
-            </label>
-            <label className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors">
-              <RadioGroupItem value="credit" id="refund-credit" />
-              <span className="text-sm">{t("appliedAsCredit")}</span>
-            </label>
-          </RadioGroup>
-
-          {refundPolicy.type === "full_before_window" &&
-            refundPolicy.refundBeforeHours !== freeCancellationHours && (
-              <div className="flex flex-wrap items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <span className="flex-1">
-                  {t("windowConflict")
-                    .replace("{refund}", String(refundPolicy.refundBeforeHours))
-                    .replace("{policy}", String(freeCancellationHours))}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 shrink-0 border-amber-300 bg-white px-2 text-[11px] text-amber-800"
-                  onClick={() =>
-                    updateRefundPolicy({
-                      refundBeforeHours: freeCancellationHours,
-                    })
-                  }
-                >
-                  {t("matchTo").replace(
-                    "{hours}",
-                    String(freeCancellationHours),
-                  )}
-                </Button>
-              </div>
-            )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
