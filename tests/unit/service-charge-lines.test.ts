@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   applicableServiceCharges,
   automaticServiceCharges,
+  feeAmountAt,
   manualServiceCharges,
   serviceChargeLine,
   serviceChargeLines,
@@ -163,6 +164,94 @@ describe("which fees apply without asking anything about the customer", () => {
   });
 });
 
+describe("what a fee costs at a particular branch", () => {
+  test("a branch with its own price charges that price", () => {
+    const line = serviceChargeLine(
+      fee({ amount: 15, locationPrices: { "loc-downtown": 25 } }),
+      { ...ctx, locationId: "loc-downtown" },
+    )!;
+    expect(line.unitPrice).toBe(25);
+  });
+
+  test("a branch with no entry charges the usual price", () => {
+    // Adding a location must never silently make every fee free there.
+    const line = serviceChargeLine(
+      fee({ amount: 15, locationPrices: { "loc-downtown": 25 } }),
+      { ...ctx, locationId: "loc-suburb" },
+    )!;
+    expect(line.unitPrice).toBe(15);
+  });
+
+  test("a booking with no branch charges the usual price", () => {
+    // Every single-location facility, and every row older than branches.
+    const priced = fee({ amount: 15, locationPrices: { "loc-a": 25 } });
+    expect(serviceChargeLine(priced, ctx)!.unitPrice).toBe(15);
+    expect(
+      serviceChargeLine(priced, { ...ctx, locationId: null })!.unitPrice,
+    ).toBe(15);
+  });
+
+  test("a branch price of ZERO is an override, and drops the line", () => {
+    // "This branch does not charge for that" is a real thing to mean, and it
+    // is the one case where an override and an absent entry must NOT agree.
+    expect(
+      serviceChargeLine(fee({ amount: 15, locationPrices: { "loc-a": 0 } }), {
+        ...ctx,
+        locationId: "loc-a",
+      }),
+    ).toBeNull();
+  });
+
+  test("a corrupted entry falls back rather than charging nonsense", () => {
+    const broken = fee({
+      amount: 15,
+      locationPrices: { "loc-a": Number.NaN, "loc-b": -5 },
+    });
+    expect(
+      serviceChargeLine(broken, { ...ctx, locationId: "loc-a" })!.unitPrice,
+    ).toBe(15);
+    expect(
+      serviceChargeLine(broken, { ...ctx, locationId: "loc-b" })!.unitPrice,
+    ).toBe(15);
+  });
+
+  test("a PERCENTAGE override is a percentage, not money", () => {
+    // 20% of 200 at this branch, against 10% everywhere else.
+    const line = serviceChargeLine(
+      fee({
+        feeType: "percentage",
+        amount: 10,
+        locationPrices: { "loc-a": 20 },
+      }),
+      { ...ctx, locationId: "loc-a" },
+    )!;
+    expect(line.unitPrice).toBe(40);
+  });
+
+  test("the branch price is what per-pet multiplies and the cap binds", () => {
+    const line = serviceChargeLine(
+      fee({
+        amount: 15,
+        scope: "per_pet",
+        locationPrices: { "loc-a": 30 },
+        maxFee: 50,
+      }),
+      { ...ctx, petCount: 3, locationId: "loc-a" },
+    )!;
+    // 30 x 3 = 90, capped at 50, so one charge of 50.
+    expect(line.quantity).toBe(1);
+    expect(line.unitPrice).toBe(50);
+  });
+
+  test("feeAmountAt answers the question on its own", () => {
+    const priced = fee({ amount: 15, locationPrices: { "loc-a": 25 } });
+    expect(feeAmountAt(priced, "loc-a")).toBe(25);
+    expect(feeAmountAt(priced, "loc-b")).toBe(15);
+    expect(feeAmountAt(priced, null)).toBe(15);
+    expect(feeAmountAt(fee({ amount: 15 }), "loc-a")).toBe(15);
+  });
+});
+
 describe("what one fee costs", () => {
   test("a flat fee, once per booking", () => {
     expect(serviceChargeLine(fee(), ctx)).toEqual({
@@ -171,6 +260,7 @@ describe("what one fee costs", () => {
       kind: "fee",
       unitPrice: 15,
       quantity: 1,
+      taxable: true,
     });
   });
 

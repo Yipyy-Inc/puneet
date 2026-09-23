@@ -7972,7 +7972,12 @@
         "rowHairTypes": "{n} coat types",
         "rowBreeds": "{n} breeds",
         "rowNoConditions": "No conditions set",
-        "sbValueDollarsLabel": "Value ($)"
+        "sbValueDollarsLabel": "Value ($)",
+        "branchPricing": "Price at each branch",
+        "branchPricingHint": "Leave blank to charge the usual amount. Enter 0 for a branch that does not charge this.",
+        "branchPriceLabel": "Price at {branch}",
+        "cfTaxable": "Charge tax on this fee",
+        "cfTaxableHint": "Turn off for a fee that is not a sale — a late-payment or no-show charge in a place that treats it as a penalty. Your own tax settings decide the rate."
       },
       "species": {
         "title": "Species",

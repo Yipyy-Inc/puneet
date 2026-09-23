@@ -7972,7 +7972,12 @@
         "rowHairTypes": "{n} types de pelage",
         "rowBreeds": "{n} races",
         "rowNoConditions": "Aucune condition définie",
-        "sbValueDollarsLabel": "Valeur ($)"
+        "sbValueDollarsLabel": "Valeur ($)",
+        "branchPricing": "Prix à chaque succursale",
+        "branchPricingHint": "Laissez vide pour facturer le montant habituel. Entrez 0 pour une succursale qui ne le facture pas.",
+        "branchPriceLabel": "Prix à {branch}",
+        "cfTaxable": "Facturer la taxe sur ce frais",
+        "cfTaxableHint": "Désactivez pour un frais qui n'est pas une vente — un frais de retard ou de non-présentation là où il compte comme une pénalité. Vos réglages de taxes décident du taux."
       },
       "species": {
         "title": "Espèces",

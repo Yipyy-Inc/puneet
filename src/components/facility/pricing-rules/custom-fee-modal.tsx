@@ -80,6 +80,10 @@ export function CustomFeeModal({
     ),
     // Empty means every branch — a new fee applies everywhere until narrowed.
     applicableLocationIds: [] as string[],
+    // Per-branch overrides. An ABSENT key is "the usual amount", never zero.
+    locationPrices: {} as Record<string, number>,
+    // Taxed unless somebody says otherwise — see the checkbox comment.
+    taxable: true,
   });
 
   // Only a facility with more than one branch is asked the question.
@@ -115,6 +119,8 @@ export function CustomFeeModal({
           editing.applicableServices,
         ),
         applicableLocationIds: editing.applicableLocationIds ?? [],
+        locationPrices: editing.locationPrices ?? {},
+        taxable: editing.taxable !== false,
       });
     } else {
       setForm({
@@ -138,6 +144,8 @@ export function CustomFeeModal({
           serviceType === "all" ? ["all"] : [serviceType],
         ),
         applicableLocationIds: [],
+        locationPrices: {},
+        taxable: true,
       });
     }
   }
@@ -269,6 +277,32 @@ export function CustomFeeModal({
               </Select>
             </div>
           </div>
+
+          {/* ── IS IT TAXED ────────────────────────────────────────────────
+              A boolean, not a rate. A `taxRate` field lived here until
+              2026-09-22: it had an input, it saved, and nothing read it, so a
+              facility could type 5 and believe tax was being charged. The
+              facility's own tax settings decide the rate; this decides only
+              whether they apply, and CHECKED is the default because an
+              extra has always been taxed. */}
+          <label className="flex items-start gap-2 rounded-lg border p-3">
+            <Checkbox
+              className="mt-0.5"
+              checked={form.taxable}
+              onCheckedChange={(checked) =>
+                setForm((p) => ({ ...p, taxable: checked !== false }))
+              }
+            />
+            <span className="min-w-0">
+              <span className="text-body-ink block text-sm font-medium">
+                {t("cfTaxable")}
+              </span>
+              <span className="text-ink-tertiary mt-0.5 block text-xs">
+                {t("cfTaxableHint")}
+              </span>
+            </span>
+          </label>
+
           <div className="space-y-2">
             <Label>{t("whereApplies")}</Label>
             <div className="space-y-2 rounded-lg border p-3">
@@ -322,11 +356,9 @@ export function CustomFeeModal({
                 ))}
               </div>
 
-              {/* ── WHICH BRANCHES ────────────────────────────────────────
+              {/* ── WHICH BRANCHES, AND AT WHAT PRICE ─────────────────────
                   Only shown to a facility that HAS branches: a picker with
-                  one option is a question with one answer. Availability, not
-                  price — a per-branch price needs custom fees promoted out of
-                  the settings blob into a table first. */}
+                  one option is a question with one answer. */}
               {branches.length > 1 && (
                 <div className="space-y-2 border-t pt-3">
                   <label className="flex items-center gap-2">
@@ -376,6 +408,75 @@ export function CustomFeeModal({
                         <span className="text-xs">{branch.name}</span>
                       </label>
                     ))}
+                  </div>
+
+                  {/* ── WHAT IT COSTS AT EACH ONE ──────────────────────────
+                      BLANK IS NOT ZERO. An empty box means "the usual
+                      amount", so adding a branch never silently makes a fee
+                      free there; a typed 0 is a real override meaning this
+                      branch does not charge it. `feeAmountAt` reads it the
+                      same way, and the unit tests pin both. */}
+                  <div className="space-y-2 pt-1">
+                    <Label className="text-xs font-medium">
+                      {t("branchPricing")}
+                    </Label>
+                    <p className="text-ink-tertiary text-xs">
+                      {t("branchPricingHint")}
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {branches
+                        .filter(
+                          (branch) =>
+                            everyBranch ||
+                            (form.applicableLocationIds ?? []).includes(
+                              branch.id,
+                            ),
+                        )
+                        .map((branch) => (
+                          <label
+                            key={branch.id}
+                            className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-2"
+                          >
+                            <span className="text-ink-secondary min-w-0 truncate text-xs">
+                              {branch.name}
+                            </span>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              inputMode="decimal"
+                              aria-label={t("branchPriceLabel").replace(
+                                "{branch}",
+                                branch.name,
+                              )}
+                              placeholder={String(form.amount ?? 0)}
+                              value={form.locationPrices?.[branch.id] ?? ""}
+                              onChange={(e) =>
+                                setForm((prev) => {
+                                  const next = {
+                                    ...(prev.locationPrices ?? {}),
+                                  };
+                                  const raw = e.target.value;
+                                  if (raw === "") {
+                                    // Cleared, so back to the usual amount —
+                                    // the key goes rather than becoming 0.
+                                    delete next[branch.id];
+                                  } else {
+                                    const parsed = parseFloat(raw);
+                                    if (
+                                      Number.isFinite(parsed) &&
+                                      parsed >= 0
+                                    ) {
+                                      next[branch.id] = parsed;
+                                    }
+                                  }
+                                  return { ...prev, locationPrices: next };
+                                })
+                              }
+                            />
+                          </label>
+                        ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -669,6 +770,27 @@ export function CustomFeeModal({
                   (form.applicableLocationIds ?? []).length > 0
                     ? form.applicableLocationIds
                     : undefined,
+                // Same reasoning, and one more: only branches the fee still
+                // APPLIES at are kept, so narrowing a fee does not leave a
+                // price behind for a branch it no longer reaches — which
+                // would come back the moment somebody re-widened it.
+                locationPrices: (() => {
+                  const entries = Object.entries(
+                    form.locationPrices ?? {},
+                  ).filter(
+                    ([id]) =>
+                      (form.applicableLocationIds ?? []).length === 0 ||
+                      (form.applicableLocationIds ?? []).includes(id),
+                  );
+                  return entries.length > 0
+                    ? Object.fromEntries(entries)
+                    : undefined;
+                })(),
+                // Only written when it is FALSE. Absent already means taxed
+                // everywhere that reads it, so storing `true` on every fee
+                // would be noise that also invites somebody to treat a
+                // missing field as a decision.
+                taxable: form.taxable ? undefined : false,
                 description: form.description || undefined,
                 amount: form.amount,
                 maxFee: form.feeType === "percentage" ? form.maxFee : undefined,

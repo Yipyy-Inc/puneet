@@ -702,14 +702,16 @@ async function recordDeposit(
   // customer sees before anything else.
   const { data: billRows } = await supabase
     .from("bookings")
-    .select("id, total_cost, extras_total, taxable")
+    .select("id, total_cost, extras_total, taxable_extras_total, taxable")
     .in(
       "id",
       deposit.bookings.map((b) => b.id),
     );
-  // `as unknown as` because src/types/database.ts has not been regenerated
-  // since `bookings.taxable` was added (20260921171524) and still reports the
-  // column as absent. The same cast the neighbouring routes already use.
+  // `as unknown as` narrows the row to the three columns `taxToAddCents`
+  // wants. It used to be here because `src/types/database.ts` did not know
+  // about `bookings.taxable`; it does now, and `taxable_extras_total` was
+  // added to it alongside 20260923200000 rather than cast around — a generated
+  // file that is allowed to fall behind makes every select on the table lie.
   const billById = new Map(
     ((billRows ?? []) as unknown as Array<BookingBill & { id: string }>).map(
       (b) => [b.id, b],

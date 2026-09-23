@@ -74,6 +74,17 @@ export function rowToBooking(row: BookingRow): BookingWithRowId {
     paymentStatus: row.payment_status as Booking["paymentStatus"],
     amountPaid: Number(row.amount_paid),
     extrasTotal: Number(row.extras_total),
+    // The taxed PART of that, since 20260923200000. Absent on a row read
+    // before the column existed — `taxableFraction` reads that as "all of
+    // them", which is what it always assumed.
+    taxableExtrasTotal:
+      (row as { taxable_extras_total?: number | string | null })
+        .taxable_extras_total == null
+        ? undefined
+        : Number(
+            (row as { taxable_extras_total?: number | string })
+              .taxable_extras_total,
+          ),
     // Absent on a row read before the column existed, which is not a decision
     // to stop charging tax.
     taxable: (row as { taxable?: boolean | null }).taxable !== false,
@@ -136,6 +147,7 @@ const COLUMN_FIELDS = [
   "paymentStatus",
   "amountPaid",
   "extrasTotal",
+  "taxableExtrasTotal",
   "amountDue",
   // Listed so it is not swept into `details`. Only ever WRITTEN by the server
   // (lib/payments/booking-service-tax.ts) — a PATCH sends only the columns it

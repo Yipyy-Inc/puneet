@@ -435,6 +435,51 @@ export const customFeeSchema = z.object({
    * existed must still parse.
    */
   applicableLocationIds: z.array(z.string()).optional(),
+  /**
+   * What this fee costs at a particular branch, keyed by location id.
+   *
+   * A branch with no entry charges `amount`, so a facility sets an override
+   * only where the price genuinely differs — and adding a branch does not
+   * silently make a fee free there.
+   *
+   * ── WHY A MAP AND NOT AN OVERRIDE TABLE ─────────────────────────────────
+   *
+   * Every other per-branch price in the product is a row pointing at another
+   * row, because those things ARE rows. A custom fee is a client-generated
+   * string id inside this JSON array, so an override table would need the fee
+   * promoted out of the settings blob purely to give a foreign key something
+   * to aim at — a migration, a backfill, RLS, and ten rewritten readers, in
+   * exchange for referential integrity that nothing here consumes.
+   *
+   * This keys by branch id exactly as `applicableLocationIds` lists branch
+   * ids, and carries the same property: a deleted branch leaves an entry
+   * nothing reads. Availability shipped that way on 2026-09-23 and price
+   * follows it rather than inventing a second shape for the same idea.
+   *
+   * For a PERCENTAGE fee the override is the percentage, not the money —
+   * `feeAmountAt` returns whatever `amount` means for that `feeType`.
+   */
+  locationPrices: z.record(z.string(), z.number()).optional(),
+  /**
+   * Whether the facility's tax applies to this fee.
+   *
+   * ABSENT MEANS TAXED, and that is the whole safety of this field. Every fee
+   * in every stored blob is missing it, `booking_line_items.taxable` defaults
+   * to true, and `taxableFraction` has always treated extras as taxed — so
+   * absence has to keep meaning exactly what the product did yesterday.
+   *
+   * `service-tax.ts` states the asymmetry: charging tax that was not owed is
+   * a refund, while failing to charge tax that WAS owed is the facility's own
+   * money, paid out of pocket and found at year end. So this only ever stops
+   * tax when somebody positively said so.
+   *
+   * A `taxRate` field used to live here and was deleted on 2026-09-22: it had
+   * an input, it saved, and no code read it, so a facility could type 5 and
+   * believe tax was being charged. This is a boolean rather than a rate for
+   * that reason — the facility's own tax settings decide the rate, and a
+   * second one with no name or registration number is worse than none.
+   */
+  taxable: z.boolean().optional(),
   isActive: z.boolean(),
 });
 export type CustomFee = z.infer<typeof customFeeSchema>;

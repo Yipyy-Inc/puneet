@@ -35,6 +35,14 @@ export interface ServiceChargeLine {
   quantity: number;
   /** A discount writes a negative `item`; see `kind` below. */
   kind: "item" | "fee";
+  /**
+   * Whether the facility's tax applies to this line.
+   *
+   * Always set, never left to the caller to remember: `booking_line_items`
+   * defaults it to true, so a line that MEANT to be exempt and forgot to say
+   * so would be taxed, and nothing on the screen would show the difference.
+   */
+  taxable: boolean;
 }
 
 export interface ServiceChargeContext {
@@ -116,6 +124,37 @@ export function applicableServiceCharges(
 }
 
 /**
+ * What this fee is worth at this branch.
+ *
+ * `amount` is the facility-wide figure and a branch overrides it only by
+ * having an entry. Three cases are deliberately NOT overrides:
+ *
+ *   * no branch on the booking — every single-location facility, and every
+ *     row written before branches existed. It charges the facility-wide
+ *     amount rather than nothing.
+ *   * a branch with no entry. Adding a location must not make every fee free
+ *     there, so absence means "the usual price", never zero.
+ *   * a non-finite or negative entry, which is a corrupted blob rather than a
+ *     decision. ZERO, however, IS an override: "this branch does not charge
+ *     for that" is a real thing to mean, and `serviceChargeLine` then drops
+ *     the line because a fee worth nothing is not a line.
+ *
+ * For a percentage fee this returns the PERCENTAGE, not money — it answers
+ * "what is `amount` here", and the caller already knows the `feeType`.
+ */
+export function feeAmountAt(
+  fee: CustomFee,
+  locationId?: string | null,
+): number {
+  if (!locationId) return fee.amount;
+  const override = fee.locationPrices?.[locationId];
+  if (override == null || !Number.isFinite(override) || override < 0) {
+    return fee.amount;
+  }
+  return override;
+}
+
+/**
  * What one fee costs on this booking.
  *
  * Returns null when it comes to nothing — a percentage of a zero price, an
@@ -129,10 +168,11 @@ export function serviceChargeLine(
   const firstPetOnly = fee.scope !== "per_pet";
   const quantity = firstPetOnly ? 1 : Math.max(1, Math.round(context.petCount));
 
+  const amount = feeAmountAt(fee, context.locationId);
   const unit =
     fee.feeType === "percentage"
-      ? (Math.max(0, context.serviceTotal) * Math.max(0, fee.amount)) / 100
-      : Math.max(0, fee.amount);
+      ? (Math.max(0, context.serviceTotal) * Math.max(0, amount)) / 100
+      : Math.max(0, amount);
 
   const uncapped = unit * quantity;
   const capped =
@@ -169,6 +209,9 @@ export function serviceChargeLine(
     kind: isDiscount ? "item" : "fee",
     unitPrice: round2(signed / lineQuantity),
     quantity: lineQuantity,
+    // Absent means taxed, matching every fee already stored and the column's
+    // own default. Only an explicit `false` exempts it.
+    taxable: fee.taxable !== false,
   };
 }
 

@@ -16,6 +16,7 @@ import type {
 import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
+import { feeAmountAt } from "@/lib/pricing/service-charge-lines";
 import {
   appliesToLocation,
   appliesToService,
@@ -1139,10 +1140,14 @@ export function applyDynamicPricingRules(
       // percentage fees cannot compound into each other and the answer does
       // not depend on which order the facility happened to author them in.
       const percentageBase = basePrice + addOnsTotal;
+      // The branch's price where it has one — the SAME resolution the server
+      // and the till use, so the quote a customer is shown and the line that
+      // is written cannot disagree about what this branch charges.
+      const amount = feeAmountAt(fee, input.locationId);
       unitAmount =
         fee.feeType === "percentage"
-          ? (percentageBase * Math.max(0, fee.amount)) / 100
-          : Math.max(0, fee.amount);
+          ? (percentageBase * Math.max(0, amount)) / 100
+          : Math.max(0, amount);
     }
 
     let feeTotal = unitAmount * multiplier;

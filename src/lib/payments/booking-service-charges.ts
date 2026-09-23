@@ -143,6 +143,8 @@ export async function applyBookingServiceCharges(
           unit_price: line.unitPrice,
           quantity: line.quantity,
           fee_id: line.feeId,
+          // The fee decides, and `serviceChargeLine` always sets it.
+          taxable: line.taxable,
           author_name: "Pricing rules",
         })) as never,
         { onConflict: "booking_id,fee_id", ignoreDuplicates: true },

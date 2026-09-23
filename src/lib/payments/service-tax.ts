@@ -59,7 +59,15 @@ export interface TaxableBillInput {
   totalCost: number;
   /** Everything added to it — `bookings.extras_total`. */
   extrasTotal: number;
-  /** Whether the SERVICE is taxed. Extras always are. */
+  /**
+   * The taxed part of `extrasTotal` — `bookings.taxable_extras_total`.
+   *
+   * ABSENT MEANS ALL OF IT. Extras were unconditionally taxed until a fee
+   * could say otherwise (20260923200000), so a caller that does not know
+   * about this field gets the behaviour it was written against.
+   */
+  taxableExtrasTotal?: number;
+  /** Whether the SERVICE is taxed. An extra is taxed unless it says not. */
   serviceTaxable: boolean;
 }
 
@@ -72,16 +80,41 @@ export interface TaxableBillInput {
 export function taxableFraction({
   totalCost,
   extrasTotal,
+  taxableExtrasTotal,
   serviceTaxable,
 }: TaxableBillInput): number {
-  if (serviceTaxable) return 1;
-
   const service = Number.isFinite(totalCost) ? Math.max(0, totalCost) : 0;
   const extras = Number.isFinite(extrasTotal) ? Math.max(0, extrasTotal) : 0;
+
+  // ── ABSENT MEANS "ALL OF THEM", WHICH IS WHAT THIS ALWAYS ASSUMED ───────
+  //
+  // Until 2026-09-23 the rule was "extras always are [taxed]" and there was
+  // no way to say otherwise. So a caller that does not supply the taxable
+  // share is answered exactly as it was before the field existed — and
+  // clamped into [0, extras], because a share larger than the whole is a
+  // corrupted row, not a licence to tax more than the bill.
+  // A NEGATIVE share is corruption, not a statement, so it falls back to
+  // "all of them" like an absent one — it must NOT read as zero-and-therefore
+  // exempt. Zero itself is the one value that genuinely means exempt, and it
+  // is the only way this ever stops charging tax.
+  const knownTaxableShare =
+    taxableExtrasTotal != null &&
+    Number.isFinite(taxableExtrasTotal) &&
+    taxableExtrasTotal >= 0;
+  const taxableExtras = knownTaxableShare
+    ? Math.min(extras, taxableExtrasTotal)
+    : extras;
+
+  // The old fast path, still exact: a taxable service with no exempt extra
+  // is a wholly taxable bill, and must return 1 rather than a float that
+  // rounds to it.
+  if (serviceTaxable && taxableExtras >= extras) return 1;
+
   const gross = service + extras;
   if (gross <= 0) return 1;
 
-  return extras / gross;
+  const taxable = (serviceTaxable ? service : 0) + taxableExtras;
+  return taxable / gross;
 }
 
 /**
@@ -99,12 +132,22 @@ export function taxableFraction({
  * page ends up showing a different tax from the one the card is charged.
  */
 export function taxableOwedForBooking(
-  booking: { totalCost?: number; extrasTotal?: number; taxable?: boolean },
+  booking: {
+    totalCost?: number;
+    extrasTotal?: number;
+    /** `bookings.taxable_extras_total`; absent means every extra is taxed. */
+    taxableExtrasTotal?: number;
+    taxable?: boolean;
+  },
   owedCents: number,
 ): number {
   return taxableOwedCents(owedCents, {
     totalCost: booking.totalCost ?? 0,
     extrasTotal: booking.extrasTotal ?? 0,
+    // Passed straight through, undefined and all: `taxableFraction` reads an
+    // absent share as "all of them", which is what a screen holding a booking
+    // mapped before this column existed still means.
+    taxableExtrasTotal: booking.taxableExtrasTotal,
     serviceTaxable: booking.taxable !== false,
   });
 }

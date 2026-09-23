@@ -29,6 +29,13 @@ export interface NewLineItem {
    * member of staff by hand — try without any of them double-charging.
    */
   feeId?: string;
+  /**
+   * Whether the facility tax applies to this line.
+   *
+   * Absent means TAXED — the column defaults to true and every extra was
+   * taxed unconditionally until a service charge could say otherwise.
+   */
+  taxable?: boolean;
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {

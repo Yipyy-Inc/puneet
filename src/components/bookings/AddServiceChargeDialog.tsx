@@ -88,7 +88,16 @@ export function AddServiceChargeDialog({
     return applicableServiceCharges(rules.customFees, serviceId, locationId)
       .map((fee) => ({
         fee,
-        line: serviceChargeLine(fee, { serviceId, petCount, serviceTotal }),
+        // `locationId` is not optional here just because the filter above
+        // already used it: this branch may price the fee differently, and
+        // what this dialog shows is EXACTLY what it writes. Leaving it out
+        // put the facility-wide amount on a branch's bill.
+        line: serviceChargeLine(fee, {
+          serviceId,
+          petCount,
+          serviceTotal,
+          locationId,
+        }),
       }))
       .filter(
         (row): row is { fee: (typeof row)["fee"]; line: ServiceChargeLine } =>

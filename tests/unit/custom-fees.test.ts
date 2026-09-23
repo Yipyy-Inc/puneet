@@ -250,6 +250,32 @@ describe("a stored blob written before this change still parses", () => {
     expect(parsed.data.customFees[0].applicableLocationIds).toBeUndefined();
   });
 
+  test("a fee authored before per-branch PRICES still parses", () => {
+    // Same guarantee `applicableLocationIds` needed: every fee in every
+    // stored blob is missing `locationPrices`, and a required field here
+    // would have `settingsFromRows` drop the whole domain on deploy.
+    const parsed = pricingRulesSchema.safeParse({
+      customFees: [fee()],
+      latePickupFees: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.customFees[0].locationPrices).toBeUndefined();
+  });
+
+  test("a branch price map round-trips", () => {
+    const parsed = pricingRulesSchema.safeParse({
+      customFees: [{ ...fee(), locationPrices: { "loc-a": 25, "loc-b": 0 } }],
+      latePickupFees: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.customFees[0].locationPrices).toEqual({
+      "loc-a": 25,
+      "loc-b": 0,
+    });
+  });
+
   test("a branch list round-trips", () => {
     const parsed = pricingRulesSchema.safeParse({
       customFees: [{ ...fee(), applicableLocationIds: ["loc-a", "loc-b"] }],

@@ -178,3 +178,161 @@ describe("taxableOwedCents — a part payment is split in proportion", () => {
     ).toBe(0);
   });
 });
+
+// ============================================================================
+// A FEE THAT IS NOT A SUPPLY — `taxableExtrasTotal`, added 2026-09-23.
+//
+// "Extras always are [taxed]" was the rule until a service charge needed to
+// say otherwise: a late-payment charge or a no-show penalty is not a sale in
+// every jurisdiction, and folding it into the service price to dodge the
+// question is exactly what Decision 3 of 20260806820000 forbids.
+//
+// The first block is the one that matters. Everything written before this
+// field existed must answer identically, because `service-tax.ts` is built on
+// the asymmetry that under-charging tax is the facility's own money.
+// ============================================================================
+
+describe("a bill written before fees could be exempt", () => {
+  test("an absent taxable share means every extra is taxed", () => {
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 50,
+        serviceTaxable: false,
+      }),
+    ).toBeCloseTo(50 / 150, 10);
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 50,
+        serviceTaxable: true,
+      }),
+    ).toBe(1);
+  });
+
+  test("and saying so explicitly gives the same answer", () => {
+    // The migration backfills taxable_extras_total = extras_total, so this is
+    // what every existing booking will actually send.
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 50,
+        taxableExtrasTotal: 50,
+        serviceTaxable: false,
+      }),
+    ).toBeCloseTo(50 / 150, 10);
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 50,
+        taxableExtrasTotal: 50,
+        serviceTaxable: true,
+      }),
+    ).toBe(1);
+  });
+});
+
+describe("an exempt fee on a taxed service", () => {
+  test("the service is still taxed and the fee is not", () => {
+    // $200 service, $15 exempt fee: tax applies to 200 of 215.
+    expect(
+      taxableFraction({
+        totalCost: 200,
+        extrasTotal: 15,
+        taxableExtrasTotal: 0,
+        serviceTaxable: true,
+      }),
+    ).toBeCloseTo(200 / 215, 10);
+  });
+
+  test("a mixture of taxed and exempt extras is split by value", () => {
+    // $100 service, $40 of extras of which $10 is exempt.
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 40,
+        taxableExtrasTotal: 30,
+        serviceTaxable: true,
+      }),
+    ).toBeCloseTo(130 / 140, 10);
+  });
+
+  test("an exempt fee on an exempt service is taxed on nothing", () => {
+    expect(
+      taxableFraction({
+        totalCost: 100,
+        extrasTotal: 25,
+        taxableExtrasTotal: 0,
+        serviceTaxable: false,
+      }),
+    ).toBe(0);
+    expect(
+      taxableOwedCents(12_500, {
+        totalCost: 100,
+        extrasTotal: 25,
+        taxableExtrasTotal: 0,
+        serviceTaxable: false,
+      }),
+    ).toBe(0);
+  });
+
+  test("the money owed follows the split, to the cent", () => {
+    // 200/215 of a $215 balance is $200.00 of taxable base.
+    expect(
+      taxableOwedCents(21_500, {
+        totalCost: 200,
+        extrasTotal: 15,
+        taxableExtrasTotal: 0,
+        serviceTaxable: true,
+      }),
+    ).toBe(20_000);
+  });
+});
+
+describe("a corrupted taxable share never taxes more than the bill", () => {
+  test("a share larger than the extras is clamped, not trusted", () => {
+    // A row claiming $999 of taxable extras inside $15 of extras is broken.
+    // Clamping to the extras keeps the old answer; believing it would tax a
+    // base bigger than the charge it sits on.
+    expect(
+      taxableFraction({
+        totalCost: 200,
+        extrasTotal: 15,
+        taxableExtrasTotal: 999,
+        serviceTaxable: true,
+      }),
+    ).toBe(1);
+  });
+
+  test("a negative or non-finite share falls back to taxing the extras", () => {
+    for (const bad of [-5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        taxableFraction({
+          totalCost: 200,
+          extrasTotal: 15,
+          taxableExtrasTotal: bad,
+          serviceTaxable: true,
+        }),
+        `taxableExtrasTotal=${bad}`,
+      ).toBe(1);
+    }
+  });
+
+  test("the fraction stays inside [0, 1] whatever it is handed", () => {
+    const inputs = [
+      { totalCost: -50, extrasTotal: 20, taxableExtrasTotal: 10 },
+      { totalCost: 0, extrasTotal: 0, taxableExtrasTotal: 0 },
+      { totalCost: 100, extrasTotal: -10, taxableExtrasTotal: 5 },
+    ];
+    for (const bill of inputs) {
+      for (const serviceTaxable of [true, false]) {
+        const f = taxableFraction({ ...bill, serviceTaxable });
+        expect(
+          f,
+          JSON.stringify({ ...bill, serviceTaxable }),
+        ).toBeGreaterThanOrEqual(0);
+        expect(f).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});

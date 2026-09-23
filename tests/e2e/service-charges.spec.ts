@@ -48,6 +48,7 @@ interface BookingPayload {
   totalCost?: number;
   amountDue?: number;
   extrasTotal?: number;
+  taxableExtrasTotal?: number;
 }
 
 interface LineItem {
@@ -200,6 +201,138 @@ test.describe("a facility's service charges", () => {
     expect(after?.amountDue, "the customer owes the fee exactly once").toBe(
       215,
     );
+  });
+
+  test("a branch's own price is the one charged there", async ({ page }) => {
+    await signIn(page, ACCOUNTS.owner);
+
+    // The branch this facility's bookings land on. Read rather than
+    // hardcoded: a uuid typed into a spec is a spec that passes somewhere
+    // else for the wrong reason.
+    const locRes = await page.request.get("/api/locations");
+    expect(locRes.ok(), await locRes.text()).toBe(true);
+    const locBody: unknown = await locRes.json();
+    const locations = Array.isArray(locBody)
+      ? (locBody as { id: string; status?: string }[])
+      : [];
+    const here = locations.find((l) => l.status === "active") ?? locations[0];
+    expect(here?.id, "the facility has a branch to price against").toBeTruthy();
+
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-branch",
+        name: "Branch-priced fee",
+        amount: 15,
+        // $25 HERE, $15 everywhere else.
+        locationPrices: { [here!.id]: 25 },
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(34),
+      end: day(35),
+      total: 200,
+    });
+
+    const items = await lines(page, ref);
+    const fee = items.find((i) => i.name.includes("Branch-priced fee"));
+    expect(fee, "the fee reached the bill").toBeTruthy();
+    // The override, not the facility-wide 15 — this is the whole feature.
+    expect(fee!.price, "the branch's price, not the facility's").toBe(25);
+
+    const after = await booking(page, ref);
+    expect(after?.totalCost).toBe(200);
+    expect(after?.amountDue, "200 + the branch's 25").toBe(225);
+  });
+
+  test("a price set for ANOTHER branch does not apply here", async ({
+    page,
+  }) => {
+    // The negative control, and the one that matters: an override must be
+    // keyed to a branch, not merely present. Without this a map with any
+    // entry at all could silently reprice every location.
+    await signIn(page, ACCOUNTS.owner);
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-elsewhere",
+        name: "Elsewhere-priced fee",
+        amount: 15,
+        locationPrices: { "00000000-0000-4000-8000-000000000999": 99 },
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(36),
+      end: day(37),
+      total: 200,
+    });
+
+    const items = await lines(page, ref);
+    const fee = items.find((i) => i.name.includes("Elsewhere-priced fee"));
+    expect(fee, "the fee still applies").toBeTruthy();
+    expect(fee!.price, "the usual amount, not the other branch's").toBe(15);
+    expect((await booking(page, ref))?.amountDue).toBe(215);
+  });
+
+  test("an exempt fee is owed but not taxed", async ({ page }) => {
+    // MoéGo configures tax per fee. Ours is a boolean rather than a rate —
+    // the facility's own tax settings decide the rate, and a second one with
+    // no name or registration number is worse than none.
+    //
+    // The pair of numbers is the whole point: the customer still owes the
+    // fee, and the government still does not get tax on it.
+    await signIn(page, ACCOUNTS.owner);
+    await withFees(page, [
+      {
+        ...CLEANING_FEE,
+        id: "e2e-sc-exempt",
+        name: "No-show penalty",
+        amount: 30,
+        taxable: false,
+      },
+    ]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(38),
+      end: day(39),
+      total: 200,
+    });
+
+    const items = await lines(page, ref);
+    const fee = items.find((i) => i.name.includes("No-show penalty"));
+    expect(fee, "the fee reached the bill").toBeTruthy();
+    expect(fee!.price).toBe(30);
+
+    const after = await booking(page, ref);
+    expect(after?.extrasTotal, "it is still owed").toBe(30);
+    expect(after?.amountDue, "and still on the total").toBe(230);
+    expect(after?.taxableExtrasTotal, "but no part of it is taxable").toBe(0);
+  });
+
+  test("a fee that says nothing about tax is taxed", async ({ page }) => {
+    // The negative control, and the one that protects every bill written
+    // before this existed: absence is not a decision to stop charging tax.
+    await signIn(page, ACCOUNTS.owner);
+    await withFees(page, [{ ...CLEANING_FEE, id: "e2e-sc-silent" }]);
+
+    const ref = await book(page, {
+      service: "boarding",
+      start: day(40),
+      end: day(41),
+      total: 200,
+    });
+
+    const after = await booking(page, ref);
+    expect(after?.extrasTotal).toBe(15);
+    expect(
+      after?.taxableExtrasTotal,
+      "silence means taxed, as it always did",
+    ).toBe(15);
   });
 
   test("a per-pet fee multiplies, and a cap stops it", async ({ page }) => {

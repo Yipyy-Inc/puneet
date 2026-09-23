@@ -834,6 +834,15 @@ export const bookingSchema = newBookingSchema.extend({
    */
   extrasTotal: z.number().optional(),
   /**
+   * The part of `extrasTotal` the facility's tax applies to.
+   *
+   * DERIVED alongside it from `booking_line_items.taxable` (20260923200000).
+   * ABSENT MEANS ALL OF IT — extras were taxed unconditionally until a
+   * service charge could say otherwise, so a booking mapped without this
+   * field must behave exactly as it did before the column existed.
+   */
+  taxableExtrasTotal: z.number().optional(),
+  /**
    * Whether this booking's OWN service price is taxed.
    *
    * Written by the server from the rate that priced it, and pinned to true for

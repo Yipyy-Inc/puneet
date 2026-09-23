@@ -48,13 +48,18 @@ export async function facilityTaxConfig(
 /**
  * The booking's own money, as far as tax is concerned.
  *
- * Three columns, and every caller already has them: `total_cost` is the
- * service the facility priced, `extras_total` is what was added at the counter,
- * and `taxable` is whether the SERVICE is taxed (extras always are).
+ * `total_cost` is the service the facility priced, `extras_total` is what was
+ * added at the counter, `taxable_extras_total` is the part of that the tax
+ * applies to (20260923200000), and `taxable` is whether the SERVICE is taxed.
+ *
+ * A NULL `taxable_extras_total` is a row read before that column existed, and
+ * means every extra is taxed — which is what this file assumed outright until
+ * a service charge could say otherwise.
  */
 export interface BookingBill {
   total_cost?: number | string | null;
   extras_total?: number | string | null;
+  taxable_extras_total?: number | string | null;
   taxable?: boolean | null;
 }
 
@@ -68,6 +73,10 @@ export function taxableOwedOf(bill: BookingBill, owedCents: number): number {
   return taxableOwedCents(owedCents, {
     totalCost: num(bill.total_cost),
     extrasTotal: num(bill.extras_total),
+    taxableExtrasTotal:
+      bill.taxable_extras_total == null
+        ? undefined
+        : num(bill.taxable_extras_total),
     // Null is a row read before the column existed, which is not a decision to
     // stop charging tax.
     serviceTaxable: bill.taxable !== false,

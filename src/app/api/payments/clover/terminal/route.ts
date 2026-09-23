@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       // the business, its address and how to reach it is the difference between
       // a record and a note. These columns exist on `facilities`
       // (20260809120000) and were simply never read here.
-      "id, ref, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
+      "id, ref, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable_extras_total, taxable, status, service, service_type, base_price, discount, tip_amount, facilities ( name, timezone, phone, email, website, address, logo_url ), clients ( name ), booking_pets ( pets ( name ) )",
     )
     .eq("ref", parsed.data.bookingRef)
     .maybeSingle();
@@ -488,6 +488,7 @@ interface BookingForReceipt {
   /** The split between the service and what was added — see BookingBill. */
   total_cost: number | string | null;
   extras_total: number | string | null;
+  taxable_extras_total?: number | string | null;
   taxable: boolean | null;
   facilities: {
     name: string;

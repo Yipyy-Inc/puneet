@@ -346,6 +346,7 @@ export type Database = {
           price: number | null;
           quantity: number;
           source_id: string | null;
+          taxable: boolean;
           unit_price: number;
           updated_at: string;
         };
@@ -362,6 +363,7 @@ export type Database = {
           price?: number | null;
           quantity?: number;
           source_id?: string | null;
+          taxable?: boolean;
           unit_price: number;
           updated_at?: string;
         };
@@ -378,6 +380,7 @@ export type Database = {
           price?: number | null;
           quantity?: number;
           source_id?: string | null;
+          taxable?: boolean;
           unit_price?: number;
           updated_at?: string;
         };
@@ -574,6 +577,7 @@ export type Database = {
           start_at: string;
           status: Database["public"]["Enums"]["booking_status"];
           taxable: boolean;
+          taxable_extras_total: number;
           tip_amount: number | null;
           total_cost: number;
           training_series_session_id: string | null;
@@ -602,6 +606,7 @@ export type Database = {
           start_at: string;
           status?: Database["public"]["Enums"]["booking_status"];
           taxable?: boolean;
+          taxable_extras_total?: number;
           tip_amount?: number | null;
           total_cost?: number;
           training_series_session_id?: string | null;
@@ -630,6 +635,7 @@ export type Database = {
           start_at?: string;
           status?: Database["public"]["Enums"]["booking_status"];
           taxable?: boolean;
+          taxable_extras_total?: number;
           tip_amount?: number | null;
           total_cost?: number;
           training_series_session_id?: string | null;

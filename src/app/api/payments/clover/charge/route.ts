@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable, status",
+      "id, facility_id, client_id, amount_due, amount_paid, total_cost, extras_total, taxable_extras_total, taxable, status",
     )
     .eq("id", parsed.data.bookingId)
     .maybeSingle();

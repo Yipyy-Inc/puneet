@@ -28,6 +28,8 @@ interface LineItemInput {
   quantity?: number;
   sourceId?: string;
   feeId?: string;
+  /** Whether the facility tax applies. Absent means TAXED, like the column. */
+  taxable?: boolean;
 }
 
 /** Resolve `ref` to the row, through a read the caller must be able to make. */
@@ -191,6 +193,10 @@ export async function POST(
     quantity: item.quantity ?? 1,
     source_id: item.sourceId ?? null,
     fee_id: item.feeId ?? null,
+    // Only an explicit `false` exempts a line. The column defaults to true
+    // and `taxableFraction` has always taxed every extra, so a caller that
+    // says nothing gets the behaviour that shipped before this existed.
+    taxable: item.taxable !== false,
   }));
 
   // ── `ifAbsent` IS FOR A LINE THAT MAY ALREADY BE THERE ──────────────────

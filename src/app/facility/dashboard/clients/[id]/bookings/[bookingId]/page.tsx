@@ -2000,6 +2000,7 @@ export default function ClientBookingDetailPage({
                   unitPrice: line.unitPrice,
                   quantity: line.quantity,
                   feeId: line.feeId,
+                  taxable: line.taxable,
                 })),
               },
               {

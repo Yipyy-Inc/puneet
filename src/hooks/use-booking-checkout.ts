@@ -179,6 +179,8 @@ export function useBookingCheckout(input: {
             unitPrice: charge.unitPrice,
             quantity: charge.quantity,
             feeId: charge.feeId,
+            // The fee says whether it is taxed; the till never decides.
+            taxable: charge.taxable,
           })),
         });
         // `price` is generated as `unit_price * quantity` in the database, so
