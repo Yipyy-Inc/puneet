@@ -161,3 +161,40 @@ console.log(
     ? "Nothing to purge: no e2e task groups left."
     : `Purged ${groupsDeleted} e2e task group(s), ${definitionsDeleted} chore(s) and ${tasksDeleted} task(s).`,
 );
+
+// ── The store credit ───────────────────────────────────────────────────────
+//
+// `gift-cards.spec.ts` redeems cards to store credit and has never taken the
+// credit back out. Measured 2026-09-24: `store_credit_entries` held 622 rows,
+// 615 of them e2e leftovers — 575 from that spec since 2026-08-23, worth
+// $25,875 of invented balance on ONE demo customer. Seven rows were real.
+//
+// It had already caused a defect. `GET /api/store-credit` sums the rows it
+// reads to get `balance`, and had no limit, so past PostgREST's silent
+// 1,000-row cap the screen would have shown the WRONG BALANCE rather than a
+// short list. That read was paged on 2026-09-23; this is the debris it was
+// needed for.
+//
+// THIS ONE CORRECTS RATHER THAN DELETES, and that is not a shortcut. The
+// ledger carries `store_credit_block_delete`, which raises on every DELETE
+// with the hint "append a correcting entry (a refund, or an adjustment)
+// instead". A purge could disable that trigger; it would then be a permanent,
+// shipped ability to delete rows from a money ledger, built to tidy a demo
+// customer's history. So it appends one balancing adjustment per client, and
+// marks it, which is what makes running it twice a no-op.
+const { data: creditData, error: creditError } = await db.rpc(
+  "purge_e2e_store_credit",
+);
+
+if (creditError) {
+  console.error(`Could not correct e2e store credit: ${creditError.message}`);
+  process.exit(1);
+}
+
+const creditCorrections = typeof creditData === "number" ? creditData : 0;
+
+console.log(
+  creditCorrections === 0
+    ? "Nothing to correct: no e2e store credit outstanding."
+    : `Corrected e2e store credit for ${creditCorrections} client(s).`,
+);

@@ -14,7 +14,6 @@
   "tests/e2e/form-requirements.spec.ts": 1,
   "tests/e2e/forms.spec.ts": 1,
   "tests/e2e/gift-card-payment.spec.ts": 1,
-  "tests/e2e/gift-cards.spec.ts": 1,
   "tests/e2e/grooming-menu-live.spec.ts": 1,
   "tests/e2e/operations-calendar.spec.ts": 1,
   "tests/e2e/payroll.spec.ts": 1,

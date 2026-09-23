@@ -81,6 +81,11 @@ interface LedgerEntry {
   balanceAfter: number;
 }
 
+/** `GET /api/store-credit` — a different ledger from the card's own. */
+interface Ledger {
+  entries: { clientRef: number; amount: number; note?: string }[];
+}
+
 /** Unique per run, so two runs cannot collide on the per-facility unique code. */
 function freshCode(label: string): string {
   return `${MARKER}${label}-${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
@@ -155,6 +160,52 @@ test.describe("gift cards", () => {
         }
       }
     }
+
+    // ── AND THE CREDIT THE CARDS TURNED INTO ────────────────────────────
+    //
+    // Draining a card to STORE CREDIT moves the money; it does not destroy
+    // it. Nothing took that half back out, so `store_credit_entries` had
+    // grown to 622 rows by 2026-09-24 with 575 of them from this file since
+    // 2026-08-23 — $25,875 of invented balance on one demo customer, roughly
+    // four more rows every push.
+    //
+    // The ledger is APPEND-ONLY by design — `store_credit_block_delete`
+    // raises on every delete and its hint says to append a correction — so
+    // this balances rather than removes, the same way store-credit.spec.ts
+    // has always cleaned up after itself.
+    const ledger = await page.request.get("/api/store-credit");
+    if (ledger.ok()) {
+      const body: unknown = await ledger.json();
+      const entries =
+        body &&
+        typeof body === "object" &&
+        Array.isArray((body as Ledger).entries)
+          ? (body as Ledger).entries
+          : [];
+      const owed = new Map<number, number>();
+      for (const entry of entries) {
+        if (!entry.note?.startsWith(`Gift card ${MARKER}`)) continue;
+        owed.set(
+          entry.clientRef,
+          (owed.get(entry.clientRef) ?? 0) + Number(entry.amount ?? 0),
+        );
+      }
+      for (const [clientRef, amount] of owed) {
+        if (Math.abs(amount) <= 0.005) continue;
+        const res = await page.request.post("/api/store-credit", {
+          data: {
+            clientRef,
+            amount: -amount,
+            reason: "adjustment",
+            note: `Gift card ${MARKER} cleanup`,
+          },
+        });
+        console.log(
+          `cleanup: client ${clientRef} store credit ${-amount} → ${res.status()}`,
+        );
+      }
+    }
+
     await context.close();
   });
 
