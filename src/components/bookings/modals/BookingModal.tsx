@@ -1935,7 +1935,7 @@ export function BookingModal({
     // `greatest(0, total_cost + extras_total - discount)`, so the database
     // subtracts the discount itself. `total` above already has it off, so
     // sending that as `total_cost` alongside `discount` took it TWICE:
-    // measured 2026-09-24, a booking posted as
+    // measured 2026-09-23, a booking posted as
     // `basePrice 100, discount 20, totalCost 80` came back owing $60.
     //
     // Adding it back is what makes the arithmetic close:

@@ -27,7 +27,7 @@
 --
 -- ── WHY IT WAS NEEDED ─────────────────────────────────────────────────────
 --
--- Measured 2026-09-24: `store_credit_entries` held 622 rows and 615 of them
+-- Measured 2026-09-23: `store_credit_entries` held 622 rows and 615 of them
 -- were e2e leftovers — 575 from `gift-cards.spec.ts` redeeming cards to
 -- credit since 2026-08-23, worth $25,875 of invented balance on ONE demo
 -- customer, and 40 from `store-credit.spec.ts`. Seven rows were real.

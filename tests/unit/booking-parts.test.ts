@@ -188,7 +188,7 @@ describe("allocateDeposit", () => {
 //
 //     Σ amount_due(part) = Σ (totalCost - discount) = quote
 //
-// It is the last link in the chain the 2026-09-24 audit followed: the pricing
+// It is the last link in the chain the 2026-09-23 audit followed: the pricing
 // engine (`discount-rules.test.ts`), the writer's arithmetic
 // (`booking-write-money.test.ts`), this, and the database itself
 // (`discount-rules.spec.ts`).

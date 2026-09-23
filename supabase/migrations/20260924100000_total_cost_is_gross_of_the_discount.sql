@@ -10,7 +10,7 @@
 -- booking form sent a `total_cost` that ALREADY had it off, and sent
 -- `discount` beside it — so it came off twice.
 --
--- Measured against this database on 2026-09-24, not inferred: a booking
+-- Measured against this database on 2026-09-23, not inferred: a booking
 -- posted as `basePrice 100, discount 20, totalCost 80` came back owing $60
 -- against a quote of $80.
 --

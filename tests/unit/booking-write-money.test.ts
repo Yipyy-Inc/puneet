@@ -13,7 +13,7 @@ import type { PricingRuleAdjustment } from "@/lib/pricing-rules";
 // Playwright spec, and the twelve lines that turn a quote into three columns
 // had nothing — they lived inside a `useMemo` in a 2,600-line component, where
 // nothing could reach them. A discount was subtracted twice there (measured
-// 2026-09-24: a booking quoted at $80 came back owing $60).
+// 2026-09-23: a booking quoted at $80 came back owing $60).
 //
 // THE INVARIANT every case re-checks, because the three outputs are one
 // sentence and not three numbers:
@@ -75,7 +75,7 @@ describe("what the booking is written with", () => {
       100,
     );
     expect(money.discount).toBe(20);
-    // Before 2026-09-24 this stored 80 and 20, and the customer owed 60.
+    // Before 2026-09-23 this stored 80 and 20, and the customer owed 60.
     expect(amountDue(money), "the customer owes the quote").toBe(80);
   });
 

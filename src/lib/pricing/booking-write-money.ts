@@ -11,7 +11,7 @@ import type { PricingRuleAdjustment } from "@/lib/pricing-rules";
  * Playwright spec; the twelve lines that turn one into the other had nothing,
  * and could have nothing — there is no way to reach into a `useMemo`.
  *
- * That gap is where the money went missing. On 2026-09-24 a booking posted as
+ * That gap is where the money went missing. On 2026-09-23 a booking posted as
  * `basePrice 100, discount 20, totalCost 80` came back owing $60 against a
  * quote of $80, because `total_cost` was sent NET while `amount_due` is
  * GENERATED as `greatest(0, total_cost + extras_total - discount)`. Measured

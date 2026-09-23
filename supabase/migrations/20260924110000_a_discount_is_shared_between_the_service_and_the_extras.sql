@@ -36,7 +36,15 @@
 -- about what one discount did, which is the only defensible answer while the
 -- same $40 is being divided by two different readers of the same row.
 --
--- ── THE OTHER HALF OF THE 2026-09-24 DISCOUNT AUDIT ───────────────────────
+-- ── A NOTE ON THE VERSION NUMBER ──────────────────────────────────────────
+--
+-- This is 20260924110000 and it was written on 2026-09-23. The three
+-- migrations of that day (…0924090000, …0924100000, this one) ran a day ahead
+-- of the calendar and were applied under those names, so the versions stand:
+-- they are ordering identifiers, they are unique, and one of them is already
+-- pushed. Every DATE in the prose here is the real one.
+--
+-- ── THE OTHER HALF OF THE 2026-09-23 DISCOUNT AUDIT ───────────────────────
 --
 -- 20260924100000 made `total_cost` GROSS because the booking form was writing
 -- it NET while `amount_due` subtracted the discount again. Commission read

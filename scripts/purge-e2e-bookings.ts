@@ -165,7 +165,7 @@ console.log(
 // ── The store credit ───────────────────────────────────────────────────────
 //
 // `gift-cards.spec.ts` redeems cards to store credit and has never taken the
-// credit back out. Measured 2026-09-24: `store_credit_entries` held 622 rows,
+// credit back out. Measured 2026-09-23: `store_credit_entries` held 622 rows,
 // 615 of them e2e leftovers — 575 from that spec since 2026-08-23, worth
 // $25,875 of invented balance on ONE demo customer. Seven rows were real.
 //

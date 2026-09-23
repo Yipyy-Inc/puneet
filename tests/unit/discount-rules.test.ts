@@ -11,7 +11,7 @@ import type {
 //
 // The two discount rules MoéGo's pricing page describes — "Multiple Pets" and
 // "Multiple Nights/Days" — plus the two stacking modes. All of it was already
-// built when this file was written on 2026-09-24, and NONE of it had a single
+// built when this file was written on 2026-09-23, and NONE of it had a single
 // test: `multiPetDiscounts` and `discountStacking` appeared in
 // `custom-fees.test.ts` and `time-fee.test.ts` only as `[]` scaffolding, set
 // empty so something else could be measured.

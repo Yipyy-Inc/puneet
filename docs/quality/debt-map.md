@@ -20786,7 +20786,7 @@ and a full page, and only one of them wants `xl:grid-cols-4`. Tailwind v4 has
 `@container` built in and that is the real fix; it was left alone here because
 this change was about a report, not about the shell.
 
-## 2026-09-24 — a discount was subtracted twice, and a green gate pinned it
+## 2026-09-23 — a discount was subtracted twice, and a green gate pinned it
 
 The client asked for MoéGo's **discount pricing** page. Unlike the service-charge
 page, everything it describes was already built: "Multiple Pets" with

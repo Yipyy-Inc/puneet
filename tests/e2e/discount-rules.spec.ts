@@ -7,7 +7,7 @@ import { ACCOUNTS, signIn } from "./_auth";
 //
 // `bookings.amount_due` is GENERATED as
 // `greatest(0, total_cost + extras_total - coalesce(discount, 0))`, so the
-// database subtracts the discount itself. Until 2026-09-24 the booking form
+// database subtracts the discount itself. Until 2026-09-23 the booking form
 // sent a `total_cost` that ALREADY had the discount off, and the discount was
 // taken twice: a booking posted as `basePrice 100, discount 20, totalCost 80`
 // came back owing $60 against a quote of $80. Measured, not inferred.
@@ -164,7 +164,7 @@ test.afterAll(async ({ browser }) => {
     //
     // `made` is filled by the tests themselves, so a test that fails
     // BETWEEN creating a booking and recording it leaves the booking
-    // behind — which is exactly what happened on 2026-09-24: the wizard
+    // behind — which is exactly what happened on 2026-09-23: the wizard
     // test timed out waiting for its toast, two real bookings had already
     // been written, and nothing here knew about them. One Postgres, shared
     // with CI, so they had to be found by hand.
@@ -226,7 +226,7 @@ test.describe("what a discounted booking costs", () => {
     page,
   }) => {
     // `bookings_discount_within_price`. Worth pinning because narrowing
-    // `best_only` on 2026-09-24 made a bigger `discountTotal` reachable, so
+    // `best_only` on 2026-09-23 made a bigger `discountTotal` reachable, so
     // this constraint went from theoretical to something a real booking can
     // hit — and it should surface as a refusal, not a silent adjustment.
     await signIn(page, ACCOUNTS.owner);
@@ -418,7 +418,7 @@ test.describe("what the booking FORM writes for a discounted booking", () => {
       total,
       "total_cost is GROSS — the price before the discount",
     ).toBeCloseTo(base, 2);
-    // Before 2026-09-24 the form sent `total_cost` NET, so this was base − 10
+    // Before 2026-09-23 the form sent `total_cost` NET, so this was base − 10
     // and `amount_due` came back at base − 20.
     expect(due, detail).toBeCloseTo(base - 10, 2);
 

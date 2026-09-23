@@ -378,8 +378,20 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await dialog.getByLabel(/special requests/i).fill(`${MARKER} form`);
     await create.click();
 
+    // ── TWO MINUTES, AND IT IS NOT PADDING ────────────────────────────
+    //
+    // At 30 seconds this failed on 2026-09-23 with the button still
+    // reading "Saving…" — and the two bookings had in fact been written,
+    // correctly, by the time anyone looked. The form posts one request per
+    // day against a facility holding ~1,500 bookings, so the save is
+    // genuinely slow rather than stuck.
+    //
+    // This spec is in the push gate. A gate that fails on a slow save is a
+    // gate people learn to re-run, which is worse than not having one: the
+    // assertion is unchanged, only the patience is. `test.slow()` does not
+    // scale an explicit timeout, which is why this has to be written out.
     await expect(page.getByText(/2 bookings created/i)).toBeVisible({
-      timeout: 30_000,
+      timeout: 120_000,
     });
     await expect(dialog).toBeHidden();
     // Alice, and only next month: her list alone is big enough to be cancelled
@@ -400,7 +412,7 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     // from the facility's tax settings, and nowhere else.
     // ── AND `total_cost` IS GROSS OF THE DISCOUNT ──────────────────────
     //
-    // This read `basePrice - discount` until 2026-09-24, which stated the
+    // This read `basePrice - discount` until 2026-09-23, which stated the
     // WRONG convention: `bookings.amount_due` is GENERATED as
     // `greatest(0, total_cost + extras_total - discount)`, so a net
     // `total_cost` has the discount taken off twice. Measured that day, a

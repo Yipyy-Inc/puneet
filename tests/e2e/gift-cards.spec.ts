@@ -165,7 +165,7 @@ test.describe("gift cards", () => {
     //
     // Draining a card to STORE CREDIT moves the money; it does not destroy
     // it. Nothing took that half back out, so `store_credit_entries` had
-    // grown to 622 rows by 2026-09-24 with 575 of them from this file since
+    // grown to 622 rows by 2026-09-23 with 575 of them from this file since
     // 2026-08-23 — $25,875 of invented balance on one demo customer, roughly
     // four more rows every push.
     //
