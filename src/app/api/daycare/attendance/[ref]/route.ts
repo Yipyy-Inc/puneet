@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
+import { applyDaycareRollover } from "@/lib/bookings/daycare-rollover";
 import { writeFailure } from "@/lib/api/write-failure";
 import { deniedIfUntouched } from "@/lib/api/rls-write";
 import { requireCareLogged } from "@/lib/daily-care/require-care";
@@ -136,6 +137,28 @@ export async function PATCH(
   // RLS check above — an update that changed nothing did not check anybody out.
   if (body.checkOut) {
     const bookingId = (booking as { id: string }).id;
+
+    // ── THE STAY RAN PAST WHAT IT PAID FOR ──────────────────────────────
+    //
+    // MoéGo's auto-rollover: a pet still here past the service's ceiling
+    // plus its grace becomes the next service up, and the BILL moves with
+    // it. Best effort and never throws — a check-out that succeeded must
+    // not be undone because a re-price failed.
+    const rollover = await applyDaycareRollover(bookingId);
+    if (rollover.rolled) {
+      console.log(
+        "[daycare] ref " +
+          bookingRef +
+          " rolled over: " +
+          rollover.from +
+          " → " +
+          rollover.to +
+          " (" +
+          rollover.delta +
+          ")",
+      );
+    }
+
     const context = await bookingEventContext(supabase, bookingId);
     if (context) {
       await emitAutomationEvent(supabase, {

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { createClient } from "@supabase/supabase-js";
+
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
@@ -62,6 +64,10 @@ async function create(page: Page, body: Record<string, unknown>) {
   return page.request.post(BASE, { data: body, failOnStatusCode: false });
 }
 
+/** Bookings this file made. Cancelled, not deleted: `bookings` has no
+ *  delete policy, deliberately — a booking is a record. */
+const madeBookings: number[] = [];
+
 test.describe.configure({ mode: "serial" });
 
 async function sweep(page: Page): Promise<number> {
@@ -91,7 +97,17 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    console.log(`cleanup: ${await sweep(page)} service(s) removed`);
+    let cancelled = 0;
+    for (const ref of new Set(madeBookings)) {
+      const res = await page.request.patch(`/api/bookings/${ref}`, {
+        data: { status: "cancelled" },
+      });
+      if (res.ok()) cancelled += 1;
+    }
+    console.log(
+      `cleanup: ${await sweep(page)} service(s) removed, ` +
+        `${cancelled}/${new Set(madeBookings).size} booking(s) cancelled`,
+    );
   } finally {
     await page.close();
   }
@@ -233,5 +249,155 @@ test.describe("the daycare menu", () => {
     await signIn(page, ACCOUNTS.owner);
     const res = await create(page, { price: 20 });
     expect(res.status(), await res.text()).toBe(422);
+  });
+});
+
+// ============================================================================
+// AUTO-ROLLOVER: the dog stayed late, so the BILL moved.
+//
+// MoéGo's own example — "this service will turn into a Full Day service if a
+// pet stays 30 minutes past the max duration of 4 hours" — is the feature that
+// stops a facility losing money on an overstay. What has to be proved is that
+// the MONEY changed, not that a label did.
+//
+// ── WHY IT REACHES PAST THE API FOR ONE FIELD ─────────────────────────────
+//
+// The stay has to be seven hours long, and a test that waits seven hours is
+// not a test. `daycare_attendance.checked_in_at` is stamped with `now()` by
+// the check-in route and no route can move it, so the arrival is backdated
+// with the service-role client — the same access `custom-services.spec.ts`
+// uses, for the same reason. Everything else goes through the shipped routes,
+// including the check-out that triggers the rollover.
+// ============================================================================
+
+function admin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  expect(url, "NEXT_PUBLIC_SUPABASE_URL must be set").toBeTruthy();
+  expect(key, "SUPABASE_SERVICE_ROLE_KEY must be set").toBeTruthy();
+  return createClient(url!, key!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+test.describe("a stay that runs past its service", () => {
+  test("checking out late rolls the booking over and moves what is owed", async ({
+    page,
+  }) => {
+    test.slow();
+    await signIn(page, ACCOUNTS.owner);
+
+    // A short service that becomes a dearer long one.
+    const longRes = await create(page, {
+      name: `${MARKER} Long day`,
+      price: 60,
+      maxDurationHours: 10,
+    });
+    expect(longRes.status(), await longRes.text()).toBe(201);
+    const long = ((await longRes.json()) as { service: Service }).service;
+
+    const shortRes = await create(page, {
+      name: `${MARKER} Short day`,
+      price: 20,
+      maxDurationHours: 4,
+    });
+    expect(shortRes.status(), await shortRes.text()).toBe(201);
+    const short = ((await shortRes.json()) as { service: Service }).service;
+
+    const linked = await page.request.patch(`${BASE}/${short.id}`, {
+      data: { rolloverAfterMinutes: 30, rolloverToServiceId: long.rowId },
+      failOnStatusCode: false,
+    });
+    expect(linked.status(), await linked.text()).toBe(200);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const made = await page.request.post("/api/bookings", {
+      data: {
+        clientId: 15,
+        petId: 1,
+        facilityId: 0,
+        service: "daycare",
+        serviceType: short.name,
+        startDate: today,
+        endDate: today,
+        checkInTime: "07:00",
+        checkOutTime: "23:00",
+        status: "confirmed",
+        basePrice: 20,
+        discount: 0,
+        totalCost: 20,
+        daycareServiceId: short.rowId,
+        specialRequests: MARKER,
+      },
+      failOnStatusCode: false,
+    });
+    expect(made.status(), await made.text()).toBe(201);
+    const ref = ((await made.json()) as { id: number }).id;
+    madeBookings.push(ref);
+
+    const arrived = await page.request.post("/api/daycare/attendance", {
+      data: { bookingRef: ref, formOverrideReason: "e2e rollover" },
+      failOnStatusCode: false,
+    });
+    expect(arrived.status(), await arrived.text()).toBe(201);
+
+    // SEVEN hours ago: past the 4-hour ceiling and its 30 minutes of grace.
+    const db = admin();
+    const { data: bookingRow } = await db
+      .from("bookings")
+      .select("id")
+      .eq("ref", ref)
+      .maybeSingle();
+    const bookingId = (bookingRow as { id: string } | null)?.id;
+    expect(bookingId, "the booking is readable as service role").toBeTruthy();
+
+    const { error: backdated } = await db
+      .from("daycare_attendance")
+      .update({
+        checked_in_at: new Date(Date.now() - 7 * 3_600_000).toISOString(),
+      })
+      .eq("booking_id", bookingId!);
+    expect(backdated, "the arrival is backdated").toBeNull();
+
+    const out = await page.request.patch(`/api/daycare/attendance/${ref}`, {
+      data: { checkOut: true, careOverrideReason: "e2e rollover" },
+      failOnStatusCode: false,
+    });
+    expect(out.status(), await out.text()).toBe(204);
+
+    // THE ASSERTION. 20 → 60, so the booking owes 40 more than it did — and
+    // `amount_due` follows, because it is generated from `total_cost`.
+    await expect
+      .poll(
+        async () => {
+          const res = await page.request.get(`/api/bookings?ref=${ref}`);
+          if (!res.ok()) return null;
+          const body: unknown = await res.json();
+          const row = Array.isArray(body)
+            ? (body[0] as { totalCost?: number } | undefined)
+            : undefined;
+          return row?.totalCost ?? null;
+        },
+        { timeout: 20_000 },
+      )
+      .toBeCloseTo(60, 2);
+
+    const after = await page.request.get(`/api/bookings?ref=${ref}`);
+    const rows: unknown = await after.json();
+    const booking = Array.isArray(rows)
+      ? (rows[0] as {
+          amountDue?: number;
+          serviceType?: string;
+          basePrice?: number;
+        })
+      : undefined;
+    expect(booking?.amountDue, "what is owed followed the price").toBeCloseTo(
+      60,
+      2,
+    );
+    expect(booking?.basePrice, "and so did the base").toBeCloseTo(60, 2);
+    expect(booking?.serviceType, "the receipt names what it became").toContain(
+      "Long day",
+    );
   });
 });
