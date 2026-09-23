@@ -103,12 +103,34 @@ export async function GET(request: NextRequest) {
     query = query.eq("client_id", match.id);
   }
 
-  const { data, error } = await query;
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // ── THE SUM BELOW MUST BE OVER EVERY ROW, NOT THE FIRST 1,000 ──────────
+  //
+  // PostgREST caps an unbounded select at 1,000 rows and says nothing about
+  // it. For a list that is a short screen; here the balance, totalIssued and
+  // totalSpent are all computed from THESE ROWS, so a capped read does not
+  // shorten a list — it reports the wrong amount of money, silently, on the
+  // screen that says how much credit a customer has. `record_payment` deducts
+  // from the real ledger, so the till and the screen would simply disagree.
+  //
+  // Measured 2026-09-23: 598 rows, growing ~18 a day because `gift-cards.spec`
+  // redeems to credit on every push. Twenty-two days from being wrong.
+  //
+  // Paged exhaustively, the same way `GET /api/bookings` does it: a short page
+  // is the last page, and a full one asks again — so exactly 1,000 is never
+  // guessed at.
+  const PAGE = 1000;
+  const rows: EntryRow[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await query.range(offset, offset + PAGE - 1);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    const page = (data ?? []) as unknown as EntryRow[];
+    rows.push(...page);
+    if (page.length < PAGE) break;
   }
 
-  const entries = (data ?? []) as unknown as EntryRow[];
+  const entries = rows;
 
   // The balance and the totals are THIS SUM, not stored columns. The fixture
   // kept `balance`, `totalPurchased` and `totalUsed` side by side — three

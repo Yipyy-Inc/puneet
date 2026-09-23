@@ -20,8 +20,22 @@ import { ACCOUNTS, signIn } from "./_auth";
 // ── WHAT THIS SUITE CHECKS ────────────────────────────────────────────────
 //
 //   * credit issued on this screen lands on the ledger the till reads;
-//   * the balance is a SUM, so returning it nets to zero rather than deleting;
+//   * the balance is a SUM, so returning credit nets it off rather than
+//     deleting the row it came from;
 //   * an entry of zero is refused, and so is a customer who does not exist.
+//
+// ── IT WAS IN NO SUITE UNTIL 2026-09-23 ──────────────────────────────────
+//
+// Written, complete, passing, and run by nothing — for the same reason
+// `booking-payment-ledger` and `booking-payment-screens` sat unrun until
+// 2026-08-25, and the day those were finally put in a suite they caught a
+// checkout asking $64 on a booking that already had $16 paid. AGENTS.md has
+// carried the line since: a spec in no suite is not coverage, it is a file.
+//
+// Putting this one in the gate found two things, neither of them in the code
+// it tests. See the comment on the second test for the hazard in the spec
+// itself, and `GET /api/store-credit` for the unbounded read that was 22 days
+// from reporting the wrong balance.
 // ============================================================================
 
 const CLIENT_REF = 15;
@@ -124,19 +138,35 @@ test.describe("store credit", () => {
     ).toBeGreaterThanOrEqual(40);
   });
 
-  test("returning a balance nets to zero rather than deleting", async ({
+  test("returning what was issued nets it off rather than deleting", async ({
     page,
   }) => {
     await signIn(page, ACCOUNTS.owner);
 
+    // ── IT RETURNS ITS OWN $40, NOT THE CUSTOMER'S BALANCE ────────────────
+    //
+    // This read the whole balance and posted the negative of it, so the
+    // assertion could be `≈ 0`. That is a nicer-looking number and a far
+    // worse test: client 15 held 595 entries and $25,695 when this spec was
+    // first put into a suite, so the run zeroed a real ledger and depended on
+    // `afterAll` to put it back. Any run that died in between — a timeout, a
+    // cancelled CI job — left a customer on $0.
+    //
+    // The property being tested is that a return is a balancing ENTRY and not
+    // a deletion, and returning $40 proves that exactly as well as returning
+    // $25,735 does. Nothing is given up; the blast radius is.
+    const ISSUED = 40; // what the first test put in
     const before = balanceOf(await ledger(page), CLIENT_REF);
-    expect(before, "there is something to return").toBeGreaterThan(0);
+    expect(
+      before,
+      "the first test's credit is there to return",
+    ).toBeGreaterThanOrEqual(ISSUED);
     const entriesBefore = (await ledger(page)).entries.length;
 
     const res = await page.request.post("/api/store-credit", {
       data: {
         clientRef: CLIENT_REF,
-        amount: -before,
+        amount: -ISSUED,
         reason: "adjustment",
         note: `${NOTE} returned`,
       },
@@ -144,8 +174,9 @@ test.describe("store credit", () => {
     expect(res.status(), await res.text()).toBe(201);
 
     const after = await ledger(page);
-    expect(balanceOf(after, CLIENT_REF)).toBeCloseTo(0, 2);
-    // The history GREW. The old screen's "Remove" deleted the row.
+    // Back where it started — the sum moved by exactly what was returned.
+    expect(balanceOf(after, CLIENT_REF)).toBeCloseTo(before - ISSUED, 2);
+    // And the history GREW. The old screen's "Remove" deleted the row.
     expect(after.entries.length).toBe(entriesBefore + 1);
   });
 

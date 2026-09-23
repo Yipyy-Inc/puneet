@@ -73,3 +73,6 @@ pnpm-lock.yaml
 
 # Supabase CLI scratch (version cache, linked-project ref) — not project state
 supabase/.temp/
+
+# The detached e2e server writes here; never part of a commit.
+e2e-server.log
