@@ -20623,18 +20623,44 @@ settled from the booking page, which does pass them.
 
 ### Still open, with the reason
 
-- **Per-branch fee PRICING.** Every existing override table points at a row with
-  a uuid PK; a custom fee is a client-generated string id inside a JSON array,
-  so there is nothing for a foreign key to point at. Per-branch AVAILABILITY
-  (`applicableLocationIds`) SHIPPED on 2026-09-23 and got most of the value with
-  no table, trigger or RLS — absent or empty means every branch, and a booking
-  with NO branch on it still gets a narrowed fee, because silently dropping a
-  charge is the failure that costs money. Real per-branch PRICING still needs
-  custom fees promoted out of the settings blob into a table first.
-- **Commission has no engine**, so MoéGo's "exclude service charges from staff
-  commission" has nothing to exclude from — `PayrollConfig` stores a percentage
-  nothing computes. When one is built, it excludes them with `where fee_id is
-null`.
+- **Per-branch fee PRICING — CLOSED 2026-09-23, and the reasoning above was
+  wrong.** "Nothing for a foreign key to point at" argued against an override
+  TABLE. A price per branch does not need a foreign key; it needs a price
+  keyed by branch id, exactly as `applicableLocationIds` is a LIST of branch
+  ids. `locationPrices` is a map on the fee, shipped the same day, and it
+  avoided a migration, a backfill, RLS and ten rewritten readers in exchange
+  for referential integrity nothing consumes. Measured before starting: no
+  facility had authored a single custom fee, so there was nothing to migrate
+  either.
+
+  Two rules, both of them ways to lose money quietly: **blank is not zero**
+  (an empty box is "the usual amount", so adding a branch never makes a fee
+  free there, while a typed `0` IS an override), and a corrupted or negative
+  entry falls back rather than charging nonsense. `AddServiceChargeDialog`
+  filtered by branch but PRICED without it, so a branch with an override
+  would have been billed the facility-wide amount — found by checking all
+  five call sites rather than assuming.
+
+- **Per-fee TAX — CLOSED 2026-09-23.** `booking_line_items.taxable` and a
+  derived `bookings.taxable_extras_total`, maintained by the same trigger as
+  `extras_total` so the pair cannot drift — `amount_due` is generated from
+  one of them. A BOOLEAN, not a rate: `taxRate` lived on this schema with an
+  input, a save path and no reader until 2026-09-22, and a second tax
+  authority with no name or registration number is worse than none.
+
+- **Commission — CLOSED 2026-09-23 by building the engine**
+  (20260923220000). `PayrollConfig` had stored rates since 20260801150000 and
+  nothing had ever computed from them. The exclusion turned out not to need
+  `where fee_id is null` at all: it is structural, because the basis is
+  `total_cost - discount` and every fee lives in `extras_total`.
+
+  Modelled on `booking_tip_allocations` rather than invented — same
+  attribution source, same auto/manual rule, same refunds-scale-it-down
+  behaviour, same `paid_at`-is-the-flag. **It does not backfill**, and that
+  is a decision: 20 bookings already qualify, and creating allocations for
+  work sold before any scheme existed invents a payroll liability
+  retroactively.
+
 - **`POST /api/bookings` answers 500, not 422, on a malformed `parts` entry.**
   The route checks that `parts` is an array and bounds its length, then hands it
   to `expandBookingParts`, which reads `part.petIds.length` — so a part missing
