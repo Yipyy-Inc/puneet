@@ -38,6 +38,8 @@ import {
   useFacilityReport,
   type CancelledData,
   type CustomerValueData,
+  type CommissionData,
+  type CommissionRow,
   type ServiceChargeRow,
   type ServiceChargesData,
   type OccupancyData,
@@ -628,6 +630,95 @@ function buildCancellationView(d: CancelledData): ReportView {
  * one rather than hidden: "what did our charges do to revenue" is the
  * question, and dropping the negatives answers a different one.
  */
+// ── Commission ──────────────────────────────────────────────────────────────
+//
+// Every figure here is read, never recomputed. `booking_commission_allocations`
+// already decided what is owed — service only, net of discounts, before tax,
+// in proportion to what was paid, with service charges excluded because they
+// never enter the basis — and a screen doing that arithmetic a second time is
+// how a report and a payout come to disagree about somebody's wages.
+function buildCommissionView(
+  d: CommissionData,
+  t: (key: string) => string,
+): ReportView {
+  const rows = d.current ?? [];
+  const unpaid = rows.reduce((sum, r) => sum + (r.unpaid ?? 0), 0);
+
+  const columns: ColumnDef<CommissionRow>[] = [
+    { accessorKey: "name", header: t("colPerson") },
+    {
+      accessorKey: "earned",
+      header: t("colEarned"),
+      cell: ({ row }) => (
+        <span className="font-semibold tabular-nums">
+          {formatCurrency(row.original.earned)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "unpaid",
+      header: t("colUnpaid"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {formatCurrency(row.original.unpaid)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "basis",
+      header: t("colBasis"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {formatCurrency(row.original.basis)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "bookings",
+      header: t("colBookings"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {formatCount(row.original.bookings)}
+        </span>
+      ),
+    },
+  ];
+
+  const kpis: ReportKpi[] = [
+    {
+      label: t("kpiEarned"),
+      value: formatCurrency(d.total),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(d.total, d.previousTotal),
+      hint: t("hintPrev"),
+    },
+    {
+      label: t("kpiUnpaid"),
+      value: formatCurrency(unpaid),
+      icon: Receipt,
+      tone: "amber",
+    },
+    {
+      label: t("kpiPeople"),
+      value: formatCount(rows.length),
+      icon: Users,
+      tone: "indigo",
+    },
+  ];
+
+  return {
+    kpis,
+    body: <DataTable columns={columns} data={rows} />,
+    exportData: rows as unknown as Record<string, unknown>[],
+    isEmpty: rows.length === 0,
+    // Deliberately not "no commission was earned": until somebody authors a
+    // rate there is nothing to earn, and the two read very differently to a
+    // facility wondering whether the report is broken.
+    emptyTitle: t("empty"),
+  };
+}
+
 function buildServiceChargesView(
   d: ServiceChargesData,
   t: (key: string) => string,
@@ -921,12 +1012,14 @@ function buildView(
   reportId: string,
   data: ReportDataset | null,
   /**
-   * A translator, threaded in because the builders are plain functions and
-   * cannot call a hook. Only the newest builder takes it so far; the rest
+   * Translators, threaded in because the builders are plain functions and
+   * cannot call a hook. Only the newest builders take them so far; the rest
    * still hold English literals and are ratcheted per file by
    * `check:ui-french`, which is how they will be converted one at a time.
    */
   t: (key: string) => string,
+  /** The commission report's own area. */
+  tc: (key: string) => string,
 ): ReportView | null {
   if (!data) return null;
   switch (reportId) {
@@ -944,6 +1037,8 @@ function buildView(
       return buildCustomerView(data as CustomerValueData);
     case "service-charges":
       return buildServiceChargesView(data as ServiceChargesData, t);
+    case "commission":
+      return buildCommissionView(data as CommissionData, tc);
     default:
       return null;
   }
@@ -977,6 +1072,7 @@ export function ReportSheet({
   );
   const [showExport, setShowExport] = useState(false);
   const { t } = useStaffText("serviceChargeReport");
+  const { t: tc } = useStaffText("commissionReport");
 
   // `enabled` inside the hook rather than a conditional call: the sheet is
   // mounted with `report === null` whenever it is closed.
@@ -987,7 +1083,7 @@ export function ReportSheet({
   );
 
   const view = report?.implemented
-    ? buildView(report.id, data?.data ?? null, t)
+    ? buildView(report.id, data?.data ?? null, t, tc)
     : null;
 
   return (

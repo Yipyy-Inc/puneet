@@ -39,6 +39,7 @@ const REPORTS = new Set([
   "customer-value",
   "total-revenue",
   "service-charges",
+  "commission",
 ]);
 
 export async function GET(request: NextRequest) {

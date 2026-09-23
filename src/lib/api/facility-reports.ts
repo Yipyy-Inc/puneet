@@ -185,6 +185,31 @@ export interface ServiceChargesData {
   previousTotal: number;
 }
 
+/**
+ * What one member of staff earned, from `booking_commission_allocations`.
+ *
+ * `earned` is already service-only, net of discounts, before tax and in
+ * proportion to what was paid — 20260923220000 decides all of that, and a
+ * service charge is excluded by construction because it never enters the
+ * basis. Nothing here recomputes any of it.
+ */
+export interface CommissionRow {
+  staffId: string;
+  name: string;
+  earned: number;
+  /** The revenue `earned` is a percentage of, as it stood when written. */
+  basis: number;
+  bookings: number;
+  /** Earned but not yet handed over — the figure a payout run needs. */
+  unpaid: number;
+}
+
+export interface CommissionData {
+  current: CommissionRow[];
+  total: number;
+  previousTotal: number;
+}
+
 export type ReportDataset =
   | RevenueByServiceData
   | RevenueByLocationData
@@ -194,7 +219,8 @@ export type ReportDataset =
   | CancelledData
   | CustomerValueData
   | TotalRevenueData
-  | ServiceChargesData;
+  | ServiceChargesData
+  | CommissionData;
 
 export interface ReportResponse {
   report: string;

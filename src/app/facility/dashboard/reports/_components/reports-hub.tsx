@@ -402,10 +402,10 @@ const CATALOG: ReportCategory[] = [
         href: "/facility/dashboard/reports/tips",
       },
       {
-        id: "commission-report",
+        id: "commission",
         name: "Commission Report",
-        description: "Groomer & trainer earnings",
-        implemented: false,
+        description: "What each person earned, and what is still owed",
+        implemented: true,
       },
       {
         id: "total-service-hours",

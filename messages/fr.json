@@ -3999,6 +3999,18 @@
         "typePer15min": "Par 15 min",
         "typePerKm": "Par km",
         "typePercent": "% du service"
+      },
+      "commissionReport": {
+        "colPerson": "Personne",
+        "colEarned": "Gagné",
+        "colUnpaid": "Pas encore versé",
+        "colBasis": "Revenu de service",
+        "colBookings": "Réservations",
+        "kpiEarned": "Commissions gagnées",
+        "kpiUnpaid": "Encore dû",
+        "kpiPeople": "Personnes rémunérées",
+        "hintPrev": "c. période précédente",
+        "empty": "Personne n'a gagné de commission durant cette période"
       }
     }
   },
