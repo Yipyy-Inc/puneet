@@ -390,13 +390,13 @@ jobs:
   # drifted from main, not because a test failed but because no test ever got
   # to run. The suite length was the cause; everything else was a symptom.
   #
-  # So this job now runs the 37 specs that guard the two things worth blocking
+  # So this job now runs the 38 specs that guard the two things worth blocking
   # a push over: the authorisation boundary, and money. The other 103 still run,
   # nightly and on demand, in this same job below — the coverage is not
   # dropped, it is rescheduled. (Paused 2026-09-17 → 18 for egress; see `on:`.)
   # ── WHAT CHANGED, SO A MARKDOWN COMMIT DOES NOT COST A SUITE RUN ────────
   #
-  # Every push ran the 37-spec gate, whatever it touched. A one-line fix to a
+  # Every push ran the 38-spec gate, whatever it touched. A one-line fix to a
   # doc spent a real browser run against the one shared production Postgres —
   # roughly 40,000 Supabase requests to publish a paragraph, which is what
   # pushed the egress investigation into looking at this at all.
@@ -624,11 +624,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         # ── ONE JOB, TWO SUITES, CHOSEN BY WHAT TRIGGERED IT ──────────────
         #
-        # A push or a PR runs the 37-spec gate: the authorisation boundary and
+        # A push or a PR runs the 38-spec gate: the authorisation boundary and
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # A manual workflow_dispatch runs all 140. So does the nightly. The
+        # A manual workflow_dispatch runs all 141. So does the nightly. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
         # is still the command to run by hand before anything that matters.
         #
@@ -636,10 +636,10 @@ jobs:
         # server build and purge, and the two would have drifted.
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Full suite (140 specs)."
+            echo "Full suite (141 specs)."
             bun run test:e2e:ci
           else
-            echo "Gate (37 specs: access & money). The full suite runs nightly."
+            echo "Gate (38 specs: access & money). The full suite runs nightly."
             bun run test:e2e:gate
           fi
 
