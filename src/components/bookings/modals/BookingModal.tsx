@@ -1690,6 +1690,8 @@ export function BookingModal({
       basePrice,
       existingExtraServices: extraServices,
       selectedPetIds: pricingSelectedPetIds,
+      // A custom fee narrowed to some branches is not charged at the others.
+      locationId: currentLocationId,
       isNewCustomer: effectiveIsNewCustomer,
       newPetIds: effectiveNewPetIds,
       customer:

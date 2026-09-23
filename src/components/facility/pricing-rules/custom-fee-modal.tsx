@@ -28,6 +28,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { useFacilityLocations } from "@/lib/api/locations";
 import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Custom Fee Modal ─────────────────────────────────────────────────
@@ -77,7 +78,17 @@ export function CustomFeeModal({
     applicableServices: normalizeApplicableServices(
       serviceType === "all" ? ["all"] : [serviceType],
     ),
+    // Empty means every branch — a new fee applies everywhere until narrowed.
+    applicableLocationIds: [] as string[],
   });
+
+  // Only a facility with more than one branch is asked the question.
+  const { data: locationRows } = useFacilityLocations();
+  const branches = (locationRows ?? []).filter(
+    (location) => location.status === "active",
+  );
+  // EMPTY MEANS EVERY BRANCH, so that is what the "all" box reads.
+  const everyBranch = (form.applicableLocationIds ?? []).length === 0;
 
   const [prevEditing, setPrevEditing] = useState(editing);
   if (editing !== prevEditing) {
@@ -103,6 +114,7 @@ export function CustomFeeModal({
         applicableServices: normalizeApplicableServices(
           editing.applicableServices,
         ),
+        applicableLocationIds: editing.applicableLocationIds ?? [],
       });
     } else {
       setForm({
@@ -125,6 +137,7 @@ export function CustomFeeModal({
         applicableServices: normalizeApplicableServices(
           serviceType === "all" ? ["all"] : [serviceType],
         ),
+        applicableLocationIds: [],
       });
     }
   }
@@ -308,6 +321,64 @@ export function CustomFeeModal({
                   </label>
                 ))}
               </div>
+
+              {/* ── WHICH BRANCHES ────────────────────────────────────────
+                  Only shown to a facility that HAS branches: a picker with
+                  one option is a question with one answer. Availability, not
+                  price — a per-branch price needs custom fees promoted out of
+                  the settings blob into a table first. */}
+              {branches.length > 1 && (
+                <div className="space-y-2 border-t pt-3">
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={everyBranch}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          // Empty IS "every branch", so clearing the list is
+                          // how the fee goes back to applying everywhere.
+                          applicableLocationIds:
+                            checked === true
+                              ? []
+                              : branches.map((branch) => branch.id),
+                        }))
+                      }
+                    />
+                    <span className="text-sm font-medium">
+                      {t("allBranches")}
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {branches.map((branch) => (
+                      <label
+                        key={branch.id}
+                        className="flex items-center gap-2"
+                      >
+                        <Checkbox
+                          checked={
+                            everyBranch ||
+                            (form.applicableLocationIds ?? []).includes(
+                              branch.id,
+                            )
+                          }
+                          disabled={everyBranch}
+                          onCheckedChange={(checked) =>
+                            setForm((prev) => {
+                              const current = prev.applicableLocationIds ?? [];
+                              const next =
+                                checked === true
+                                  ? [...new Set([...current, branch.id])]
+                                  : current.filter((id) => id !== branch.id);
+                              return { ...prev, applicableLocationIds: next };
+                            })
+                          }
+                        />
+                        <span className="text-xs">{branch.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -591,6 +662,13 @@ export function CustomFeeModal({
               onSave({
                 id: editing?.id ?? makeId("cf"),
                 name: form.name,
+                // Undefined rather than [] when it applies everywhere: the
+                // schema reads absent as "every branch", and storing an empty
+                // array on every fee would be noise in the settings blob.
+                applicableLocationIds:
+                  (form.applicableLocationIds ?? []).length > 0
+                    ? form.applicableLocationIds
+                    : undefined,
                 description: form.description || undefined,
                 amount: form.amount,
                 maxFee: form.feeType === "percentage" ? form.maxFee : undefined,

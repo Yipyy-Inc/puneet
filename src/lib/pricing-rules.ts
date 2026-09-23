@@ -17,6 +17,7 @@ import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
 import {
+  appliesToLocation,
   appliesToService,
   computeTimeFees,
   isWithinTimeWindow,
@@ -164,6 +165,13 @@ export interface ApplyPricingRulesInput {
    * quoting it was sitting.
    */
   timeZone?: string;
+  /**
+   * Which branch the booking is at, when the facility has more than one.
+   *
+   * A custom fee narrowed to some branches is not charged at the others.
+   * Absent means every branch — see .
+   */
+  locationId?: string | null;
   isNewCustomer?: boolean;
   newPetIds?: number[];
   customer?: PricingContextCustomer;
@@ -551,9 +559,11 @@ function shouldApplyCustomFee(
   newPetIds: number[],
   customer: PricingContextCustomer | undefined,
   extraServices: ExtraService[],
+  locationId: string | null | undefined,
 ): boolean {
   if (!fee.isActive) return false;
   if (!appliesToService(serviceId, fee.applicableServices)) return false;
+  if (!appliesToLocation(locationId, fee.applicableLocationIds)) return false;
 
   switch (fee.autoApply) {
     case "at_checkout":
@@ -1078,6 +1088,7 @@ export function applyDynamicPricingRules(
         newPetIds,
         customer,
         normalizedMergedExtraServices,
+        input.locationId,
       )
     ) {
       continue;

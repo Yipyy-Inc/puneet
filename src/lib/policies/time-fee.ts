@@ -149,6 +149,28 @@ export function appliesToService(
   return applicableServices.includes(serviceId);
 }
 
+/**
+ * Whether a rule scoped to some branches applies at this one.
+ *
+ * ABSENT OR EMPTY MEANS EVERY BRANCH, exactly as `appliesToService` treats an
+ * empty service list — a rule nobody has narrowed is not a rule that applies
+ * nowhere.
+ *
+ * An UNKNOWN branch (no `locationId` on the booking, which is every
+ * single-location facility) also matches: a fee the facility authored must not
+ * silently stop being charged because a row has no branch on it. Narrowing is
+ * something somebody chooses, and this is the direction that cannot lose
+ * money by accident.
+ */
+export function appliesToLocation(
+  locationId: string | undefined | null,
+  applicableLocationIds?: string[],
+): boolean {
+  if (!applicableLocationIds || applicableLocationIds.length === 0) return true;
+  if (!locationId) return true;
+  return applicableLocationIds.includes(locationId);
+}
+
 /** Minutes since midnight from "17:30", "5:30 PM" or an ISO timestamp's clock part. */
 export function parseTimeToMinutes(value?: string | null): number | null {
   if (!value) return null;

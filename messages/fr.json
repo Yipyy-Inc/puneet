@@ -7597,6 +7597,7 @@
         "nameRequired": "Une règle doit porter un nom.",
         "whereApplies": "Où cette règle s’applique",
         "allServices": "Tous les services",
+        "allBranches": "Toutes les succursales",
         "scope": "Portée",
         "perPet": "Par animal",
         "perBooking": "Par réservation",

@@ -955,6 +955,10 @@ export function GroomingBookingFlow({
 
     return applyDynamicPricingRules({
       rules: pricingRules,
+      // NO `locationId`, and that is deliberate: this flow has no branch
+      // context at all, and absent means "every branch" — so a fee narrowed to
+      // some branches still applies here rather than silently vanishing. When
+      // this screen learns which branch it is booking into, pass it.
       serviceId: "grooming",
       basePrice: totalPriceWithAddOns,
       existingExtraServices: [],

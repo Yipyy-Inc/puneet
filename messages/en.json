@@ -7597,6 +7597,7 @@
         "nameRequired": "A rule needs a name.",
         "whereApplies": "Where this applies",
         "allServices": "All services",
+        "allBranches": "All branches",
         "scope": "Scope",
         "perPet": "Per pet",
         "perBooking": "Per booking",

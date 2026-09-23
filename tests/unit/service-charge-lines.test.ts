@@ -65,6 +65,60 @@ describe("which fees apply without asking anything about the customer", () => {
     expect(automaticServiceCharges(fees, "boarding")).toEqual([]);
   });
 
+  test("a fee narrowed to another branch does not apply at this one", () => {
+    const fees = [
+      fee({ id: "downtown", applicableLocationIds: ["loc-downtown"] }),
+      fee({ id: "everywhere" }),
+    ];
+    expect(
+      automaticServiceCharges(fees, "boarding", "loc-suburb").map((f) => f.id),
+    ).toEqual(["everywhere"]);
+    expect(
+      automaticServiceCharges(fees, "boarding", "loc-downtown").map(
+        (f) => f.id,
+      ),
+    ).toEqual(["downtown", "everywhere"]);
+  });
+
+  test("a booking with NO branch still gets a narrowed fee", () => {
+    // Every single-location facility, and any row that predates branches.
+    // Silently dropping a charge because a row has no branch on it is the
+    // failure that costs money; narrowing is something somebody chooses.
+    const fees = [fee({ id: "downtown", applicableLocationIds: ["loc-a"] })];
+    expect(automaticServiceCharges(fees, "boarding").map((f) => f.id)).toEqual([
+      "downtown",
+    ]);
+    expect(
+      automaticServiceCharges(fees, "boarding", null).map((f) => f.id),
+    ).toEqual(["downtown"]);
+  });
+
+  test("an EMPTY branch list means every branch, not none", () => {
+    const fees = [fee({ id: "open", applicableLocationIds: [] })];
+    expect(
+      automaticServiceCharges(fees, "boarding", "loc-anything").map(
+        (f) => f.id,
+      ),
+    ).toEqual(["open"]);
+  });
+
+  test("the branch narrows the picker and the manual list too", () => {
+    const fees = [
+      fee({ id: "manual-here", autoApply: "none" }),
+      fee({
+        id: "manual-there",
+        autoApply: "none",
+        applicableLocationIds: ["loc-other"],
+      }),
+    ];
+    expect(
+      manualServiceCharges(fees, "boarding", "loc-here").map((f) => f.id),
+    ).toEqual(["manual-here"]);
+    expect(
+      applicableServiceCharges(fees, "boarding", "loc-here").map((f) => f.id),
+    ).toEqual(["manual-here"]);
+  });
+
   test("an inactive fee never does", () => {
     expect(
       automaticServiceCharges([fee({ isActive: false })], "boarding"),

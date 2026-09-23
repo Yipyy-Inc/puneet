@@ -20603,9 +20603,11 @@ settled from the booking page, which does pass them.
 - **Per-branch fee PRICING.** Every existing override table points at a row with
   a uuid PK; a custom fee is a client-generated string id inside a JSON array,
   so there is nothing for a foreign key to point at. Per-branch AVAILABILITY
-  (`applicableLocationIds`) gets most of the value with no table, trigger or
-  RLS. Real per-branch pricing needs custom fees promoted out of the settings
-  blob into a table first.
+  (`applicableLocationIds`) SHIPPED on 2026-09-23 and got most of the value with
+  no table, trigger or RLS — absent or empty means every branch, and a booking
+  with NO branch on it still gets a narrowed fee, because silently dropping a
+  charge is the failure that costs money. Real per-branch PRICING still needs
+  custom fees promoted out of the settings blob into a table first.
 - **Commission has no engine**, so MoéGo's "exclude service charges from staff
   commission" has nothing to exclude from — `PayrollConfig` stores a percentage
   nothing computes. When one is built, it excludes them with `where fee_id is

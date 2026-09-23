@@ -1,6 +1,6 @@
 import type { CustomFee } from "@/types/boarding";
 
-import { appliesToService } from "@/lib/policies/time-fee";
+import { appliesToLocation, appliesToService } from "@/lib/policies/time-fee";
 
 // ============================================================================
 // A custom fee, turned into a line on the bill.
@@ -49,17 +49,28 @@ export interface ServiceChargeContext {
    * to author them in.
    */
   serviceTotal: number;
+  /**
+   * Which branch this booking is at, when the facility has more than one.
+   *
+   * Absent means "not a multi-location facility, or the row does not say",
+   * and a fee narrowed to some branches still applies then — see
+   * `appliesToLocation`. Losing a charge because a row has no branch on it is
+   * the failure worth avoiding.
+   */
+  locationId?: string | null;
 }
 
 /** The fees a facility can apply knowing only which service was booked. */
 export function automaticServiceCharges(
   fees: CustomFee[] | undefined,
   serviceId: string,
+  locationId?: string | null,
 ): CustomFee[] {
   return (fees ?? []).filter(
     (fee) =>
       fee.isActive &&
       appliesToService(serviceId, fee.applicableServices) &&
+      appliesToLocation(locationId, fee.applicableLocationIds) &&
       (fee.autoApply === "at_checkout" ||
         (fee.autoApply === "by_care_type" &&
           appliesToService(serviceId, fee.autoApplyCareTypes))),
@@ -70,12 +81,14 @@ export function automaticServiceCharges(
 export function manualServiceCharges(
   fees: CustomFee[] | undefined,
   serviceId: string,
+  locationId?: string | null,
 ): CustomFee[] {
   return (fees ?? []).filter(
     (fee) =>
       fee.isActive &&
       fee.autoApply === "none" &&
-      appliesToService(serviceId, fee.applicableServices),
+      appliesToService(serviceId, fee.applicableServices) &&
+      appliesToLocation(locationId, fee.applicableLocationIds),
   );
 }
 
@@ -92,10 +105,13 @@ export function manualServiceCharges(
 export function applicableServiceCharges(
   fees: CustomFee[] | undefined,
   serviceId: string,
+  locationId?: string | null,
 ): CustomFee[] {
   return (fees ?? []).filter(
     (fee) =>
-      fee.isActive && appliesToService(serviceId, fee.applicableServices),
+      fee.isActive &&
+      appliesToService(serviceId, fee.applicableServices) &&
+      appliesToLocation(locationId, fee.applicableLocationIds),
   );
 }
 
@@ -161,7 +177,7 @@ export function serviceChargeLines(
   fees: CustomFee[] | undefined,
   context: ServiceChargeContext,
 ): ServiceChargeLine[] {
-  return automaticServiceCharges(fees, context.serviceId)
+  return automaticServiceCharges(fees, context.serviceId, context.locationId)
     .map((fee) => serviceChargeLine(fee, context))
     .filter((line): line is ServiceChargeLine => line !== null);
 }

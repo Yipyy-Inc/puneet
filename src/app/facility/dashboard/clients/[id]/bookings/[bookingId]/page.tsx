@@ -1151,11 +1151,13 @@ export default function ClientBookingDetailPage({
         automaticServiceCharges(
           pricingRules.customFees,
           booking.service.toLowerCase(),
+          booking.locationId,
         ),
         {
           serviceId: booking.service.toLowerCase(),
           petCount,
           serviceTotal: booking.totalCost ?? 0,
+          locationId: booking.locationId,
         },
       ).filter((line) => !alreadyChargedFeeIds.has(line.feeId)),
     );
@@ -1984,6 +1986,7 @@ export default function ClientBookingDetailPage({
           // percentage fee is a percentage of that, never of the running
           // total, or two of them would compound into each other.
           serviceTotal={booking.totalCost ?? 0}
+          locationId={booking.locationId}
           appliedFeeIds={[...alreadyChargedFeeIds]}
           // `ifAbsent` is NOT set: a duplicate here is a mistake worth seeing,
           // and the dialog has already disabled everything on the bill.

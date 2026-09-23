@@ -235,4 +235,31 @@ describe("a stored blob written before this change still parses", () => {
     expect(parsed.data.customFees).toHaveLength(1);
     expect("taxRate" in parsed.data.customFees[0]).toBe(false);
   });
+
+  test("a fee authored before branches existed still parses, and applies everywhere", () => {
+    // Same guarantee in the other direction: `applicableLocationIds` is new,
+    // so every fee in every facility's stored blob is missing it. If the
+    // schema required it, `settingsFromRows` would drop the whole domain and
+    // a facility would lose every rule it had authored.
+    const parsed = pricingRulesSchema.safeParse({
+      customFees: [fee()],
+      latePickupFees: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.customFees[0].applicableLocationIds).toBeUndefined();
+  });
+
+  test("a branch list round-trips", () => {
+    const parsed = pricingRulesSchema.safeParse({
+      customFees: [{ ...fee(), applicableLocationIds: ["loc-a", "loc-b"] }],
+      latePickupFees: [],
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.customFees[0].applicableLocationIds).toEqual([
+      "loc-a",
+      "loc-b",
+    ]);
+  });
 });

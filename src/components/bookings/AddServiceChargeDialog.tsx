@@ -52,6 +52,12 @@ interface AddServiceChargeDialogProps {
   petCount: number;
   /** The SERVICE's price — what a percentage fee is a percentage OF. */
   serviceTotal: number;
+  /**
+   * Which branch this booking is at. A fee narrowed to some branches is not
+   * offered at the others; absent means every branch, so a single-location
+   * facility is unaffected.
+   */
+  locationId?: string | null;
   /** Fee ids already on this bill, from `booking_line_items.fee_id`. */
   appliedFeeIds: readonly string[];
   /** Called with the chosen lines. The caller writes them. */
@@ -64,6 +70,7 @@ export function AddServiceChargeDialog({
   serviceId,
   petCount,
   serviceTotal,
+  locationId,
   appliedFeeIds,
   onAdd,
 }: AddServiceChargeDialogProps) {
@@ -78,7 +85,7 @@ export function AddServiceChargeDialog({
   // comes to nothing (a percentage of an unpriced booking) is not offered:
   // `serviceChargeLine` returns null and there is nothing to add.
   const offered = useMemo(() => {
-    return applicableServiceCharges(rules.customFees, serviceId)
+    return applicableServiceCharges(rules.customFees, serviceId, locationId)
       .map((fee) => ({
         fee,
         line: serviceChargeLine(fee, { serviceId, petCount, serviceTotal }),
@@ -87,7 +94,7 @@ export function AddServiceChargeDialog({
         (row): row is { fee: (typeof row)["fee"]; line: ServiceChargeLine } =>
           row.line !== null,
       );
-  }, [rules.customFees, serviceId, petCount, serviceTotal]);
+  }, [rules.customFees, serviceId, locationId, petCount, serviceTotal]);
 
   const picked = offered.filter(
     (row) => chosen.has(row.fee.id) && !already.has(row.fee.id),

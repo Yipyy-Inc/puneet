@@ -417,6 +417,24 @@ export const customFeeSchema = z.object({
   waivedAddOnIds: z.array(z.string()).optional(),
   waivePercentage: z.number().optional(),
   applicableServices: z.array(z.string()),
+  /**
+   * The branches this fee applies at. ABSENT OR EMPTY MEANS EVERY BRANCH.
+   *
+   * Availability, not price. Every other per-branch override in the product
+   * points at a row with a uuid primary key; a custom fee is a
+   * client-generated string id inside a JSON array, so there is nothing for a
+   * foreign key to point AT. This gets most of the value with no table, no
+   * trigger and no RLS — a downtown branch that charges for parking and a
+   * suburban one that does not.
+   *
+   * A real per-branch PRICE needs custom fees promoted out of the settings
+   * blob into a table first; the debt map says so.
+   *
+   * `.optional()` is load-bearing: `settingsFromRows` drops a whole domain
+   * whose stored value stops parsing, so every fee authored before this
+   * existed must still parse.
+   */
+  applicableLocationIds: z.array(z.string()).optional(),
   isActive: z.boolean(),
 });
 export type CustomFee = z.infer<typeof customFeeSchema>;

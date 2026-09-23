@@ -64,6 +64,7 @@ interface BookingRow {
   service: string;
   status: string;
   total_cost: number | string | null;
+  location_id: string | null;
 }
 
 export async function applyBookingServiceCharges(
@@ -76,7 +77,7 @@ export async function applyBookingServiceCharges(
 
     const { data } = await admin
       .from("bookings")
-      .select("id, facility_id, service, status, total_cost")
+      .select("id, facility_id, service, status, total_cost, location_id")
       .in("id", bookingIds);
 
     const rows = (data ?? []) as unknown as BookingRow[];
@@ -116,6 +117,8 @@ export async function applyBookingServiceCharges(
         serviceId: row.service,
         petCount: petCounts.get(row.id) ?? 1,
         serviceTotal: Number(row.total_cost ?? 0),
+        // A fee narrowed to some branches is not charged at the others.
+        locationId: row.location_id,
       })) {
         lines.push({
           ...line,
