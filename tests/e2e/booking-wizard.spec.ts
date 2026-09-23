@@ -6,6 +6,7 @@ import {
 } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
 // THE NEW BOOKING WIZARD, DRIVEN BY STAFF, TO A SAVED BOOKING.
@@ -150,6 +151,15 @@ test.afterAll(async ({ browser }) => {
     await cancelMade(page);
   } finally {
     await page.close();
+    // A LIST ONLY KNOWS WHAT THE TESTS REACHED THE LINE TO RECORD. A run
+    // that dies between creating a booking and recording it leaves the row
+    // CONFIRMED, and `purge_e2e_bookings()` only ever deletes rows already
+    // CANCELLED — so nothing collects it, ever. Found 2026-09-23 with rows
+    // from this spec sitting in the shared database since 2026-09-20.
+    //
+    // Inside the finally, because the cleanup above can throw, and a
+    // backstop that runs only on the happy path is not one.
+    await cancelBookingsMarked(browser, MARKER, "after");
   }
 });
 

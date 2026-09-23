@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
 // A CUSTOMER'S BOOKINGS DO WHAT THEY SAY.
@@ -17,8 +18,20 @@ import { ACCOUNTS, signIn } from "./_auth";
 //   · the list reads in French, and fits a 599px screen.
 //
 // Bookings are Alice Johnson's (client 15, Buddy), whose record the customer
-// account owns; one is Bob Smith's (client 16), to be refused. afterAll
-// cancels whatever is still open.
+// account owns; one is Bob Smith's (client 16), to be refused.
+//
+// ── CLEANUP RUNS AT BOTH ENDS, AND NOT OFF A LIST ─────────────────────────
+//
+// `made` is filled by the tests, so it only knows about bookings the run
+// reached the line for. Worse, the note-tidying loop below used to run
+// BEFORE the cancel loop and could throw — leaving every booking of that
+// run confirmed. Four of them were found in the database on 2026-09-23,
+// all created the same day, which is the signature of a teardown that died
+// rather than of tests that each missed one.
+//
+// `cancelBookingsMarked` asks the database what carries the marker, so it
+// heals what a crashed run left AND catches what this run did not record.
+// It never throws. See `_sweep.ts` for why it runs in beforeAll too.
 // ============================================================================
 
 const MARKER = "[e2e customer-booking-actions]";
@@ -80,6 +93,8 @@ const refs = {
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async ({ browser }) => {
+  // Heal whatever a crashed earlier run left behind, before adding to it.
+  await cancelBookingsMarked(browser, MARKER, "before");
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
@@ -131,30 +146,39 @@ test.afterAll(async ({ browser }) => {
   try {
     await signIn(page, ACCOUNTS.owner);
     const refused: string[] = [];
-    // The customer's notes: they cannot delete their own, the facility can.
-    for (const ref of made) {
-      const read = await page.request.get(
-        `/api/notes?category=booking&ref=${ref}`,
-      );
-      if (!read.ok()) continue;
-      for (const n of (await read.json()) as Array<{
-        id: string;
-        content: string;
-      }>) {
-        if (!n.content.includes(MARKER)) continue;
-        const del = await page.request.delete(`/api/notes/${n.id}`);
-        if (!del.ok()) refused.push(`note ${n.id}: ${await del.text()}`);
-      }
-    }
+
+    // BOOKINGS FIRST. This used to sit below the note loop, and a throw in
+    // that loop meant nothing here ran at all.
     for (const ref of made) {
       const res = await page.request.patch(`/api/bookings/${ref}`, {
         data: { status: "cancelled" },
       });
       if (!res.ok()) refused.push(`${ref}: ${await res.text()}`);
     }
+
+    // The customer's notes: they cannot delete their own, the facility can.
+    // `Array.isArray` because a cast is a claim — a 500 answers `{error}`,
+    // and `for...of` on that throws INSIDE the teardown.
+    for (const ref of made) {
+      const read = await page.request.get(
+        `/api/notes?category=booking&ref=${ref}`,
+      );
+      if (!read.ok()) continue;
+      const body: unknown = await read.json();
+      if (!Array.isArray(body)) continue;
+      for (const n of body as Array<{ id: string; content: string }>) {
+        if (!n.content?.includes(MARKER)) continue;
+        const del = await page.request.delete(`/api/notes/${n.id}`);
+        if (!del.ok()) refused.push(`note ${n.id}: ${await del.text()}`);
+      }
+    }
     expect(refused, "cleanup left bookings behind").toEqual([]);
   } finally {
     await page.close();
+    // INSIDE the finally, on purpose: the assertion above can fail, and a
+    // backstop that only runs when the teardown already succeeded is not a
+    // backstop. It never throws, so it cannot mask that failure either.
+    await cancelBookingsMarked(browser, MARKER, "after");
   }
 });
 
