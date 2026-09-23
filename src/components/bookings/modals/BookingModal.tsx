@@ -91,6 +91,7 @@ import {
   applyDynamicPricingRules,
   getServiceAddOnsStorageKey,
 } from "@/lib/pricing-rules";
+import { splitBookingMoney } from "@/lib/pricing/booking-write-money";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -1825,8 +1826,21 @@ export function BookingModal({
       feedingFeeTotal +
       evaluationFeeTotal;
 
-    let totalDiscount = pricingComputation.discountTotal || 0;
     const adjustments = [...(pricingComputation.adjustments || [])];
+
+    // ── A DISCOUNT THAT IS ALREADY A LINE IS NOT ALSO `discount` ─────────
+    //
+    // A custom fee authored with `adjustmentKind: "discount"` is written by
+    // the server as a negative `booking_line_items` row, so it is already off
+    // `amount_due` through `extras_total`. `discountTotal` filters on SIGN,
+    // not source, so it counts that fee as well — and a $10 loyalty credit
+    // came off the bill twice.
+    //
+    // The package pass is deliberately NOT excluded here: it travels as
+    // `discount` and nothing else at booking time.
+    // Travels as `discount` and nothing else at booking time, so it is kept
+    // apart from the evaluator's own total until `splitBookingMoney` adds it.
+    let packagePassDiscount = 0;
 
     // Step 6 — Travel zone surcharge. Looks up the matching zone from the
     // van's home base to the client's postal code and adds the surcharge as
@@ -1874,7 +1888,7 @@ export function BookingModal({
         baseService: basePrice,
       });
       subtotal -= passDiscount;
-      totalDiscount += passDiscount;
+      packagePassDiscount = passDiscount;
       adjustments.push({
         id: "package_redemption",
         label: t("packagePassApplied"),
@@ -1908,17 +1922,37 @@ export function BookingModal({
     //
     // So `serviceTotal` is what the booking is created with, and every
     // displayed figure keeps using `total`.
-    const serviceChargeTotal = adjustments
-      .filter((adjustment) => adjustment.source === "custom_fee")
-      .reduce((sum, adjustment) => sum + adjustment.amount, 0);
-    const serviceTotal = Math.round((total - serviceChargeTotal) * 100) / 100;
+    const { discount, serviceChargeTotal, serviceTotal } = splitBookingMoney({
+      adjustments,
+      discountTotal: pricingComputation.discountTotal,
+      packagePassDiscount,
+      total,
+    });
+
+    // ── `total_cost` IS GROSS OF THE DISCOUNT ───────────────────────────
+    //
+    // `amount_due` is GENERATED as
+    // `greatest(0, total_cost + extras_total - discount)`, so the database
+    // subtracts the discount itself. `total` above already has it off, so
+    // sending that as `total_cost` alongside `discount` took it TWICE:
+    // measured 2026-09-24, a booking posted as
+    // `basePrice 100, discount 20, totalCost 80` came back owing $60.
+    //
+    // Adding it back is what makes the arithmetic close:
+    //   amount_due = (total − fees + discount) + fees − discount = total
+    // which is the figure the customer was quoted, exactly.
+    //
+    // Gross is the database's own convention — `amount_due`'s comment, the
+    // commission basis (`total_cost − discount`) and `booking-commission.sql`
+    // all assume it. It was the WRITER that disagreed, and
+    // `booking-form-saves.spec.ts` pinned the writer.
 
     return {
       basePrice,
       rateGap,
       addOnsTotal: pricingComputation.addOnsTotal,
       adjustments,
-      discount: totalDiscount,
+      discount,
       subtotal,
       taxRate,
       taxAmount,

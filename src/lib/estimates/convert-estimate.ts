@@ -54,7 +54,16 @@ export function buildBookingDataFromEstimate(estimate: Estimate): NewBooking {
     basePrice: estimate.subtotal,
     discount: estimate.discount,
     discountReason: estimate.discountReason,
-    totalCost: estimate.total,
+    // ── GROSS, AND WITHOUT TAX ──────────────────────────────────────────
+    //
+    // `estimate.total` is the wrong number twice over: it is already net of
+    // the discount (`mappers/estimate.ts:295`), which `amount_due` then
+    // subtracts AGAIN, and it carries tax, which a booking's price never
+    // does — tax is charged at payment from the facility's own settings.
+    //
+    // `subtotal` is the gross line sum, which is exactly what `total_cost`
+    // means: `amount_due = total_cost + extras_total - discount`.
+    totalCost: estimate.subtotal,
     kennel: estimate.roomType,
     specialRequests: notes || undefined,
   };

@@ -177,3 +177,100 @@ describe("allocateDeposit", () => {
     });
   });
 });
+
+// ============================================================================
+// A DISCOUNT SURVIVES BEING SPLIT.
+//
+// `splitBookingMoney` hands the wizard three numbers for the WHOLE request;
+// the parts turn them into several rows. The database then computes each row's
+// `amount_due` on its own, so the quote is only honoured if the invariant
+// survives the split — and the split rounds.
+//
+//     Σ amount_due(part) = Σ (totalCost - discount) = quote
+//
+// It is the last link in the chain the 2026-09-24 audit followed: the pricing
+// engine (`discount-rules.test.ts`), the writer's arithmetic
+// (`booking-write-money.test.ts`), this, and the database itself
+// (`discount-rules.spec.ts`).
+// ============================================================================
+
+/** `amount_due` per part, summed. `extras_total` is 0 at booking time. */
+const owed = (parts: { totalCost: number; discount: number }[]) =>
+  Math.round(
+    parts.reduce((sum, p) => sum + (p.totalCost - p.discount), 0) * 100,
+  );
+
+describe("a discount, split across parts", () => {
+  test("three daycare days: each day is gross, and together they owe the quote", () => {
+    // $150 of daycare with a $30 multi-pet discount — quoted at $120.
+    const parts = daycareParts({
+      dates: ["2026-10-05", "2026-10-06", "2026-10-07"],
+      dateTimes: [],
+      petIds: [1, 51],
+      checkInTime: "08:00",
+      checkOutTime: "17:00",
+      money: { basePrice: 150, discount: 30, totalCost: 150 },
+    });
+    expect(cents(parts.map((p) => p.totalCost)), "gross, in full").toBe(15000);
+    expect(cents(parts.map((p) => p.discount))).toBe(3000);
+    expect(owed(parts), "the quote").toBe(12000);
+  });
+
+  test("a discount that does not divide evenly still adds back to the quote", () => {
+    // $100 over three days is 33.34 / 33.33 / 33.33, and a $10 discount is
+    // 3.34 / 3.33 / 3.33. Neither divides; both have to add back anyway.
+    const parts = daycareParts({
+      dates: ["2026-10-05", "2026-10-06", "2026-10-07"],
+      dateTimes: [],
+      petIds: [1],
+      checkInTime: "08:00",
+      checkOutTime: "17:00",
+      money: { basePrice: 100, discount: 10, totalCost: 100 },
+    });
+    expect(owed(parts), "no penny lost to rounding").toBe(9000);
+  });
+
+  test("two rooms at different nightly rates carry the discount in proportion", () => {
+    // A suite and a standard run: $180 of boarding, $36 off, quoted at $144.
+    // The suite is worth twice the run, so it takes twice the discount — the
+    // dearer room must not be subsidised by the cheaper one.
+    const parts = boardingParts({
+      petIds: [1, 51],
+      roomAssignments: [
+        { petId: 1, roomId: "suite-1" },
+        { petId: 51, roomId: "run-4" },
+      ],
+      startDate: "2026-10-05",
+      endDate: "2026-10-07",
+      checkInTime: "08:00",
+      checkOutTime: "17:00",
+      money: { basePrice: 180, discount: 36, totalCost: 180 },
+      weightOf: (roomId) => (roomId === "suite-1" ? 120 : 60),
+    });
+    expect(parts).toHaveLength(2);
+    const suite = parts.find((p) => p.unitAssignment === "suite-1")!;
+    const run = parts.find((p) => p.unitAssignment === "run-4")!;
+    expect(suite.totalCost).toBe(120);
+    expect(suite.discount).toBe(24);
+    expect(run.totalCost).toBe(60);
+    expect(run.discount).toBe(12);
+    expect(owed(parts)).toBe(14400);
+  });
+
+  test("a discount is never repeated onto every part", () => {
+    // The failure this guards: handing each part the WHOLE discount. Two
+    // parts of a $200 booking with $40 off would then owe $120, not $160.
+    const parts = daycareParts({
+      dates: ["2026-10-05", "2026-10-06"],
+      dateTimes: [],
+      petIds: [1],
+      checkInTime: "08:00",
+      checkOutTime: "17:00",
+      money: { basePrice: 200, discount: 40, totalCost: 200 },
+    });
+    for (const part of parts) {
+      expect(part.discount, "its share, not the whole").toBe(20);
+    }
+    expect(owed(parts)).toBe(16000);
+  });
+});

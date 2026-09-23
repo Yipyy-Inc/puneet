@@ -398,11 +398,25 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     // for every facility and every service — into totalCost, and checkout
     // then added the facility's own tax on top. Tax is charged at payment,
     // from the facility's tax settings, and nowhere else.
+    // ── AND `total_cost` IS GROSS OF THE DISCOUNT ──────────────────────
+    //
+    // This read `basePrice - discount` until 2026-09-24, which stated the
+    // WRONG convention: `bookings.amount_due` is GENERATED as
+    // `greatest(0, total_cost + extras_total - discount)`, so a net
+    // `total_cost` has the discount taken off twice. Measured that day, a
+    // booking posted as `basePrice 100, discount 20, totalCost 80` came back
+    // owing $60 against a quote of $80.
+    //
+    // It did NOT catch that, and it could not have: every booking this file
+    // posts carries `discount: 0`, where the two formulas agree. So the old
+    // line documented a convention it never exercised — which is its own kind
+    // of hazard, because the next person reads it as settled.
+    //
+    // `discount-rules.spec.ts` is what actually exercises a non-zero
+    // discount. This stays because the relationship is worth stating where
+    // the form's own output is being checked.
     for (const b of made) {
-      expect(b.totalCost, JSON.stringify(b)).toBeCloseTo(
-        (b.basePrice ?? 0) - (b.discount ?? 0),
-        2,
-      );
+      expect(b.totalCost, JSON.stringify(b)).toBeCloseTo(b.basePrice ?? 0, 2);
     }
   });
 });

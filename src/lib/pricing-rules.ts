@@ -26,6 +26,42 @@ import {
   type FacilityDayHours,
 } from "@/lib/policies/time-fee";
 
+/**
+ * The sources "Apply the best discount only" is allowed to choose between.
+ *
+ * ── WHY THIS IS A LIST AND NOT `amount < 0` ───────────────────────────────
+ *
+ * It used to be `amount < 0`, which treated EVERY negative adjustment as a
+ * rival promotion and kept only the largest. Five other things are negative:
+ * a custom fee authored with `adjustmentKind: "discount"`, a `room_type` or
+ * `grooming_condition` adjustment on its discount side, and a service bundle.
+ * None of those is a promotion competing for the same customer — they are
+ * properties of the room, the coat, or a line the facility deliberately
+ * authored. A facility with a $20 multi-pet discount, a $6 shared-suite
+ * discount and a $10 loyalty credit was given $20 and silently lost $16.
+ *
+ * The setting this implements is MoéGo's "Only apply the rule with the best
+ * discount", and on its own page that means the two DISCOUNT RULES. So the
+ * set is named, not inferred from a sign.
+ *
+ * Typed against the `source` union rather than `string`, so adding a source
+ * to `PricingRuleAdjustment` and forgetting this list is a compile error
+ * rather than money quietly going missing.
+ */
+const COMPETING_DISCOUNT_SOURCES: readonly PricingRuleAdjustment["source"][] = [
+  "multi_pet",
+  "multi_night",
+];
+
+function isCompetingDiscountRule(adjustment: PricingRuleAdjustment): boolean {
+  // Still `< 0`: a rule that came out as a surcharge is not a discount to
+  // choose between, whatever its source says.
+  return (
+    adjustment.amount < 0 &&
+    COMPETING_DISCOUNT_SOURCES.includes(adjustment.source)
+  );
+}
+
 export const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
 
 function toScopeToken(scopeKey?: string | number): string | null {
@@ -1176,19 +1212,20 @@ export function applyDynamicPricingRules(
   let finalAdjustments = adjustments;
 
   if (rules.discountStacking === "best_only") {
-    const discountAdjustments = adjustments.filter(
-      (adjustment) => adjustment.amount < 0,
-    );
+    const competing = adjustments.filter(isCompetingDiscountRule);
 
-    if (discountAdjustments.length > 1) {
-      const bestDiscount = discountAdjustments.reduce((best, current) =>
+    if (competing.length > 1) {
+      const bestDiscount = competing.reduce((best, current) =>
         Math.abs(current.amount) > Math.abs(best.amount) ? current : best,
       );
 
-      finalAdjustments = [
-        ...adjustments.filter((adjustment) => adjustment.amount >= 0),
-        bestDiscount,
-      ];
+      // Drop the LOSERS by identity and keep the array's order. Rebuilding it
+      // as `[...positives, best]` moved the surviving discount to the end of
+      // the list the confirmation step renders, and identity is what has to
+      // select them: `id` is not unique across sources, and a service bundle
+      // composes its own as `${rule.id}-${petId}`.
+      const dropped = new Set(competing.filter((a) => a !== bestDiscount));
+      finalAdjustments = adjustments.filter((a) => !dropped.has(a));
     }
   }
 
