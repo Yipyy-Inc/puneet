@@ -20674,3 +20674,35 @@ Still open: the debris itself (880 groups, 1,107 definitions) is only hygiene no
 that nothing loads it, and clearing it wants a `purge_e2e_task_groups()` RPC
 beside the existing ones — groups cascade to their items, definitions are
 `on delete restrict` and must go after them.
+
+## 2026-09-23 — every report dialog was half the width its own class asked for
+
+Adding the Service Charges report meant looking at one, and the KPI tiles were
+unreadable: `GROSS TAKINGS` rendered as `GR… TA…`, and `vs. prev. period` wrapped
+to ONE LETTER PER LINE. Not the new report — `Total Revenue`, shipped, measured
+the same way.
+
+**Two faults, compounding.**
+
+`ReportSheet` asks for `max-w-3xl` (768px). `DialogContent` ships
+`sm:max-w-lg` in its base class string, and Tailwind emits responsive variants
+AFTER plain utilities at equal specificity, so at any width ≥640px the base wins
+and the dialog was **512px**. Measured, not guessed:
+`{"width":512}` before, `{"width":768}` after prefixing it `sm:max-w-3xl`.
+
+**Any dialog passing an unprefixed `max-w-*` wider than `lg` has this bug**, and
+the class it names is the one thing that will not tell you — it is right there in
+the markup, doing nothing.
+
+Then `ReportShell` lays its KPIs out `grid-cols-1 sm:grid-cols-2
+xl:grid-cols-4`. Those are VIEWPORT breakpoints inside a fixed-width container,
+so a 1440px viewport forced four columns into the 512px dialog — about 119px a
+tile, which is where the one-letter-per-line came from. The report reads BETTER
+at 599px than at 1440px, which is the tell.
+
+Widening the dialog fixed the labels and the hints. **Still open:** a six-figure
+value still clips (`$113,093.` with the last digits cut), and the grid still uses
+viewport breakpoints for a container — `ReportShell` has two call sites, a dialog
+and a full page, and only one of them wants `xl:grid-cols-4`. Tailwind v4 has
+`@container` built in and that is the real fix; it was left alone here because
+this change was about a report, not about the shell.

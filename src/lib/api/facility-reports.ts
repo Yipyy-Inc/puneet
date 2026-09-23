@@ -162,6 +162,29 @@ export interface TotalRevenueData {
   prevGross: number;
 }
 
+/**
+ * What a facility's own pricing rules earned.
+ *
+ * Keyed on `feeId` rather than the name, because the name is what the invoice
+ * said and a facility may correct a typo in it at any time — grouping by name
+ * would split one fee's history the day somebody did. `name` is the one on the
+ * most recent line.
+ */
+export interface ServiceChargeRow {
+  feeId: string;
+  name: string;
+  /** Signed: a discount authored as a custom fee is negative. */
+  revenue: number;
+  timesCharged: number;
+  bookings: number;
+}
+
+export interface ServiceChargesData {
+  current: ServiceChargeRow[];
+  total: number;
+  previousTotal: number;
+}
+
 export type ReportDataset =
   | RevenueByServiceData
   | RevenueByLocationData
@@ -170,7 +193,8 @@ export type ReportDataset =
   | OccupancyData
   | CancelledData
   | CustomerValueData
-  | TotalRevenueData;
+  | TotalRevenueData
+  | ServiceChargesData;
 
 export interface ReportResponse {
   report: string;

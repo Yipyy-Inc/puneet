@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Clock,
   DollarSign,
+  Receipt,
   CalendarCheck,
   Users,
   BedDouble,
@@ -37,6 +38,8 @@ import {
   useFacilityReport,
   type CancelledData,
   type CustomerValueData,
+  type ServiceChargeRow,
+  type ServiceChargesData,
   type OccupancyData,
   type ReportDataset,
   type RevenueByLocationData,
@@ -65,6 +68,7 @@ import {
   formatPercent,
   computeDelta,
 } from "@/lib/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { ReportEntry } from "./reports-hub";
 
 type ReportWithCategory = ReportEntry & {
@@ -611,6 +615,102 @@ function buildCancellationView(d: CancelledData): ReportView {
   };
 }
 
+// ── Service Charges ───────────────────────────────────────────────────────────
+
+/**
+ * What the facility's own pricing rules earned, per rule.
+ *
+ * Until 20260923140000 no report joined `booking_line_items` at all, so a
+ * facility could author a cleaning fee, charge it on four hundred stays and
+ * have no way to ask what it brought in.
+ *
+ * A DISCOUNT authored as a custom fee is a negative row, and it is shown as
+ * one rather than hidden: "what did our charges do to revenue" is the
+ * question, and dropping the negatives answers a different one.
+ */
+function buildServiceChargesView(
+  d: ServiceChargesData,
+  t: (key: string) => string,
+): ReportView {
+  const rows = d.current ?? [];
+
+  const columns: ColumnDef<ServiceChargeRow>[] = [
+    { accessorKey: "name", header: t("colCharge") },
+    {
+      accessorKey: "revenue",
+      header: t("colEarned"),
+      cell: ({ row }) => (
+        <span className="font-semibold tabular-nums">
+          {formatCurrency(row.original.revenue)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "timesCharged",
+      header: t("colTimes"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {formatCount(row.original.timesCharged)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "bookings",
+      header: t("colBookings"),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {formatCount(row.original.bookings)}
+        </span>
+      ),
+    },
+  ];
+
+  const kpis: ReportKpi[] = [
+    {
+      label: t("kpiCharged"),
+      value: formatCurrency(d.total),
+      icon: DollarSign,
+      tone: "emerald",
+      delta: computeDelta(d.total, d.previousTotal),
+      hint: t("hintPrev"),
+    },
+    {
+      label: t("kpiRules"),
+      value: formatCount(rows.length),
+      icon: Receipt,
+      tone: "indigo",
+      hint: t("hintApplied"),
+    },
+    {
+      label: t("kpiTimes"),
+      value: formatCount(rows.reduce((n, r) => n + r.timesCharged, 0)),
+      icon: Receipt,
+      tone: "slate",
+      hint: t("hintLines"),
+    },
+  ];
+
+  return {
+    kpis,
+    body: (
+      <DataTable
+        columns={columns}
+        data={rows}
+        searchColumn="name"
+        searchPlaceholder={t("search")}
+      />
+    ),
+    exportData: rows.map((r) => ({
+      [t("colCharge")]: r.name,
+      [t("colEarned")]: r.revenue,
+      [t("colTimes")]: r.timesCharged,
+      [t("colBookings")]: r.bookings,
+    })),
+    isEmpty: rows.length === 0,
+    emptyTitle: t("empty"),
+  };
+}
+
 // ── Customer Value ────────────────────────────────────────────────────────────
 
 function buildCustomerView(d: CustomerValueData): ReportView {
@@ -820,6 +920,13 @@ function buildTotalRevenueView(d: TotalRevenueData): ReportView {
 function buildView(
   reportId: string,
   data: ReportDataset | null,
+  /**
+   * A translator, threaded in because the builders are plain functions and
+   * cannot call a hook. Only the newest builder takes it so far; the rest
+   * still hold English literals and are ratcheted per file by
+   * `check:ui-french`, which is how they will be converted one at a time.
+   */
+  t: (key: string) => string,
 ): ReportView | null {
   if (!data) return null;
   switch (reportId) {
@@ -835,6 +942,8 @@ function buildView(
       return buildCancellationView(data as CancelledData);
     case "customer-value":
       return buildCustomerView(data as CustomerValueData);
+    case "service-charges":
+      return buildServiceChargesView(data as ServiceChargesData, t);
     default:
       return null;
   }
@@ -867,6 +976,7 @@ export function ReportSheet({
     defaultReportRange("90d"),
   );
   const [showExport, setShowExport] = useState(false);
+  const { t } = useStaffText("serviceChargeReport");
 
   // `enabled` inside the hook rather than a conditional call: the sheet is
   // mounted with `report === null` whenever it is closed.
@@ -877,13 +987,13 @@ export function ReportSheet({
   );
 
   const view = report?.implemented
-    ? buildView(report.id, data?.data ?? null)
+    ? buildView(report.id, data?.data ?? null, t)
     : null;
 
   return (
     <>
       <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="flex max-h-[88vh] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0">
+        <DialogContent className="flex max-h-[88vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
           {/* Header */}
           <div className="shrink-0 border-b px-6 pt-6 pb-4">
             <DialogHeader>

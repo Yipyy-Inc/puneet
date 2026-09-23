@@ -38,6 +38,7 @@ const REPORTS = new Set([
   "cancelled-bookings",
   "customer-value",
   "total-revenue",
+  "service-charges",
 ]);
 
 export async function GET(request: NextRequest) {

@@ -3941,6 +3941,31 @@
         "offHelp": "No tax is added to this service. Anything added at the counter is still taxed.",
         "noTaxes": "This facility charges no tax yet, so this changes nothing.",
         "noTaxesLink": "Set up taxes"
+      },
+      "serviceChargeReport": {
+        "name": "Service Charges",
+        "blurb": "What each custom fee earned",
+        "colCharge": "Charge",
+        "colEarned": "Earned",
+        "colTimes": "Times charged",
+        "colBookings": "Bookings",
+        "kpiCharged": "Charged",
+        "kpiRules": "Rules used",
+        "kpiTimes": "Times charged",
+        "hintPrev": "vs. prev. period",
+        "hintApplied": "charges that applied",
+        "hintLines": "lines on bills",
+        "search": "Search by charge…",
+        "empty": "No service charges applied in this period"
+      },
+      "reportsHub": {
+        "revenue": "Revenue",
+        "bookings": "Bookings",
+        "occupancy": "Occupancy",
+        "retention": "Retention",
+        "last6": "Last 6 months",
+        "fillRate": "Boarding fill rate",
+        "window3": "3-month window"
       }
     }
   },

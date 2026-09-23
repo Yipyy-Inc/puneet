@@ -3941,6 +3941,31 @@
         "offHelp": "Aucune taxe n'est ajoutée à ce service. Ce qui est ajouté au comptoir reste taxable.",
         "noTaxes": "Cet établissement ne facture encore aucune taxe : ceci ne change rien.",
         "noTaxesLink": "Configurer les taxes"
+      },
+      "serviceChargeReport": {
+        "name": "Frais de service",
+        "blurb": "Ce que chaque frais personnalisé a rapporté",
+        "colCharge": "Frais",
+        "colEarned": "Rapporté",
+        "colTimes": "Fois facturé",
+        "colBookings": "Réservations",
+        "kpiCharged": "Facturé",
+        "kpiRules": "Règles utilisées",
+        "kpiTimes": "Fois facturé",
+        "hintPrev": "c. période préc.",
+        "hintApplied": "frais appliqués",
+        "hintLines": "lignes sur les factures",
+        "search": "Rechercher un frais…",
+        "empty": "Aucuns frais de service appliqués durant cette période"
+      },
+      "reportsHub": {
+        "revenue": "Revenus",
+        "bookings": "Réservations",
+        "occupancy": "Occupation",
+        "retention": "Rétention",
+        "last6": "6 derniers mois",
+        "fillRate": "Taux de remplissage",
+        "window3": "Fenêtre de 3 mois"
       }
     }
   },

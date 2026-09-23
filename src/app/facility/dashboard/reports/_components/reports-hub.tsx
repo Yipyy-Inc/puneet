@@ -24,6 +24,7 @@ import {
   formatPercent,
   type Delta,
 } from "@/lib/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { ReportSheet } from "./report-sheet";
 
 type ReportTier = "Essential" | "Beneficial";
@@ -129,6 +130,12 @@ const CATALOG: ReportCategory[] = [
         name: "Retail / POS Sales",
         description: "Product sales & item breakdown",
         implemented: false,
+      },
+      {
+        id: "service-charges",
+        name: "Service Charges",
+        description: "What each custom fee earned",
+        implemented: true,
       },
       {
         id: "revenue-by-line-item",
@@ -673,6 +680,7 @@ export function ReportsHub({
   // Section 3C / Table 5 — omit the revenue/financial KPI tiles without
   // view_revenue (all-access fallback keeps them for admin).
   const canSeeRevenue = usePermission("view_revenue");
+  const { t: hubT } = useStaffText("reportsHub");
   const [openReportId, setOpenReportId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -723,28 +731,28 @@ export function ReportsHub({
       >
         {canSeeRevenue && (
           <KpiTile
-            label="Revenue"
+            label={hubT("revenue")}
             value={formatCurrencyWhole(kpis.totalRevenue)}
-            sub="Last 6 months"
+            sub={hubT("last6")}
             delta={deltas.revenue}
           />
         )}
         <KpiTile
-          label="Bookings"
+          label={hubT("bookings")}
           value={formatCount(kpis.totalBookings)}
-          sub="Last 6 months"
+          sub={hubT("last6")}
           delta={deltas.bookings}
         />
         <KpiTile
-          label="Occupancy"
+          label={hubT("occupancy")}
           value={formatPercent(kpis.occupancyRate)}
-          sub="Boarding fill rate"
+          sub={hubT("fillRate")}
           delta={deltas.occupancy}
         />
         <KpiTile
-          label="Retention"
+          label={hubT("retention")}
           value={formatPercent(kpis.retentionRate)}
-          sub="3-month window"
+          sub={hubT("window3")}
         />
         <KpiTile
           label="Active Clients"
