@@ -1888,6 +1888,208 @@ export type Database = {
           },
         ];
       };
+      daycare_service_categories: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_service_categories_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      daycare_service_location_prices: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          location_id: string | null;
+          price: number;
+          service_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          location_id?: string | null;
+          price: number;
+          service_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          location_id?: string | null;
+          price?: number;
+          service_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_service_location_prices_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_service_location_prices_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_service_location_prices_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "daycare_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      daycare_services: {
+        Row: {
+          allowed_section_ids: string[];
+          blocked_pet_tags: string[];
+          category_id: string | null;
+          color: string | null;
+          created_at: string;
+          description: string;
+          display_order: number;
+          eligible_breeds: string[];
+          eligible_pet_tags: string[];
+          eligible_species: string[];
+          eligible_weight_tiers: string[];
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          included_addon_ids: string[];
+          is_active: boolean;
+          legacy_id: string | null;
+          location_ids: string[];
+          max_duration_hours: number | null;
+          name: string;
+          price: number;
+          requires_evaluation: boolean;
+          requires_evaluation_online: boolean;
+          rollover_after_minutes: number | null;
+          rollover_to_service_id: string | null;
+          size_pricing: Json;
+          taxable: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          allowed_section_ids?: string[];
+          blocked_pet_tags?: string[];
+          category_id?: string | null;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          eligible_breeds?: string[];
+          eligible_pet_tags?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          included_addon_ids?: string[];
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          max_duration_hours?: number | null;
+          name: string;
+          price?: number;
+          requires_evaluation?: boolean;
+          requires_evaluation_online?: boolean;
+          rollover_after_minutes?: number | null;
+          rollover_to_service_id?: string | null;
+          size_pricing?: Json;
+          taxable?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          allowed_section_ids?: string[];
+          blocked_pet_tags?: string[];
+          category_id?: string | null;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          eligible_breeds?: string[];
+          eligible_pet_tags?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          included_addon_ids?: string[];
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          max_duration_hours?: number | null;
+          name?: string;
+          price?: number;
+          requires_evaluation?: boolean;
+          requires_evaluation_online?: boolean;
+          rollover_after_minutes?: number | null;
+          rollover_to_service_id?: string | null;
+          size_pricing?: Json;
+          taxable?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "daycare_services_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "daycare_service_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_services_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "daycare_services_rollover_to_service_id_fkey";
+            columns: ["rollover_to_service_id"];
+            isOneToOne: false;
+            referencedRelation: "daycare_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       estimates: {
         Row: {
           accepted_at: string | null;
