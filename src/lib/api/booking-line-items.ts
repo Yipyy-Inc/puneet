@@ -21,6 +21,14 @@ export interface NewLineItem {
   quantity?: number;
   /** A retail product id, a module id — whatever it came from, if anything. */
   sourceId?: string;
+  /**
+   * The custom-fee rule that charged this line.
+   *
+   * `unique (booking_id, fee_id)` means a fee can land ONCE on a booking, so
+   * this is what lets three separate passes — booking create, checkout, a
+   * member of staff by hand — try without any of them double-charging.
+   */
+  feeId?: string;
 }
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
@@ -59,14 +67,36 @@ function useBillInvalidation() {
  * Takes an ARRAY because a basket is scanned as a basket: four items arriving
  * as four requests can half-succeed, and a customer charged for two of the four
  * things in their bag is worse than an error.
+ *
+ * ── `ifAbsent` IS FOR LINES THAT MAY ALREADY BE THERE ───────────────────
+ *
+ * A service charge is applied by more than one pass, so "add it unless this
+ * booking already has it" is the ordinary case rather than an error. With
+ * `ifAbsent`, the write upserts on `(booking_id, fee_id)` and skips what is
+ * already there.
+ *
+ * **The answer then lists only the rows actually INSERTED** — a call that
+ * skipped everything returns `items: []` and a 200. Never assert
+ * `items.length === sent.length`. The manual picker deliberately leaves this
+ * off, because there a duplicate IS a mistake worth showing.
  */
 export function useAddLineItems() {
   const invalidate = useBillInvalidation();
   return useMutation({
-    mutationFn: async (input: { bookingRef: number; items: NewLineItem[] }) =>
+    mutationFn: async (input: {
+      bookingRef: number;
+      items: NewLineItem[];
+      ifAbsent?: boolean;
+    }) =>
       json<{ items: { id: string; name: string; price: number }[] }>(
         `/api/bookings/${input.bookingRef}/line-items`,
-        { method: "POST", body: JSON.stringify({ items: input.items }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            items: input.items,
+            ifAbsent: input.ifAbsent === true,
+          }),
+        },
       ),
     onSuccess: invalidate,
   });

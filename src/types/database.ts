@@ -338,6 +338,7 @@ export type Database = {
           booking_id: string;
           created_at: string;
           created_by: string | null;
+          fee_id: string | null;
           facility_id: string;
           id: string;
           kind: string;
@@ -354,6 +355,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           facility_id: string;
+          fee_id?: string | null;
           id?: string;
           kind: string;
           name: string;
@@ -368,6 +370,7 @@ export type Database = {
           booking_id?: string;
           created_at?: string;
           created_by?: string | null;
+          fee_id?: string | null;
           facility_id?: string;
           id?: string;
           kind?: string;

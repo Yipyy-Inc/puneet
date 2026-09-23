@@ -27,6 +27,7 @@ interface LineItemInput {
   unitPrice?: number;
   quantity?: number;
   sourceId?: string;
+  feeId?: string;
 }
 
 /** Resolve `ref` to the row, through a read the caller must be able to make. */
@@ -134,6 +135,7 @@ export async function POST(
   const { ref } = await params;
   const body = (await request.json().catch(() => null)) as {
     items?: LineItemInput[];
+    ifAbsent?: boolean;
   } | null;
 
   const items = body?.items ?? [];
@@ -171,22 +173,41 @@ export async function POST(
     );
   }
 
-  // One statement, so a basket of four either lands or does not. Two of them
-  // arriving is a customer charged for half of what was scanned.
-  const { data, error } = await supabase
-    .from("booking_line_items")
-    .insert(
-      items.map((item) => ({
-        booking_id: booking.id,
-        facility_id: booking.facility_id,
-        kind: item.kind ?? "item",
-        name: item.name!.trim(),
-        unit_price: item.unitPrice!,
-        quantity: item.quantity ?? 1,
-        source_id: item.sourceId ?? null,
-      })) as never,
-    )
-    .select("id, name, price");
+  const rows = items.map((item) => ({
+    booking_id: booking.id,
+    facility_id: booking.facility_id,
+    kind: item.kind ?? "item",
+    name: item.name!.trim(),
+    unit_price: item.unitPrice!,
+    quantity: item.quantity ?? 1,
+    source_id: item.sourceId ?? null,
+    fee_id: item.feeId ?? null,
+  }));
+
+  // ── `ifAbsent` IS FOR A LINE THAT MAY ALREADY BE THERE ──────────────────
+  //
+  // A service charge is applied by more than one pass — booking create,
+  // checkout, and a member of staff by hand — so "add it unless this booking
+  // already has it" is the ordinary case, not an error. The upsert targets
+  // `(booking_id, fee_id)`, which is the constraint that makes a fee land
+  // once, and returns ONLY the rows actually inserted: a call that skipped
+  // everything answers with an empty list and a 201.
+  //
+  // Without it, a duplicate is a 409 the caller can show — which is what the
+  // manual picker wants, because there a second attempt IS a mistake.
+  //
+  // One statement either way, so a basket of four either lands or does not.
+  // Two of them arriving is a customer charged for half of what was scanned.
+  const write = supabase.from("booking_line_items");
+  const { data, error } =
+    body?.ifAbsent === true
+      ? await write
+          .upsert(rows as never, {
+            onConflict: "booking_id,fee_id",
+            ignoreDuplicates: true,
+          })
+          .select("id, name, price")
+      : await write.insert(rows as never).select("id, name, price");
 
   if (error) {
     return writeFailure(error, {
