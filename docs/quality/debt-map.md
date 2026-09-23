@@ -13109,8 +13109,33 @@ toggle and delete were gone on reload. They are the
 `grooming_service_charges` settings domain now (empty fallback: a charge is
 money); each change writes the whole list and the toast waits for it.
 
-- **Still open:** nothing applies a charge to a bill yet — the list is the
-  facility's price sheet, and a groomer adds a fee as a line item.
+- **Closed 2026-09-23, by retiring the domain rather than finishing it.** "A
+  groomer adds a fee as a line item" is what `pricing_rules.customFees` does
+  now — a `booking_line_items` row with `fee_id`, on the invoice under the
+  facility's own name, once per appointment by unique constraint. Building
+  that twice was never worth it, and two editors for one idea is how a
+  facility comes to author a fee in the one that does nothing.
+
+  So this section is read-only and carries a one-way importer
+  (`src/lib/pricing/import-grooming-charges.ts`). It **refuses `per-15min`
+  and `per-km` by name** and names the better home for each: a custom fee has
+  no unit, and flattening Paws & Co's $20-per-15-min matting fee to "$20"
+  would invent a number and undercharge every de-matting over a quarter of an
+  hour. Those belong to `groomingConditionAdjustment.billingMode: "per_unit"`
+  and the mobile-grooming travel zones respectively.
+
+- **Still open:** the domain itself. Nothing reads `grooming_service_charges`
+  now, so leaving the rows is inert, and the importer deliberately deletes
+  nothing — an irreversible write on somebody else's money in exchange for
+  tidiness is a bad trade. It goes when every facility's list is empty or
+  moved. Measured 2026-09-23: only Paws & Co — Demo has one, holding three
+  active charges, one of which will never move.
+
+  **`scripts/demo-seed/run.ts` re-creates that row**, guarded by an
+  `if (!haveCharges)`, so emptying the demo facility by hand is not enough on
+  its own — the seed is the other half, and it is deliberately still there,
+  because those three charges are what exercises the importer's refusal path
+  against real data rather than a fixture.
 
 ## 2026-09-11 — two e2e runs at once time the shared database out
 
@@ -20564,13 +20589,11 @@ per appointment" a database fact rather than a discipline three call sites have
 to remember. `total_cost` went back to being the SERVICE's price, which is what
 20260806820000's Decision 3 always said it was.
 
-**This does NOT clear the 2026-09-11 "still open" above.** That entry is about
-`grooming_service_charges`, a SECOND and entirely separate fee domain holding
-three charges a real facility authored. Nothing applies those to a bill yet;
-they are retired into custom fees in a later phase, by a one-way importer that
-must refuse `per-15min` and `per-km` **by name and with a reason** — neither
-maps onto `customFeeSchema`, and the live facility's matting fee is `per-15min`,
-so that path runs on its first use rather than hypothetically.
+**This did not, by itself, clear the 2026-09-11 "still open" above.** That
+entry is about `grooming_service_charges`, a SECOND and entirely separate fee
+domain holding three charges a real facility authored. The importer that
+retires it landed later the same day — see that entry for what it refuses and
+why, and for the one thing still outstanding, which is the domain itself.
 
 ### Three traps this work hit, none of them obvious
 

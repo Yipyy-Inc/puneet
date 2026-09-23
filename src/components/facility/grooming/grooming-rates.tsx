@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   useDeleteGroomingService,
   useGroomingServices,
@@ -9,19 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { usePermission } from "@/hooks/use-facility-rbac";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -46,22 +36,30 @@ import {
   DollarSign,
   Sparkles,
   AlertCircle,
+  ArrowRight,
+  Ban,
+  Check,
   Star,
-  Save,
-  X,
   Scissors,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { GroomingPackage } from "@/types/grooming";
 import {
   useFacilitySettings,
+  usePricingRules,
   useSaveFacilitySetting,
   useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import type { ServiceCharge } from "@/lib/settings/grooming-service-charges";
+import { isImported } from "@/lib/pricing/import-grooming-charges";
+import { formatMoney } from "@/lib/i18n/format";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import type { CustomFee } from "@/types/boarding";
 import { addOnsForService } from "@/lib/settings/addons";
 import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import { GroomingChargeImportDialog } from "./GroomingChargeImportDialog";
 import { ServiceDialog } from "./service-dialog";
+import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useLocationContext } from "@/hooks/use-location-context";
 
 /** No branch, as opposed to "not answered yet" -- Radix Select crashes on a
@@ -74,11 +72,12 @@ const FACILITY_WIDE = "__facility_wide__";
 
 type ServiceChargeType = ServiceCharge["type"];
 
-const SERVICE_CHARGE_TYPE_LABELS: Record<ServiceChargeType, string> = {
-  flat: "Flat fee",
-  "per-15min": "Per 15 min",
-  "per-km": "Per km",
-  percent: "% of service",
+/** Catalogue keys, not words: a module constant cannot call a translator. */
+const SERVICE_CHARGE_TYPE_KEYS: Record<ServiceChargeType, string> = {
+  flat: "typeFlat",
+  "per-15min": "typePer15min",
+  "per-km": "typePerKm",
+  percent: "typePercent",
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -198,140 +197,6 @@ function ServiceCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Service charge editor dialog
-// ─────────────────────────────────────────────────────────────────────────
-
-const EMPTY_CHARGE: Omit<ServiceCharge, "id"> = {
-  name: "",
-  description: "",
-  amount: 0,
-  type: "flat",
-  isActive: true,
-};
-
-function ChargeEditorDialog({
-  open,
-  onOpenChange,
-  editing,
-  onSave,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  editing: ServiceCharge | null;
-  onSave: (
-    form: Omit<ServiceCharge, "id">,
-    editing: ServiceCharge | null,
-  ) => void;
-}) {
-  const [form, setForm] = useState<Omit<ServiceCharge, "id">>(() =>
-    editing
-      ? {
-          name: editing.name,
-          description: editing.description,
-          amount: editing.amount,
-          type: editing.type,
-          isActive: editing.isActive,
-        }
-      : EMPTY_CHARGE,
-  );
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {editing ? "Edit Service Charge" : "New Service Charge"}
-          </DialogTitle>
-          <DialogDescription>
-            Charges staff can manually add to an appointment for special
-            circumstances.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g., Matting Fee"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              rows={2}
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="When does this charge apply?"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.amount}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    amount: parseFloat(e.target.value) || 0,
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Charge Type</Label>
-              <Select
-                value={form.type}
-                onValueChange={(v: ServiceChargeType) =>
-                  setForm({ ...form, type: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="flat">Flat fee</SelectItem>
-                  <SelectItem value="per-15min">Per 15 min</SelectItem>
-                  <SelectItem value="per-km">Per km</SelectItem>
-                  <SelectItem value="percent">% of service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-            />
-            <Label>Active</Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="mr-2 size-4" /> Cancel
-          </Button>
-          <Button
-            disabled={!form.name.trim()}
-            onClick={() => {
-              onSave(form, editing);
-              setForm(EMPTY_CHARGE);
-            }}
-          >
-            <Save className="mr-2 size-4" />
-            {editing ? "Save Changes" : "Add Charge"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -367,39 +232,55 @@ export function GroomingRates() {
     [allAddOns],
   );
 
-  // ── THE SERVICE CHARGES ARE THE FACILITY'S ────────────────────────────
+  // ── THIS SECTION IS READ-ONLY, AND IS ON ITS WAY OUT ──────────────────
   //
-  // Five charges typed into this file, copied into useState: add, edit,
-  // toggle and delete were gone on reload. They are the
-  // `grooming_service_charges` settings domain now; each change writes the
-  // whole list and the toast waits for it.
+  // `grooming_service_charges` was the facility's own fee list with a full
+  // editor, and it has never charged anybody anything — nothing reads it at
+  // any point between a booking and a card. `pricing_rules.customFees` now
+  // does reach a bill: a line item, on the invoice, under the facility's own
+  // name, and once per appointment by database constraint.
+  //
+  // Keeping two editors for the same idea is how a facility comes to author
+  // a fee in the one that does nothing. So the editor here is gone and the
+  // list stays visible, read-only, beside the button that moves it. The
+  // domain itself goes when every facility's list is empty or moved — see
+  // `import-grooming-charges.ts` for why nothing is deleted on the way out.
   const { settings, isPending: chargesPending } = useFacilitySettings();
   const { mutateAsync: saveSetting } = useSaveFacilitySetting();
+  const { rules, isPending: rulesPending } = usePricingRules();
+  const { t, fill, locale } = useStaffText("groomingChargeImport");
+  const money = (value: number) => formatMoney(value, locale);
+  // Never a hand-written settings path: the employee shell re-exports this
+  // component, and a /facility/ link there bounces a groomer out of their
+  // own portal.
+  const settingsPath = useSettingsHref();
   const charges = settings.grooming_service_charges.value.charges;
-  async function writeCharges(
-    next: ServiceCharge[],
-    done?: string,
-  ): Promise<boolean> {
-    if (chargesPending) return false;
+  const [importOpen, setImportOpen] = useState(false);
+
+  // Both domains, because the import reads one and writes the other. Writing
+  // `pricing_rules` while it is still loading would persist the EMPTY
+  // fallback over whatever the facility has authored — the exact failure
+  // `check:settings-seeding` exists for.
+  const settingsPending = chargesPending || rulesPending;
+
+  async function importCharges(fees: CustomFee[]) {
+    if (settingsPending || fees.length === 0) return;
     try {
       await saveSetting({
-        domain: "grooming_service_charges",
-        value: { charges: next },
+        domain: "pricing_rules",
+        value: { ...rules, customFees: [...rules.customFees, ...fees] },
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
-      return false;
+      toast.error(error instanceof Error ? error.message : t("moveFailed"));
+      return;
     }
-    if (done) toast.success(done);
-    return true;
+    toast.success(
+      fees.length === 1
+        ? t("movedToastOne")
+        : fill("movedToast", { n: fees.length }),
+    );
+    setImportOpen(false);
   }
-  const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
-  const [editingCharge, setEditingCharge] = useState<ServiceCharge | null>(
-    null,
-  );
-  const [deletingCharge, setDeletingCharge] = useState<ServiceCharge | null>(
-    null,
-  );
 
   const activeServices = services.filter((s) => s.isActive).length;
   const activeAddOns = groomingAddOns.filter((a) => a.isActive).length;
@@ -431,39 +312,6 @@ export function GroomingRates() {
             : `Could not delete "${pkg.name}".`,
         ),
     });
-  }
-
-  // ── Service charge handlers ──────────────────────────────────────────
-  function handleChargeSave(
-    form: Omit<ServiceCharge, "id">,
-    editing: ServiceCharge | null,
-  ) {
-    const next = editing
-      ? charges.map((c) => (c.id === editing.id ? { ...c, ...form } : c))
-      : [...charges, { id: `sc-${crypto.randomUUID()}`, ...form }];
-    void writeCharges(
-      next,
-      editing ? `"${form.name}" updated` : `"${form.name}" added`,
-    ).then((saved) => {
-      if (!saved) return;
-      setChargeDialogOpen(false);
-      setEditingCharge(null);
-    });
-  }
-  function handleChargeDelete() {
-    if (!deletingCharge) return;
-    const gone = deletingCharge;
-    void writeCharges(
-      charges.filter((c) => c.id !== gone.id),
-      `"${gone.name}" deleted`,
-    ).then((saved) => {
-      if (saved) setDeletingCharge(null);
-    });
-  }
-  function toggleCharge(id: string) {
-    void writeCharges(
-      charges.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c)),
-    );
   }
 
   return (
@@ -521,7 +369,7 @@ export function GroomingRates() {
               </div>
               <div>
                 <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Active Service Charges
+                  {t("activeTile")}
                 </p>
                 <p className="mt-0.5 text-2xl font-bold">{activeCharges}</p>
               </div>
@@ -545,7 +393,7 @@ export function GroomingRates() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="charges">
-            Service Charges
+            {t("sectionTitle")}
             <Badge variant="secondary" className="ml-2 text-[10px]">
               {charges.length}
             </Badge>
@@ -636,89 +484,92 @@ export function GroomingRates() {
         {/* ── Service charges tab ── */}
         <TabsContent value="charges" className="mt-0 space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between border-b">
-              <div>
-                <CardTitle className="text-base">Service Charges</CardTitle>
+            <CardHeader className="flex flex-wrap items-start justify-between gap-3 border-b">
+              <div className="min-w-0">
+                <CardTitle className="text-base">{t("sectionTitle")}</CardTitle>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  Special-circumstance fees staff can add to an appointment
-                  manually.
+                  {t("sectionNotice")}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t("readOnlyHint")}
                 </p>
               </div>
               {canEditPricing && (
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingCharge(null);
-                    setChargeDialogOpen(true);
-                  }}
-                >
-                  <Plus className="mr-1.5 size-4" />
-                  New Charge
-                </Button>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={settingsPath("pricing-rules")}>
+                      {t("sectionNoticeLink")}
+                    </Link>
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={settingsPending || charges.length === 0}
+                    onClick={() => setImportOpen(true)}
+                  >
+                    <ArrowRight className="mr-1.5 size-4" />
+                    {t("moveAction")}
+                  </Button>
+                </div>
               )}
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
-                {charges.map((sc) => (
-                  <div
-                    key={sc.id}
-                    className="hover:bg-muted/30 flex items-center justify-between gap-4 px-5 py-3"
-                  >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-900/20">
-                        <AlertCircle className="size-3.5 text-rose-500 dark:text-rose-400" />
+                {charges.map((sc) => {
+                  // A charge is in exactly one of three states, and the
+                  // interesting two are permanent: a per-unit charge will
+                  // NEVER move, so its reason lives here rather than only
+                  // inside the dialog that says it once and closes.
+                  const moved = isImported(sc, rules.customFees);
+                  const stuck =
+                    sc.type === "per-15min"
+                      ? t("reasonPer15min")
+                      : sc.type === "per-km"
+                        ? t("reasonPerKm")
+                        : null;
+                  return (
+                    <div
+                      key={sc.id}
+                      className="flex min-h-12 items-center justify-between gap-4 px-5 py-3"
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="bg-surface-inset flex size-8 shrink-0 items-center justify-center rounded-lg">
+                          {moved ? (
+                            <Check className="text-success size-3.5" />
+                          ) : stuck ? (
+                            <Ban className="text-warning size-3.5" />
+                          ) : (
+                            <AlertCircle className="text-ink-tertiary size-3.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium wrap-break-word">
+                            {sc.name}
+                          </p>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {moved
+                              ? t("skipAlready")
+                              : (stuck ?? sc.description)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{sc.name}</p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {sc.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold tabular-nums">
                           {sc.type === "percent"
-                            ? `${sc.amount}%`
-                            : `$${sc.amount}`}
+                            ? fill("percentAmount", { pct: String(sc.amount) })
+                            : money(sc.amount)}
                         </p>
                         <p className="text-muted-foreground text-[10px]">
-                          {SERVICE_CHARGE_TYPE_LABELS[sc.type]}
+                          {moved
+                            ? t("movedTag")
+                            : t(SERVICE_CHARGE_TYPE_KEYS[sc.type])}
                         </p>
                       </div>
-                      {canEditPricing && (
-                        <>
-                          <Switch
-                            checked={sc.isActive}
-                            onCheckedChange={() => toggleCharge(sc.id)}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => {
-                              setEditingCharge(sc);
-                              setChargeDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive size-8"
-                            onClick={() => setDeletingCharge(sc)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {charges.length === 0 && (
                   <div className="text-muted-foreground px-5 py-10 text-center text-sm">
-                    No service charges configured.
+                    {t("emptyList")}
                   </div>
                 )}
               </div>
@@ -735,43 +586,15 @@ export function GroomingRates() {
         locationId={scopeLocationId}
       />
 
-      {/* Charge editor */}
-      <ChargeEditorDialog
-        key={editingCharge?.id ?? "new-charge"}
-        open={chargeDialogOpen}
-        onOpenChange={(v) => {
-          setChargeDialogOpen(v);
-          if (!v) setEditingCharge(null);
-        }}
-        editing={editingCharge}
-        onSave={handleChargeSave}
+      {/* The one-way exit. It shows what moves, what never will, and why. */}
+      <GroomingChargeImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        charges={charges}
+        existingFees={rules.customFees}
+        isPending={settingsPending}
+        onImport={(fees) => void importCharges(fees)}
       />
-
-      {/* Charge delete confirmation */}
-      <Dialog
-        open={!!deletingCharge}
-        onOpenChange={(open) => !open && setDeletingCharge(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Service Charge</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold">{deletingCharge?.name}</span>?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingCharge(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleChargeDelete}>
-              <Trash2 className="mr-2 size-4" />
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
