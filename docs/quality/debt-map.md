@@ -20617,3 +20617,60 @@ null`.
   already exists and describes exactly the shape; nothing parses the body with
   it. Found by writing a spec with an incomplete payload, which is the only
   caller that has ever sent one.
+
+## 2026-09-23 — an unbounded read plus test debris makes a real screen lie
+
+**This is the SECOND time in three days**, and the first one is already written
+down — in `scripts/purge-e2e-bookings.ts`, about forms on 2026-09-20: _"`GET
+/api/forms` sets no limit, so PostgREST caps the answer at 1,000 rows, and
+`forms.spec.ts` started failing because the row it had just created sorted past
+the cap. Junk data made a real screen wrong, not just a test."_ The instance was
+fixed; the PATTERN was not, so it came back somewhere else.
+
+**What happened this time.** The nightly failed on
+`facility-task-groups.spec.ts:464` — a group created two lines earlier was not
+on screen. Measured:
+
+```
+try 1: 400 in 9149ms :: {"error":"canceling statement due to statement timeout"}
+try 2: 200 in 7569ms :: {"groups":[ …880 groups… ]}
+try 3: 400 in 9076ms :: {"error":"canceling statement due to statement timeout"}
+```
+
+`GET /api/task-groups` answered with EVERY group, each dragging two embeds — the
+department, and every item with its whole definition row. Against 880 groups it
+took 7.5–9s and sat on the statement timeout, so it failed about half the time.
+
+**The failure was invisible because the screen rendered it as emptiness.**
+`TaskGroupsTab` does `data ?? []`, so a timed-out read showed "Groups 0 · 0
+active" and an empty tab. A facility whose read fails is told it has no tasks.
+Its stats cards also printed `0` while the query was still in flight, which is
+the same lie with a shorter life: **a figure is a claim, and there is no figure
+yet while a read is in flight.** Both now show `—` until the answer arrives.
+
+**The debris was the whole load.** Measured directly: 880 groups, **880 of them
+named `[e2e]`**, 879 retired; 1,107 task definitions, **all 1,107 `[e2e]`**. The
+facility had ZERO real task groups. The suite retires its rows (`isActive:
+false`) because there is no DELETE route — a chore a group names is `on delete
+restrict` — so the rows stay forever, and the list kept fetching every one.
+
+**The fix was to stop reading history.** `/api/task-groups` now defaults to
+active and takes `includeRetired=1`, which is **exactly what its sibling
+`/api/task-definitions` already did** — the pattern existed in the same folder
+and this one route had missed it. 9149ms/400 became 1002ms/200, and the spec
+passes WITH the 880 rows still in place, which is what proves the bound is the
+fix rather than the cleanup.
+
+### What to check when a list screen "has no rows"
+
+1. **Is the read bounded?** No `.limit()` and no `is_active` filter means it
+   grows without end. PostgREST also caps at 1,000 rows silently.
+2. **Does the screen tell a failed read from an empty one?** `data ?? []` cannot.
+   An error state is required, and a COUNT must not render `0` while pending.
+3. **Does the suite's data accumulate?** Retiring is not deleting. If rows
+   cannot be deleted, the read must stop loading the retired ones.
+
+Still open: the debris itself (880 groups, 1,107 definitions) is only hygiene now
+that nothing loads it, and clearing it wants a `purge_e2e_task_groups()` RPC
+beside the existing ones — groups cascade to their items, definitions are
+`on delete restrict` and must go after them.

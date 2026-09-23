@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
+  Archive,
   CalendarClock,
   CalendarPlus,
   Camera,
@@ -28,6 +29,7 @@ import {
   type TaskGroupRow,
   type TaskGroupScope,
 } from "@/lib/api/task-groups";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { NewTaskGroupDialog } from "./NewTaskGroupDialog";
 
 // ============================================================================
@@ -286,45 +288,69 @@ function GroupCard({ group }: { group: TaskGroupRow }) {
 
 export function TaskGroupsTab({ scope }: { scope: TaskGroupScope }) {
   const [newOpen, setNewOpen] = useState(false);
+  // Retired groups are fetched only when asked for. They are history, and
+  // loading every one a facility ever retired is what made this read time out
+  // — see the route's own note.
+  const [showRetired, setShowRetired] = useState(false);
+  const { t, fill } = useStaffText("taskGroups");
   const { data, isPending, isError, error } = useQuery(
-    chorelistQueries.groups(scope),
+    chorelistQueries.groups(scope, showRetired),
   );
 
   const groups = useMemo<TaskGroupRow[]>(() => data ?? [], [data]);
   const activeCount = groups.filter((g) => g.isActive).length;
 
-  const blurb =
-    scope === "shift"
-      ? "Chores owed on a given shift. An empty day strip means every day."
-      : "Chores owed by everyone in a department.";
+  const blurb = scope === "shift" ? t("blurbShift") : t("blurbPosition");
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">{blurb}</p>
-        <Button onClick={() => setNewOpen(true)} className="gap-2">
-          <Plus className="size-4" />
-          New Group
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            aria-pressed={showRetired}
+            onClick={() => setShowRetired((on) => !on)}
+            className="gap-2"
+          >
+            <Archive className="size-4" />
+            {showRetired ? t("hideRetired") : t("showRetired")}
+          </Button>
+          <Button onClick={() => setNewOpen(true)} className="gap-2">
+            <Plus className="size-4" />
+            {t("newGroup")}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
-          <span className="text-muted-foreground text-[11px]">Groups</span>
-          <span className="text-2xl font-bold">{groups.length}</span>
           <span className="text-muted-foreground text-[11px]">
-            {activeCount} active
+            {t("groups")}
+          </span>
+          {/* A figure is a claim. While the read is in flight there is no
+              answer yet, and "0" is the one answer that reads as fact — which
+              is exactly how a timed-out query looked like an empty facility. */}
+          <span className="text-2xl font-bold">
+            {isPending || isError ? "—" : groups.length}
+          </span>
+          <span className="text-muted-foreground text-[11px]">
+            {isPending || isError
+              ? t("notLoaded")
+              : fill("nActive", { n: activeCount })}
           </span>
         </div>
         <div className="bg-card flex flex-col gap-1 rounded-xl border px-4 py-3">
           <span className="text-muted-foreground text-[11px]">
-            Chores assigned
+            {t("choresAssigned")}
           </span>
           <span className="text-2xl font-bold">
-            {groups.reduce((n, g) => n + g.items.length, 0)}
+            {isPending || isError
+              ? "—"
+              : groups.reduce((n, g) => n + g.items.length, 0)}
           </span>
           <span className="text-muted-foreground text-[11px]">
-            across all groups
+            {t("acrossAll")}
           </span>
         </div>
       </div>
@@ -338,9 +364,9 @@ export function TaskGroupsTab({ scope }: { scope: TaskGroupScope }) {
       ) : isError ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center rounded-md border py-12 text-center">
           <AlertTriangle className="mb-4 size-10 text-red-500 opacity-70" />
-          <p>Could not load these groups.</p>
+          <p>{t("loadFailed")}</p>
           <p className="mt-1 text-sm">
-            {error instanceof Error ? error.message : "Please try again."}
+            {error instanceof Error ? error.message : t("tryAgain")}
           </p>
         </div>
       ) : groups.length === 0 ? (

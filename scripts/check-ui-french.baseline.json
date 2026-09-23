@@ -799,7 +799,7 @@
     "src/app/facility/dashboard/tasks/OffboardingTasksTab.tsx": 10,
     "src/app/facility/dashboard/tasks/page.tsx": 16,
     "src/app/facility/dashboard/tasks/StandaloneTasksTab.tsx": 54,
-    "src/app/facility/dashboard/tasks/TaskGroupsTab.tsx": 28,
+    "src/app/facility/dashboard/tasks/TaskGroupsTab.tsx": 19,
     "src/app/facility/dashboard/tasks/TaskLibraryTab.tsx": 65,
     "src/app/facility/dashboard/waivers/page.tsx": 2,
     "src/app/facility/documents/_components/facility-documents-client.tsx": 30,

@@ -1468,6 +1468,24 @@
         "taskBoard": "Tableau des tâches",
         "noTasks": "Aucune tâche ouverte attribuée à {name}."
       },
+      "taskGroups": {
+        "showRetired": "Afficher les retirés",
+        "hideRetired": "Masquer les retirés",
+        "newGroup": "Nouveau groupe",
+        "groups": "Groupes",
+        "nActive": "{n} actifs",
+        "notLoaded": "Pas encore chargé",
+        "choresAssigned": "Tâches assignées",
+        "acrossAll": "dans tous les groupes",
+        "loadFailed": "Impossible de charger ces groupes.",
+        "tryAgain": "Réessayez.",
+        "blurbShift": "Tâches dues pendant un quart donné. Une bande de jours vide signifie tous les jours.",
+        "blurbPosition": "Tâches dues par tout le monde dans un département.",
+        "department": "Département",
+        "saveFailed": "Impossible d'enregistrer.",
+        "groupRetired": "Groupe retiré",
+        "groupRestored": "Groupe restauré"
+      },
       "preview": {
         "previewingAs": "Aperçu comme {name} — lecture seule",
         "exitPreview": "Quitter l’aperçu"

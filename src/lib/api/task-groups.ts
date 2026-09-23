@@ -86,14 +86,28 @@ export const chorelistQueries = {
       ).definitions,
   }),
 
-  groups: (scope?: TaskGroupScope) => ({
-    queryKey: ["chore-list", "groups", scope ?? "all"] as const,
-    queryFn: async () =>
-      (
-        await get<GroupsPayload>(
-          `/api/task-groups${scope ? `?scope=${scope}` : ""}`,
-        )
-      ).groups,
+  /**
+   * A facility's task groups — ACTIVE ones unless `includeRetired`.
+   *
+   * Retired groups are only wanted where one can be restored. Asking for them
+   * everywhere is what made this read exceed the statement timeout, and the
+   * screen showed the failure as an empty list.
+   */
+  groups: (scope?: TaskGroupScope, includeRetired = false) => ({
+    queryKey: [
+      "chore-list",
+      "groups",
+      scope ?? "all",
+      includeRetired ? "with-retired" : "active",
+    ] as const,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (scope) params.set("scope", scope);
+      if (includeRetired) params.set("includeRetired", "1");
+      const qs = params.toString();
+      return (await get<GroupsPayload>(`/api/task-groups${qs ? `?${qs}` : ""}`))
+        .groups;
+    },
   }),
 
   group: (id: string | undefined) => ({

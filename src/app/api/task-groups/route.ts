@@ -57,6 +57,21 @@ export async function GET(request: NextRequest) {
     query = query.eq("scope", scope);
   }
 
+  // ── RETIRED GROUPS ARE HISTORY, AND THEY ARE NOT FREE ──────────────────
+  //
+  // Every row here drags two embeds with it — the department, and each item
+  // with its whole definition. Answering with every group a facility has ever
+  // retired made this query take 7.5-9s against 880 of them and SOMETIMES
+  // exceed the statement timeout: a 400 the screen rendered as "Groups 0",
+  // so a facility was told it had no tasks rather than told the read failed.
+  //
+  // Active is what the tab is for, and both of the page's counters already
+  // filtered to it. `includeRetired=1` is how the one screen that shows
+  // retired groups — to offer Restore — asks for them.
+  if (params.get("includeRetired") !== "1") {
+    query = query.eq("is_active", true);
+  }
+
   const { data, error } = await query;
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

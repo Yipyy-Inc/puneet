@@ -1468,6 +1468,24 @@
         "taskBoard": "Task board",
         "noTasks": "No open tasks assigned to {name}."
       },
+      "taskGroups": {
+        "showRetired": "Show retired",
+        "hideRetired": "Hide retired",
+        "newGroup": "New group",
+        "groups": "Groups",
+        "nActive": "{n} active",
+        "notLoaded": "Not loaded yet",
+        "choresAssigned": "Chores assigned",
+        "acrossAll": "across all groups",
+        "loadFailed": "Could not load these groups.",
+        "tryAgain": "Try again.",
+        "blurbShift": "Chores owed on a given shift. An empty day strip means every day.",
+        "blurbPosition": "Chores owed by everyone in a department.",
+        "department": "Department",
+        "saveFailed": "Could not save that.",
+        "groupRetired": "Group retired",
+        "groupRestored": "Group restored"
+      },
       "preview": {
         "previewingAs": "Previewing as {name} — read only",
         "exitPreview": "Exit preview"
