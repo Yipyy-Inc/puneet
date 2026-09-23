@@ -1894,6 +1894,23 @@ export function BookingModal({
     const taxAmount = subtotal * taxRate;
     const total = subtotal + taxAmount;
 
+    // ── A SERVICE CHARGE IS NOT THE BOOKING'S PRICE ────────────────────────
+    //
+    // The customer still pays `total` — nothing on screen moves. But a custom
+    // fee is an ADDITION, not part of what the service costs, so it is
+    // written as a `booking_line_items` row by the server and must not also
+    // be inside `total_cost` or it would be charged twice.
+    //
+    // 20260806820000, Decision 3: "`total_cost` is the BOOKING's price and
+    // stays that. What a customer owes is `total_cost + extras_total`."
+    //
+    // So `serviceTotal` is what the booking is created with, and every
+    // displayed figure keeps using `total`.
+    const serviceChargeTotal = adjustments
+      .filter((adjustment) => adjustment.source === "custom_fee")
+      .reduce((sum, adjustment) => sum + adjustment.amount, 0);
+    const serviceTotal = Math.round((total - serviceChargeTotal) * 100) / 100;
+
     return {
       basePrice,
       rateGap,
@@ -1904,6 +1921,8 @@ export function BookingModal({
       taxRate,
       taxAmount,
       total,
+      serviceChargeTotal,
+      serviceTotal,
       effectiveExtraServices: pricingComputation.extraServices,
       medicationFeeTotal,
       feedingFeeTotal,
@@ -2583,7 +2602,11 @@ export function BookingModal({
       status: isCustomerMode ? "request_submitted" : "confirmed",
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
-      totalCost: calculatePrice.total,
+      // The SERVICE's price. Any custom fee is excluded here and written as a
+      // line item by the server, so the customer owes `total_cost +
+      // extras_total` — the same figure they were quoted, itemised. Putting
+      // the fee in both places would charge it twice.
+      totalCost: calculatePrice.serviceTotal,
       // No paymentStatus: a new booking has taken no money, and the database
       // says so rather than being told. See 20260806680000.
       specialRequests: specialRequests.trim() || undefined,

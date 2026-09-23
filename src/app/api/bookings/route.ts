@@ -35,6 +35,7 @@ import {
 import type { NewBooking } from "@/types/booking";
 import { autoConfirmCustomerBookings } from "@/lib/bookings/auto-confirm";
 import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
+import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
   FORM_REQUIRED,
@@ -461,6 +462,20 @@ export async function POST(request: NextRequest) {
   const autoConfirmed = await autoConfirmCustomerBookings(
     created.map((c) => c.booking_id),
   );
+
+  // ── THE FACILITY'S SERVICE CHARGES, AS LINES ON THE BILL ────────────────
+  //
+  // AFTER auto-confirm, because a customer's booking arrives with its price
+  // zeroed by the integrity trigger and a percentage fee against $0 would be
+  // $0 — and then stuck there, since a fee can land only once per booking.
+  // Auto-confirm is what puts the facility's own price on it.
+  //
+  // `created[0]` and no more: the wizard splits one request into a booking
+  // per day (daycare) or per room (boarding), so applying a fee to each row
+  // would turn a $15 cleaning fee into $75 on a five-day block.
+  //
+  // Never fails the booking, same contract as the tax stamp above.
+  await applyBookingServiceCharges([created[0].booking_id]);
 
   const { data: full } = await supabase
     .from("bookings")
