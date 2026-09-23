@@ -193,6 +193,21 @@ export function BookingCard({
     clientRef: ownerRef ?? 0,
     timeFees: pendingTimeFees,
     clearTimeFees: () => setPendingTimeFees([]),
+    // ── NO `serviceCharges` HERE, DELIBERATELY ───────────────────────────
+    //
+    // The booking page passes them; this card must not, and the asymmetry is
+    // the correct answer rather than an omission.
+    //
+    // `booking.amountDue` is `total_cost + extras_total`, so a service charge
+    // the create path already wrote is ALREADY in the figure above and in the
+    // one this card shows. Passing it again would display a doubled total and
+    // charge whatever the customer was shown.
+    //
+    // Excluding what is already there needs the booking's line items, which
+    // is a query per row on a board that renders many. The only booking this
+    // leaves uncharged is one that had no price when it was made — a
+    // customer's request — and those are priced and settled from the booking
+    // page, which does pass them.
     loyaltyDiscount,
     consumeLoyaltyDiscount,
     releaseLoyaltyDiscount,

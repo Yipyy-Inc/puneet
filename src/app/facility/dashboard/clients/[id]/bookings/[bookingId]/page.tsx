@@ -102,6 +102,13 @@ import {
 } from "@/lib/settings/deposits";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
+import { AddServiceChargeDialog } from "@/components/bookings/AddServiceChargeDialog";
+import {
+  automaticServiceCharges,
+  serviceChargeLines,
+  serviceChargesTotal,
+  type ServiceChargeLine,
+} from "@/lib/pricing/service-charge-lines";
 import {
   computeTimeFees,
   timeFeesTotal,
@@ -319,6 +326,9 @@ export default function ClientBookingDetailPage({
     serviceType: booking?.service?.toLowerCase(),
   });
   const [pendingTimeFees, setPendingTimeFees] = useState<TimeFeeResult[]>([]);
+  const [pendingServiceCharges, setPendingServiceCharges] = useState<
+    ServiceChargeLine[]
+  >([]);
   // ── THE MEMBERSHIP DISCOUNT COMES OFF THE BILL ─────────────────────────
   //
   // A member was sold "10% off" and nothing on the facility side ever took it
@@ -430,6 +440,7 @@ export default function ClientBookingDetailPage({
   const [prepaymentOpen, setPrepaymentOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [retailOpen, setRetailOpen] = useState(false);
+  const [serviceChargeOpen, setServiceChargeOpen] = useState(false);
   const [boardingSheetOpen, setBoardingSheetOpen] = useState(false);
   const [incidentOpen, setIncidentOpen] = useState(false);
   // Flow C: checkout must lock any open incident's in-stay care first. Holds the
@@ -584,6 +595,15 @@ export default function ClientBookingDetailPage({
     staleTime: 30_000,
   });
   const bookingLineItems = bookingLineItemsData ?? [];
+  // Which pricing rules have already charged this booking. `unique
+  // (booking_id, fee_id)` refuses a second one anyway; this is what lets the
+  // screen say so before the refusal, and keeps the till's arithmetic in step
+  // with the lines it is about to write.
+  const alreadyChargedFeeIds = new Set(
+    bookingLineItems
+      .map((line) => line.feeId)
+      .filter((id): id is string => Boolean(id)),
+  );
   const membershipOffer = booking
     ? memberDiscount(
         clientMembershipRows ?? [],
@@ -622,6 +642,7 @@ export default function ClientBookingDetailPage({
     clientRef: clientId,
     timeFees: pendingTimeFees,
     clearTimeFees: () => setPendingTimeFees([]),
+    serviceCharges: pendingServiceCharges,
     loyaltyDiscount,
     consumeLoyaltyDiscount,
     releaseLoyaltyDiscount,
@@ -1007,6 +1028,7 @@ export default function ClientBookingDetailPage({
       ),
     edit: () => setEditOpen(true),
     add_item: () => setRetailOpen(true),
+    add_service_charge: () => setServiceChargeOpen(true),
     transfer: () => setTransferOpen(true),
     report_incident: () => setIncidentOpen(true),
     // One step: the cancel dialog IS the confirmation — reason, refund, and
@@ -1112,6 +1134,31 @@ export default function ClientBookingDetailPage({
       );
     }
     setPendingTimeFees(fees);
+
+    // ── THE FACILITY'S SERVICE CHARGES, RE-CHECKED AT THE TILL ────────────
+    //
+    // The create path applies these already, so for most bookings this is a
+    // no-op — `ifAbsent` in the checkout hook makes a second attempt cost
+    // nothing. It exists for the booking that had no price when it was made:
+    // a customer's request arrives with `total_cost` zeroed by the integrity
+    // trigger, so a percentage fee was skipped, and this is where it lands
+    // once staff have priced it.
+    //
+    // Anything already on the bill is excluded here as well as by the
+    // constraint, so `amountDue` below matches what will actually be written.
+    setPendingServiceCharges(
+      serviceChargeLines(
+        automaticServiceCharges(
+          pricingRules.customFees,
+          booking.service.toLowerCase(),
+        ),
+        {
+          serviceId: booking.service.toLowerCase(),
+          petCount,
+          serviceTotal: booking.totalCost ?? 0,
+        },
+      ).filter((line) => !alreadyChargedFeeIds.has(line.feeId)),
+    );
     setCheckoutOpen(true);
   };
 
@@ -1691,13 +1738,21 @@ export default function ClientBookingDetailPage({
           // A pending late fee IS added on top: it is not a row until the
           // checkout writes it. (Fixture "incident care" used to be added here
           // too and was never billed — it is sample data, and it is gone.)
-          amountDue={balanceOf(booking) + timeFeesTotal(pendingTimeFees)}
+          // The service charges are in here because the checkout is about to
+          // WRITE them. A till that offers less than the lines it adds asks
+          // for one figure and leaves the customer owing another.
+          amountDue={
+            balanceOf(booking) +
+            timeFeesTotal(pendingTimeFees) +
+            serviceChargesTotal(pendingServiceCharges)
+          }
           // What they actually handed over, so "Amount Due" and the deduction
           // above it reconcile to the balance rather than to two sources.
           depositPaid={booking.amountPaid ?? 0}
           invoiceTotal={
             (booking.amountDue ?? booking.totalCost + addedSubtotal) +
-            timeFeesTotal(pendingTimeFees)
+            timeFeesTotal(pendingTimeFees) +
+            serviceChargesTotal(pendingServiceCharges)
           }
           clientRowId={
             (booking as { clientRowId?: string }).clientRowId ?? null
@@ -1903,6 +1958,45 @@ export default function ClientBookingDetailPage({
                   // price and multiplies it back.
                   unitPrice: i.price / i.quantity,
                   quantity: i.quantity,
+                })),
+              },
+              {
+                onSuccess: (result) =>
+                  toast.success(
+                    detailFill(
+                      result.items.length === 1
+                        ? "itemsAddedOne"
+                        : "itemsAddedMany",
+                      { n: result.items.length, ref: bookingRef },
+                    ),
+                  ),
+                onError: (error) => toast.error(error.message),
+              },
+            );
+          }}
+        />
+        <AddServiceChargeDialog
+          open={serviceChargeOpen}
+          onOpenChange={setServiceChargeOpen}
+          serviceId={String(booking.service ?? "")}
+          petCount={Array.isArray(booking.petId) ? booking.petId.length : 1}
+          // The SERVICE's price, which is what `total_cost` now holds — a
+          // percentage fee is a percentage of that, never of the running
+          // total, or two of them would compound into each other.
+          serviceTotal={booking.totalCost ?? 0}
+          appliedFeeIds={[...alreadyChargedFeeIds]}
+          // `ifAbsent` is NOT set: a duplicate here is a mistake worth seeing,
+          // and the dialog has already disabled everything on the bill.
+          onAdd={(lines) => {
+            addLineItems.mutate(
+              {
+                bookingRef: booking.id,
+                items: lines.map((line) => ({
+                  kind: line.kind,
+                  name: line.name,
+                  unitPrice: line.unitPrice,
+                  quantity: line.quantity,
+                  feeId: line.feeId,
                 })),
               },
               {

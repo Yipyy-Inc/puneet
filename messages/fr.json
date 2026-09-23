@@ -3621,6 +3621,7 @@
         "reinstate": "Rétablir la réservation",
         "edit": "Modifier la réservation",
         "addItem": "Ajouter un article",
+        "addServiceCharge": "Ajouter des frais de service",
         "transfer": "Déplacer vers un autre emplacement",
         "reportIncident": "Signaler un incident",
         "sendPayLink": "Envoyer un lien de paiement",
@@ -3736,6 +3737,20 @@
         "closeScanner": "Fermer le lecteur",
         "scanned": "Scanné : {name}",
         "noBarcode": "Aucun produit n’a le code-barres {code}"
+      },
+      "addServiceCharge": {
+        "title": "Ajouter des frais de service",
+        "subtitle": "Les frais que cet établissement a définis pour ce service.",
+        "none": "Aucuns frais de service pour ce service",
+        "noneHint": "Définissez-les dans Paramètres, sous les règles de tarification.",
+        "alreadyOnBill": "Déjà sur cette facture",
+        "perPet": "{each} chacun, {n} animaux",
+        "percentOf": "{pct} % de {base}",
+        "oncePerBooking": "Une seule fois pour cette réservation",
+        "remove": "Retirer {name}",
+        "goBack": "Retour",
+        "addToBill": "Ajouter à la facture",
+        "addWithTotal": "Ajouter {amount} à la facture"
       },
       "tipSplit": {
         "title": "Répartir les pourboires",

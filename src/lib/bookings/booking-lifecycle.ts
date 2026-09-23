@@ -114,6 +114,7 @@ export type BookingActionId =
   // any open booking
   | "edit"
   | "add_item"
+  | "add_service_charge"
   | "transfer"
   | "report_incident"
   | "send_pay_link"
@@ -180,6 +181,7 @@ export function availableActions(
       add("edit", "secondary", canEdit);
       add("charge_deposit", "secondary", canPay && ctx.depositDue);
       add("add_item", "secondary", canPay);
+      add("add_service_charge", "more", canPay);
       add("transfer", "more", canEdit && ctx.multiLocation);
       add("report_incident", "more", canIncident);
       add("cancel", "reverse", canCancel);
@@ -195,6 +197,7 @@ export function availableActions(
         canPay && ctx.owed > 0 && !ctx.depositDue,
       );
       add("add_item", "secondary", canPay);
+      add("add_service_charge", "more", canPay);
       add("send_pay_link", "more", canPay && ctx.owed > 0);
       add("transfer", "more", canEdit && ctx.multiLocation);
       add("report_incident", "more", canIncident);
@@ -221,6 +224,7 @@ export function availableActions(
       );
       add("edit", "secondary", canEdit);
       add("add_item", "secondary", canPay);
+      add("add_service_charge", "more", canPay);
       add("send_pay_link", "more", canPay && ctx.owed > 0);
       add("transfer", "more", canEdit && ctx.multiLocation);
       add("report_incident", "more", canIncident);

@@ -22,6 +22,7 @@ import { useStoreCredit, useWriteStoreCredit } from "@/lib/api/store-credit";
 import { useChargeOnTerminal } from "@/lib/api/terminals";
 import { planSplit, type PlannedPart } from "@/lib/checkout/plan-split";
 import { timeFeesTotal, type TimeFeeResult } from "@/lib/policies/time-fee";
+import type { ServiceChargeLine } from "@/lib/pricing/service-charge-lines";
 import type { Booking } from "@/types/booking";
 
 // ============================================================================
@@ -68,6 +69,18 @@ export function useBookingCheckout(input: {
    */
   timeFees: TimeFeeResult[];
   clearTimeFees: () => void;
+  /**
+   * The facility's own service charges, from `serviceChargeLines()`.
+   *
+   * No evaluator call happens in here — these arrive already chosen, exactly
+   * as `timeFees` do, so the hook cannot disagree with the figure the screen
+   * showed before the button was pressed.
+   *
+   * Every one of them may ALREADY be on the booking: the create path applies
+   * the automatic ones. They are written with `ifAbsent`, and only what that
+   * actually inserts is added to what the customer is asked for.
+   */
+  serviceCharges?: ServiceChargeLine[];
   loyaltyDiscount: Discount | null | undefined;
   consumeLoyaltyDiscount: (bookingRef: number) => Promise<unknown>;
   releaseLoyaltyDiscount: () => Promise<unknown>;
@@ -140,7 +153,51 @@ export function useBookingCheckout(input: {
       }
     }
 
-    // ── 3. The time fees and the reward go on the bill — every tender ────
+    // ── 3. What the bill gains, before anybody is asked for money ────────
+    //
+    // The service charges go FIRST and in a call of their own, because they
+    // are the only lines here that may already exist — the create path writes
+    // the automatic ones, and `unique (booking_id, fee_id)` means a second
+    // attempt must cost nothing rather than fail.
+    //
+    // A call of their own, rather than `ifAbsent` over the whole basket, for
+    // one reason: the answer lists only the rows actually INSERTED, and it
+    // carries no `fee_id` to tell them apart. Mixed in with the reward and
+    // the time fees, there would be no way to know how much of it was new —
+    // and adding a charge the booking already carried to `amountDue` is the
+    // double charge this whole design exists to prevent.
+    let serviceChargeAdded = 0;
+    const charges = input.serviceCharges ?? [];
+    if (charges.length > 0) {
+      try {
+        const written = await addLineItems.mutateAsync({
+          bookingRef: booking.id,
+          ifAbsent: true,
+          items: charges.map((charge) => ({
+            kind: charge.kind,
+            name: charge.name,
+            unitPrice: charge.unitPrice,
+            quantity: charge.quantity,
+            feeId: charge.feeId,
+          })),
+        });
+        // `price` is generated as `unit_price * quantity` in the database, so
+        // this is the money that landed, not the money that was offered.
+        serviceChargeAdded = (written.items ?? []).reduce(
+          (sum, item) => sum + (Number(item.price) || 0),
+          0,
+        );
+      } catch (error) {
+        // Nothing has been charged and the reward is already spent.
+        if (reward) await input.releaseLoyaltyDiscount();
+        throw error instanceof Error
+          ? error
+          : new Error("The service charges could not be added.");
+      }
+    }
+
+    // The time fees and the reward — neither can already be there, so a
+    // duplicate stays the error it has always been.
     const lines: {
       kind: "item" | "fee";
       name: string;
@@ -191,7 +248,10 @@ export function useBookingCheckout(input: {
       amountDue: Math.max(
         0,
         (booking.amountDue ?? booking.totalCost) +
-          timeFeeTotal -
+          timeFeeTotal +
+          // Only what was actually inserted above. A charge the booking
+          // already carried is already inside `amountDue`.
+          serviceChargeAdded -
           (reward?.amount ?? 0) -
           (memberOff?.amount ?? 0),
       ),

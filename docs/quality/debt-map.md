@@ -20553,3 +20553,67 @@ something compiles" — `next build` writes `.next` whatever it was run for.
 And read a mass sign-in failure as INFRASTRUCTURE first. A page that renders
 but cannot hydrate looks identical to correct software; the tell is that the
 failures are not about the thing being tested.
+
+## 2026-09-23 — a service charge reaches the bill, and what still does not
+
+A custom fee used to be folded into `bookings.total_cost`, indistinguishable
+from the base price: invisible on an invoice, invisible to every report, with
+no record of which rule charged it. It is a `booking_line_items` row now, with
+`fee_id` naming the rule and `unique (booking_id, fee_id)` making MoéGo's "once
+per appointment" a database fact rather than a discipline three call sites have
+to remember. `total_cost` went back to being the SERVICE's price, which is what
+20260806820000's Decision 3 always said it was.
+
+**This does NOT clear the 2026-09-11 "still open" above.** That entry is about
+`grooming_service_charges`, a SECOND and entirely separate fee domain holding
+three charges a real facility authored. Nothing applies those to a bill yet;
+they are retired into custom fees in a later phase, by a one-way importer that
+must refuse `per-15min` and `per-km` **by name and with a reason** — neither
+maps onto `customFeeSchema`, and the live facility's matting fee is `per-15min`,
+so that path runs on its first use rather than hypothetically.
+
+### Three traps this work hit, none of them obvious
+
+**A capped fee is ONE charge of the cap.** `booking_line_items.price` is
+GENERATED as `unit_price * quantity`, so a $25 cap over three pets written as
+three units is 8.33 × 3 = **$24.99** — a facility setting a cap of 25 and
+charging 24.99, forever. The line collapses to a single unit when the cap binds
+and keeps its `×3` when it does not. Caught by a unit test, not by review.
+
+**The till must add only what it actually INSERTED.** `ifAbsent` upserts and
+answers with the rows that landed, which is the only figure that may reach
+`amountDue` — a charge the booking already carried is already inside it, and
+adding it again is the double charge the whole design exists to remove. The
+answer carries no `fee_id`, so service charges are written in a call of their
+own rather than mixed into the reward/time-fee basket, where there would be no
+way to tell how much was new.
+
+**The dashboard card deliberately does NOT pass `serviceCharges`, and the
+asymmetry with the booking page is correct.** `booking.amountDue` is
+`total_cost + extras_total`, so a charge the create path wrote is already in the
+figure that card displays; passing it again would show a doubled total and then
+charge what was shown. Excluding what is already there needs the booking's line
+items — a query per row on a board that renders many. The only booking this
+leaves uncharged is one that had no price when it was made (a customer's
+request, zeroed by `enforce_booking_integrity`), and those are priced and
+settled from the booking page, which does pass them.
+
+### Still open, with the reason
+
+- **Per-branch fee PRICING.** Every existing override table points at a row with
+  a uuid PK; a custom fee is a client-generated string id inside a JSON array,
+  so there is nothing for a foreign key to point at. Per-branch AVAILABILITY
+  (`applicableLocationIds`) gets most of the value with no table, trigger or
+  RLS. Real per-branch pricing needs custom fees promoted out of the settings
+  blob into a table first.
+- **Commission has no engine**, so MoéGo's "exclude service charges from staff
+  commission" has nothing to exclude from — `PayrollConfig` stores a percentage
+  nothing computes. When one is built, it excludes them with `where fee_id is
+null`.
+- **`POST /api/bookings` answers 500, not 422, on a malformed `parts` entry.**
+  The route checks that `parts` is an array and bounds its length, then hands it
+  to `expandBookingParts`, which reads `part.petIds.length` — so a part missing
+  its required fields throws where nothing catches it. `bookingPartSchema`
+  already exists and describes exactly the shape; nothing parses the body with
+  it. Found by writing a spec with an incomplete payload, which is the only
+  caller that has ever sent one.

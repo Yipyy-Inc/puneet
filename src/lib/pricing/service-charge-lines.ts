@@ -80,6 +80,26 @@ export function manualServiceCharges(
 }
 
 /**
+ * Every active fee a member of staff could put on THIS booking, whatever its
+ * trigger — what MoéGo's "Add service charges" picker offers.
+ *
+ * Wider than `manualServiceCharges` on purpose. An automatic fee is offered
+ * too, because the picker's job is to show the facility's whole list and mark
+ * what the booking already carries; hiding the automatic ones would leave
+ * staff wondering where the cleaning fee went. The ones already on the bill
+ * are the caller's to disable — `booking_line_items.fee_id` says which.
+ */
+export function applicableServiceCharges(
+  fees: CustomFee[] | undefined,
+  serviceId: string,
+): CustomFee[] {
+  return (fees ?? []).filter(
+    (fee) =>
+      fee.isActive && appliesToService(serviceId, fee.applicableServices),
+  );
+}
+
+/**
  * What one fee costs on this booking.
  *
  * Returns null when it comes to nothing — a percentage of a zero price, an

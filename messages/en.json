@@ -3621,6 +3621,7 @@
         "reinstate": "Reinstate the booking",
         "edit": "Edit the booking",
         "addItem": "Add an item",
+        "addServiceCharge": "Add service charges",
         "transfer": "Move to another location",
         "reportIncident": "Report an incident",
         "sendPayLink": "Send a payment link",
@@ -3736,6 +3737,20 @@
         "closeScanner": "Close the scanner",
         "scanned": "Scanned: {name}",
         "noBarcode": "No product has the barcode {code}"
+      },
+      "addServiceCharge": {
+        "title": "Add service charges",
+        "subtitle": "The charges this facility has set up for this service.",
+        "none": "No service charges for this service",
+        "noneHint": "Set them up in Settings, under pricing rules.",
+        "alreadyOnBill": "Already on this bill",
+        "perPet": "{each} each, {n} pets",
+        "percentOf": "{pct}% of {base}",
+        "oncePerBooking": "Once for this booking",
+        "remove": "Take {name} back off",
+        "goBack": "Go back",
+        "addToBill": "Add to the bill",
+        "addWithTotal": "Add {amount} to the bill"
       },
       "tipSplit": {
         "title": "Split the tips",

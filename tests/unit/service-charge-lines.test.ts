@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  applicableServiceCharges,
   automaticServiceCharges,
   manualServiceCharges,
   serviceChargeLine,
@@ -78,6 +79,22 @@ describe("which fees apply without asking anything about the customer", () => {
     expect(manualServiceCharges(fees, "boarding").map((f) => f.id)).toEqual([
       "manual",
     ]);
+  });
+
+  test("the picker is offered every active fee for the service, automatic ones included", () => {
+    // Wider than `manualServiceCharges` on purpose: the dialog shows the
+    // facility's whole list and marks what the booking already carries, so an
+    // automatic fee must appear rather than seem to have vanished.
+    const fees = [
+      fee({ id: "auto", autoApply: "at_checkout" }),
+      fee({ id: "manual", autoApply: "none" }),
+      fee({ id: "segment", autoApply: "customer_segment" }),
+      fee({ id: "off", isActive: false }),
+      fee({ id: "other-service", applicableServices: ["grooming"] }),
+    ];
+    expect(applicableServiceCharges(fees, "boarding").map((f) => f.id)).toEqual(
+      ["auto", "manual", "segment"],
+    );
   });
 
   test("a manual fee scoped to another service is not offered", () => {

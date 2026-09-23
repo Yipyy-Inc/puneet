@@ -54,6 +54,13 @@ export interface BookingLineItem {
   price: number;
   authorName: string;
   createdAt: string;
+  /**
+   * The pricing rule that charged this line, when one did.
+   *
+   * Read so a picker can show a fee the booking ALREADY carries as added and
+   * disabled, rather than letting staff find out by getting a 409 back.
+   */
+  feeId?: string;
 }
 
 /**
@@ -86,7 +93,7 @@ export async function GET(
   const { data, error } = await supabase
     .from("booking_line_items")
     .select(
-      "id, kind, name, unit_price, quantity, price, author_name, created_at",
+      "id, kind, name, unit_price, quantity, price, author_name, created_at, fee_id",
     )
     .eq("booking_id", booking.id)
     .order("created_at", { ascending: true });
@@ -104,6 +111,7 @@ export async function GET(
     price: number | string | null;
     author_name: string;
     created_at: string;
+    fee_id: string | null;
   }[];
 
   return NextResponse.json(
@@ -119,6 +127,7 @@ export async function GET(
         r.price === null ? Number(r.unit_price) * r.quantity : Number(r.price),
       authorName: r.author_name,
       createdAt: r.created_at,
+      ...(r.fee_id ? { feeId: r.fee_id } : {}),
     })) satisfies BookingLineItem[],
   );
 }
