@@ -197,6 +197,14 @@ const SAME_IN_BOTH = new Set([
   "staff.bookingReadiness.documents", // Documents / Documents
   "staff.retailStore.transactionsCount", // {n} transactions / {n} transactions
   "staff.retailStore.totalLabel", // Total / Total
+  // The daycare menu: three cognates, a URL and a unit symbol.
+  "staff.daycareServices.servicesTab", // Services / Services
+  "staff.daycareServices.description", // Description / Description
+  "staff.daycareServices.image", // Image / Image
+  "staff.daycareServices.imagePlaceholder", // https://… — not a word
+  // The hour SYMBOL, which French keeps: "14 h 30" is the correct form and
+  // is exactly why this must not be "translated" to anything else.
+  "staff.includedAddOns.hour", // h / h
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */
