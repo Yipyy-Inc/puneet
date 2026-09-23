@@ -20786,6 +20786,50 @@ and a full page, and only one of them wants `xl:grid-cols-4`. Tailwind v4 has
 `@container` built in and that is the real fix; it was left alone here because
 this change was about a report, not about the shell.
 
+## 2026-09-23 — the lapsed-clients read can time out in CI, and the obvious measurement says it cannot
+
+`automation-send-boundary.spec.ts` failed in CI on `235a1a00` with
+`{"error":"canceling statement due to statement timeout"}` on the
+`GET /api/rebook/lapsed` read — twice in one run, once after a retry. Postgres
+cancelled the statement; this is not a test being impatient, and no timeout in
+the spec can fix it.
+
+**It is load-dependent, and that is measured rather than assumed.** Eleven
+consecutive CI runs had gone green that day and this was the first red, so
+"flake" needed evidence: re-running the failed job alone brought the whole run
+back green, and the spec passes locally (6 passed, 1 skipped) against the same
+shared database. So it is real, intermittent, and it will happen again.
+
+**THE TRAP, and it cost a wrong conclusion before it was caught.** The obvious
+check is to `EXPLAIN (ANALYZE)` the function's own scan:
+
+```
+-- as the database owner, via SUPABASE_DB_URL
+explain (analyze, buffers)
+select distinct on (b.client_id, b.service) ...
+  from public.bookings b
+ where b.facility_id = ... and b.status = 'completed' ...
+```
+
+That returns **0.119 ms** on the busiest facility, a clean index scan on
+`bookings_status_idx`, and reads as an exoneration. It is the wrong
+measurement. `public.lapsed_clients` is `security invoker`, and
+`src/app/api/rebook/lapsed/route.ts` calls it through `createServerClient()` —
+the SESSION user — so the shipped path evaluates the `bookings` RLS policies
+over every row the scan touches. A superuser `EXPLAIN` skips all of it, which
+is exactly why it looks fast.
+
+**So measure it as the role that runs it**, with `set local role authenticated`
+and the session's JWT claims, or the number means nothing. Not yet done: fixing
+it plausibly touches an RLS policy or swaps the route to an admin client, and
+both are authorisation-boundary decisions rather than performance tuning.
+
+**One more number worth having first.** `bookings` held 2,380 rows that day,
+2,174 of them cancelled — 91% — and `purge_e2e_bookings()` could take only 13
+of them, because the rest carry a payment, store credit or a package pass and
+keep their row by design. The table only grows, so whatever this costs under
+RLS costs more every week.
+
 ## 2026-09-23 — a discount was subtracted twice, and a green gate pinned it
 
 The client asked for MoéGo's **discount pricing** page. Unlike the service-charge
