@@ -98,7 +98,6 @@ import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { boardingNightlyRate, boardingPricing } from "@/lib/boarding-pricing";
-import { daycareDayRate } from "@/lib/daycare-pricing";
 import { rateGapMessage, type RateGap } from "@/lib/bookings/rate-gap";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { boardingParts, daycareParts } from "@/lib/bookings/booking-parts";
@@ -746,6 +745,18 @@ export function BookingModal({
         ? "full_day"
         : "",
   );
+  // ── WHICH DAYCARE SERVICE ────────────────────────────────────────────
+  //
+  // The facility's choice, carried as a row id. Until 2026-09-23 nobody
+  // chose: `daycareRateForHours` charged the cheapest active rate covering
+  // the stay, so the menu was decoration and a receipt could not name what
+  // was sold. The price rides along so the quote does not re-read the
+  // catalogue on every keystroke.
+  const [daycareService, setDaycareService] = useState<{
+    rowId: string;
+    name: string;
+    price: number;
+  } | null>(null);
   const [startDate, setStartDate] = useState(preSelectedStartDate ?? "");
   const [endDate, setEndDate] = useState(preSelectedEndDate ?? "");
   const [checkInTime, setCheckInTime] = useState(
@@ -1526,27 +1537,18 @@ export function BookingModal({
       [];
 
     if (selectedService === "daycare") {
-      // A branch's own rate, then the facility's rate card. Nothing stands in
-      // for a facility that has set neither — see @/lib/daycare-pricing.
-      const pricePerDay = daycareDayRate({
-        branchPrice: daycareLocationPrices.find(
-          (p) => p.locationId === currentLocationId,
-        )?.basePrice,
-        rates: daycareRateCards,
-        // The LONGEST day chosen. A rate has to cover the stay, and pricing a
-        // three-hour Monday and a ten-hour Tuesday from the shorter of the two
-        // would undercharge the Tuesday — the one direction a pricing bug must
-        // not go.
-        hours: longestDaycareDayHours,
-        // Only when every pet chosen is one species: a dog and a cat on one
-        // booking have no single answer, so none is passed and every rate
-        // stays a candidate.
-        species: soleSelectedSpecies,
-      });
-      if (pricePerDay === null) {
+      // THE SERVICE THE FACILITY PICKED, at this branch's price — the picker
+      // already resolved the branch, so this is the number on the card the
+      // user clicked. Nothing stands in for a facility that has authored no
+      // daycare service, and nothing is guessed from the length of the day.
+      //
+      // No choice is a rate GAP, which the wizard renders as a refusal and
+      // which disables Create. Never a zero: a zero is a free day nobody
+      // agreed to.
+      if (!daycareService) {
         rateGap = { kind: "daycare" };
       } else {
-        basePrice = pricePerDay * daycareSelectedDates.length;
+        basePrice = daycareService.price * daycareSelectedDates.length;
       }
     } else if (selectedService === "boarding") {
       // Priced by the KENNEL CLASS the pet is assigned to, not one flat rate.
@@ -2610,7 +2612,15 @@ export function BookingModal({
       facilityId,
       service: selectedService,
       serviceType:
-        selectedService === "evaluation" ? "evaluation" : serviceType,
+        selectedService === "evaluation"
+          ? "evaluation"
+          : // Daycare's `service_type` is the service's NAME now, not
+            // `full_day`/`half_day` derived from a five-hour rule of thumb.
+            // The id travels in `details.daycareServiceId`, which is what
+            // the server re-price and the tax stamp resolve.
+            selectedService === "daycare" && daycareService
+            ? daycareService.name
+            : serviceType,
       startDate:
         daycareDay ??
         (selectedService === "boarding" && boardingRangeStart
@@ -2645,6 +2655,12 @@ export function BookingModal({
       totalCost: calculatePrice.serviceTotal,
       // No paymentStatus: a new booking has taken no money, and the database
       // says so rather than being told. See 20260806680000.
+      // The id the server re-price and the tax stamp resolve. Without it
+      // both fall back to the pre-cutover rule and disagree with the quote.
+      daycareServiceId:
+        selectedService === "daycare"
+          ? (daycareService?.rowId ?? null)
+          : undefined,
       specialRequests: specialRequests.trim() || undefined,
       daycareSelectedDates:
         daycareSelectedDates.length > 0
@@ -4373,6 +4389,8 @@ export function BookingModal({
                       setCheckOutTime={setCheckOutTime}
                       serviceType={serviceType}
                       setServiceType={setServiceType}
+                      daycareServiceId={daycareService?.rowId ?? null}
+                      onDaycareServiceChange={setDaycareService}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}
                       medications={medications}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { PawPrint, Check, Sun, Gift, Lock } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import { DaycareServicePicker } from "./DaycareServicePicker";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
 import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
@@ -44,6 +45,11 @@ interface DaycareDetailsProps {
     times: Array<{ date: string; checkInTime: string; checkOutTime: string }>,
   ) => void;
   setServiceType: (type: string) => void;
+  /** The daycare service chosen, by row id. */
+  daycareServiceId: string | null;
+  onDaycareServiceChange: (
+    service: { rowId: string; name: string; price: number } | null,
+  ) => void;
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
   medications: MedicationItem[];
@@ -70,6 +76,8 @@ export function DaycareDetails({
   daycareDateTimes,
   setDaycareDateTimes,
   setServiceType,
+  daycareServiceId,
+  onDaycareServiceChange,
   feedingSchedule,
   setFeedingSchedule,
   medications,
@@ -149,6 +157,22 @@ export function DaycareDetails({
     return stepIndex === 0 || allPreviousCompleted(stepIndex);
   };
 
+  // What the eligibility rules are matched against. Only when every pet
+  // chosen is ONE species does a species rule have a single answer — the
+  // same reason the price passes `soleSelectedSpecies` and not a list.
+  const petFacts = useMemo(() => {
+    const species = new Set(
+      selectedPets.map((p) => p.type?.trim().toLowerCase()).filter(Boolean),
+    );
+    const first = selectedPets[0];
+    return {
+      species: species.size === 1 ? (first?.type ?? null) : null,
+      breed: selectedPets.length === 1 ? (first?.breed ?? null) : null,
+      weightLb: selectedPets.length === 1 ? (first?.weight ?? null) : null,
+      petTags: [] as string[],
+    };
+  }, [selectedPets]);
+
   return (
     <div className="space-y-6">
       {/* Step Content */}
@@ -168,6 +192,16 @@ export function DaycareDetails({
               </div>
             </div>
 
+            {/* WHICH SERVICE, then which days. Nothing used to be chosen
+                here at all — the price came from whichever active rate was
+                cheapest for the hours, so a receipt could not say what had
+                been sold. */}
+            <DaycareServicePicker
+              value={daycareServiceId}
+              onChange={onDaycareServiceChange}
+              pet={petFacts}
+            />
+
             <div className="overflow-hidden rounded-xl border shadow-sm">
               <DateSelectionCalendar
                 mode="multi"
@@ -177,22 +211,10 @@ export function DaycareDetails({
                 dateTimes={daycareDateTimes}
                 onDateTimesChange={(times) => {
                   setDaycareDateTimes(times);
-                  if (times.length > 0) {
-                    const firstTime = times[0];
-                    const checkIn = firstTime.checkInTime.split(":");
-                    const checkOut = firstTime.checkOutTime.split(":");
-                    const checkInMinutes =
-                      parseInt(checkIn[0]) * 60 + parseInt(checkIn[1]);
-                    const checkOutMinutes =
-                      parseInt(checkOut[0]) * 60 + parseInt(checkOut[1]);
-                    const hoursSpent = (checkOutMinutes - checkInMinutes) / 60;
-
-                    if (hoursSpent <= 5) {
-                      setServiceType("half_day");
-                    } else {
-                      setServiceType("full_day");
-                    }
-                  }
+                  // The hours USED to decide the service here — "under five
+                  // means half day" — and the money path never read the
+                  // answer. The service is picked above now, and it is what
+                  // names the booking.
                 }}
                 facilityHours={hours}
                 scheduleTimeOverrides={scheduleTimeOverridesForDaycare}

@@ -1,8 +1,9 @@
 import "server-only";
 
-import { daycareDayRate } from "@/lib/daycare-pricing";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
+import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
 
 // ============================================================================
@@ -98,6 +99,23 @@ export interface PriceRequest {
    */
   hours?: number;
   /**
+   * Daycare: WHICH service the booking is for.
+   *
+   * The one field that makes this agree with the wizard. Without it the
+   * server falls back to the pre-cutover rule — the cheapest service whose
+   * ceiling covers the stay — which is right for an old booking and wrong
+   * for a new one, because the facility chose.
+   */
+  daycareServiceId?: string | null;
+  /**
+   * The branch the booking belongs to, when it has one.
+   *
+   * A branch's own price REPLACES the facility's for that branch, so
+   * quoting one and re-pricing the other is a `quote_mismatch` that stops
+   * the booking auto-confirming for a reason nobody can see.
+   */
+  locationId?: string | null;
+  /**
    * Daycare: the animal being booked, when every pet on it is one species.
    *
    * A rate may be offered to some species rather than all. Undefined leaves
@@ -163,20 +181,26 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   return { ok: true, basePrice: total, total };
 }
 
-/** Days × the facility's own day rate. */
+/** Days × the price of the service the booking names. */
 async function priceDaycare(input: PriceRequest): Promise<ServerQuote> {
-  const parsed = SETTING_DOMAINS.daycare_rates.schema.safeParse(
-    await settingValue(input.facilityId, "daycare_rates"),
+  // THE SAME ROW THE WIZARD PRICED FROM, resolved by the id the booking
+  // carries. A booking made before the cutover has no id and falls back to
+  // the old rule, which is what it was sold at.
+  const services = await loadDaycareServices(
+    input.facilityId,
+    input.locationId ?? null,
   );
-  const rates = parsed.success ? parsed.data.rates : [];
-
-  const perDay = daycareDayRate({
-    branchPrice: null,
-    rates,
+  const chosen = resolveDaycareService(services, {
+    serviceId: input.daycareServiceId,
     hours: input.hours,
     species: input.species,
   });
-  if (perDay === null) return { ok: false, reason: "no_rate" };
+  if (!chosen) return { ok: false, reason: "no_rate" };
+
+  // The branch's own price where it set one — the mapper already resolved it
+  // for `locationId`. This is why the customer path must pass the branch:
+  // quoting the facility price and re-pricing the branch one is a mismatch.
+  const perDay = chosen.price;
 
   const days = input.daycareDates?.length
     ? input.daycareDates.length

@@ -235,6 +235,14 @@ export const newBookingSchema = z.object({
   assignedStaff: z.string().optional(),
   tipAmount: z.number().optional(),
   // Service-specific fields
+  /**
+   * WHICH daycare service this booking is for — the row id.
+   *
+   * The server re-price and the tax stamp both resolve it, so the three
+   * numbers cannot belong to three different services. Absent on a booking
+   * made before 2026-09-23, which falls back to the pre-cutover rule.
+   */
+  daycareServiceId: z.string().nullable().optional(),
   daycareSelectedDates: z.array(z.string()).optional(),
   daycareDateTimes: z.array(daycareDateTimeSchema).optional(),
   groomingStyle: z.string().optional(),

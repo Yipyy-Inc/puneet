@@ -61,6 +61,11 @@ interface DetailsStepProps {
   setCheckOutTime: (value: string) => void;
   serviceType: string;
   setServiceType: (value: string) => void;
+  /** Daycare: the service chosen, by row id. */
+  daycareServiceId: string | null;
+  onDaycareServiceChange: (
+    service: { rowId: string; name: string; price: number } | null,
+  ) => void;
   // Common
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (value: FeedingScheduleItem[]) => void;
@@ -140,6 +145,8 @@ export function DetailsStep({
   setCheckOutTime,
   serviceType,
   setServiceType,
+  daycareServiceId,
+  onDaycareServiceChange,
   feedingSchedule,
   setFeedingSchedule,
   medications,
@@ -181,6 +188,8 @@ export function DetailsStep({
           daycareDateTimes={daycareDateTimes}
           setDaycareDateTimes={setDaycareDateTimes}
           setServiceType={setServiceType}
+          daycareServiceId={daycareServiceId}
+          onDaycareServiceChange={onDaycareServiceChange}
           feedingSchedule={feedingSchedule}
           setFeedingSchedule={setFeedingSchedule}
           medications={medications}

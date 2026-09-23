@@ -362,6 +362,14 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await dialog
       .getByRole("button", { name: String(second), exact: true })
       .click();
+    // WHICH SERVICE. Nothing was chosen here until 2026-09-23 — the price
+    // came from whichever active rate was cheapest for the hours, so the
+    // facility's menu was decoration. Create stays DISABLED until a service
+    // is picked, which is the rate gap doing its job rather than a bug.
+    await dialog
+      .getByRole("button", { name: /full day/i })
+      .first()
+      .click();
     await dialog.getByRole("button", { name: /^next$/i }).click();
 
     // A play area Buddy is allowed in: the first one that takes a click.

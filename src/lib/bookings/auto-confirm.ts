@@ -52,6 +52,8 @@ interface Promotable {
   start_at: string | null;
   end_at: string | null;
   details: Record<string, unknown> | null;
+  /** The branch, where the facility has more than one. */
+  location_id: string | null;
 }
 
 /**
@@ -100,7 +102,9 @@ export async function autoConfirmCustomerBookings(
     const admin = createAdminClient();
     const { data } = await admin
       .from("bookings")
-      .select("id, facility_id, service, status, start_at, end_at, details")
+      .select(
+        "id, facility_id, service, status, start_at, end_at, details, location_id",
+      )
       .in("id", bookingIds);
 
     const rows = (data ?? []) as unknown as Promotable[];
@@ -214,6 +218,13 @@ export async function autoConfirmCustomerBookings(
         // number — the booking already carries it.
         hours: stayHours(row.start_at, row.end_at),
         species: speciesByBooking.get(row.id),
+        // WHICH daycare service the customer picked, and WHERE. Without
+        // these the re-price falls back to the pre-cutover rule — the
+        // cheapest service covering the stay — and disagrees with the quote
+        // the customer was shown, so nothing auto-confirms.
+        daycareServiceId:
+          (row.details?.["daycareServiceId"] as string | undefined) ?? null,
+        locationId: row.location_id ?? null,
         quotedTotal: quoted,
       });
       if (!priced.ok) continue;

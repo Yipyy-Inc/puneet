@@ -201,6 +201,14 @@ test.describe("staff finish the New Booking wizard for every service", () => {
     await dialog
       .getByRole("button", { name: String(tuesday), exact: true })
       .click();
+    // WHICH SERVICE. Nothing was chosen here until 2026-09-23 — the price
+    // came from whichever active rate was cheapest for the hours, so the
+    // facility's menu was decoration. Create stays DISABLED until a service
+    // is picked, which is the rate gap doing its job rather than a bug.
+    await dialog
+      .getByRole("button", { name: /full day/i })
+      .first()
+      .click();
     await next(dialog);
     // The play area: Next waits for one, and the cards arrive with the day's
     // capacity, so this waits for them rather than glancing.

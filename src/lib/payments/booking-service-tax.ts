@@ -1,10 +1,11 @@
 import "server-only";
 
-import { daycareRateForHours } from "@/lib/daycare-pricing";
 import { isBuiltinService } from "@/lib/service-registry";
 import { chargesTax } from "@/lib/payments/service-tax";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
+import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 
 // ============================================================================
 // RECORDING WHETHER A BOOKING'S SERVICE IS TAXED.
@@ -61,6 +62,8 @@ interface BookingRow {
   end_at: string | null;
   details: Record<string, unknown> | null;
   training_series_session_id: string | null;
+  /** Needed so daycare tax resolves the branch's row, as the money did. */
+  location_id: string | null;
 }
 
 function hoursOf(startAt: string | null, endAt: string | null) {
@@ -87,7 +90,7 @@ export async function stampBookingTaxable(
     const { data } = await admin
       .from("bookings")
       .select(
-        "id, facility_id, service, start_at, end_at, details, training_series_session_id",
+        "id, facility_id, service, start_at, end_at, details, training_series_session_id, location_id",
       )
       .in("id", bookingIds);
 
@@ -217,18 +220,22 @@ async function serviceTaxable(
   }
 
   if (service === "daycare") {
-    const parsed = SETTING_DOMAINS.daycare_rates.schema.safeParse(
-      settings?.get("daycare_rates"),
+    // THE SAME RESOLVER THAT PRICED THE BOOKING, so the tax answer can never
+    // belong to a different service than the money did. That property was
+    // true before the menu became a table and it has to survive the move —
+    // it is the reason this reads `daycareServiceId` rather than guessing
+    // from the hours, exactly as `price-booking.ts` does.
+    const services = await loadDaycareServices(
+      row.facility_id,
+      row.location_id,
     );
-    if (!parsed.success) return undefined;
-    // The SAME function that priced the booking picks the rate, so the tax
-    // answer can never belong to a different rate than the money did.
-    const rate = daycareRateForHours(
-      parsed.data.rates,
-      hoursOf(row.start_at, row.end_at),
-      context.species,
-    );
-    return rate ? chargesTax(rate) : undefined;
+    const chosen = resolveDaycareService(services, {
+      serviceId:
+        (row.details?.["daycareServiceId"] as string | undefined) ?? null,
+      hours: hoursOf(row.start_at, row.end_at),
+      species: context.species,
+    });
+    return chosen ? chosen.taxable : undefined;
   }
 
   if (service === "boarding") {

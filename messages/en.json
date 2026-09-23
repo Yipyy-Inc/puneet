@@ -4100,7 +4100,10 @@
         "requiresEvaluationOnlineHint": "Online, a client is asked to book an evaluation before this service.",
         "pricingRules": "Pricing rules",
         "pricingRulesBlurb": "Multi-pet and multi-day discounts, extra charges and late pick-up apply across every service.",
-        "openPricingRules": "Open pricing rules"
+        "openPricingRules": "Open pricing rules",
+        "whichService": "Which service?",
+        "noServiceForPet": "Nothing this pet can book",
+        "noServiceForPetHint": "No active daycare service accepts this pet at this location. Check the service's pet rules under Services → Daycare."
       },
       "includedAddOns": {
         "title": "Included add-ons (free)",

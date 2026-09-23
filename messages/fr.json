@@ -4100,7 +4100,10 @@
         "requiresEvaluationOnlineHint": "En ligne, on demande au client de réserver une évaluation avant ce service.",
         "pricingRules": "Règles de tarification",
         "pricingRulesBlurb": "Les rabais multi-animaux et multi-jours, les frais supplémentaires et le retard s'appliquent à tous les services.",
-        "openPricingRules": "Ouvrir les règles de tarification"
+        "openPricingRules": "Ouvrir les règles de tarification",
+        "whichService": "Quel service ?",
+        "noServiceForPet": "Rien que cet animal puisse réserver",
+        "noServiceForPetHint": "Aucun service de garderie actif n'accepte cet animal à cet emplacement. Vérifiez les règles du service sous Services → Garderie."
       },
       "includedAddOns": {
         "title": "Suppléments inclus (gratuits)",
