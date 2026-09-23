@@ -6,7 +6,12 @@ import { bookingMutations } from "@/lib/api/booking";
 import { useCurrentCustomer } from "@/lib/api/current-customer";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useShellText } from "@/lib/shell/use-shell-text";
-import { FORM_REQUIRED, formRefusalOf } from "@/lib/forms/requirements";
+import {
+  DAYCARE_EVALUATION_REQUIRED,
+  FORM_REQUIRED,
+  formRefusalOf,
+} from "@/lib/forms/requirements";
+import { LiveWriteError } from "@/lib/api/live-fetch";
 import type { NewBooking } from "@/types/booking";
 
 /**
@@ -128,6 +133,22 @@ export function useCustomerBookingRequest(options?: {
         });
         return false;
       }
+
+      // The daycare service this facility gates on an evaluation. The database
+      // refused (20260924140000) and its message already names the service, so
+      // it is shown rather than replaced by a generic sentence: "book an
+      // evaluation" with no idea which service is a dead end.
+      if (
+        error instanceof LiveWriteError &&
+        error.code === DAYCARE_EVALUATION_REQUIRED
+      ) {
+        toast.error(t("evaluationNeededTitle"), {
+          description: error.message,
+          duration: Infinity,
+        });
+        return false;
+      }
+
       // The modal stays where it is, holding what was entered. There is no
       // row, so saying anything else would be a claim nothing made true.
       toast.error(t("couldNotSendBooking"), {

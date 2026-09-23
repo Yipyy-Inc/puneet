@@ -14205,6 +14205,14 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: Json;
       };
+      offered_daycare_services: {
+        Args: {
+          p_facility_id: string;
+          p_location_id?: string | null;
+          p_pet_ids?: string[];
+        };
+        Returns: Json;
+      };
       offered_mobile_grooming: {
         Args: { p_facility_id: string };
         Returns: Json;

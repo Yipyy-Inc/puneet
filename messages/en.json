@@ -9278,6 +9278,7 @@
       "bookingAwaitingConfirmation": "Booking #{id} for {pet} is awaiting confirmation.",
       "yourPetLower": "your pet",
       "couldNotSendBooking": "That booking couldn’t be sent",
+      "evaluationNeededTitle": "Book an evaluation first",
       "formsNeededTitle": "Complete these forms to book",
       "formsNeededBody": "This business needs these forms before a booking can be sent. Your booking details stay here.",
       "openForm": "Open {form}",

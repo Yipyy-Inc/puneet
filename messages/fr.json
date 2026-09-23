@@ -9278,6 +9278,7 @@
       "bookingAwaitingConfirmation": "La réservation no {id} pour {pet} attend une confirmation.",
       "yourPetLower": "votre animal",
       "couldNotSendBooking": "Impossible d’envoyer cette réservation",
+      "evaluationNeededTitle": "Réservez d’abord une évaluation",
       "formsNeededTitle": "Remplissez ces formulaires pour réserver",
       "formsNeededBody": "Cet établissement exige ces formulaires avant d’envoyer une réservation. Les détails de votre réservation restent ici.",
       "openForm": "Ouvrir {form}",

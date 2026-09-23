@@ -76,3 +76,7 @@ supabase/.temp/
 
 # The detached e2e server writes here; never part of a commit.
 e2e-server.log
+# Its stderr half. The documented Start-Process invocation in scripts/e2e-server.ts
+# redirects BOTH streams, so ignoring only one leaves an untracked file behind
+# after every local run.
+e2e-server.err

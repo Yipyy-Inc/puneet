@@ -6,7 +6,7 @@ import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { useDaycareServices } from "@/lib/api/daycare-catalogue";
+import { useDaycareMenu } from "@/lib/api/daycare-catalogue";
 import { useLocationContext } from "@/hooks/use-location-context";
 import {
   eligibleDaycareServices,
@@ -24,12 +24,30 @@ import {
 // standing in. What a pet is NOT eligible for is left off rather than shown
 // disabled — a greyed row invites "why not?", and the honest answer lives on
 // the service's own setup screen, not in a tooltip at the till.
+//
+// ── A CUSTOMER READS A DIFFERENT ROUTE, AND THAT IS THE POINT ─────────────
+//
+// `asCustomer` is drilled rather than sniffed from a context. Which facility
+// a menu belongs to, and which of its columns the reader may see, is exactly
+// the "fixture or Postgres, staff or customer?" question this codebase keeps
+// losing time to — so the call site states it. The customer's route answers
+// for ONE facility and hands back a projection; the staff route answers for
+// the facility they are standing in and hands back the row. See
+// `useDaycareMenu`.
+//
+// The pet-tag rules are applied SERVER-SIDE for a customer, because the tags
+// themselves are the facility's own classification and are not sent. So the
+// customer's menu arrives with empty tag arrays, `isPetEligible` finds
+// nothing left to test, and the filtering below still runs — it simply agrees
+// with what the server already decided.
 // ============================================================================
 
 export function DaycareServicePicker({
   value,
   onChange,
   pet,
+  petRefs,
+  asCustomer = false,
 }: {
   /** The chosen service's row id, or null. */
   value: string | null;
@@ -37,13 +55,21 @@ export function DaycareServicePicker({
     service: { rowId: string; name: string; price: number } | null,
   ) => void;
   pet: DaycarePetFacts;
+  /** The pets chosen, by ref. Sent so the server can apply the tag rules. */
+  petRefs?: readonly number[];
+  /** True when a pet owner is booking for themselves. */
+  asCustomer?: boolean;
 }) {
   const { t, locale } = useStaffText("daycareServices");
   // The branch is read here rather than drilled: the price a service costs
   // depends on it, and three layers of prop is three places to forget it.
   const { currentLocation } = useLocationContext();
   const locationId = currentLocation?.id ?? null;
-  const { data: services, isPending } = useDaycareServices(locationId);
+  const { data: services, isPending } = useDaycareMenu({
+    asCustomer,
+    locationId,
+    petRefs,
+  });
 
   const offered = useMemo(
     () => eligibleDaycareServices(services ?? [], pet, locationId),

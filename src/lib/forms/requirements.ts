@@ -12,6 +12,18 @@ import { LiveWriteError } from "@/lib/api/live-fetch";
 export const FORM_REQUIRED = "form_required";
 export const FORM_OVERRIDE_REASON_REQUIRED = "form_override_reason_required";
 
+/**
+ * A daycare service the facility gates on an evaluation before ONLINE booking
+ * (`requires_evaluation_online`, 20260924140000).
+ *
+ * It lives here rather than in a daycare module because it is the same
+ * mechanism: the database refuses, `create_booking` raises 22023 with a hint,
+ * and the route turns the hint into a 422 the customer's screen can act on.
+ * The message names the service, because a refusal somebody cannot act on is a
+ * dead end rather than a refusal.
+ */
+export const DAYCARE_EVALUATION_REQUIRED = "daycare_evaluation_required";
+
 export type FormRefusalCode =
   | typeof FORM_REQUIRED
   | typeof FORM_OVERRIDE_REASON_REQUIRED;

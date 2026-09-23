@@ -50,6 +50,8 @@ interface DaycareDetailsProps {
   onDaycareServiceChange: (
     service: { rowId: string; name: string; price: number } | null,
   ) => void;
+  /** True when a pet owner is booking for themselves, not staff at the desk. */
+  isCustomerMode?: boolean;
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
   medications: MedicationItem[];
@@ -78,6 +80,7 @@ export function DaycareDetails({
   setServiceType,
   daycareServiceId,
   onDaycareServiceChange,
+  isCustomerMode = false,
   feedingSchedule,
   setFeedingSchedule,
   medications,
@@ -173,6 +176,14 @@ export function DaycareDetails({
     };
   }, [selectedPets]);
 
+  // The pets themselves, for the customer's route: the tag rules are applied
+  // server-side there, because the tags are the facility's own classification
+  // and are never sent to a customer.
+  const petRefs = useMemo(
+    () => selectedPets.map((p) => p.id).filter((id) => Number.isInteger(id)),
+    [selectedPets],
+  );
+
   return (
     <div className="space-y-6">
       {/* Step Content */}
@@ -200,6 +211,8 @@ export function DaycareDetails({
               value={daycareServiceId}
               onChange={onDaycareServiceChange}
               pet={petFacts}
+              petRefs={petRefs}
+              asCustomer={isCustomerMode}
             />
 
             <div className="overflow-hidden rounded-xl border shadow-sm">

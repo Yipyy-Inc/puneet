@@ -63,6 +63,8 @@ interface DetailsStepProps {
   setServiceType: (value: string) => void;
   /** Daycare: the service chosen, by row id. */
   daycareServiceId: string | null;
+  /** True when a pet owner is booking for themselves, not staff at the desk. */
+  isCustomerMode?: boolean;
   onDaycareServiceChange: (
     service: { rowId: string; name: string; price: number } | null,
   ) => void;
@@ -146,6 +148,7 @@ export function DetailsStep({
   serviceType,
   setServiceType,
   daycareServiceId,
+  isCustomerMode = false,
   onDaycareServiceChange,
   feedingSchedule,
   setFeedingSchedule,
@@ -189,6 +192,7 @@ export function DetailsStep({
           setDaycareDateTimes={setDaycareDateTimes}
           setServiceType={setServiceType}
           daycareServiceId={daycareServiceId}
+          isCustomerMode={isCustomerMode}
           onDaycareServiceChange={onDaycareServiceChange}
           feedingSchedule={feedingSchedule}
           setFeedingSchedule={setFeedingSchedule}

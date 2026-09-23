@@ -272,6 +272,20 @@ function legacyRate(
 // "full-day" rate, found none, and the wizard told them they had "no daycare
 // rate yet" — a facility that had saved a rate card minutes earlier.
 // ============================================================================
+// ============================================================================
+// THE LEGACY PATH, AND IT IS ONLY THAT NOW.
+//
+// `daycareRateForHours` used to BE the daycare money path: every active rate
+// whose ceiling covered the stay, cheapest wins. Since 2026-09-23 a booking
+// PICKS a service (`daycare_services`, 20260924120000) and all four pricing
+// call sites resolve that one row by id.
+//
+// These tests are kept, and they are not describing the intended model any
+// more. They pin the FALLBACK: a booking made before the cutover carries no
+// service id, and re-pricing it must still produce the number it was sold at.
+// `resolveDaycareService` reaches this only when the id is absent — see
+// tests/unit/daycare-service-choice.test.ts for what a new booking does.
+// ============================================================================
 describe("which daycare rate covers a stay", () => {
   it("prices the stay Doggieville's single rate actually covers", () => {
     // The real card: one rate, five hours, $45.

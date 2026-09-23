@@ -20989,3 +20989,88 @@ enforces one layer down: a teardown may not assume the test worked.
   report is `implemented: false`. Listed once rather than fixed: none is on
   the page the client asked for, and each is a feature rather than a defect
   in one.
+
+## 2026-09-23 — the daycare menu nobody was ever offered, and the three fields that decided nothing
+
+The client read MoéGo's **Set up daycare service** page and said ours was
+"missing a lot of things". He was right, but not in the way the phrase
+suggests. We already stored a list of named daycare rate cards with prices,
+and the facility could edit them at Services → Daycare → Rates. **Nobody was
+ever asked to choose one.**
+
+`daycareRateForHours` (`src/lib/daycare-pricing.ts`) took every active rate
+whose ceiling covered the stay's hours and charged **the cheapest**.
+`bookings.service_type` was a label derived from "≤ 5 hours", and nothing in
+the money path read it. So a facility authored a menu, the till ignored it,
+and a receipt could not say what had been sold. Six services across three
+facilities, all of them decoration.
+
+That is now `public.daycare_services` (20260924120000), a real table following
+`grooming_services`, with the booking picking a row and every one of the four
+pricing call sites resolving the SAME row by id.
+
+### Three fields were edited, saved, rendered back — and read by nothing
+
+This is the shape worth recognising, because it is not a bug any gate we had
+could see. Each field typechecked, round-tripped through the API, and appeared
+correctly in the editor when reopened. Nothing was broken. It simply decided
+nothing.
+
+- **`sizePricing`** — small/medium/large/giant prices. **All 6 services carried
+  a non-empty one, across 3 facilities**, and no pricing code ever read it. A
+  Great Dane and a Chihuahua cost the same. Replaced by weight ELIGIBILITY,
+  which is what MoéGo has; the column is kept and still unread, so the number
+  above is recoverable rather than a claim in a commit message.
+- **`allowedSectionIds` and `includedAddOnIds`** — looked up by a legacy `type`
+  field the current editor never wrote. `EMPTY_RATE` had no `type` key, so
+  every rate made in that UI had `type === undefined`, and the room restriction
+  and the free add-ons silently no-opped.
+- **`requires_evaluation_online`** — stored from Phase 1, written by the setup
+  screen from Phase 3, read by nothing until Phase 6. A facility could tick
+  "requires an evaluation before online booking" and the customer booked it
+  anyway. **0 services have it set today**, which is why nobody had noticed:
+  the defect was invisible until somebody used the feature.
+
+**What they have in common:** a value the facility can see itself setting. The
+feedback loop that would normally catch a dead field — "I changed it and
+nothing happened" — is broken when the field's effect is invisible at the
+moment of editing and only shows up in a price weeks later.
+
+### The customer's read was a second, quieter version of the same thing
+
+The booking modal is shared between staff and customers, so a pet owner's
+wizard called `/api/daycare/services` — a staff route. It scopes with
+`activeFacilityIdForStaff()`, which returns **null** for somebody holding no
+membership, so `inFacility(null)` is `{}` and the query fell through to RLS
+alone. RLS admits active services at every facility the caller is a client of,
+and `private.client_facility_ids()` is `setof uuid` — **plural, deliberately**.
+One household using two businesses got both menus merged, with nothing saying
+which service belonged to whom.
+
+It also handed over the whole row: the calendar colour our own setup screen
+labels "internal only", the pet tags that are the facility's behavioural
+classification of animals, the play areas, the rollover target.
+
+`public.offered_daycare_services()` (20260924140000) is the projection, built
+on `offered_custom_services`' reasoning. **`grooming_services` has the same
+shape and has not been fixed** — the customer's grooming menu still reads the
+staff route. It is listed here rather than changed in passing, because it is
+the same change again and belongs in its own commit with its own tests.
+
+### Still open, with the reason
+
+- **The STAFF picker passes an empty pet-tag list.** `DaycareDetails.petFacts`
+  hardcodes `petTags: []`, so a service's `eligiblePetTags` / `blockedPetTags`
+  rules do nothing at the desk. The CUSTOMER path enforces them, server-side,
+  inside the projection — so the two paths now disagree, and the stricter one
+  is the customer's. Fixing it needs the pets' tags on the client, which is a
+  read the modal does not do yet.
+- **`sizePricing` is preserved and still unread.** Deliberate: dropping it
+  would destroy the only record of what three facilities had configured.
+- **MoéGo fields we still do not have:** per-service deposit rules, and the
+  "duplicate service" action (sort, categories, images and per-branch pricing
+  all shipped).
+- **`daycare_rates` remains a registered settings domain**, unread after the
+  cutover. Removing it is a separate change, because `settingsFromRows` drops a
+  whole domain whose stored value stops parsing — so every field in its schema
+  must stay `.optional()` while it exists.

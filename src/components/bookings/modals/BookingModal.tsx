@@ -4391,6 +4391,7 @@ export function BookingModal({
                       setServiceType={setServiceType}
                       daycareServiceId={daycareService?.rowId ?? null}
                       onDaycareServiceChange={setDaycareService}
+                      isCustomerMode={isCustomerMode}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}
                       medications={medications}

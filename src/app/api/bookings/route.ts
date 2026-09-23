@@ -38,6 +38,7 @@ import { stampBookingTaxable } from "@/lib/payments/booking-service-tax";
 import { applyBookingServiceCharges } from "@/lib/payments/booking-service-charges";
 import {
   FORM_OVERRIDE_REASON_REQUIRED,
+  DAYCARE_EVALUATION_REQUIRED,
   FORM_REQUIRED,
   type MissingForm,
 } from "@/lib/forms/requirements";
@@ -414,6 +415,18 @@ export async function POST(request: NextRequest) {
           code: error.hint,
           missing: (missing ?? []).filter((m) => m.enforcement === "block"),
         },
+        { status: 422 },
+      );
+    }
+
+    // The daycare service the facility gates on an evaluation. Refused by
+    // `create_booking` (20260924140000) for a caller who cannot create
+    // bookings — a customer — and never for staff, because the field governs
+    // the ONLINE channel. The message already names the service, so it is
+    // passed through rather than rewritten here.
+    if (error.hint === DAYCARE_EVALUATION_REQUIRED) {
+      return NextResponse.json(
+        { error: error.message, code: error.hint },
         { status: 422 },
       );
     }
