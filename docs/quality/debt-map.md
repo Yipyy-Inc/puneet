@@ -20695,10 +20695,38 @@ fix rather than the cleanup.
 3. **Does the suite's data accumulate?** Retiring is not deleting. If rows
    cannot be deleted, the read must stop loading the retired ones.
 
-Still open: the debris itself (880 groups, 1,107 definitions) is only hygiene now
-that nothing loads it, and clearing it wants a `purge_e2e_task_groups()` RPC
-beside the existing ones — groups cascade to their items, definitions are
-`on delete restrict` and must go after them.
+**The debris is cleared, by `purge_e2e_task_groups()`** (20260923180000),
+the fourth RPC behind `bun run e2e:purge`. Re-measured 2026-09-23, and the
+number that matters is not the size:
+
+```
+facility_task_groups        896 rows,  896 of them '[e2e]%'
+facility_task_definitions  1117 rows, 1117 of them '[e2e]%'
+facility_tasks             1369 rows, 1362 of them '[e2e]%'
+```
+
+**Not one group or chore in the database belonged to a facility.** Both tables
+were entirely this spec's leavings, going back to 2026-08-23 — so "the
+facility's chore library" was a screen reading 1,117 rows of test data.
+
+Three things the RPC had to get right, all of them from the schema rather than
+from taste:
+
+- **Groups before chores.** `facility_task_group_items.definition_id` is ON
+  DELETE RESTRICT on purpose (20260823800000: "a chore named by a group cannot
+  vanish underneath it"), so the order is the whole function. Asserted as T0,
+  a negative control that fails if the constraint is ever weakened.
+- **A chore a SURVIVING group still names is left, not raised on.** A bare
+  delete takes the entire purge down on the first one, including work that
+  already succeeded. It is a `not exists` guard, and the returned count is how
+  you find out any were skipped.
+- **Tasks are not children of either.** A generated task carries
+  `source_ref = '<group id>:<date>:<definition id>'` as TEXT with no foreign
+  key, so deleting the groups alone would have orphaned 1,362 rows rather than
+  cascading to them.
+
+It returns three counts rather than one, because collapsing them would hide the
+only interesting case — the chores that were deliberately left.
 
 ## 2026-09-23 — every report dialog was half the width its own class asked for
 

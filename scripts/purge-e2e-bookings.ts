@@ -123,3 +123,41 @@ console.log(
     ? "Nothing to purge: no e2e forms left."
     : `Purged ${formsDeleted} e2e form(s) and their submissions.`,
 );
+
+// ── The chores ─────────────────────────────────────────────────────────────
+//
+// `facility-task-groups.spec.ts` cleans up by RETIRING what it made, because
+// that is all the API offers. Measured 2026-09-23: `facility_task_groups` held
+// 896 rows and `facility_task_definitions` 1,117, and NOT ONE of them belonged
+// to a facility — every chore and every group in the database was debris from
+// this spec, going back to 2026-08-23. `facility_tasks` held 1,369, of which 7
+// were real.
+//
+// `GET /api/task-groups` read all 896 with two nested embeds, took 7.5-9s, sat
+// on the statement timeout and failed about half the time — and the screen
+// rendered that as "Groups 0" rather than as an error. Bounding the route was
+// the fix (b6e04b99); this removes what the fix was needed for.
+//
+// The order is the whole function: groups before chores, because
+// `facility_task_group_items.definition_id` is ON DELETE RESTRICT so a chore a
+// group still names cannot go. A chore some SURVIVING group names is left
+// rather than raised on, which is why three counts come back instead of one.
+const { data: choreData, error: choreError } = await db.rpc(
+  "purge_e2e_task_groups",
+);
+
+if (choreError) {
+  console.error(`Could not purge task groups: ${choreError.message}`);
+  process.exit(1);
+}
+
+const chores = Array.isArray(choreData) ? choreData[0] : choreData;
+const tasksDeleted = Number(chores?.tasks ?? 0);
+const groupsDeleted = Number(chores?.groups ?? 0);
+const definitionsDeleted = Number(chores?.definitions ?? 0);
+
+console.log(
+  tasksDeleted + groupsDeleted + definitionsDeleted === 0
+    ? "Nothing to purge: no e2e task groups left."
+    : `Purged ${groupsDeleted} e2e task group(s), ${definitionsDeleted} chore(s) and ${tasksDeleted} task(s).`,
+);
