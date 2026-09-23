@@ -20785,3 +20785,163 @@ viewport breakpoints for a container — `ReportShell` has two call sites, a dia
 and a full page, and only one of them wants `xl:grid-cols-4`. Tailwind v4 has
 `@container` built in and that is the real fix; it was left alone here because
 this change was about a report, not about the shell.
+
+## 2026-09-24 — a discount was subtracted twice, and a green gate pinned it
+
+The client asked for MoéGo's **discount pricing** page. Unlike the service-charge
+page, everything it describes was already built: "Multiple Pets" with
+`per_pet` / `additional_pet` and `sameLodging`, "Multiple Nights/Days" with
+three modes, both stacking options, and a Preview calculator. The work was an
+audit, and the audit found a money bug bigger than the feature.
+
+**`bookings.amount_due` is GENERATED as
+`greatest(0, total_cost + extras_total - coalesce(discount, 0))`** — so the
+database takes the discount off itself. The booking form sent a `total_cost`
+that ALREADY had it off, and sent `discount` beside it. Measured against this
+database, not inferred: a booking posted as `basePrice 100, discount 20,
+totalCost 80` came back owing **$60** against a quote of **$80**.
+
+**A gate spec stated the wrong convention — and, checked properly, did not
+enforce it.** `booking-form-saves.spec.ts` asserted
+`totalCost === basePrice - discount` and is in both suites, which looks like a
+green gate pinning the bug. It is not: every booking that file posts carries
+`discount: 0`, where the two formulas agree, so the line documented a
+convention it never exercised. That is its own hazard — the next person reads
+it as settled — and it is why the audit checked the assertion's _inputs_
+rather than trusting its shape. It now states the gross relationship, and
+`discount-rules.spec.ts` is what exercises a non-zero discount.
+
+**The ledger settled which convention was right.** Every database artefact
+already assumed GROSS — `amount_due`'s own comment, the commission basis
+`greatest(0, total_cost - discount)`, `booking-commission.sql` T2 — while
+`booking-write-integrity.sql` T15 seeded NET, so the two disagreed in writing.
+Booking ref 7 decided it: `completed`, `paid`, one payment of **$63.75**
+against `base_price 75, discount 11.25, total_cost 63.75` and an `amount_due`
+of $52.50. The customer was charged 75 − 11.25 — the gross answer. The money
+that moved was right and `amount_due` was wrong. Three rows were corrected by
+20260924100000; ref 7's `amount_due` rose to the $63.75 it had already been
+paid.
+
+### Four more, found in the same pass
+
+**`best_only` discarded discounts that were not competing rules.** It filtered
+on `amount < 0`, so every negative adjustment counted as a rival promotion —
+including a custom fee authored as a discount, and `room_type`,
+`grooming_condition` and `service_bundle` adjustments on their discount side.
+A facility with a $20 multi-pet discount, a $6 shared-suite discount and a $10
+loyalty credit was given $20 and silently lost $16. It is the DEFAULT mode.
+Now a named `Record` keyed on the `source` union, so adding a source without
+deciding whether it competes is a compile error.
+
+**A `discount`-kind custom fee was counted twice.** It is written as a negative
+`booking_line_items` row AND was inside `discountTotal`, which filters on sign
+rather than source — off the bill through `extras_total` and again through
+`discount`.
+
+**Commission took the whole discount off the service alone.**
+`private.derive_booking_commission` used `basis = greatest(0, total_cost -
+discount)` while `amount_due` subtracts the same discount from `total_cost +
+extras_total`. On a booking carrying a service charge the commissionable base
+fell by more than the discount's share of it, and the staff member was
+underpaid — $200 of grooming, a $50 fee and $40 off gave a basis of $160
+where the service's own share of the discount is $32, so $168. Eighty cents
+there, and the same fraction on every discounted booking with an extra.
+20260924110000 weighs the discount by `total_cost / (total_cost +
+extras_total)`. Extras are still never commissionable — they appear in that
+weight and nowhere else, which T1 still asserts.
+
+**Why proportional is not a preference.** Nothing records WHICH part of a
+bill a discount discounted, and the same `bookings.discount` already lowers
+the TAXABLE base proportionally. One discount on one row cannot mean two
+things to two readers of it. `service-tax.ts` had already written the
+principle down — _"a part payment does not say which part it settled.
+Neither does a discount"_.
+
+**Fixing `best_only` made the double-subtraction BIGGER**, because more
+discounts survived to be subtracted twice. The two had to ship together, and
+did.
+
+### Why it could live there for weeks, and what stops the next one
+
+**The arithmetic was in a place nothing could reach.** The twelve lines that
+turn a quote into `total_cost`, `discount` and the service charges sat at the
+end of a ~450-line `useMemo` inside `BookingModal.tsx`, a 2,600-line client
+component. Underneath it the pricing engine had unit tests; above it there was
+a Playwright spec; the seam between them could not be called by anything. A
+test cannot reach into a `useMemo`, so the only way to exercise those lines
+was to drive a browser through six wizard steps against the shared database —
+which is why nobody had.
+
+They are `splitBookingMoney` in
+[src/lib/pricing/booking-write-money.ts](../../src/lib/pricing/booking-write-money.ts)
+now, with 14 cases in `tests/unit/booking-write-money.test.ts` that assert the
+DATABASE's own formula — `greatest(0, total_cost + extras_total - discount)`,
+transcribed by hand — rather than re-running the code under test. Four more in
+`booking-parts.test.ts` carry it through the split into one row per day or per
+room, because `amount_due` is generated a row at a time and a discount handed
+whole to every part would quietly halve a bill.
+
+**And one test does drive the wizard**, in `discount-rules.spec.ts`: it
+authors a real rule, clicks through the form and reads back what the form
+chose to send. It is the only thing in either suite that can see the writer's
+arithmetic. Measured on the day: `base_price 38.00, discount 5.00, total_cost
+38.00, amount_due 33.00` per day, two days, against a quote of $66 on screen.
+
+**Its first run left two real bookings behind**, and that is worth more than
+the fix. The cleanup pushed refs onto a list as each test recorded them, so a
+test that failed BETWEEN writing a booking and recording it was invisible to
+its own `afterAll` — and this one failed waiting for a toast, 30 seconds being
+too short for a form that posts once per day against ~1,500 bookings. Two
+confirmed bookings sat in the shared database until they were found by hand.
+The sweep now ASKS the database what carries the marker instead of trusting a
+list the happy path fills, which is the same lesson `check:teardown-shape`
+enforces one layer down: a teardown may not assume the test worked.
+
+### Still open, with the reason
+
+- **Two discount mechanisms tax differently.** `bookings.discount` lowers the
+  taxable base _proportionally_ (through `amount_due` and `taxableFraction`);
+  a promo code writes a negative line item which, since 20260923200000,
+  defaults `taxable = true` and lowers `taxable_extras_total` by its **full**
+  amount. Same $20 off, different tax. Changing either moves money on past
+  bookings — it is a decision about which is correct, not a refactor.
+- **`apply_discount` is granted to six roles and checked by zero call sites.**
+  Defined in `types/facility-staff.ts`, seeded in `supabase/seed.sql`, labelled
+  in `role-utils.ts`, read nowhere. Only `retail_apply_discount` is real
+  (`retail/page.tsx:181`, a deferred constraint trigger, `till-trust-guards.sql`
+  D1–D5). There is also no ad-hoc discount control at the booking till at all,
+  though estimates and retail both have one.
+- **The Preview calculator re-implements the arithmetic.**
+  `PricingRulesPanel.tsx` does its own multi-pet maths instead of calling
+  `applyDynamicPricingRules`, and disagrees with it: a different
+  `additional_pet` tier model, flat discounts multiplied by nights, and
+  multi-night rules ignored entirely despite the panel having a nights input.
+  MoéGo names this button; ours can quote a price the till will not honour.
+- **The customer's own booking flow never prices a discount.**
+  `applyDynamicPricingRules` has two call sites, `BookingModal` and
+  `GroomingBookingFlow`. A customer booking two pets online is quoted the
+  undiscounted price. The BILL is right — `enforce_booking_integrity` zeroes a
+  customer-submitted price so staff re-price it — but the QUOTE is not.
+- **`bookings` has no `discount_reason` column.** Three call sites read it
+  (`BookingPaymentBreakdown`, `print-invoice`, `use-save-booking-edit`) and it
+  survives only inside `details`. Estimates have a real column. MoéGo names the
+  rule that discounted a bill; ours reaches the invoice anonymous.
+- **`apply_all_sequence` is additive, not compounding.** MoéGo's label says "in
+  sequence"; our own copy says "Combine every matching discount", which is what
+  the code does. Additive is order-independent — the property the custom-fee
+  work deliberately protected. Left alone on purpose: changing it reprices
+  every facility on that mode.
+- **A package pass may reduce the bill twice.** At booking time it is folded
+  into `discount`; at payment `payments.package_pass_applied` reduces
+  `amount_charged` again. Not chased here — passes are not on the discount
+  page — but the shape is the same as the bug above.
+- **Five more discount surfaces are configured and inert.** Loyalty TIER
+  percentage discounts are computed and never applied to money;
+  `DiscountStackingConfig` offers six modes and a max-total cap and is read
+  by nothing (`discountStacking`, the two-mode setting, is the real one);
+  `grooming_price_adjustments` has a table and a read path but no write
+  route; peak dates are surcharge-only, so a seasonal DISCOUNT cannot be
+  authored at all; and the "Sales Summary — gross, net, discounts, refunds"
+  report is `implemented: false`. Listed once rather than fixed: none is on
+  the page the client asked for, and each is a feature rather than a defect
+  in one.

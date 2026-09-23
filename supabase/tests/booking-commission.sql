@@ -16,8 +16,11 @@
 --     $200 service + $50 fee at 10% earns $20, not $25. The exclusion is
 --     structural — `total_cost` is the service, fees are `extras_total` — so
 --     this test is what proves the structure, not a filter somebody wrote.
--- T2  Net of discounts. Commission follows what the facility actually
---     received, not the price it advertised.
+-- T2  Net of the service's OWN SHARE of the discount. A discount comes off
+--     the whole bill, so on a booking with a fee the service loses only
+--     its fraction of it. Read 160.00 until 20260924110000.
+-- T2b NEGATIVE CONTROL for T2. With no fee there is nothing to share with,
+--     so the whole discount comes off the service, exactly as before.
 -- T3  Half paid is half earned, and the basis is remembered.
 -- T4  A REFUND TAKES IT BACK. The half that rots otherwise: `amount_paid`
 --     falls and the allocation must follow it down, to nothing at zero.
@@ -121,16 +124,29 @@ begin
     format('amount=%s basis=%s rate=%s share=%s (25.00 would mean the fee was counted)',
       v_amount, v_basis, v_rate, v_share));
 
-  -- ── T2 net of discounts ─────────────────────────────────────────────────
+  -- ── T2 a discount is SHARED with the extras ─────────────────────────────
+  --
   -- A $40 discount makes amount_due 210. The 250 already paid now overpays
-  -- it, so the share clamps to 1 and only the basis moves: 200 - 40 = 160.
+  -- it, so the share clamps to 1 and only the basis moves.
+  --
+  -- The $40 came off a $250 bill of which the service is $200 — four
+  -- fifths. Four fifths of the discount is the service's: 200 - 32 = 168.
+  --
+  -- THIS READ 160.00 / 16.00 UNTIL 20260924110000, which took the WHOLE
+  -- discount off the service while `amount_due` took it off service + fee.
+  -- The groomer was short 80c here and the same fraction on every
+  -- discounted booking carrying an extra. The expectation moved because the
+  -- arithmetic was wrong, not to make a change pass: proportional is what
+  -- the taxable base already does with this same column, and one discount
+  -- cannot mean two things on one row.
   update public.bookings set discount = 40 where id = v_booking;
   select amount, basis into v_amount, v_basis
     from public.booking_commission_allocations where booking_id = v_booking;
   perform pg_temp.t(
-    'T2 commission follows the discounted price, not the advertised one',
-    v_amount = 16.00 and v_basis = 160.00,
-    format('amount=%s basis=%s', v_amount, v_basis));
+    'T2 the service loses only its own share of the discount',
+    v_amount = 16.80 and v_basis = 168.00,
+    format('amount=%s basis=%s (160.00/16.00 is the whole discount taken off the service alone)',
+      v_amount, v_basis));
 
   -- ── T3 half paid is half earned ─────────────────────────────────────────
   --
@@ -139,7 +155,8 @@ begin
   -- it that way. 20260827140000 says the same of tips — "a refund inserts a
   -- negative tip". So these give money back the way production does.
   --
-  -- 250 paid, less 145, is 105 of a 210 bill: exactly half.
+  -- 250 paid, less 145, is 105 of a 210 bill: exactly half. Half of T2's
+  -- 16.80 is 8.40 — it was 8.00 while the basis was 160.00.
   insert into public.payments
     (facility_id, booking_id, method, subtotal, amount_charged, grand_total)
   values (v_facility, v_booking, 'e-transfer', -145, -145, -145);
@@ -147,7 +164,7 @@ begin
     from public.booking_commission_allocations where booking_id = v_booking;
   perform pg_temp.t(
     'T3 half the bill paid is half the commission earned',
-    v_amount = 8.00 and v_share = 0.5,
+    v_amount = 8.40 and v_share = 0.5,
     format('amount=%s share=%s', v_amount, v_share));
 
   -- ── T4 a refund takes it back ───────────────────────────────────────────
@@ -203,6 +220,60 @@ begin
     format('%s allocation(s) on a cancelled booking', v_rows));
 exception when others then
   perform pg_temp.t('T0-T7 commission', false, sqlerrm);
+end $$;
+
+-- ── T2b NEGATIVE CONTROL: with nothing to share with, nothing moves ───────
+--
+-- The whole risk in 20260924110000 is that it rewrote the basis for EVERY
+-- booking, not only the ones carrying an extra. With `extras_total` at 0 the
+-- weight `total_cost / (total_cost + extras_total)` is exactly 1, so the
+-- formula collapses to the old `total_cost - discount` — and this is what
+-- says so out loud, on its own booking, rather than leaving it to algebra.
+do $$
+declare
+  v_facility uuid := 'a0000000-0000-4000-8000-0000000000f1';
+  v_client   uuid;
+  v_staff    uuid;
+  v_booking  uuid;
+  v_amount   numeric;
+  v_basis    numeric;
+  v_stamp    text := to_char(clock_timestamp(), 'YYYYMMDDHH24MISSUS');
+begin
+  select id into v_client from public.clients
+   where facility_id = v_facility order by ref limit 1;
+
+  insert into public.staff
+    (facility_id, first_name, last_name, email, primary_role, access_level, details)
+  values (v_facility, 'Commission', 'Plain ' || v_stamp,
+    'commission.plain.' || v_stamp || '@example.invalid', 'groomer', 'staff',
+    jsonb_build_object('payroll', jsonb_build_object(
+      'generalServiceCommission', 10, 'hourlyRate', 0, 'tipsRate', 0)))
+  returning id into v_staff;
+
+  -- $200 of boarding, $40 off, and NO service charge. amount_due is 160.
+  insert into public.bookings
+    (facility_id, client_id, service, status, start_at, end_at,
+     base_price, discount, total_cost, assigned_staff_id)
+  values
+    (v_facility, v_client, 'boarding', 'confirmed',
+     now() + interval '302 days', now() + interval '303 days',
+     200, 40, 200, v_staff)
+  returning id into v_booking;
+
+  insert into public.payments
+    (facility_id, booking_id, method, subtotal, amount_charged, grand_total)
+  values (v_facility, v_booking, 'e-transfer', 160, 160, 160);
+
+  select amount, basis into v_amount, v_basis
+    from public.booking_commission_allocations where booking_id = v_booking;
+
+  perform pg_temp.t(
+    'T2b with no extras the whole discount still comes off the service',
+    v_amount = 16.00 and v_basis = 160.00,
+    format('amount=%s basis=%s (anything else means the proportional basis moved a booking it should not touch)',
+      v_amount, v_basis));
+exception when others then
+  perform pg_temp.t('T2b no extras', false, sqlerrm);
 end $$;
 
 -- ── T8 the grants and the policy ───────────────────────────────────────────
