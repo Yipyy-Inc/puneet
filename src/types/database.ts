@@ -265,6 +265,7 @@ export type Database = {
           override_reason: string | null;
           released_at: string | null;
           room_id: string;
+          space_type: Database["public"]["Enums"]["lodging_space_type"];
           status: string | null;
           updated_at: string;
         };
@@ -9505,10 +9506,12 @@ export type Database = {
           id: string;
           image_url: string | null;
           legacy_id: string;
+          max_pets_per_area: number | null;
           name: string;
           rules: Json;
           service: Database["public"]["Enums"]["service_module"];
           sort_order: number;
+          space_type: Database["public"]["Enums"]["lodging_space_type"];
           taxable: boolean;
           updated_at: string;
           visible_to_clients: boolean;
@@ -9524,9 +9527,11 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           legacy_id: string;
+          max_pets_per_area?: number | null;
           name: string;
           rules?: Json;
           service: Database["public"]["Enums"]["service_module"];
+          space_type?: Database["public"]["Enums"]["lodging_space_type"];
           sort_order?: number;
           taxable?: boolean;
           updated_at?: string;
@@ -9543,9 +9548,11 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           legacy_id?: string;
+          max_pets_per_area?: number | null;
           name?: string;
           rules?: Json;
           service?: Database["public"]["Enums"]["service_module"];
+          space_type?: Database["public"]["Enums"]["lodging_space_type"];
           sort_order?: number;
           taxable?: boolean;
           updated_at?: string;
@@ -15282,6 +15289,7 @@ export type Database = {
         | "retail"
         | "accountant"
         | "sanitation";
+      lodging_space_type: "room" | "area";
       platform_role: "superadmin" | "support" | "billing" | "readonly";
       position_pay_type: "hourly" | "salary";
       service_module:
@@ -15476,6 +15484,7 @@ export const Constants = {
         "accountant",
         "sanitation",
       ],
+      lodging_space_type: ["room", "area"],
       platform_role: ["superadmin", "support", "billing", "readonly"],
       position_pay_type: ["hourly", "salary"],
       service_module: [
