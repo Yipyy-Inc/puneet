@@ -4105,7 +4105,16 @@
         "openPricingRules": "Ouvrir les règles de tarification",
         "whichService": "Quel service ?",
         "noServiceForPet": "Rien que cet animal puisse réserver",
-        "noServiceForPetHint": "Aucun service de garderie actif n'accepte cet animal à cet emplacement. Vérifiez les règles du service sous Services → Garderie."
+        "noServiceForPetHint": "Aucun service de garderie actif n'accepte cet animal à cet emplacement. Vérifiez les règles du service sous Services → Garderie.",
+        "newCategory": "Nouvelle",
+        "categoryNamePlaceholder": "Nom de la catégorie",
+        "saveCategory": "Enregistrer",
+        "renameCategory": "Renommer la catégorie",
+        "removeCategoryTitle": "Retirer {name} ?",
+        "removeCategoryBody": "C'est définitif. Ses services restent au menu et passent à {none}.",
+        "categoryActions": "Actions de catégorie",
+        "couldNotSaveCategory": "La catégorie n'a pas pu être enregistrée",
+        "couldNotRemoveCategory": "La catégorie n'a pas pu être retirée"
       },
       "includedAddOns": {
         "title": "Suppléments inclus (gratuits)",
@@ -4195,7 +4204,18 @@
         "branchPriceCount": "{n} prix par succursale",
         "lodgingTypesCard": "Types d'hébergement et unités",
         "lodgingTypesCardBlurb": "Les chambres, chenils et aires où un séjour est assigné — et combien il y en a de chaque.",
-        "openLodgingTypes": "Ouvrir les types d'hébergement"
+        "openLodgingTypes": "Ouvrir les types d'hébergement",
+        "picture": "Photo",
+        "pictureHint": "Affichée aux clients lorsqu’ils choisissent un service.",
+        "newCategory": "Nouvelle",
+        "categoryNamePlaceholder": "Nom de la catégorie",
+        "saveCategory": "Enregistrer",
+        "renameCategory": "Renommer la catégorie",
+        "removeCategoryTitle": "Retirer {name} ?",
+        "removeCategoryBody": "C'est définitif. Ses services restent au menu et passent à {none}.",
+        "categoryActions": "Actions de catégorie",
+        "couldNotSaveCategory": "La catégorie n'a pas pu être enregistrée",
+        "couldNotRemoveCategory": "La catégorie n'a pas pu être retirée"
       }
     }
   },

@@ -4105,7 +4105,16 @@
         "openPricingRules": "Open pricing rules",
         "whichService": "Which service?",
         "noServiceForPet": "Nothing this pet can book",
-        "noServiceForPetHint": "No active daycare service accepts this pet at this location. Check the service's pet rules under Services → Daycare."
+        "noServiceForPetHint": "No active daycare service accepts this pet at this location. Check the service's pet rules under Services → Daycare.",
+        "newCategory": "New",
+        "categoryNamePlaceholder": "Category name",
+        "saveCategory": "Save",
+        "renameCategory": "Rename category",
+        "removeCategoryTitle": "Remove {name}?",
+        "removeCategoryBody": "This can't be undone. Its services stay on the menu and move to {none}.",
+        "categoryActions": "Category actions",
+        "couldNotSaveCategory": "The category could not be saved",
+        "couldNotRemoveCategory": "The category could not be removed"
       },
       "includedAddOns": {
         "title": "Included add-ons (free)",
@@ -4195,7 +4204,18 @@
         "branchPriceCount": "{n} branch price(s)",
         "lodgingTypesCard": "Lodging types and units",
         "lodgingTypesCardBlurb": "The rooms, kennels and areas a stay is assigned to — and how many of each there are.",
-        "openLodgingTypes": "Open lodging types"
+        "openLodgingTypes": "Open lodging types",
+        "picture": "Picture",
+        "pictureHint": "Shown to clients when they choose a service.",
+        "newCategory": "New",
+        "categoryNamePlaceholder": "Category name",
+        "saveCategory": "Save",
+        "renameCategory": "Rename category",
+        "removeCategoryTitle": "Remove {name}?",
+        "removeCategoryBody": "This can't be undone. Its services stay on the menu and move to {none}.",
+        "categoryActions": "Category actions",
+        "couldNotSaveCategory": "The category could not be saved",
+        "couldNotRemoveCategory": "The category could not be removed"
       }
     }
   },

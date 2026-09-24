@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import { IncludedAddOnsPicker } from "@/components/facility/add-ons/IncludedAddOnsPicker";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
@@ -34,11 +35,15 @@ import { useLocationContext } from "@/hooks/use-location-context";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
   useSaveDaycareService,
+  useSaveDaycareServiceCategory,
+  useRenameDaycareServiceCategory,
+  useDeleteDaycareServiceCategory,
   type DaycareServiceCategory,
 } from "@/lib/api/daycare-catalogue";
 import type { DaycareService } from "@/lib/api/mappers/daycare-service";
 
 import { PetEligibility } from "@/components/facility/services/pet-eligibility";
+import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
 
 // ============================================================================
 // One daycare service, in MoéGo's own seven sections and MoéGo's own order.
@@ -64,7 +69,6 @@ import { PetEligibility } from "@/components/facility/services/pet-eligibility";
 
 const FACILITY_WIDE = "facility";
 /** Radix Select throws on an item whose value is the empty string. */
-const NO_CATEGORY = "__none__";
 const NO_ROLLOVER = "__none__";
 
 export interface DaycareServiceDraft {
@@ -141,7 +145,7 @@ function Section({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-[17px] font-bold text-[var(--ink-heading)]">
+        <h3 className="text-[17px] font-bold text-(--ink-heading)">
           {index} · {title}
         </h3>
         {hint ? (
@@ -172,6 +176,9 @@ export function DaycareServiceDialog({
   const { areas, sections } = useDaycareAreas();
   const { locations, isMultiLocation } = useLocationContext();
   const save = useSaveDaycareService();
+  const saveCategory = useSaveDaycareServiceCategory();
+  const renameCategory = useRenameDaycareServiceCategory();
+  const removeCategory = useDeleteDaycareServiceCategory();
 
   const [draft, setDraft] = useState<DaycareServiceDraft>(() =>
     draftFrom(service),
@@ -301,29 +308,61 @@ export function DaycareServiceDialog({
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dsv-category">{t("category")}</Label>
-                <Select
-                  value={draft.categoryId ?? NO_CATEGORY}
-                  onValueChange={(v) =>
-                    patch({ categoryId: v === NO_CATEGORY ? null : v })
+              <ServiceCategoryField
+                value={draft.categoryId}
+                onChange={(categoryId) => patch({ categoryId })}
+                categories={categories}
+                onCreate={async (name) => {
+                  try {
+                    return await saveCategory.mutateAsync({ name });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : t("couldNotSaveCategory"),
+                    );
+                    return null;
                   }
-                >
-                  <SelectTrigger id="dsv-category">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_CATEGORY}>
-                      {t("noCategory")}
-                    </SelectItem>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                }}
+                onRename={async (id, name) => {
+                  try {
+                    return await renameCategory.mutateAsync({ id, name });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : t("couldNotSaveCategory"),
+                    );
+                    return null;
+                  }
+                }}
+                onDelete={async (id) => {
+                  try {
+                    await removeCategory.mutateAsync(id);
+                    return true;
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : t("couldNotRemoveCategory"),
+                    );
+                    return false;
+                  }
+                }}
+                text={{
+                  label: t("category"),
+                  none: t("ungrouped"),
+                  newCategory: t("newCategory"),
+                  namePlaceholder: t("categoryNamePlaceholder"),
+                  save: t("saveCategory"),
+                  cancel: t("cancel"),
+                  rename: t("renameCategory"),
+                  remove: t("remove"),
+                  removeTitle: t("removeCategoryTitle"),
+                  removeBody: t("removeCategoryBody"),
+                  actions: t("categoryActions"),
+                }}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="dsv-description">{t("description")}</Label>
@@ -339,7 +378,7 @@ export function DaycareServiceDialog({
                 </p>
               </div>
 
-              <div className="bg-card flex items-center justify-between rounded-2xl border border-[var(--line)] px-4 py-3">
+              <div className="bg-card flex items-center justify-between rounded-2xl border border-(--line) px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold">{t("status")}</p>
                   <p className="text-muted-foreground text-[13.5px]">
@@ -353,17 +392,19 @@ export function DaycareServiceDialog({
                 />
               </div>
 
+              {/* CHOOSE A FILE, rather than paste a link to one. The box
+                  here held `https://…` and a facility has no such address for
+                  a photograph on their phone. */}
               <div className="space-y-2">
-                <Label htmlFor="dsv-image">{t("image")}</Label>
-                <Input
-                  id="dsv-image"
-                  value={draft.imageUrl}
-                  placeholder={t("imagePlaceholder")}
-                  onChange={(e) => patch({ imageUrl: e.target.value })}
+                <RoomImageUpload
+                  value={draft.imageUrl || undefined}
+                  onChange={(url) => patch({ imageUrl: url ?? "" })}
+                  label={t("image")}
+                  compact={!draft.imageUrl}
+                  aspectClass="aspect-[3/1]"
+                  slug={draft.name || "daycare-service"}
+                  hint={t("imageHint")}
                 />
-                <p className="text-muted-foreground text-[13.5px]">
-                  {t("imageHint")}
-                </p>
               </div>
 
               <div className="space-y-1">
@@ -380,7 +421,7 @@ export function DaycareServiceDialog({
 
             {/* ── 2 Lodgings ────────────────────────────────────────── */}
             <Section index={2} title={t("lodgings")} hint={t("lodgingsHint")}>
-              <div className="bg-card flex items-center justify-between rounded-2xl border border-[var(--line)] px-4 py-3">
+              <div className="bg-card flex items-center justify-between rounded-2xl border border-(--line) px-4 py-3">
                 <p className="text-[15px] font-semibold">{t("allPlayAreas")}</p>
                 <Switch
                   checked={allAreas}
@@ -624,7 +665,7 @@ export function DaycareServiceDialog({
 
             {/* ── 7 Evaluation ──────────────────────────────────────── */}
             <Section index={isMultiLocation ? 7 : 6} title={t("evaluation")}>
-              <div className="bg-card flex items-center justify-between gap-4 rounded-2xl border border-[var(--line)] px-4 py-3">
+              <div className="bg-card flex items-center justify-between gap-4 rounded-2xl border border-(--line) px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold">
                     {t("requiresEvaluation")}
@@ -640,7 +681,7 @@ export function DaycareServiceDialog({
                 />
               </div>
 
-              <div className="bg-card flex items-center justify-between gap-4 rounded-2xl border border-[var(--line)] px-4 py-3">
+              <div className="bg-card flex items-center justify-between gap-4 rounded-2xl border border-(--line) px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold">
                     {t("requiresEvaluationOnline")}

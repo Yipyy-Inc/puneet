@@ -18,23 +18,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import { PetEligibility } from "@/components/facility/services/pet-eligibility";
+import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 import {
   useSaveBoardingService,
+  useSaveBoardingServiceCategory,
+  useRenameBoardingServiceCategory,
+  useDeleteBoardingServiceCategory,
   type BoardingServiceCategory,
 } from "@/lib/api/boarding-catalogue";
 import type {
@@ -73,8 +72,6 @@ import type {
 // ============================================================================
 
 const FACILITY_WIDE = "facility";
-/** Radix Select throws on an item whose value is the empty string. */
-const NO_CATEGORY = "__none__";
 
 export interface BoardingServiceDraft {
   name: string;
@@ -142,7 +139,7 @@ function Section({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-[17px] font-bold text-[var(--ink-heading)]">
+        <h3 className="text-[17px] font-bold text-(--ink-heading)">
           {index} · {title}
         </h3>
         {hint ? (
@@ -170,6 +167,9 @@ export function BoardingServiceDialog({
   const { categories: roomCategories } = useRooms();
   const { locations, isMultiLocation } = useLocationContext();
   const save = useSaveBoardingService();
+  const saveCategory = useSaveBoardingServiceCategory();
+  const renameCategory = useRenameBoardingServiceCategory();
+  const removeCategory = useDeleteBoardingServiceCategory();
 
   const [draft, setDraft] = useState<BoardingServiceDraft>(() =>
     draftFrom(service),
@@ -292,30 +292,72 @@ export function BoardingServiceDialog({
                   rows={2}
                 />
               </div>
+              <RoomImageUpload
+                value={draft.imageUrl || undefined}
+                onChange={(url) => patch({ imageUrl: url ?? "" })}
+                label={t("picture")}
+                compact={!draft.imageUrl}
+                aspectClass="aspect-[3/1]"
+                slug={draft.name || "boarding-service"}
+                hint={t("pictureHint")}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bsv-cat">{t("category")}</Label>
-                  <Select
-                    value={draft.categoryId ?? NO_CATEGORY}
-                    onValueChange={(v) =>
-                      patch({ categoryId: v === NO_CATEGORY ? null : v })
+                <ServiceCategoryField
+                  value={draft.categoryId}
+                  onChange={(categoryId) => patch({ categoryId })}
+                  categories={categories}
+                  onCreate={async (name) => {
+                    try {
+                      return await saveCategory.mutateAsync({ name });
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : t("couldNotSaveCategory"),
+                      );
+                      return null;
                     }
-                  >
-                    <SelectTrigger id="bsv-cat">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_CATEGORY}>
-                        {t("ungrouped")}
-                      </SelectItem>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  }}
+                  onRename={async (id, name) => {
+                    try {
+                      return await renameCategory.mutateAsync({ id, name });
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : t("couldNotSaveCategory"),
+                      );
+                      return null;
+                    }
+                  }}
+                  onDelete={async (id) => {
+                    try {
+                      await removeCategory.mutateAsync(id);
+                      return true;
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : t("couldNotRemoveCategory"),
+                      );
+                      return false;
+                    }
+                  }}
+                  text={{
+                    label: t("category"),
+                    none: t("ungrouped"),
+                    newCategory: t("newCategory"),
+                    namePlaceholder: t("categoryNamePlaceholder"),
+                    save: t("saveCategory"),
+                    cancel: t("cancel"),
+                    rename: t("renameCategory"),
+                    remove: t("remove"),
+                    removeTitle: t("removeCategoryTitle"),
+                    removeBody: t("removeCategoryBody"),
+                    actions: t("categoryActions"),
+                  }}
+                />
                 <div className="space-y-2">
                   {/* Internal only — MoéGo is explicit that the colour is for
                       the calendar and never shown to a client.
@@ -374,7 +416,7 @@ export function BoardingServiceDialog({
                             "transition-[box-shadow,border-color] duration-150",
                             chosen
                               ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary)]"
-                              : "border-[var(--line)] hover:border-[var(--line-strong)]",
+                              : "border-(--line) hover:border-(--line-strong)",
                           )}
                         >
                           {unit === "night" ? t("perNight") : t("perDay")}
@@ -391,7 +433,7 @@ export function BoardingServiceDialog({
               />
 
               {isMultiLocation ? (
-                <div className="space-y-3 rounded-2xl border border-[var(--line)] p-4">
+                <div className="space-y-3 rounded-2xl border border-(--line) p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[14.5px] font-semibold">
@@ -469,7 +511,7 @@ export function BoardingServiceDialog({
                     {lodgingOptions.map((opt) => (
                       <label
                         key={opt.id}
-                        className="flex min-h-10 items-center gap-3 rounded-2xl border border-[var(--line)] px-3 text-[14.5px] max-lg:min-h-12"
+                        className="flex min-h-10 items-center gap-3 rounded-2xl border border-(--line) px-3 text-[14.5px] max-lg:min-h-12"
                       >
                         <Checkbox
                           checked={draft.lodgingTypeIds.includes(opt.id)}

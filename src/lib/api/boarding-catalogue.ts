@@ -235,3 +235,38 @@ export function useSaveBoardingServiceCategory() {
     },
   });
 }
+
+export function useRenameBoardingServiceCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      json<BoardingServiceCategory>(`${CATEGORIES}/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { name },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: boardingCatalogueKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteBoardingServiceCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      json<{ removed: number }>(`${CATEGORIES}/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    // A removed category takes nothing with it — the services it grouped are
+    // `on delete set null` and reappear under the ungrouped heading — but the
+    // SERVICES query still holds their old `categoryId`, so the whole
+    // catalogue is invalidated rather than just the category list.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: boardingCatalogueKeys.all,
+      });
+    },
+  });
+}
