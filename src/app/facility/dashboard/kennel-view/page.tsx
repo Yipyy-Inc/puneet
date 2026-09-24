@@ -51,7 +51,7 @@ import type {
   DaycarePlayArea,
   DaycareSection,
 } from "@/types/rooms";
-import type { OccupancyKennel } from "./_lib/calendar-types";
+import type { OccupancyKennel, OccupancyStay } from "./_lib/calendar-types";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { PageHeader } from "@/components/ui/page-header";
@@ -110,6 +110,31 @@ function buildKennels({
     );
   }
 
+  // EVERY stay holding a unit, not just the last one. `stayByRoom` above keeps
+  // one because a kennel square draws one guest; an AREA holds several at once
+  // and the board expands them into lanes, so it needs the whole list.
+  const staysByRoom = new Map<string, OccupancyStay[]>();
+  for (const stay of occupied) {
+    const list = staysByRoom.get(stay.roomId) ?? [];
+    list.push({
+      bookingId: stay.bookingRef,
+      petName: stay.petNames[0],
+      petSpecies: (stay.petType?.toLowerCase() === "cat" ? "cat" : "dog") as
+        | "cat"
+        | "dog",
+      clientName: stay.clientName,
+      checkIn: stay.from,
+      checkOut: stay.to,
+      status: (stay.status === "checked_in"
+        ? "occupied"
+        : "reserved") as KennelStatus,
+      bookingStatus: (stay.status === "checked_in"
+        ? "checked_in"
+        : "confirmed") as OccupancyKennel["bookingStatus"],
+    });
+    staysByRoom.set(stay.roomId, list);
+  }
+
   return rooms
     .filter((room) => room.active)
     .map((room) => {
@@ -132,6 +157,7 @@ function buildKennels({
         categoryId: room.categoryId,
         dailyRate: category?.defaultBasePrice ?? 0,
         petCount: petsByRoom.get(room.id) ?? 0,
+        stays: staysByRoom.get(room.id),
         status,
         ...(stay
           ? {

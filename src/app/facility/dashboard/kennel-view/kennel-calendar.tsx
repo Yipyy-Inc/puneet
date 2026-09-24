@@ -51,6 +51,7 @@ import {
 } from "./_lib/calendar-types";
 import { printOccupancyGrid } from "./_lib/print-calendar";
 import {
+  isCountedInPets,
   lodgingOccupancy,
   type LodgingOccupancy,
 } from "@/lib/boarding/lodging-occupancy";
@@ -97,6 +98,73 @@ function formatShortDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+/**
+ * One row per stay, for a lodging type that holds several at once.
+ *
+ * ── WHY LANES RATHER THAN SEVERAL BARS IN ONE ROW ─────────────────────────
+ *
+ * This board draws ONE GUEST PER ROW, and has since it was written — the
+ * daycare half says so in its own comment and the debt map records it. An
+ * AREA is counted in pets and holds several stays side by side, so a busy
+ * yard read as whichever guest happened to sort first.
+ *
+ * Stacking several bars inside one row means a lane layout inside the
+ * absolutely-positioned bars grid, a row height that grows with the busiest
+ * day, and a drag state that can tell two bars in one row apart. Giving each
+ * stay its OWN row instead reuses the entire existing row — cells, blocking,
+ * drag, resize, conflict detection — with no change to any of it, because a
+ * lane is just a row that happens to share a unit id with its neighbours.
+ *
+ * A ROOM IS UNTOUCHED. Anything not counted in pets, and any unit holding one
+ * stay or none, comes back exactly as it went in — same object, same identity
+ * — so every kennel on this board behaves today as it did yesterday.
+ *
+ * `id` STAYS THE UNIT. Drag, drop, blocking and the cell grid all address the
+ * unit and must keep doing so; `laneKey` is for React and nothing else.
+ */
+function expandLanes(
+  rooms: OccupancyKennel[],
+  category: RoomCategory,
+): OccupancyKennel[] {
+  if (!isCountedInPets(category)) return rooms;
+
+  return rooms.flatMap((room) => {
+    const stays = room.stays ?? [];
+    if (stays.length <= 1) return [room];
+
+    // Earliest arrival first, so a yard reads in the order it filled up.
+    const ordered = [...stays].sort((a, b) =>
+      (a.checkIn ?? "").localeCompare(b.checkIn ?? ""),
+    );
+    return ordered.map((stay, index) => ({
+      ...room,
+      ...stay,
+      laneKey: `${room.id}#${stay.bookingId ?? index}`,
+      laneIndex: index,
+      laneCount: ordered.length,
+    }));
+  });
+}
+
+/**
+ * Is this row's bar the one being dragged?
+ *
+ * A unit used to be a row, so `sourceRoomId === kennel.id` answered it
+ * exactly. An AREA expanded into lanes has several rows sharing one unit id,
+ * where that test is true for every lane and fades all of them while one bar
+ * moves. Comparing the booking as well asks the question the code always
+ * meant. A room has one bar per row, so this is true whenever the room test
+ * is and nothing about a kennel changes.
+ *
+ * An undefined on either side means "not a specific bar", which is the
+ * pre-lane behaviour and stays permissive rather than silently refusing a
+ * drag somebody just started.
+ */
+function sameBar(dragged?: number, row?: number): boolean {
+  if (dragged === undefined || row === undefined) return true;
+  return dragged === row;
 }
 
 function nightsBetween(checkIn: string, checkOut: string): number {
@@ -227,7 +295,10 @@ export function KennelCalendarView({
     return categories
       .map((cat) => ({
         category: cat,
-        rooms: filteredKennels.filter((k) => k.categoryId === cat.id),
+        rooms: expandLanes(
+          filteredKennels.filter((k) => k.categoryId === cat.id),
+          cat,
+        ),
       }))
       .filter((g) => g.rooms.length > 0);
   }, [categories, filteredKennels]);
@@ -811,20 +882,44 @@ export function KennelCalendarView({
 
                       return (
                         <div
-                          key={kennel.id}
+                          // `laneKey` for an expanded AREA, where several rows
+                          // share one unit id; `id` for every room, unchanged.
+                          key={kennel.laneKey ?? kennel.id}
                           data-room-row
                           data-room-id={kennel.id}
                           className="flex border-b last:border-b-0"
                         >
-                          {/* Room label */}
+                          {/* Room label. An AREA expanded into lanes names the
+                              unit ONCE, on the first lane — repeating "Yard 1"
+                              down four rows reads as four yards. The later
+                              lanes name their guest instead, which is what
+                              distinguishes them. */}
                           <div className="w-[180px] min-w-[180px] shrink-0 border-r p-2 pl-9">
-                            <div className="text-muted-foreground text-xs font-normal">
-                              {kennel.name}
-                            </div>
-                            <div className="text-muted-foreground text-[11px]">
-                              ${kennel.dailyRate}
-                              {rateSuffix}
-                            </div>
+                            {(kennel.laneIndex ?? 0) === 0 ? (
+                              <>
+                                <div className="text-muted-foreground text-xs font-normal">
+                                  {kennel.name}
+                                  {kennel.laneCount && kennel.laneCount > 1 ? (
+                                    <span className="text-[11px]">
+                                      {" "}
+                                      ·{" "}
+                                      {t("petsInside").replace(
+                                        "{n}",
+                                        String(kennel.petCount ?? 0),
+                                      )}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="text-muted-foreground text-[11px]">
+                                  ${kennel.dailyRate}
+                                  {rateSuffix}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-muted-foreground truncate text-[11px]">
+                                {kennel.petName ?? ""}
+                              </div>
+                            )}
                           </div>
 
                           {/* Date cells with bookings */}
@@ -916,7 +1011,8 @@ export function KennelCalendarView({
                                   const displayBooking =
                                     dragPreview &&
                                     drag &&
-                                    drag.sourceRoomId === kennel.id
+                                    drag.sourceRoomId === kennel.id &&
+                                    sameBar(drag.bookingId, kennel.bookingId)
                                       ? {
                                           checkIn: dragPreview.checkIn,
                                           checkOut: dragPreview.checkOut,
@@ -930,7 +1026,8 @@ export function KennelCalendarView({
                                   if (!pos) return null;
                                   const isMoveDragging =
                                     drag?.kind === "move" &&
-                                    drag.sourceRoomId === kennel.id;
+                                    drag.sourceRoomId === kennel.id &&
+                                    sameBar(drag.bookingId, kennel.bookingId);
                                   if (
                                     isMoveDragging &&
                                     dragPreview &&
@@ -962,7 +1059,11 @@ export function KennelCalendarView({
                                       startCol={pos.startCol}
                                       span={pos.span}
                                       isDragging={
-                                        drag?.sourceRoomId === kennel.id
+                                        drag?.sourceRoomId === kennel.id &&
+                                        sameBar(
+                                          drag.bookingId,
+                                          kennel.bookingId,
+                                        )
                                       }
                                       isPastWeek={isPastWeek}
                                       hideResizeHandles={disableResize}
