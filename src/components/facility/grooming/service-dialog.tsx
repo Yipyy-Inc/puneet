@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -996,32 +997,22 @@ export function ServiceDialog({
                     (optional)
                   </span>
                 </Label>
-                <Input
-                  type="url"
-                  placeholder="https://images.example.com/full-groom.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="mt-1 text-sm"
-                />
-                <p className="text-muted-foreground mt-1 text-[10px]">
-                  Shown on the online booking page next to the service name.
-                </p>
-                {imageUrl && (
-                  <div className="bg-muted/40 mt-2 inline-flex items-center gap-2 rounded-lg border px-2 py-1.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={imageUrl}
-                      alt="Preview"
-                      className="size-12 rounded-md object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.opacity = "0.2";
-                      }}
-                    />
-                    <span className="text-muted-foreground text-[10px]">
-                      Preview
-                    </span>
-                  </div>
-                )}
+                {/* CHOOSE A FILE. This was a `type="url"` box holding
+                    `https://images.example.com/full-groom.jpg` — a link a
+                    groomer would have to host somewhere public first. Its
+                    preview set opacity to 0.2 on a broken image, which is a
+                    fair sign of how often the pasted URL did not work. */}
+                <div className="mt-1">
+                  <RoomImageUpload
+                    value={imageUrl || undefined}
+                    onChange={(url) => setImageUrl(url ?? "")}
+                    label=""
+                    compact={!imageUrl}
+                    aspectClass="aspect-[3/1]"
+                    slug={name || "service"}
+                    hint="Shown on the online booking page next to the service name."
+                  />
+                </div>
               </div>
               <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
                 <div>

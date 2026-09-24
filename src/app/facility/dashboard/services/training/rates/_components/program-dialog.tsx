@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -25,15 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertTriangle,
-  ImageOff,
-  Image as ImageIcon,
-  Save,
-  X,
-  XCircle,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, Save, X, XCircle } from "lucide-react";
 import { trainingQueries } from "@/lib/api/training";
 import {
   SKILL_LEVEL_LABELS,
@@ -477,40 +470,19 @@ export function ProgramDialog({ open, onOpenChange, editing, onSave }: Props) {
           </div>
 
           {/* Cover image ────────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <Label>Cover image URL</Label>
-            <Input
-              value={form.imageUrl}
-              placeholder="https://… or /training/puppy.jpg"
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-            />
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-slate-50",
-                )}
-              >
-                {form.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.imageUrl}
-                    alt="Cover preview"
-                    className="size-full object-cover"
-                    onError={(ev) => {
-                      (ev.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <ImageOff className="text-muted-foreground size-5" />
-                )}
-              </div>
-              <p className="text-muted-foreground text-xs">
-                <ImageIcon className="mr-1 inline size-3 align-text-bottom" />
-                Shown on the online booking page as the program&apos;s hero
-                image.
-              </p>
-            </div>
-          </div>
+          {/* CHOOSE A FILE. This was a text box asking for
+              `https://… or /training/puppy.jpg`, with a preview that set
+              `display: none` when the link did not resolve — so a wrong URL
+              left an empty square and no explanation at all. */}
+          <RoomImageUpload
+            value={form.imageUrl || undefined}
+            onChange={(url) => setForm({ ...form, imageUrl: url ?? "" })}
+            label="Cover image"
+            compact={!form.imageUrl}
+            aspectClass="aspect-[3/1]"
+            slug={form.name || "training-program"}
+            hint="Shown on the online booking page as the program's hero image."
+          />
 
           {/* Toggles ────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">

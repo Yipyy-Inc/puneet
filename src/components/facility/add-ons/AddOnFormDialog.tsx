@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -555,14 +556,14 @@ export function AddOnFormDialog({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-xs">
-                    {t("fieldImage")}
-                  </Label>
-                  <Input
-                    value={form.image ?? ""}
-                    onChange={(e) => f("image", e.target.value)}
-                    placeholder="https://..."
-                    className="text-sm"
+                  {/* CHOOSE A FILE, not a link to one. */}
+                  <RoomImageUpload
+                    value={form.image || undefined}
+                    onChange={(url) => f("image", url ?? "")}
+                    label={t("fieldImage")}
+                    compact={!form.image}
+                    aspectClass="aspect-[3/1]"
+                    slug={form.name || "add-on"}
                   />
                 </div>
               </div>

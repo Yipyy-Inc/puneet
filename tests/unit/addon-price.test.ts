@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { formatPrice } from "@/components/facility/add-ons/AddOnsManager";
+import { formatPrice } from "@/components/facility/add-ons/addon-price";
 import type { AppLocale } from "@/lib/language-settings";
 import type { ServiceAddOn } from "@/types/facility";
 

@@ -14,8 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { useSettingsText } from "@/lib/settings/use-settings-text";
-import { formatDuration, formatMoney, formatPercent } from "@/lib/i18n/format";
-import type { AppLocale } from "@/lib/language-settings";
+import { formatDuration, formatPercent } from "@/lib/i18n/format";
+import { formatPrice } from "./addon-price";
+
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -109,38 +110,6 @@ const SERVICE_KEY: Record<(typeof BUILTIN_ADDON_SERVICES)[number], string> = {
 // is translated, at the render site. The English word used to be the key,
 // which meant a facility naming a category "Uncategorized" merged the two.
 const UNCATEGORIZED = "__uncategorized__";
-
-// `$${addon.price}` put a leading dollar sign on every figure and a `/` in
-// front of every unit. Both are English-only shapes: fr-CA writes `42,50 $`,
-// sign trailing, with a non-breaking space so the two never wrap apart — and
-// it says `par jour`, not `/jour`. Intl decides the money; the catalogue
-// supplies the whole suffix rather than a fragment glued to a slash.
-export function formatPrice(
-  addon: ServiceAddOn,
-  locale: AppLocale,
-  t: (key: string) => string,
-): string {
-  const amount = formatMoney(addon.price, locale);
-  const per = (unit: string) =>
-    t("pricePerUnit").replace("{amount}", amount).replace("{unit}", unit);
-  switch (addon.pricingType) {
-    case "flat":
-      return amount;
-    case "per_day":
-      return t("pricePerDay").replace("{amount}", amount);
-    case "per_session":
-      return per(addon.unitLabel || t("unitSession"));
-    case "per_hour":
-      return per(addon.unitLabel || t("unitHour"));
-    case "per_item":
-      return per(addon.unitLabel || t("unitItem"));
-    case "percentage_of_booking":
-      return t("priceOfBooking").replace(
-        "{pct}",
-        formatPercent(addon.price, locale),
-      );
-  }
-}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
