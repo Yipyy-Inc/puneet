@@ -128,6 +128,22 @@ async function runFile(url: string, file: string): Promise<FileResult> {
   let rows: TapRow[] = [];
   try {
     await sql.begin(async (tx) => {
+      // ── THE SUITE IS NOT RECORDED IN pg_stat_statements ─────────────────
+      //
+      // Every file here is a string of unique multi-kilobyte `DO` blocks, so
+      // each run left hundreds of new entries in pg_stat_statements — 3,141 of
+      // the 4,973 it held on 2026-09-24, 1.28 MB of query text. That cost is
+      // not ours to see: Supabase's own metrics collector re-reads and
+      // regex-normalises EVERY entry once a minute, and with `work_mem` at
+      // 2 MB it spilled the result to disk each time. Measured with the API
+      // idle and nothing of ours connected: 23.9 MB of temp files in three
+      // minutes, ~11 GB a day, on a database whose WAL is 0.06 GB a day.
+      // After `pg_stat_statements_reset()`, the same window spilled nothing.
+      //
+      // `set local` because everything below runs inside this transaction and
+      // is rolled back — it cannot leak into another session, and it cannot
+      // outlive the file.
+      await tx.unsafe("set local pg_stat_statements.track = 'none'").simple();
       await tx.unsafe(parsed.body).simple();
       // `?? []` because Bun's client returns undefined rather than an empty
       // array for some shapes, and an undefined `rows` crashes the summary
