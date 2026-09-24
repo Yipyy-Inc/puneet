@@ -76,7 +76,7 @@ describe("boardingPricing", () => {
       ],
       nights: 3,
     });
-    expect(result.perNight).toBe(93);
+    expect(result.perUnit).toBe(93);
     expect(result.total).toBe(279);
     expect(result.unpricedClasses).toEqual([]);
   });
@@ -91,7 +91,7 @@ describe("boardingPricing", () => {
       ],
       nights: 2,
     });
-    expect(shared.perNight).toBe(55);
+    expect(shared.perUnit).toBe(55);
     expect(shared.total).toBe(110);
   });
 
@@ -142,7 +142,7 @@ describe("boardingPricing", () => {
       nights: 4,
     });
     expect(result.unpricedClasses).toEqual(["Isolation Room"]);
-    expect(result.perNight).toBe(0);
+    expect(result.perUnit).toBe(0);
     expect(result.total).toBe(0);
   });
 
@@ -156,7 +156,7 @@ describe("boardingPricing", () => {
       ],
       nights: 1,
     });
-    expect(result.perNight).toBe(38);
+    expect(result.perUnit).toBe(38);
     expect(result.unpricedClasses).toEqual(["Isolation Room"]);
   });
 
@@ -194,7 +194,7 @@ describe("boardingPricing", () => {
       roomAssignments: [{ petId: 1, roomId: "cat-suite" }],
       nights: 2,
     });
-    expect(result.perNight).toBe(55);
+    expect(result.perUnit).toBe(55);
     expect(result.total).toBe(110);
     expect(result.unpricedClasses).toEqual([]);
   });

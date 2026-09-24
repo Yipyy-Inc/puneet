@@ -243,6 +243,15 @@ export const newBookingSchema = z.object({
    * made before 2026-09-23, which falls back to the pre-cutover rule.
    */
   daycareServiceId: z.string().nullable().optional(),
+  /**
+   * WHICH boarding service this booking is for — the row id.
+   *
+   * The daycare field's twin. The server re-price, auto-confirm and the tax
+   * stamp all resolve it, so the numbers cannot belong to three different
+   * rows. Absent on a booking made before 2026-09-24, which falls back to the
+   * kennel class's own nightly rate — what that booking was actually sold at.
+   */
+  boardingServiceId: z.string().nullable().optional(),
   daycareSelectedDates: z.array(z.string()).optional(),
   daycareDateTimes: z.array(daycareDateTimeSchema).optional(),
   groomingStyle: z.string().optional(),

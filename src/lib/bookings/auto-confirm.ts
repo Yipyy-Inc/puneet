@@ -213,6 +213,13 @@ export async function autoConfirmCustomerBookings(
         bookingId: row.id,
         roomCategoryId:
           (row.details?.["roomCategoryId"] as string | undefined) ?? null,
+        // WHICH boarding service the customer picked. Without it the re-price
+        // falls back to the kennel class's own rate — right for a booking made
+        // before the cutover, wrong for one made after, and a disagreement
+        // stops the booking auto-confirming for a reason nobody can see. The
+        // daycare line below says the same thing about the same trap.
+        boardingServiceId:
+          (row.details?.["boardingServiceId"] as string | undefined) ?? null,
         // Daycare rates are chosen by the length of the day, so the server
         // needs the same number the wizard used. start_at/end_at ARE that
         // number — the booking already carries it.

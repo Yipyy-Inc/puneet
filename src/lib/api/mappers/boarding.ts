@@ -90,6 +90,20 @@ export function rowToRoomCategory(
 ): RoomCategory {
   return {
     id: row.legacy_id ?? row.id,
+    // THE UUID, ALWAYS — and it is not a duplicate of `id`.
+    //
+    // `id` above is the APP id, which for every real category is its
+    // `legacy_id` (`cat-suite`, `cat-condo`). 87 screens key on that and it is
+    // not changing. But `boarding_services.lodging_type_ids` is a `uuid[]`,
+    // because Postgres cannot store `cat-suite` in a uuid column — so anything
+    // comparing a service's lodging restriction against a category must
+    // compare THIS, not `id`.
+    //
+    // Added 2026-09-24 after the comparison was written against `id` and
+    // silently matched nothing: every kennel vanished from the booking wizard
+    // the moment a service was picked, and the screen said the service could
+    // not be booked anywhere. Typecheck was happy — both sides are `string`.
+    rowId: row.id,
     facilityId,
     service: row.service as FacilityRoomService,
     name: row.name,

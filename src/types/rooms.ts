@@ -35,6 +35,18 @@ export type RoomCategoryColor =
 export interface RoomCategory {
   id: string;
   /**
+   * The row's uuid, as distinct from the app `id` above.
+   *
+   * `id` is `legacy_id ?? uuid`, so for every real category it is a string
+   * like `cat-suite`. `boarding_services.lodging_type_ids` is a `uuid[]` —
+   * Postgres cannot hold `cat-suite` in a uuid column — so a comparison
+   * between the two must go through THIS field. Both are `string`, so getting
+   * it wrong typechecks and matches nothing.
+   *
+   * Optional because a caller building a draft category has no uuid yet.
+   */
+  rowId?: string;
+  /**
    * A LABEL, not a scope — `/api/rooms` stamps the facility's own `legacyRef`
    * here (0 for one created since the mock era), and the rows key on a uuid.
    * Optional because a caller building a draft has no number to invent: the

@@ -2,6 +2,11 @@ import "server-only";
 
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { loadBoardingServices } from "@/lib/pricing/boarding-services-server";
+import {
+  resolveBoardingService,
+  stayUnits,
+} from "@/lib/pricing/boarding-service-choice";
 import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
 import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
@@ -122,7 +127,33 @@ export interface PriceRequest {
    * every rate a candidate — the same answer as a rate that names none.
    */
   species?: string;
-  /** Boarding: the room category the customer chose. */
+  /**
+   * Boarding: WHICH service the booking is for — `details.boardingServiceId`.
+   *
+   * The daycare field's twin, and for the same reason: the facility chose, and
+   * the wizard, this re-price, auto-confirm and the tax stamp must all land on
+   * the same row. Absent is the pre-cutover path, where the kennel class still
+   * carries the rate.
+   */
+  boardingServiceId?: string | null;
+  /**
+   * Boarding: the room category the customer chose.
+   *
+   * ── THIS IS WRITTEN BY NOTHING, AND IT NEVER WAS ──────────────────────
+   *
+   * Measured 2026-09-24: no file under `src/app` or `src/components` writes
+   * `details.roomCategoryId`, so this arrived undefined on every request and
+   * `priceBoarding` refused with `no_rate` before reading a single rate. Every
+   * customer boarding booking has therefore failed to auto-confirm since the
+   * path was written, silently, with nothing in the logs — the facility just
+   * saw requests that never turned into bookings.
+   *
+   * Kept as an OVERRIDE rather than deleted: it costs nothing, it is the
+   * honest shape for a caller that does know the class, and the class is now
+   * read from the kennel the stay actually occupies when this is absent —
+   * which is what `booking-service-tax.ts` already did and the reason its
+   * comment says the detail key resolved none of the 410 staff bookings.
+   */
   roomCategoryId?: string | null;
   /** What the customer was shown. The quote this must agree with. */
   quotedTotal: number;
@@ -150,7 +181,78 @@ async function settingValue(
   return (data as { value?: unknown } | null)?.value;
 }
 
-/** Nights × the nightly rate of the class the customer chose. */
+/**
+ * The kennel classes a booking actually occupies, and how many DISTINCT ones.
+ *
+ * Through `boarding_stays`, not through `details`: the class a stay belongs to
+ * is reachable only as boarding_stays → facility_rooms → room_categories, and
+ * the detail key this used to read is written by nothing (see
+ * `PriceRequest.roomCategoryId`). `booking-service-tax.ts` already resolves the
+ * class this way and says so; this now agrees with it.
+ *
+ * NO STAY YET is a real state, not an error: a customer's request is priced
+ * before staff put the pet anywhere. It returns no classes and one lodging,
+ * which is what the wizard quotes for an unassigned stay.
+ */
+async function boardingKennels(
+  bookingId: string | undefined,
+): Promise<{ categoryIds: string[]; lodgings: number }> {
+  if (!bookingId) return { categoryIds: [], lodgings: 1 };
+
+  const admin = createAdminClient();
+  const { data: stays } = await admin
+    .from("boarding_stays")
+    .select("room_id")
+    .eq("booking_id", bookingId);
+
+  const roomIds = [
+    ...new Set(
+      ((stays ?? []) as Array<{ room_id: string | null }>)
+        .map((s) => s.room_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (roomIds.length === 0) return { categoryIds: [], lodgings: 1 };
+
+  const { data: units } = await admin
+    .from("facility_rooms")
+    .select("id, category_id")
+    .in("id", roomIds);
+
+  const byRoom = new Map(
+    ((units ?? []) as Array<{ id: string; category_id: string | null }>).map(
+      (u) => [u.id, u.category_id],
+    ),
+  );
+  const categoryIds = roomIds
+    .map((id) => byRoom.get(id))
+    .filter((id): id is string => Boolean(id));
+
+  // DISTINCT ROOMS, the same rule `boardingPricing` uses: two pets from one
+  // household in one suite are one suite being paid for once.
+  return { categoryIds, lodgings: roomIds.length };
+}
+
+/**
+ * What a boarding stay costs: the SERVICE the booking names, else the class.
+ *
+ * ── THE SERVICE IS TRIED FIRST, AND IT IS THE ONLY NEW PATH ───────────────
+ *
+ * Phase 5 separated the boarding service from the lodging type, and Phase 6 is
+ * where that reaches the money. A booking carrying `boardingServiceId` prices
+ * from the menu item the facility chose, at this branch's price, per night or
+ * per day as the service says.
+ *
+ * ── AND THE CLASS RATE IS NOT A DEGRADED FALLBACK ─────────────────────────
+ *
+ * Every boarding booking made before this commit carries no service id and was
+ * sold at its kennel class's nightly rate. That rate is still on
+ * `room_categories` and still what those bookings were sold at, so re-pricing
+ * them through a service — even the one the Phase 5 migration derived from
+ * that very class — would re-price them at whatever the facility has edited it
+ * to since. The fallback is the correct answer for an old booking, not a
+ * consolation prize.
+ */
 async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   if (!input.startDate || !input.endDate) {
     return { ok: false, reason: "bad_dates" };
@@ -159,22 +261,98 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   if (!Number.isFinite(nights) || nights < 1) {
     return { ok: false, reason: "bad_dates" };
   }
-  if (!input.roomCategoryId) return { ok: false, reason: "no_rate" };
 
-  const { data } = await createAdminClient()
+  const { categoryIds, lodgings } = await boardingKennels(input.bookingId);
+
+  // ── THE SERVICE THE BOOKING NAMES ────────────────────────────────────────
+  if (input.boardingServiceId) {
+    const services = await loadBoardingServices(
+      input.facilityId,
+      input.locationId ?? null,
+    );
+    const chosen = resolveBoardingService(services, {
+      serviceId: input.boardingServiceId,
+    });
+    // A named service that cannot be found is NOT quietly re-priced from the
+    // class: the customer was quoted that service, and a number from another
+    // row is a number they were never shown.
+    if (!chosen) return { ok: false, reason: "no_rate" };
+
+    const rate = Number(chosen.price);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      return { ok: false, reason: "no_rate" };
+    }
+    const total = rate * lodgings * stayUnits(chosen.unit, nights);
+    return { ok: true, basePrice: total, total };
+  }
+
+  // ── THE PRE-CUTOVER PATH: the class the stay is actually in ─────────────
+  const classIds =
+    categoryIds.length > 0
+      ? categoryIds
+      : input.roomCategoryId
+        ? [input.roomCategoryId]
+        : [];
+  if (classIds.length === 0) return { ok: false, reason: "no_rate" };
+
+  const admin = createAdminClient();
+  const uniqueIds = [...new Set(classIds)];
+  const { data } = await admin
     .from("room_categories")
-    .select("default_base_price")
+    .select("id, default_base_price")
     .eq("facility_id", input.facilityId)
-    .eq("id", input.roomCategoryId)
-    .maybeSingle();
+    .in("id", uniqueIds);
 
-  const rate = (data as { default_base_price: number | string | null } | null)
-    ?.default_base_price;
-  const nightly = rate === null || rate === undefined ? null : Number(rate);
-  // A class with no price is the gap the wizard already refuses to invent
-  // over; the server refuses too rather than guessing one.
-  if (nightly === null || !Number.isFinite(nightly) || nightly <= 0) {
-    return { ok: false, reason: "no_rate" };
+  const priceById = new Map(
+    (
+      (data ?? []) as Array<{
+        id: string;
+        default_base_price: number | string | null;
+      }>
+    ).map((r) => [
+      r.id,
+      r.default_base_price === null ? null : Number(r.default_base_price),
+    ]),
+  );
+
+  // ── THE BRANCH'S OWN NIGHTLY RATE, WHICH THE WIZARD ALREADY APPLIES ─────
+  //
+  // `classRate` in `boarding-pricing.ts` resolves `locationPricing` before
+  // `defaultBasePrice`, so a multi-branch facility is QUOTED the branch rate.
+  // Re-pricing against the facility-wide one here would disagree by exactly
+  // the override and turn every such booking into `quote_mismatch` — a
+  // silent refusal, the same failure mode as the `roomCategoryId` defect this
+  // function was just rescued from. Same resolution order, both sides.
+  if (input.locationId) {
+    const { data: branch } = await admin
+      .from("room_category_location_prices")
+      .select("category_id, price")
+      .eq("location_id", input.locationId)
+      .in("category_id", uniqueIds);
+
+    for (const row of (branch ?? []) as Array<{
+      category_id: string;
+      price: number | string | null;
+    }>) {
+      if (row.price === null) continue;
+      priceById.set(row.category_id, Number(row.price));
+    }
+  }
+
+  let nightly = 0;
+  for (const id of classIds) {
+    const rate = priceById.get(id);
+    // A class with no price is the gap the wizard already refuses to invent
+    // over; the server refuses too rather than guessing one.
+    if (
+      rate === undefined ||
+      rate === null ||
+      !Number.isFinite(rate) ||
+      rate <= 0
+    ) {
+      return { ok: false, reason: "no_rate" };
+    }
+    nightly += rate;
   }
 
   const total = nightly * nights;

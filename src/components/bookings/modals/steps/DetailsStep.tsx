@@ -5,6 +5,7 @@ import {
   GroomingDetails,
   CustomServiceDetails,
 } from "../service-details";
+import type { ChosenBoardingService } from "../service-details/BoardingDetails";
 import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
@@ -63,6 +64,16 @@ interface DetailsStepProps {
   setServiceType: (value: string) => void;
   /** Daycare: the service chosen, by row id. */
   daycareServiceId: string | null;
+  /**
+   * WHICH boarding service, since Phase 6.
+   *
+   * Drilled rather than read from a context for the same reason the daycare
+   * one is: the id has to be the SAME row the server re-prices and the tax
+   * stamp resolves, and a value picked up somewhere en route is a value that
+   * can differ from the one the customer was quoted.
+   */
+  boardingService: ChosenBoardingService | null;
+  onBoardingServiceChange: (service: ChosenBoardingService | null) => void;
   /** True when a pet owner is booking for themselves, not staff at the desk. */
   isCustomerMode?: boolean;
   onDaycareServiceChange: (
@@ -148,6 +159,8 @@ export function DetailsStep({
   serviceType,
   setServiceType,
   daycareServiceId,
+  boardingService,
+  onBoardingServiceChange,
   isCustomerMode = false,
   onDaycareServiceChange,
   feedingSchedule,
@@ -233,6 +246,9 @@ export function DetailsStep({
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}
           skipEligibility={skipEligibility}
+          boardingService={boardingService}
+          onBoardingServiceChange={onBoardingServiceChange}
+          isCustomerMode={isCustomerMode}
         />
       )}
 

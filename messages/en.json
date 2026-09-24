@@ -4133,6 +4133,14 @@
         "createsNone": "No units yet. Add them from the lodging type later.",
         "creates": "Creates {list}.",
         "createsMore": "Creates {list} … {last}."
+      },
+      "boardingServices": {
+        "whichService": "Which boarding service?",
+        "perNight": "per night",
+        "perDay": "per day",
+        "limitedLodging": "Some lodging types only",
+        "lodgingForService": "Lodging for {name}",
+        "noLodgingForService": "{name} cannot be booked into any lodging this facility has set up."
       }
     }
   },

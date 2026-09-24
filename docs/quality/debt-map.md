@@ -21197,3 +21197,147 @@ which is why those had to be applied inside the projection.
 - **The three staff-only grooming controls still read the staff route**, which
   is correct — they are behind `!isCustomerMode` now and only staff mount them.
   If one is ever shown to a customer again, the merge comes back with it.
+
+## 2026-09-24 — Customer boarding bookings could never auto-confirm, and nothing said so
+
+`priceBoarding` (`src/lib/bookings/price-booking.ts`) opened with:
+
+```ts
+if (!input.roomCategoryId) return { ok: false, reason: "no_rate" };
+```
+
+and `roomCategoryId` came from `details.roomCategoryId`, which **nothing has
+ever written.** Measured 2026-09-24: no file under `src/app` or
+`src/components` writes that key. Three files READ it —
+`price-booking.ts`, `auto-confirm.ts` and `booking-service-tax.ts` — and the
+last one already carried a comment saying it was "absent on all 410 staff-made
+boarding bookings".
+
+So every customer boarding request hit that first line, returned `no_rate`
+before reading a single rate, and stayed a request. A facility with instant
+booking switched on for boarding got it for daycare and grooming and silently
+never got it for boarding. **No log line, no error, no screen**: the refusal is
+deliberately silent, because a refusal is supposed to mean "let staff look".
+
+### Why no gate caught it
+
+Every gate this repo has was green over it, and each for a defensible reason:
+
+- **typecheck** — `roomCategoryId?: string | null` is a well-typed optional
+  field. Nothing about a key nobody writes is a type error.
+- **the e2e gate** — `booking-auto-confirm` drives DAYCARE, which works.
+- **`check:success-claims`** — the code claims nothing; it correctly reports a
+  refusal. The bug is that the refusal is always taken.
+- **the SQL suite** — the database is not involved. `create_booking` did its
+  job; the re-price never asked it anything.
+
+The shape worth naming: **a field that is read by three files and written by
+none typechecks perfectly and fails at runtime, forever, in the quiet
+direction.** The daycare twin of this field (`daycareServiceId`) is written by
+`BookingModal` and works, which is exactly why the boarding one looked
+plausible next to it.
+
+### What now decides it
+
+`price-booking.ts` reads the class from `boarding_stays → facility_rooms →
+room_categories` — the route `booking-service-tax.ts` already used and said
+was the only one that resolves anything — and `details.boardingServiceId` is
+written by `BookingModal` for the new menu path. `roomCategoryId` is kept as
+an override for a caller that genuinely knows the class, and is no longer
+load-bearing.
+
+**This was found by reading, not by a gate, and there is still no gate for the
+class.** A `check:details-keys` that fails when a `details.*` key is read and
+never written would have caught it, and would also have caught nothing else in
+the repo today — so it is worth writing when a second instance appears rather
+than on one.
+
+## 2026-09-24 — A $0 kennel class is quoted as free and refused by the server
+
+Found while moving boarding's money path onto `boarding_services` and **not
+fixed there**, because it is a money change and that commit was about services.
+
+`classRate` (`src/lib/boarding-pricing.ts`) returns `0` for a class whose
+`defaultBasePrice` is `0`, and `boardingPricing` adds it without flagging —
+so the wizard quotes **$0** and offers to create the booking. `price-booking.ts`
+refuses `<= 0` with `no_rate`. The two disagree:
+
+- a STAFF booking on a $0 class creates a $0 booking, silently;
+- a CUSTOMER booking on one is quoted $0 and then never auto-confirms.
+
+On a class, `null` and `0` are genuinely different answers — `null` is "never
+set" and already refuses, `0` is something somebody typed — so aligning them is
+a decision about what a facility meant, not a bug fix. The SERVICE path added in
+the same commit treats `0` as unset in both places (`boarding_services.price`
+is `not null default 0`, so a zero there is "not priced yet"), and says so in
+`servicePriceOrNull`.
+
+**No facility has a $0 boarding class today.** It is recorded rather than fixed
+so that whoever does reach it finds the reasoning instead of the symptom.
+
+## 2026-09-24 — Two plausible strings, and only a photograph could tell them apart
+
+The boarding service picker shipped its filter as:
+
+```ts
+boardingService.lodgingTypeIds.includes(category.id);
+```
+
+`lodgingTypeIds` is `uuid[]` — `boarding_services.lodging_type_ids`, and
+Postgres cannot hold `cat-suite` in a uuid column. `RoomCategory.id` is
+`legacy_id ?? uuid`, which for every real category is `cat-suite`,
+`cat-condo`, `cat-1786136174939`. **Both sides are `string`.**
+
+So the comparison matched nothing, and the consequence was not "a filter that
+does nothing" — it was the opposite. Choosing a service removed EVERY kennel
+from the wizard and drew "No room categories set up yet" over a facility with
+four of them, plus a sentence saying the service could not be booked anywhere.
+
+### What was green over it
+
+typecheck, lint (0 errors), format, **1081 unit tests**, **40/40 checks**,
+**1577 SQL assertions**, and 26 boarding e2e specs. Also a hand-written script
+proving all five new translation keys resolve in both catalogues — which was
+written _specifically_ because of the Phase 4 lesson that a gate can be green
+over a broken screen.
+
+**The unit tests could not have caught it**, and that is the part worth
+keeping. `servesLodgingType` was tested with `cat-suite` on BOTH sides:
+
+```ts
+const s = service({ lodgingTypeIds: ["cat-suite"] });
+expect(servesLodgingType(s, "cat-deluxe")).toBe(true);
+```
+
+A test that supplies both halves of a comparison agrees with itself whatever
+the production ids are. It measured the `includes`, not the contract.
+
+### What caught it
+
+A screenshot, driven four steps into the booking wizard by
+`tests/shots/boarding-service-picker.spec.ts`. The same run had already caught
+a second, smaller thing — "Select a room type" rendering directly above "Which
+boarding service?", so the step header appeared to label the service cards.
+
+### What now stops it
+
+- `RoomCategory.rowId` carries the uuid alongside the app `id`, the convention
+  `DaycareService`/`BoardingService` already use, documented on both fields.
+- The comparison moved out of the component into `lodgingTypesServing`, so it
+  can be tested at all.
+- Its test uses **realistic ids on both sides** and carries a NEGATIVE CONTROL:
+  a restriction written with the app id must match nothing. If the function
+  ever compares `id` again, that test fails.
+
+### The shape to remember
+
+**When two string fields on the same object are both plausible operands, a
+test that writes both sides proves nothing.** Pin it with a negative control —
+assert that the WRONG operand fails — or the test is documentation of an
+assumption rather than a measurement of behaviour.
+
+This is the third defect in one day whose only witness was a rendered screen
+(the Phase 4 raw translation keys, the header ordering above, and this). The
+standing conclusion from Phase 4 still holds and is now three for three: **a
+new surface is not done when the gate goes green — it is done when somebody
+has seen it.**

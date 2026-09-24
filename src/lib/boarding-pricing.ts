@@ -1,3 +1,5 @@
+import type { BoardingService } from "@/lib/api/mappers/boarding-service";
+import { stayUnits } from "@/lib/pricing/boarding-service-choice";
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 
 // ============================================================================
@@ -28,6 +30,22 @@ import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 // worth some other number — it is UNPRICED, and this says so by name rather
 // than guessing. The caller refuses the booking and points at the class.
 //
+// ── AND WHY A SERVICE MAY NOW STAND IN FRONT OF THE CLASS ─────────────────
+//
+// Until Phase 5 the kennel class WAS the rate: `room_categories` was both the
+// building and the menu, so a facility could not offer two priced services in
+// one class. `boarding_services` (20260924210000) separated them, and this is
+// where that separation reaches the money.
+//
+// THE SUBSTITUTION IS DELIBERATELY NARROW. A chosen service replaces the RATE
+// and the UNIT, and nothing else: the stay is still summed over the DISTINCT
+// rooms it occupies, because two kennels are still two kennels. That keeps the
+// cutover PRICE-NEUTRAL by construction — the Phase 5 migration carried every
+// priced class across at an identical price, per night, restricted to the
+// class it came from, so a facility that never opens the new menu is quoted
+// exactly what it was quoted yesterday. `boarding-service-pricing.test.ts`
+// asserts that rather than asserting that somebody believed it.
+//
 // Pure: it takes the catalogue and the assignments and returns the money.
 // ============================================================================
 
@@ -44,19 +62,69 @@ export interface BoardingPriceInput {
    * this resolves exactly as before.
    */
   locationId?: string | null;
+  /**
+   * The boarding service the booking names, already resolved for this branch.
+   *
+   * Absent or null is the PRE-CUTOVER PATH and it is not a degraded one: every
+   * boarding booking made before Phase 6 carries no service id and was sold at
+   * its kennel class's nightly rate. Re-pricing it through a service — even
+   * the one the migration derived from that very class — would re-price it at
+   * whatever the facility has edited that service to since.
+   *
+   * Narrowed to the three fields this actually reads rather than taking the
+   * whole row: the wizard holds only what the picker handed it, and a
+   * function that demands twenty fields to use three invites a call site to
+   * fetch nineteen it does not need.
+   */
+  service?: Pick<BoardingService, "price" | "unit" | "name"> | null;
 }
 
 export interface BoardingPricing {
-  /** Summed over the DISTINCT rooms the stay occupies. */
-  perNight: number;
-  /** `perNight` × nights, counting a same-day stay as one night. */
+  /**
+   * Summed over the DISTINCT rooms the stay occupies.
+   *
+   * Per NIGHT or per DAY according to `unit` — MoéGo lets a facility charge
+   * either, and "Monday to Wednesday is 2 nights or 3 days".
+   */
+  perUnit: number;
+  /** Which quantity `perUnit` is multiplied by. `night` unless a service says. */
+  unit: "night" | "day";
+  /** `perUnit` × the units the stay is charged for, never fewer than one. */
   total: number;
   /**
    * The classes in this stay whose nightly rate the facility has not set,
    * by name and without repeats. Empty means every room in the stay is
    * priced — which is the only state a booking may be taken in.
+   *
+   * When a SERVICE prices the stay there are no classes to be unpriced: the
+   * menu carries the money now. An unpriced service names itself instead, so
+   * the refusal still points at the thing the facility has to go and fix.
    */
   unpricedClasses: string[];
+}
+
+/**
+ * A SERVICE priced at zero is not a free stay — it is a price nobody has set.
+ *
+ * `boarding_services.price` is `not null default 0`, so a facility that adds a
+ * service and never prices it holds a zero, which is "not yet" and not "free".
+ * `price-booking.ts` refuses `<= 0` on the server, and agreeing here is what
+ * stops the wizard quoting a number the server then rejects as
+ * `quote_mismatch`.
+ *
+ * ── THE CLASS PATH IS DELIBERATELY NOT CHANGED TO MATCH ───────────────────
+ *
+ * `classRate` returns 0 for a class whose `defaultBasePrice` IS 0, and this
+ * function is not applied to it. On a class, null and 0 are different answers:
+ * null is "never set" and already refuses, 0 is something a facility typed.
+ * Aligning the two would turn a $0 class into a refusal, which is a money
+ * change nobody asked for in a commit about services — so it is recorded for
+ * Phase 9 rather than made quietly here. The server already disagrees with the
+ * wizard on that case, and it disagreed before this commit too.
+ */
+function servicePriceOrNull(rate: number): number | null {
+  if (!Number.isFinite(rate) || rate <= 0) return null;
+  return rate;
 }
 
 /**
@@ -103,29 +171,45 @@ export function boardingPricing({
   roomAssignments,
   nights,
   locationId,
+  service,
 }: BoardingPriceInput): BoardingPricing {
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
   const distinctRooms = [...new Set(roomAssignments.map((a) => a.roomId))];
 
-  let perNight = 0;
+  // The service's rate, resolved ONCE for the stay. Null means either that no
+  // service was chosen — the pre-cutover path, where the class still prices
+  // the stay — or that the chosen one carries no price, which is a gap that
+  // names itself below.
+  const serviceRate = service ? servicePriceOrNull(service.price) : null;
+  const unit = service?.unit ?? "night";
+
+  let perUnit = 0;
   const unpriced = new Set<string>();
 
   for (const roomId of distinctRooms) {
     const category = classOf(roomId, roomById, categoryById);
-    const rate = classRate(category, locationId);
+    // THE SERVICE REPLACES THE RATE, NOT THE ARITHMETIC. Two kennels are
+    // still two kennels; what changed is where the number comes from.
+    const rate = service ? serviceRate : classRate(category, locationId);
     if (rate === null) {
       // A room whose class is gone is not a pricing gap the facility can
-      // close, so it is named by what the screen can show.
-      unpriced.add(category?.name ?? roomById.get(roomId)?.name ?? roomId);
+      // close, so it is named by what the screen can show. An unpriced
+      // SERVICE names the service, because that is the row to go and fix.
+      unpriced.add(
+        service
+          ? service.name
+          : (category?.name ?? roomById.get(roomId)?.name ?? roomId),
+      );
       continue;
     }
-    perNight += rate;
+    perUnit += rate;
   }
 
   return {
-    perNight,
-    total: perNight * Math.max(nights, 1),
+    perUnit,
+    unit,
+    total: perUnit * stayUnits(unit, nights),
     unpricedClasses: [...unpriced],
   };
 }
@@ -139,5 +223,5 @@ export function boardingPricing({
 export function boardingNightlyRate(
   input: Omit<BoardingPriceInput, "nights">,
 ): number {
-  return boardingPricing({ ...input, nights: 1 }).perNight;
+  return boardingPricing({ ...input, nights: 1 }).perUnit;
 }

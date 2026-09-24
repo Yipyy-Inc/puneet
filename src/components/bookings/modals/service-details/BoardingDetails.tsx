@@ -22,9 +22,27 @@ import { rich } from "@/lib/i18n/rich";
 import { useQuery } from "@tanstack/react-query";
 import { bookingQueries } from "@/lib/api/booking";
 import type { Booking } from "@/types/booking";
+import { BoardingServicePicker } from "./BoardingServicePicker";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
 
 // Stable while the query loads, so a memo keyed on it does not recompute.
 const NO_BOOKINGS: Booking[] = [];
+
+/**
+ * The boarding service a booking names, as the wizard carries it.
+ *
+ * One object rather than four drilled scalars: the id, the name, the price,
+ * the unit and the lodging types are only ever read together, and a picker
+ * that hands back four values is four places for them to drift apart.
+ */
+export interface ChosenBoardingService {
+  rowId: string;
+  name: string;
+  price: number;
+  unit: "night" | "day";
+  lodgingTypeIds: string[];
+}
 
 // Boarding categories are rendered dynamically inside the component
 // with live availability via getBoardingCategoryAvailability()
@@ -65,6 +83,17 @@ interface BoardingDetailsProps {
   ) => void;
   selectedPets: Pet[];
   skipEligibility?: boolean;
+  /**
+   * WHICH boarding service, since Phase 6 — `boarding_services.id`.
+   *
+   * Null is not a failure state: every boarding booking made before the
+   * cutover carries no service and is priced by its kennel class, and a
+   * facility that has authored no menu stays on that path deliberately.
+   */
+  boardingService?: ChosenBoardingService | null;
+  onBoardingServiceChange?: (service: ChosenBoardingService | null) => void;
+  /** True when a pet owner is booking for themselves. */
+  isCustomerMode?: boolean;
 }
 
 export function BoardingDetails({
@@ -92,6 +121,9 @@ export function BoardingDetails({
   setExtraServices,
   selectedPets,
   skipEligibility,
+  boardingService = null,
+  onBoardingServiceChange,
+  isCustomerMode = false,
 }: BoardingDetailsProps) {
   const t = useShellText("booking");
   const {
@@ -242,6 +274,9 @@ export function BoardingDetails({
             boardingRangeStart={boardingRangeStart}
             boardingRangeEnd={boardingRangeEnd}
             skipEligibility={skipEligibility}
+            boardingService={boardingService}
+            onBoardingServiceChange={onBoardingServiceChange}
+            isCustomerMode={isCustomerMode}
           />
         )}
 
@@ -345,6 +380,9 @@ interface BoardingRoomSelectionStepProps {
   boardingRangeStart: Date | null;
   boardingRangeEnd: Date | null;
   skipEligibility?: boolean;
+  boardingService?: ChosenBoardingService | null;
+  onBoardingServiceChange?: (service: ChosenBoardingService | null) => void;
+  isCustomerMode?: boolean;
 }
 
 function BoardingRoomSelectionStep({
@@ -356,8 +394,16 @@ function BoardingRoomSelectionStep({
   boardingRangeStart,
   boardingRangeEnd,
   skipEligibility,
+  boardingService = null,
+  onBoardingServiceChange,
+  isCustomerMode = false,
 }: BoardingRoomSelectionStepProps) {
   const t = useShellText("booking");
+  // The service picker's own strings. `staff.areas.boardingServices.<key>` —
+  // `staffText` reads `staff.areas.<area>.<key>` and returns the KEY on a miss
+  // by design, which is how Phase 4 shipped a dialog rendering raw keys past
+  // forty green checks. The area name is the part that has to be right.
+  const { t: serviceText } = useStaffText("boardingServices");
   const locale = useShellLocale();
   const [activePet, setActivePet] = React.useState<Pet | null>(null);
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
@@ -366,15 +412,49 @@ function BoardingRoomSelectionStep({
   const { categories: allCategories, rooms: allRooms } = useRooms();
   const boardingCategories = React.useMemo(
     () =>
-      allCategories.filter(
-        (c) => c.service === "boarding" && c.visibleToClients,
+      // THE SERVICE NARROWS THE BUILDING. MoéGo: "By default all lodging types
+      // are selected. Toggle off All Lodging Types to limit." Empty means every
+      // type, so an unrestricted service filters nothing — which is also what a
+      // facility with no menu at all gets.
+      //
+      // The comparison lives in `lodgingTypesServing` because it has two
+      // plausible wrong sides (app id vs uuid) and inline code cannot be tested.
+      lodgingTypesServing(
+        allCategories.filter(
+          (c) => c.service === "boarding" && c.visibleToClients,
+        ),
+        boardingService,
       ),
-    [allCategories],
+    [allCategories, boardingService],
   );
   const boardingRooms = React.useMemo(() => {
     const ids = new Set(boardingCategories.map((c) => c.id));
     return allRooms.filter((r) => ids.has(r.categoryId));
   }, [allRooms, boardingCategories]);
+
+  // What the service's eligibility rules are matched against. Only when every
+  // pet chosen is ONE species does a species rule have a single answer — the
+  // same reason the daycare picker passes one species and not a list.
+  const petFacts = React.useMemo(() => {
+    const species = new Set(
+      selectedPets.map((p) => p.type?.trim().toLowerCase()).filter(Boolean),
+    );
+    const first = selectedPets[0];
+    return {
+      species: species.size === 1 ? (first?.type ?? null) : null,
+      breed: selectedPets.length === 1 ? (first?.breed ?? null) : null,
+      weightLb: selectedPets.length === 1 ? (first?.weight ?? null) : null,
+      petTags: [] as string[],
+    };
+  }, [selectedPets]);
+
+  // The pets themselves, for the customer's route: the tag rules are applied
+  // server-side there, because the tags are the facility's own classification
+  // and are never sent to a customer.
+  const petRefs = React.useMemo(
+    () => selectedPets.map((p) => p.id).filter((id) => Number.isInteger(id)),
+    [selectedPets],
+  );
 
   // The picked days in the browser's own calendar. `toISOString()` reads
   // UTC, which names the day BEFORE east of Greenwich, so availability was
@@ -466,6 +546,29 @@ function BoardingRoomSelectionStep({
 
   return (
     <div className="space-y-5">
+      {/* WHICH SERVICE, then which kennel — MoéGo's own order, and the order
+          the money now follows. Nothing used to be chosen here at all: the
+          kennel class WAS the rate, so a facility could not offer two priced
+          services in one class.
+
+          ── IT SITS ABOVE THE STEP HEADER, AND THAT IS DELIBERATE ──────────
+
+          Photographed at 1440 first with the header on top, and the screen
+          read "Select a room type" immediately followed by "Which boarding
+          service?" — the header appeared to label the service cards, which are
+          not room types. A facility with no menu renders nothing here and sees
+          exactly the screen it saw yesterday, so the header stays true in both
+          cases rather than being made conditional on a query. */}
+      {onBoardingServiceChange ? (
+        <BoardingServicePicker
+          value={boardingService?.rowId ?? null}
+          onChange={onBoardingServiceChange}
+          pet={petFacts}
+          petRefs={petRefs}
+          asCustomer={isCustomerMode}
+        />
+      ) : null}
+
       {/* Header */}
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
@@ -480,6 +583,23 @@ function BoardingRoomSelectionStep({
           </p>
         </div>
       </div>
+
+      {/* A service restricted to lodging types this facility no longer has.
+          `lodging_type_ids` is not a foreign key — Postgres cannot reference
+          array elements — so a deleted type leaves a dead id behind, and the
+          table's own comment says the app must filter by what it can resolve
+          rather than trust the list. Said out loud rather than rendered as an
+          empty grid that looks like a loading state. */}
+      {boardingService && boardingCategories.length === 0 ? (
+        <div className="bg-card rounded-2xl border border-[var(--line)] p-4">
+          <p className="text-[14.5px] font-semibold">
+            {serviceText("noLodgingForService").replace(
+              "{name}",
+              boardingService.name,
+            )}
+          </p>
+        </div>
+      ) : null}
 
       {/* Pet chips */}
       <div className="flex flex-wrap gap-2">

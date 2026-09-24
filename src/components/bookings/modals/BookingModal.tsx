@@ -98,6 +98,7 @@ import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import { useRooms } from "@/hooks/use-rooms";
 import { useLocationContext } from "@/hooks/use-location-context";
 import { boardingNightlyRate, boardingPricing } from "@/lib/boarding-pricing";
+import type { ChosenBoardingService } from "@/components/bookings/modals/service-details/BoardingDetails";
 import { rateGapMessage, type RateGap } from "@/lib/bookings/rate-gap";
 import { useDaycareRates } from "@/hooks/use-daycare-rates";
 import { boardingParts, daycareParts } from "@/lib/bookings/booking-parts";
@@ -764,6 +765,13 @@ export function BookingModal({
     name: string;
     price: number;
   } | null>(null);
+  // WHICH BOARDING SERVICE, and it is the same story one service along:
+  // until Phase 5 `room_categories` was the kennel class AND the nightly
+  // rate, so the menu was the building and a facility could not offer two
+  // priced services in one class. Null stays on the kennel-class path, which
+  // is what every boarding booking made before this was sold at.
+  const [boardingService, setBoardingService] =
+    useState<ChosenBoardingService | null>(null);
   const [startDate, setStartDate] = useState(preSelectedStartDate ?? "");
   const [endDate, setEndDate] = useState(preSelectedEndDate ?? "");
   const [checkInTime, setCheckInTime] = useState(
@@ -1568,6 +1576,18 @@ export function BookingModal({
         roomAssignments,
         nights: boardingNights,
         locationId: currentLocationId,
+        // The chosen menu item, when there is one. It replaces the RATE and
+        // the UNIT and nothing else — two kennels are still two kennels — so
+        // a facility that has authored no menu is quoted exactly what it was
+        // quoted yesterday. `boarding-service-pricing.test.ts` measures that
+        // rather than asserting somebody believed it.
+        service: boardingService
+          ? {
+              price: boardingService.price,
+              unit: boardingService.unit,
+              name: boardingService.name,
+            }
+          : null,
       });
       basePrice = stay.total;
       if (stay.unpricedClasses.length > 0) {
@@ -2667,6 +2687,14 @@ export function BookingModal({
       daycareServiceId:
         selectedService === "daycare"
           ? (daycareService?.rowId ?? null)
+          : undefined,
+      // Boarding's twin of the line above. `details.roomCategoryId` is the
+      // field three files read and NOTHING has ever written — measured
+      // 2026-09-24 — which is why every customer boarding booking failed to
+      // auto-confirm silently. This is the id that actually travels.
+      boardingServiceId:
+        selectedService === "boarding"
+          ? (boardingService?.rowId ?? null)
           : undefined,
       specialRequests: specialRequests.trim() || undefined,
       daycareSelectedDates:
@@ -4398,6 +4426,8 @@ export function BookingModal({
                       setServiceType={setServiceType}
                       daycareServiceId={daycareService?.rowId ?? null}
                       onDaycareServiceChange={setDaycareService}
+                      boardingService={boardingService}
+                      onBoardingServiceChange={setBoardingService}
                       isCustomerMode={isCustomerMode}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}

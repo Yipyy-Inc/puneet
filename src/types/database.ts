@@ -254,6 +254,240 @@ export type Database = {
           },
         ];
       };
+      boarding_service_categories: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_service_categories_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      boarding_service_default_addons: {
+        Row: {
+          addon_id: string;
+          applies_on: string;
+          created_at: string;
+          facility_id: string;
+          id: string;
+          min_nights: number | null;
+          quantity_per_day: number;
+          service_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          addon_id: string;
+          applies_on?: string;
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          min_nights?: number | null;
+          quantity_per_day?: number;
+          service_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          addon_id?: string;
+          applies_on?: string;
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          min_nights?: number | null;
+          quantity_per_day?: number;
+          service_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_service_default_addons_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "boarding_service_default_addons_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "boarding_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      boarding_service_location_prices: {
+        Row: {
+          created_at: string;
+          facility_id: string;
+          id: string;
+          location_id: string | null;
+          price: number;
+          service_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          facility_id: string;
+          id?: string;
+          location_id?: string | null;
+          price: number;
+          service_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          facility_id?: string;
+          id?: string;
+          location_id?: string | null;
+          price?: number;
+          service_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_service_location_prices_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "boarding_service_location_prices_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "boarding_service_location_prices_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "boarding_services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      boarding_services: {
+        Row: {
+          blocked_pet_tags: string[];
+          category_id: string | null;
+          color: string | null;
+          created_at: string;
+          description: string;
+          display_order: number;
+          eligible_breeds: string[];
+          eligible_pet_tags: string[];
+          eligible_species: string[];
+          eligible_weight_tiers: string[];
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          is_active: boolean;
+          legacy_id: string | null;
+          location_ids: string[];
+          lodging_type_ids: string[];
+          name: string;
+          price: number;
+          requires_evaluation: boolean;
+          requires_evaluation_online: boolean;
+          taxable: boolean;
+          unit: Database["public"]["Enums"]["boarding_price_unit"];
+          updated_at: string;
+        };
+        Insert: {
+          blocked_pet_tags?: string[];
+          category_id?: string | null;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          eligible_breeds?: string[];
+          eligible_pet_tags?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          lodging_type_ids?: string[];
+          name: string;
+          price?: number;
+          requires_evaluation?: boolean;
+          requires_evaluation_online?: boolean;
+          taxable?: boolean;
+          unit?: Database["public"]["Enums"]["boarding_price_unit"];
+          updated_at?: string;
+        };
+        Update: {
+          blocked_pet_tags?: string[];
+          category_id?: string | null;
+          color?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          eligible_breeds?: string[];
+          eligible_pet_tags?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          lodging_type_ids?: string[];
+          name?: string;
+          price?: number;
+          requires_evaluation?: boolean;
+          requires_evaluation_online?: boolean;
+          taxable?: boolean;
+          unit?: Database["public"]["Enums"]["boarding_price_unit"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "boarding_services_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "boarding_service_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "boarding_services_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       boarding_stays: {
         Row: {
           booking_id: string;
@@ -14212,6 +14446,14 @@ export type Database = {
         Args: { p_facility_id: string };
         Returns: Json;
       };
+      offered_boarding_services: {
+        Args: {
+          p_facility_id: string;
+          p_location_id?: string | null;
+          p_pet_ids?: string[];
+        };
+        Returns: Json;
+      };
       offered_daycare_services: {
         Args: {
           p_facility_id: string;
@@ -15261,6 +15503,7 @@ export type Database = {
     Enums: {
       access_scope: "anytime" | "operating_hours" | "assigned_shifts" | "none";
       approval_status: "pending" | "approved" | "denied" | "cancelled";
+      boarding_price_unit: "night" | "day";
       booking_status:
         | "pending"
         | "estimate_sent"

@@ -4,6 +4,8 @@ import { isBuiltinService } from "@/lib/service-registry";
 import { chargesTax } from "@/lib/payments/service-tax";
 import { SETTING_DOMAINS } from "@/lib/settings/domains";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { loadBoardingServices } from "@/lib/pricing/boarding-services-server";
+import { resolveBoardingService } from "@/lib/pricing/boarding-service-choice";
 import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
 import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 
@@ -45,9 +47,11 @@ import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 // Not where its editor is. Two of the five would have resolved nothing if this
 // had trusted the obvious field:
 //
-//   * BOARDING — `details.roomCategoryId` is what the customer wizard sends,
-//     and it is absent on every staff-made boarding booking in the database.
-//     The class is reachable only through boarding_stays → facility_rooms.
+//   * BOARDING — `details.roomCategoryId` is absent on every boarding booking
+//     in the database, staff-made or not: measured 2026-09-24, NOTHING writes
+//     it. The class is reachable only through boarding_stays → facility_rooms.
+//     Since Phase 6 a booking may instead name a `boardingServiceId`, which is
+//     asked first because that is where its price came from.
 //   * TRAINING — the Rates tab's programs look like the priced thing and are
 //     not. `training_series.total_price` is what a training booking is charged,
 //     and a series holds no reference to the program it was modelled on, so
@@ -239,8 +243,30 @@ async function serviceTaxable(
   }
 
   if (service === "boarding") {
-    // Through the KENNEL, not through `details`. `details.roomCategoryId` is
-    // what the customer wizard sends and it is absent on all 410 staff-made
+    // THE SAME RESOLVER THAT PRICED THE BOOKING, first — so the tax answer can
+    // never belong to a different row than the money did. That property is why
+    // the daycare branch above reads `daycareServiceId` rather than guessing,
+    // and boarding earns it here for the first time: until Phase 5 there was
+    // no service to name, because the kennel class WAS the rate.
+    const chosenId =
+      typeof row.details?.["boardingServiceId"] === "string"
+        ? (row.details["boardingServiceId"] as string)
+        : null;
+    if (chosenId) {
+      const services = await loadBoardingServices(
+        row.facility_id,
+        row.location_id,
+      );
+      const chosen = resolveBoardingService(services, { serviceId: chosenId });
+      // A named service that has since been deleted falls through to the
+      // class below rather than returning `undefined`, which the caller reads
+      // as "no answer" and which would drop the tax on a real stay.
+      if (chosen) return chosen.taxable;
+    }
+
+    // Through the KENNEL, not through `details`. `details.roomCategoryId` was
+    // described here as "what the customer wizard sends"; measured 2026-09-24
+    // it is sent by NOTHING, and it is absent on all 410 staff-made
     // boarding bookings in the database — the class a stay belongs to is
     // reachable only as boarding_stays → facility_rooms → room_categories.
     // Falling back to the detail key would have quietly resolved none of them.

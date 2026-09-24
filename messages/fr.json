@@ -4133,6 +4133,14 @@
         "createsNone": "Aucune unité pour l'instant. Ajoutez-les depuis le type d'hébergement plus tard.",
         "creates": "Crée {list}.",
         "createsMore": "Crée {list} … {last}."
+      },
+      "boardingServices": {
+        "whichService": "Quel service d'hébergement ?",
+        "perNight": "par nuit",
+        "perDay": "par jour",
+        "limitedLodging": "Certains types d'hébergement seulement",
+        "lodgingForService": "Hébergement pour {name}",
+        "noLodgingForService": "{name} ne peut être réservé dans aucun hébergement configuré par cet établissement."
       }
     }
   },
