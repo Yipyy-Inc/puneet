@@ -1,28 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Modal } from "@/components/ui/modal";
-import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useSettings } from "@/hooks/use-settings";
-import { useQuery } from "@tanstack/react-query";
-import { clientQueries } from "@/lib/api/client";
-import { useFacilityProfile } from "@/lib/api/facility-profile";
-import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import {
   Sun,
   DollarSign,
   Package,
   FileText,
   Settings,
-  Plus,
   Home,
   ClipboardList,
 } from "lucide-react";
@@ -66,52 +54,33 @@ const tabs = [
   },
 ];
 
+// ── WHY THERE IS NO ENABLE/DISABLE SWITCH HERE ────────────────────────────
+//
+// There was one, with a confirmation dialog and a "reason for disabling" box.
+// A facility is not who decides which modules they have — that is a platform
+// decision, made where the subscription is. Leaving the control on the
+// facility's own screen offered them a choice they do not have, and the
+// dialog asking WHY made it look like the answer went somewhere.
+//
+// Removed 2026-09-24 on the client's instruction. The badge beside the title
+// stays: it REPORTS the state, which is worth knowing when a module's screens
+// are missing, and reporting is not the same as offering to change it.
+//
+// ── AND NO "BOOK" BUTTON ──────────────────────────────────────────────────
+//
+// Removed in the same pass. Every way into the booking wizard is already on
+// the screens that know what is being booked — the dashboard, the calendar,
+// a client's file — and a module header is not one of them: it knew the
+// service and nothing else, so it opened a wizard with the client still to be
+// found.
+
 export default function DaycareLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { openBookingModal } = useBookingModal();
-  const { daycare, updateDaycare } = useSettings();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
-  const [disableReason, setDisableReason] = useState("");
-
-  // The facility and its clients from the session, and a booking that is
-  // WRITTEN. This read the fixture facility 11 and its fixture clients, and
-  // "Book" ended in `console.log("Booking created:")` — a real facility
-  // could not pick one of its own clients, and nothing was ever saved.
-  const { profile } = useFacilityProfile();
-  const { data: clients = [] } = useQuery(clientQueries.all());
-  const handleCreateBooking = useCreateBookingFromModal();
-
-  const handleToggleEnabled = (checked: boolean) => {
-    setPendingEnabled(checked);
-    setModalOpen(true);
-  };
-
-  const handleConfirmToggle = () => {
-    if (pendingEnabled !== null) {
-      updateDaycare({
-        ...daycare,
-        status: {
-          ...daycare.status,
-          disabled: !pendingEnabled,
-          reason: !pendingEnabled ? disableReason : undefined,
-        },
-      });
-    }
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
-
-  const handleCancelToggle = () => {
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
+  const { daycare } = useSettings();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -137,33 +106,6 @@ export default function DaycareLayout({
                   Manage daycare operations, check-ins, rates, and report cards
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Enabled</span>
-                <Switch
-                  checked={!daycare.status.disabled}
-                  onCheckedChange={handleToggleEnabled}
-                />
-              </div>
-              <Button
-                onClick={() =>
-                  openBookingModal({
-                    clients,
-                    // No `facilityId`. The modal's only use for it is the
-                    // browser-local add-on store's scope key, and it has no
-                    // number to be given — a facility is a uuid. Absent, that
-                    // store falls back to its unscoped key, which the modal
-                    // already watches.
-                    facilityName: profile.businessName,
-                    preSelectedService: "daycare",
-                    onCreateBooking: handleCreateBooking,
-                  })
-                }
-              >
-                <Plus className="mr-2 size-4" />
-                Book
-              </Button>
             </div>
           </div>
         </div>
@@ -195,46 +137,6 @@ export default function DaycareLayout({
         </nav>
       </div>
       <div className="flex-1 p-6">{children}</div>
-
-      <Modal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        type={pendingEnabled ? "confirmation" : "warning"}
-        title={
-          pendingEnabled ? "Enable Daycare Module" : "Disable Daycare Module"
-        }
-        description={
-          pendingEnabled
-            ? "Are you sure you want to enable the daycare module? This will make daycare services available for booking."
-            : "Are you sure you want to disable the daycare module? This will prevent new daycare bookings and may affect existing operations."
-        }
-        actions={{
-          primary: {
-            label: "Confirm",
-            onClick: handleConfirmToggle,
-            variant: pendingEnabled ? "default" : "destructive",
-            disabled: !pendingEnabled && !disableReason.trim(),
-          },
-          secondary: {
-            label: "Cancel",
-            onClick: handleCancelToggle,
-            variant: "outline",
-          },
-        }}
-      >
-        {!pendingEnabled && (
-          <div className="space-y-2">
-            <Label htmlFor="disable-reason">Reason for disabling</Label>
-            <Textarea
-              id="disable-reason"
-              value={disableReason}
-              onChange={(e) => setDisableReason(e.target.value)}
-              placeholder="Please provide a reason for disabling the daycare module..."
-              rows={3}
-            />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

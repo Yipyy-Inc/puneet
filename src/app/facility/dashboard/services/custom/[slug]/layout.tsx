@@ -1,15 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Modal } from "@/components/ui/modal";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import {
@@ -32,10 +26,6 @@ export default function CustomServiceLayout({
   const { getModuleBySlug, setModuleStatus, isPending } = useCustomServices();
 
   const serviceModule = getModuleBySlug(slug ?? "");
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
-  const [disableReason, setDisableReason] = useState("");
 
   // The facility's list arrives from its settings; until then this is not
   // "not found", it is loading (§5s).
@@ -66,7 +56,6 @@ export default function CustomServiceLayout({
   }
 
   const basePath = `/facility/dashboard/services/custom/${serviceModule.slug}`;
-  const isEnabled = serviceModule.status === "active";
 
   const tabs = [
     { name: "Check-In", href: `${basePath}/check-in`, icon: LogIn },
@@ -74,36 +63,6 @@ export default function CustomServiceLayout({
     { name: "Tasks", href: `${basePath}/tasks`, icon: ClipboardList },
     { name: "Settings", href: `${basePath}/settings`, icon: Settings },
   ];
-
-  const handleToggleEnabled = (checked: boolean) => {
-    setPendingEnabled(checked);
-    setModalOpen(true);
-  };
-
-  // Saved to the facility's settings before it says so — it was localStorage.
-  const handleConfirmToggle = async () => {
-    if (pendingEnabled !== null) {
-      const result = await setModuleStatus(
-        serviceModule.id,
-        pendingEnabled ? "active" : "disabled",
-        !pendingEnabled ? disableReason : undefined,
-      );
-      if (!result.ok) {
-        toast.error(result.reason ?? "Unable to update module status");
-        return;
-      }
-      toast.success(pendingEnabled ? "Service enabled" : "Service disabled");
-    }
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
-
-  const handleCancelToggle = () => {
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
 
   // Status badge
   const statusVariant =
@@ -144,13 +103,6 @@ export default function CustomServiceLayout({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Enabled</span>
-              <Switch
-                checked={isEnabled}
-                onCheckedChange={handleToggleEnabled}
-              />
-            </div>
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-6">
@@ -181,48 +133,6 @@ export default function CustomServiceLayout({
       </div>
 
       <div className="flex-1 p-6">{children}</div>
-
-      <Modal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        type={pendingEnabled ? "confirmation" : "warning"}
-        title={
-          pendingEnabled
-            ? `Enable ${serviceModule.name}`
-            : `Disable ${serviceModule.name}`
-        }
-        description={
-          pendingEnabled
-            ? `Are you sure you want to enable ${serviceModule.name}? This will make the service available for booking.`
-            : `Are you sure you want to disable ${serviceModule.name}? This will prevent new bookings and may affect existing operations.`
-        }
-        actions={{
-          primary: {
-            label: "Confirm",
-            onClick: handleConfirmToggle,
-            variant: pendingEnabled ? "default" : "destructive",
-            disabled: !pendingEnabled && !disableReason.trim(),
-          },
-          secondary: {
-            label: "Cancel",
-            onClick: handleCancelToggle,
-            variant: "outline",
-          },
-        }}
-      >
-        {!pendingEnabled && (
-          <div className="space-y-2">
-            <Label htmlFor="disable-reason">Reason for disabling</Label>
-            <Textarea
-              id="disable-reason"
-              value={disableReason}
-              onChange={(e) => setDisableReason(e.target.value)}
-              placeholder={`Please provide a reason for disabling ${serviceModule.name}...`}
-              rows={3}
-            />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

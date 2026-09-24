@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Modal } from "@/components/ui/modal";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Bed,
@@ -75,43 +70,25 @@ const tabs = [
   },
 ];
 
+// ── WHY THERE IS NO ENABLE/DISABLE SWITCH HERE ────────────────────────────
+//
+// There was one, with a confirmation dialog and a "reason for disabling" box.
+// A facility is not who decides which modules they have — that is a platform
+// decision, made where the subscription is. Leaving the control on the
+// facility's own screen offered them a choice they do not have, and asking
+// WHY made it look like the answer went somewhere.
+//
+// Removed 2026-09-24 on the client's instruction. The badge beside the title
+// stays: it REPORTS the state, which is worth knowing when a module's screens
+// are missing, and reporting is not the same as offering to change it.
+
 export default function BoardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { boarding, updateBoarding } = useSettings();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
-  const [disableReason, setDisableReason] = useState("");
-
-  const handleToggleEnabled = (checked: boolean) => {
-    setPendingEnabled(checked);
-    setModalOpen(true);
-  };
-
-  const handleConfirmToggle = () => {
-    if (pendingEnabled !== null) {
-      updateBoarding({
-        ...boarding,
-        status: {
-          ...boarding.status,
-          disabled: !pendingEnabled,
-          reason: !pendingEnabled ? disableReason : undefined,
-        },
-      });
-    }
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
-
-  const handleCancelToggle = () => {
-    setModalOpen(false);
-    setPendingEnabled(null);
-    setDisableReason("");
-  };
+  const { boarding } = useSettings();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -137,13 +114,6 @@ export default function BoardingLayout({
                   Manage boarding guests, rates, care sheets, and kennel cards
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Enabled</span>
-              <Switch
-                checked={!boarding.status.disabled}
-                onCheckedChange={handleToggleEnabled}
-              />
             </div>
           </div>
         </div>
@@ -175,46 +145,6 @@ export default function BoardingLayout({
         </nav>
       </div>
       <div className="flex-1 p-6">{children}</div>
-
-      <Modal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        type={pendingEnabled ? "confirmation" : "warning"}
-        title={
-          pendingEnabled ? "Enable Boarding Module" : "Disable Boarding Module"
-        }
-        description={
-          pendingEnabled
-            ? "Are you sure you want to enable the boarding module? This will make boarding services available for booking."
-            : "Are you sure you want to disable the boarding module? This will prevent new boarding bookings and may affect existing operations."
-        }
-        actions={{
-          primary: {
-            label: "Confirm",
-            onClick: handleConfirmToggle,
-            variant: pendingEnabled ? "default" : "destructive",
-            disabled: !pendingEnabled && !disableReason.trim(),
-          },
-          secondary: {
-            label: "Cancel",
-            onClick: handleCancelToggle,
-            variant: "outline",
-          },
-        }}
-      >
-        {!pendingEnabled && (
-          <div className="space-y-2">
-            <Label htmlFor="disable-reason">Reason for disabling</Label>
-            <Textarea
-              id="disable-reason"
-              value={disableReason}
-              onChange={(e) => setDisableReason(e.target.value)}
-              placeholder="Please provide a reason for disabling the boarding module..."
-              rows={3}
-            />
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
