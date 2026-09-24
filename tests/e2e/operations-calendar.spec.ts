@@ -173,9 +173,30 @@ test.describe("the operations calendar", () => {
     const page = await browser.newPage();
     try {
       await signIn(page, ACCOUNTS.owner);
-      const all = (await (
-        await page.request.get("/api/bookings")
-      ).json()) as BookingPayload[];
+
+      // ── A CAST IS A CLAIM, AND THIS ONE WAS FALSE ─────────────────────
+      //
+      // This read `as BookingPayload[]` and walked the result. A 500 answers
+      // `{error}` and a 401 answers `{error}` too — `for...of` on either
+      // throws INSIDE the teardown, so the cleanup does nothing AND the
+      // failure is reported against the last test rather than against the
+      // cleanup. It fired on 2026-09-24 under load: `TypeError: all is not
+      // iterable`, and that run's bookings were left behind on a database
+      // shared with production.
+      //
+      // Guarded, and LOUD. A teardown that silently cleans nothing is worse
+      // than one that crashes, because the run still looks green.
+      const response = await page.request.get("/api/bookings");
+      const parsed = (await response.json().catch(() => null)) as unknown;
+      const all: BookingPayload[] = Array.isArray(parsed)
+        ? (parsed as BookingPayload[])
+        : [];
+      if (!Array.isArray(parsed)) {
+        console.log(
+          `cleanup: /api/bookings answered ${response.status()} with no list — ` +
+            `NOTHING WAS CLEANED UP, and rows tagged ${MARKER} are still there`,
+        );
+      }
 
       let cancelled = 0;
       for (const b of all) {
