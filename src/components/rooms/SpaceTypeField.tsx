@@ -89,7 +89,7 @@ export function SpaceTypeField({
                   "transition-[box-shadow,border-color] duration-150",
                   chosen
                     ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary)]"
-                    : "border-[var(--line)] hover:border-[var(--line-strong)]",
+                    : "border-(--line) hover:border-(--line-strong)",
                 )}
               >
                 <span className="block text-[14.5px] font-semibold">

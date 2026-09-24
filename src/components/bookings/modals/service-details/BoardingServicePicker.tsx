@@ -132,7 +132,7 @@ export function BoardingServicePicker({
                 "transition-[box-shadow,border-color] duration-150",
                 chosen
                   ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary)]"
-                  : "border-[var(--line)] hover:border-[var(--line-strong)]",
+                  : "border-(--line) hover:border-(--line-strong)",
               )}
             >
               <span className="flex items-start justify-between gap-3">

@@ -134,7 +134,7 @@ function ServiceCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-[var(--error)]"
+            className="text-(--error)"
             onClick={onDelete}
           >
             <Trash2 className="size-4" aria-hidden />
@@ -232,7 +232,7 @@ export function DaycareServiceList() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[17px] font-bold text-[var(--ink-heading)]">
+          <h2 className="text-[17px] font-bold text-(--ink-heading)">
             {t("menuTitle")}
           </h2>
           <p className="text-muted-foreground text-[13.5px]">
@@ -262,7 +262,7 @@ export function DaycareServiceList() {
       ) : (
         grouped.map((group) => (
           <div key={group.id} className="space-y-3">
-            <p className="text-[12px] font-bold tracking-[0.06em] text-[var(--ink-tertiary)] uppercase">
+            <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
               {group.name}
             </p>
             <div className="grid gap-4 md:grid-cols-2">

@@ -591,7 +591,7 @@ function BoardingRoomSelectionStep({
           rather than trust the list. Said out loud rather than rendered as an
           empty grid that looks like a loading state. */}
       {boardingService && boardingCategories.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-[var(--line)] p-4">
+        <div className="bg-card rounded-2xl border border-(--line) p-4">
           <p className="text-[14.5px] font-semibold">
             {serviceText("noLodgingForService").replace(
               "{name}",

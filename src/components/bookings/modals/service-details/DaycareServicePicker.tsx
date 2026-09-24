@@ -88,7 +88,7 @@ export function DaycareServicePicker({
     // NOT a silent zero. A facility with nothing this pet may book has to be
     // told so, because the alternative is a booking priced at nothing.
     return (
-      <div className="bg-card rounded-2xl border border-[var(--line)] p-4">
+      <div className="bg-card rounded-2xl border border-(--line) p-4">
         <p className="text-[14.5px] font-semibold">{t("noServiceForPet")}</p>
         <p className="text-muted-foreground text-[13.5px]">
           {t("noServiceForPetHint")}
@@ -125,7 +125,7 @@ export function DaycareServicePicker({
                 "transition-[box-shadow,border-color] duration-150",
                 chosen
                   ? "border-transparent shadow-[inset_0_0_0_2px_var(--primary)]"
-                  : "border-[var(--line)] hover:border-[var(--line-strong)]",
+                  : "border-(--line) hover:border-(--line-strong)",
               )}
             >
               <span className="flex items-start justify-between gap-3">

@@ -102,7 +102,7 @@ function ChipRow({
                 "transition-[background-color,box-shadow] duration-150",
                 on
                   ? "bg-primary text-primary-foreground border-transparent shadow-[inset_0_0_0_2px_var(--primary)]"
-                  : "bg-card hover:bg-muted border-[var(--line)]",
+                  : "bg-card hover:bg-muted border-(--line)",
               )}
               aria-pressed={on}
             >
