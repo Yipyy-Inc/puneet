@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -145,12 +145,9 @@ export function SubscriptionDetailSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="flex w-full flex-col gap-0 p-0 sm:max-w-[600px]"
-        >
-          <SheetHeader className="border-b px-6 py-5">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[600px]">
+          <DialogHeader className="border-b px-6 py-5">
             <div className="flex items-start gap-3">
               <div className="relative shrink-0">
                 <div className="flex size-10 items-center justify-center overflow-hidden rounded-full ring-2 ring-slate-100">
@@ -183,12 +180,12 @@ export function SubscriptionDetailSheet({
                 </div>
               </div>
               <div className="flex-1">
-                <SheetTitle className="text-base">
+                <DialogTitle className="text-base">
                   {membership.customerName}
-                </SheetTitle>
-                <SheetDescription className="text-xs">
+                </DialogTitle>
+                <DialogDescription className="text-xs">
                   {membership.customerEmail}
-                </SheetDescription>
+                </DialogDescription>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <Badge variant="outline">{membership.planName}</Badge>
                   <span
@@ -200,7 +197,7 @@ export function SubscriptionDetailSheet({
                 </div>
               </div>
             </div>
-          </SheetHeader>
+          </DialogHeader>
 
           <Tabs defaultValue="overview" className="flex flex-1 flex-col">
             <TabsList className="bg-muted/40 mx-6 mt-4 w-auto justify-start gap-1">
@@ -210,7 +207,7 @@ export function SubscriptionDetailSheet({
               <TabsTrigger value="perks">Perks</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <TabsContent value="overview" className="mt-0 space-y-4">
                 <div className="bg-muted/30 grid grid-cols-2 gap-3 rounded-xl border p-3 text-sm">
                   <Kv
@@ -453,8 +450,8 @@ export function SubscriptionDetailSheet({
               </TabsContent>
             </div>
           </Tabs>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <PauseSubscriptionDialog
         open={pauseOpen}

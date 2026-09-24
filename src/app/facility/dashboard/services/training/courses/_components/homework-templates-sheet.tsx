@@ -14,13 +14,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -158,18 +151,18 @@ export function HomeworkTemplatesSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader className="space-y-1.5">
-            <SheetTitle className="flex items-center gap-2 text-base">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="flex items-center gap-2 text-base">
               <BookOpen className="size-5 text-indigo-600" />
               Homework templates · {courseTypeName}
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               Save once, reuse every cohort. Trainers load these in one tap
               after marking a session complete.
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="mt-4 space-y-3 px-4 pb-4">
             <div className="flex items-center justify-between">
@@ -303,8 +296,8 @@ export function HomeworkTemplatesSheet({
               </ul>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <TemplateEditorDialog
         open={editorOpen}

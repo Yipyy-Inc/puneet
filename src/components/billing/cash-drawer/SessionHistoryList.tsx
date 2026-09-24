@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -186,7 +186,7 @@ export function SessionHistoryList({
         rowClassName={() => "cursor-pointer"}
       />
 
-      <Sheet
+      <Dialog
         open={!!selected}
         onOpenChange={(v) => {
           if (!v) {
@@ -195,11 +195,11 @@ export function SessionHistoryList({
           }
         }}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="w-full overflow-y-auto sm:max-w-2xl">
           {selected && (
             <>
-              <SheetHeader>
-                <SheetTitle>
+              <DialogHeader>
+                <DialogTitle>
                   {new Date(
                     selected.businessDate + "T00:00:00",
                   ).toLocaleDateString("en-CA", {
@@ -208,13 +208,13 @@ export function SessionHistoryList({
                     day: "numeric",
                     year: "numeric",
                   })}
-                </SheetTitle>
-                <SheetDescription>
+                </DialogTitle>
+                <DialogDescription>
                   Session opened by {selected.opening.countedBy} ·{" "}
                   {selected.capturedTxns.length} cash txn
                   {selected.capturedTxns.length === 1 ? "" : "s"}
-                </SheetDescription>
-              </SheetHeader>
+                </DialogDescription>
+              </DialogHeader>
 
               {/* Variance summary */}
               {selected.varianceStatus && selected.variance !== null && (
@@ -411,8 +411,8 @@ export function SessionHistoryList({
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

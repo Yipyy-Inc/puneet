@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -377,30 +377,27 @@ function AbandonmentRecoveryEditor({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col overflow-hidden sm:max-w-xl"
-      >
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col overflow-hidden sm:max-w-xl">
         {/* Header */}
-        <SheetHeader className="border-b pb-4">
+        <DialogHeader className="border-b pb-4">
           <div className="flex items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
               <Zap className="size-4 text-amber-600" />
             </div>
             <div>
-              <SheetTitle className="text-base/tight">
+              <DialogTitle className="text-base/tight">
                 Abandonment Recovery Settings
-              </SheetTitle>
-              <SheetDescription className="text-xs">
+              </DialogTitle>
+              <DialogDescription className="text-xs">
                 Auto-reach out when clients don&apos;t finish their booking
-              </SheetDescription>
+              </DialogDescription>
             </div>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         {/* Scrollable body */}
-        <div className="flex-1 space-y-5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           {/* Master toggle */}
           <div className="bg-muted/30 flex items-center justify-between rounded-xl border px-4 py-3">
             <div>
@@ -523,7 +520,7 @@ function AbandonmentRecoveryEditor({
         </div>
 
         {/* Footer */}
-        <SheetFooter className="flex-row items-center justify-between gap-2 border-t pt-4">
+        <DialogFooter className="flex-row items-center justify-between gap-2 border-t pt-4">
           <Button
             variant="ghost"
             size="sm"
@@ -547,8 +544,8 @@ function AbandonmentRecoveryEditor({
               Save Settings
             </Button>
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

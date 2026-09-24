@@ -28,12 +28,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Search,
   Download,
@@ -522,14 +522,11 @@ export function LoyaltyMembersTable() {
       </p>
 
       {/* History drawer */}
-      <Sheet
+      <Dialog
         open={!!historyFor}
         onOpenChange={(o) => !o && setHistoryFor(null)}
       >
-        <SheetContent
-          side="right"
-          className="w-full gap-0 overflow-y-auto sm:max-w-2xl"
-        >
+        <DialogContent className="w-full gap-0 overflow-y-auto sm:max-w-2xl">
           {historyFor && (
             <MemberHistoryBody
               account={historyFor}
@@ -541,8 +538,8 @@ export function LoyaltyMembersTable() {
               customerName={historyFor.clientName}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {adjustFor && (
         <AdjustPointsModal
@@ -623,12 +620,12 @@ function MemberHistoryBody({
   );
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>{customerName ?? account.clientName}</SheetTitle>
-        <SheetDescription>
+      <DialogHeader>
+        <DialogTitle>{customerName ?? account.clientName}</DialogTitle>
+        <DialogDescription>
           Loyalty balances and transaction history
-        </SheetDescription>
-      </SheetHeader>
+        </DialogDescription>
+      </DialogHeader>
       <div className="space-y-5 px-4 pb-6">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Points" value={account.pointsBalance.toLocaleString()} />

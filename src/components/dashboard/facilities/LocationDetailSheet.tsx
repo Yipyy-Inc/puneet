@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { facilityStaff, FACILITY_LOCATIONS } from "@/data/facility-staff";
@@ -135,17 +135,14 @@ export function LocationDetailSheet({
   );
 
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
     >
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-lg"
-      >
-        <SheetHeader className="border-b">
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div
@@ -158,8 +155,8 @@ export function LocationDetailSheet({
                 <Building className="size-5 text-white" />
               </div>
               <div className="min-w-0">
-                <SheetTitle className="text-lg">{location.name}</SheetTitle>
-                <SheetDescription>Location details</SheetDescription>
+                <DialogTitle className="text-lg">{location.name}</DialogTitle>
+                <DialogDescription>Location details</DialogDescription>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={onEdit}>
@@ -167,9 +164,9 @@ export function LocationDetailSheet({
               Edit
             </Button>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           <Section icon={MapPin} title="Address">
             <p className="text-sm">{location.address}</p>
           </Section>
@@ -241,7 +238,7 @@ export function LocationDetailSheet({
             )}
           </Section>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

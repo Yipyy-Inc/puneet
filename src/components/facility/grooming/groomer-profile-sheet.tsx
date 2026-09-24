@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -125,10 +125,10 @@ export function GroomerProfileSheet({
   if (!groomer) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-3">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
             <Avatar className="size-11">
               <AvatarImage src={groomer.photoUrl} />
               <AvatarFallback>
@@ -144,7 +144,7 @@ export function GroomerProfileSheet({
                 Groomer · {groomer.email}
               </p>
             </div>
-          </SheetTitle>
+          </DialogTitle>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {statusBadge(groomer.status)}
             <Badge variant="outline" className="capitalize">
@@ -157,7 +157,7 @@ export function GroomerProfileSheet({
               </span>
             )}
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         <Tabs defaultValue="profile" className="px-4 pb-6">
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
@@ -342,8 +342,8 @@ export function GroomerProfileSheet({
             </Button>
           </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

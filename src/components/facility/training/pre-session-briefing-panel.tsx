@@ -5,13 +5,13 @@ import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -267,12 +267,9 @@ export function PreSessionBriefingPanel({
     .toUpperCase();
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-xl"
-      >
-        <SheetHeader className="space-y-3 border-b bg-linear-to-br from-indigo-50/60 via-white to-white pb-4 dark:from-indigo-950/30 dark:via-slate-950 dark:to-slate-950">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 sm:max-w-xl">
+        <DialogHeader className="space-y-3 border-b bg-linear-to-br from-indigo-50/60 via-white to-white pb-4 dark:from-indigo-950/30 dark:via-slate-950 dark:to-slate-950">
           {/* Top row — kicker label + countdown chip */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -295,14 +292,14 @@ export function PreSessionBriefingPanel({
 
           {/* Course name — the hero of the screen */}
           <div className="space-y-1 text-left">
-            <SheetTitle className="text-2xl/tight font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <DialogTitle className="text-2xl/tight font-bold tracking-tight text-slate-900 dark:text-slate-50">
               {task.className}
-            </SheetTitle>
-            <SheetDescription className="text-muted-foreground text-[12.5px]">
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-[12.5px]">
               {task.studentCount} student
               {task.studentCount === 1 ? "" : "s"} enrolled · everything you
               need before class starts
-            </SheetDescription>
+            </DialogDescription>
           </div>
 
           {/* Session facts grid — date, time, location, instructor. */}
@@ -394,7 +391,7 @@ export function PreSessionBriefingPanel({
               )}
             </div>
           )}
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="flex-1 space-y-3 py-3">
           {rows.length === 0 ? (
@@ -431,7 +428,7 @@ export function PreSessionBriefingPanel({
           )}
         </div>
 
-        <SheetFooter className="border-t bg-slate-50/40 pt-3 dark:bg-slate-950/40">
+        <DialogFooter className="border-t bg-slate-50/40 pt-3 dark:bg-slate-950/40">
           <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
               <Sparkles className="size-3" />
@@ -472,9 +469,9 @@ export function PreSessionBriefingPanel({
               </Button>
             </div>
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

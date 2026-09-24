@@ -2,12 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -62,14 +62,11 @@ export function FormPreviewSheet({
   const questions = form ? toFlatForm(form).questions : [];
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-b p-5">
-          <SheetTitle className="pr-6">{formName}</SheetTitle>
-          <SheetDescription className="flex items-center gap-1.5">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b p-5">
+          <DialogTitle className="pr-6">{formName}</DialogTitle>
+          <DialogDescription className="flex items-center gap-1.5">
             <Lock className="size-3" />
             {t("readOnlyPreview")}
             {form
@@ -82,8 +79,8 @@ export function FormPreviewSheet({
                       )
                 }`
               : ""}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         <ScrollArea className="flex-1">
           <div className="space-y-3 p-5">
@@ -102,8 +99,8 @@ export function FormPreviewSheet({
             )}
           </div>
         </ScrollArea>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

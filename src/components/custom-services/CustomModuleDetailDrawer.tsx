@@ -6,12 +6,12 @@ import { Building, Eye } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { getCategoryMeta, PRICING_MODEL_LABELS } from "@/data/custom-services";
 import { facilities } from "@/data/facilities";
@@ -74,23 +74,20 @@ export function CustomModuleDetailDrawer({
   const catMeta = mod ? getCategoryMeta(mod.category) : null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
-      >
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         {mod && (
           <>
-            <SheetHeader className="border-b">
+            <DialogHeader className="border-b">
               <div className="flex items-start gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white">
                   <DynamicIcon name={mod.icon} className="size-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <SheetTitle className="truncate">{mod.name}</SheetTitle>
-                  <SheetDescription className="truncate">
+                  <DialogTitle className="truncate">{mod.name}</DialogTitle>
+                  <DialogDescription className="truncate">
                     /{mod.slug}
-                  </SheetDescription>
+                  </DialogDescription>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -115,9 +112,9 @@ export function CustomModuleDetailDrawer({
                   Read-only
                 </Badge>
               </div>
-            </SheetHeader>
+            </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto px-4 py-2">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-2">
               {mod.description && (
                 <p className="text-muted-foreground border-b py-3 text-sm">
                   {mod.description}
@@ -244,7 +241,7 @@ export function CustomModuleDetailDrawer({
             </div>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

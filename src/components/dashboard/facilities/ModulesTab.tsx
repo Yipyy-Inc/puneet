@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import {
   Calendar,
@@ -285,20 +285,17 @@ export function ModulesTab({
         </CardContent>
 
         {/* Manage Modules drawer */}
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetContent
-            side="right"
-            className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
-          >
-            <SheetHeader className="border-b">
-              <SheetTitle>Manage Modules</SheetTitle>
-              <SheetDescription>
+        <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+            <DialogHeader className="border-b">
+              <DialogTitle>Manage Modules</DialogTitle>
+              <DialogDescription>
                 Enable or disable modules for {facilityName}, and set a custom
                 price (blank uses the tier default). Changes apply on save.
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
               {availableModules.map((module) => {
                 const Icon = getModuleIcon(module.icon);
                 const enabled = draftEnabled.has(module.id);
@@ -393,7 +390,7 @@ export function ModulesTab({
               })}
             </div>
 
-            <SheetFooter className="border-t">
+            <DialogFooter className="border-t">
               <div className="mr-auto flex flex-col gap-0.5 text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <CheckCircle className="size-3.5 text-emerald-500" />
@@ -411,9 +408,9 @@ export function ModulesTab({
                 Cancel
               </Button>
               <Button onClick={handleSave}>Save Changes</Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </Card>
 
       <FacilityCustomModulesSection

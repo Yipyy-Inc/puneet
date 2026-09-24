@@ -4,12 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { loyaltyQueries } from "@/lib/api/loyalty";
@@ -90,20 +90,17 @@ export function MemberLifecycleFunnel() {
         Click any stage to see the customers in it.
       </p>
 
-      <Sheet open={!!openStage} onOpenChange={(o) => !o && setOpenStage(null)}>
-        <SheetContent
-          side="right"
-          className="w-full gap-0 overflow-y-auto sm:max-w-md"
-        >
+      <Dialog open={!!openStage} onOpenChange={(o) => !o && setOpenStage(null)}>
+        <DialogContent className="w-full gap-0 overflow-y-auto sm:max-w-md">
           {openStage && (
             <>
-              <SheetHeader>
-                <SheetTitle>{openStage.label}</SheetTitle>
-                <SheetDescription>
+              <DialogHeader>
+                <DialogTitle>{openStage.label}</DialogTitle>
+                <DialogDescription>
                   {openStage.count} member{openStage.count === 1 ? "" : "s"} ·{" "}
                   {Math.round(openStage.pctOfEnrolled * 100)}% of enrolled
-                </SheetDescription>
-              </SheetHeader>
+                </DialogDescription>
+              </DialogHeader>
               <div className="space-y-0.5 px-4 pb-6">
                 {openStage.members.length === 0 ? (
                   <p className="text-muted-foreground py-6 text-center text-sm">
@@ -125,8 +122,8 @@ export function MemberLifecycleFunnel() {
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

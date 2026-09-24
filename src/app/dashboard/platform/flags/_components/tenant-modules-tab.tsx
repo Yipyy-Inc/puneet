@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   tenantModuleConfigs,
@@ -164,15 +164,12 @@ export function TenantModulesTab() {
         }}
       />
 
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent
-          side="right"
-          className="flex w-full flex-col gap-0 sm:max-w-lg"
-        >
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-lg">
           {selected && (
             <>
-              <SheetHeader className="border-b">
-                <SheetTitle className="flex items-center gap-2">
+              <DialogHeader className="border-b">
+                <DialogTitle className="flex items-center gap-2">
                   {selected.tenantName}
                   <Badge
                     variant="outline"
@@ -180,14 +177,14 @@ export function TenantModulesTab() {
                   >
                     {tierName(selected.subscriptionTier)}
                   </Badge>
-                </SheetTitle>
-                <SheetDescription>
+                </DialogTitle>
+                <DialogDescription>
                   {enabledCount(selected)} of {TOTAL_MODULES} modules enabled ·
                   last updated {formatDate(selected.lastUpdated)} by{" "}
                   {selected.updatedBy}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="flex-1 overflow-y-auto p-4">
+                </DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
                 <ModuleToggleList
                   items={items}
                   onToggle={(moduleId, enabled) => {
@@ -207,8 +204,8 @@ export function TenantModulesTab() {
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

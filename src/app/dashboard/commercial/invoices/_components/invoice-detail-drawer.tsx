@@ -14,12 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -69,19 +69,16 @@ export function InvoiceDetailDrawer({
   const canVoid = isUnpaid;
 
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-lg"
-      >
-        <SheetHeader className="border-b">
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b">
           <div className="flex items-center gap-2">
-            <SheetTitle className="text-lg">{invoice.number}</SheetTitle>
+            <DialogTitle className="text-lg">{invoice.number}</DialogTitle>
             <Badge
               variant="outline"
               className={cn(STATUS_BADGE[invoice.status])}
@@ -89,12 +86,12 @@ export function InvoiceDetailDrawer({
               {invoice.status}
             </Badge>
           </div>
-          <SheetDescription>
+          <DialogDescription>
             {invoice.facilityName} · {invoice.planName} · {invoice.periodLabel}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-5">
           {invoice.status === "Draft" && invoice.autoSendAt && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
               <Clock className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -241,8 +238,8 @@ export function InvoiceDetailDrawer({
           currency={invoice.currency}
           onConfirm={(payment) => onPay(invoice, payment)}
         />
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

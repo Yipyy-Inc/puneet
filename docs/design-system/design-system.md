@@ -853,6 +853,16 @@ never auto-dismiss. Prefer an undo toast over a confirmation dialog wherever the
 **Never stack two modals.** A drawer may open a modal; a modal must never open a drawer. Escape
 closes the topmost layer only.
 
+**Logged exception, 2026-09-24 (§5v rule 10).** The client asked for every side panel to open in
+the centre, consistently. The add-on categories panel was a short form and belonged in a modal by
+this table anyway; the other 30 were drawers and sheets, most of them records this table reserves
+for a drawer — gift cards, clients, estimates, invoices, subscriptions. They are centred modals
+now, capped at the viewport, with `min-h-0` on every scrolling body so a footer cannot be pushed
+off the bottom. The system lost once, and the cost is the one the Drawer row names: **the list is
+no longer in view while a record is open.** If a second product decision lands in the same place,
+this row changes rather than being excepted again. Two sheets stayed on purpose — `ui/sidebar` and
+`EmployeeBottomNav` are the mobile navigation, which the Sheet row still covers.
+
 ## 5j. Destructive actions
 
 Name the object in the title — never "Are you sure?". State what survives, what does not, and

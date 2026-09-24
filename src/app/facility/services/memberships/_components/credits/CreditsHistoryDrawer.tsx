@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowDownRight,
@@ -53,18 +53,18 @@ export function CreditsHistoryDrawer({
   if (!account) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="p-0 sm:max-w-[520px]">
-        <SheetHeader className="border-b px-6 py-5">
-          <SheetTitle>{account.clientName}</SheetTitle>
-          <SheetDescription>Store credit history</SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 sm:max-w-[520px]">
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle>{account.clientName}</DialogTitle>
+          <DialogDescription>Store credit history</DialogDescription>
 
           <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
             <Stat label="Balance" value={fmt(account.balance)} tone="emerald" />
             <Stat label="Issued" value={fmt(account.totalIssued)} />
             <Stat label="Spent" value={fmt(account.totalSpent)} />
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="overflow-y-auto px-6 py-4">
           {entries.length === 0 ? (
@@ -128,8 +128,8 @@ export function CreditsHistoryDrawer({
             </ol>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

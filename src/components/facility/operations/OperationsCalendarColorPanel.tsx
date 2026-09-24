@@ -4,12 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 import { Check, Palette, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -64,7 +64,7 @@ function ColorSwatch({
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs font-medium">
+        <TooltipContent className="text-xs font-medium">
           {name}
         </TooltipContent>
       </Tooltip>
@@ -232,8 +232,8 @@ export function OperationsCalendarColorPanel({
   }, [onColorOverridesChange]);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button
           variant="outline"
           className="h-10 gap-2 rounded-full border border-slate-200/60 bg-white/80 px-5 text-slate-600 shadow-sm transition-all duration-300 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
@@ -246,21 +246,19 @@ export function OperationsCalendarColorPanel({
             </span>
           )}
         </Button>
-      </SheetTrigger>
-      <SheetContent
-        side="right"
-        className="flex w-[380px] flex-col p-0 sm:w-[420px]"
+      </DialogTrigger>
+      <DialogContent className="flex w-[380px] flex-col p-0 sm:w-[420px] overflow-hidden"
       >
-        <SheetHeader className="shrink-0 border-b border-slate-100 px-5 pt-5 pb-4">
+        <DialogHeader className="shrink-0 border-b border-slate-100 px-5 pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-100 ring-1 ring-indigo-200/60">
                 <Palette className="size-4.5 text-indigo-600" />
               </div>
               <div>
-                <SheetTitle className="text-sm leading-none font-black tracking-tight text-slate-800">
+                <DialogTitle className="text-sm leading-none font-black tracking-tight text-slate-800">
                   Event Colors
-                </SheetTitle>
+                </DialogTitle>
                 <p className="mt-0.5 text-[11px] text-slate-400">
                   Customize calendar event colors
                 </p>
@@ -278,9 +276,9 @@ export function OperationsCalendarColorPanel({
               </Button>
             )}
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
           {/* Services section */}
           <div>
             <p className="mb-2 px-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">
@@ -327,7 +325,7 @@ export function OperationsCalendarColorPanel({
             </div>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

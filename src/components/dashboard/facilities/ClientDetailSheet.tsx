@@ -14,12 +14,12 @@ import {
 } from "lucide-react";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { bookings as allBookings } from "@/data/bookings";
@@ -109,35 +109,32 @@ export function ClientDetailSheet({
   const address = client.address;
 
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
     >
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
-      >
-        <SheetHeader className="border-b p-4">
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="border-b p-4">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
               {initials(client.name)}
             </div>
             <div className="min-w-0">
-              <SheetTitle className="flex items-center gap-2 text-lg">
+              <DialogTitle className="flex items-center gap-2 text-lg">
                 {client.name}
                 <StatusBadge type="status" value={client.status} />
                 {client.isBlocked && (
                   <Badge variant="destructive">Blocked</Badge>
                 )}
-              </SheetTitle>
-              <SheetDescription>Client profile · view only</SheetDescription>
+              </DialogTitle>
+              <DialogDescription>Client profile · view only</DialogDescription>
             </div>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           <div className="text-muted-foreground bg-muted/40 flex items-center gap-2 rounded-lg border p-2.5 text-xs">
             <Lock className="size-3.5 shrink-0" />
             View only — client records are managed by the facility and cannot be
@@ -278,7 +275,7 @@ export function ClientDetailSheet({
             )}
           </Section>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

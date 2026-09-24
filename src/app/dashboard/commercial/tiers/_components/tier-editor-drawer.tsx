@@ -26,12 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { modules } from "@/data/modules";
@@ -130,26 +130,23 @@ export function TierEditorDrawer({
   }
 
   return (
-    <Sheet
+    <Dialog
       open
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
-      >
-        <SheetHeader className="border-b">
-          <SheetTitle>{isNew ? "Create new tier" : "Edit tier"}</SheetTitle>
-          <SheetDescription>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="border-b">
+          <DialogTitle>{isNew ? "Create new tier" : "Edit tier"}</DialogTitle>
+          <DialogDescription>
             {isNew
               ? "Define pricing, modules and platform limits for the new tier."
               : `Update the “${tier.name}” tier configuration.`}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-8 overflow-y-auto px-4 py-5">
+        <div className="min-h-0 flex-1 space-y-8 overflow-y-auto px-4 py-5">
           {/* Identity */}
           <Section title="Identity">
             <Field label="Name" htmlFor="tier-name">
@@ -370,8 +367,8 @@ export function TierEditorDrawer({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

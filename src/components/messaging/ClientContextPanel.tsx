@@ -30,11 +30,11 @@ import {
   FileSignature,
 } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   getReminderHistoryForCustomer,
   ReminderHistoryPanel,
@@ -523,7 +523,7 @@ export function ClientContextPanel({
       )}
 
       {(isCustomerMode || activeTab === "client") && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {/* ── Client profile ── */}
           <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
             {profileImage ? (
@@ -1036,23 +1036,20 @@ export function ClientContextPanel({
         </div>
       )}
 
-      <Sheet open={allRemindersOpen} onOpenChange={setAllRemindersOpen}>
-        <SheetContent
-          side="right"
-          className="w-full overflow-hidden p-0 sm:max-w-2xl"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>
+      <Dialog open={allRemindersOpen} onOpenChange={setAllRemindersOpen}>
+        <DialogContent className="w-full p-0 sm:max-w-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>
               {t("reminderHistoryFor").replace("{name}", profileName)}
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
           <ReminderHistoryPanel
             counterpartyName={profileName}
             reminderHistory={reminderHistory}
             mode={mode}
           />
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Lightbox */}
       {selectedImage && (

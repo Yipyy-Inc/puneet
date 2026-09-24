@@ -16,12 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { RetentionPolicy } from "@/data/system-administration";
 import {
   updateRetentionPolicy,
@@ -59,21 +59,18 @@ export function RetentionEditDrawer({
   };
 
   return (
-    <Sheet open={!!policy} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-b">
-          <SheetTitle className="flex items-center gap-2">
+    <Dialog open={!!policy} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b">
+          <DialogTitle className="flex items-center gap-2">
             <Archive className="size-5" />
             Edit Retention Policy
-          </SheetTitle>
-          <SheetDescription>{policy?.policyName}</SheetDescription>
-        </SheetHeader>
+          </DialogTitle>
+          <DialogDescription>{policy?.policyName}</DialogDescription>
+        </DialogHeader>
 
         {policy && (
-          <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5">
             <div>
               <p className="text-muted-foreground text-xs">Data type</p>
               <p className="font-medium">{policy.dataType}</p>
@@ -150,7 +147,7 @@ export function RetentionEditDrawer({
             Save Changes
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

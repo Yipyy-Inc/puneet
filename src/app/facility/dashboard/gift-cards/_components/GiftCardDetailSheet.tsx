@@ -8,16 +8,6 @@ import { toLegacyTransaction } from "../_lib/to-legacy-card";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,6 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -551,19 +544,19 @@ export function GiftCardDetailSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
-          <SheetHeader className="border-b pb-4">
-            <SheetTitle className="flex items-center gap-2">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-md">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2">
               <Gift className="size-5" />
               Gift Card Details
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               Full audit trail and balance information
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="flex-1 space-y-5 overflow-y-auto py-4">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-4">
             {/* Balance card */}
             <div className="rounded-xl bg-linear-to-br from-violet-600 to-purple-700 p-5 text-white shadow-lg">
               <div className="flex items-start justify-between">
@@ -846,8 +839,8 @@ export function GiftCardDetailSheet({
               )}
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Extend Expiry dialog */}
       <Dialog open={extendOpen} onOpenChange={setExtendOpen}>

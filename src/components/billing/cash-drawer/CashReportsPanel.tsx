@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -202,21 +202,21 @@ export function CashReportsPanel({ sessions, currencySymbol }: Props) {
       </Tabs>
 
       {/* Drill-down sheet */}
-      <Sheet
+      <Dialog
         open={!!drillBucket}
         onOpenChange={(v) => {
           if (!v) setDrillKey(null);
         }}
       >
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+        <DialogContent className="w-full overflow-y-auto sm:max-w-xl">
           {drillBucket && (
             <DrillContent
               bucket={drillBucket}
               currencySymbol={currencySymbol}
             />
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -239,14 +239,14 @@ function DrillContent({
 
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>{bucket.label}</SheetTitle>
-        <SheetDescription>
+      <DialogHeader>
+        <DialogTitle>{bucket.label}</DialogTitle>
+        <DialogDescription>
           {bucket.sessions.length} session
           {bucket.sessions.length === 1 ? "" : "s"} · {bucket.txnCount} cash
           txns · {fmt(bucket.cashCaptured)} captured
-        </SheetDescription>
-      </SheetHeader>
+        </DialogDescription>
+      </DialogHeader>
 
       <div className="mt-4 space-y-4 px-1">
         {/* Source breakdown */}

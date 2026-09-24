@@ -13,23 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { facilityParentHost } from "@/lib/app-host";
@@ -695,15 +687,15 @@ export default function FacilitiesPage() {
       </Card>
 
       {/* Filter Panel */}
-      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-        <SheetContent className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Filter facilities</SheetTitle>
-            <SheetDescription>
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="w-full sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Filter facilities</DialogTitle>
+            <DialogDescription>
               Refine the list by status, plan, and business type.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 space-y-6 overflow-y-auto px-4">
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4">
             <FilterGroup
               title="Status"
               options={filterOptions.statuses}
@@ -723,16 +715,16 @@ export default function FacilitiesPage() {
               onToggle={(v) => toggleDraftFilter("businessTypes", v)}
             />
           </div>
-          <SheetFooter className="flex-row gap-2 border-t">
+          <DialogFooter className="flex-row gap-2 border-t">
             <Button variant="outline" className="flex-1" onClick={clearFilters}>
               Clear
             </Button>
             <Button className="flex-1" onClick={applyFilters}>
               Apply
             </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Notify All Modal */}
       <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>

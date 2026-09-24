@@ -15,11 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   Dog,
@@ -455,21 +455,18 @@ export default function CustomerReportCardsPage() {
       </div>
 
       {/* Detail slide-over */}
-      <Sheet
+      <Dialog
         open={openId !== null}
         onOpenChange={(o) => {
           if (!o) setOpenId(null);
         }}
       >
-        <SheetContent
-          side="right"
-          className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg"
-        >
-          <SheetHeader className="border-b px-4 py-3">
-            <SheetTitle>
+        <DialogContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
+          <DialogHeader className="border-b px-4 py-3">
+            <DialogTitle>
               {openItem ? `${openItem.petName}'s report card` : "Report card"}
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
           {openItem && (
             <div className="p-4">
               <ReportCardDetail
@@ -479,8 +476,8 @@ export default function CustomerReportCardsPage() {
               />
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

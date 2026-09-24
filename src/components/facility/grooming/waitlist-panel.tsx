@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -196,13 +196,10 @@ export function WaitlistPanel({
     return names.join(", ");
   };
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-b bg-amber-50/60 px-5 py-4 dark:bg-amber-950/20">
-          <SheetTitle className="flex items-center gap-2 text-base">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b bg-amber-50/60 px-5 py-4 dark:bg-amber-950/20">
+          <DialogTitle className="flex items-center gap-2 text-base">
             <Hourglass className="size-4 text-amber-600" />
             Waitlist
             <Badge
@@ -211,13 +208,13 @@ export function WaitlistPanel({
             >
               {entries.length}
             </Badge>
-          </SheetTitle>
+          </DialogTitle>
           <p className="text-muted-foreground text-xs">
             {formatDateLong(date)}
           </p>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {entries.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <Hourglass className="text-muted-foreground/40 size-6" />
@@ -455,7 +452,7 @@ export function WaitlistPanel({
             </ul>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

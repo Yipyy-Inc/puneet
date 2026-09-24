@@ -13,11 +13,11 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   BookOpen,
@@ -987,10 +987,10 @@ export function DailyCareView() {
           onReloadMedication={handleReloadMeds}
         />
 
-        <Sheet open={journalSheetOpen} onOpenChange={setJournalSheetOpen}>
-          <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
+        <Dialog open={journalSheetOpen} onOpenChange={setJournalSheetOpen}>
+          <DialogContent className="w-full overflow-y-auto sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
                 {selectedJournalGuest && (
                   <Button
                     variant="ghost"
@@ -1005,8 +1005,8 @@ export function DailyCareView() {
                 {selectedJournalGuest
                   ? `${selectedJournalGuest.petName}'s Journal`
                   : "Guest Journals"}
-              </SheetTitle>
-            </SheetHeader>
+              </DialogTitle>
+            </DialogHeader>
 
             <div className="px-4 pb-6">
               {selectedJournalGuest ? (
@@ -1074,8 +1074,8 @@ export function DailyCareView() {
                 </div>
               )}
             </div>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <DailyCarePrintSheet

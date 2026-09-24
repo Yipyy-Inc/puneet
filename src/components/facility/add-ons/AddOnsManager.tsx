@@ -51,7 +51,7 @@ import {
   AddOnFormDialog,
   type AddOnFormValues,
 } from "@/components/facility/add-ons/AddOnFormDialog";
-import { AddOnCategorySheet } from "@/components/facility/add-ons/AddOnCategorySheet";
+import { AddOnCategoryDialog } from "@/components/facility/add-ons/AddOnCategoryDialog";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 
 // ── Storage ────────────────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ function AddOnsEditor({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogSeq, setDialogSeq] = useState(0);
   const [editingAddon, setEditingAddon] = useState<ServiceAddOn | null>(null);
-  const [catSheetOpen, setCatSheetOpen] = useState(false);
+  const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -398,7 +398,7 @@ function AddOnsEditor({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCatSheetOpen(true)}
+            onClick={() => setCatDialogOpen(true)}
             className="gap-1.5"
           >
             <FolderOpen className="size-4" />
@@ -707,9 +707,9 @@ function AddOnsEditor({
         onSave={handleSave}
       />
 
-      <AddOnCategorySheet
-        open={catSheetOpen}
-        onOpenChange={setCatSheetOpen}
+      <AddOnCategoryDialog
+        open={catDialogOpen}
+        onOpenChange={setCatDialogOpen}
         categories={categories}
         onSave={persistCategories}
       />

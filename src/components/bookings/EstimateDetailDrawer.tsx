@@ -5,12 +5,12 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Send,
   XCircle,
@@ -172,13 +172,10 @@ export function EstimateDetailDrawer({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="w-full gap-0 p-0 sm:max-w-xl lg:max-w-2xl"
-        >
-          <SheetHeader className="border-b pr-10">
-            <SheetTitle className="flex flex-wrap items-center gap-2">
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full gap-0 p-0 sm:max-w-xl lg:max-w-2xl">
+          <DialogHeader className="border-b pr-10">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               <span>{estimate.clientName}</span>
               <Badge className={`text-[10px] ${config.color}`}>
                 {config.label}
@@ -201,10 +198,10 @@ export function EstimateDetailDrawer({
                     </Badge>
                   </Link>
                 )}
-            </SheetTitle>
-            <SheetDescription className="sr-only">
+            </DialogTitle>
+            <DialogDescription className="sr-only">
               Estimate {estimate.estimateId} details
-            </SheetDescription>
+            </DialogDescription>
             <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
               <span className="flex items-center gap-1">
                 <CalendarDays className="size-3" />
@@ -242,9 +239,9 @@ export function EstimateDetailDrawer({
                 {formatDate(estimate.expiresAt)}
               </p>
             )}
-          </SheetHeader>
+          </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
               {/* Line items */}
               <div className="space-y-1.5">
@@ -484,8 +481,8 @@ export function EstimateDetailDrawer({
               )}
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConvertEstimateReviewDialog
         estimate={estimate}

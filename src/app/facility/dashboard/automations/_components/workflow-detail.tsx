@@ -15,12 +15,12 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TableSkeleton } from "@/components/ui/skeletons";
 import { useUpdateWorkflow, workflowQueries } from "@/lib/api/workflows";
 import { TRIGGER_META } from "@/lib/automations/triggers";
@@ -66,13 +66,10 @@ export function WorkflowDetailSheet({
   const workflow = detail.data;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-y-auto sm:max-w-xl lg:max-w-2xl"
-      >
-        <SheetHeader>
-          <SheetTitle className="flex flex-wrap items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full overflow-y-auto sm:max-w-xl lg:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
             {workflow?.name ?? "Workflow"}
             {workflow && (
               <Badge
@@ -81,15 +78,15 @@ export function WorkflowDetailSheet({
                 {workflow.status}
               </Badge>
             )}
-          </SheetTitle>
-          <SheetDescription>
+          </DialogTitle>
+          <DialogDescription>
             {workflow
               ? workflow.kind === "audience"
                 ? "Runs on a schedule against a filtered group."
                 : "Starts when a client does something."
               : "Loading…"}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
         {detail.isLoading || !workflow ? (
           <div className="p-4">
@@ -290,8 +287,8 @@ export function WorkflowDetailSheet({
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 

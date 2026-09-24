@@ -8,18 +8,39 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, GripVertical, FolderOpen } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
+
+// ============================================================================
+// ADD-ON CATEGORIES — IN THE MIDDLE OF THE SCREEN.
+//
+// This slid in from the right until 2026-09-24. Client instruction: panels open
+// in the CENTRE, everywhere, because a product that sometimes puts a form at
+// the edge and sometimes in the middle makes somebody look for it twice.
+//
+// The structure is unchanged — a scrolling list above a fixed form — and that
+// is the one thing the conversion has to get right. A side sheet is full-height
+// by default; a centred dialog is not, so the content is capped at 85vh, the
+// container is `overflow-hidden`, and the list carries `min-h-0`. Without that
+// last class the list refuses to shrink (a flex child defaults to
+// `min-height: auto`) and the whole dialog scrolls instead, taking the form
+// off the bottom of the screen with it.
+//
+// The `sheet*` translation keys are deliberately NOT renamed: they are internal
+// identifiers, the words they hold are unchanged, and churning ten keys across
+// two catalogues to match a component name is risk with nothing on the other
+// side of it.
+// ============================================================================
 
 interface Props {
   open: boolean;
@@ -40,7 +61,7 @@ function blankCategory(): Omit<
   };
 }
 
-export function AddOnCategorySheet({
+export function AddOnCategoryDialog({
   open,
   onOpenChange,
   categories,
@@ -99,10 +120,10 @@ export function AddOnCategorySheet({
   const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:w-[420px]">
-        <SheetHeader className="border-b px-6 pt-6 pb-4">
-          <SheetTitle className="flex items-center gap-2.5 text-lg">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b px-6 pt-6 pb-4">
+          <DialogTitle className="flex items-center gap-2.5 text-lg">
             {/* A SOLID disc with a white glyph, not a violet wash behind a violet
                 icon: §6 rule 2 tints a metric tile and a status chip, and nothing
                 else. Light-on-light is also what disappears against a wash. */}
@@ -110,11 +131,11 @@ export function AddOnCategorySheet({
               <FolderOpen className="text-violet-foreground size-4" />
             </div>
             {t("sheetTitle")}
-          </SheetTitle>
-          <SheetDescription>{t("sheetIntro")}</SheetDescription>
-        </SheetHeader>
+          </DialogTitle>
+          <DialogDescription>{t("sheetIntro")}</DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
           {sorted.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FolderOpen className="text-muted-foreground/30 mb-3 size-10" />
@@ -238,7 +259,7 @@ export function AddOnCategorySheet({
             )}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -15,12 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import type { PasswordPolicy } from "@/data/security-compliance";
 
@@ -75,21 +75,18 @@ export function PasswordPolicyDrawer({
     setForm((f) => (f ? { ...f, ...patch } : f));
 
   return (
-    <Sheet open={!!policy} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-lg"
-      >
-        <SheetHeader className="border-b">
-          <SheetTitle className="flex items-center gap-2">
+    <Dialog open={!!policy} onOpenChange={onOpenChange}>
+      <DialogContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b">
+          <DialogTitle className="flex items-center gap-2">
             <Key className="size-5" />
             Edit Password Policy
-          </SheetTitle>
-          <SheetDescription>{form?.policyName}</SheetDescription>
-        </SheetHeader>
+          </DialogTitle>
+          <DialogDescription>{form?.policyName}</DialogDescription>
+        </DialogHeader>
 
         {form && (
-          <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5">
             <div className="grid gap-1.5">
               <Label htmlFor="policy-name">Policy name</Label>
               <Input
@@ -182,7 +179,7 @@ export function PasswordPolicyDrawer({
             Save Changes
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

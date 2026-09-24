@@ -17,11 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -551,12 +551,12 @@ export function UserProfileSheet({
 
       {/* Notifications Sheet */}
       {showNotifications && (
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+        <Dialog open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <DialogContent className="w-full p-0 sm:max-w-md">
             <div className="flex h-full flex-col">
               {/* Header */}
-              <SheetHeader className="p-6 pb-4">
-                <SheetTitle className="flex items-center gap-2">
+              <DialogHeader className="p-6 pb-4">
+                <DialogTitle className="flex items-center gap-2">
                   <Bell className="size-5" />
                   {tNotify("title")}
                   {unreadCount > 0 && (
@@ -564,11 +564,11 @@ export function UserProfileSheet({
                       {unreadCount} {tNotify("new")}
                     </Badge>
                   )}
-                </SheetTitle>
-              </SheetHeader>
+                </DialogTitle>
+              </DialogHeader>
 
               {/* Notifications Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="space-y-4 p-6">
                   {unreadCount > 0 && (
                     <div className="flex justify-end">
@@ -629,8 +629,8 @@ export function UserProfileSheet({
                 </div>
               </div>
             </div>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
