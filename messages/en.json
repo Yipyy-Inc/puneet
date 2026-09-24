@@ -2111,7 +2111,8 @@
         "legendMaintenance": "Maintenance",
         "legendBlocked": "Blocked",
         "roomOne": "room",
-        "roomMany": "rooms"
+        "roomMany": "rooms",
+        "countedInPets": "counted in pets"
       },
       "opsCalendar": {
         "eventNotSaved": "The event was not saved",

@@ -50,6 +50,10 @@ import {
   type RoomBlock,
 } from "./_lib/calendar-types";
 import { printOccupancyGrid } from "./_lib/print-calendar";
+import {
+  lodgingOccupancy,
+  type LodgingOccupancy,
+} from "@/lib/boarding/lodging-occupancy";
 
 interface KennelCalendarViewProps {
   kennels: OccupancyKennel[];
@@ -228,25 +232,45 @@ export function KennelCalendarView({
       .filter((g) => g.rooms.length > 0);
   }, [categories, filteredKennels]);
 
-  // Per-day occupancy across the visible roster (excludes blocked rooms)
+  // ── Per-day occupancy across the visible roster (excludes blocked rooms) ─
+  //
+  // X / Y (%), which is MoéGo's format and replaces a bare percentage: "60%"
+  // does not tell a receptionist whether three of five or thirty of fifty are
+  // free, and the two are different conversations with somebody on the phone.
+  //
+  // COUNTED IN SPACES, deliberately, even where a type is an area. This column
+  // spans every lodging type on screen at once, and adding pet places to
+  // kennel places gives a number that means neither. The per-type figure on
+  // each category header is the one that knows the difference.
   const dayOccupancy = useMemo(() => {
     return dates.map((date) => {
       const ds = toLocalISODate(date);
-      const totalRooms = filteredKennels.filter(
+      const capacity = filteredKennels.filter(
         (k) => !isRoomBlockedOnDate(blocks, k.id, ds),
       ).length;
-      if (totalRooms === 0) return 0;
-      const occupied = filteredKennels.filter((k) => {
+      const used = filteredKennels.filter((k) => {
         if (!k.checkIn || !k.checkOut) return false;
+        if (isRoomBlockedOnDate(blocks, k.id, ds)) return false;
         return ds >= k.checkIn && ds <= k.checkOut;
       }).length;
-      return Math.round((occupied / totalRooms) * 100);
+      return {
+        used,
+        capacity,
+        percent: capacity > 0 ? Math.round((used / capacity) * 100) : 0,
+      };
     });
   }, [filteredKennels, dates, blocks]);
 
-  // Per-category occupancy across visible range
+  // ── Per-category occupancy across the visible range ─────────────────────
+  //
+  // COUNTED THE WAY THE TYPE IS COUNTED. A room type is counted in rooms; an
+  // AREA is counted in pets, because MoéGo's area "remains available until the
+  // number of assigned pets reaches the maximum limit". Until this used
+  // `lodgingOccupancy`, a yard with room for twelve dogs read 100% the moment
+  // one arrived — `space_type` was stored, enforced by a trigger and editable
+  // on the setup screen, and decided nothing anybody could see.
   const categoryOccupancy = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, LodgingOccupancy>();
     const rangeStart = toLocalISODate(dates[0]);
     const rangeEnd = toLocalISODate(dates[dates.length - 1]);
     groupedKennels.forEach(({ category, rooms }) => {
@@ -258,14 +282,28 @@ export function KennelCalendarView({
               dateRangesOverlap(rangeStart, rangeEnd, b.startDate, b.endDate),
           ),
       );
-      const occupiedRooms = eligibleRooms.filter((room) => {
-        if (!room.checkIn || !room.checkOut) return false;
-        return room.checkOut >= rangeStart && room.checkIn <= rangeEnd;
-      }).length;
-      const total = eligibleRooms.length;
+      const inRange = (room: (typeof eligibleRooms)[number]) =>
+        Boolean(room.checkIn && room.checkOut) &&
+        room.checkOut! >= rangeStart &&
+        room.checkIn! <= rangeEnd;
+
       map.set(
         category.id,
-        total > 0 ? Math.round((occupiedRooms / total) * 100) : 0,
+        lodgingOccupancy(
+          category,
+          eligibleRooms.map((r) => ({ id: r.id })),
+          {
+            occupiedUnitIds: new Set(
+              eligibleRooms.filter(inRange).map((r) => r.id),
+            ),
+            petsByUnit: new Map(
+              eligibleRooms.map((r) => [
+                r.id,
+                inRange(r) ? (r.petCount ?? 0) : 0,
+              ]),
+            ),
+          },
+        ),
       );
     });
     return map;
@@ -680,7 +718,15 @@ export function KennelCalendarView({
                         isTodayDate ? "text-primary" : "text-muted-foreground",
                       )}
                     >
-                      {dayName} {occ}%
+                      {dayName}
+                    </div>
+                    <div
+                      className={cn(
+                        "text-[11px] tabular-nums",
+                        isTodayDate ? "text-primary" : "text-muted-foreground",
+                      )}
+                    >
+                      {occ.used}/{occ.capacity} ({occ.percent}%)
                     </div>
                   </div>
                 );
@@ -690,7 +736,8 @@ export function KennelCalendarView({
             {/* Category Groups */}
             {groupedKennels.map(({ category, rooms }) => {
               const collapsed = collapsedCategories.has(category.id);
-              const occupancy = categoryOccupancy.get(category.id) ?? 0;
+              const occupancy = categoryOccupancy.get(category.id);
+              const percent = occupancy?.percent ?? 0;
               return (
                 <div key={category.id}>
                   {/* Category Header Row */}
@@ -711,6 +758,14 @@ export function KennelCalendarView({
                       {rooms.length}{" "}
                       {rooms.length === 1 ? t("roomOne") : t("roomMany")}
                     </span>
+                    {/* AN AREA SAYS SO. Its numbers are dogs, not runs, and
+                        "7 / 24" means nothing if the reader cannot tell which
+                        — so the space type is named rather than implied. */}
+                    {occupancy?.countedIn === "pets" ? (
+                      <span className="border-line text-muted-foreground rounded-full border px-2 py-0.5 text-[11px] font-bold tracking-[.06em] uppercase">
+                        {t("countedInPets")}
+                      </span>
+                    ) : null}
                     <span className="ml-auto flex items-center gap-2 text-xs">
                       <span className="text-muted-foreground">
                         {t("occupancyLabel")}
@@ -718,14 +773,21 @@ export function KennelCalendarView({
                       <span
                         className={cn(
                           "font-semibold",
-                          occupancy >= 80
+                          percent >= 80
                             ? "text-red-600"
-                            : occupancy >= 50
+                            : percent >= 50
                               ? "text-amber-600"
                               : "text-emerald-600",
                         )}
                       >
-                        {occupancy}%
+                        {/* MoéGo's own format. A bare percentage cannot tell a
+                            receptionist whether three of five or thirty of
+                            fifty are free, and those are different
+                            conversations with somebody on the phone. */}
+                        <span className="tabular-nums">
+                          {occupancy?.used ?? 0}/{occupancy?.capacity ?? 0}
+                        </span>{" "}
+                        <span className="tabular-nums">({percent}%)</span>
                       </span>
                     </span>
                   </button>

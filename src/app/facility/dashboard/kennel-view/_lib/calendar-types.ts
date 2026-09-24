@@ -30,6 +30,15 @@ export interface OccupancyKennel {
   checkInTime?: string;
   checkOutTime?: string;
   dailyRate: number;
+  /**
+   * How many pets are in this unit right now, across EVERY stay holding it.
+   *
+   * `petName` above is the first pet of the first stay, which is all a room
+   * square needs. An AREA holds several stays at once and is counted in PETS
+   * (MoeGo: "an area remains available until the number of assigned pets
+   * reaches the maximum limit"), so the count cannot be derived from one row.
+   */
+  petCount?: number;
   hasFeedingInstructions?: boolean;
   hasMedications?: boolean;
   specialRequests?: string;

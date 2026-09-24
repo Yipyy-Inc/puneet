@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
 import { effectiveCapacity } from "@/lib/api/mappers/boarding";
+import {
+  lodgingOccupancy,
+  type LodgingCountedIn,
+} from "@/lib/boarding/lodging-occupancy";
 
 // ============================================================================
 // The kennels, from Postgres.
@@ -151,19 +155,69 @@ export function summariseOccupancy(payload: BoardingRoomsPayload | undefined) {
   // Inactive rooms are excluded: a kennel out for a deep clean is not capacity
   // the facility has tonight, and counting it would understate how full it is.
   const rooms = (payload?.rooms ?? []).filter((r) => r.active);
-  const occupiedIds = new Set((payload?.occupied ?? []).map((o) => o.roomId));
-  const nameById = new Map(categories.map((c) => [c.id, c.name]));
+  const occupancyRows = payload?.occupied ?? [];
+  const occupiedIds = new Set(occupancyRows.map((o) => o.roomId));
 
-  const byType: Record<string, { total: number; occupied: number }> = {};
-  for (const room of rooms) {
-    // Grouped by the CATEGORY's name, which is what the facility calls it —
-    // "Deluxe Suite", not a `typeId` from an enum no room row ever had.
-    const label = nameById.get(room.categoryId) ?? room.categoryId;
-    const entry = (byType[label] ??= { total: 0, occupied: 0 });
-    entry.total += 1;
-    if (occupiedIds.has(room.id)) entry.occupied += 1;
+  // PETS PER UNIT, which is how an AREA is counted. Summed rather than taken
+  // from one row because several stays may share one area — that is the whole
+  // difference between an area and a room, and `private.area_pets_in_use`
+  // sums the same way.
+  const petsByUnit = new Map<string, number>();
+  for (const row of occupancyRows) {
+    petsByUnit.set(
+      row.roomId,
+      (petsByUnit.get(row.roomId) ?? 0) + (row.petNames?.length ?? 0),
+    );
   }
 
+  const unitsByCategory = new Map<string, typeof rooms>();
+  for (const room of rooms) {
+    const list = unitsByCategory.get(room.categoryId) ?? [];
+    list.push(room);
+    unitsByCategory.set(room.categoryId, list);
+  }
+
+  const byType: Record<
+    string,
+    {
+      /** Places available — rooms for a room type, pet slots for an area. */
+      total: number;
+      /** Places taken, in the same unit as `total`. */
+      occupied: number;
+      /** WHICH of the two, so a screen can say "dogs" rather than "runs". */
+      countedIn: LodgingCountedIn;
+      percent: number;
+    }
+  > = {};
+
+  for (const category of categories) {
+    const units = unitsByCategory.get(category.id) ?? [];
+    if (units.length === 0) continue;
+    // Grouped by the CATEGORY's name, which is what the facility calls it —
+    // "Deluxe Suite", not a `typeId` from an enum no room row ever had.
+    const label = category.name || category.id;
+    // AN AREA IS COUNTED IN PETS. Until this call every board counted rooms,
+    // so a yard with room for twelve dogs read 1 / 1 the moment one arrived.
+    const o = lodgingOccupancy(category, units, {
+      occupiedUnitIds: occupiedIds,
+      petsByUnit,
+    });
+    byType[label] = {
+      total: o.capacity,
+      occupied: o.used,
+      countedIn: o.countedIn,
+      percent: o.percent,
+    };
+  }
+
+  // ── THE HEADLINE STAYS IN ROOMS, ON PURPOSE ──────────────────────────────
+  //
+  // "How full are we" across a facility that has both kinds cannot be one
+  // number: adding pet places to kennel places is adding two different things
+  // and the sum means neither. This keeps its original meaning — SPACES in
+  // use — which is what the bar above it has always drawn, rather than
+  // silently redefining a figure staff already read every morning. The honest
+  // per-type numbers are in `byType`, which is where the distinction belongs.
   const total = rooms.length;
   const occupied = rooms.filter((r) => occupiedIds.has(r.id)).length;
 

@@ -97,6 +97,19 @@ function buildKennels({
   const categoryById = new Map(categories.map((c) => [c.id, c]));
   const stayByRoom = new Map(occupied.map((o) => [o.roomId, o]));
 
+  // PETS PER UNIT, summed across every stay holding it. `stayByRoom` above
+  // keeps only the last stay for a room, which is all a kennel square needs
+  // and is not enough for an AREA: several stays share one, and an area is
+  // counted in pets rather than in rooms. Summed the same way
+  // `private.area_pets_in_use` sums, so the board and the constraint agree.
+  const petsByRoom = new Map<string, number>();
+  for (const stay of occupied) {
+    petsByRoom.set(
+      stay.roomId,
+      (petsByRoom.get(stay.roomId) ?? 0) + (stay.petNames?.length ?? 0),
+    );
+  }
+
   return rooms
     .filter((room) => room.active)
     .map((room) => {
@@ -118,6 +131,7 @@ function buildKennels({
         name: room.name,
         categoryId: room.categoryId,
         dailyRate: category?.defaultBasePrice ?? 0,
+        petCount: petsByRoom.get(room.id) ?? 0,
         status,
         ...(stay
           ? {

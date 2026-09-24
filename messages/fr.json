@@ -2111,7 +2111,8 @@
         "legendMaintenance": "Entretien",
         "legendBlocked": "Bloqué",
         "roomOne": "chambre",
-        "roomMany": "chambres"
+        "roomMany": "chambres",
+        "countedInPets": "compté en animaux"
       },
       "opsCalendar": {
         "eventNotSaved": "L’événement n’a pas été enregistré",

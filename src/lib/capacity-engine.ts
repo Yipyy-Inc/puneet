@@ -16,6 +16,10 @@ import type {
 } from "@/types/rooms";
 import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import {
+  isCountedInPets,
+  petsOnBooking,
+} from "@/lib/boarding/lodging-occupancy";
 
 // ── Rule matching ─────────────────────────────────────────────────────────────
 
@@ -223,6 +227,32 @@ export function getBoardingUnitUsage(
 }
 
 /**
+ * How many PETS already occupy a unit over a range.
+ *
+ * The sibling of `getBoardingUnitUsage`, and the two answer different
+ * questions on purpose: a room is full when somebody is in it, an area is full
+ * when the DOGS reach its maximum. Counting stays against `maxPetsPerArea`
+ * would let a twelve-dog yard take twelve families and then be refused by
+ * `private.boarding_area_within_capacity`, which counts `booking_pets`.
+ */
+export function boardingUnitPets(
+  unitId: string,
+  startDate: string,
+  endDate: string,
+  bookings: Booking[],
+): number {
+  return bookings
+    .filter(
+      (b) =>
+        b.service === "boarding" &&
+        b.unitAssignment === unitId &&
+        holdsSpace(b) &&
+        datesOverlap(b.startDate, b.endDate, startDate, endDate),
+    )
+    .reduce((sum, b) => sum + petsOnBooking(b), 0);
+}
+
+/**
  * Returns availability summary per room category for a date range.
  * Used in the boarding booking wizard to show "X of Y available".
  */
@@ -253,16 +283,34 @@ export function getBoardingCategoryAvailability(
           ? cat.rules.find((r) => r.enabled && !petMatchesRules(pet, [r]))
           : null;
 
-      const availableUnits = activeUnits.filter((unit) => {
-        const cap = unit.capacity ?? cat.defaultCapacity;
-        const used = getBoardingUnitUsage(
-          unit.id,
-          startDate,
-          endDate,
-          bookings,
-        );
-        return used < cap;
-      }).length;
+      // ── AN AREA IS COUNTED IN PETS, NOT IN UNITS ────────────────────────
+      //
+      // MoéGo: "An area remains available until the number of assigned pets
+      // reaches the maximum limit." So a yard is not full because somebody is
+      // in it — it is full at `maxPetsPerArea` PER UNIT, which is exactly how
+      // `private.boarding_area_within_capacity` enforces it.
+      //
+      // `defaultCapacity` is deliberately not consulted for an area: it means
+      // "max pets of the SAME FAMILY per room", a different question with a
+      // different answer, and the database refuses to let one row hold both.
+      const availableUnits = isCountedInPets(cat)
+        ? activeUnits.filter(
+            (unit) =>
+              // PETS, not stays. A household bringing three dogs is one stay
+              // and three dogs, and the trigger counts `booking_pets`.
+              boardingUnitPets(unit.id, startDate, endDate, bookings) <
+              (cat.maxPetsPerArea as number),
+          ).length
+        : activeUnits.filter((unit) => {
+            const cap = unit.capacity ?? cat.defaultCapacity;
+            const used = getBoardingUnitUsage(
+              unit.id,
+              startDate,
+              endDate,
+              bookings,
+            );
+            return used < cap;
+          }).length;
 
       return {
         category: cat,
