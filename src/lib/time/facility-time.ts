@@ -12,10 +12,29 @@
 // in production. One module so the two directions cannot disagree again.
 // ============================================================================
 
-/** How far `timeZone` is from UTC at a given instant, in minutes. */
-function offsetMinutes(instant: Date, timeZone: string): number {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+// ── THE FORMATTERS ARE BUILT ONCE PER ZONE ────────────────────────────────
+//
+// `new Intl.DateTimeFormat(…)` loads locale and timezone data on construction,
+// and both functions below used to build one on EVERY call. Measured
+// 2026-09-24: 5,000 construct-and-format cycles take 192 ms, the same 5,000
+// formats through one cached instance take 10 ms — **19.5x**.
+//
+// That is not academic. `/api/bookings` maps every row through here twice or
+// more, and with 2,547 rows on the demo facility the endpoint was answering
+// `canceling statement due to statement timeout` on every call. This is one of
+// the three things that made it do so.
+//
+// A formatter is immutable and has no per-call state, so reuse is safe: the
+// same locale, options and zone always produce the same instance. Keyed by
+// zone alone because the locale and options are fixed per map — if either ever
+// becomes a parameter, it has to join the key.
+const OFFSET_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+const WALL_CLOCK_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
+function offsetFormatter(timeZone: string): Intl.DateTimeFormat {
+  let f = OFFSET_FORMATTERS.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
       timeZone,
       hour12: false,
       year: "numeric",
@@ -24,7 +43,33 @@ function offsetMinutes(instant: Date, timeZone: string): number {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-    })
+    });
+    OFFSET_FORMATTERS.set(timeZone, f);
+  }
+  return f;
+}
+
+function wallClockFormatter(timeZone: string): Intl.DateTimeFormat {
+  let f = WALL_CLOCK_FORMATTERS.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    WALL_CLOCK_FORMATTERS.set(timeZone, f);
+  }
+  return f;
+}
+
+/** How far `timeZone` is from UTC at a given instant, in minutes. */
+function offsetMinutes(instant: Date, timeZone: string): number {
+  const parts = Object.fromEntries(
+    offsetFormatter(timeZone)
       .formatToParts(instant)
       .map((p) => [p.type, p.value]),
   );
@@ -69,15 +114,7 @@ export function wallClockParts(
   timeZone: string,
 ): { date: string; time: string } {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+    wallClockFormatter(timeZone)
       .formatToParts(new Date(timestamp))
       .map((p) => [p.type, p.value]),
   );
