@@ -38,7 +38,7 @@ import {
 } from "@/lib/api/daycare-catalogue";
 import type { DaycareService } from "@/lib/api/mappers/daycare-service";
 
-import { DaycarePetEligibility } from "./daycare-pet-eligibility";
+import { PetEligibility } from "@/components/facility/services/pet-eligibility";
 
 // ============================================================================
 // One daycare service, in MoéGo's own seven sections and MoéGo's own order.
@@ -612,7 +612,7 @@ export function DaycareServiceDialog({
 
             {/* ── 6 Pet details ─────────────────────────────────────── */}
             <Section index={isMultiLocation ? 6 : 5} title={t("petDetails")}>
-              <DaycarePetEligibility
+              <PetEligibility
                 eligibleSpecies={draft.eligibleSpecies}
                 eligibleBreeds={draft.eligibleBreeds}
                 eligibleWeightTiers={draft.eligibleWeightTiers}

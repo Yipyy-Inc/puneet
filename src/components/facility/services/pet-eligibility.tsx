@@ -13,7 +13,25 @@ import { useTagCatalogue } from "@/lib/api/tags";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
-// MoéGo's "Pet Details": who this daycare service is for.
+// MoéGo's "Pet Details": who a service is for.
+//
+// ── SHARED, BECAUSE IT IS ONE IDEA ────────────────────────────────────────
+//
+// Written for daycare and moved here when boarding needed the same question.
+// Every field it edits is a `text[] not null default '{}'` on
+// `daycare_services` AND on `boarding_services`, with the identical "empty
+// means no restriction" rule, so a second copy would be two editors for one
+// concept — and the day the rule changes, one of them would be missed.
+//
+// ── ITS STRINGS STAY UNDER `daycareServices` ──────────────────────────────
+//
+// The keys are service-neutral ("Pet details", "All species", "Blocked beats
+// eligible") and they live where they were first written. Moving them would
+// be a rename across two catalogues for no behavioural gain, and duplicating
+// them under every service's area is the thing this file exists to avoid.
+// `staffText` returns the key on a miss, so a move that missed one would show
+// `allSpecies` on screen with every gate green — which is exactly how Phase 4
+// shipped a dialog full of raw keys.
 //
 // Three questions, each with the same shape — an "everyone" choice and a
 // "customise" choice — because that is how MoéGo asks them and it is the
@@ -100,7 +118,7 @@ function ChipRow({
   );
 }
 
-export function DaycarePetEligibility({
+export function PetEligibility({
   eligibleSpecies,
   eligibleBreeds,
   eligibleWeightTiers,

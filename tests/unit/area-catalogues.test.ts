@@ -200,6 +200,10 @@ const SAME_IN_BOTH = new Set([
   // The daycare menu: three cognates, a URL and a unit symbol.
   "staff.daycareServices.servicesTab", // Services / Services
   "staff.daycareServices.description", // Description / Description
+  // The boarding menu (2026-09-24) — the same three words, one service along.
+  "staff.boardingServices.servicesTab", // Services / Services
+  "staff.boardingServices.description", // Description / Description
+  "staff.boardingServices.restrictionCount", // {n} restriction(s) — same in both
   "staff.daycareServices.image", // Image / Image
   "staff.daycareServices.imagePlaceholder", // https://… — not a word
   // The hour SYMBOL, which French keeps: "14 h 30" is the correct form and

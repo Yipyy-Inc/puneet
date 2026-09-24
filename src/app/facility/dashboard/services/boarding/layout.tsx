@@ -19,6 +19,7 @@ import {
   Building2,
   Package,
   ClipboardList,
+  ListChecks,
 } from "lucide-react";
 
 const tabs = [
@@ -31,6 +32,16 @@ const tabs = [
     name: "Rooms",
     href: "/facility/dashboard/services/boarding/rooms",
     icon: Building2,
+  },
+  // THE MENU AND THE BUILDING ARE TWO TABS NOW, because Phase 5 made them two
+  // objects. "Rooms" is the lodging types and their units; "Menu" is what may
+  // be sold into them. "Rates" still edits the kennel class's own nightly
+  // rate, which is what prices every booking made before the cutover and the
+  // fallback whenever a booking names no service.
+  {
+    name: "Menu",
+    href: "/facility/dashboard/services/boarding/menu",
+    icon: ListChecks,
   },
   {
     name: "Rates",
