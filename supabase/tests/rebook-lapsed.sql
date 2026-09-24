@@ -61,6 +61,21 @@ begin
     return;
   end if;
 
+  -- ── ASK AS SOMEBODY, NOT AS NOBODY ──────────────────────────────────────
+  --
+  -- This file looked up a manager and then never became one: every call below
+  -- ran as the test runner's own role, where RLS is bypassed, so
+  -- `lapsed_clients` returned rows no matter who was asking. It was measuring
+  -- the arithmetic and not the access.
+  --
+  -- It surfaced on 2026-09-24, when `rebook_pipeline` became SECURITY DEFINER
+  -- and started asking `view_clients` explicitly (20260924230000). The claims
+  -- go in here so the permission check has a subject — the role is deliberately
+  -- NOT switched, because the inserts below are fixture setup rather than
+  -- anything this file is asserting about.
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', v_admin, 'role', 'authenticated')::text, true);
+
   -- ── Privilege shape, measured not assumed ───────────────────────────────
 
   perform pg_temp.t(1, 'anon cannot read dismissals',
