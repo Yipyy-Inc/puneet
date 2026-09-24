@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  DEFAULT_LODGING_CONFIG,
+  lodgingConfigSchema,
+} from "@/lib/settings/lodging";
+
 import { NO_PAYROLL_RULES, payrollConfigSchema } from "@/lib/settings/payroll";
 import {
   DEFAULT_SCHEDULING_RULES,
@@ -734,6 +739,16 @@ export const SETTING_DOMAINS = {
   boarding_config: {
     schema: moduleConfigSchema,
     fallback: boardingConfig as ModuleConfig,
+  },
+  // ── THE LODGINGS THEMSELVES ────────────────────────────────────────────
+  //
+  // MoeGo keeps the checkout cut-off at Settings > Lodgings, beside "Manage
+  // lodging type", and so does this. NOT on boarding_config: that is
+  // moduleConfigSchema, which daycare and grooming share, so a boarding-only
+  // field there would appear on three modules and be read by one.
+  lodging_config: {
+    schema: lodgingConfigSchema,
+    fallback: DEFAULT_LODGING_CONFIG,
   },
   grooming_config: {
     schema: moduleConfigSchema,
