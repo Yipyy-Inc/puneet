@@ -31,6 +31,7 @@ import { useGroomingStations } from "@/hooks/use-grooming-stations";
 // the customer one number while the booking recorded another.
 import {
   groomingCatalogueQueries,
+  useGroomingMenu,
   useGroomingAddOns,
 } from "@/lib/api/grooming-catalogue";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
@@ -108,6 +109,8 @@ interface GroomingDetailsProps {
    *  `eligiblePetSizes` doesn't overlap with the pets' sizes are hidden. */
   selectedPets?: Pet[];
   applyEligibilityFilter?: boolean;
+  /** True when a pet owner is booking for themselves, not staff at the desk. */
+  isCustomerMode?: boolean;
   /** Add-on selection for the grooming sub-step. Per-pet rows in the
    *  parent — for grooming we apply the same set to every selected pet. */
   extraServices?: Array<{
@@ -153,6 +156,7 @@ interface GroomingDetailsProps {
 }
 
 export function GroomingDetails({
+  isCustomerMode = false,
   currentSubStep,
   serviceType,
   setServiceType,
@@ -193,6 +197,7 @@ export function GroomingDetails({
         onSelectPackage={setServiceType}
         selectedPets={selectedPets ?? []}
         applyEligibilityFilter={applyEligibilityFilter}
+        isCustomerMode={isCustomerMode}
         stylistId={stylistId}
         setStylistId={setStylistId}
         additionalStylistIds={additionalStylistIds}
@@ -211,6 +216,7 @@ export function GroomingDetails({
   if (currentSubStep === 1) {
     return (
       <GroomingAddOns
+        isCustomerMode={isCustomerMode}
         selectedPets={selectedPets ?? []}
         extraServices={extraServices ?? []}
         setExtraServices={setExtraServices ?? (() => {})}
@@ -224,6 +230,7 @@ export function GroomingDetails({
   }
   return (
     <GroomingSchedule
+      isCustomerMode={isCustomerMode}
       startDate={startDate}
       setStartDate={setStartDate}
       checkInTime={checkInTime}
@@ -259,6 +266,7 @@ function GroomingService({
   setManualPrice,
   manualDuration,
   setManualDuration,
+  isCustomerMode = false,
 }: {
   selectedPackageId: string;
   onSelectPackage: (id: string) => void;
@@ -276,6 +284,7 @@ function GroomingService({
   setManualPrice: (price: number | undefined) => void;
   manualDuration: number | undefined;
   setManualDuration: (mins: number | undefined) => void;
+  isCustomerMode?: boolean;
 }) {
   const t = useShellText("booking");
   return (
@@ -285,12 +294,25 @@ function GroomingService({
         onSelect={onSelectPackage}
         selectedPets={selectedPets}
         applyEligibilityFilter={applyEligibilityFilter}
+        isCustomerMode={isCustomerMode}
       />
 
       {/* The stylist + station + stages + pricing UIs are only meaningful
           once a package is chosen. Until then, show a one-liner so users know
           there's more configuration available after picking a service. */}
-      {selectedPackageId ? (
+      {/* ── THE DESK'S CONTROLS, AND THEY ARE NOT THE CUSTOMER'S ──────────
+          Choosing a groomer, a station, the stages of the appointment and —
+          above all — OVERRIDING THE PRICE are staff work. They were rendered
+          for everybody, so a pet owner booking online was shown all four; the
+          bill was safe, because `enforce_booking_integrity` zeroes a price a
+          customer submits, but a price box on an owner's screen is an offer
+          nobody meant to make.
+
+          They also each read the grooming menu, which is why this gate is
+          part of closing the customer read rather than a separate tidy-up:
+          leaving them mounted would leave four more callers of the staff
+          route in a customer's browser. */}
+      {selectedPackageId && !isCustomerMode ? (
         <>
           <GroomingStylistPicker
             selectedPackageId={selectedPackageId}
@@ -335,6 +357,7 @@ function GroomingService({
 
 // ─── Step 0a: Package picker ─────────────────────────────────────────────────
 function GroomingPackagePicker({
+  isCustomerMode = false,
   selectedPackageId,
   onSelect,
   selectedPets,
@@ -344,6 +367,8 @@ function GroomingPackagePicker({
   onSelect: (id: string) => void;
   selectedPets?: Pet[];
   applyEligibilityFilter?: boolean;
+  /** True when a pet owner is booking for themselves. */
+  isCustomerMode?: boolean;
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -354,9 +379,14 @@ function GroomingPackagePicker({
   // saving for real (see service-dialog.tsx), so the cards had been serving a
   // frozen copy ever since. Same key as the editor now, so an edit there
   // invalidates these.
-  const { data: livePackages = [] } = useQuery(
-    groomingCatalogueQueries.services(),
-  );
+  // A CUSTOMER READS A DIFFERENT ROUTE. The staff one scopes by membership,
+  // which a pet owner does not have, so it fell through to RLS and merged
+  // every facility they are a client of — and the wizard prices whatever was
+  // picked, so the other business's price could reach this card. See
+  // .
+  const { data: livePackages = [] } = useGroomingMenu({
+    asCustomer: isCustomerMode,
+  });
   // Only show active packages. The catalog card shows the starting price —
   // the price for the smallest pet size — because the final price depends
   // on the pet (size / breed / coat / stylist), which is resolved later.
@@ -1149,6 +1179,7 @@ function GroomingSchedule({
   packageId,
   stylistId,
   manualDuration,
+  isCustomerMode = false,
 }: {
   startDate: string;
   setStartDate: (date: string) => void;
@@ -1165,6 +1196,8 @@ function GroomingSchedule({
   stylistId: string;
   /** Manual duration override (minutes) — flows into slot sizing. */
   manualDuration: number | undefined;
+  /** True when a pet owner is booking for themselves. */
+  isCustomerMode?: boolean;
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
@@ -1186,7 +1219,7 @@ function GroomingSchedule({
   );
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
 
-  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+  const { data: menu = [] } = useGroomingMenu({ asCustomer: isCustomerMode });
 
   // The route preview tints the van pin with the assigned groomer's color
   // so multi-van routes don't blur together. Fall back to the brand pink.
@@ -1677,6 +1710,7 @@ function GroomingSchedule({
       <GroomingWaitlistDialog
         open={waitlistOpen}
         onOpenChange={setWaitlistOpen}
+        isCustomerMode={isCustomerMode}
         selectedClient={selectedClient}
         selectedPets={selectedPets}
         packageId={packageId}
@@ -1706,6 +1740,7 @@ function GroomingAddOns({
   setSelectedGroomingAddOnIds,
   autoAttachedAddOnIds,
   setAutoAttachedAddOnIds,
+  isCustomerMode = false,
 }: {
   selectedPets: Pet[];
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
@@ -1717,11 +1752,13 @@ function GroomingAddOns({
   setSelectedGroomingAddOnIds: (ids: string[]) => void;
   autoAttachedAddOnIds: string[];
   setAutoAttachedAddOnIds: (ids: string[]) => void;
+  /** True when a pet owner is booking for themselves. */
+  isCustomerMode?: boolean;
 }) {
   const t = useShellText("booking");
   const locale = useShellLocale();
   const accent = SERVICE_ACCENTS.grooming;
-  const { data: menu = [] } = useQuery(groomingCatalogueQueries.services());
+  const { data: menu = [] } = useGroomingMenu({ asCustomer: isCustomerMode });
   const selectedPackage = menu.find((p) => p.id === packageId);
   const primaryPet = selectedPets[0];
 

@@ -22,6 +22,20 @@ import type { GroomingPackage } from "@/types/grooming";
 // ============================================================================
 
 const BASE = "/api/grooming/services";
+/**
+ * The customer's own read, and it is a DIFFERENT ROUTE rather than the same
+ * one with a flag.
+ *
+ * `/api/grooming/services` scopes with `activeFacilityIdForStaff()`, which is
+ * null for somebody holding no membership — so for a customer it falls through
+ * to RLS, and RLS admits active services at every facility they are a client
+ * of. Two businesses, one merged menu, and the wizard prices whatever was
+ * picked. It also attaches the cross-branch price breakdown built for HQ.
+ *
+ * This one calls `public.offered_grooming_services()` (20260924160000), which
+ * answers for ONE facility and projects to an allowlist. See the route.
+ */
+const CUSTOMER_BASE = "/api/customer/grooming-services";
 
 async function json<T>(
   url: string,
@@ -51,6 +65,14 @@ export const groomingCatalogueKeys = {
       "services",
       locationId ?? "facility-wide",
     ] as const,
+  /** Keyed apart from `services`, so a staff answer can never be served from
+   *  the cache to a customer or the other way round. */
+  offered: (locationId?: string | null) =>
+    [
+      ...groomingCatalogueKeys.all,
+      "offered",
+      locationId ?? "facility-wide",
+    ] as const,
 };
 
 export const groomingCatalogueQueries = {
@@ -67,6 +89,16 @@ export const groomingCatalogueQueries = {
           : BASE,
       ),
   }),
+  /** What this customer's own facility offers, at this branch. */
+  offered: (locationId?: string | null) => ({
+    queryKey: groomingCatalogueKeys.offered(locationId),
+    queryFn: () =>
+      json<GroomingPackage[]>(
+        locationId
+          ? `${CUSTOMER_BASE}?locationId=${encodeURIComponent(locationId)}`
+          : CUSTOMER_BASE,
+      ),
+  }),
 };
 
 /**
@@ -78,6 +110,32 @@ export function useGroomingAddOns() {
   return useQuery({
     queryKey: [...groomingCatalogueKeys.all, "add-ons"] as const,
     queryFn: () => json<GroomingAddOnOption[]>("/api/grooming/add-ons"),
+  });
+}
+
+/**
+ * The grooming menu for whoever is driving the booking.
+ *
+ * ONE hook rather than two, because a component cannot call a different hook
+ * in a customer's browser than in a groomer's — that is a conditional hook and
+ * React would be right to refuse it. The mode picks the query config, and the
+ * key carries the mode.
+ */
+export function useGroomingMenu(options: {
+  /** True = the customer's own projection. False = the staff menu. */
+  asCustomer: boolean;
+  locationId?: string | null;
+}) {
+  const config = options.asCustomer
+    ? groomingCatalogueQueries.offered(options.locationId)
+    : groomingCatalogueQueries.services(options.locationId);
+  // Spread rather than passed through: the two factories return keys of the
+  // same length but different literal types, and `useQuery` would try to
+  // unify them. The keys stay distinct at runtime, which is the part that
+  // matters.
+  return useQuery<GroomingPackage[]>({
+    queryKey: [...config.queryKey],
+    queryFn: config.queryFn,
   });
 }
 

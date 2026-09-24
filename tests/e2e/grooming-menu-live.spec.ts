@@ -123,3 +123,109 @@ test.describe("the grooming menu is the facility's", () => {
     ).toBeVisible({ timeout: 20_000 });
   });
 });
+
+// ============================================================================
+// THE CUSTOMER'S OWN MENU — one business, and only the columns they may see.
+//
+// `/api/grooming/services` scopes with `activeFacilityIdForStaff()`, which is
+// null for somebody holding no membership, so a customer's read fell through
+// to RLS — and RLS admits active services at every facility they are a client
+// of. The wizard PRICES whatever was picked, so a customer of two businesses
+// could be quoted the other one's number.
+//
+// The projection itself is proved in SQL (grooming-customer-services.sql,
+// G0-G6, including the partial branch override and the merge). What is proved
+// here is the WIRING: that the route answers, that the private columns are not
+// in the answer, and that a draft is not offered.
+// ============================================================================
+
+const CUSTOMER_SERVICES = "/api/customer/grooming-services";
+
+test.describe("the grooming menu a customer is offered", () => {
+  test("is projected, not the row — and a draft is not on it", async ({
+    page,
+  }) => {
+    test.slow();
+
+    await signIn(page, ACCOUNTS.owner);
+
+    const liveRes = await page.request.post(SERVICES, {
+      data: {
+        name: `${MARKER} Customer live groom`,
+        duration: 60,
+        basePrice: 48,
+        color: "#654321",
+        requiredSkillLevel: "senior",
+        maxPerDay: 3,
+        description: "On the customer menu",
+      },
+      failOnStatusCode: false,
+    });
+    expect(liveRes.status(), await liveRes.text()).toBe(201);
+
+    const draftRes = await page.request.post(SERVICES, {
+      data: {
+        name: `${MARKER} Customer draft groom`,
+        duration: 45,
+        basePrice: 30,
+        isActive: false,
+      },
+      failOnStatusCode: false,
+    });
+    expect(draftRes.status(), await draftRes.text()).toBe(201);
+
+    // Read as the customer.
+    await signIn(page, ACCOUNTS.customer);
+
+    const res = await page.request.get(CUSTOMER_SERVICES, {
+      failOnStatusCode: false,
+    });
+    expect(res.status(), await res.text()).toBe(200);
+
+    const body: unknown = await res.json();
+    expect(Array.isArray(body), "the menu is a list").toBe(true);
+    const offered = body as Record<string, unknown>[];
+
+    const live = offered.find((s) =>
+      String(s["name"]).includes("Customer live groom"),
+    );
+    expect(live, "the active service is offered").toBeTruthy();
+    expect(
+      offered.find((s) => String(s["name"]).includes("Customer draft groom")),
+      "a draft the facility is still working on is NOT offered",
+    ).toBeUndefined();
+
+    // The three the projection withholds, each authored above so the
+    // assertion has something real to fail on.
+    expect(
+      live?.["color"],
+      "the calendar colour does not reach a customer",
+    ).toBeUndefined();
+    expect(
+      live?.["requiredSkillLevel"],
+      "nor does which tier of groomer may perform it",
+    ).toBeUndefined();
+    expect(
+      live?.["maxPerDay"],
+      "nor the per-day capacity limit",
+    ).toBeUndefined();
+    expect(
+      live?.["locationPricing"],
+      "nor what every other branch charges",
+    ).toBeUndefined();
+
+    // And what it DOES carry: the price is reconstructable.
+    expect(live?.["basePrice"], "the price is there").toBe(48);
+  });
+
+  test("a signed-out caller reads nothing", async ({ page }) => {
+    const res = await page.request.get(CUSTOMER_SERVICES, {
+      failOnStatusCode: false,
+      headers: { Cookie: "" },
+    });
+    expect(
+      [401, 403, 404].includes(res.status()),
+      `signed out should not read the menu, got ${res.status()}`,
+    ).toBe(true);
+  });
+});

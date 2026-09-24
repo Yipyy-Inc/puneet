@@ -21074,3 +21074,86 @@ the same change again and belongs in its own commit with its own tests.
   cutover. Removing it is a separate change, because `settingsFromRows` drops a
   whole domain whose stored value stops parsing — so every field in its schema
   must stay `.optional()` while it exists.
+
+## 2026-09-24 — the same customer read was wrong in three services, and the third one priced it
+
+Phase 6 of the daycare work closed a customer-facing read that merged
+facilities and handed over the whole row. **Grooming had the identical defect,
+and had had it longer.** So did custom services, which is why
+`offered_custom_services` (20260912172123) exists. Three services, one shape:
+
+> A shared component reads a FACILITY route. The route scopes with
+> `activeFacilityIdForStaff()`, which returns **null** for somebody holding no
+> membership — by design, a customer has none. `inFacility(null)` is `{}`, so
+> the query falls through to RLS alone, and RLS admits rows at every facility
+> the caller is a client of. `private.client_facility_ids()` is `setof uuid`:
+> plural, deliberately, because one household can use two businesses.
+
+**The defect is invisible in a single-facility test, and invisible to
+`check:facility-scoped-reads`,** which only walks facility-portal GET lists.
+Nothing walks "a shared component in a customer's browser".
+
+### Grooming was the expensive one, because the merge reaches the price
+
+Daycare's merge showed a customer two menus. Grooming's merge could **quote**
+from the wrong one: `BookingModal` prices the package that was picked, and its
+own comment says "what this quotes must be what create_booking records". So
+picking facility B's "Full Groom" while booking at facility A quoted B's price
+on A's booking. The till is not wrong — a customer's booking is a REQUEST with
+the price zeroed (20260806840000) — but the number the customer agreed to was,
+and that is the one they remember.
+
+The route also attached `perLocationSizePricing()` to every response: the
+cross-branch breakdown built for HQ Services. A customer was handed what each
+of the business's branches charges for each pet size.
+
+### And the customer was being shown the desk's controls
+
+Found while tracing who reads the menu, not looked for. `GroomingDetails`
+sub-step 0 rendered `GroomingStylistPicker`, `GroomingStationPicker`,
+`GroomingStagesEditor` and **`GroomingPriceOverride`** with no customer-mode
+guard anywhere in the chain. A pet owner booking online was offered a box to
+override the price of their own groom.
+
+The bill was never at risk — `enforce_booking_integrity` zeroes a
+customer-submitted price — and the staff queries those components make
+(`stylists`, `allPetServicePricing`) are refused by RLS for a customer, so they
+rendered empty. It was an offer nobody meant to make, on four controls that
+could not work.
+
+**Gating them was part of closing the read, not a separate tidy-up:** each of
+the four also reads the grooming menu, so leaving them mounted would have left
+four more callers of the staff route in a customer's browser.
+
+### What the fix looks like, and what to copy next time
+
+`public.offered_grooming_services()` (20260924160000), on the pattern
+`offered_custom_services` set and `offered_daycare_services` followed: ONE
+facility, active only, prices resolved for ONE branch, and an **allowlist** of
+keys rather than a list of keys to strip — so a column added later is private
+until somebody decides otherwise. Then `/api/customer/grooming-services`,
+resolving the facility through the client row, and one `useGroomingMenu({
+asCustomer })` hook so a component cannot call a different hook in a customer's
+browser than in a groomer's.
+
+Grooming needed no pet argument, unlike daycare: its eligibility
+(`eligible_pet_sizes`, `eligible_coat_types`, `eligible_breeds`) describes the
+SERVICE, which a customer may read. Daycare's pet TAGS describe the ANIMAL,
+which is why those had to be applied inside the projection.
+
+### Still open, with the reason
+
+- **`grooming-menu-live.spec.ts` was in NO suite** until this change — written,
+  passing, and run by nothing, which AGENTS.md names exactly ("a spec in no
+  suite is not coverage, it is a file"). It is in the gate and the full suite
+  now. **Worth a sweep: nothing checks that a spec file belongs to a suite**,
+  and this one sat outside for as long as it existed.
+- **No gate catches this class.** `check:facility-scoped-reads` walks
+  facility-portal GET lists; `check:customer-routes` walks `api/customer`,
+  `customer`, `pay` and `book`. Neither walks a SHARED component, which is
+  where all three defects lived. A gate that asked "does this component render
+  in a customer's browser, and if so what does it fetch?" would have caught all
+  three on the day they were written.
+- **The three staff-only grooming controls still read the staff route**, which
+  is correct — they are behind `!isCustomerMode` now and only staff mount them.
+  If one is ever shown to a customer again, the merge comes back with it.

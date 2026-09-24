@@ -254,6 +254,7 @@ export function DetailsStep({
 
       {selectedService === "grooming" && (
         <GroomingDetails
+          isCustomerMode={isCustomerMode}
           currentSubStep={currentSubStep}
           serviceType={serviceType}
           setServiceType={setServiceType}

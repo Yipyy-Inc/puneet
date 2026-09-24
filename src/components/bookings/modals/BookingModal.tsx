@@ -116,7 +116,7 @@ import {
 } from "@/components/bookings/use-estimate-actions";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import {
-  groomingCatalogueQueries,
+  useGroomingMenu,
   useGroomingAddOns,
 } from "@/lib/api/grooming-catalogue";
 import type { GroomingAddOnOption } from "@/app/api/grooming/add-ons/route";
@@ -423,9 +423,16 @@ export function BookingModal({
   // create_booking records: since 20260806560000 the appointment's price comes
   // from `grooming_services`, so a fixture here would show the customer one
   // number and file another.
-  const { data: groomingMenu = [] } = useQuery(
-    groomingCatalogueQueries.services(),
-  );
+  //
+  // AND IT MUST BE THE RIGHT FACILITY'S MENU. This is the read that decides
+  // the number a customer agrees to, and for a customer the staff route
+  // scopes by a membership they do not have — so it fell through to RLS and
+  // returned every facility they are a client of, merged. Picking the other
+  // business's "Full Groom" quoted the other business's price on this
+  // business's booking (20260924160000).
+  const { data: groomingMenu = [] } = useGroomingMenu({
+    asCustomer: isCustomerMode,
+  });
   // The groom's own extras, from `grooming_add_ons` — the list create_booking
   // checks every requested add-on against. The details step offered the
   // sample-data list, so an add-on staff picked was either refused by the

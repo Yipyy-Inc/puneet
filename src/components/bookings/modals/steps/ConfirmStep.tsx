@@ -39,7 +39,7 @@ import { useRooms } from "@/hooks/use-rooms";
 import type { ServiceModule } from "@/types/facility-staff";
 import { useQuery } from "@tanstack/react-query";
 
-import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -295,10 +295,12 @@ export function ConfirmStep({
   const { evaluation: evaluationConfig } = useSettings();
   // Names the chosen groom on the confirmation. Read from the facility's menu
   // rather than a fixture so the summary cannot name a service the booking is
-  // not actually for.
-  const { data: groomingMenu = [] } = useQuery(
-    groomingCatalogueQueries.services(),
-  );
+  // not actually for — and from the CUSTOMER's menu when a customer is
+  // reading it, so it cannot name one belonging to the other business they
+  // are also a client of (20260924160000).
+  const { data: groomingMenu = [] } = useGroomingMenu({
+    asCustomer: isCustomerMode,
+  });
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === selectedService);
   const ServiceIcon = serviceInfo?.icon ?? PawPrint;
   const hasAddons = extraServices.length > 0;

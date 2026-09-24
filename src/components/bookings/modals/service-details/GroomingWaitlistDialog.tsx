@@ -15,9 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 
-import { groomingCatalogueQueries } from "@/lib/api/grooming-catalogue";
+import { useGroomingMenu } from "@/lib/api/grooming-catalogue";
 import type { GroomingWaitlistEntry } from "@/data/grooming-waitlist";
 import { useGroomingWaitlist } from "@/hooks/use-grooming-waitlist";
 import { cn } from "@/lib/utils";
@@ -37,6 +36,9 @@ interface GroomingWaitlistDialogProps {
   packageId: string;
   isMobile: boolean;
   postalCode?: string;
+  /** True when a pet owner is booking for themselves. It reads the menu to
+   *  name the package, and a customer reads a different route. */
+  isCustomerMode?: boolean;
 }
 
 export function GroomingWaitlistDialog({
@@ -47,6 +49,7 @@ export function GroomingWaitlistDialog({
   packageId,
   isMobile,
   postalCode,
+  isCustomerMode = false,
 }: GroomingWaitlistDialogProps) {
   const { addEntry } = useGroomingWaitlist();
   const [dateKind, setDateKind] = useState<DateKind>("asap");
@@ -68,9 +71,9 @@ export function GroomingWaitlistDialog({
 
   const pet = selectedPets[0]; // Primary pet on the entry; multi-pet entries
   // would each get their own waitlist row — out of scope for this form.
-  const { data: groomingMenu = [] } = useQuery(
-    groomingCatalogueQueries.services(),
-  );
+  const { data: groomingMenu = [] } = useGroomingMenu({
+    asCustomer: isCustomerMode,
+  });
   const pkg = groomingMenu.find((p) => p.id === packageId);
 
   const toggleDay = (d: number) =>

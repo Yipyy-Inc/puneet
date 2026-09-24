@@ -14213,6 +14213,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      offered_grooming_services: {
+        Args: { p_facility_id: string; p_location_id?: string | null };
+        Returns: Json;
+      };
       offered_mobile_grooming: {
         Args: { p_facility_id: string };
         Returns: Json;
