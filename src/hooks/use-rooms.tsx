@@ -1,5 +1,6 @@
 "use client";
 
+import type { UnitNaming } from "@/lib/api/lodging-units";
 import { createContext, useCallback, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,7 +64,8 @@ interface RoomsContextValue {
   // Category CRUD
   addCategory: (
     category: RoomCategory,
-    unitCount?: number,
+    /** MoéGo's quantity, prefix and starting number for the first units. */
+    naming?: UnitNaming,
   ) => Promise<RoomWrite>;
   updateCategory: (category: RoomCategory) => Promise<RoomWrite>;
   deleteCategory: (id: string) => Promise<RoomWrite>;
@@ -154,11 +156,16 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
   );
 
   const addCategory = useCallback(
-    (category: RoomCategory, unitCount = 0) =>
+    (category: RoomCategory, naming: UnitNaming = { count: 0 }) =>
       run({
         url: "/api/rooms/categories",
         method: "POST",
-        body: { ...category, unitCount },
+        body: {
+          ...category,
+          unitCount: naming.count,
+          unitPrefix: naming.prefix,
+          unitStart: naming.start,
+        },
       }),
     [run],
   );

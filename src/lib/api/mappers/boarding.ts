@@ -19,7 +19,7 @@ import type {
 // ============================================================================
 
 export const ROOM_CATEGORY_SELECT =
-  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, taxable, visible_to_clients, image_url, rules, active, room_category_location_prices ( location_id, price )";
+  "id, legacy_id, service, name, description, color, sort_order, default_capacity, default_base_price, taxable, visible_to_clients, image_url, rules, active, space_type, max_pets_per_area, room_category_location_prices ( location_id, price )";
 
 export const FACILITY_ROOM_SELECT =
   "id, legacy_id, category_id, name, active, capacity, staff_notes, image_url, sort_order, description, color, rules";
@@ -33,6 +33,8 @@ export interface RoomCategoryRow {
   color: string;
   sort_order: number;
   default_capacity: number;
+  space_type: "room" | "area" | null;
+  max_pets_per_area: number | null;
   default_base_price: number | null;
   taxable: boolean | null;
   visible_to_clients: boolean;
@@ -95,6 +97,9 @@ export function rowToRoomCategory(
     color: row.color as RoomCategoryColor,
     sortOrder: row.sort_order,
     rules: row.rules ?? [],
+    spaceType: row.space_type ?? "room",
+    maxPetsPerArea:
+      row.max_pets_per_area === null ? undefined : row.max_pets_per_area,
     defaultCapacity: row.default_capacity,
     defaultBasePrice:
       row.default_base_price === null

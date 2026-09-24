@@ -1113,7 +1113,7 @@
     "src/components/retail/InvoiceLineItemsTable.tsx": 78,
     "src/components/retail/VariantSelector.tsx": 16,
     "src/components/rooms/BoardingRoomsClient.tsx": 19,
-    "src/components/rooms/CategoryFormDialog.tsx": 37,
+    "src/components/rooms/CategoryFormDialog.tsx": 32,
     "src/components/rooms/DaycareAreasClient.tsx": 56,
     "src/components/rooms/GroomingStationsClient.tsx": 82,
     "src/components/rooms/PlayAreaCard.tsx": 15,

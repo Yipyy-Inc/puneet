@@ -20579,6 +20579,46 @@ And read a mass sign-in failure as INFRASTRUCTURE first. A page that renders
 but cannot hydrate looks identical to correct software; the tell is that the
 failures are not about the thing being tested.
 
+### And here is how to TELL, in two commands
+
+The rule above was written down, read, and broken again on 2026-09-24 by
+somebody actively trying to avoid it: the build was started in the background,
+and a supervised server came back up from a restart while it ran. "Remember to
+stop the server" is not a gate. This is:
+
+```
+stat -c %y .next/BUILD_ID     # when the build on disk finished
+# and the listener's start time:
+Get-NetTCPConnection -LocalPort 3000 -State Listen |
+  ForEach-Object { Get-Process -Id $_.OwningProcess | Select StartTime }
+```
+
+**If the process started BEFORE the build finished, it is serving a build that
+no longer exists**, and every sign-in hangs. On 2026-09-24 those read 12:15:58
+against a build finishing 12:17:19, and THREE Playwright runs were abandoned as
+"a hanging test" before anybody compared the two numbers.
+
+The fix is a restart, not a rerun. `scripts/e2e-server.ts` supervises, so killing
+the node child is enough — the supervisor starts a fresh one and a fresh one
+reads the current `.next`.
+
+### The same day, a second thing a green gate could not see
+
+The screenshots that finally ran showed the new dialog rendering RAW
+TRANSLATION KEYS — `spaceType`, `roomBlurb`, `maxPerRoomHint` — with
+typecheck, lint, 1038 unit tests and all 40 checks passing, `check:ui-french`
+among them.
+
+The strings had been written to `staff.lodging` in the catalogues; `staffText`
+reads `staff.areas.<area>.<key>`. It returns the key on a miss, by design
+(`text.ts`: "A key that has no entry returns its fallback untouched"), so
+nothing threw.
+
+**`check:ui-french` asks whether a string is ROUTED through a translator, not
+whether the translator can FIND it.** Both are worth having and only the first
+is gated. Until that gap is closed, a new staff area is not done when the gate
+goes green — it is done when somebody has seen the screen.
+
 ## 2026-09-23 — a service charge reaches the bill, and what still does not
 
 A custom fee used to be folded into `bookings.total_cost`, indistinguishable

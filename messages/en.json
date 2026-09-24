@@ -4115,6 +4115,24 @@
         "session": "session",
         "hour": "h",
         "item": "item"
+      },
+      "lodging": {
+        "spaceType": "Space type",
+        "room": "Room / kennel",
+        "area": "Area",
+        "roomBlurb": "Capacity is counted in rooms. Once a pet or pet family is in one, it is full — only one family per room.",
+        "areaBlurb": "Capacity is counted in pets. The area stays available until the pets in it reach the maximum.",
+        "maxPerArea": "Max # of pets per area",
+        "maxPerRoom": "Max # of pets (same family) per room",
+        "maxPerAreaHint": "Pets in the area at once, whoever they belong to. A stay past this is refused unless somebody overrides it with a reason.",
+        "maxPerRoomHint": "Pets from ONE family that may share a unit. A second family is never put in an occupied room.",
+        "units": "Units",
+        "prefix": "Prefix",
+        "startsAt": "Starts at",
+        "prefixPlaceholder": "Room",
+        "createsNone": "No units yet. Add them from the lodging type later.",
+        "creates": "Creates {list}.",
+        "createsMore": "Creates {list} … {last}."
       }
     }
   },

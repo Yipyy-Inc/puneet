@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { generateUnits } from "@/lib/api/lodging-units";
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
 import { getFacilityContext } from "@/lib/api/facility-context";
 import { writeFailure } from "@/lib/api/write-failure";
@@ -24,6 +25,10 @@ export const dynamic = "force-dynamic";
 
 interface CategoryInput extends Partial<RoomCategory> {
   unitCount?: number;
+  /** MoéGo's Prefix — "Room" in "Room 101". Absent gives bare numbers. */
+  unitPrefix?: string;
+  /** MoéGo's starting number. Absent means 1. */
+  unitStart?: number;
 }
 
 function validate(input: CategoryInput): string | null {
@@ -39,6 +44,18 @@ function validate(input: CategoryInput): string | null {
   // the alternative is a page that appears to hang while it writes them.
   if ((input.unitCount ?? 0) > 200) {
     return "That is more rooms than this can create at once.";
+  }
+  // The database refuses both of these (room_categories_area_max_pets), and it
+  // is the authority. Saying so here is worth a sentence because a 400 from a
+  // check constraint reads as a bug, and this reads as an answer.
+  if (input.spaceType === "area" && !(input.maxPetsPerArea ?? 0)) {
+    return "An area needs a maximum number of pets.";
+  }
+  if (input.spaceType !== "area" && input.maxPetsPerArea !== undefined) {
+    return "Only an area has a maximum number of pets.";
+  }
+  if (input.maxPetsPerArea !== undefined && input.maxPetsPerArea < 1) {
+    return "An area has to hold at least one pet.";
   }
   return null;
 }
@@ -92,6 +109,11 @@ export async function POST(request: NextRequest) {
       color: input.color ?? "slate",
       sort_order: (count ?? 0) + 1,
       default_capacity: input.defaultCapacity ?? 1,
+      // MoéGo's Space type. Absent is a room, which is what every category in
+      // the product was before 20260924180000.
+      space_type: input.spaceType ?? "room",
+      max_pets_per_area:
+        input.spaceType === "area" ? (input.maxPetsPerArea ?? null) : null,
       default_base_price: input.defaultBasePrice ?? null,
       // Only an explicit false stops the tax — see lib/payments/service-tax.ts.
       taxable: input.taxable !== false,
@@ -116,13 +138,23 @@ export async function POST(request: NextRequest) {
   const unitCount = input.unitCount ?? 0;
 
   if (unitCount > 0) {
-    const units = Array.from({ length: unitCount }, (_, i) => ({
+    // Named the way MoéGo names them — the facility's own prefix and starting
+    // number, not the category's name and a counter that always began at one.
+    // See lib/api/lodging-units.ts and its unit tests.
+    const units = generateUnits(
+      {
+        count: unitCount,
+        prefix: input.unitPrefix,
+        start: input.unitStart,
+      },
+      category.legacy_id,
+    ).map((unit) => ({
       facility_id: facility.facilityId,
       category_id: category.id,
-      legacy_id: `${category.legacy_id}-${String(i + 1).padStart(2, "0")}`,
-      name: `${input.name!.trim()} ${String(i + 1).padStart(2, "0")}`,
+      legacy_id: unit.legacyId,
+      name: unit.name,
       active: true,
-      sort_order: i + 1,
+      sort_order: unit.sortOrder,
       image_url: input.imageUrl ?? null,
     }));
 

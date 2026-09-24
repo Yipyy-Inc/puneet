@@ -4115,6 +4115,24 @@
         "session": "séance",
         "hour": "h",
         "item": "article"
+      },
+      "lodging": {
+        "spaceType": "Type d'espace",
+        "room": "Chambre / chenil",
+        "area": "Aire",
+        "roomBlurb": "La capacité se compte en chambres. Dès qu'un animal ou une famille y est installé, elle est pleine — une seule famille par chambre.",
+        "areaBlurb": "La capacité se compte en animaux. L'aire reste disponible jusqu'à ce que les animaux qui s'y trouvent atteignent le maximum.",
+        "maxPerArea": "Nombre max. d'animaux par aire",
+        "maxPerRoom": "Nombre max. d'animaux (même famille) par chambre",
+        "maxPerAreaHint": "Les animaux présents dans l'aire en même temps, quelle que soit leur famille. Un séjour au-delà est refusé, sauf si quelqu'un passe outre en indiquant une raison.",
+        "maxPerRoomHint": "Les animaux d'UNE SEULE famille qui peuvent partager une unité. On ne place jamais une deuxième famille dans une chambre occupée.",
+        "units": "Unités",
+        "prefix": "Préfixe",
+        "startsAt": "Commence à",
+        "prefixPlaceholder": "Chambre",
+        "createsNone": "Aucune unité pour l'instant. Ajoutez-les depuis le type d'hébergement plus tard.",
+        "creates": "Crée {list}.",
+        "createsMore": "Crée {list} … {last}."
       }
     }
   },

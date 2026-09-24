@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+import { SpaceTypeField } from "@/components/rooms/SpaceTypeField";
+import { UnitNamingField } from "@/components/rooms/UnitNamingField";
+import type { UnitNaming } from "@/lib/api/lodging-units";
 import {
   Dialog,
   DialogContent,
@@ -113,6 +117,7 @@ function blankCategory(facilityId: number): RoomCategory {
     active: true,
     rules: [],
     defaultCapacity: 1,
+    spaceType: "room",
     defaultBasePrice: undefined,
     visibleToClients: true,
     locationPricing: [],
@@ -146,8 +151,12 @@ interface Props {
   /** True while the save is in flight — the button says so and refuses a second. */
   saving?: boolean;
   onClose: () => void;
-  /** When creating, unitCount is the number of units to auto-generate */
-  onSave: (cat: RoomCategory, unitCount: number) => void;
+  /**
+   * When creating, `naming` says how many units to generate and what to call
+   * them — MoéGo's quantity, prefix and starting number. Editing passes
+   * `{ count: 0 }`: the units already exist and are edited one at a time.
+   */
+  onSave: (cat: RoomCategory, naming: UnitNaming) => void;
 }
 
 // ── Dialog ─────────────────────────────────────────────────────────────────────
@@ -165,6 +174,10 @@ export function CategoryFormDialog({
   );
   const [addType, setAddType] = useState<RoomRuleType | "">("");
   const [unitCount, setUnitCount] = useState(1);
+  // MoéGo's Prefix and starting number. Empty and 1 reproduce its own
+  // "1, 2, 3" example, which is the sensible default for a small facility.
+  const [unitPrefix, setUnitPrefix] = useState("");
+  const [unitStart, setUnitStart] = useState(1);
 
   useEffect(() => {
     setForm(
@@ -245,56 +258,29 @@ export function CategoryFormDialog({
               hint="Shown to clients when browsing room categories during booking"
             />
 
-            <div
-              className={
-                editing ? "grid grid-cols-2 gap-4" : "grid grid-cols-3 gap-4"
-              }
-            >
-              {!editing && (
-                <div className="space-y-1.5">
-                  <Label>
-                    Number of Units <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={unitCount}
-                    onChange={(e) =>
-                      setUnitCount(
-                        Math.max(
-                          1,
-                          Math.min(50, parseInt(e.target.value) || 1),
-                        ),
-                      )
-                    }
-                  />
-                  <p className="text-muted-foreground text-[11px]">
-                    Auto-creates {unitCount} room{unitCount > 1 ? "s" : ""}{" "}
-                    named {form.name ? `"${form.name} 01"` : '"Room 01"'}
-                    {unitCount > 1
-                      ? ` – "${form.name || "Room"} ${String(unitCount).padStart(2, "0")}"`
-                      : ""}
-                  </p>
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label>Capacity / Unit</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.defaultCapacity}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      defaultCapacity: Math.max(
-                        1,
-                        parseInt(e.target.value) || 1,
-                      ),
-                    })
-                  }
-                />
-              </div>
+            {/* MoéGo asks the space type before the capacity, because the
+                capacity means a different thing depending on the answer. */}
+            <SpaceTypeField
+              spaceType={form.spaceType ?? "room"}
+              maxPetsPerArea={form.maxPetsPerArea}
+              defaultCapacity={form.defaultCapacity}
+              onChange={(patch) => setForm({ ...form, ...patch })}
+            />
+
+            {!editing && (
+              <UnitNamingField
+                count={unitCount}
+                prefix={unitPrefix}
+                start={unitStart}
+                onChange={(patch) => {
+                  if (patch.count !== undefined) setUnitCount(patch.count);
+                  if (patch.prefix !== undefined) setUnitPrefix(patch.prefix);
+                  if (patch.start !== undefined) setUnitStart(patch.start);
+                }}
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Base Price ($/night)</Label>
                 <Input
@@ -419,7 +405,14 @@ export function CategoryFormDialog({
               this one waits on two writes (the category, then its units). */}
           <Button
             disabled={!valid || saving}
-            onClick={() => onSave(form, editing ? 0 : unitCount)}
+            onClick={() =>
+              onSave(
+                form,
+                editing
+                  ? { count: 0 }
+                  : { count: unitCount, prefix: unitPrefix, start: unitStart },
+              )
+            }
           >
             {saving ? (
               <>

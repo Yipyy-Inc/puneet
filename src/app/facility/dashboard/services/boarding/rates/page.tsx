@@ -179,7 +179,8 @@ export default function BoardingRatesPage() {
           active: rateForm.isActive,
           locationPricing: [],
         },
-        0,
+        // The Rates screen makes the class, never its units.
+        { count: 0 },
       );
     }
     setIsRateModalOpen(false);

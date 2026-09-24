@@ -163,7 +163,8 @@ export function DaycareAreasProvider({ children }: { children: ReactNode }) {
   );
 
   const addArea = useCallback(
-    (area: DaycarePlayArea) => addCategory(areaToCategory(area), 0),
+    // A play area is one row; its sections are added separately.
+    (area: DaycarePlayArea) => addCategory(areaToCategory(area), { count: 0 }),
     [addCategory, areaToCategory],
   );
 

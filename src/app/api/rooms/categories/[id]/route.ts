@@ -52,6 +52,21 @@ export async function PATCH(
       { status: 422 },
     );
   }
+  // An area must carry its maximum and a room must not: the database says so
+  // (room_categories_area_max_pets) and it is the authority. Answering here
+  // means a 422 with a sentence rather than a check violation read as a 400.
+  if (input.spaceType === "area" && !(input.maxPetsPerArea ?? 0)) {
+    return NextResponse.json(
+      { error: "An area needs a maximum number of pets." },
+      { status: 422 },
+    );
+  }
+  if (input.maxPetsPerArea !== undefined && input.maxPetsPerArea < 1) {
+    return NextResponse.json(
+      { error: "An area has to hold at least one pet." },
+      { status: 422 },
+    );
+  }
   if (input.defaultCapacity !== undefined && input.defaultCapacity < 1) {
     return NextResponse.json(
       { error: "Capacity must be at least 1." },
@@ -119,6 +134,18 @@ export async function PATCH(
   if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
   if (input.defaultCapacity !== undefined)
     patch.default_capacity = input.defaultCapacity;
+  // Space type and the area maximum move TOGETHER or not at all. The database
+  // requires an area to carry a maximum and a room not to
+  // (room_categories_area_max_pets), so patching one without the other is a
+  // check violation reported as a 400 — which reads as a bug rather than as
+  // the answer it is.
+  if (input.spaceType !== undefined) {
+    patch.space_type = input.spaceType;
+    patch.max_pets_per_area =
+      input.spaceType === "area" ? (input.maxPetsPerArea ?? null) : null;
+  } else if (input.maxPetsPerArea !== undefined) {
+    patch.max_pets_per_area = input.maxPetsPerArea;
+  }
   if (input.defaultBasePrice !== undefined && !locationId) {
     patch.default_base_price = input.defaultBasePrice ?? null;
     if (input.taxable !== undefined) patch.taxable = input.taxable !== false;

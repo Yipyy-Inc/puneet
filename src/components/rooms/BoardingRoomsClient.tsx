@@ -1,5 +1,6 @@
 "use client";
 
+import type { UnitNaming } from "@/lib/api/lodging-units";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,10 +73,10 @@ export function BoardingRoomsClient() {
   // that still holds rooms, a room with stays recorded against it) then
   // arrived as a second toast contradicting the first, with the typed values
   // already thrown away.
-  const saveCategory = async (cat: RoomCategory, unitCount: number) => {
+  const saveCategory = async (cat: RoomCategory, naming: UnitNaming) => {
     const isNew = !catDialog.editing;
     const result = isNew
-      ? await addCategory(cat, unitCount)
+      ? await addCategory(cat, naming)
       : await updateCategory(cat);
     if (!result.ok) {
       toast.error(result.error);
@@ -84,8 +85,8 @@ export function BoardingRoomsClient() {
     toast.success(
       !isNew
         ? "Category updated"
-        : unitCount > 0
-          ? `Category created with ${unitCount} unit${unitCount > 1 ? "s" : ""}`
+        : naming.count > 0
+          ? `Category created with ${naming.count} unit${naming.count > 1 ? "s" : ""}`
           : "Category created",
     );
     setCatDialog({ open: false, editing: null });

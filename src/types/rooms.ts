@@ -47,7 +47,32 @@ export interface RoomCategory {
   color: RoomCategoryColor;
   sortOrder: number;
   rules: RoomRule[];
-  /** Default capacity per unit (can be overridden per unit) */
+  /**
+   * MoeGo Space type: how this lodging type counts capacity.
+   *
+   * `room` — "Capacity is based on individual rooms. Once a pet (or pet
+   * family) is assigned to a lodging, it is considered fully occupied. (Only
+   * one family per room)"
+   *
+   * `area` — "Capacity is based on the number of pets. An area remains
+   * available until the number of assigned pets reaches the maximum limit."
+   *
+   * Optional here and `not null default room` in Postgres, so a row read back
+   * before the column existed is a room — which is what every one of them was.
+   */
+  spaceType?: "room" | "area";
+  /**
+   * MoeGo "Max # of pets per area" — pets at once, regardless of family.
+   *
+   * Only for an area, and REQUIRED for one: the database refuses an area
+   * without it and a room that carries one (room_categories_area_max_pets),
+   * so there is never a stale number here that decides nothing.
+   */
+  maxPetsPerArea?: number;
+  /**
+   * Pets per unit. For a room type this is MoeGo's "Max # of Pets (same
+   * family) per room"; an area counts with `maxPetsPerArea` instead.
+   */
   defaultCapacity: number;
   defaultBasePrice?: number;
   /**
