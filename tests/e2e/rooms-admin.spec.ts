@@ -304,15 +304,22 @@ test.describe("the rooms page writes to the database", () => {
 
     // dnd-kit's keyboard sensor: pick up, one place up, put down. Each step
     // waits for what a screen reader is told, which is also what makes the
-    // steps land: the list is measured after the pick-up, and a key pressed
-    // before that finishes drops the class where it started.
+    // steps land.
     await handle.focus();
     await page.keyboard.press("Space");
-    await expect(page.getByText("Picked up E2E Order B.")).toBeAttached();
-    await page.keyboard.press("ArrowUp");
-    await expect(
-      page.getByText("E2E Order B is over E2E Order A."),
-    ).toBeAttached();
+    const pickedUp = page.getByText("Picked up E2E Order B.");
+    await expect(pickedUp).toBeAttached();
+    // The list is measured AFTER the pick-up is announced, and an arrow
+    // pressed before that moves nothing: the full suite failed here on
+    // 2026-09-25, under load, with the pick-up still the last thing said. So
+    // the arrow is pressed again only while the pick-up is still the last
+    // thing said — a move that registered replaces it, so this can never
+    // carry the class two places.
+    const overA = page.getByText("E2E Order B is over E2E Order A.");
+    await expect(async () => {
+      if ((await pickedUp.count()) > 0) await page.keyboard.press("ArrowUp");
+      await expect(overA).toBeAttached({ timeout: 1_500 });
+    }).toPass({ timeout: 20_000 });
     await page.keyboard.press("Space");
     await expect(
       page.getByText("E2E Order B was dropped over E2E Order A."),
