@@ -21447,15 +21447,22 @@ cancelled them through `/api/payments` on the re-run.
    Alice's. Harmless to the boards, and part of why her list is what it is.
 6. `clover-connect` rendered its "you do not administer a facility" line twice
    once, under the nightly's load, and passed on the re-run. Not reproduced.
-7. **Checking out from the operations calendar can do nothing at all.**
-   `checkOut` in `use-calendar-booking-actions.ts` begins
+7. ~~**Checking out from the operations calendar can do nothing at
+   all.**~~ **Fixed in `14dbdc24`.** `checkOut` in
+   `use-calendar-booking-actions.ts` began
    `const booking = find(bookingId); if (!booking) return;` — so when the
-   calendar's loaded list no longer holds the booking, the click closes the
-   drawer with no toast and no departure. `operations-calendar`'s
-   check-in-and-out test failed exactly so, twice in a row, on a $0 groom
-   that owed nothing. Its own cleanup reads the whole booking list and had
-   left 11 open bookings on the very day it books into (2027-07-22/23).
-8. **A groomer's audit-log read sits on the statement timeout.** Measured as
+   calendar's loaded list no longer held the booking, the click closed the
+   drawer with no toast and no departure. Check-in, rebook and the vaccine
+   confirmation had the same line. They ask for the booking by ref when the
+   list lacks it now, and say so if even that fails. Its own cleanup read
+   the whole booking list and had left 20 open bookings on the days it books
+   into (2027-07-21/23); it asks the database by marker since `afcf2346`.
+8. **`yipyy-go-form`'s "a draft and its photo survive a reload" fails on
+   `main` too** — in the 2026-09-25 nightly and in two local runs the same
+   day: the customer dashboard's pre-arrival reminder never appears within
+   90 s. Alice's dashboard reads her whole booking history (item 3), which is
+   the first suspect; not diagnosed.
+9. **A groomer's audit-log read sits on the statement timeout.** Measured as
    the groomer under RLS: 7,677 ms against 8 s, for `audit_log` (21,200 rows)
    newest-first. Every row the index offers is checked through
    `is_platform_admin`, `is_facility_admin` and `has_permission`, and the
@@ -21512,45 +21519,73 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
 
 ### Still open, with the reason
 
-1. **A customer never sees the boarding menu, and is never priced by it.** The
-   `BoardingServicePicker` renders inside the room-type sub-step (id 1), and
-   customer mode hides that sub-step because "the facility assigns rooms". So
-   the customer's quote comes from the room the wizard auto-assigns, at that
-   CLASS's rate — the pre-cutover path — not from any service the facility
-   sells, and a facility that changes a service's price quotes customers the
-   old number. The request then carries neither a stay (`unitAssignment` is
-   dropped on purpose, so a request cannot hold a kennel) nor a
-   `boardingServiceId`, so `priceBoarding` finds no class and no service and
-   answers `no_rate`: **a customer's boarding request can still never
-   auto-confirm**, which the 2026-09-24 entry reads as fixed. It is fixed for
-   bookings that have a stay, which customers' never do. Separately, the
-   customer auto-assignment (`autoAssignBoardingUnit`, once per pet) does not
-   count this booking's own placements, so two dogs can be put in one
-   capacity-1 unit and quoted as one room. Next, because the rest depends on
-   it.
-2. **Default add-ons by length of stay are a table and nothing else.**
-   `boarding_service_default_addons` (20260924210000) is read and written by
-   no route, screen or price. Building it needs three things underneath that
-   do not exist yet: add-ons are charged `price × the quantity somebody typed`
-   (`computeAddOnsTotal`), so a `per_day` add-on labelled "/day" is charged
-   once unless staff type the number of days; the add-on editor's
-   `per_stay_night` ("applied automatically once per night of a boarding
-   stay") is read by nothing; and the server re-price never prices a boarding
-   add-on, so any priced add-on in a customer's quote is a `quote_mismatch`.
-   And a default attached to a SERVICE cannot reach a customer until item 1
-   is done.
-3. **Split lodging (Phase 8) has not started.** `boarding_stays` is keyed by
-   `booking_id`, so a stay is one kennel. It re-keys a table with an exclusion
-   constraint, three triggers and every reader that assumes one stay per
-   booking, and `boarding-occupancy.sql` is its regression suite.
+1. ~~**A customer never sees the boarding menu, and is never priced by
+   it.**~~ **Fixed in `cbc3ddf5`.** The `BoardingServicePicker` rendered
+   inside the room-type sub-step, which customer mode hides, so a customer
+   was quoted by the CLASS of whichever room the wizard assigned them — the
+   pre-cutover path — and the request carried neither a stay nor a
+   `boardingServiceId`, so the server could never price it. The picker is on
+   the customer's dates step now, a pick is required whenever the menu offers
+   these pets anything, and the room assigned for the quote keeps to the
+   service's lodging types and to this household's own placements. A
+   single-pet request that names a service is one the server can re-price. A
+   multi-pet one still has no stay, so the server counts one lodging; where
+   the quote counted two it stays a request, which is the safe direction.
+   **Found on the way, fixed first (`5844b313`):** a two-dog suite with
+   another family in it read as free, because the other BOOKING was compared
+   with the SAME-family capacity — the availability count, the customer's
+   quote and the staff wizard all offered it, and the database refused the
+   save. `unitHasRoomFor` holds the rule: a room is taken by any other stay,
+   an area counts pets.
+2. ~~**Default add-ons by length of stay are a table and nothing
+   else.**~~ **Built in `cbc3ddf5`:** section 6 of the service editor, the two
+   write routes, the customer's menu (20260925173458), and the booking form,
+   which derives the lines from the chosen service and the stay rather than
+   storing them — so they follow the dates — and skips them when editing a
+   saved booking, whose lines already hold them. They show on the add-ons
+   step ("Comes with …") and the confirm step, and are saved as ordinary
+   add-on lines; `boarding-default-addons` books a real stay and reads two
+   walks back for one night. **Still open:** the server re-price prices
+   boarding's BASE only, so a customer request whose service has defaults
+   stays a request for staff — as any customer add-on already did; `per_day`
+   add-ons chosen by hand are still charged × whatever quantity was typed;
+   and the add-on editor's `per_stay_night` is still read by nothing.
+   **A trap found writing the spec:** `serviceAddOnSchema` requires
+   `sortOrder`, `createdAt` and `updatedAt`, and one stored add-on missing
+   them makes `settingsFromRows` drop the WHOLE `service_addons` domain — the
+   booking form then offers no add-ons at all, with nothing said.
+   `yipyy-go-charges` writes an add-on without them; it passes only because
+   it reads the catalogue through SQL.
+3. **Split lodging (Phase 8) has not started, and it is bigger than it
+   reads.** `boarding_stays` is keyed by `booking_id`; it carries FIVE
+   triggers (space type, cut-off, live-booking guard, the presence mirror,
+   the deferred area capacity) and `bookings` a sixth that rewrites stays.
+   Surveyed 2026-09-25, the places that break silently with a second stay:
+   `sync_boarding_stay`, `save_checkout_cut_off` and `assign_boarding_room`
+   each rebuild `occupies` from the booking's WHOLE range (the last also
+   collapses every segment into one room); `record_boarding_arrival` does an
+   `update … returning … into` that raises `too_many_rows`; the presence
+   mirror completes the booking at the first segment's check-out and the
+   live-booking guard then refuses the second's check-in; `booking_presence`
+   fans out into duplicate rows; the arrivals mapper and `/api/daily-care`
+   read the embedded stay as ONE object, and go empty when it becomes an
+   array; the tax lookup is `.maybeSingle()`; and both price paths multiply
+   rooms by ALL nights, which over-prices sequential segments. The area
+   trigger excludes by booking, not by stay. `boarding-occupancy.sql` is the
+   regression suite (K2 and L0 are the money rule). One small correction on
+   the way: the BEFORE triggers fire in name order — cut-off, live-booking
+   guard, space type — not space type first as 20260924200000's comment
+   says; harmless today, and worth knowing before a per-segment `occupies`
+   trigger.
 4. **The Rooms page still asks for a price the service now owns.** "Base Price
-   ($/night)" on a room type feeds only the pre-cutover path — which is, per
-   item 1, every customer quote.
+   ($/night)" on a room type feeds only the pre-cutover path: bookings made
+   before the menu, and a facility with no menu at all.
 5. **Three sets of size bands.** The lodging picker uses boarding's
    (`BOARDING_WEIGHT_TIERS`, 15 / 35 / 70 lb), which daycare's services share;
    `getPetSize` in `pet-size.ts` (20 / 40 / 80) sizes grooming bookings; and
    the service editor's tier chips read "under 15 lb" for a band that
-   includes 15.
+   includes 15, and name their tiers in English on a French screen
+   ("Large · moins de 70 lb") — they read `defaultGroomingConfig`'s labels.
 6. **A room type's card still reads "Max 60 lbs"** — English and pounds only,
    where §5q wants `27 kg (60 lb)` — and the room-type dialog outside the new
    eligibility field is untranslated. Both sit in the `check:ui-french`
