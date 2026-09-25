@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 import { cancelBookingsMarked } from "./_sweep";
+import { withoutTestItems } from "./_settings-snapshot";
 
 // ============================================================================
 // A FACILITY DECIDES WHICH SERVICES NEED ITS APPROVAL.
@@ -438,5 +439,207 @@ test.describe("a facility decides which services need its approval", () => {
       data: { status: "confirmed" },
     });
     expect(tried.ok(), "only cancelling is theirs to do").toBe(false);
+  });
+});
+
+// ============================================================================
+// BOARDING, WITH THE ADD-ONS ITS SERVICE INSISTS ON (2026-09-25).
+//
+// The server priced boarding's BASE only, so any add-on on a customer's
+// request — including one the service attaches by itself, by length of stay —
+// made the quote disagree and the booking stayed a request. It prices them
+// now, from the facility's own catalogue, and refuses a booking that dropped
+// one of its service's defaults.
+//
+// B1  The stay plus its service's default add-on, quoted right → confirmed,
+//     at that total.
+// B2  The default taken off → still a request.
+// B3  The right lines and the wrong total → still a request.
+// ============================================================================
+
+const BOARD_MARKER = `${MARKER} boarding`;
+const BOARD_SERVICE = `${MARKER} Stay with walks`;
+const WALK_ID = "e2e-auto-confirm-walk";
+/** The service's nightly price, and one walk. */
+const NIGHT = 50;
+const WALK = 7;
+
+interface MenuService {
+  id: string;
+  name: string;
+}
+
+/** The staff menu, or nothing — never a throw inside a teardown. */
+async function boardingMenu(page: Page): Promise<MenuService[]> {
+  const res = await page.request.get("/api/boarding/services");
+  if (!res.ok()) return [];
+  const body: unknown = await res.json().catch(() => null);
+  return Array.isArray(body) ? (body as MenuService[]) : [];
+}
+
+test.describe("boarding confirms with the add-ons its service attaches", () => {
+  let serviceRowId = "";
+  let priorAddOns: Record<string, unknown> | null = null;
+
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+
+      // The facility's add-ons stay; one walk joins them for the run. The
+      // copy is cleaned of anything a crashed run left, or it would be put
+      // back forever (`_settings-snapshot.ts`).
+      const res = await page.request.get("/api/facility/settings");
+      expect(res.ok(), await res.text()).toBe(true);
+      const all = (await res.json()) as Record<string, { value?: unknown }>;
+      const current = (withoutTestItems(all.service_addons?.value ?? {}) ??
+        {}) as { addOns?: unknown[]; categories?: unknown[] };
+      priorAddOns = current as Record<string, unknown>;
+      const put = await page.request.patch("/api/facility/settings", {
+        data: {
+          domain: "service_addons",
+          value: {
+            ...current,
+            categories: current.categories ?? [],
+            addOns: [
+              ...(current.addOns ?? []),
+              {
+                id: WALK_ID,
+                name: `${MARKER} Walk`,
+                description: "",
+                pricingType: "per_day",
+                price: WALK,
+                petScope: "per_pet",
+                applicableServices: ["boarding"],
+                requiresScheduling: false,
+                generatesTask: false,
+                isActive: true,
+                // Required by the schema: one stored add-on without them
+                // drops the whole catalogue from every reader.
+                sortOrder: 99,
+                createdAt: "2026-09-25T00:00:00.000Z",
+                updatedAt: "2026-09-25T00:00:00.000Z",
+              },
+            ],
+          },
+        },
+      });
+      expect(put.ok(), await put.text()).toBe(true);
+
+      for (const s of await boardingMenu(page)) {
+        if (s.name.includes(MARKER)) {
+          await page.request.delete(`/api/boarding/services/${s.id}`);
+        }
+      }
+      const created = await page.request.post("/api/boarding/services", {
+        data: {
+          name: BOARD_SERVICE,
+          price: NIGHT,
+          unit: "night",
+          lodgingTypeIds: [],
+          isActive: true,
+          defaultAddOns: [
+            {
+              addOnId: WALK_ID,
+              appliesOn: "every_day",
+              quantityPerDay: 1,
+              minNights: null,
+            },
+          ],
+        },
+      });
+      expect(created.status(), await created.text()).toBe(201);
+      serviceRowId = ((await created.json()) as { service: { rowId: string } })
+        .service.rowId;
+
+      await setAutoConfirm(page, { boarding: true });
+    } finally {
+      await page.close();
+    }
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      await setAutoConfirm(page, {}).catch(() => undefined);
+      if (priorAddOns !== null) {
+        await page.request.patch("/api/facility/settings", {
+          data: { domain: "service_addons", value: priorAddOns },
+        });
+      }
+      for (const s of await boardingMenu(page)) {
+        if (s.name.includes(MARKER)) {
+          await page.request.delete(`/api/boarding/services/${s.id}`);
+        }
+      }
+    } finally {
+      await page.close();
+      await cancelBookingsMarked(browser, BOARD_MARKER, "after");
+    }
+  });
+
+  /** One night, the service named, the lines as a customer's form saves them. */
+  const book = (
+    page: Page,
+    total: number,
+    lines: Array<{ serviceId: string; quantity: number; petId: number }>,
+  ) =>
+    page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        service: "boarding",
+        startDate: day(40),
+        endDate: day(41),
+        checkInTime: "14:00",
+        checkOutTime: "11:00",
+        status: "confirmed",
+        basePrice: NIGHT,
+        discount: 0,
+        totalCost: total,
+        specialRequests: BOARD_MARKER,
+        boardingServiceId: serviceRowId,
+        extraServices: lines,
+      },
+    });
+
+  // Every day of a one-night stay is two days: two walks.
+  const twoWalks = [{ serviceId: WALK_ID, quantity: 2, petId: ALICE.pet }];
+
+  test("B1 the stay and its default add-on, quoted right: confirmed", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await book(page, NIGHT + 2 * WALK, twoWalks);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as {
+      id: number;
+      status: string;
+      totalCost?: number;
+    };
+    made.push(booking.id);
+    expect(booking.status).toBe("confirmed");
+    expect(booking.totalCost).toBe(NIGHT + 2 * WALK);
+  });
+
+  test("B2 the default taken off: still a request", async ({ page }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await book(page, NIGHT, []);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status).toBe("request_submitted");
+  });
+
+  test("B3 the right lines and the wrong total: still a request", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await book(page, NIGHT + 2 * WALK - 5, twoWalks);
+    expect(res.ok(), await res.text()).toBe(true);
+    const booking = (await res.json()) as { id: number; status: string };
+    made.push(booking.id);
+    expect(booking.status).toBe("request_submitted");
   });
 });

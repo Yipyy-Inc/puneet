@@ -126,17 +126,27 @@ export async function autoConfirmCustomerBookings(
     // no single answer, so it passes none and every rate stays a candidate —
     // the same thing an unknown species has always meant.
     const speciesByBooking = new Map<string, string | undefined>();
+    // And WHICH pets, by ref: a boarding service's default add-ons are per
+    // pet, and the server has to know how many there are to require them.
+    const petRefsByBooking = new Map<string, number[]>();
     const { data: petRows } = await admin
       .from("booking_pets")
-      .select("booking_id, pets!inner(species)")
+      .select("booking_id, pets!inner(species, ref)")
       .in(
         "booking_id",
         candidates.map((c) => c.id),
       );
     for (const row of (petRows ?? []) as unknown as Array<{
       booking_id: string;
-      pets: { species: string | null } | null;
+      pets: { species: string | null; ref: number | string | null } | null;
     }>) {
+      const ref = Number(row.pets?.ref);
+      if (Number.isInteger(ref)) {
+        petRefsByBooking.set(row.booking_id, [
+          ...(petRefsByBooking.get(row.booking_id) ?? []),
+          ref,
+        ]);
+      }
       const species = row.pets?.species?.trim();
       if (!species) continue;
       const seen = speciesByBooking.get(row.booking_id);
@@ -231,6 +241,11 @@ export async function autoConfirmCustomerBookings(
         // the customer was shown, so nothing auto-confirms.
         daycareServiceId:
           (row.details?.["daycareServiceId"] as string | undefined) ?? null,
+        // Boarding's add-ons: the lines the customer's form saved and the pets
+        // they are on. Only the quantities are taken; prices are the
+        // facility's own.
+        extraServices: row.details?.["extraServices"],
+        petRefs: petRefsByBooking.get(row.id) ?? [],
         locationId: row.location_id ?? null,
         quotedTotal: quoted,
       });

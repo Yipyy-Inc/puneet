@@ -10,6 +10,16 @@ import {
 import { loadDaycareServices } from "@/lib/pricing/daycare-services-server";
 import { resolveDaycareService } from "@/lib/pricing/daycare-service-choice";
 import { isBuiltinService } from "@/lib/service-registry";
+import {
+  addOnLinesFrom,
+  computeAddOnsTotal,
+  missingRequiredLine,
+} from "@/lib/pricing/add-on-lines";
+import {
+  defaultAddOnLines,
+  type BoardingDefaultAddOn,
+} from "@/lib/pricing/boarding-default-addons";
+import { serviceAddOnsConfigSchema } from "@/lib/settings/addons";
 
 // ============================================================================
 // What a customer's booking costs, decided by the SERVER.
@@ -80,6 +90,11 @@ export type ServerQuoteRefusal =
   | "no_rate"
   /** The dates make no sense as a stay. */
   | "bad_dates"
+  /**
+   * A default add-on the booking's service attaches was not on it — taken
+   * off, or a request made before the service had it. Staff look instead.
+   */
+  | "missing_add_on"
   /** The server's price and the customer's quote disagree. */
   | "quote_mismatch";
 
@@ -155,6 +170,15 @@ export interface PriceRequest {
    * comment says the detail key resolved none of the 410 staff bookings.
    */
   roomCategoryId?: string | null;
+  /**
+   * Boarding: the add-on lines the booking carries (`details.extraServices`),
+   * as the customer's form saved them. Untrusted — read by `addOnLinesFrom` —
+   * and only the QUANTITIES are taken: every price comes from the facility's
+   * own catalogue.
+   */
+  extraServices?: unknown;
+  /** Boarding: the pets on the booking, by ref — for per-pet defaults. */
+  petRefs?: readonly number[];
   /** What the customer was shown. The quote this must agree with. */
   quotedTotal: number;
 }
@@ -283,7 +307,7 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
       return { ok: false, reason: "no_rate" };
     }
     const total = rate * lodgings * stayUnits(chosen.unit, nights);
-    return { ok: true, basePrice: total, total };
+    return withAddOns(input, total, chosen.defaultAddOns, nights);
   }
 
   // ── THE PRE-CUTOVER PATH: the class the stay is actually in ─────────────
@@ -356,7 +380,52 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
   }
 
   const total = nightly * nights;
-  return { ok: true, basePrice: total, total };
+  return withAddOns(input, total, [], nights);
+}
+
+/**
+ * The stay's price plus its add-ons, as the wizard adds them.
+ *
+ * Until 2026-09-25 the server priced boarding's BASE only, so any add-on on a
+ * customer's request made its quote disagree and the booking stayed a
+ * request — including, once services could attach them, the add-ons the
+ * service itself insists on. The lines are merged and totalled by the SAME
+ * functions the wizard uses (`lib/pricing/add-on-lines.ts`), from the
+ * facility's catalogue at its own prices, and a booking missing one of its
+ * service's defaults is not confirmed at all.
+ */
+async function withAddOns(
+  input: PriceRequest,
+  base: number,
+  defaults: readonly BoardingDefaultAddOn[],
+  nights: number,
+): Promise<ServerQuote> {
+  const lines = addOnLinesFrom(input.extraServices);
+  if (lines.length === 0 && defaults.length === 0) {
+    return { ok: true, basePrice: base, total: base };
+  }
+  // A stored value that no longer parses is no catalogue at all — exactly
+  // what `settingsFromRows` hands the wizard, so both sides price nothing.
+  const parsed = serviceAddOnsConfigSchema.safeParse(
+    await settingValue(input.facilityId, "service_addons"),
+  );
+  const catalogue = parsed.success
+    ? parsed.data.addOns.filter((addOn) => addOn.isActive)
+    : [];
+  const required = defaultAddOnLines({
+    defaults,
+    nights,
+    petIds: input.petRefs ?? [],
+    catalogue,
+  });
+  if (missingRequiredLine(lines, required)) {
+    return { ok: false, reason: "missing_add_on" };
+  }
+  const addOns = computeAddOnsTotal(
+    lines,
+    new Map(catalogue.map((addOn) => [addOn.id, addOn])),
+  );
+  return { ok: true, basePrice: base, total: base + addOns };
 }
 
 /** Days × the price of the service the booking names. */

@@ -17,6 +17,11 @@ import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 import { resolvePeakDateCharges } from "@/lib/policies/peak-dates";
 import { feeAmountAt } from "@/lib/pricing/service-charge-lines";
+// Shared with the server's re-price, so the two cannot count add-ons differently.
+import {
+  computeAddOnsTotal,
+  normalizeExtraServices,
+} from "@/lib/pricing/add-on-lines";
 import {
   appliesToLocation,
   appliesToService,
@@ -312,34 +317,6 @@ function normalizeServices(applicableServices?: string[]): string[] {
     : Array.from(new Set(applicableServices));
 }
 
-function normalizeExtraServices(services: ExtraService[]): ExtraService[] {
-  const map = new Map<string, ExtraService>();
-
-  for (const service of services) {
-    if (!service || !service.serviceId) continue;
-    if (!Number.isFinite(service.quantity) || !Number.isFinite(service.petId)) {
-      continue;
-    }
-    const quantity = Math.max(0, Math.round(service.quantity));
-    if (quantity <= 0) continue;
-
-    const key = `${service.serviceId}::${service.petId}`;
-    const existing = map.get(key);
-    if (existing) {
-      existing.quantity += quantity;
-      continue;
-    }
-
-    map.set(key, {
-      serviceId: service.serviceId,
-      petId: service.petId,
-      quantity,
-    });
-  }
-
-  return Array.from(map.values());
-}
-
 /*
  * `parseTimeToMinutes`, `isWithinTimeWindow` and `appliesToService` used to be
  * defined here as well as in the time-fee evaluator. They are imported from
@@ -541,17 +518,6 @@ function hasAddOnPurchaseTrigger(
   return extraServices.some((service) =>
     triggerIds.has(service.serviceId.trim().toLowerCase()),
   );
-}
-
-function computeAddOnsTotal(
-  extraServices: ExtraService[],
-  addOnsById: Map<string, ServiceAddOn>,
-): number {
-  return extraServices.reduce((sum, service) => {
-    const addOn = addOnsById.get(service.serviceId);
-    if (!addOn) return sum;
-    return sum + Math.max(0, addOn.price) * service.quantity;
-  }, 0);
 }
 
 function computeWaivedAddOnTotal(
