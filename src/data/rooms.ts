@@ -54,15 +54,9 @@ export const roomCategories: RoomCategory[] = [
     visibleToClients: true,
     active: true,
     imageUrl: "/rooms/room-2.jpg",
+    // Two pets of one household per suite is `defaultCapacity` above; the
+    // `max_pets` rule that said it again was retired (20260925164457).
     rules: [
-      {
-        id: "rule-ds-1",
-        type: "max_pets",
-        value: 2,
-        clientMessage:
-          "Deluxe Suites accommodate up to 2 pets from the same household.",
-        enabled: true,
-      },
       {
         id: "rule-ds-2",
         type: "min_weight",
@@ -97,14 +91,6 @@ export const roomCategories: RoomCategory[] = [
           "Suites are designed for dogs up to 80 lbs. For larger dogs, please select a Deluxe Suite.",
         enabled: true,
       },
-      {
-        id: "rule-s-2",
-        type: "single_pet_only",
-        value: 1,
-        clientMessage:
-          "Suites accommodate one pet per booking. Multi-pet stays are available in Deluxe Suites.",
-        enabled: true,
-      },
     ],
   },
   {
@@ -130,14 +116,6 @@ export const roomCategories: RoomCategory[] = [
         value: 60,
         clientMessage:
           "Condominiums are best suited for dogs up to 60 lbs. For larger dogs, please select a Suite.",
-        enabled: true,
-      },
-      {
-        id: "rule-c-2",
-        type: "single_pet_only",
-        value: 1,
-        clientMessage:
-          "Condominiums are single-pet only. For multi-pet stays please choose a Deluxe Suite.",
         enabled: true,
       },
     ],

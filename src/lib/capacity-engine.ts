@@ -20,36 +20,51 @@ import {
   isCountedInPets,
   petsOnBooking,
 } from "@/lib/boarding/lodging-occupancy";
+import { sameSpecies } from "@/lib/settings/species";
 
 // ── Rule matching ─────────────────────────────────────────────────────────────
+//
+// Three rule types, and the database admits no others
+// (`room_category_rules_are_read`, 20260925164457). Three more used to be
+// offered and read by nothing: `single_pet_only` and `max_pets` were the
+// class's capacity spelled twice more — `defaultCapacity`, which
+// `roomsForAssignments` does enforce — and `size_restriction` had bands no
+// other part of the product used.
+
+/**
+ * The species a set of rules admits, or null when nothing restricts it.
+ *
+ * A `pet_type` value is the facility's own species names: a list since the
+ * Rooms page picks them as chips, one name before that. The old editor also
+ * offered "Dogs & Cats" as the single string `"dog,cat"`, which no pet's
+ * species ever equalled — a class set that way refused every pet. It is read
+ * as the list it meant. No row held it on 2026-09-25.
+ *
+ * Several `pet_type` rules admit the union, not the intersection: a class
+ * whose rules say dogs and, separately, cats takes both. Read one at a time
+ * they refused everything, which is never what two species rules mean.
+ */
+export function admittedSpecies(rules: RoomRule[]): string[] | null {
+  const names = rules
+    .filter((rule) => rule.enabled && rule.type === "pet_type")
+    .flatMap((rule) =>
+      Array.isArray(rule.value) ? rule.value : String(rule.value).split(","),
+    )
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return names.length > 0 ? names : null;
+}
 
 /** Returns true when the pet satisfies every enabled rule in the array. */
 export function petMatchesRules(pet: Pet, rules: RoomRule[]): boolean {
+  const species = admittedSpecies(rules);
+  if (species && !species.some((name) => sameSpecies(name, pet.type ?? ""))) {
+    return false;
+  }
   for (const rule of rules) {
-    if (!rule.enabled) continue;
-    switch (rule.type) {
-      case "max_weight":
-        if (typeof rule.value === "number" && pet.weight > rule.value)
-          return false;
-        break;
-      case "min_weight":
-        if (typeof rule.value === "number" && pet.weight < rule.value)
-          return false;
-        break;
-      case "pet_type":
-        if (
-          typeof rule.value === "string" &&
-          pet.type.toLowerCase() !== rule.value.toLowerCase()
-        )
-          return false;
-        break;
-      case "single_pet_only":
-        // evaluated by the caller when assigning multiple pets
-        break;
-      case "max_pets":
-        // evaluated by the caller when assigning multiple pets
-        break;
-    }
+    if (!rule.enabled || typeof rule.value !== "number") continue;
+    if (rule.type === "max_weight" && pet.weight > rule.value) return false;
+    if (rule.type === "min_weight" && pet.weight < rule.value) return false;
   }
   return true;
 }

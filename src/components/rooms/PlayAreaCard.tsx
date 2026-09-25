@@ -14,6 +14,7 @@ import {
   AlertCircle,
   TreePine,
 } from "lucide-react";
+import { admittedSpecies } from "@/lib/capacity-engine";
 import { cn } from "@/lib/utils";
 import type {
   DaycarePlayArea,
@@ -87,11 +88,7 @@ function ruleLabel(rule: RoomRule): string {
     case "min_weight":
       return `Min ${rule.value} lbs`;
     case "pet_type":
-      return `${String(rule.value)} only`;
-    case "max_pets":
-      return `Max ${rule.value} pets`;
-    case "single_pet_only":
-      return "Single pet";
+      return `${(admittedSpecies([rule]) ?? []).join(", ")} only`;
     default:
       return "Rule";
   }

@@ -10,12 +10,12 @@ import {
   Pencil,
   Trash2,
   Scale,
-  Users,
   PawPrint,
   AlertCircle,
   Building2,
   ImageIcon,
 } from "lucide-react";
+import { admittedSpecies } from "@/lib/capacity-engine";
 import { cn } from "@/lib/utils";
 import type { RoomCategory, FacilityRoom, RoomRule } from "@/types/rooms";
 
@@ -94,9 +94,6 @@ function ruleIcon(type: RoomRule["type"]) {
       return Scale;
     case "pet_type":
       return PawPrint;
-    case "max_pets":
-    case "single_pet_only":
-      return Users;
     default:
       return AlertCircle;
   }
@@ -109,13 +106,7 @@ function ruleLabel(rule: RoomRule): string {
     case "min_weight":
       return `Min ${rule.value} lbs`;
     case "pet_type":
-      return `${rule.value} only`;
-    case "max_pets":
-      return `Max ${rule.value} pets`;
-    case "single_pet_only":
-      return "Single pet";
-    case "size_restriction":
-      return `${rule.value} size`;
+      return `${(admittedSpecies([rule]) ?? []).join(", ")} only`;
     default:
       return "Rule";
   }

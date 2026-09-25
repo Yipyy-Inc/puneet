@@ -74,31 +74,12 @@ const RULE_TYPES: RuleConfig[] = [
     placeholder: "e.g. 40",
   },
   {
-    value: "max_pets",
-    label: "Max Pets per Booking",
-    valueType: "number",
-    placeholder: "e.g. 2",
-  },
-  { value: "single_pet_only", label: "Single Pet Only", valueType: "none" },
-  {
     value: "pet_type",
     label: "Pet Type Restriction",
     valueType: "select",
     options: [
       { value: "dog", label: "Dogs only" },
       { value: "cat", label: "Cats only" },
-      { value: "dog,cat", label: "Dogs & Cats" },
-    ],
-  },
-  {
-    value: "size_restriction",
-    label: "Size Group",
-    valueType: "select",
-    options: [
-      { value: "small", label: "Small  (under 20 lbs)" },
-      { value: "medium", label: "Medium (20–50 lbs)" },
-      { value: "large", label: "Large  (50–90 lbs)" },
-      { value: "giant", label: "Giant  (90+ lbs)" },
     ],
   },
 ];
@@ -128,10 +109,7 @@ function blankRule(type: RoomRuleType): RoomRule {
   const defaults: Record<RoomRuleType, number | string> = {
     max_weight: 60,
     min_weight: 40,
-    max_pets: 2,
-    single_pet_only: 1,
     pet_type: "dog",
-    size_restriction: "medium",
   };
   return {
     id: `rule-${Date.now()}`,

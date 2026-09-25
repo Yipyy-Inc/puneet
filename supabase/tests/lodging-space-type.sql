@@ -31,6 +31,12 @@
 -- L5  An area must carry a maximum, and a room must not carry a stale one.
 --     Exactly one meaning per row.
 -- L6  A maximum of zero or less is refused.
+-- L7  A class may carry only the rules the engine reads. `single_pet_only`
+--     and `max_pets` were its capacity spelled twice more, `size_restriction`
+--     was read by nothing (20260925164457) — each is refused now.
+-- L8  A daycare section's own rules (`facility_rooms.rules`) take the same
+--     list, and so does a rule with no type at all.
+-- L9  The positive control: the three it reads are still admitted, on both.
 -- ============================================================================
 
 begin;
@@ -328,6 +334,81 @@ begin
   perform pg_temp.t(6,
     'an area that holds nobody is refused',
     v_zero, 'max_pets_per_area must be positive');
+end $$;
+
+-- ── L7-L9 only the rules the engine reads ──────────────────────────────────
+
+do $$
+declare
+  v_fac     uuid;
+  v_kennel  uuid;
+  v_room    uuid;
+  v_refused text[] := '{}';
+  v_kind    text;
+  v_err     text;
+begin
+  select id into v_fac from public.facilities where slug = 'lambda-pets-lst';
+  select id into v_kennel from public.room_categories
+   where facility_id = v_fac and legacy_id = 'lst-kennel';
+  select id into v_room from public.facility_rooms
+   where facility_id = v_fac and legacy_id = 'lst-room-1';
+
+  foreach v_kind in array array['single_pet_only', 'max_pets', 'size_restriction']
+  loop
+    begin
+      update public.room_categories
+         set rules = jsonb_build_array(jsonb_build_object(
+               'id', 'lst-' || v_kind, 'type', v_kind, 'value', 1,
+               'clientMessage', '', 'enabled', true))
+       where id = v_kennel;
+    exception when check_violation then
+      v_refused := v_refused || v_kind;
+    end;
+  end loop;
+
+  perform pg_temp.t(7,
+    'a class refuses a rule the engine does not read',
+    cardinality(v_refused) = 3,
+    format('refused: %s of single_pet_only, max_pets, size_restriction',
+           array_to_string(v_refused, ', ')));
+
+  v_refused := '{}';
+  begin
+    update public.facility_rooms
+       set rules = '[{"id":"lst-u","type":"max_pets","value":2,"clientMessage":"","enabled":true}]'::jsonb
+     where id = v_room;
+  exception when check_violation then
+    v_refused := v_refused || 'unit max_pets'::text;
+  end;
+  begin
+    update public.room_categories
+       set rules = '[{"id":"lst-x","value":2,"clientMessage":"","enabled":true}]'::jsonb
+     where id = v_kennel;
+  exception when check_violation then
+    v_refused := v_refused || 'class rule with no type'::text;
+  end;
+
+  perform pg_temp.t(8,
+    'a section refuses one too, and so does a rule with no type',
+    cardinality(v_refused) = 2,
+    format('refused: %s', array_to_string(v_refused, ', ')));
+
+  begin
+    update public.room_categories
+       set rules = '[{"id":"lst-a","type":"min_weight","value":15,"clientMessage":"","enabled":true},
+                     {"id":"lst-b","type":"max_weight","value":70,"clientMessage":"","enabled":true},
+                     {"id":"lst-c","type":"pet_type","value":["Dog","Cat"],"clientMessage":"","enabled":true}]'::jsonb
+     where id = v_kennel;
+    update public.facility_rooms
+       set rules = '[{"id":"lst-d","type":"pet_type","value":"dog","clientMessage":"","enabled":false}]'::jsonb
+     where id = v_room;
+  exception when others then
+    v_err := sqlerrm;
+  end;
+
+  perform pg_temp.t(9,
+    'the three it reads are still admitted, on a class and on a section',
+    v_err is null, coalesce(v_err, 'min_weight, max_weight and pet_type saved'));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

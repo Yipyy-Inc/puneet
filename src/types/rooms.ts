@@ -4,18 +4,20 @@ export type FacilityRoomService =
   | "grooming"
   | "training";
 
-export type RoomRuleType =
-  | "max_weight"
-  | "min_weight"
-  | "pet_type"
-  | "max_pets"
-  | "single_pet_only"
-  | "size_restriction";
+/**
+ * The rules `petMatchesRules` reads, and the only ones the database admits
+ * (`room_category_rules_are_read`, 20260925164457). How many pets share a
+ * room is the class's `defaultCapacity`, not a rule.
+ */
+export type RoomRuleType = "max_weight" | "min_weight" | "pet_type";
 
 export interface RoomRule {
   id: string;
   type: RoomRuleType;
-  /** weight rules → number (lbs) | pet_type → string | size → string | count → number */
+  /**
+   * Weight rules → pounds. `pet_type` → the facility's own species names,
+   * one or several (see `admittedSpecies`).
+   */
   value: number | string | string[];
   /** Message shown to clients when this rule blocks their booking */
   clientMessage: string;

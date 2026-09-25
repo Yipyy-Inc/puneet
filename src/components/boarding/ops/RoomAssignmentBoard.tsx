@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input";
 // shape flattened all of that onto the room and had a `typeId` enum no row
 // ever held.
 import { PetType } from "@/data/boarding-ops";
-import type { FacilityRoom, RoomCategory, RoomRule } from "@/types/rooms";
+import type { FacilityRoom, RoomCategory } from "@/types/rooms";
+import { admittedSpecies } from "@/lib/capacity-engine";
+import { sameSpecies } from "@/lib/settings/species";
 import { GripVertical, X } from "lucide-react";
 
 /**
@@ -42,19 +44,6 @@ export interface AssignableOccupant {
 /** Kennel id → the occupant ids in it. */
 export type RoomAssignments = Record<string, number[]>;
 
-/**
- * The pet types a category admits, from its `pet_type` rules.
- *
- * No rule means no restriction — an empty list here would refuse every pet,
- * which is the opposite of what "unrestricted" means.
- */
-function allowedPetTypes(rules: RoomRule[]): PetType[] | null {
-  const values = rules
-    .filter((r) => r.enabled && r.type === "pet_type")
-    .flatMap((r) => (Array.isArray(r.value) ? r.value : [String(r.value)]));
-  return values.length > 0 ? (values as PetType[]) : null;
-}
-
 function canDrop({
   category,
   capacity,
@@ -72,8 +61,10 @@ function canDrop({
 }) {
   if (allowOverride) return true;
   if (!pet.eligible) return false;
-  const admits = allowedPetTypes(category?.rules ?? []);
-  if (admits && !admits.includes(pet.petType)) return false;
+  const admits = admittedSpecies(category?.rules ?? []);
+  if (admits && !admits.some((name) => sameSpecies(name, pet.petType))) {
+    return false;
+  }
   // `assignedPetIds` only ever describes THIS booking, so this line was never
   // a capacity rule — it could not see another guest. `takenByAnotherStay`
   // comes from /api/boarding/rooms and is what the exclusion constraint on
@@ -227,7 +218,10 @@ export function RoomAssignmentBoard({
               // category's default. NULL means "whatever the category says",
               // so it is resolved here rather than copied onto the room.
               const capacity = room.capacity ?? category?.defaultCapacity ?? 1;
-              const admits = allowedPetTypes(category?.rules ?? []);
+              // Null when nothing restricts it — never an empty list, which
+              // would refuse every pet. The booking wizard reads the same
+              // function, so the board and the wizard cannot disagree.
+              const admits = admittedSpecies(category?.rules ?? []);
               const isFull = taken || assigned.length >= capacity;
               return (
                 <div
