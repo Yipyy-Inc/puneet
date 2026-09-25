@@ -21488,6 +21488,19 @@ cancelled them through `/api/payments` on the re-run.
     same happens to any checked-in booking staff cancel; whether cancelling
     should record a departure, or be refused while the pet is on site, is a
     product decision nobody has made.
+11. ~~**`settings-french` failed "unfilled placeholders on
+    estimate-settings" on both tries of one run.**~~ **Fixed in
+    `6f132b0e`.** Test residue, and the snapshot trap above once more:
+    `estimate-follow-ups` reads the facility's follow-ups, saves its own rule
+    and restores what it read — so a run that died in between left follow-ups
+    ON, "Hi {{customer_name}}", on the demo facility, and every later run put
+    that back faithfully. What it writes carries a marker now, and a snapshot
+    carrying it is restored as the disabled default; the demo facility's value
+    was reset by hand. **Still open, and the reason it showed:** with
+    follow-ups on, `EstimateFollowUpSettings` lists its merge tags inside a
+    sentence ("Tags you can use: {{customer_name}}, …"), which is exactly
+    what `settings-french` calls a hole — tags meant to be seen are chips.
+    The spec passes only while the demo facility's follow-ups are off.
 
 **The shape to remember: when a whole cluster of money specs fails at once,
 read `facility_settings` for test residue before reading any code** —
