@@ -21468,3 +21468,113 @@ cancelled them through `/api/payments` on the re-run.
 read `facility_settings` for test residue before reading any code** —
 `value::text ~ '(\[e2e|"e2e-)'` found both fees in one query, and nothing in
 seventeen stack traces pointed at either.
+
+## 2026-09-25 — Boarding lodging: what the plan fixed, and what it left open
+
+The client asked for boarding to work like the lodging model they use: a
+**lodging type** that owns units and capacity, and a **boarding service** —
+the menu item with a price — that names the lodging types it may be booked
+into. Ours had been one row doing both (`room_categories` was the kennel class,
+the nightly rate and the menu item at once). Phases 1–7 shipped on 2026-09-24:
+room or area (`422f6ab5`), an area counted in pets (`3dddd3d6`), the checkout
+cut-off (`cbaa07ea`), units named by prefix and starting number (`1bc53c98`),
+the boarding menu (`dd2b8e0b`, `8510cc60`), the booking picking a service and
+then a lodging (`2d719cd1`), and the boards counting areas in pets
+(`fc4b13c0`). Finished on the 25th: a screen for the cut-off (`72c58852`),
+drag-to-sort for room types (`d0f8aad3`), a notice on a room type no service
+can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
+
+### The four defects the plan found on the way
+
+1. **A room-type surcharge matched the wrong rooms.** Its checkbox list was the
+   dead fixture enum `standard / deluxe / vip / cat-suite`; three of the four
+   never matched a real class, and `cat-suite` — meant as a suite for cats —
+   IS a real class ("Suite", $55), so the surcharge landed on it. Fixed in
+   `597a8255`: the rule names the facility's own classes, and a booked unit is
+   mapped to its class before comparing.
+2. **`details.roomCategoryId` was read by three files and written by none.**
+   See the 2026-09-24 entry above — and the first item below, because that fix
+   reaches staff-made bookings only.
+3. **`single_pet_only` and `max_pets` were offered and decided nothing.**
+   Resolved in `449c7ba0`, but not by enforcing them: both were the class's
+   capacity ("Max # of pets (same family) per room", `default_capacity`)
+   spelled twice more, and capacity is already enforced by
+   `roomsForAssignments`. All four live ones agreed with it, so folding them
+   changed no number. `size_restriction` — in the editor, on no row, read by
+   nothing, with bands no other part of the product used — went too, and
+   `room_category_rules_are_read` now admits only the three rule types the
+   engine reads. Found in the same pass: "Dogs & Cats" was stored as the one
+   string `"dog,cat"`, which no pet ever equalled, so it refused every pet; a
+   list value was ignored; and two species rules were read as "must be both".
+   `admittedSpecies` is the one reader now, for the wizard and the board.
+4. **`boardingRateSchema.sizePricing`** was the daycare `sizePricing` defect
+   again, and the whole type turned out to be unread. Deleted in `f03a6284`.
+
+### Still open, with the reason
+
+1. **A customer never sees the boarding menu, and is never priced by it.** The
+   `BoardingServicePicker` renders inside the room-type sub-step (id 1), and
+   customer mode hides that sub-step because "the facility assigns rooms". So
+   the customer's quote comes from the room the wizard auto-assigns, at that
+   CLASS's rate — the pre-cutover path — not from any service the facility
+   sells, and a facility that changes a service's price quotes customers the
+   old number. The request then carries neither a stay (`unitAssignment` is
+   dropped on purpose, so a request cannot hold a kennel) nor a
+   `boardingServiceId`, so `priceBoarding` finds no class and no service and
+   answers `no_rate`: **a customer's boarding request can still never
+   auto-confirm**, which the 2026-09-24 entry reads as fixed. It is fixed for
+   bookings that have a stay, which customers' never do. Separately, the
+   customer auto-assignment (`autoAssignBoardingUnit`, once per pet) does not
+   count this booking's own placements, so two dogs can be put in one
+   capacity-1 unit and quoted as one room. Next, because the rest depends on
+   it.
+2. **Default add-ons by length of stay are a table and nothing else.**
+   `boarding_service_default_addons` (20260924210000) is read and written by
+   no route, screen or price. Building it needs three things underneath that
+   do not exist yet: add-ons are charged `price × the quantity somebody typed`
+   (`computeAddOnsTotal`), so a `per_day` add-on labelled "/day" is charged
+   once unless staff type the number of days; the add-on editor's
+   `per_stay_night` ("applied automatically once per night of a boarding
+   stay") is read by nothing; and the server re-price never prices a boarding
+   add-on, so any priced add-on in a customer's quote is a `quote_mismatch`.
+   And a default attached to a SERVICE cannot reach a customer until item 1
+   is done.
+3. **Split lodging (Phase 8) has not started.** `boarding_stays` is keyed by
+   `booking_id`, so a stay is one kennel. It re-keys a table with an exclusion
+   constraint, three triggers and every reader that assumes one stay per
+   booking, and `boarding-occupancy.sql` is its regression suite.
+4. **The Rooms page still asks for a price the service now owns.** "Base Price
+   ($/night)" on a room type feeds only the pre-cutover path — which is, per
+   item 1, every customer quote.
+5. **Three sets of size bands.** The lodging picker uses boarding's
+   (`BOARDING_WEIGHT_TIERS`, 15 / 35 / 70 lb), which daycare's services share;
+   `getPetSize` in `pet-size.ts` (20 / 40 / 80) sizes grooming bookings; and
+   the service editor's tier chips read "under 15 lb" for a band that
+   includes 15.
+6. **A room type's card still reads "Max 60 lbs"** — English and pounds only,
+   where §5q wants `27 kg (60 lb)` — and the room-type dialog outside the new
+   eligibility field is untranslated. Both sit in the `check:ui-french`
+   baseline.
+
+## 2026-09-25 — 26 migrations the database never recorded
+
+`docs/PROJECT-STATE.md` says every migration reaches the database through
+`apply_migration`, and that the file is then named with the version the
+DATABASE recorded. On 2026-09-25, `supabase_migrations.schema_migrations`
+ended at `20260921181244` — apart from `20260925164457`, the first applied that
+way since. **26 migration files after it were applied without being
+recorded**, under hand-picked version numbers — the daycare menu and the whole
+boarding lodging model among them. At least one went through a
+`SUPABASE_DB_URL` script: `20260925120000`, the cut-off save, applied that way
+on 2026-09-25. And `20260921190000` is recorded under another version,
+`20260921181244`, with the same name.
+
+Nothing is wrong in the schema that the SQL suite can see: it reads the
+database back, and all 1,595 of its assertions passed that day. What is wrong
+is the record. `supabase db push` would take those 26 as pending and run them
+again, and `list_migrations` no longer describes the database.
+
+**Backfilling the 26 records is a decision for the maintainer, not a side
+effect of a feature**, so it has not been done. Until it is, use the
+`apply_migration` route for every new migration, as PROJECT-STATE.md says, and
+never `db push`.
