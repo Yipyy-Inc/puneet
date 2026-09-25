@@ -17,22 +17,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Info, Loader2 } from "lucide-react";
-import type {
-  RoomCategory,
-  RoomRule,
-  RoomCategoryColor,
-  RoomRuleType,
-} from "@/types/rooms";
+import { Loader2 } from "lucide-react";
+import type { RoomCategory, RoomCategoryColor } from "@/types/rooms";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
+import { LodgingEligibilityField } from "@/components/rooms/LodgingEligibilityField";
+import {
+  limitsConflict,
+  weightLimitsOf,
+} from "@/lib/rooms/lodging-eligibility";
 
 // ── Color picker ───────────────────────────────────────────────────────────────
 
@@ -45,43 +38,6 @@ const COLORS: { key: RoomCategoryColor; dot: string }[] = [
   { key: "orange", dot: "bg-orange-400" },
   { key: "indigo", dot: "bg-indigo-400" },
   { key: "slate", dot: "bg-slate-400" },
-];
-
-// ── Rule type definitions ──────────────────────────────────────────────────────
-
-type RuleConfig = {
-  value: RoomRuleType;
-  label: string;
-  valueType: "number" | "select" | "none";
-  unit?: string;
-  placeholder?: string;
-  options?: { value: string; label: string }[];
-};
-
-const RULE_TYPES: RuleConfig[] = [
-  {
-    value: "max_weight",
-    label: "Max Weight",
-    valueType: "number",
-    unit: "lbs",
-    placeholder: "e.g. 60",
-  },
-  {
-    value: "min_weight",
-    label: "Min Weight",
-    valueType: "number",
-    unit: "lbs",
-    placeholder: "e.g. 40",
-  },
-  {
-    value: "pet_type",
-    label: "Pet Type Restriction",
-    valueType: "select",
-    options: [
-      { value: "dog", label: "Dogs only" },
-      { value: "cat", label: "Cats only" },
-    ],
-  },
 ];
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -102,21 +58,6 @@ function blankCategory(facilityId: number): RoomCategory {
     defaultBasePrice: undefined,
     visibleToClients: true,
     locationPricing: [],
-  };
-}
-
-function blankRule(type: RoomRuleType): RoomRule {
-  const defaults: Record<RoomRuleType, number | string> = {
-    max_weight: 60,
-    min_weight: 40,
-    pet_type: "dog",
-  };
-  return {
-    id: `rule-${Date.now()}`,
-    type,
-    value: defaults[type],
-    clientMessage: "",
-    enabled: true,
   };
 }
 
@@ -150,7 +91,6 @@ export function CategoryFormDialog({
   const [form, setForm] = useState<RoomCategory>(() =>
     blankCategory(facilityId),
   );
-  const [addType, setAddType] = useState<RoomRuleType | "">("");
   const [unitCount, setUnitCount] = useState(1);
   // MoéGo's Prefix and starting number. Empty and 1 reproduce its own
   // "1, 2, 3" example, which is the sensible default for a small facility.
@@ -163,29 +103,13 @@ export function CategoryFormDialog({
         ? { ...editing, rules: editing.rules.map((r) => ({ ...r })) }
         : blankCategory(facilityId),
     );
-    setAddType("");
     setUnitCount(1);
   }, [editing, open, facilityId]);
 
-  const addRule = () => {
-    if (!addType) return;
-    setForm((p) => ({
-      ...p,
-      rules: [...p.rules, blankRule(addType as RoomRuleType)],
-    }));
-    setAddType("");
-  };
-
-  const patchRule = (id: string, patch: Partial<RoomRule>) =>
-    setForm((p) => ({
-      ...p,
-      rules: p.rules.map((r) => (r.id === id ? { ...r, ...patch } : r)),
-    }));
-
-  const removeRule = (id: string) =>
-    setForm((p) => ({ ...p, rules: p.rules.filter((r) => r.id !== id) }));
-
-  const valid = form.name.trim().length > 0;
+  // A lowest weight above the highest admits no pet at all — refused here,
+  // where the field already says why, rather than saved and discovered later.
+  const valid =
+    form.name.trim().length > 0 && !limitsConflict(weightLimitsOf(form.rules));
 
   return (
     <Dialog
@@ -312,67 +236,12 @@ export function CategoryFormDialog({
 
           <Separator />
 
-          {/* Rules builder */}
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold">Booking Rules</p>
-              <p className="text-muted-foreground mt-0.5 flex items-start gap-1 text-xs">
-                <Info className="mt-0.5 size-3.5 shrink-0" />
-                Rules are enforced during client booking. When a rule is
-                triggered, the custom message is shown to the client and the
-                room is greyed out.
-              </p>
-            </div>
-
-            {form.rules.length > 0 && (
-              <div className="space-y-2">
-                {form.rules.map((rule) => {
-                  const cfg = RULE_TYPES.find((r) => r.value === rule.type)!;
-                  return (
-                    <RuleRow
-                      key={rule.id}
-                      rule={rule}
-                      config={cfg}
-                      onPatch={(p) => patchRule(rule.id, p)}
-                      onRemove={() => removeRule(rule.id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <Select
-                value={addType}
-                onValueChange={(v) => setAddType(v as RoomRuleType)}
-              >
-                <SelectTrigger className="h-8 flex-1 text-xs">
-                  <SelectValue placeholder="Select rule type to add…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {RULE_TYPES.map((rt) => (
-                    <SelectItem
-                      key={rt.value}
-                      value={rt.value}
-                      className="text-xs"
-                    >
-                      {rt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!addType}
-                onClick={addRule}
-                className="h-8 shrink-0 px-3"
-              >
-                <Plus className="mr-1 size-3" />
-                Add
-              </Button>
-            </div>
-          </div>
+          {/* Which pets it takes, by size and by kind — written onto the
+              rules the booking wizard and the kennel board read. */}
+          <LodgingEligibilityField
+            rules={form.rules}
+            onChange={(rules) => setForm((prev) => ({ ...prev, rules }))}
+          />
         </div>
 
         <DialogFooter>
@@ -406,89 +275,5 @@ export function CategoryFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ── Rule row ───────────────────────────────────────────────────────────────────
-
-function RuleRow({
-  rule,
-  config,
-  onPatch,
-  onRemove,
-}: {
-  rule: RoomRule;
-  config: RuleConfig;
-  onPatch: (p: Partial<RoomRule>) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="bg-muted/20 space-y-2.5 rounded-lg border p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold">{config.label}</span>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={rule.enabled}
-            onCheckedChange={(v) => onPatch({ enabled: v })}
-            className="scale-75"
-          />
-          <button
-            type="button"
-            onClick={onRemove}
-            className="text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {config.valueType === "number" && (
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            min={0}
-            value={typeof rule.value === "number" ? rule.value : ""}
-            onChange={(e) =>
-              onPatch({ value: parseFloat(e.target.value) || 0 })
-            }
-            placeholder={config.placeholder}
-            className="h-7 w-24 text-xs"
-          />
-          {config.unit && (
-            <span className="text-muted-foreground text-xs">{config.unit}</span>
-          )}
-        </div>
-      )}
-
-      {config.valueType === "select" && config.options && (
-        <Select
-          value={String(rule.value)}
-          onValueChange={(v) => onPatch({ value: v })}
-        >
-          <SelectTrigger className="h-7 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {config.options.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
-          Client message when blocked
-        </p>
-        <Input
-          value={rule.clientMessage}
-          onChange={(e) => onPatch({ clientMessage: e.target.value })}
-          placeholder="Message shown to clients when this rule blocks their booking…"
-          className="h-7 text-xs"
-        />
-      </div>
-    </div>
   );
 }

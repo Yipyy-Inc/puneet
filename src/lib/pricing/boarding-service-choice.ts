@@ -56,12 +56,13 @@ export interface BoardingPetFacts {
  * same numbers today, and the day a facility tunes boarding's bands without
  * tuning daycare's, one import would move both. The bands are data, not logic.
  */
-const WEIGHT_TIERS: { id: string; maxLb?: number }[] = [
-  { id: "small", maxLb: 15 },
-  { id: "medium", maxLb: 35 },
-  { id: "large", maxLb: 70 },
-  { id: "giant" },
-];
+export const BOARDING_WEIGHT_TIERS: readonly { id: string; maxLb?: number }[] =
+  [
+    { id: "small", maxLb: 15 },
+    { id: "medium", maxLb: 35 },
+    { id: "large", maxLb: 70 },
+    { id: "giant" },
+  ];
 
 /** The band a weight falls in, or null when the record has no weight. */
 export function boardingWeightTierFor(
@@ -70,7 +71,7 @@ export function boardingWeightTierFor(
   if (weightLb == null || !Number.isFinite(weightLb) || weightLb <= 0) {
     return null;
   }
-  for (const tier of WEIGHT_TIERS) {
+  for (const tier of BOARDING_WEIGHT_TIERS) {
     if (tier.maxLb === undefined || weightLb <= tier.maxLb) return tier.id;
   }
   return "giant";

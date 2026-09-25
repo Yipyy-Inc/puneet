@@ -209,6 +209,9 @@ const SAME_IN_BOTH = new Set([
   // The hour SYMBOL, which French keeps: "14 h 30" is the correct form and
   // is exactly why this must not be "translated" to anything else.
   "staff.includedAddOns.hour", // h / h
+  // A size tier's chip: two values and a separator, no word to translate —
+  // the tier's name and the formatted range are each localised on their own.
+  "staff.lodging.tierBand", // {tier} · {range}
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

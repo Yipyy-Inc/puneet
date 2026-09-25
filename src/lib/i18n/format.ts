@@ -487,6 +487,25 @@ export function formatWeightFromLb(lb: number, locale: AppLocale): string {
   return `${formatNumber(kg, locale, decimals)} kg (${formatNumber(lb, locale, lbDigits)} lb)`;
 }
 
+/**
+ * `6.8–15.9 kg (15–35 lb)` — a band of weights stored in pounds, as a size
+ * tier is. Each end follows `formatWeightFromLb`'s rule, so a band reads the
+ * same as its two ends would on their own; one pair of units, not two.
+ */
+export function formatWeightRangeFromLb(
+  fromLb: number,
+  toLb: number,
+  locale: AppLocale,
+): string {
+  const kg = (lb: number) => {
+    const value = lb / 2.20462;
+    return formatNumber(value, locale, value < 20 ? 1 : 0);
+  };
+  const lb = (value: number) =>
+    formatNumber(value, locale, Number.isInteger(value) ? 0 : 1);
+  return `${kg(fromLb)}–${kg(toLb)} kg (${lb(fromLb)}–${lb(toLb)} lb)`;
+}
+
 /** `1h 30m` · `1 h 30`. */
 export function formatDuration(minutes: number, locale: AppLocale): string {
   const h = Math.floor(minutes / 60);

@@ -73,8 +73,12 @@ function toggle(list: string[], value: string): string[] {
     : [...list, value];
 }
 
-/** A chip row. Nothing selected reads as "all", which is what the table means. */
-function ChipRow({
+/**
+ * A chip row. Nothing selected reads as "all", which is what the table means,
+ * and `emptyMeans` says so. The Rooms page's size picker shares it and passes
+ * none: there, every chip is on when nothing is restricted.
+ */
+export function ChipRow({
   options,
   selected,
   onToggle,
@@ -83,7 +87,7 @@ function ChipRow({
   options: { id: string; label: string }[];
   selected: string[];
   onToggle: (id: string) => void;
-  emptyMeans: string;
+  emptyMeans?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -111,7 +115,7 @@ function ChipRow({
           );
         })}
       </div>
-      {selected.length === 0 ? (
+      {selected.length === 0 && emptyMeans ? (
         <p className="text-muted-foreground text-[13.5px]">{emptyMeans}</p>
       ) : null}
     </div>
