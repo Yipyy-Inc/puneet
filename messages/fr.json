@@ -2452,6 +2452,20 @@
         "charsCount": "{count} caractères",
         "addedByName": "Ajouté par {who}"
       },
+      "checkoutCutOff": {
+        "title": "Heure limite de départ",
+        "description": "Un animal qui part à cette heure ou plus tard garde sa chambre pour la nuit : elle ne peut pas être vendue à une arrivée le jour même. Un départ plus tôt libère la chambre pour le prochain client.",
+        "enabledLabel": "Garder la chambre pour la nuit après un départ tardif",
+        "timeLabel": "Heure limite",
+        "timeRequired": "Choisissez une heure pour activer l’heure limite.",
+        "save": "Enregistrer l’heure limite",
+        "savedTitle": "Heure limite enregistrée",
+        "savedBody": "Séjours déjà réservés mis à jour : {held} gardent maintenant leur chambre pour la nuit, {released} l’ont libérée.",
+        "savedNothing": "Aucun séjour déjà réservé n’avait besoin de changer.",
+        "saveFailed": "L’heure limite n’a pas été enregistrée",
+        "conflictsTitle": "Non retenus — un autre client est attendu dans la même chambre ce soir-là",
+        "conflictsHelp": "Déplacez l’une de ces réservations vers une autre chambre, puis enregistrez de nouveau."
+      },
       "dailyCareBoard": {
         "flaggedHealth": "Signalement pour {pet} : problème de santé",
         "flaggedIncident": "Signalement pour {pet} : incident consigné",

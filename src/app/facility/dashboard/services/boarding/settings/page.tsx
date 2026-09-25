@@ -27,6 +27,7 @@ import { MaxPetsPerStaffCard } from "@/components/smart-insights/MaxPetsPerStaff
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { DailyCareSettings } from "@/components/facility/boarding/daily-care-settings";
+import { CheckoutCutOffCard } from "@/components/facility/boarding/checkout-cut-off-card";
 import type {
   EarlyCheckoutPolicy,
   EarlyCheckoutPolicyConfig,
@@ -553,6 +554,10 @@ export default function BoardingSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* The late check-out that keeps the kennel for the night. Beside the
+            early-checkout policy, its opposite. */}
+        <CheckoutCutOffCard />
 
         <MaxPetsPerStaffCard service="boarding" />
       </div>

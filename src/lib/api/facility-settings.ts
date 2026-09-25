@@ -15,6 +15,10 @@ import type { InvoiceTemplate } from "@/types/invoice-template";
 import type { CustomServiceModule, FacilityResource } from "@/types/facility";
 import type { MobileGroomingSettings } from "@/lib/settings/mobile-grooming";
 import type {
+  CheckoutCutOffReport,
+  LodgingConfig,
+} from "@/lib/settings/lodging";
+import type {
   CallingDispatch,
   CallingFollowUp,
   CallingNumberPrefs,
@@ -231,6 +235,8 @@ export interface FacilitySettings {
   booking_flow: SettingState<FacilityBookingFlowConfig>;
   daycare_config: SettingState<ModuleConfig>;
   boarding_config: SettingState<ModuleConfig>;
+  /** The lodgings' own settings — the checkout cut-off. Not a module config. */
+  lodging_config: SettingState<LodgingConfig>;
   grooming_config: SettingState<ModuleConfig>;
   training_config: SettingState<ModuleConfig>;
   evaluation_config: SettingState<EvaluationConfig>;
@@ -796,6 +802,60 @@ export function useMobileAppConfig(): {
     configured: settings.mobile_app_config.configured,
     isPending,
   };
+}
+
+/** The lodgings' own settings — today, the checkout cut-off time. */
+export function useLodgingConfig(): {
+  config: LodgingConfig;
+  configured: boolean;
+  isPending: boolean;
+} {
+  const { settings, isPending } = useFacilitySettings();
+  return {
+    config: settings.lodging_config.value,
+    configured: settings.lodging_config.configured,
+    isPending,
+  };
+}
+
+/**
+ * Save the checkout cut-off AND apply it to the stays already booked.
+ *
+ * Not `useSaveFacilitySetting`: that saves the row and stops, and the cut-off
+ * is applied by a trigger when a stay is written — so the book as it stands
+ * would never hear of it. The answer says what moved, including the bookings
+ * that could not be held because another guest is due in that kennel.
+ */
+export function useSaveCheckoutCutOff() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      enabled: boolean;
+      time: string | null;
+    }): Promise<CheckoutCutOffReport> => {
+      const response = await fetch("/api/lodging/checkout-cut-off", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const parsed = (await response.json().catch(() => null)) as
+        | (CheckoutCutOffReport & { error?: string })
+        | null;
+      if (!response.ok || !parsed) {
+        throw new Error(parsed?.error ?? `Request failed (${response.status})`);
+      }
+      return parsed;
+    },
+    onSuccess: () => {
+      // The setting, and every read that counts a kennel as taken.
+      void queryClient.invalidateQueries({
+        queryKey: ["facility", "settings"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["boarding-rooms"] });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
 }
 
 /** Save one whole domain. The response is the STORED value. */

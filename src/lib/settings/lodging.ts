@@ -67,3 +67,20 @@ export type LodgingConfig = z.infer<typeof lodgingConfigSchema>;
 export const DEFAULT_LODGING_CONFIG: LodgingConfig = {
   checkoutCutOff: { enabled: false },
 };
+
+/**
+ * What saving the cut-off did to the stays already booked — the answer of
+ * `public.save_checkout_cut_off` (20260925120000), which re-derives every
+ * upcoming stay under the new setting.
+ */
+export interface CheckoutCutOffReport {
+  /** Upcoming stays that now hold their kennel for the check-out night. */
+  held: number;
+  /** Stays whose held night was given back (switched off, or a later time). */
+  released: number;
+  /**
+   * Booking numbers left exactly as they were, because holding their night
+   * would collide with a guest already booked into that kennel that evening.
+   */
+  conflicts: number[];
+}

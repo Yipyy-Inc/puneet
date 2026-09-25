@@ -2452,6 +2452,20 @@
         "charsCount": "{count} characters",
         "addedByName": "Added by {who}"
       },
+      "checkoutCutOff": {
+        "title": "Checkout cut-off time",
+        "description": "A pet who checks out at or after this time keeps their kennel for that night, so it can't be sold to a same-day arrival. A check-out before it frees the kennel for the next guest.",
+        "enabledLabel": "Hold the kennel for the night after a late check-out",
+        "timeLabel": "Cut-off time",
+        "timeRequired": "Pick a time to switch the cut-off on.",
+        "save": "Save cut-off time",
+        "savedTitle": "Cut-off time saved",
+        "savedBody": "Stays already booked were updated: {held} now hold their kennel for the night, {released} were given it back.",
+        "savedNothing": "No stay already booked needed to change.",
+        "saveFailed": "The cut-off time was not saved",
+        "conflictsTitle": "Not held — another guest is due in the same kennel that evening",
+        "conflictsHelp": "Move one of these bookings to another kennel, then save again."
+      },
       "dailyCareBoard": {
         "flaggedHealth": "{pet} is flagged for attention — health concern",
         "flaggedIncident": "{pet} is flagged — incident logged",

@@ -15135,6 +15135,14 @@ export type Database = {
         Returns: Json;
       };
       revoke_platform_role: { Args: { p_profile_id: string }; Returns: Json };
+      save_checkout_cut_off: {
+        Args: {
+          p_enabled: boolean;
+          p_facility_id: string;
+          p_time: string | null;
+        };
+        Returns: Json;
+      };
       save_my_notification_preferences: {
         Args: { p_email: Json; p_facility_id: string; p_in_app: Json };
         Returns: undefined;

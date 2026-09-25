@@ -23,6 +23,15 @@
 --     real check-out times and scheduled end times".
 -- C6  A malformed or disabled setting is no cut-off at all, and anon cannot
 --     read the setting.
+-- C7  SAVING the cut-off holds a late check-out booked before it was on —
+--     `save_checkout_cut_off` re-derives the upcoming stays.
+-- C8  A hold that would collide with the next guest is reported by booking
+--     number, and both stays are left exactly as they were.
+-- C9  Switching it off gives the night back.
+-- C10 A stranger, a malformed time and an "on" with no time are refused, and
+--     anon cannot call it.
+-- C11 An area the hold would put over capacity is caught per stay — its
+--     trigger is DEFERRED, and would otherwise fail the whole save at commit.
 --
 -- ── WHICH OF THESE ACTUALLY PROVE THE TRIGGER ─────────────────────────────
 --
@@ -267,6 +276,210 @@ begin
     v_off and v_junk
       and not has_function_privilege('anon', 'private.checkout_cut_off(uuid)', 'execute'),
     format('disabled=null:%s malformed=null:%s', v_off, v_junk));
+end $$;
+
+-- ── C7-C11 saving the cut-off reaches the stays already booked ────────────
+--
+-- `public.save_checkout_cut_off` (20260925120000). The trigger above applies
+-- the rule when a stay is WRITTEN; these prove that saving the setting
+-- re-writes the upcoming ones, and what it does when that cannot be done.
+
+create or replace function pg_temp.as_user(p_sub text) returns void
+language sql as $$
+  select set_config('request.jwt.claims',
+    json_build_object('sub', p_sub, 'role', 'authenticated')::text, true);
+$$;
+
+do $$
+declare
+  v_fac uuid; v_booking uuid; v_before timestamptz; v_after timestamptz;
+  v_fits boolean; v_report jsonb;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-lcc';
+  perform pg_temp.set_cutoff(false, '14:00');
+
+  -- Booked while the cut-off was off: out at 15:00, late against a 14:00
+  -- cut-off, and nothing held the night. 15:00 exactly, because the next
+  -- guest arrives at 15:00 — the two touch and do not overlap, so the ONLY
+  -- thing that can refuse that guest below is the hold.
+  v_booking := pg_temp.stay('2028-07-01', '2028-07-05', '15:00');
+  select upper(occupies) into v_before
+    from public.boarding_stays where booking_id = v_booking;
+
+  perform pg_temp.as_user('user_lccAdmin000000000000000000000');
+  v_report := public.save_checkout_cut_off(v_fac, true, '14:00');
+
+  select upper(occupies) into v_after
+    from public.boarding_stays where booking_id = v_booking;
+  v_fits := pg_temp.next_guest_fits('2028-07-05');
+
+  perform pg_temp.t(7,
+    'saving the cut-off holds a late check-out that was booked before it was on',
+    v_after > v_before and not v_fits and (v_report ->> 'held')::int >= 1,
+    format('upper before=%s after=%s next guest fits=%s report=%s',
+           v_before, v_after, v_fits, v_report));
+end $$;
+
+do $$
+declare
+  v_fac uuid; v_first uuid; v_next uuid; v_ref bigint;
+  v_first_before tstzrange; v_first_after tstzrange;
+  v_next_before tstzrange; v_next_after tstzrange; v_report jsonb;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-lcc';
+  perform pg_temp.set_cutoff(false, '14:00');
+
+  -- Out at 15:00 and the next guest in at 15:00, same kennel: legal while the
+  -- cut-off is off, a collision the moment it holds the first one's night.
+  v_first := pg_temp.stay('2028-08-01', '2028-08-05', '15:00');
+  v_next  := pg_temp.stay('2028-08-05', '2028-08-08', '11:00');
+  select occupies into v_first_before from public.boarding_stays where booking_id = v_first;
+  select occupies into v_next_before  from public.boarding_stays where booking_id = v_next;
+  select ref into v_ref from public.bookings where id = v_first;
+
+  perform pg_temp.as_user('user_lccAdmin000000000000000000000');
+  v_report := public.save_checkout_cut_off(v_fac, true, '14:00');
+
+  select occupies into v_first_after from public.boarding_stays where booking_id = v_first;
+  select occupies into v_next_after  from public.boarding_stays where booking_id = v_next;
+
+  perform pg_temp.t(8,
+    'a hold that would collide with the next guest is reported, and both stays are left as they were',
+    v_first_after = v_first_before and v_next_after = v_next_before
+      and (v_report -> 'conflicts') @> to_jsonb(v_ref),
+    format('first %s -> %s, next %s -> %s, report=%s',
+           v_first_before, v_first_after, v_next_before, v_next_after, v_report));
+end $$;
+
+do $$
+declare
+  v_fac uuid; v_booking uuid; v_end timestamptz; v_after timestamptz;
+  v_fits boolean; v_report jsonb;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-lcc';
+  -- C7's stay, held until midnight since C7 saved the cut-off on.
+  select b.id, b.end_at into v_booking, v_end
+    from public.bookings b
+   where b.facility_id = v_fac
+     and b.end_at = ('2028-07-05 15:00'::timestamp at time zone 'America/Toronto');
+
+  perform pg_temp.as_user('user_lccAdmin000000000000000000000');
+  v_report := public.save_checkout_cut_off(v_fac, false, '14:00');
+
+  select upper(occupies) into v_after
+    from public.boarding_stays where booking_id = v_booking;
+  v_fits := pg_temp.next_guest_fits('2028-07-05');
+
+  perform pg_temp.t(9,
+    'switching it off gives the night back — the stay returns to its booked check-out',
+    v_after = v_end and v_fits and (v_report ->> 'released')::int >= 1,
+    format('booked end=%s upper now=%s next guest fits=%s report=%s',
+           v_end, v_after, v_fits, v_report));
+end $$;
+
+do $$
+declare v_fac uuid; v_stranger boolean; v_malformed boolean; v_timeless boolean;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-lcc';
+
+  -- Nobody at this facility: no membership, no platform role.
+  perform pg_temp.as_user('user_lccStranger000000000000000000');
+  begin
+    perform public.save_checkout_cut_off(v_fac, true, '14:00');
+    v_stranger := false;
+  exception when insufficient_privilege then
+    v_stranger := true;
+  end;
+
+  perform pg_temp.as_user('user_lccAdmin000000000000000000000');
+  begin
+    perform public.save_checkout_cut_off(v_fac, true, 'half past two');
+    v_malformed := false;
+  exception when invalid_parameter_value then
+    v_malformed := true;
+  end;
+  begin
+    perform public.save_checkout_cut_off(v_fac, true, null);
+    v_timeless := false;
+  exception when invalid_parameter_value then
+    v_timeless := true;
+  end;
+
+  perform pg_temp.t(10,
+    'a stranger is refused, a time that is not a time is refused, and anon cannot call it',
+    v_stranger and v_malformed and v_timeless
+      and not has_function_privilege('anon',
+            'public.save_checkout_cut_off(uuid,boolean,text)', 'execute')
+      and has_function_privilege('authenticated',
+            'public.save_checkout_cut_off(uuid,boolean,text)', 'execute'),
+    format('stranger refused=%s malformed refused=%s on-without-time refused=%s',
+           v_stranger, v_malformed, v_timeless));
+end $$;
+
+do $$
+declare
+  v_fac uuid; v_client uuid; v_pet uuid; v_cat uuid; v_room uuid;
+  v_first uuid; v_next uuid; v_ref bigint;
+  v_before tstzrange; v_after tstzrange; v_report jsonb; v_pending text;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-lcc';
+  select id into v_client from public.clients
+   where facility_id = v_fac and email = 'nadia@cruz.invalid';
+  select id into v_pet from public.pets
+   where facility_id = v_fac and name = 'Pepper';
+  perform pg_temp.set_cutoff(false, '14:00');
+
+  -- An AREA with room for one pet. Areas are not the exclusion constraint's
+  -- business; the deferred area trigger is the only thing that can refuse.
+  insert into public.room_categories
+    (facility_id, legacy_id, service, name, default_capacity, space_type, max_pets_per_area)
+  values (v_fac, 'lcc-yard', 'boarding', 'LCC Yard', 1, 'area', 1)
+  returning id into v_cat;
+  insert into public.facility_rooms (facility_id, category_id, legacy_id, name)
+  values (v_fac, v_cat, 'lcc-yard-1', 'LCC Yard 1')
+  returning id into v_room;
+
+  insert into public.bookings
+    (facility_id, client_id, service, service_type, status, start_at, end_at, base_price, total_cost)
+  values (v_fac, v_client, 'boarding', 'LCC yard', 'confirmed',
+          '2028-09-01 15:00'::timestamp at time zone 'America/Toronto',
+          '2028-09-05 15:00'::timestamp at time zone 'America/Toronto', 100, 100)
+  returning id into v_first;
+  insert into public.bookings
+    (facility_id, client_id, service, service_type, status, start_at, end_at, base_price, total_cost)
+  values (v_fac, v_client, 'boarding', 'LCC yard', 'confirmed',
+          '2028-09-05 15:00'::timestamp at time zone 'America/Toronto',
+          '2028-09-08 11:00'::timestamp at time zone 'America/Toronto', 100, 100)
+  returning id into v_next;
+  insert into public.booking_pets (booking_id, pet_id) values (v_first, v_pet), (v_next, v_pet);
+  insert into public.boarding_stays (booking_id, facility_id, room_id, occupies)
+  select b.id, v_fac, v_room, tstzrange(b.start_at, b.end_at, '[)')
+    from public.bookings b where b.id in (v_first, v_next);
+
+  select occupies into v_before from public.boarding_stays where booking_id = v_first;
+  select ref into v_ref from public.bookings where id = v_first;
+
+  perform pg_temp.as_user('user_lccAdmin000000000000000000000');
+  v_report := public.save_checkout_cut_off(v_fac, true, '14:00');
+
+  select occupies into v_after from public.boarding_stays where booking_id = v_first;
+
+  -- Run every check still deferred. If the function had let the yard go over
+  -- capacity, this is where it would surface — at COMMIT in real life, failing
+  -- the whole save instead of the one stay.
+  begin
+    set constraints all immediate;
+    v_pending := 'none';
+  exception when check_violation then
+    v_pending := sqlerrm;
+  end;
+
+  perform pg_temp.t(11,
+    'an area that the hold would put over capacity is reported per stay, not at commit',
+    v_after = v_before and v_pending = 'none'
+      and (v_report -> 'conflicts') @> to_jsonb(v_ref),
+    format('first %s -> %s, pending at commit: %s, report=%s',
+           v_before, v_after, v_pending, v_report));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
