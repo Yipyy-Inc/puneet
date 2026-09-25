@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // Checkout takes a payment, reached the way staff reach it now: check the
@@ -146,28 +147,19 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    // Scoped to the client this spec uses, not every booking in the facility:
-    // every row it creates is BOB's, and the unbounded read is the 16-20s one.
-    //
-    // The shape is checked rather than asserted. A 500 here answers with an
-    // `{error}` OBJECT, and `for (const b of bookings ?? [])` on an object
-    // throws "object is not iterable" — which is how this teardown turned a
-    // reporting failure into a crash that left the run's paid bookings behind.
-    const res = await page.request.get(`/api/bookings?clientRef=${CLIENT_REF}`);
-    const body = res.ok() ? ((await res.json()) as unknown) : null;
-    const bookings = Array.isArray(body) ? (body as BookingPayload[]) : [];
-
+    // Found by marker in the database. This read `?clientRef=15`, which is
+    // Alice — 1,496 bookings, 1,471 of them earlier runs — and it answered a
+    // statement timeout. The shape check turned that into an empty list, so
+    // the cleanup reported "0 refund(s), 0 cancellation(s)" and left the run's
+    // paid bookings standing (2026-09-25). See `bookingsMarked`.
     let reversed = 0;
     let cancelled = 0;
-    for (const b of bookings) {
-      if (!b.specialRequests?.includes(MARKER)) continue;
-      if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
-
-      if ((b.amountPaid ?? 0) > 0) {
-        const amount = b.amountPaid ?? 0;
+    for (const b of await bookingsMarked(MARKER)) {
+      if (b.amountPaid > 0) {
+        const amount = b.amountPaid;
         const res = await page.request.post("/api/payments", {
           data: {
-            bookingRef: String(b.id),
+            bookingRef: String(b.ref),
             method: "new-card",
             subtotal: -amount,
             tax: 0,
@@ -182,9 +174,10 @@ test.afterAll(async ({ browser }) => {
           },
         });
         if (res.ok()) reversed++;
-        else console.log(`cleanup: refund on #${b.id} -> ${res.status()}`);
+        else console.log(`cleanup: refund on #${b.ref} -> ${res.status()}`);
       }
-      const cancel = await page.request.patch(`/api/bookings/${b.id}`, {
+      if (b.status === "cancelled") continue;
+      const cancel = await page.request.patch(`/api/bookings/${b.ref}`, {
         data: { status: "cancelled" },
       });
       if (cancel.ok()) cancelled++;

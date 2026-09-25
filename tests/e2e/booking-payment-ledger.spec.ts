@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // A booking is paid when the ledger says so.
@@ -129,33 +130,28 @@ test.afterAll(async ({ browser }) => {
     //
     // A cleanup that cannot see the list says so, rather than reporting the
     // zero it did.
-    const listed = await page.request.get("/api/bookings");
-    const body = listed.ok() ? await listed.json().catch(() => null) : null;
-    const bookings: BookingPayload[] = Array.isArray(body) ? body : [];
-    if (!Array.isArray(body)) {
-      console.log(
-        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
-      );
-    }
-
+    //
+    // And then it stopped being able to see it at all. The list was the whole
+    // facility's `GET /api/bookings`, which under the full suite's load
+    // answers a statement timeout: on 2026-09-25 this reported "NOTHING was
+    // cleaned up" and left eight paid bookings confirmed. `bookingsMarked`
+    // asks the database for the marker instead, already narrowed to the rows
+    // a previous run did not finish — not cancelled, or money still standing —
+    // so the counts below describe THIS run.
     let reversed = 0;
     let cancelled = 0;
-    for (const b of bookings) {
-      if (!b.specialRequests?.includes(MARKER)) continue;
-      // Already dealt with on a previous run. Skipped so the counts below
-      // describe THIS run rather than growing by four every time.
-      if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
-
+    for (const b of await bookingsMarked(MARKER)) {
       // Reverse whatever is standing. The payment row cannot be removed, so
       // the only honest cleanup is the one a business would do.
-      if ((b.amountPaid ?? 0) > 0) {
+      if (b.amountPaid > 0) {
         const res = await page.request.post("/api/payments", {
-          data: paymentBody(b.id, -(b.amountPaid ?? 0)),
+          data: paymentBody(b.ref, -b.amountPaid),
         });
         if (res.ok()) reversed++;
-        else console.log(`cleanup: refund on #${b.id} -> ${res.status()}`);
+        else console.log(`cleanup: refund on #${b.ref} -> ${res.status()}`);
       }
-      const cancel = await page.request.patch(`/api/bookings/${b.id}`, {
+      if (b.status === "cancelled") continue;
+      const cancel = await page.request.patch(`/api/bookings/${b.ref}`, {
         data: { status: "cancelled" },
       });
       if (cancel.ok()) cancelled++;

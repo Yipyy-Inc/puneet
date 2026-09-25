@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { NO_PRICING_RULES } from "@/lib/settings/pricing";
+
 import { ACCOUNTS, signIn } from "./_auth";
+import { withoutTestItems } from "./_settings-snapshot";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // WHAT A DISCOUNTED BOOKING COSTS.
@@ -56,25 +60,6 @@ function nextMonthWindow(): { from: string; to: string } {
       d.getDate(),
     ).padStart(2, "0")}`;
   return { from: iso(first), to: iso(last) };
-}
-
-/** Live bookings carrying this file's marker, asked of the database. */
-async function strays(page: Page): Promise<number[]> {
-  const month = nextMonthWindow();
-  const res = await page.request.get(
-    `/api/bookings?clientRef=${ALICE.client}&from=${month.from}&to=${month.to}`,
-  );
-  if (!res.ok()) return [];
-  const body: unknown = await res.json();
-  if (!Array.isArray(body)) return [];
-  return (body as BookingPayload[])
-    .filter(
-      (b) =>
-        typeof b.specialRequests === "string" &&
-        b.specialRequests.includes(MARKER) &&
-        b.status !== "cancelled",
-    )
-    .map((b) => b.id);
 }
 
 let originalPricingRules: Record<string, unknown> | null = null;
@@ -148,7 +133,9 @@ test.beforeAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    originalPricingRules = await readPricingRules(page);
+    // Cleaned as it is taken, or a fee an earlier crashed run left on would
+    // be the thing this file puts back — see `_settings-snapshot.ts`.
+    originalPricingRules = withoutTestItems(await readPricingRules(page));
   } finally {
     await page.close();
   }
@@ -158,8 +145,18 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    if (originalPricingRules)
-      await writePricingRules(page, originalPricingRules);
+    // ── THE RULES GO BACK WHATEVER THE SNAPSHOT SAID, AND CANNOT THROW ─────
+    //
+    // A facility with no rules used to be skipped here, which left this run's
+    // fee on; and the write went through `writePricingRules`, whose `expect`
+    // throws on a 500 and took the sweep below down with it. Both happened on
+    // 2026-09-24: a $15 "Cleaning" fee stayed on for twelve hours.
+    const restored = await page.request.patch(SETTINGS, {
+      data: {
+        domain: "pricing_rules",
+        value: originalPricingRules ?? NO_PRICING_RULES,
+      },
+    });
     // ── THE SWEEP IS NOT ALLOWED TO DEPEND ON THE TEST PASSING ───────
     //
     // `made` is filled by the tests themselves, so a test that fails
@@ -170,9 +167,12 @@ test.afterAll(async ({ browser }) => {
     // with CI, so they had to be found by hand.
     //
     // Asking the database what carries the marker cannot go stale that
-    // way. Alice's own list is big enough to hit the statement timeout
-    // unscoped, so it is scoped to the window the wizard books into.
-    for (const ref of await strays(page)) made.push(ref);
+    // way. It used to ask `/api/bookings` for Alice's next month, which is
+    // the read that times out under load; `bookingsMarked` asks for the
+    // marker itself.
+    for (const b of await bookingsMarked(MARKER)) {
+      if (b.status !== "cancelled") made.push(b.ref);
+    }
 
     let cancelled = 0;
     for (const ref of new Set(made)) {
@@ -182,7 +182,8 @@ test.afterAll(async ({ browser }) => {
       if (res.ok()) cancelled++;
     }
     console.log(
-      `cleanup: pricing rules restored, ${cancelled}/${new Set(made).size} booking(s) cancelled`,
+      `cleanup: pricing rules ${restored.ok() ? "restored" : "NOT RESTORED"}, ` +
+        `${cancelled}/${new Set(made).size} booking(s) cancelled`,
     );
   } finally {
     await page.close();

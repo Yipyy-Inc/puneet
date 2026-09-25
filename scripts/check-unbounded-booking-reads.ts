@@ -61,19 +61,21 @@ const DIR = "tests/e2e";
  * status the way the others were, and `?clientRef=` is the read that times out
  * for the client they use. They are waiting on the debris being cleared, not on
  * somebody noticing them. See docs/quality/debt-map.md, 2026-09-17.
+ *
+ * The way down, since 2026-09-25, is `bookingsMarked` in tests/e2e/_sweep.ts:
+ * it asks the database for the marker itself, cancelled-with-money included,
+ * so a refunding sweep no longer needs the whole list. Three files moved to it
+ * after the nightly run lost two cleanups to this read timing out.
  */
 const BASELINE: Record<string, number> = {
   "booking-detail-redirect.spec.ts": 1,
   "booking-line-items.spec.ts": 1,
-  "booking-payment-ledger.spec.ts": 1,
   "booking-presence.spec.ts": 1,
   "booking-tip-split.spec.ts": 1,
   "booking-write-integrity.spec.ts": 2,
   "bookings-list.spec.ts": 2,
   "client-balance.spec.ts": 1,
   "client-pet-write-path.spec.ts": 1,
-  "daily-care-board.spec.ts": 1,
-  "dashboard-live-board.spec.ts": 1,
   "daycare-attendance.spec.ts": 1,
   "operations-calendar.spec.ts": 1,
   "training-attendance.spec.ts": 1,

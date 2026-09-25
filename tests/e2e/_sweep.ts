@@ -1,4 +1,5 @@
 import type { Browser } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 import { BOOKING_STATUS_IDS } from "@/lib/settings/booking-statuses";
@@ -126,5 +127,82 @@ export async function cancelBookingsMarked(
     return 0;
   } finally {
     await page.close();
+  }
+}
+
+// ============================================================================
+// Find a marker's bookings WITHOUT reading the facility's list.
+//
+// ── WHY A SECOND WAY IN ───────────────────────────────────────────────────
+//
+// Everything above reads `/api/bookings` as staff, through row-level security,
+// which is a permission check per row — and under the full suite's load that
+// read answers 500 `canceling statement due to statement timeout`. On
+// 2026-09-25 two cleanups that read the facility's WHOLE list that way lost
+// everything after it: `dashboard-live-board` and `daily-care-board` walked
+// the `{error}` body with `for...of`, threw, and never reached the line that
+// put the pricing rules back. An "Early Drop-off Fee" of $14 stayed on in the
+// demo facility and every later checkout cost more than its spec asserted —
+// most of that night's seventeen failures came from one read.
+//
+// Finding the rows is not the part that needs RLS. This asks the database for
+// the marker with the service role, the way the purge step does; the caller
+// still undoes each row through the API, as staff would.
+//
+// ── IT NEVER THROWS, EITHER ───────────────────────────────────────────────
+//
+// For the reason `cancelBookingsMarked` gives above. A lookup that fails says
+// so and answers nothing.
+// ============================================================================
+
+export interface MarkedBooking {
+  /** The booking's number — what `/api/bookings/:ref` takes. */
+  ref: number;
+  status: string;
+  service: string;
+  amountPaid: number;
+}
+
+/**
+ * Every booking whose `specialRequests` contains `marker` and that still
+ * needs undoing: not cancelled yet, or cancelled with money still standing.
+ */
+export async function bookingsMarked(marker: string): Promise<MarkedBooking[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) {
+    console.log(`sweep: no service-role key, so nothing found for ${marker}`);
+    return [];
+  }
+  try {
+    const { data, error } = await createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+      .from("bookings")
+      .select("ref, status, service, amount_paid")
+      .like("special_requests", `%${marker}%`)
+      .or("status.neq.cancelled,amount_paid.gt.0");
+    if (error) {
+      console.log(`sweep: could not look up ${marker}: ${error.message}`);
+      return [];
+    }
+    return (
+      (data ?? []) as {
+        ref: number | string;
+        status: string;
+        service: string;
+        amount_paid: number | string | null;
+      }[]
+    ).map((row) => ({
+      ref: Number(row.ref),
+      status: row.status,
+      service: row.service,
+      amountPaid: Number(row.amount_paid ?? 0),
+    }));
+  } catch (error) {
+    console.log(
+      `sweep: could not look up ${marker}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return [];
   }
 }

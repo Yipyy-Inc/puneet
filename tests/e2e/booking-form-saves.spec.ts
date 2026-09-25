@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // The New Booking form saves what it was given — every day, every room, the
@@ -144,23 +145,16 @@ test.afterAll(async ({ browser }) => {
     // BOTH clients: the API tests book Bob, the form test books Alice, and a
     // sweep that reads one of them leaves the other's paid bookings behind —
     // which is the exact debt the counter below exists to stop accumulating.
-    // Alice is windowed because her whole list times out.
-    const month = nextMonthWindow();
-    const toSweep = [
-      ...(await allBookings(page, `?clientRef=${BOB.client}`)),
-      ...(await allBookings(
-        page,
-        `?clientRef=${ALICE.client}&from=${month.from}&to=${month.to}`,
-      )),
-    ];
-    for (const b of toSweep) {
-      if (!b.specialRequests?.includes(MARKER)) continue;
-      if (b.status === "cancelled" && (b.amountPaid ?? 0) === 0) continue;
-      const paid = Number(b.amountPaid ?? 0);
+    //
+    // By marker, in the database, which is both at once. Reading their lists
+    // stopped working: Bob's 902 bookings time out whole, and on 2026-09-25
+    // the `expect` inside `allBookings` threw here and left six behind.
+    for (const b of await bookingsMarked(MARKER)) {
+      const paid = b.amountPaid;
       if (paid > 0) {
         const refund = await page.request.post("/api/payments", {
           data: {
-            bookingRef: String(b.id),
+            bookingRef: String(b.ref),
             method: "cash",
             subtotal: -paid,
             tax: 0,
@@ -177,10 +171,11 @@ test.afterAll(async ({ browser }) => {
           },
         });
         if (!refund.ok()) {
-          refused.push(`refund ${b.id}: ${await refund.text()}`);
+          refused.push(`refund ${b.ref}: ${await refund.text()}`);
         }
       }
-      await page.request.patch(`/api/bookings/${b.id}`, {
+      if (b.status === "cancelled") continue;
+      await page.request.patch(`/api/bookings/${b.ref}`, {
         data: { status: "cancelled" },
       });
     }
@@ -250,8 +245,15 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     await signIn(page, ACCOUNTS.owner);
     const start = isoDaysAhead(410);
     const end = isoDaysAhead(413);
-    const before = (await marked(page, "clash", `?clientRef=${BOB.client}`))
-      .length;
+    // Counted by marker in the database, for whichever client holds them.
+    // This read BOB's list while the stays below are ALICE's, so it counted
+    // zero on both sides and could not have seen a half-written request; and
+    // Bob's 902 bookings now time out as a list anyway (2026-09-25).
+    const clashes = async () =>
+      (await bookingsMarked(`${MARKER} clash`)).filter(
+        (b) => b.status !== "cancelled",
+      ).length;
+    const before = await clashes();
     const res = await page.request.post("/api/bookings", {
       data: {
         clientId: ALICE.client,
@@ -282,9 +284,7 @@ test.describe("the New Booking form saves all of it, or none of it", () => {
     });
     expect(res.status(), await res.text()).toBe(409);
     // The first stay — written before the second was refused — is not there.
-    expect(
-      (await marked(page, "clash", `?clientRef=${BOB.client}`)).length,
-    ).toBe(before);
+    expect(await clashes()).toBe(before);
   });
 
   test("a cash deposit taken with the booking is a payment on it", async ({

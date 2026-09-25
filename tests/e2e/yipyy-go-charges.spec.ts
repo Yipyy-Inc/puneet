@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { withoutTestItems } from "./_settings-snapshot";
 import { defaultYipyyGoConfig } from "../../src/data/yipyygo-config";
 
 // ============================================================================
@@ -55,7 +56,13 @@ async function remember(domain: string) {
     .eq("facility_id", facilityId)
     .eq("domain", domain)
     .maybeSingle();
-  saved[domain] = { had: Boolean(data), value: data?.value ?? null };
+  // Cleaned as it is taken: this file's "Extra play" add-on was being put
+  // back run after run, because the copy it restored already held it from a
+  // run that died first. See `_settings-snapshot.ts`.
+  saved[domain] = {
+    had: Boolean(data),
+    value: withoutTestItems(data?.value ?? null),
+  };
 }
 
 async function put(domain: string, value: unknown) {

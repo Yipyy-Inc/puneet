@@ -21341,3 +21341,88 @@ This is the third defect in one day whose only witness was a rendered screen
 standing conclusion from Phase 4 still holds and is now three for three: **a
 new surface is not done when the gate goes green — it is done when somebody
 has seen it.**
+
+## 2026-09-25 — A cleanup that timed out left a fee on, and the suite paid it all night
+
+The nightly on `62734b26` failed 17 specs (the one before failed 2), and most
+of them were not about the code under test. Two test fees were switched on in
+the **Yipyy Demo Facility's** `pricing_rules`:
+
+- **"[e2e discount-rules] Cleaning", $15**, on from 21:31 on the 24th until
+  09:21 on the 25th. A local full-suite run on the old Nano database died in
+  `discount-rules`' `afterAll`: it restored through `writePricingRules`, whose
+  `expect` throws on a 500, so neither the restore nor the sweep after it ran.
+- **"Early Drop-off Fee", $14**, left at 09:58 by `dashboard-live-board`. Its
+  `afterAll` began with an unbounded `GET /api/bookings`, which answered a
+  statement timeout; `for...of` threw on the `{error}` body, and the pricing
+  rules restore written AFTER the loop never ran. `daily-care-board` crashed
+  the same way the same night.
+
+$64 + $15 + $14 is the $93 a checkout spec was offered for a $64 booking.
+Every money spec downstream failed on it — amount due $70 not $55, "paid"
+staying "pending", a booking that owed nothing owing something. **45 test
+bookings carried the $15 fee and no booking outside the demo facility did.**
+
+### The snapshot makes a crash permanent
+
+`discount-rules` and `yipyy-go-charges` read a setting in `beforeAll` and write
+the copy back in `afterAll`. If an earlier run died first, its leftover is IN
+the copy, and every later run restores it faithfully. `yipyy-go-charges` had
+been putting its own "[e2e yipyy-go-charges] Extra play" add-on back that way.
+
+### What changed
+
+- `bookingsMarked(marker)` in `tests/e2e/_sweep.ts` asks the database for a
+  marker with the service role — the purge step's way in — including rows
+  cancelled with money still standing, so a refunding sweep no longer needs a
+  list. Six cleanups use it: `dashboard-live-board`, `daily-care-board`,
+  `discount-rules`, `booking-payment-ledger`, `booking-payment-screens`,
+  `booking-form-saves`.
+- `withoutTestItems` in `tests/e2e/_settings-snapshot.ts` drops any array entry
+  a spec authored (an `e2e-` id, an `[e2e …]` name or label) from a copy
+  before it is kept. `discount-rules` and `yipyy-go-charges` use it.
+- `dashboard-live-board` restores its pricing rules before anything that can
+  fail; `discount-rules` restores whatever its snapshot said, `NO_PRICING_RULES`
+  when there was none, without an `expect` that throws.
+- `booking-form-saves`' "two stays wanting one kennel" test counted "clash"
+  bookings in BOB's list while posting them for ALICE — zero on both sides
+  whatever happened. It counts by marker now, so it can see a half-written
+  request for the first time.
+- `check:unbounded-booking-reads` came down from 16 reads in 14 files to 13
+  in 11.
+
+Cleaned by hand the same morning: the $14 fee and the stale add-on out of the
+demo facility's settings, 96 money-free test bookings cancelled and purged. The
+paid ones were left for their own specs' fixed cleanups, which reversed and
+cancelled them through `/api/payments` on the re-run.
+
+### Still open
+
+1. **The New Booking wizard holds its confirmation hostage to a list reload.**
+   `useCreateBookingFromModal` (`src/components/bookings/use-create-booking.ts`)
+   awaits `invalidateQueries({ queryKey: ["bookings"] })` before its success
+   toast, so it waits for every booking list on the page. On a client page
+   whose list is slow the booking is written in 3.6 s and the button says
+   "Saving…" for over a minute — the refetch times out and is retried. A
+   second click there is a duplicate booking. `booking-wizard`'s one-day
+   daycare test fails on exactly this, locally and in CI.
+2. **The two money clients are mostly debris, and it is permanent by design.**
+   Alice (client 15) holds 1,496 bookings, 1,471 of them earlier runs; Bob (16)
+   902, 899. 1,241 of Alice's cancelled test bookings carry payment rows, and
+   `payments` is append-only, so `purge_e2e_bookings()` can never take them —
+   every money spec adds more. `?clientRef=15` takes ~17 s and times out, so
+   any spec that reads either client's list fails more often every week.
+3. **Eight more cleanups read a list to find their own rows** and print
+   "NOTHING was cleaned up" when it times out: `boarding-arrival`,
+   `boarding-kennel-board`, `booking-presence`, `client-balance`,
+   `client-pet-write-path`, `daycare-attendance`, `grooming-ready-estimate`,
+   `request-decision`. They fail safe — they do not crash — but a run under
+   load leaves their rows behind. `bookingsMarked` is the way down, for them
+   and for the 13 reads left in `check:unbounded-booking-reads`.
+4. `clover-connect` rendered its "you do not administer a facility" line twice
+   once, under the nightly's load, and passed on the re-run. Not reproduced.
+
+**The shape to remember: when a whole cluster of money specs fails at once,
+read `facility_settings` for test residue before reading any code** —
+`value::text ~ '(\[e2e|"e2e-)'` found both fees in one query, and nothing in
+seventeen stack traces pointed at either.

@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // The facility home page counts the same day the check-in boards do.
@@ -336,31 +337,33 @@ test.afterAll(async ({ browser }) => {
   const page = await browser.newPage();
   try {
     await signIn(page, ACCOUNTS.owner);
-    const all = (await (
-      await page.request.get("/api/bookings")
-    ).json()) as BookingPayload[];
+    // ── THE PRICING RULES GO BACK FIRST ───────────────────────────────────
+    //
+    // One Postgres, and a fee left configured silently changes what every
+    // other spec's checkout costs — so nothing that can fail comes before it.
+    // It used to come after a sweep that began with an unbounded
+    // `GET /api/bookings`. On 2026-09-25 that read timed out, `for...of` threw
+    // on the `{error}` it answered, and this spec's $14 early drop-off fee
+    // stayed on in the demo facility for the rest of the night.
+    const restored = await page.request.patch("/api/facility/settings", {
+      data: { domain: "pricing_rules", value: EMPTY_PRICING_RULES },
+    });
     let cleared = 0;
     let cancelled = 0;
-    for (const b of all) {
-      if (!b.specialRequests?.includes(MARKER)) continue;
+    for (const b of await bookingsMarked(MARKER)) {
       if (b.status === "cancelled") continue;
       const clear = await page.request.put("/api/boarding/stays", {
-        data: { bookingRef: b.id, roomId: null },
+        data: { bookingRef: b.ref, roomId: null },
       });
       if (clear.ok()) cleared++;
-      const cancel = await page.request.patch(`/api/bookings/${b.id}`, {
+      const cancel = await page.request.patch(`/api/bookings/${b.ref}`, {
         data: { status: "cancelled" },
       });
       if (cancel.ok()) cancelled++;
     }
-    // The pricing rules go back to empty. One Postgres, and a late fee left
-    // configured would silently change what every other spec's checkout costs.
-    const restored = await page.request.patch("/api/facility/settings", {
-      data: { domain: "pricing_rules", value: EMPTY_PRICING_RULES },
-    });
     console.log(
-      `cleanup: ${cleared} stay(s) cleared, ${cancelled} cancelled, ` +
-        `pricing rules ${restored.ok() ? "restored" : "NOT RESTORED"}`,
+      `cleanup: pricing rules ${restored.ok() ? "restored" : "NOT RESTORED"}, ` +
+        `${cleared} stay(s) cleared, ${cancelled} cancelled`,
     );
   } finally {
     await page.close();
