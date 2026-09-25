@@ -64,7 +64,7 @@ function ColorSwatch({
             )}
           </button>
         </TooltipTrigger>
-        <TooltipContent className="text-xs font-medium">
+        <TooltipContent side="top" className="text-xs font-medium">
           {name}
         </TooltipContent>
       </Tooltip>
@@ -247,8 +247,7 @@ export function OperationsCalendarColorPanel({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex w-[380px] flex-col p-0 sm:w-[420px] overflow-hidden"
-      >
+      <DialogContent className="flex w-[380px] flex-col overflow-hidden p-0 sm:w-[420px]">
         <DialogHeader className="shrink-0 border-b border-slate-100 px-5 pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
