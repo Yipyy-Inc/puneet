@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -132,6 +132,8 @@ interface Props {
   onEditUnit: (room: FacilityRoom) => void;
   onToggleUnit: (id: string) => void;
   onDeleteUnit: (id: string) => void;
+  /** A line under the header — e.g. that no service can book this class. */
+  notice?: ReactNode;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────────────
@@ -145,6 +147,7 @@ export function RoomCategoryCard({
   onEditUnit,
   onToggleUnit,
   onDeleteUnit,
+  notice,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const colors = COLOR_CONFIG[category.color];
@@ -239,6 +242,8 @@ export function RoomCategoryCard({
             </Button>
           </div>
         </div>
+
+        {notice}
 
         {/* Active rules chips */}
         {category.rules.filter((r) => r.enabled).length > 0 && (

@@ -195,6 +195,33 @@ export function lodgingTypesServing<T extends { id: string; rowId?: string }>(
 }
 
 /**
+ * The lodging types no active boarding service can be booked into.
+ *
+ * The cutover gave every priced class a service restricted to that class, so
+ * a class made AFTER it is covered by nothing unless some service is open to
+ * every type — and once staff pick a service in the wizard, that class drops
+ * out of the kennel list without a word. The rooms screen warns about these.
+ *
+ * `rowId`, never `id` — `lodgingTypeIds` holds uuids; see the note on
+ * `lodgingTypesServing` above for what comparing the app id does.
+ *
+ * A facility with NO active service is on the pre-cutover path, where a class
+ * books at its own rate; nothing is missing there, so nothing is returned.
+ */
+export function lodgingTypesNoServiceCanBook<T extends { rowId?: string }>(
+  categories: readonly T[],
+  services: readonly Pick<BoardingService, "lodgingTypeIds" | "isActive">[],
+): T[] {
+  const active = services.filter((service) => service.isActive);
+  if (active.length === 0) return [];
+  if (active.some((service) => service.lodgingTypeIds.length === 0)) return [];
+  const covered = new Set(active.flatMap((service) => service.lodgingTypeIds));
+  return categories.filter(
+    (category) => category.rowId === undefined || !covered.has(category.rowId),
+  );
+}
+
+/**
  * The services a facility may offer this pet, here, in menu order.
  *
  * Inactive services are excluded: an inactive service is a draft the facility

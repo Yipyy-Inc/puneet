@@ -2466,6 +2466,10 @@
         "conflictsTitle": "Non retenus — un autre client est attendu dans la même chambre ce soir-là",
         "conflictsHelp": "Déplacez l’une de ces réservations vers une autre chambre, puis enregistrez de nouveau."
       },
+      "lodgingCoverage": {
+        "notice": "Aucun service de pension ne peut encore réserver ce type de chambre : il ne peut pas être choisi une fois un service sélectionné.",
+        "link": "L’ajouter à un service dans l’onglet Menu"
+      },
       "dailyCareBoard": {
         "flaggedHealth": "Signalement pour {pet} : problème de santé",
         "flaggedIncident": "Signalement pour {pet} : incident consigné",

@@ -2466,6 +2466,10 @@
         "conflictsTitle": "Not held — another guest is due in the same kennel that evening",
         "conflictsHelp": "Move one of these bookings to another kennel, then save again."
       },
+      "lodgingCoverage": {
+        "notice": "No boarding service can book this room type yet, so it can't be chosen once a service is picked.",
+        "link": "Add it to a service on the Menu tab"
+      },
       "dailyCareBoard": {
         "flaggedHealth": "{pet} is flagged for attention — health concern",
         "flaggedIncident": "{pet} is flagged — incident logged",

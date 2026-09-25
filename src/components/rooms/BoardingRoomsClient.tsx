@@ -11,6 +11,9 @@ import { RoomCategoryCard } from "@/components/rooms/RoomCategoryCard";
 import { CategoryFormDialog } from "@/components/rooms/CategoryFormDialog";
 import { RoomUnitFormDialog } from "@/components/rooms/RoomUnitFormDialog";
 import { useRooms } from "@/hooks/use-rooms";
+import { useBoardingServices } from "@/lib/api/boarding-catalogue";
+import { lodgingTypesNoServiceCanBook } from "@/lib/pricing/boarding-service-choice";
+import { NoServiceNotice } from "@/components/rooms/NoServiceNotice";
 
 export function BoardingRoomsClient() {
   const {
@@ -39,6 +42,17 @@ export function BoardingRoomsClient() {
   const categories = allCategories.filter((c) => c.service === "boarding");
   const categoryIds = new Set(categories.map((c) => c.id));
   const rooms = allRooms.filter((r) => categoryIds.has(r.categoryId));
+
+  // The offered classes no active service can be booked into. Until the menu
+  // has loaded nothing is flagged — no services means no warning — so a
+  // facility never sees the notice flash over a class that is covered.
+  const { data: services } = useBoardingServices();
+  const unbookable = new Set(
+    lodgingTypesNoServiceCanBook(
+      categories.filter((c) => c.active),
+      services ?? [],
+    ).map((c) => c.id),
+  );
 
   const [catDialog, setCatDialog] = useState<{
     open: boolean;
@@ -202,6 +216,9 @@ export function BoardingRoomsClient() {
                 key={cat.id}
                 category={cat}
                 rooms={rooms.filter((r) => r.categoryId === cat.id)}
+                notice={
+                  unbookable.has(cat.id) ? <NoServiceNotice /> : undefined
+                }
                 onEditCategory={() =>
                   setCatDialog({ open: true, editing: cat })
                 }
