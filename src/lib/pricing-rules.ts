@@ -176,6 +176,15 @@ export interface ApplyPricingRulesInput {
   pets: PricingContextPet[];
   addOnsCatalog: ServiceAddOn[];
   roomAssignments?: Array<{ petId: number; roomId: string }>;
+  /**
+   * The kennel class an assignment's `roomId` belongs to.
+   *
+   * An assignment names a room OR a room type (see `classOf` in
+   * `boarding-pricing.ts`), and a room-type rule is written against classes.
+   * Absent, the id is compared as it stands — which matches a type-level
+   * assignment and never a room.
+   */
+  roomCategoryOf?: (roomId: string) => string | undefined;
   boardingNights?: number;
   sessionUnits?: number;
   serviceStartDate?: string;
@@ -867,8 +876,19 @@ export function applyDynamicPricingRules(
     }
   }
 
-  // Room type discounts/surcharges
+  // ── ROOM TYPE DISCOUNTS/SURCHARGES, MATCHED BY THE ASSIGNMENT'S CLASS ────
+  //
+  // The editor used to offer four hard-coded types — `standard`, `deluxe`,
+  // `vip`, `cat-suite` — instead of the facility's kennel classes, and this
+  // compared them with the assignment's raw id. Three could never match a real
+  // class. The fourth was worse: `cat-suite` is ALSO the id of the demo
+  // facility's plain "Suite", so a surcharge written for cat suites landed on
+  // it. And a booking assigned to a specific room never matched at all, because
+  // a room's id is not its class's. The rules now hold real class ids, and
+  // each assignment is resolved to its class before it is compared.
   if (input.serviceId === "boarding") {
+    const classOf = (roomId: string) =>
+      input.roomCategoryOf?.(roomId) ?? roomId;
     for (const rule of rules.roomTypeAdjustments) {
       if (!rule.isActive) continue;
       if (!appliesToService(input.serviceId, rule.applicableServices)) continue;
@@ -878,7 +898,7 @@ export function applyDynamicPricingRules(
       if (roomAssignments.length === 0) continue;
 
       const matchingAssignments = roomAssignments.filter((assignment) =>
-        rule.roomTypeIds.includes(assignment.roomId),
+        rule.roomTypeIds.includes(classOf(assignment.roomId)),
       );
       if (matchingAssignments.length === 0) continue;
 
@@ -894,7 +914,7 @@ export function applyDynamicPricingRules(
         if (uniqueRooms.size !== 1) continue;
 
         const roomId = roomAssignments[0]?.roomId;
-        if (!roomId || !rule.roomTypeIds.includes(roomId)) continue;
+        if (!roomId || !rule.roomTypeIds.includes(classOf(roomId))) continue;
       }
 
       let adjustmentAmount =

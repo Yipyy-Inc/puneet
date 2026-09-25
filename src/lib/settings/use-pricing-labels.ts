@@ -45,13 +45,6 @@ const SERVICE_KEYS: Record<string, string> = {
   training: "svcTraining",
 };
 
-const ROOM_KEYS: Record<string, string> = {
-  standard: "roomStandard",
-  deluxe: "roomDeluxe",
-  vip: "roomVip",
-  "cat-suite": "roomCatSuite",
-};
-
 const COAT_KEYS: Record<string, string> = {
   short: "coatShort",
   medium: "coatMedium",
@@ -130,7 +123,6 @@ export interface PricingLabels {
   /** `n === 1` is not a plural rule — French counts 0 as singular. */
   plural: (n: number, one: string, other: string) => string;
   services: PricingOption[];
-  rooms: PricingOption[];
   coats: PricingOption[];
   /** Every syncable country, named and ordered in the viewer's language. */
   countries: PricingOption[];
@@ -210,7 +202,6 @@ export function usePricingLabels(): PricingLabels {
       t,
       plural,
       services: option(SERVICE_KEYS),
-      rooms: option(ROOM_KEYS),
       coats: option(COAT_KEYS),
       countries,
       country,

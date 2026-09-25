@@ -27,6 +27,7 @@ import {
   normalizeApplicableServices,
 } from "@/components/facility/pricing-rules/shared";
 import type { ServiceOption } from "@/components/facility/pricing-rules/shared";
+import { useRooms } from "@/hooks/use-rooms";
 import { usePricingLabels } from "@/lib/settings/use-pricing-labels";
 
 // ── Room-Type Adjustment Modal ──────────────────────────────────────
@@ -46,10 +47,13 @@ export function RoomTypeAdjustmentModal({
   serviceOptions: ServiceOption[];
   onSave: (rule: RoomTypeAdjustment) => void;
 }) {
-  const { t, rooms } = usePricingLabels();
+  const { t } = usePricingLabels();
+  const { categories } = useRooms();
   const [form, setForm] = useState({
     name: "",
-    roomTypeIds: ["standard"],
+    // Nothing ticked. This started on `standard`, one of four types that were
+    // never this facility's classes — see the note in pricing-rules.ts.
+    roomTypeIds: [] as string[],
     minNights: null as number | null,
     maxNights: null as number | null,
     sameRoomRequired: true,
@@ -81,7 +85,7 @@ export function RoomTypeAdjustmentModal({
     } else {
       setForm({
         name: "",
-        roomTypeIds: ["standard"],
+        roomTypeIds: [],
         minNights: null,
         maxNights: null,
         sameRoomRequired: true,
@@ -94,6 +98,17 @@ export function RoomTypeAdjustmentModal({
       });
     }
   }
+
+  // The facility's own kennel classes — the ids an assignment resolves to at
+  // pricing time. A class the rule already names stays listed even once it is
+  // no longer offered, so editing the rule cannot drop it without a click.
+  const classes = categories
+    .filter(
+      (category) =>
+        category.service === "boarding" &&
+        (category.active || form.roomTypeIds.includes(category.id)),
+    )
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,29 +130,40 @@ export function RoomTypeAdjustmentModal({
 
           <div className="space-y-2">
             <Label>{t("rtRoomTypes")}</Label>
-            <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
-              {rooms.map((roomType) => (
-                <label key={roomType.value} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={form.roomTypeIds.includes(roomType.value)}
-                    onCheckedChange={(checked) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        roomTypeIds:
-                          checked === true
-                            ? prev.roomTypeIds.includes(roomType.value)
-                              ? prev.roomTypeIds
-                              : [...prev.roomTypeIds, roomType.value]
-                            : prev.roomTypeIds.filter(
-                                (value) => value !== roomType.value,
-                              ),
-                      }))
-                    }
-                  />
-                  <span className="text-xs">{roomType.label}</span>
-                </label>
-              ))}
-            </div>
+            {classes.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border p-3 text-sm">
+                {t("rtNoClasses")}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
+                {classes.map((roomClass) => (
+                  <label
+                    key={roomClass.id}
+                    className="flex min-w-0 items-center gap-2"
+                  >
+                    <Checkbox
+                      checked={form.roomTypeIds.includes(roomClass.id)}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          roomTypeIds:
+                            checked === true
+                              ? prev.roomTypeIds.includes(roomClass.id)
+                                ? prev.roomTypeIds
+                                : [...prev.roomTypeIds, roomClass.id]
+                              : prev.roomTypeIds.filter(
+                                  (value) => value !== roomClass.id,
+                                ),
+                        }))
+                      }
+                    />
+                    <span className="text-xs wrap-break-word">
+                      {roomClass.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

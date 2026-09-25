@@ -1739,6 +1739,10 @@ export function BookingModal({
       pets: pricingPets,
       addOnsCatalog: storedAddOns,
       roomAssignments,
+      // A room-type rule names kennel CLASSES and an assignment may name a
+      // room; a room answers with its class, a class id falls through as is.
+      roomCategoryOf: (roomId) =>
+        facilityRooms.find((room) => room.id === roomId)?.categoryId,
       boardingNights,
       sessionUnits:
         selectedService === "daycare"

@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { useRooms } from "@/hooks/use-rooms";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import type { PricingRules } from "@/lib/settings/pricing";
 import type {
@@ -143,6 +144,11 @@ export function PricingRulesPanel({
   } = usePricingLabels();
   const sections = showSections ?? ALL_SECTIONS;
   const { activeModules } = useCustomServices();
+  // A room-type rule stores kennel class ids; the row names the classes.
+  const { categories: roomClasses } = useRooms();
+  const roomClassName = (id: string) =>
+    roomClasses.find((roomClass) => roomClass.id === id)?.name ??
+    t("rtRemovedClass");
   // The extras this facility sells. Read from localStorage until 2026-09-05,
   // under a key thirteen files each carried their own copy of.
   const { addOns: serviceAddOns } = useServiceAddOns();
@@ -941,7 +947,8 @@ export function PricingRulesPanel({
                       )}
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {t("rowRooms")} {rule.roomTypeIds.join(", ")} ·{" "}
+                      {t("rowRooms")}{" "}
+                      {rule.roomTypeIds.map(roomClassName).join(", ")} ·{" "}
                       {range(rule.minNights, rule.maxNights, "nights")}
                     </p>
                     <ServiceScopeChips
