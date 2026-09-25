@@ -4,16 +4,13 @@
 --
 --   bun run test:sql boarding-services
 --
--- One transaction, rolled back. It provisions its own facility for everything
--- except S0, which measures the REAL data migration and therefore has to look
--- at the real rows.
+-- One transaction, rolled back, on a facility it provisions for itself. It
+-- reads no live rows since S0 was retired (below).
 --
 -- ── WHAT THIS FILE IS ABOUT ────────────────────────────────────────────────
 --
--- S0  THE MIGRATION CARRIED EVERY PRICED CLASS, at the same price, per night,
---     restricted to the class it came from. This is the assertion that would
---     catch a rewrite silently losing a facility's rates — and there were 459
---     boarding bookings resting on them.
+-- S0  RETIRED 2026-09-25 — the migration carried every priced class. It did,
+--     and the record of it is where the assertion was, below.
 -- S1  THE THING THAT WAS IMPOSSIBLE BEFORE: two priced services in ONE lodging
 --     type. The whole point of splitting the row.
 -- S2  Empty `lodging_type_ids` means EVERY type, not none — the convention
@@ -41,44 +38,43 @@ returns void language sql as $$
   insert into tap(n, name, ok, detail) values (i, p, ok, d);
 $$;
 
--- ── S0 the migration carried every priced class ───────────────────────────
-
-do $$
-declare
-  v_classes integer;
-  v_missing integer;
-  v_wrong   integer;
-begin
-  select count(*) into v_classes from public.room_categories
-   where service = 'boarding' and default_base_price is not null;
-
-  select count(*) into v_missing
-    from public.room_categories rc
-   where rc.service = 'boarding'
-     and rc.default_base_price is not null
-     and not exists (
-       select 1 from public.boarding_services s
-        where s.facility_id = rc.facility_id
-          and s.legacy_id = 'svc-' || rc.legacy_id);
-
-  -- Same price, per night, and bookable in the class it came from.
-  select count(*) into v_wrong
-    from public.room_categories rc
-    join public.boarding_services s
-      on s.facility_id = rc.facility_id
-     and s.legacy_id = 'svc-' || rc.legacy_id
-   where rc.service = 'boarding'
-     and rc.default_base_price is not null
-     and (s.price is distinct from rc.default_base_price
-          or s.unit <> 'night'
-          or not (rc.id = any (s.lodging_type_ids)));
-
-  perform pg_temp.t(0,
-    'every priced boarding class became a service at the same price, per night, in its own class',
-    v_missing = 0 and v_wrong = 0,
-    format('%s priced class(es), %s with no service, %s carried wrongly',
-           v_classes, v_missing, v_wrong));
-end $$;
+-- ── S0, retired 2026-09-25: the migration carried every priced class ──────
+--
+-- It asserted that every priced boarding class had a service at the same
+-- price, per night, bookable in its own class — the promise of
+-- 20260924210000, which had 459 boarding bookings resting on those rates.
+--
+-- THE MIGRATION KEPT IT. S0 passed in CI the day it ran, and again by hand on
+-- 2026-09-25: 10 priced classes, 0 without a service, 0 carried wrongly.
+--
+-- WHY IT IS NOT A STANDING CHECK. It compared the migration's promise against
+-- TODAY's rows, and those are the facility's to change. Each of these fails
+-- it, and none is a migration fault:
+--
+--   - a new priced kennel class — nothing creates its service, by design;
+--   - a service repriced, or a kennel class repriced on the rooms screen;
+--   - a service opened to more kennels, or charged by the day;
+--   - a migrated service deleted from the menu (a hard delete).
+--
+-- Neither table records edits (no trigger stamps `updated_at`), so no scoping
+-- can tell a lost rate from a changed one. And `sql` gates the image: on
+-- 2026-09-25 a kennel class `rooms-admin` had left behind failed S0, and
+-- `be16ac28` passed every other gate and did not deploy. The day the facility
+-- added a priced class the same way, every deploy would have stopped.
+--
+-- To measure it again by hand — expect a non-zero count once the facility has
+-- changed its menu, and read each one before calling it a loss:
+--
+--   select count(*) filter (where s.id is null) as without_a_service,
+--          count(*) filter (where s.id is not null
+--                             and (s.price is distinct from rc.default_base_price
+--                                  or s.unit <> 'night'
+--                                  or not (rc.id = any (s.lodging_type_ids))))
+--            as differing
+--     from public.room_categories rc
+--     left join public.boarding_services s
+--       on s.facility_id = rc.facility_id and s.legacy_id = 'svc-' || rc.legacy_id
+--    where rc.service = 'boarding' and rc.default_base_price is not null;
 
 -- ── A facility of this file's own for everything else ─────────────────────
 

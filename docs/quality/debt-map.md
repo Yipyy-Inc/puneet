@@ -21416,9 +21416,19 @@ cancelled them through `/api/payments` on the re-run.
    reading Alice's list. It finds it with
    `bookingsMarked(MARKER, { holdingAStay: true })` now, and healed the class
    on its next run. **The same thing happens the day a real facility creates a
-   priced kennel class**, because nothing creates its service. That needs a
-   decision, not a quiet edit to a gate: scope S0 to classes that existed when
-   the migration ran, or have creating a priced class create its service.
+   priced kennel class**, because nothing creates its service.
+   **Decided the same day: S0 is retired from the recurring suite.** Scoping
+   it to the migrated classes was the first proposal and is not enough —
+   repricing a service or a class, opening a service to more kennels, or
+   deleting a migrated service fails it too, and neither table records edits,
+   so nothing can tell a lost rate from a changed one. Auto-creating a service
+   with each class was rejected: it would re-merge the two objects the
+   migration separated, and put menu items on the facility's menu that nobody
+   made. The migration's result (10 priced classes, none missing, none
+   different) and a query to re-measure it by hand sit where S0 was, in
+   `supabase/tests/boarding-services.sql`. What is still open is the product
+   side: a new kennel class has no service that can book it, and the rooms
+   screen still asks for a price the service now owns.
 3. **The two money clients are mostly debris, and it is permanent by design.**
    Alice (client 15) holds 1,496 bookings, 1,471 of them earlier runs; Bob (16)
    902, 899. 1,241 of Alice's cancelled test bookings carry payment rows, and
