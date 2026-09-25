@@ -35,6 +35,7 @@ interface Catalogue {
     id: string;
     name: string;
     service: string;
+    sortOrder: number;
     defaultCapacity: number;
     defaultBasePrice?: number;
     visibleToClients: boolean;
@@ -266,5 +267,66 @@ test.describe("the rooms page writes to the database", () => {
     await page.request.patch(`/api/bookings/${created.id}`, {
       data: { status: "cancelled" },
     });
+  });
+
+  test("a class is dragged into place by keyboard, and the order is saved", async ({
+    page,
+  }) => {
+    // The order kennel classes are offered in could only be set by creating
+    // them in that order. Two classes of this file's own, created last so they
+    // sit at the bottom: moving the second above the first renumbers those two
+    // and none of the facility's real classes. The sweep removes both, by
+    // the marker in their ids.
+    await signIn(page, ACCOUNTS.owner);
+    for (const [id, name] of [
+      [`${CATEGORY}-order-a`, "E2E Order A"],
+      [`${CATEGORY}-order-b`, "E2E Order B"],
+    ]) {
+      const res = await page.request.post(`${API}/categories`, {
+        data: {
+          id,
+          name,
+          service: "boarding",
+          defaultCapacity: 1,
+          visibleToClients: false,
+          rules: [],
+          unitCount: 0,
+        },
+      });
+      expect(res.status(), await res.text()).toBe(201);
+    }
+
+    await page.goto("/facility/dashboard/services/boarding/rooms");
+    const handle = page.getByRole("button", {
+      name: "Move E2E Order B in the list",
+    });
+    await expect(handle).toBeVisible({ timeout: 45_000 });
+
+    // dnd-kit's keyboard sensor: pick up, one place up, put down. Each step
+    // waits for what a screen reader is told, which is also what makes the
+    // steps land: the list is measured after the pick-up, and a key pressed
+    // before that finishes drops the class where it started.
+    await handle.focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByText("Picked up E2E Order B.")).toBeAttached();
+    await page.keyboard.press("ArrowUp");
+    await expect(
+      page.getByText("E2E Order B is over E2E Order A."),
+    ).toBeAttached();
+    await page.keyboard.press("Space");
+    await expect(
+      page.getByText("E2E Order B was dropped over E2E Order A."),
+    ).toBeAttached();
+
+    const orderOf = async () => {
+      const catalogue = (await (
+        await page.request.get(API)
+      ).json()) as Catalogue;
+      const find = (suffix: string) =>
+        catalogue.categories.find((c) => c.id === `${CATEGORY}-order-${suffix}`)
+          ?.sortOrder ?? Number.NaN;
+      return find("b") < find("a") ? "b first" : "a first";
+    };
+    await expect.poll(orderOf, { timeout: 30_000 }).toBe("b first");
   });
 });

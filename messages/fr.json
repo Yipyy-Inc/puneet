@@ -2470,6 +2470,16 @@
         "notice": "Aucun service de pension ne peut encore réserver ce type de chambre : il ne peut pas être choisi une fois un service sélectionné.",
         "link": "L’ajouter à un service dans l’onglet Menu"
       },
+      "roomsOrder": {
+        "handle": "Déplacer {name} dans la liste",
+        "saveFailed": "Le nouvel ordre n’a pas été enregistré",
+        "instructions": "Pour déplacer un type de chambre, appuyez sur Espace ou Entrée pour le saisir, utilisez les flèches pour le déplacer, puis appuyez sur Espace ou Entrée pour le déposer. Appuyez sur Échap pour annuler.",
+        "pickedUp": "{name} est saisi.",
+        "over": "{name} est sur {over}.",
+        "dropped": "{name} a été déposé sur {over}.",
+        "droppedNowhere": "{name} a été remis à sa place.",
+        "cancelled": "Le déplacement de {name} a été annulé."
+      },
       "dailyCareBoard": {
         "flaggedHealth": "Signalement pour {pet} : problème de santé",
         "flaggedIncident": "Signalement pour {pet} : incident consigné",

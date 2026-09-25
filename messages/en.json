@@ -2470,6 +2470,16 @@
         "notice": "No boarding service can book this room type yet, so it can't be chosen once a service is picked.",
         "link": "Add it to a service on the Menu tab"
       },
+      "roomsOrder": {
+        "handle": "Move {name} in the list",
+        "saveFailed": "The new order was not saved",
+        "instructions": "To move a room type, press Space or Enter to pick it up, use the arrow keys to move it, then press Space or Enter to drop it. Press Escape to cancel.",
+        "pickedUp": "Picked up {name}.",
+        "over": "{name} is over {over}.",
+        "dropped": "{name} was dropped over {over}.",
+        "droppedNowhere": "{name} was put back where it was.",
+        "cancelled": "Moving {name} was cancelled."
+      },
       "dailyCareBoard": {
         "flaggedHealth": "{pet} is flagged for attention — health concern",
         "flaggedIncident": "{pet} is flagged — incident logged",

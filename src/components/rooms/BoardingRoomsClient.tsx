@@ -7,7 +7,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import type { RoomCategory, FacilityRoom } from "@/types/rooms";
-import { RoomCategoryCard } from "@/components/rooms/RoomCategoryCard";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableRoomCategoryCard } from "@/components/rooms/SortableRoomCategoryCard";
+import { useStaffText } from "@/lib/staff/use-staff-text";
+import { reorderedClasses } from "@/lib/rooms/reorder-classes";
 import { CategoryFormDialog } from "@/components/rooms/CategoryFormDialog";
 import { RoomUnitFormDialog } from "@/components/rooms/RoomUnitFormDialog";
 import { useRooms } from "@/hooks/use-rooms";
@@ -42,6 +59,92 @@ export function BoardingRoomsClient() {
   const categories = allCategories.filter((c) => c.service === "boarding");
   const categoryIds = new Set(categories.map((c) => c.id));
   const rooms = allRooms.filter((r) => categoryIds.has(r.categoryId));
+
+  // ── DRAG TO SORT ─────────────────────────────────────────────────────────
+  //
+  // `sort_order` decides the order kennel classes are offered in, here and in
+  // the booking form, and it could only be set by creating classes in the
+  // order wanted. A drop shows the new order at once and saves the classes
+  // whose position changed. The dropped order is shown only while the server
+  // still has the order it was dropped ON: writes refetch in the background,
+  // so clearing it on success would flash the old order back, and holding it
+  // past the refetch would hide somebody else's later change.
+  const { t: orderT, fill: orderFill } = useStaffText("roomsOrder");
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const serverOrder = categories
+    .slice()
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const serverSignature = serverOrder
+    .map((c) => `${c.id}:${c.sortOrder}`)
+    .join("|");
+  const [dropped, setDropped] = useState<{
+    ids: string[];
+    basedOn: string;
+  } | null>(null);
+  const ordered =
+    dropped && dropped.basedOn === serverSignature
+      ? [
+          ...dropped.ids.flatMap((id) => {
+            const category = serverOrder.find((c) => c.id === id);
+            return category ? [category] : [];
+          }),
+          ...serverOrder.filter((c) => !dropped.ids.includes(c.id)),
+        ]
+      : serverOrder;
+
+  // What a screen reader hears while a class is moved. dnd-kit's own are
+  // English and name the raw id ("draggable item cat-1786136174939"); these
+  // name the class, in the facility's language.
+  const nameOf = (id: string | number | undefined) =>
+    ordered.find((c) => c.id === String(id))?.name ?? String(id ?? "");
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      orderFill("pickedUp", { name: nameOf(active.id) }),
+    // Not "X is over X": dnd-kit fires it the moment a class is picked up,
+    // and it would replace "Picked up X." before anybody heard that.
+    onDragOver: ({ active, over }) =>
+      over && over.id !== active.id
+        ? orderFill("over", { name: nameOf(active.id), over: nameOf(over.id) })
+        : undefined,
+    onDragEnd: ({ active, over }) =>
+      over
+        ? orderFill("dropped", {
+            name: nameOf(active.id),
+            over: nameOf(over.id),
+          })
+        : orderFill("droppedNowhere", { name: nameOf(active.id) }),
+    onDragCancel: ({ active }) =>
+      orderFill("cancelled", { name: nameOf(active.id) }),
+  };
+  const accessibility = {
+    screenReaderInstructions: { draggable: orderT("instructions") },
+    announcements,
+  };
+
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    if (!over) return;
+    const change = reorderedClasses(
+      ordered,
+      String(active.id),
+      String(over.id),
+    );
+    if (!change) return;
+    setDropped({ ids: change.ids, basedOn: serverSignature });
+
+    const results = await Promise.all(
+      change.moves.map((c) => updateCategory(c)),
+    );
+    const failed = results.find((result) => !result.ok);
+    if (failed && !failed.ok) {
+      setDropped(null);
+      toast.error(orderT("saveFailed"), { description: failed.error });
+    }
+  };
 
   // The offered classes no active service can be booked into. Until the menu
   // has loaded nothing is flagged — no services means no warning — so a
@@ -208,39 +311,48 @@ export function BoardingRoomsClient() {
             onAdd={() => setCatDialog({ open: true, editing: null })}
           />
         ) : (
-          categories
-            .slice()
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((cat) => (
-              <RoomCategoryCard
-                key={cat.id}
-                category={cat}
-                rooms={rooms.filter((r) => r.categoryId === cat.id)}
-                notice={
-                  unbookable.has(cat.id) ? <NoServiceNotice /> : undefined
-                }
-                onEditCategory={() =>
-                  setCatDialog({ open: true, editing: cat })
-                }
-                onDeleteCategory={() => handleDeleteCategory(cat.id)}
-                onAddUnit={() =>
-                  setUnitDialog({
-                    open: true,
-                    editing: null,
-                    categoryId: cat.id,
-                  })
-                }
-                onEditUnit={(room) =>
-                  setUnitDialog({
-                    open: true,
-                    editing: room,
-                    categoryId: cat.id,
-                  })
-                }
-                onToggleUnit={handleToggleUnit}
-                onDeleteUnit={handleDeleteUnit}
-              />
-            ))
+          <DndContext
+            sensors={sensors}
+            accessibility={accessibility}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => void handleDragEnd(event)}
+          >
+            <SortableContext
+              items={ordered.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {ordered.map((cat) => (
+                <SortableRoomCategoryCard
+                  key={cat.id}
+                  category={cat}
+                  rooms={rooms.filter((r) => r.categoryId === cat.id)}
+                  notice={
+                    unbookable.has(cat.id) ? <NoServiceNotice /> : undefined
+                  }
+                  onEditCategory={() =>
+                    setCatDialog({ open: true, editing: cat })
+                  }
+                  onDeleteCategory={() => handleDeleteCategory(cat.id)}
+                  onAddUnit={() =>
+                    setUnitDialog({
+                      open: true,
+                      editing: null,
+                      categoryId: cat.id,
+                    })
+                  }
+                  onEditUnit={(room) =>
+                    setUnitDialog({
+                      open: true,
+                      editing: room,
+                      categoryId: cat.id,
+                    })
+                  }
+                  onToggleUnit={handleToggleUnit}
+                  onDeleteUnit={handleDeleteUnit}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 

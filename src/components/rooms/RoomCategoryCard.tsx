@@ -134,6 +134,8 @@ interface Props {
   onDeleteUnit: (id: string) => void;
   /** A line under the header — e.g. that no service can book this class. */
   notice?: ReactNode;
+  /** The drag handle, first in the header, when the list can be reordered. */
+  dragHandle?: ReactNode;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────────────
@@ -148,6 +150,7 @@ export function RoomCategoryCard({
   onToggleUnit,
   onDeleteUnit,
   notice,
+  dragHandle,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const colors = COLOR_CONFIG[category.color];
@@ -162,6 +165,7 @@ export function RoomCategoryCard({
       {/* Header */}
       <div className={cn("px-5 py-4", colors.headerBg)}>
         <div className="flex items-center gap-3">
+          {dragHandle}
           <button
             onClick={() => setExpanded(!expanded)}
             className="flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-white/60 dark:hover:bg-white/10"
