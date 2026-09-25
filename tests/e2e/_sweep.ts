@@ -166,8 +166,17 @@ export interface MarkedBooking {
 /**
  * Every booking whose `specialRequests` contains `marker` and that still
  * needs undoing: not cancelled yet, or cancelled with money still standing.
+ *
+ * `holdingAStay` asks a different question — every marked booking that still
+ * has a `boarding_stays` row, WHATEVER its status. Cancelling only releases a
+ * stay; the row survives, and a room with any stay against it refuses to be
+ * deleted. So a sweep that removes rooms needs the cancelled ones too, and
+ * only those: `rooms-admin` owns 187 cancelled bookings and one stay.
  */
-export async function bookingsMarked(marker: string): Promise<MarkedBooking[]> {
+export async function bookingsMarked(
+  marker: string,
+  { holdingAStay = false }: { holdingAStay?: boolean } = {},
+): Promise<MarkedBooking[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) {
@@ -175,13 +184,19 @@ export async function bookingsMarked(marker: string): Promise<MarkedBooking[]> {
     return [];
   }
   try {
-    const { data, error } = await createClient(url, key, {
+    const bookings = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
-    })
-      .from("bookings")
-      .select("ref, status, service, amount_paid")
-      .like("special_requests", `%${marker}%`)
-      .or("status.neq.cancelled,amount_paid.gt.0");
+    }).from("bookings");
+    const { data, error } = await (holdingAStay
+      ? bookings
+          .select(
+            "ref, status, service, amount_paid, boarding_stays!inner(booking_id)",
+          )
+          .like("special_requests", `%${marker}%`)
+      : bookings
+          .select("ref, status, service, amount_paid")
+          .like("special_requests", `%${marker}%`)
+          .or("status.neq.cancelled,amount_paid.gt.0"));
     if (error) {
       console.log(`sweep: could not look up ${marker}: ${error.message}`);
       return [];

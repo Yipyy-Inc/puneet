@@ -1,6 +1,7 @@
 import { test, expect, type Browser } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // The Rooms page edits the rooms bookings actually use.
@@ -67,20 +68,15 @@ async function sweep(browser: Browser, when: "before" | "after") {
     // room stays undeletable and the next run would collide on the category id.
     // Clearing the assignment deletes the stay, which is exactly what
     // `roomId: null` is for.
-    // Only this client's: the facility's whole list is ~1,000 rows here, slow
-    // enough to fail, and a failed read used to throw before a single room was
-    // removed.
-    const listed = await page.request.get(
-      `/api/bookings?clientRef=${CLIENT_REF}`,
-    );
-    const bookings = listed.ok()
-      ? ((await listed.json()) as { id: number; specialRequests?: string }[])
-      : [];
-    if (!listed.ok()) console.log(`cleanup: bookings -> ${listed.status()}`);
-    for (const b of bookings) {
-      if (!b.specialRequests?.includes(MARKER)) continue;
+    //
+    // Found in the database, and only the bookings still holding one. This
+    // read `?clientRef=15` — Alice, 1,496 bookings — which times out; on
+    // 2026-09-25 it came back empty, one stay stayed in `cat-e2e-rooms-2`, the
+    // room and then the category refused to go, and `boarding-services.sql`
+    // failed on the leftover class and held the deploy behind it.
+    for (const b of await bookingsMarked(MARKER, { holdingAStay: true })) {
       await page.request.put("/api/boarding/stays", {
-        data: { bookingRef: b.id, roomId: null },
+        data: { bookingRef: b.ref, roomId: null },
       });
     }
 
