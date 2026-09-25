@@ -117,7 +117,27 @@ export interface BoardingArrivalRow {
         } | null;
       }[]
     | null;
-  boarding_stays: BoardingStayJoin | null;
+  /** One stay today, a list once a booking can have several — `embeddedStay`. */
+  boarding_stays: BoardingStayJoin | BoardingStayJoin[] | null;
+}
+
+/**
+ * A booking's stay, however PostgREST embeds it.
+ *
+ * ONE object today, because `boarding_stays` is keyed by `booking_id` and
+ * PostgREST embeds a to-one relation as an object. Split lodging gives a
+ * booking several stays in sequence, and the day that key changes PostgREST
+ * sends a LIST instead — which a reader expecting an object reads as
+ * `undefined` on every row: an empty board, and no error anywhere, which is
+ * exactly how `/api/daily-care` once failed. So both readers take either
+ * shape, and ship BEFORE the key changes. The first stay is the only one until
+ * a booking can be split; choosing the one that covers the day comes with it.
+ */
+export function embeddedStay<T>(
+  value: T | readonly T[] | null | undefined,
+): T | null {
+  if (Array.isArray(value)) return (value[0] as T | undefined) ?? null;
+  return (value as T | null | undefined) ?? null;
 }
 
 export const BOARDING_ARRIVAL_SELECT = `
@@ -159,7 +179,7 @@ export function rowToBoardingArrival(
     .map((bp) => bp.pets)
     .filter((p): p is NonNullable<typeof p> => p !== null);
 
-  const stay = row.boarding_stays;
+  const stay = embeddedStay(row.boarding_stays);
   const start = new Date(row.start_at);
   const end = new Date(row.end_at);
   const nights = Math.max(

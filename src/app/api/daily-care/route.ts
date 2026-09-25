@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { createServerClient } from "@/lib/supabase/server";
 import { readAllPages, type RangeableQuery } from "@/lib/api/read-all-pages";
+import { embeddedStay } from "@/lib/api/mappers/boarding-arrival";
 import {
   careGuestFromBooking,
   type BookingCareDetails,
@@ -78,18 +79,22 @@ interface Row {
     | { pets: { id: string; ref: number; name: string } | null }[]
     | null;
   /**
-   * ONE stay, embedded as an object rather than a list.
+   * ONE stay, embedded as an object rather than a list — for now.
    *
    * PostgREST embeds a to-one relation as an object, and reading it as an array
    * silently yields `undefined` for every row — so the board came back empty
    * with no error anywhere. `mappers/boarding-arrival.ts` had this right; this
-   * route did not, and the spec caught it.
+   * route did not, and the spec caught it. The same trap runs the other way the
+   * day a booking can hold several stays, so it is read through
+   * `embeddedStay`, which takes either shape.
    */
-  boarding_stays: {
-    checked_in_at: string | null;
-    checked_out_at: string | null;
-    facility_rooms: { name: string } | null;
-  } | null;
+  boarding_stays: CareStay | CareStay[] | null;
+}
+
+interface CareStay {
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+  facility_rooms: { name: string } | null;
 }
 
 function nightsBetween(startIso: string, endIso: string): number {
@@ -142,7 +147,7 @@ export async function GET(request: NextRequest) {
   const petIdsByGuest = new Map<string, string[]>();
   const guests = (data as unknown as Row[])
     .filter((row) => {
-      const stay = row.boarding_stays;
+      const stay = embeddedStay(row.boarding_stays);
       // Arrived, and not yet collected. A booking with a stay row but no
       // arrival is expected rather than present.
       return Boolean(stay?.checked_in_at) && !stay?.checked_out_at;
@@ -165,7 +170,8 @@ export async function GET(request: NextRequest) {
           petNames: pets.map((pet) => pet.name),
           ownerName: row.clients?.name ?? "",
           ownerPhone: row.clients?.phone ?? null,
-          roomName: row.boarding_stays?.facility_rooms?.name ?? null,
+          roomName:
+            embeddedStay(row.boarding_stays)?.facility_rooms?.name ?? null,
           scheduledArrival: row.start_at,
           scheduledDeparture: row.end_at,
           nights: nightsBetween(row.start_at, row.end_at),
