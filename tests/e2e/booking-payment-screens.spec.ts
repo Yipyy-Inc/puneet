@@ -97,6 +97,25 @@ async function readBooking(page: Page, ref: number) {
 }
 
 /**
+ * A checkout that settles the bill checks the pet out — as its LAST step,
+ * after the payment. So the ledger says paid a moment before the pet has left,
+ * and a test that ends on the ledger closes the page inside that moment: the
+ * departure is never sent, and the booking stays checked in. Measured
+ * 2026-09-25: both tries of a failed run left a `daycare_attendance` row with
+ * a check-in and no check-out — still "on-site" after the cleanup cancelled
+ * it — and the bookings that did leave had their check-out 10–19 seconds
+ * after the check-in.
+ */
+async function expectDeparted(page: Page, ref: number) {
+  await expect
+    .poll(async () => (await readBooking(page, ref))?.status, {
+      timeout: 30_000,
+      message: "the settling checkout records the departure",
+    })
+    .toBe("completed");
+}
+
+/**
  * Open checkout the way staff reach it now: check the pet in on the daycare
  * floor (the attendance write — a direct status PATCH is refused for a
  * service that tracks arrival), then press "Check {pet} out", which is the till
@@ -266,6 +285,10 @@ test.describe("the payment button reaches the ledger", () => {
       )
       .toBe(`paid/${AMOUNT}`);
 
+    // Ending on the ledger left the next test a booking still checked in,
+    // offering "Check Buddy out" — see `expectDeparted`.
+    await expectDeparted(page, created.id);
+
     // The next test is about THIS booking. Saying so is what lets it ask for
     // one row instead of searching a client's entire history for it.
     settledRef = created.id;
@@ -358,5 +381,6 @@ test.describe("the payment button reaches the ledger", () => {
         { timeout: 30_000, message: "the balance settles it exactly" },
       )
       .toBe(`paid/${AMOUNT}`);
+    await expectDeparted(page, created.id);
   });
 });
