@@ -11,7 +11,6 @@ import type {
 
 export type {
   BoardingGuest,
-  BoardingRate,
   BoardingAddOn,
   MultiNightDiscount,
   PeakSurcharge,

@@ -233,26 +233,11 @@ export type BoardingGuest = z.infer<typeof boardingGuestSchema>;
 // Boarding Rate & Pricing
 // ============================================================================
 
-export const boardingRateSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    basePrice: z.number(),
-    isActive: z.boolean(),
-    sizePricing: z.object({
-      small: z.number(),
-      medium: z.number(),
-      large: z.number(),
-      giant: z.number(),
-    }),
-    color: z.string().optional(),
-    /** IDs of ServiceAddOns included free of charge with this rate */
-    includedAddOnIds: z.array(z.string()).optional(),
-  })
-  .catchall(z.unknown());
-
-export type BoardingRate = z.infer<typeof boardingRateSchema>;
+// `boardingRateSchema` lived here, with a small/medium/large/giant
+// `sizePricing` that no price was ever computed from — daycare's dead field
+// again. Nothing read the type either: the fixture rows it described were gone
+// and the rate is a boarding SERVICE now (20260924210000). Deleted rather
+// than kept "for later", so it cannot be picked up as if it priced something.
 
 export const boardingAddOnSchema = z.object({
   id: z.string(),
