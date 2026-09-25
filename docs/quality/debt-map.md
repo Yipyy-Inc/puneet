@@ -21435,13 +21435,12 @@ cancelled them through `/api/payments` on the re-run.
    `payments` is append-only, so `purge_e2e_bookings()` can never take them —
    every money spec adds more. `?clientRef=15` takes ~17 s and times out, so
    any spec that reads either client's list fails more often every week.
-4. **Eight more cleanups read a list to find their own rows** and print
-   "NOTHING was cleaned up" when it times out: `boarding-arrival`,
+4. ~~**Eight more cleanups read a list to find their own rows**~~ and printed
+   "NOTHING was cleaned up" when it timed out: `boarding-arrival`,
    `boarding-kennel-board`, `booking-presence`, `client-balance`,
    `client-pet-write-path`, `daycare-attendance`, `grooming-ready-estimate`,
-   `request-decision`. They fail safe — they do not crash — but a run under
-   load leaves their rows behind. `bookingsMarked` is the way down, for them
-   and for the 13 reads left in `check:unbounded-booking-reads`.
+   `request-decision`. **All eight ask `bookingsMarked` since
+   `7308c1a7`**, and `check:unbounded-booking-reads` is down to 8.
 5. `gift-card-payment` cancels its booking and never reverses the payment, so
    263 of its cancelled bookings still read `amount_paid` 20 — all of them
    Alice's. Harmless to the boards, and part of why her list is what it is.
@@ -21456,7 +21455,8 @@ cancelled them through `/api/payments` on the re-run.
    confirmation had the same line. They ask for the booking by ref when the
    list lacks it now, and say so if even that fails. Its own cleanup read
    the whole booking list and had left 20 open bookings on the days it books
-   into (2027-07-21/23); it asks the database by marker since `afcf2346`.
+   into (2027-07-21/23); it asks the database by marker since `afcf2346`,
+   and its first run that way cancelled all of them — 31 of 31 are cancelled.
 8. **`yipyy-go-form`'s "a draft and its photo survive a reload" fails on
    `main` too** — in the 2026-09-25 nightly and in two local runs the same
    day: the customer dashboard's pre-arrival reminder never appears within
@@ -21470,6 +21470,24 @@ cancelled them through `/api/payments` on the re-run.
    with its own `has_permission`) as a hashed subplan. `schedule-audit-trail`'s
    "a groomer reads no roster history" answers 500 whenever anything else is
    running. The per-row policy cost the advisors flag, with a number on it.
+10. ~~**`booking-payment-screens` failed "a settled booking stops offering to
+    be paid" on both tries of one run.**~~ **Fixed in `358712f1`.**
+    Not the page: the test before it ended on the ledger. A settling checkout
+    records the departure as its LAST step, after the payment, so the ledger
+    says paid a moment before the pet has left — and closing the page inside
+    that moment meant the departure was never sent. The booking stayed
+    checked in, and the next test correctly found "Check Buddy out". The
+    database showed it: both tries left a `daycare_attendance` row with a
+    check-in and no check-out, as had seven more of this spec's paid bookings
+    since 2026-09-24; the ones that left have their check-out 10–19 seconds
+    after the check-in. Both paying tests now wait for the
+    booking to read `completed`, which also proves the departure happens.
+    **Left behind:** 29 cancelled bookings, across specs, still read `on-site`
+    in `booking_presence` — a cleanup cancels a booking whose pet never left
+    — and the bookings list shows "On site" beside "Cancelled" for each. The
+    same happens to any checked-in booking staff cancel; whether cancelling
+    should record a departure, or be refused while the pet is on site, is a
+    product decision nobody has made.
 
 **The shape to remember: when a whole cluster of money specs fails at once,
 read `facility_settings` for test residue before reading any code** —
@@ -21545,19 +21563,30 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
    saved booking, whose lines already hold them. They show on the add-ons
    step ("Comes with …") and the confirm step, and are saved as ordinary
    add-on lines; `boarding-default-addons` books a real stay and reads two
-   walks back for one night. **Still open:** the server re-price prices
-   boarding's BASE only, so a customer request whose service has defaults
-   stays a request for staff — as any customer add-on already did; `per_day`
-   add-ons chosen by hand are still charged × whatever quantity was typed;
-   and the add-on editor's `per_stay_night` is still read by nothing.
+   walks back for one night. **The server re-price reached them in
+   `46f4c94d`.** It priced boarding's BASE only, so any add-on on a
+   customer's request — the service's own defaults included — made the quote
+   disagree and the booking stayed a request for staff. It now totals the
+   booking's lines from the facility's catalogue with the wizard's own
+   functions (`src/lib/pricing/add-on-lines.ts`, moved out of
+   `pricing-rules.ts` so the two cannot drift by a cent), and refuses a
+   booking missing one of its service's defaults (`missing_add_on`);
+   `booking-auto-confirm`'s three boarding tests hold it. **Still open:**
+   `per_day` add-ons chosen by hand are still charged × whatever quantity was
+   typed; and the add-on editor's `per_stay_night` is still read by nothing.
    **A trap found writing the spec:** `serviceAddOnSchema` requires
    `sortOrder`, `createdAt` and `updatedAt`, and one stored add-on missing
    them makes `settingsFromRows` drop the WHOLE `service_addons` domain — the
    booking form then offers no add-ons at all, with nothing said.
    `yipyy-go-charges` writes an add-on without them; it passes only because
    it reads the catalogue through SQL.
-3. **Split lodging (Phase 8) has not started, and it is bigger than it
-   reads.** `boarding_stays` is keyed by `booking_id`; it carries FIVE
+3. **Split lodging (Phase 8) has begun, and it is bigger than it reads.**
+   Its first step is `cedc26a1`: the arrivals mapper and `/api/daily-care`
+   read the embedded stay through `embeddedStay`, which takes one stay or a
+   list, so the table's key can move without any deployed reader going
+   empty. The key itself has not moved yet — that migration keeps
+   `booking_id` unique, and applies only once those readers are live.
+   `boarding_stays` is keyed by `booking_id`; it carries FIVE
    triggers (space type, cut-off, live-booking guard, the presence mirror,
    the deferred area capacity) and `bookings` a sixth that rewrites stays.
    Surveyed 2026-09-25, the places that break silently with a second stay:
@@ -21568,8 +21597,9 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
    mirror completes the booking at the first segment's check-out and the
    live-booking guard then refuses the second's check-in; `booking_presence`
    fans out into duplicate rows; the arrivals mapper and `/api/daily-care`
-   read the embedded stay as ONE object, and go empty when it becomes an
-   array; the tax lookup is `.maybeSingle()`; and both price paths multiply
+   read the embedded stay as ONE object, and went empty when it became an
+   array (fixed first, above); the tax lookup is `.maybeSingle()`; and both
+   price paths multiply
    rooms by ALL nights, which over-prices sequential segments. The area
    trigger excludes by booking, not by stay. `boarding-occupancy.sql` is the
    regression suite (K2 and L0 are the money rule). One small correction on
