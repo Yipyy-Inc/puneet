@@ -2450,7 +2450,8 @@
         "newLeadFromWhere": "Nouveau prospect de {source}",
         "stopsDoneOf": "{done}/{total} arrêts faits",
         "charsCount": "{count} caractères",
-        "addedByName": "Ajouté par {who}"
+        "addedByName": "Ajouté par {who}",
+        "bookingNotLoaded": "La réservation {ref} n'a pas pu être chargée, donc rien n'a été modifié. Actualisez le calendrier et réessayez."
       },
       "checkoutCutOff": {
         "title": "Heure limite de départ",

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { useBookingArrival } from "@/lib/api/booking-arrival";
+import { bookingQueries } from "@/lib/api/booking";
 import { balanceOf } from "@/lib/api/booking-money";
 import { useUpdateBookingStatus } from "@/lib/api/booking-status";
 import { useFacilityProfile } from "@/lib/api/facility-profile";
@@ -60,6 +62,7 @@ export function useCalendarBookingActions(input: {
   vaccinations: readonly VaccinationRecord[];
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { can } = useFacilityRbac();
   const arrival = useBookingArrival();
   const updateStatus = useUpdateBookingStatus();
@@ -77,6 +80,30 @@ export function useCalendarBookingActions(input: {
   const [vaccineAsk, setVaccineAsk] = useState<CalendarVaccineAsk | null>(null);
 
   const find = (id: number) => input.bookings.find((b) => b.id === id);
+
+  // ── A CLICK THAT DOES NOTHING IS THE WORST ANSWER ──────────────────────
+  //
+  // These began `if (!booking) return;`, and the calendar's loaded list does
+  // not always hold the booking at the moment of the click: it refetches
+  // after every write, and a window read that timed out answers nothing. So
+  // checking a guest out closed the drawer with no departure and no word —
+  // `operations-calendar` failed exactly so, twice, on 2026-09-24. The one
+  // booking is asked for by ref when the list lacks it, and if that fails
+  // too, staff are told nothing was changed.
+  const resolve = async (id: number): Promise<Booking | undefined> => {
+    const loaded = find(id);
+    if (loaded) return loaded;
+    try {
+      return await queryClient.fetchQuery({
+        ...bookingQueries.detail(id),
+        staleTime: 0,
+      });
+    } catch {
+      return undefined;
+    }
+  };
+  const notLoaded = (id: number) =>
+    toast.error(calFill("bookingNotLoaded", { ref: formatBookingRef(id) }));
   const clientOf = (booking: Booking) =>
     input.clients.find((c) => c.id === booking.clientId);
   const petsOf = (booking: Booking) => {
@@ -142,9 +169,12 @@ export function useCalendarBookingActions(input: {
   const mayArrive = (booking: Booking) =>
     can(arrivalPermissionFor(booking.service));
 
-  const checkIn = (bookingId: number) => {
-    const booking = find(bookingId);
-    if (!booking) return;
+  const checkIn = async (bookingId: number) => {
+    const booking = await resolve(bookingId);
+    if (!booking) {
+      notLoaded(bookingId);
+      return;
+    }
     const pet = petLabel(booking);
     if (!mayArrive(booking)) {
       toast.error(t("failNotAllowed"));
@@ -158,18 +188,27 @@ export function useCalendarBookingActions(input: {
     void arrive(booking);
   };
 
-  const confirmVaccineAsk = () => {
-    const booking = vaccineAsk ? find(vaccineAsk.bookingId) : undefined;
+  const confirmVaccineAsk = async () => {
+    const id = vaccineAsk?.bookingId;
     setVaccineAsk(null);
-    if (booking) void arrive(booking);
+    if (id === undefined) return;
+    const booking = await resolve(id);
+    if (!booking) {
+      notLoaded(id);
+      return;
+    }
+    void arrive(booking);
   };
 
   // With money owed, checking out IS the till, and the till is the booking
   // page's: the calendar sends staff there rather than recording a departure
   // that leaves the balance behind without anybody deciding to.
   const checkOut = async (bookingId: number) => {
-    const booking = find(bookingId);
-    if (!booking) return;
+    const booking = await resolve(bookingId);
+    if (!booking) {
+      notLoaded(bookingId);
+      return;
+    }
     const pet = petLabel(booking);
     const owed = balanceOf(booking);
     if (owed > 0) {
@@ -227,9 +266,12 @@ export function useCalendarBookingActions(input: {
   const facilityName = profile.businessName;
 
   // The wizard again, for the same pet, owner and service.
-  const rebook = (bookingId: number) => {
-    const booking = find(bookingId);
-    if (!booking) return;
+  const rebook = async (bookingId: number) => {
+    const booking = await resolve(bookingId);
+    if (!booking) {
+      notLoaded(bookingId);
+      return;
+    }
     if (!can("create_bookings")) {
       toast.error(t("notAllowedCreate"));
       return;

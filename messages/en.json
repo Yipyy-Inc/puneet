@@ -2450,7 +2450,8 @@
         "newLeadFromWhere": "New lead from {source}",
         "stopsDoneOf": "{done}/{total} stops done",
         "charsCount": "{count} characters",
-        "addedByName": "Added by {who}"
+        "addedByName": "Added by {who}",
+        "bookingNotLoaded": "Booking {ref} could not be loaded, so nothing was changed. Refresh the calendar and try again."
       },
       "checkoutCutOff": {
         "title": "Checkout cut-off time",
