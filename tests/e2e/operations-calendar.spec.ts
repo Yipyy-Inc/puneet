@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { bookingListSearch } from "@/lib/api/booking-list-params";
-import { SWEEPABLE_STATUSES } from "./_sweep";
+import { SWEEPABLE_STATUSES, bookingsMarked } from "./_sweep";
 
 import { ACCOUNTS, signIn } from "./_auth";
 
@@ -186,31 +186,30 @@ test.describe("the operations calendar", () => {
       //
       // Guarded, and LOUD. A teardown that silently cleans nothing is worse
       // than one that crashes, because the run still looks green.
-      const response = await page.request.get("/api/bookings");
-      const parsed = (await response.json().catch(() => null)) as unknown;
-      const all: BookingPayload[] = Array.isArray(parsed)
-        ? (parsed as BookingPayload[])
-        : [];
-      if (!Array.isArray(parsed)) {
-        console.log(
-          `cleanup: /api/bookings answered ${response.status()} with no list — ` +
-            `NOTHING WAS CLEANED UP, and rows tagged ${MARKER} are still there`,
-        );
-      }
+      //
+      // And NOT A LIST READ. Guarded, the read above still timed out under
+      // load — on 2026-09-25 it answered 500 and left 20 open bookings on
+      // the days this file books into. The database is asked for the marker
+      // instead (`bookingsMarked`, the service role's way in), which also
+      // finds what an earlier run that died left behind.
+      const mine = (await bookingsMarked(MARKER)).filter(
+        (b) => b.status !== "cancelled",
+      );
 
       let cancelled = 0;
-      for (const b of all) {
-        if (!b.specialRequests?.includes(MARKER)) continue;
-        if (b.status === "cancelled") continue;
+      for (const b of mine) {
         // Off the daycare floor first: a cancelled booking with an attendance
         // row is still somebody on the board.
-        await page.request.delete(`/api/daycare/attendance/${b.id}`);
-        const res = await page.request.patch(`/api/bookings/${b.id}`, {
+        await page.request.delete(`/api/daycare/attendance/${b.ref}`);
+        const res = await page.request.patch(`/api/bookings/${b.ref}`, {
           data: { status: "cancelled" },
         });
         if (res.ok()) cancelled++;
+        else console.log(`cleanup: #${b.ref} (${b.status}) -> ${res.status()}`);
       }
-      console.log(`cleanup: ${cancelled} booking(s) cancelled`);
+      console.log(
+        `cleanup: ${cancelled} of ${mine.length} booking(s) cancelled`,
+      );
     } finally {
       await page.close();
     }
