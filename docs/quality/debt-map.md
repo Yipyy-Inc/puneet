@@ -21398,29 +21398,61 @@ cancelled them through `/api/payments` on the re-run.
 
 ### Still open
 
-1. **The New Booking wizard holds its confirmation hostage to a list reload.**
-   `useCreateBookingFromModal` (`src/components/bookings/use-create-booking.ts`)
-   awaits `invalidateQueries({ queryKey: ["bookings"] })` before its success
-   toast, so it waits for every booking list on the page. On a client page
-   whose list is slow the booking is written in 3.6 s and the button says
-   "Saving…" for over a minute — the refetch times out and is retried. A
-   second click there is a duplicate booking. `booking-wizard`'s one-day
-   daycare test fails on exactly this, locally and in CI.
-2. **The two money clients are mostly debris, and it is permanent by design.**
+1. ~~**The New Booking wizard holds its confirmation hostage to a list
+   reload.**~~ **Fixed the same day.** `useCreateBookingFromModal` awaited
+   `invalidateQueries({ queryKey: ["bookings"] })` before its success toast,
+   which waits for every booking list the page has open: on a client page the
+   booking was written in 3.6 s and the form said "Saving…" for over a minute
+   while the client's list timed out and retried — long enough to click again
+   and book twice. The staff handler and the customer's booking request both
+   confirm on the write now and refetch behind it; `booking-wizard`'s one-day
+   daycare test, red in CI and locally, passes.
+2. **A test's leftover can hold every deploy.** `boarding-services.sql` S0
+   asserts that every priced boarding class has a service — the invariant of
+   the `20260924210000` migration, checked against TODAY's rows. A class made
+   after it without a service fails it, and `sql` is in `image`'s `needs:`,
+   so `be16ac28` built, passed e2e and did not deploy: `rooms-admin` had left
+   "E2E Kennels" behind, because its sweep found the stay blocking the room by
+   reading Alice's list. It finds it with
+   `bookingsMarked(MARKER, { holdingAStay: true })` now, and healed the class
+   on its next run. **The same thing happens the day a real facility creates a
+   priced kennel class**, because nothing creates its service. That needs a
+   decision, not a quiet edit to a gate: scope S0 to classes that existed when
+   the migration ran, or have creating a priced class create its service.
+3. **The two money clients are mostly debris, and it is permanent by design.**
    Alice (client 15) holds 1,496 bookings, 1,471 of them earlier runs; Bob (16)
    902, 899. 1,241 of Alice's cancelled test bookings carry payment rows, and
    `payments` is append-only, so `purge_e2e_bookings()` can never take them —
    every money spec adds more. `?clientRef=15` takes ~17 s and times out, so
    any spec that reads either client's list fails more often every week.
-3. **Eight more cleanups read a list to find their own rows** and print
+4. **Eight more cleanups read a list to find their own rows** and print
    "NOTHING was cleaned up" when it times out: `boarding-arrival`,
    `boarding-kennel-board`, `booking-presence`, `client-balance`,
    `client-pet-write-path`, `daycare-attendance`, `grooming-ready-estimate`,
    `request-decision`. They fail safe — they do not crash — but a run under
    load leaves their rows behind. `bookingsMarked` is the way down, for them
    and for the 13 reads left in `check:unbounded-booking-reads`.
-4. `clover-connect` rendered its "you do not administer a facility" line twice
+5. `gift-card-payment` cancels its booking and never reverses the payment, so
+   263 of its cancelled bookings still read `amount_paid` 20 — all of them
+   Alice's. Harmless to the boards, and part of why her list is what it is.
+6. `clover-connect` rendered its "you do not administer a facility" line twice
    once, under the nightly's load, and passed on the re-run. Not reproduced.
+7. **Checking out from the operations calendar can do nothing at all.**
+   `checkOut` in `use-calendar-booking-actions.ts` begins
+   `const booking = find(bookingId); if (!booking) return;` — so when the
+   calendar's loaded list no longer holds the booking, the click closes the
+   drawer with no toast and no departure. `operations-calendar`'s
+   check-in-and-out test failed exactly so, twice in a row, on a $0 groom
+   that owed nothing. Its own cleanup reads the whole booking list and had
+   left 11 open bookings on the very day it books into (2027-07-22/23).
+8. **A groomer's audit-log read sits on the statement timeout.** Measured as
+   the groomer under RLS: 7,677 ms against 8 s, for `audit_log` (21,200 rows)
+   newest-first. Every row the index offers is checked through
+   `is_platform_admin`, `is_facility_admin` and `has_permission`, and the
+   booking branch rebuilds the whole visible `bookings` set (2,514 rows, each
+   with its own `has_permission`) as a hashed subplan. `schedule-audit-trail`'s
+   "a groomer reads no roster history" answers 500 whenever anything else is
+   running. The per-row policy cost the advisors flag, with a number on it.
 
 **The shape to remember: when a whole cluster of money specs fails at once,
 read `facility_settings` for test residue before reading any code** —

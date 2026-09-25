@@ -22,8 +22,8 @@ interface CreatedExtras {
 }
 
 /**
- * The booking modal's `onCreateBooking` for staff: write the booking, refresh
- * every booking list, and say what happened.
+ * The booking modal's `onCreateBooking` for staff: write the booking, say what
+ * happened, and refresh every booking list behind it.
  *
  * It lived inside FacilityHeader, the one caller that persisted. The daycare
  * section's "Book" button and the pet profile opened the same modal with a
@@ -74,9 +74,20 @@ export function useCreateBookingFromModal() {
       }
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    // ── THE CONFIRMATION DOES NOT WAIT FOR THE LISTS ──────────────────────
+    //
+    // These were awaited, and `invalidateQueries` resolves only once every
+    // ACTIVE query under the key has refetched — so "Saving…" and the toast
+    // below waited on whichever booking lists the page had open. On a client
+    // page that is the client's whole history: 1,496 bookings for the e2e
+    // client, 17 seconds, a statement timeout, then retries. The booking was
+    // written in 3.6 s and the form said "Saving…" for over a minute
+    // (measured 2026-09-25) — long enough to click again, and a second click
+    // is a second booking. The write is the answer; the lists catch up behind
+    // it, and a list that cannot load says so on its own screen.
+    void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     // A stay holds a kennel, and the occupancy board is its own read.
-    await queryClient.invalidateQueries({ queryKey: ["boarding-rooms"] });
+    void queryClient.invalidateQueries({ queryKey: ["boarding-rooms"] });
 
     // No Undo: bookings have no DELETE policy — a booking is cancelled, not
     // erased — so there is nothing honest to offer.

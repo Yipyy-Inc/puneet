@@ -81,7 +81,11 @@ export function useCustomerBookingRequest(options?: {
         kennel: undefined,
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      // Not awaited, for the reason `useCreateBookingFromModal` gives: it
+      // resolves only once every open booking list has refetched, so the
+      // message saying the request was sent waited on the customer's own
+      // lists — after the request was already written.
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
 
       // ── ONE MESSAGE, BECAUSE THERE IS ONE OUTCOME ─────────────────────────
       //
