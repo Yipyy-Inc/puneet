@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { BoardingService } from "@/lib/api/mappers/boarding-service";
 import {
+  boardingPetFactsFor,
   boardingWeightTierFor,
   eligibleBoardingServices,
   isBoardingServiceOfferedAt,
@@ -46,6 +47,7 @@ function service(over: Partial<BoardingService> = {}): BoardingService {
     displayOrder: 0,
     isActive: true,
     locationPricing: [],
+    defaultAddOns: [],
     ...over,
   };
 }
@@ -342,5 +344,28 @@ describe("boardingWeightTierFor", () => {
     expect(boardingWeightTierFor(null)).toBeNull();
     expect(boardingWeightTierFor(undefined)).toBeNull();
     expect(boardingWeightTierFor(0)).toBeNull();
+  });
+});
+
+describe("what the menu is judged against, for one booking's pets", () => {
+  test("one pet: its species, breed and weight", () => {
+    expect(
+      boardingPetFactsFor([{ type: "Dog", breed: "Beagle", weight: 24 }]),
+    ).toEqual({ species: "Dog", breed: "Beagle", weightLb: 24, petTags: [] });
+  });
+
+  test("two dogs: the species holds, breed and weight have no one answer", () => {
+    expect(
+      boardingPetFactsFor([
+        { type: "Dog", breed: "Beagle", weight: 24 },
+        { type: "dog ", breed: "Boxer", weight: 61 },
+      ]),
+    ).toEqual({ species: "Dog", breed: null, weightLb: null, petTags: [] });
+  });
+
+  test("a dog and a cat: no species rule can be answered for both", () => {
+    expect(
+      boardingPetFactsFor([{ type: "Dog" }, { type: "Cat" }]).species,
+    ).toBeNull();
   });
 });

@@ -64,6 +64,35 @@ export const BOARDING_WEIGHT_TIERS: readonly { id: string; maxLb?: number }[] =
     { id: "giant" },
   ];
 
+/**
+ * What a service's eligibility is judged against, for the pets on ONE
+ * booking. A species rule has a single answer only when every pet is one
+ * species; breed and weight only when there is one pet. Tags are applied on
+ * the server for a customer, because they are the facility's classification
+ * and are never sent to one.
+ *
+ * Shared by the staff room step and the customer's dates step, which both
+ * show the menu and must both judge it the same way.
+ */
+export function boardingPetFactsFor(
+  pets: readonly {
+    type?: string | null;
+    breed?: string | null;
+    weight?: number | null;
+  }[],
+): BoardingPetFacts {
+  const species = new Set(
+    pets.map((p) => p.type?.trim().toLowerCase()).filter(Boolean),
+  );
+  const first = pets[0];
+  return {
+    species: species.size === 1 ? (first?.type ?? null) : null,
+    breed: pets.length === 1 ? (first?.breed ?? null) : null,
+    weightLb: pets.length === 1 ? (first?.weight ?? null) : null,
+    petTags: [],
+  };
+}
+
 /** The band a weight falls in, or null when the record has no weight. */
 export function boardingWeightTierFor(
   weightLb: number | null | undefined,

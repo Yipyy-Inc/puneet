@@ -8,7 +8,11 @@ import { Check, PawPrint, Bed, X, AlertCircle, Gift, Lock } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
-import { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type {
+  ExtraService,
+  FeedingScheduleItem,
+  MedicationItem,
+} from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { SimpleFeedingForm } from "@/components/booking/shared/SimpleFeedingForm";
 import { SimpleMedicationForm } from "@/components/booking/shared/SimpleMedicationForm";
@@ -23,8 +27,13 @@ import { useQuery } from "@tanstack/react-query";
 import { bookingQueries } from "@/lib/api/booking";
 import type { Booking } from "@/types/booking";
 import { BoardingServicePicker } from "./BoardingServicePicker";
+import { IncludedAddOns } from "./IncludedAddOns";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
+import {
+  boardingPetFactsFor,
+  lodgingTypesServing,
+} from "@/lib/pricing/boarding-service-choice";
+import type { BoardingDefaultAddOn } from "@/lib/pricing/boarding-default-addons";
 
 // Stable while the query loads, so a memo keyed on it does not recompute.
 const NO_BOOKINGS: Booking[] = [];
@@ -42,6 +51,8 @@ export interface ChosenBoardingService {
   price: number;
   unit: "night" | "day";
   lodgingTypeIds: string[];
+  /** What a stay of it gets by its length, billed as add-on lines. */
+  defaultAddOns: BoardingDefaultAddOn[];
 }
 
 // Boarding categories are rendered dynamically inside the component
@@ -92,6 +103,13 @@ interface BoardingDetailsProps {
    */
   boardingService?: ChosenBoardingService | null;
   onBoardingServiceChange?: (service: ChosenBoardingService | null) => void;
+  /**
+   * How many services the customer's menu offers these pets — null while it
+   * loads. The wizard asks for a pick only when there is something to pick.
+   */
+  onBoardingMenuChange?: (offered: number | null) => void;
+  /** The lines the chosen service attaches by itself, as the form priced them. */
+  boardingDefaultLines?: ExtraService[];
   /** True when a pet owner is booking for themselves. */
   isCustomerMode?: boolean;
 }
@@ -123,9 +141,20 @@ export function BoardingDetails({
   skipEligibility,
   boardingService = null,
   onBoardingServiceChange,
+  onBoardingMenuChange,
+  boardingDefaultLines,
   isCustomerMode = false,
 }: BoardingDetailsProps) {
   const t = useShellText("booking");
+  // For the customer's menu, on the dates step (see below).
+  const petFacts = React.useMemo(
+    () => boardingPetFactsFor(selectedPets),
+    [selectedPets],
+  );
+  const petRefs = React.useMemo(
+    () => selectedPets.map((p) => p.id).filter((id) => Number.isInteger(id)),
+    [selectedPets],
+  );
   const {
     hours,
     rules,
@@ -208,6 +237,24 @@ export function BoardingDetails({
       <div className="min-h-[400px]">
         {currentSubStep === 0 && (
           <div className="space-y-5">
+            {/* ── THE CUSTOMER CHOOSES FROM THE MENU HERE ─────────────────
+                Staff meet the menu on the room step, which customer mode
+                hides — so until this, a customer never saw the facility's
+                boarding services, was quoted by the class of whichever room
+                the wizard picked for them, and sent a request the server
+                could never price (no service, and no stay). What they buy
+                comes before when. */}
+            {isCustomerMode && onBoardingServiceChange ? (
+              <BoardingServicePicker
+                value={boardingService?.rowId ?? null}
+                onChange={onBoardingServiceChange}
+                onOfferedChange={onBoardingMenuChange}
+                pet={petFacts}
+                petRefs={petRefs}
+                asCustomer
+              />
+            ) : null}
+
             {/* Header */}
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
@@ -287,6 +334,8 @@ export function BoardingDetails({
             setExtraServices={setExtraServices}
             selectedPets={selectedPets}
             serviceType={serviceType}
+            includedLines={boardingDefaultLines}
+            includedFrom={boardingService?.name}
           />
         )}
 
@@ -435,18 +484,10 @@ function BoardingRoomSelectionStep({
   // What the service's eligibility rules are matched against. Only when every
   // pet chosen is ONE species does a species rule have a single answer — the
   // same reason the daycare picker passes one species and not a list.
-  const petFacts = React.useMemo(() => {
-    const species = new Set(
-      selectedPets.map((p) => p.type?.trim().toLowerCase()).filter(Boolean),
-    );
-    const first = selectedPets[0];
-    return {
-      species: species.size === 1 ? (first?.type ?? null) : null,
-      breed: selectedPets.length === 1 ? (first?.breed ?? null) : null,
-      weightLb: selectedPets.length === 1 ? (first?.weight ?? null) : null,
-      petTags: [] as string[],
-    };
-  }, [selectedPets]);
+  const petFacts = React.useMemo(
+    () => boardingPetFactsFor(selectedPets),
+    [selectedPets],
+  );
 
   // The pets themselves, for the customer's route: the tag rules are applied
   // server-side there, because the tags are the facility's own classification
@@ -920,8 +961,14 @@ function BoardingAddOnsSubStep({
   setExtraServices,
   selectedPets,
   serviceType,
+  includedLines = [],
+  includedFrom,
 }: {
   isStepAccessible: (step: number) => boolean;
+  /** What the chosen service attaches by itself — see `IncludedAddOns`. */
+  includedLines?: ExtraService[];
+  /** The chosen service's name, which the included lines are credited to. */
+  includedFrom?: string;
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
   setExtraServices: (
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
@@ -973,6 +1020,14 @@ function BoardingAddOnsSubStep({
           {t("addOptionalServicesToEnhance")}
         </p>
       </div>
+
+      {isStepAccessible(2) && includedFrom ? (
+        <IncludedAddOns
+          lines={includedLines}
+          serviceName={includedFrom}
+          pets={selectedPets}
+        />
+      ) : null}
 
       {!isStepAccessible(2) && (
         <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">

@@ -23,6 +23,10 @@
 // ============================================================================
 
 import type { Database } from "@/types/database";
+import {
+  DEFAULT_ADD_ON_WHENS,
+  type BoardingDefaultAddOn,
+} from "@/lib/pricing/boarding-default-addons";
 
 /** The generated write shape. Typed, so a renamed column fails the build. */
 export type BoardingServiceUpdate =
@@ -41,7 +45,8 @@ export const BOARDING_SERVICE_SELECT = `
   location_ids,
   requires_evaluation, requires_evaluation_online,
   display_order, is_active, created_at,
-  boarding_service_location_prices ( price, location_id )
+  boarding_service_location_prices ( price, location_id ),
+  boarding_service_default_addons ( addon_id, applies_on, quantity_per_day, min_nights )
 ` as const;
 
 export interface BoardingServicePriceRow {
@@ -75,6 +80,15 @@ export interface BoardingServiceRow {
   is_active: boolean;
   created_at: string;
   boarding_service_location_prices: BoardingServicePriceRow[] | null;
+  boarding_service_default_addons: BoardingDefaultAddOnRow[] | null;
+}
+
+/** One default add-on, as `boarding_service_default_addons` stores it. */
+export interface BoardingDefaultAddOnRow {
+  addon_id: string;
+  applies_on: string;
+  quantity_per_day: number;
+  min_nights: number | null;
 }
 
 /** One branch's price for a service, for the screen that shows them all. */
@@ -120,6 +134,11 @@ export interface BoardingService {
   isActive: boolean;
   /** Every branch that has priced it, for the HQ screen. */
   locationPricing: BoardingServiceBranchPrice[];
+  /**
+   * The add-ons a stay of this service gets by its length — see
+   * `lib/pricing/boarding-default-addons.ts` for how the days are counted.
+   */
+  defaultAddOns: BoardingDefaultAddOn[];
 }
 
 /**
@@ -198,7 +217,33 @@ export function rowToBoardingService(
     locationPricing: perLocationBoardingPricing(
       row.boarding_service_location_prices ?? [],
     ),
+    defaultAddOns: defaultAddOnsFromRows(row.boarding_service_default_addons),
   };
+}
+
+/**
+ * The stored default add-ons, as the booking form counts them. A row whose
+ * `applies_on` is not one of the four the table's check admits cannot exist,
+ * but one is dropped rather than guessed at if it ever does.
+ */
+export function defaultAddOnsFromRows(
+  rows: readonly BoardingDefaultAddOnRow[] | null | undefined,
+): BoardingDefaultAddOn[] {
+  return (rows ?? []).flatMap((row) => {
+    const appliesOn = DEFAULT_ADD_ON_WHENS.find((w) => w === row.applies_on);
+    if (!appliesOn || !row.addon_id) return [];
+    return [
+      {
+        addOnId: row.addon_id,
+        appliesOn,
+        quantityPerDay: Math.max(1, Math.round(num(row.quantity_per_day))),
+        minNights:
+          row.min_nights === null || row.min_nights === undefined
+            ? null
+            : Math.max(1, Math.round(num(row.min_nights))),
+      },
+    ];
+  });
 }
 
 /** What the client may write. Anything absent is left alone by a PATCH. */
@@ -222,6 +267,12 @@ export interface BoardingServiceInput {
   requiresEvaluationOnline?: boolean;
   displayOrder?: number;
   isActive?: boolean;
+  /**
+   * The whole set of default add-ons, replacing what is stored. Absent leaves
+   * them alone; `[]` removes them all. Written to their own table, after the
+   * service row — see `writeBoardingDefaultAddOns`.
+   */
+  defaultAddOns?: BoardingDefaultAddOn[];
 }
 
 const TEXT_ARRAYS = {

@@ -4265,7 +4265,26 @@
         "removeCategoryBody": "C'est définitif. Ses services restent au menu et passent à {none}.",
         "categoryActions": "Actions de catégorie",
         "couldNotSaveCategory": "La catégorie n'a pas pu être enregistrée",
-        "couldNotRemoveCategory": "La catégorie n'a pas pu être retirée"
+        "couldNotRemoveCategory": "La catégorie n'a pas pu être retirée",
+        "defaultsSection": "Suppléments par défaut",
+        "defaultsHint": "Ajoutés d'office à un séjour de ce service selon sa durée, et facturés sur leurs propres lignes.",
+        "defaultsNoAddOns": "Aucun supplément d'hébergement ne peut encore être ajouté. Créez-en un dans l'onglet Suppléments.",
+        "defaultsRemovedAddOn": "Un supplément supprimé",
+        "defaultsAddOn": "Supplément",
+        "defaultsRemove": "Retirer {name}",
+        "defaultsWhen": "Quels jours",
+        "whenEveryDay": "Tous les jours",
+        "whenExceptCheckout": "Tous les jours sauf le jour du départ",
+        "whenExceptCheckin": "Tous les jours sauf le jour de l'arrivée",
+        "whenLastDay": "Le jour du départ seulement",
+        "defaultsPerDay": "Combien par jour",
+        "defaultsMinNights": "À partir d'un séjour de (nuits)",
+        "defaultsEveryStay": "Tous les séjours",
+        "defaultsAdd": "Ajouter un supplément par défaut",
+        "savedButNoDefaults": "Service enregistré, mais pas ses suppléments par défaut.",
+        "includedTitle": "Inclus avec {service}",
+        "includedLine": "{name} × {quantity}",
+        "includedHelp": "Ajoutés par le service selon la durée du séjour, et facturés sur leurs propres lignes."
       }
     }
   },

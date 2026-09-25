@@ -70,6 +70,7 @@ function service(over: Partial<BoardingService> = {}): BoardingService {
     displayOrder: 0,
     isActive: true,
     locationPricing: [],
+    defaultAddOns: [],
     ...over,
   };
 }

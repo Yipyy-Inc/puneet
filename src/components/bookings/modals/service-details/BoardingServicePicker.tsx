@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Bed } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   eligibleBoardingServices,
   type BoardingPetFacts,
 } from "@/lib/pricing/boarding-service-choice";
+import type { BoardingDefaultAddOn } from "@/lib/pricing/boarding-default-addons";
 
 // ============================================================================
 // WHICH BOARDING SERVICE. The thing that could not be chosen because it did
@@ -50,10 +51,16 @@ import {
 export function BoardingServicePicker({
   value,
   onChange,
+  onOfferedChange,
   pet,
   petRefs,
   asCustomer = false,
 }: {
+  /**
+   * How many services are on offer to these pets, null while the menu loads —
+   * so a caller can ask for a pick only when there is something to pick.
+   */
+  onOfferedChange?: (offered: number | null) => void;
   /** The chosen service's row id, or null. */
   value: string | null;
   onChange: (
@@ -63,6 +70,7 @@ export function BoardingServicePicker({
       price: number;
       unit: "night" | "day";
       lodgingTypeIds: string[];
+      defaultAddOns: BoardingDefaultAddOn[];
     } | null,
   ) => void;
   pet: BoardingPetFacts;
@@ -90,6 +98,11 @@ export function BoardingServicePicker({
     () => eligibleBoardingServices(services ?? [], pet, { locationId }),
     [services, pet, locationId],
   );
+
+  const offeredCount = isPending ? null : offered.length;
+  useEffect(() => {
+    onOfferedChange?.(offeredCount);
+  }, [offeredCount, onOfferedChange]);
 
   const money = (amount: number) =>
     new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-CA", {
@@ -122,6 +135,7 @@ export function BoardingServicePicker({
                         price: service.price,
                         unit: service.unit,
                         lodgingTypeIds: service.lodgingTypeIds,
+                        defaultAddOns: service.defaultAddOns,
                       },
                 )
               }

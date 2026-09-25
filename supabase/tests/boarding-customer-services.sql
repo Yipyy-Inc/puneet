@@ -1,6 +1,7 @@
 -- ============================================================================
 -- A customer reads the boarding menu they are offered — at ONE business. See
--- 20260924220000_a_customer_reads_the_boarding_menu_they_are_offered.sql
+-- 20260924220000_a_customer_reads_the_boarding_menu_they_are_offered.sql and
+-- 20260925173458_a_customer_menu_carries_default_add_ons.sql
 --
 --   bun run test:sql boarding-customer-services
 --
@@ -31,6 +32,10 @@
 -- B5  A BLOCKED pet tag removes a service, decided server-side — the tags are
 --     the facility's own classification of an animal and are never sent.
 -- B6  anon cannot call it.
+-- B7  It carries a service's DEFAULT ADD-ONS — what a stay of it gets by its
+--     length. They are part of the price the customer is quoted, so a menu
+--     without them would put the customer's total on a different footing
+--     from the till's. A service with none carries an empty list, not null.
 -- ============================================================================
 
 begin;
@@ -109,6 +114,11 @@ begin
   values (v_nu, 'obs-standard', 'OBS Standard stay', 'A kennel and four walks',
           80, 'night', array[v_suite], '#123456', true, false, 1)
   returning id into v_standard;
+
+  -- B7: two walks a day, every day, once a stay is three nights.
+  insert into public.boarding_service_default_addons
+    (service_id, facility_id, addon_id, applies_on, quantity_per_day, min_nights)
+  values (v_standard, v_nu, 'obs-walk', 'every_day', 2, 3);
 
   -- Per DAY, unrestricted, so B2 measures both values of `unit` and the
   -- "empty means every type" convention in the same call.
@@ -330,6 +340,35 @@ begin
     v_anon = false and v_auth = true,
     format('anon=%s authenticated=%s', v_anon, v_auth));
 end $$;
+
+-- ── B7 the default add-ons, which are part of the price ───────────────────
+
+select set_config('request.jwt.claims',
+  json_build_object('sub','user_obsPriya0000000000000000000000','role','authenticated')::text, true);
+set local role authenticated;
+
+do $$
+declare offered jsonb; standard jsonb; allin jsonb; v_fac uuid;
+begin
+  select id into v_fac from public.facilities where slug = 'nu-pets-obs';
+  offered := public.offered_boarding_services(v_fac);
+  select e into standard from jsonb_array_elements(offered) e
+   where e->>'name' = 'OBS Standard stay';
+  select e into allin from jsonb_array_elements(offered) e
+   where e->>'name' = 'OBS All-inclusive';
+
+  perform pg_temp.t(7,
+    'the default add-ons are sent, and a service with none sends an empty list',
+    standard->'defaultAddOns' = jsonb_build_array(jsonb_build_object(
+        'addon_id', 'obs-walk', 'applies_on', 'every_day',
+        'quantity_per_day', 2, 'min_nights', 3))
+      and allin->'defaultAddOns' = '[]'::jsonb,
+    format('standard=%s allin=%s',
+           coalesce(standard->>'defaultAddOns', 'absent'),
+           coalesce(allin->>'defaultAddOns', 'absent')));
+end $$;
+
+reset role;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
 select case when ok then '  PASS  ' else '> FAIL <' end as result, name, detail

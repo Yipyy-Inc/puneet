@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
-import type {
-  BoardingPriceUnit,
-  BoardingService,
+import {
+  defaultAddOnsFromRows,
+  type BoardingDefaultAddOnRow,
+  type BoardingPriceUnit,
+  type BoardingService,
 } from "@/lib/api/mappers/boarding-service";
 
 // ============================================================================
@@ -54,6 +56,8 @@ interface OfferedRow {
   locationIds: string[];
   requiresEvaluationOnline: boolean;
   displayOrder: number;
+  /** What a stay of it gets by its length (20260925173458). */
+  defaultAddOns?: BoardingDefaultAddOnRow[] | null;
 }
 
 function num(value: number | string | null | undefined): number {
@@ -102,6 +106,8 @@ function toService(row: OfferedRow): BoardingService {
     isActive: true,
     // The branch comparison is an HQ screen, not a customer one.
     locationPricing: [],
+    // Part of the price, so the customer's quote counts them as the till will.
+    defaultAddOns: defaultAddOnsFromRows(row.defaultAddOns),
   };
 }
 

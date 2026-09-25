@@ -7,7 +7,11 @@ import {
 } from "../service-details";
 import type { ChosenBoardingService } from "../service-details/BoardingDetails";
 import type { TrainingSelection } from "../service-details/TrainingScheduleStep";
-import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type {
+  ExtraService,
+  FeedingScheduleItem,
+  MedicationItem,
+} from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import type { AppointmentStage } from "@/types/grooming";
@@ -74,6 +78,10 @@ interface DetailsStepProps {
    */
   boardingService: ChosenBoardingService | null;
   onBoardingServiceChange: (service: ChosenBoardingService | null) => void;
+  /** How many services the customer's boarding menu offers; null while loading. */
+  onBoardingMenuChange?: (offered: number | null) => void;
+  /** What the chosen boarding service attaches by itself, as priced. */
+  boardingDefaultLines?: ExtraService[];
   /** True when a pet owner is booking for themselves, not staff at the desk. */
   isCustomerMode?: boolean;
   onDaycareServiceChange: (
@@ -161,6 +169,8 @@ export function DetailsStep({
   daycareServiceId,
   boardingService,
   onBoardingServiceChange,
+  onBoardingMenuChange,
+  boardingDefaultLines,
   isCustomerMode = false,
   onDaycareServiceChange,
   feedingSchedule,
@@ -248,6 +258,8 @@ export function DetailsStep({
           skipEligibility={skipEligibility}
           boardingService={boardingService}
           onBoardingServiceChange={onBoardingServiceChange}
+          onBoardingMenuChange={onBoardingMenuChange}
+          boardingDefaultLines={boardingDefaultLines}
           isCustomerMode={isCustomerMode}
         />
       )}

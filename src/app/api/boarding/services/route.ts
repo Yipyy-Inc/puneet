@@ -7,6 +7,7 @@ import {
   inFacility,
 } from "@/lib/api/facility-context";
 import { writeBoardingBranchPrices } from "@/lib/api/boarding-service-prices";
+import { writeBoardingDefaultAddOns } from "@/lib/api/boarding-default-addons";
 import { writeFailure } from "@/lib/api/write-failure";
 import {
   BOARDING_SERVICE_SELECT,
@@ -124,16 +125,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const created = data as unknown as BoardingServiceRow;
+  let created = data as unknown as BoardingServiceRow;
   const pricesWritten = await writeBoardingBranchPrices(
     supabase,
     created.id,
     facility.facilityId,
     body.branchPrices,
   );
+  const defaultsWritten = await writeBoardingDefaultAddOns(
+    supabase,
+    created.id,
+    facility.facilityId,
+    body.defaultAddOns,
+  );
+
+  // The row above was read before its children existed. Read it again when
+  // there were any, so the answer is what is stored.
+  if (body.branchPrices !== undefined || body.defaultAddOns?.length) {
+    const { data: reread } = await supabase
+      .from("boarding_services")
+      .select(BOARDING_SERVICE_SELECT)
+      .eq("id", created.id)
+      .maybeSingle();
+    if (reread) created = reread as unknown as BoardingServiceRow;
+  }
 
   return NextResponse.json(
-    { service: rowToBoardingService(created), pricesWritten },
+    { service: rowToBoardingService(created), pricesWritten, defaultsWritten },
     { status: 201 },
   );
 }

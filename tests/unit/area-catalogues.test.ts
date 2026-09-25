@@ -212,6 +212,9 @@ const SAME_IN_BOTH = new Set([
   // A size tier's chip: two values and a separator, no word to translate —
   // the tier's name and the formatted range are each localised on their own.
   "staff.lodging.tierBand", // {tier} · {range}
+  // An included add-on's line: the facility's own name for it, a symbol and
+  // a count — nothing a translator could move.
+  "staff.boardingServices.includedLine", // {name} × {quantity}
 ]);
 
 /** `{name}` placeholders in a string, sorted, duplicates kept. */

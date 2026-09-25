@@ -23,6 +23,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-toggle";
 import { PetEligibility } from "@/components/facility/services/pet-eligibility";
+import type { BoardingDefaultAddOn } from "@/lib/pricing/boarding-default-addons";
+import { BoardingDefaultAddOnsField } from "./boarding-default-addons-field";
 import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { useRooms } from "@/hooks/use-rooms";
@@ -93,6 +95,7 @@ export interface BoardingServiceDraft {
   requiresEvaluationOnline: boolean;
   isActive: boolean;
   branchPrices: Record<string, string>;
+  defaultAddOns: BoardingDefaultAddOn[];
 }
 
 export function draftFrom(
@@ -122,6 +125,7 @@ export function draftFrom(
     requiresEvaluationOnline: service?.requiresEvaluationOnline ?? false,
     isActive: service?.isActive ?? true,
     branchPrices,
+    defaultAddOns: service?.defaultAddOns ?? [],
   };
 }
 
@@ -242,15 +246,19 @@ export function BoardingServiceDialog({
           requiresEvaluationOnline: draft.requiresEvaluationOnline,
           isActive: draft.isActive,
           branchPrices,
+          // The whole set, replacing what is stored — `[]` removes them all.
+          defaultAddOns: draft.defaultAddOns,
         },
       });
 
       // A partial success is a real outcome: `manage_services` saved the
       // service, `manage_rates` was missing, so the prices did not move.
-      if (result.pricesWritten) {
-        toast.success(t("saved"));
-      } else {
+      if (!result.pricesWritten) {
         toast.warning(t("savedButNotPriced"));
+      } else if (result.defaultsWritten === false) {
+        toast.warning(t("savedButNoDefaults"));
+      } else {
+        toast.success(t("saved"));
       }
       onOpenChange(false);
     } catch (error) {
@@ -589,6 +597,18 @@ export function BoardingServiceDialog({
                   onCheckedChange={(v) => patch({ isActive: v })}
                 />
               </div>
+            </Section>
+
+            {/* ── 6 Default add-ons ────────────────────────────────── */}
+            <Section
+              index={6}
+              title={t("defaultsSection")}
+              hint={t("defaultsHint")}
+            >
+              <BoardingDefaultAddOnsField
+                value={draft.defaultAddOns}
+                onChange={(defaultAddOns) => patch({ defaultAddOns })}
+              />
             </Section>
           </div>
         </ScrollArea>

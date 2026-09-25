@@ -68,6 +68,12 @@ export interface BoardingServiceWriteResult {
   service: BoardingService | null;
   /** False = saved, but `manage_rates` was missing, so the prices are not. */
   pricesWritten: boolean;
+  /**
+   * False = saved, but the default add-ons were not — refused, or a write
+   * failed between the delete and the insert, leaving none. Absent from an
+   * older server's answer, which is read as written.
+   */
+  defaultsWritten?: boolean;
 }
 
 export const boardingCatalogueKeys = {

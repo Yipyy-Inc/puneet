@@ -11,6 +11,7 @@ import {
   type BoardingServiceRow,
 } from "@/lib/api/mappers/boarding-service";
 import { writeBoardingBranchPrices } from "@/lib/api/boarding-service-prices";
+import { writeBoardingDefaultAddOns } from "@/lib/api/boarding-default-addons";
 
 // ============================================================================
 // One boarding service: edit it, or take it off the menu.
@@ -113,8 +114,20 @@ export async function PATCH(
     service.facilityId,
     body.branchPrices,
   );
+  const defaultsWritten = await writeBoardingDefaultAddOns(
+    supabase,
+    service.id,
+    service.facilityId,
+    body.defaultAddOns,
+  );
 
-  if (!updated) {
+  // Read back after the child writes too, so the answer carries the prices
+  // and the default add-ons as stored rather than as they were before.
+  if (
+    !updated ||
+    body.branchPrices !== undefined ||
+    body.defaultAddOns !== undefined
+  ) {
     const { data } = await supabase
       .from("boarding_services")
       .select(BOARDING_SERVICE_SELECT)
@@ -126,6 +139,7 @@ export async function PATCH(
   return NextResponse.json({
     service: updated ? rowToBoardingService(updated) : null,
     pricesWritten,
+    defaultsWritten,
   });
 }
 

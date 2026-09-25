@@ -4265,7 +4265,26 @@
         "removeCategoryBody": "This can't be undone. Its services stay on the menu and move to {none}.",
         "categoryActions": "Category actions",
         "couldNotSaveCategory": "The category could not be saved",
-        "couldNotRemoveCategory": "The category could not be removed"
+        "couldNotRemoveCategory": "The category could not be removed",
+        "defaultsSection": "Default add-ons",
+        "defaultsHint": "Added to a stay of this service by themselves, by the length of the stay, and billed as their own lines.",
+        "defaultsNoAddOns": "No boarding add-on can be attached yet. Add one on the Add-ons tab first.",
+        "defaultsRemovedAddOn": "An add-on that was removed",
+        "defaultsAddOn": "Add-on",
+        "defaultsRemove": "Remove {name}",
+        "defaultsWhen": "On which days",
+        "whenEveryDay": "Every day",
+        "whenExceptCheckout": "Every day except check-out day",
+        "whenExceptCheckin": "Every day except check-in day",
+        "whenLastDay": "Check-out day only",
+        "defaultsPerDay": "How many each day",
+        "defaultsMinNights": "From a stay of (nights)",
+        "defaultsEveryStay": "Every stay",
+        "defaultsAdd": "Add a default add-on",
+        "savedButNoDefaults": "Service saved, but its default add-ons were not.",
+        "includedTitle": "Comes with {service}",
+        "includedLine": "{name} × {quantity}",
+        "includedHelp": "Added by the service for the length of the stay, and billed as their own lines."
       }
     }
   },

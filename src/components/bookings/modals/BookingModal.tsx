@@ -108,6 +108,8 @@ import {
   autoAssignBoardingUnit,
   roomsForAssignments,
 } from "@/lib/capacity-engine";
+import { lodgingTypesServing } from "@/lib/pricing/boarding-service-choice";
+import { defaultAddOnLines } from "@/lib/pricing/boarding-default-addons";
 import { toast } from "sonner";
 import { useEstimateMutations, type EstimateCreate } from "@/lib/api/estimates";
 import {
@@ -157,6 +159,8 @@ import { staffQueries } from "@/lib/api/staff";
 
 // Stable while the query loads, so a memo keyed on it does not recompute.
 const NO_BOOKINGS: Booking[] = [];
+// Stable for a stay with no default add-ons, for the same reason.
+const NO_EXTRA_SERVICES: ExtraService[] = [];
 
 // Types
 
@@ -772,6 +776,11 @@ export function BookingModal({
   // is what every boarding booking made before this was sold at.
   const [boardingService, setBoardingService] =
     useState<ChosenBoardingService | null>(null);
+  // How many services the customer's boarding menu offers these pets, null
+  // while it loads. Reported by the picker, which already works it out.
+  const [boardingMenuOffered, setBoardingMenuOffered] = useState<number | null>(
+    null,
+  );
   const [startDate, setStartDate] = useState(preSelectedStartDate ?? "");
   const [endDate, setEndDate] = useState(preSelectedEndDate ?? "");
   const [checkInTime, setCheckInTime] = useState(
@@ -1047,7 +1056,18 @@ export function BookingModal({
       if (selectedService === "boarding") {
         switch (stepId) {
           case 0:
-            return boardingRangeStart !== null && boardingRangeEnd !== null;
+            return (
+              boardingRangeStart !== null &&
+              boardingRangeEnd !== null &&
+              // A customer buys from the menu when there is one to buy from.
+              // The class-rate path is for bookings made before the menu,
+              // and a request priced by it is one the server can never
+              // confirm. Staff keep their choice: they meet the menu on the
+              // room step, where "none" is still a valid answer.
+              (!isCustomerMode ||
+                boardingMenuOffered === 0 ||
+                boardingService !== null)
+            );
           case 1:
             return (
               effectivePetCount > 0 &&
@@ -1101,6 +1121,9 @@ export function BookingModal({
       guestPetNames,
       boardingRangeStart,
       boardingRangeEnd,
+      isCustomerMode,
+      boardingMenuOffered,
+      boardingService,
       startDate,
       checkInTime,
       checkOutTime,
@@ -1357,6 +1380,13 @@ export function BookingModal({
       if (!boardingRangeStart || !boardingRangeEnd) return;
       const startStr = boardingRangeStart.toISOString().split("T")[0];
       const endStr = boardingRangeEnd.toISOString().split("T")[0];
+      // Only the kennels the chosen service may be booked into — the same
+      // narrowing staff see on the room step — and never a second dog in a
+      // room that holds one: `placed` is what this household has been given
+      // so far. These rooms are never held (the request drops them); they
+      // decide how many lodgings the quote is for.
+      const classes = lodgingTypesServing(roomCategories, boardingService);
+      const placed = new Map<string, number>();
       const next: Array<{ petId: number; roomId: string }> = [];
       for (const pet of effectiveSelectedPets) {
         const unit = autoAssignBoardingUnit(
@@ -1364,11 +1394,14 @@ export function BookingModal({
           startStr,
           endStr,
           null,
-          roomCategories,
+          classes,
           facilityRooms,
           knownBookings,
+          placed,
         );
-        if (unit) next.push({ petId: pet.id, roomId: unit.id });
+        if (!unit) continue;
+        next.push({ petId: pet.id, roomId: unit.id });
+        placed.set(unit.id, (placed.get(unit.id) ?? 0) + 1);
       }
       setRoomAssignments(next);
     }
@@ -1383,6 +1416,7 @@ export function BookingModal({
     roomCategories,
     facilityRooms,
     knownBookings,
+    boardingService,
   ]);
 
   // The selected client's own bookings, asked for by client: whether they are
@@ -1535,6 +1569,36 @@ export function BookingModal({
       ),
     );
   }, [boardingRangeStart, boardingRangeEnd]);
+
+  // The add-ons the chosen boarding service attaches by length of stay.
+  // DERIVED, never stored in `extraServices`: they follow the dates and the
+  // service as they change, and a line kept in state would outlive both. They
+  // are priced and saved beside the chosen add-ons — see
+  // `lib/pricing/boarding-default-addons.ts` for how the days are counted.
+  // Not when EDITING: a saved booking's lines already hold its defaults, and
+  // deriving them again would charge each one twice.
+  const boardingDefaultLines = useMemo(
+    () =>
+      !editMode &&
+      selectedService === "boarding" &&
+      boardingService &&
+      boardingNights > 0
+        ? defaultAddOnLines({
+            defaults: boardingService.defaultAddOns,
+            nights: boardingNights,
+            petIds: pricingSelectedPetIds,
+            catalogue: storedAddOns,
+          })
+        : NO_EXTRA_SERVICES,
+    [
+      editMode,
+      selectedService,
+      boardingService,
+      boardingNights,
+      pricingSelectedPetIds,
+      storedAddOns,
+    ],
+  );
 
   // Calculate total price with dynamic pricing rules
   const calculatePrice = useMemo(() => {
@@ -1718,7 +1782,10 @@ export function BookingModal({
       rules: pricingRules,
       serviceId: selectedService,
       basePrice,
-      existingExtraServices: extraServices,
+      existingExtraServices:
+        boardingDefaultLines.length > 0
+          ? [...extraServices, ...boardingDefaultLines]
+          : extraServices,
       selectedPetIds: pricingSelectedPetIds,
       // A custom fee narrowed to some branches is not charged at the others.
       locationId: currentLocationId,
@@ -2017,6 +2084,7 @@ export function BookingModal({
     selectedClient,
     pricingPets,
     extraServices,
+    boardingDefaultLines,
     roomAssignments,
     checkInTime,
     checkOutTime,
@@ -4432,6 +4500,8 @@ export function BookingModal({
                       onDaycareServiceChange={setDaycareService}
                       boardingService={boardingService}
                       onBoardingServiceChange={setBoardingService}
+                      onBoardingMenuChange={setBoardingMenuOffered}
+                      boardingDefaultLines={boardingDefaultLines}
                       isCustomerMode={isCustomerMode}
                       feedingSchedule={feedingSchedule}
                       setFeedingSchedule={setFeedingSchedule}
