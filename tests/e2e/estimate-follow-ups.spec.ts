@@ -27,9 +27,18 @@ import { ACCOUNTS, signIn } from "./_auth";
 // There is no DELETE on the settings route. A facility that had follow-ups
 // gets them back; one that had none gets the disabled default stored, which
 // sends exactly as nothing does.
+//
+// "What the facility had" is read at the start, so a run that died between
+// its save and its restore left ITS OWN rule as what the facility had — and
+// every later run restored that faithfully: follow-ups on, on the demo
+// facility, for good. `settings-french` then failed on the merge tags the
+// open editor lists (2026-09-25). What this spec writes carries MARKER now,
+// and a snapshot that carries it is restored as the disabled default.
 // ============================================================================
 
 const SETTINGS = "/facility/dashboard/settings/estimate-settings";
+const MARKER = "[e2e estimate-follow-ups]";
+const MESSAGE = `${MARKER} Hi {{customer_name}}`;
 
 type Page = import("@playwright/test").Page;
 
@@ -98,7 +107,7 @@ test("estimate follow-ups are stored, bounded, and survive a reload", async ({
       notViewed: {
         ...OFF.notViewed,
         delayDays: 4,
-        emailMessage: "Hi {{customer_name}}",
+        emailMessage: MESSAGE,
       },
     };
     const saved = await save(page, on);
@@ -118,7 +127,7 @@ test("estimate follow-ups are stored, bounded, and survive a reload", async ({
     const max = page.locator("#follow-up-viewed-max");
     await expect(delay).toHaveValue("4");
     await expect(page.locator("#follow-up-not_viewed-email")).toHaveValue(
-      "Hi {{customer_name}}",
+      MESSAGE,
     );
 
     await delay.fill("5");
@@ -144,7 +153,13 @@ test("estimate follow-ups are stored, bounded, and survive a reload", async ({
       page.getByRole("button", { name: "Save follow-up reminders" }),
     ).toBeDisabled();
   } finally {
-    const restored = await save(page, before.configured ? before.value : OFF);
+    // A snapshot carrying MARKER is a crashed run's leftover, not the
+    // facility's own rule.
+    const own = JSON.stringify(before.value ?? null).includes(MARKER);
+    const restored = await save(
+      page,
+      before.configured && !own ? before.value : OFF,
+    );
     expect(restored.ok(), await restored.text()).toBe(true);
   }
 });
