@@ -268,6 +268,48 @@ export function boardingUnitPets(
 }
 
 /**
+ * Can this unit take one more of ONE family's pets over the range, on top of
+ * `placedHere` already put in it by the same booking?
+ *
+ * The two kinds of space answer differently (20260924180000):
+ *
+ *   ROOM  A second family is never put in an occupied room — the exclusion
+ *         constraint on `boarding_stays` refuses it, whatever the capacity
+ *         says. So any other live stay makes it unavailable, and the capacity
+ *         (`unit.capacity ?? defaultCapacity`, "max pets of the same family")
+ *         limits only this booking's own pets.
+ *   AREA  Counted in pets, whoever they belong to, up to `maxPetsPerArea` —
+ *         what `private.boarding_area_within_capacity` enforces.
+ *
+ * It used to compare the number of OTHER bookings with the same-family
+ * capacity, so a two-dog suite with another family in it read as having room:
+ * the availability count said so, a customer was quoted for it, and the staff
+ * wizard assigned it — and the database refused the save. A one-dog room, the
+ * common case, answered the same either way, which is why it went unseen.
+ */
+export function unitHasRoomFor(input: {
+  unit: FacilityRoom;
+  category: RoomCategory;
+  startDate: string;
+  endDate: string;
+  bookings: Booking[];
+  placedHere?: number;
+}): boolean {
+  const { unit, category, startDate, endDate, bookings } = input;
+  const placedHere = input.placedHere ?? 0;
+  if (isCountedInPets(category)) {
+    return (
+      boardingUnitPets(unit.id, startDate, endDate, bookings) + placedHere <
+      (category.maxPetsPerArea as number)
+    );
+  }
+  if (getBoardingUnitUsage(unit.id, startDate, endDate, bookings) > 0) {
+    return false;
+  }
+  return placedHere < (unit.capacity ?? category.defaultCapacity);
+}
+
+/**
  * Returns availability summary per room category for a date range.
  * Used in the boarding booking wizard to show "X of Y available".
  */
@@ -303,29 +345,11 @@ export function getBoardingCategoryAvailability(
       // MoéGo: "An area remains available until the number of assigned pets
       // reaches the maximum limit." So a yard is not full because somebody is
       // in it — it is full at `maxPetsPerArea` PER UNIT, which is exactly how
-      // `private.boarding_area_within_capacity` enforces it.
-      //
-      // `defaultCapacity` is deliberately not consulted for an area: it means
-      // "max pets of the SAME FAMILY per room", a different question with a
-      // different answer, and the database refuses to let one row hold both.
-      const availableUnits = isCountedInPets(cat)
-        ? activeUnits.filter(
-            (unit) =>
-              // PETS, not stays. A household bringing three dogs is one stay
-              // and three dogs, and the trigger counts `booking_pets`.
-              boardingUnitPets(unit.id, startDate, endDate, bookings) <
-              (cat.maxPetsPerArea as number),
-          ).length
-        : activeUnits.filter((unit) => {
-            const cap = unit.capacity ?? cat.defaultCapacity;
-            const used = getBoardingUnitUsage(
-              unit.id,
-              startDate,
-              endDate,
-              bookings,
-            );
-            return used < cap;
-          }).length;
+      // `private.boarding_area_within_capacity` enforces it. And a ROOM is
+      // full once any family is in it. `unitHasRoomFor` holds both rules.
+      const availableUnits = activeUnits.filter((unit) =>
+        unitHasRoomFor({ unit, category: cat, startDate, endDate, bookings }),
+      ).length;
 
       return {
         category: cat,
@@ -340,6 +364,10 @@ export function getBoardingCategoryAvailability(
 /**
  * Auto-assign the best available boarding unit for a pet and date range.
  * Returns the specific FacilityRoom unit, or null if none available.
+ *
+ * `placed` is what the caller has already put where for THIS booking, pets
+ * per unit. Assigning a household one dog at a time without it put every dog
+ * in the first free room — two dogs in a one-dog condo, quoted as one room.
  */
 export function autoAssignBoardingUnit(
   pet: Pet,
@@ -349,6 +377,7 @@ export function autoAssignBoardingUnit(
   categories: RoomCategory[],
   units: FacilityRoom[],
   bookings: Booking[],
+  placed: ReadonlyMap<string, number> = new Map(),
 ): FacilityRoom | null {
   const eligibleCategories = categories.filter(
     (c) =>
@@ -370,9 +399,18 @@ export function autoAssignBoardingUnit(
       (u) => u.categoryId === cat.id && u.active,
     );
     for (const unit of activeUnits) {
-      const cap = unit.capacity ?? cat.defaultCapacity;
-      const used = getBoardingUnitUsage(unit.id, startDate, endDate, bookings);
-      if (used < cap) return unit;
+      if (
+        unitHasRoomFor({
+          unit,
+          category: cat,
+          startDate,
+          endDate,
+          bookings,
+          placedHere: placed.get(unit.id) ?? 0,
+        })
+      ) {
+        return unit;
+      }
     }
   }
   return null;
@@ -414,14 +452,19 @@ export function roomsForAssignments(input: {
     }
     const category = categories.find((c) => c.id === assignment.roomId);
     if (!category) continue;
-    const free = units.find((unit) => {
-      if (unit.categoryId !== category.id || !unit.active) return false;
-      const cap = unit.capacity ?? category.defaultCapacity;
-      const used =
-        getBoardingUnitUsage(unit.id, startDate, endDate, bookings) +
-        (placedHere.get(unit.id) ?? 0);
-      return used < cap;
-    });
+    const free = units.find(
+      (unit) =>
+        unit.categoryId === category.id &&
+        unit.active &&
+        unitHasRoomFor({
+          unit,
+          category,
+          startDate,
+          endDate,
+          bookings,
+          placedHere: placedHere.get(unit.id) ?? 0,
+        }),
+    );
     if (!free) continue;
     placedHere.set(free.id, (placedHere.get(free.id) ?? 0) + 1);
     out.push({ petId: assignment.petId, roomId: free.id });

@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  autoAssignBoardingUnit,
+  getBoardingCategoryAvailability,
   getBoardingUnitUsage,
   getDaycareSectionUsage,
   holdsSpace,
   isGroomingStationBooked,
   roomsForAssignments,
+  unitHasRoomFor,
 } from "@/lib/capacity-engine";
 import type { Booking } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 
 const booking = (patch: Partial<Booking>): Booking =>
@@ -231,5 +235,129 @@ describe("roomsForAssignments", () => {
         assignments: [{ petId: 1, roomId: "s1" }],
       }),
     ).toEqual([{ petId: 1, roomId: "s1" }]);
+  });
+});
+
+// ── A ROOM HOLDS ONE FAMILY; AN AREA HOLDS PETS ─────────────────────────────
+//
+// A two-dog suite with another family in it read as having room, because the
+// OTHER booking was compared with the SAME-family capacity. The count, the
+// customer's quote and the staff wizard all offered it, and the database
+// refused the save. A one-dog room answered the same either way.
+
+describe("room for one more of this family", () => {
+  const deluxe = {
+    id: "cat-deluxe",
+    service: "boarding",
+    name: "Deluxe Suite",
+    defaultCapacity: 2,
+    visibleToClients: true,
+    sortOrder: 1,
+    rules: [],
+  } as unknown as RoomCategory;
+  const yard = {
+    id: "cat-yard",
+    service: "boarding",
+    name: "Play Yard",
+    defaultCapacity: 1,
+    spaceType: "area",
+    maxPetsPerArea: 3,
+    visibleToClients: true,
+    sortOrder: 2,
+    rules: [],
+  } as unknown as RoomCategory;
+  const room = (id: string, categoryId: string) =>
+    ({ id, categoryId, name: id, active: true, rules: [] }) as FacilityRoom;
+  const d1 = room("d1", "cat-deluxe");
+  const d2 = room("d2", "cat-deluxe");
+  const y1 = room("y1", "cat-yard");
+  const nights = { startDate: "2026-10-06", endDate: "2026-10-08" };
+  const otherFamilyIn = (unit: string, pets = 1) =>
+    booking({
+      id: 90 + pets,
+      service: "boarding",
+      unitAssignment: unit,
+      startDate: "2026-10-05",
+      endDate: "2026-10-07",
+      petId: Array.from({ length: pets }, (_, i) => i + 100),
+    });
+  const dog = { id: 1, type: "Dog", weight: 30 } as Pet;
+
+  test("a two-dog suite with another family in it has no room", () => {
+    const bookings = [otherFamilyIn("d1")];
+    expect(
+      unitHasRoomFor({ unit: d1, category: deluxe, ...nights, bookings }),
+    ).toBe(false);
+    expect(
+      unitHasRoomFor({ unit: d2, category: deluxe, ...nights, bookings }),
+    ).toBe(true);
+  });
+
+  test("two dogs of one family share it, and a third does not fit", () => {
+    const base = { unit: d1, category: deluxe, ...nights, bookings: [] };
+    expect(unitHasRoomFor({ ...base, placedHere: 1 })).toBe(true);
+    expect(unitHasRoomFor({ ...base, placedHere: 2 })).toBe(false);
+  });
+
+  test("an area counts pets, whoever they belong to", () => {
+    const bookings = [otherFamilyIn("y1", 2)];
+    const base = { unit: y1, category: yard, ...nights, bookings };
+    expect(unitHasRoomFor(base)).toBe(true);
+    expect(unitHasRoomFor({ ...base, placedHere: 1 })).toBe(false);
+  });
+
+  test("the staff wizard skips the occupied suite instead of being refused", () => {
+    expect(
+      roomsForAssignments({
+        ...nights,
+        categories: [deluxe],
+        units: [d1, d2],
+        bookings: [otherFamilyIn("d1")],
+        assignments: [
+          { petId: 1, roomId: "cat-deluxe" },
+          { petId: 2, roomId: "cat-deluxe" },
+        ],
+      }),
+    ).toEqual([
+      { petId: 1, roomId: "d2" },
+      { petId: 2, roomId: "d2" },
+    ]);
+  });
+
+  test("the availability count leaves the occupied suite out", () => {
+    const [row] = getBoardingCategoryAvailability(
+      nights.startDate,
+      nights.endDate,
+      [deluxe],
+      [d1, d2],
+      [otherFamilyIn("d1")],
+    );
+    expect(row?.availableUnits).toBe(1);
+  });
+
+  test("assigning a household dog by dog does not put two in a one-dog room", () => {
+    const condo = { ...deluxe, id: "cat-condo", defaultCapacity: 1 };
+    const c1 = room("c1", "cat-condo");
+    const c2 = room("c2", "cat-condo");
+    const first = autoAssignBoardingUnit(
+      dog,
+      nights.startDate,
+      nights.endDate,
+      null,
+      [condo],
+      [c1, c2],
+      [],
+    );
+    const second = autoAssignBoardingUnit(
+      dog,
+      nights.startDate,
+      nights.endDate,
+      null,
+      [condo],
+      [c1, c2],
+      [],
+      new Map([[first!.id, 1]]),
+    );
+    expect([first?.id, second?.id]).toEqual(["c1", "c2"]);
   });
 });
