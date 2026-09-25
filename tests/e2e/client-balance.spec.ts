@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import { bookingListSearch } from "@/lib/api/booking-list-params";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // What a client owes, and what they merely have booked.
@@ -141,14 +142,15 @@ test.afterAll(async ({ browser }) => {
     // with an `{error}` object, and `for...of` on that throws inside
     // `afterAll` — turning a reporting failure into a cleanup that silently
     // does nothing and leaves paid bookings on the shared database.
-    const listed = await page.request.get("/api/bookings");
-    const body = listed.ok() ? await listed.json().catch(() => null) : null;
-    const bookings: BookingPayload[] = Array.isArray(body) ? body : [];
-    if (!Array.isArray(body)) {
-      console.log(
-        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
-      );
-    }
+    // Asked of the DATABASE by marker (`bookingsMarked`, the service role's
+    // way in), not read out of a booking list: guarded, the list read still
+    // timed out under load and cleaned nothing (debt map, 2026-09-25).
+    const bookings = (await bookingsMarked(MARKER)).map((b) => ({
+      id: b.ref,
+      status: b.status,
+      specialRequests: MARKER,
+      amountPaid: b.amountPaid,
+    }));
 
     let reversed = 0;
     let cancelled = 0;

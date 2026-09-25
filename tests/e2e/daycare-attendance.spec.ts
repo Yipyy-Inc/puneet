@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // The daycare floor is a record, not an array.
@@ -90,14 +91,15 @@ test.afterAll(async ({ browser }) => {
     // list answered with an `{error}` object instead `for...of` threw "all is
     // not iterable" inside `afterAll` — so the cleanup below cancelled
     // nothing, reverted nothing, and left its rows on the shared database.
-    const listed = await page.request.get("/api/bookings");
-    const body = listed.ok() ? await listed.json().catch(() => null) : null;
-    const all: BookingPayload[] = Array.isArray(body) ? body : [];
-    if (!Array.isArray(body)) {
-      console.log(
-        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
-      );
-    }
+    // Asked of the DATABASE by marker (`bookingsMarked`, the service role's
+    // way in), not read out of a booking list: guarded, the list read still
+    // timed out under load and cleaned nothing (debt map, 2026-09-25).
+    const all = (await bookingsMarked(MARKER)).map((b) => ({
+      id: b.ref,
+      status: b.status,
+      specialRequests: MARKER,
+      amountPaid: b.amountPaid,
+    }));
     let cancelled = 0;
     let reverted = 0;
     for (const b of all) {

@@ -1,5 +1,6 @@
 import { test, expect, type APIResponse } from "@playwright/test";
 import { ACCOUNTS, signIn } from "./_auth";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // POST and PATCH /api/clients and /api/pets — does the app tell the truth
@@ -78,18 +79,15 @@ test.describe("client and pet write path", () => {
       // The shape is CHECKED, not assumed: a 500 answers with an `{error}`
       // object, and `for...of` on that throws inside teardown — a cleanup
       // that does nothing while looking like one that found nothing.
-      const listed = await page.request.get("/api/bookings");
-      const body = listed.ok() ? await listed.json().catch(() => null) : null;
-      const bookings: {
-        id: string;
-        status?: string;
-        specialRequests?: string;
-      }[] = Array.isArray(body) ? body : [];
-      if (!Array.isArray(body)) {
-        console.log(
-          `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
-        );
-      }
+      // Asked of the DATABASE by marker (`bookingsMarked`, the service role's
+      // way in), not read out of a booking list: guarded, the list read still
+      // timed out under load and cleaned nothing (debt map, 2026-09-25).
+      const bookings = (await bookingsMarked(MARKER)).map((b) => ({
+        id: String(b.ref),
+        status: b.status,
+        specialRequests: MARKER,
+        amountPaid: b.amountPaid,
+      }));
       for (const b of bookings) {
         if (!b.specialRequests?.includes(MARKER)) continue;
         if (b.status === "cancelled") continue;

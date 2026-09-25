@@ -1,9 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
-import { bookingListSearch } from "@/lib/api/booking-list-params";
-
 import { ACCOUNTS, signIn } from "./_auth";
-import { SWEEPABLE_STATUSES } from "./_sweep";
+import { bookingsMarked } from "./_sweep";
 
 // ============================================================================
 // ANSWERING A CUSTOMER'S REQUEST IS STAFF WORK — and the boundary is the point.
@@ -86,17 +84,15 @@ test.afterAll(async ({ browser }) => {
     // answers `{error}`, and a cast would turn that into "all is not
     // iterable" INSIDE the teardown — cleaning up nothing while the run looks
     // fine. See the boarding teardowns, 2026-09-22.
-    const listed = await page.request.get(
-      `/api/bookings${bookingListSearch({ statuses: SWEEPABLE_STATUSES })}`,
-    );
-    const body = listed.ok() ? await listed.json().catch(() => null) : null;
-    const all: { id: number; specialRequests?: string; status?: string }[] =
-      Array.isArray(body) ? body : [];
-    if (!Array.isArray(body)) {
-      console.log(
-        `cleanup: /api/bookings answered ${listed.status()} with no list — NOTHING was cleaned up`,
-      );
-    }
+    // Asked of the DATABASE by marker (`bookingsMarked`, the service role's
+    // way in), not read out of a booking list: guarded, the list read still
+    // timed out under load and cleaned nothing (debt map, 2026-09-25).
+    const all = (await bookingsMarked(MARKER)).map((b) => ({
+      id: b.ref,
+      status: b.status,
+      specialRequests: MARKER,
+      amountPaid: b.amountPaid,
+    }));
 
     let cancelled = 0;
     for (const b of all) {

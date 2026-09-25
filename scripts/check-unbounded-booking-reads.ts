@@ -70,13 +70,9 @@ const DIR = "tests/e2e";
 const BASELINE: Record<string, number> = {
   "booking-detail-redirect.spec.ts": 1,
   "booking-line-items.spec.ts": 1,
-  "booking-presence.spec.ts": 1,
   "booking-tip-split.spec.ts": 1,
   "booking-write-integrity.spec.ts": 2,
   "bookings-list.spec.ts": 2,
-  "client-balance.spec.ts": 1,
-  "client-pet-write-path.spec.ts": 1,
-  "daycare-attendance.spec.ts": 1,
   "training-attendance.spec.ts": 1,
 };
 

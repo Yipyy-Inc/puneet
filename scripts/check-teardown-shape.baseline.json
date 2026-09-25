@@ -5,8 +5,6 @@
   "tests/e2e/booking-tip-split.spec.ts": 1,
   "tests/e2e/booking-write-integrity.spec.ts": 1,
   "tests/e2e/clover-pay.spec.ts": 1,
-  "tests/e2e/daily-care-board.spec.ts": 1,
-  "tests/e2e/dashboard-live-board.spec.ts": 1,
   "tests/e2e/employee-self-service.spec.ts": 1,
   "tests/e2e/facility-task-groups.spec.ts": 1,
   "tests/e2e/facility-tasks.spec.ts": 1,
