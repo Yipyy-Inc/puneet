@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   useDeleteGroomingService,
@@ -43,7 +43,6 @@ import {
   Package,
   Clock,
   DollarSign,
-  Sparkles,
   AlertCircle,
   ArrowRight,
   Ban,
@@ -58,15 +57,13 @@ import {
   useFacilitySettings,
   usePricingRules,
   useSaveFacilitySetting,
-  useServiceAddOns,
 } from "@/lib/api/facility-settings";
 import type { ServiceCharge } from "@/lib/settings/grooming-service-charges";
 import { isImported } from "@/lib/pricing/import-grooming-charges";
 import { formatMoney, isPluralOne } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { CustomFee } from "@/types/boarding";
-import { addOnsForService } from "@/lib/settings/addons";
-import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import { AddOnsSettingsLink } from "@/components/facility/add-ons/add-ons-settings-link";
 import { GroomingChargeImportDialog } from "./GroomingChargeImportDialog";
 import { ServiceDialog } from "./service-dialog";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
@@ -285,14 +282,6 @@ export function GroomingRates() {
     null,
   );
 
-  // Add-ons (sourced from global service-addons store)
-  // The facility's own extras. The last of thirteen localStorage loaders.
-  const { addOns: allAddOns } = useServiceAddOns();
-  const groomingAddOns = useMemo(
-    () => addOnsForService(allAddOns, "grooming"),
-    [allAddOns],
-  );
-
   // ── THIS SECTION IS READ-ONLY, AND IS ON ITS WAY OUT ──────────────────
   //
   // `grooming_service_charges` was the facility's own fee list with a full
@@ -344,7 +333,6 @@ export function GroomingRates() {
   }
 
   const activeServices = services.filter((s) => s.isActive).length;
-  const activeAddOns = groomingAddOns.filter((a) => a.isActive).length;
   const activeCharges = charges.filter((c) => c.isActive).length;
 
   // ── Service handlers ─────────────────────────────────────────────────
@@ -391,7 +379,7 @@ export function GroomingRates() {
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -403,21 +391,6 @@ export function GroomingRates() {
                   Active Services
                 </p>
                 <p className="mt-0.5 text-2xl font-bold">{activeServices}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-50">
-                <Sparkles className="size-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Active Add-ons
-                </p>
-                <p className="mt-0.5 text-2xl font-bold">{activeAddOns}</p>
               </div>
             </div>
           </CardContent>
@@ -445,12 +418,6 @@ export function GroomingRates() {
             Services
             <Badge variant="secondary" className="ml-2 text-[10px]">
               {services.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="addons">
-            Add-ons
-            <Badge variant="secondary" className="ml-2 text-[10px]">
-              {groomingAddOns.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="charges">
@@ -574,11 +541,6 @@ export function GroomingRates() {
           />
         </TabsContent>
 
-        {/* ── Add-ons tab ── */}
-        <TabsContent value="addons" className="mt-0 space-y-4">
-          <AddOnsManager serviceFilter="grooming" />
-        </TabsContent>
-
         {/* ── Service charges tab ── */}
         <TabsContent value="charges" className="mt-0 space-y-4">
           <Card>
@@ -675,6 +637,9 @@ export function GroomingRates() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add-ons are one list for every service, set up in Settings. */}
+      <AddOnsSettingsLink />
 
       {/* Service editor */}
       <ServiceDialog

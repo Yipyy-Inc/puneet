@@ -24,7 +24,7 @@ import {
   Info,
 } from "lucide-react";
 import type { TrainingPackage } from "@/types/training";
-import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import { AddOnsSettingsLink } from "@/components/facility/add-ons/add-ons-settings-link";
 import {
   useFacilitySettings,
   useSaveFacilitySetting,
@@ -285,9 +285,6 @@ export default function TrainingRatesPage() {
           <TabsTrigger value="programs">
             Programs ({programs.length})
           </TabsTrigger>
-          <TabsTrigger value="addons">
-            Add-ons ({trainingAddOns.length})
-          </TabsTrigger>
         </TabsList>
 
         {/* ── Programs Tab ── */}
@@ -354,12 +351,10 @@ export default function TrainingRatesPage() {
             </>
           )}
         </TabsContent>
-
-        {/* ── Add-ons Tab ── */}
-        <TabsContent value="addons" className="mt-0 space-y-4">
-          <AddOnsManager serviceFilter="training" />
-        </TabsContent>
       </Tabs>
+
+      {/* Add-ons are one list for every service, set up in Settings. */}
+      <AddOnsSettingsLink />
 
       {/* Pricing rules link */}
       <div className="flex items-center justify-between rounded-xl border px-5 py-3">

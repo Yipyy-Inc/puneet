@@ -937,6 +937,8 @@ export const groomingPackageSchema = z.object({
    * (`grooming_service_categories`, 20260926181007). Null: uncategorised.
    */
   categoryId: z.string().nullable().optional(),
+  /** The row's uuid; `id` may be a legacy string. */
+  rowId: z.string().optional(),
   description: z.string(),
   basePrice: z.number(),
   duration: z.number(),

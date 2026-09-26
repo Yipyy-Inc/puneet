@@ -182,7 +182,6 @@ const BASELINE = new Set<string>([
   // person actually reads.
   "src/components/facility/RouteView.tsx",
   "src/components/facility/TrainingSection.tsx",
-  "src/components/facility/add-ons/AddOnCategoryDialog.tsx",
   "src/components/grooming/PriceAdjustmentForm.tsx",
   "src/components/messaging/CampaignsView.tsx",
   "src/components/messaging/ClientContextPanel.tsx",

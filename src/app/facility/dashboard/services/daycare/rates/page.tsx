@@ -4,13 +4,9 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
-import { useServiceAddOns } from "@/lib/api/facility-settings";
-import { addOnsForService } from "@/lib/settings/addons";
+import { AddOnsSettingsLink } from "@/components/facility/add-ons/add-ons-settings-link";
 import { useSettingsHref } from "@/lib/settings/use-settings-href";
 import { useStaffText } from "@/lib/staff/use-staff-text";
-import { useDaycareServices } from "@/lib/api/daycare-catalogue";
 
 import { DaycareServiceList } from "./_components/daycare-service-list";
 
@@ -40,30 +36,14 @@ import { DaycareServiceList } from "./_components/daycare-service-list";
 export default function DaycareRatesPage() {
   const { t } = useStaffText("daycareServices");
   const settingsPath = useSettingsHref();
-  const { data: services } = useDaycareServices();
-  const { addOns: allAddOns } = useServiceAddOns();
-  const daycareAddOns = addOnsForService(allAddOns, "daycare");
 
+  // Add-ons are one list for every service now, set up in Settings (see
+  // AddOnsSettingsLink) — this page carried its own copy as a second tab.
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="services" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="services">
-            {t("servicesTab")} ({services?.length ?? 0})
-          </TabsTrigger>
-          <TabsTrigger value="addons">
-            {t("addOnsTab")} ({daycareAddOns.length})
-          </TabsTrigger>
-        </TabsList>
+      <DaycareServiceList />
 
-        <TabsContent value="services" className="mt-0">
-          <DaycareServiceList />
-        </TabsContent>
-
-        <TabsContent value="addons" className="mt-0">
-          <AddOnsManager serviceFilter="daycare" />
-        </TabsContent>
-      </Tabs>
+      <AddOnsSettingsLink />
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">

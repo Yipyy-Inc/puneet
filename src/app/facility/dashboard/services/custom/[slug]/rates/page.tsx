@@ -23,7 +23,7 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import type { CustomServiceVariant } from "@/types/facility";
 import { useServiceAddOns } from "@/lib/api/facility-settings";
 import { addOnsForService } from "@/lib/settings/addons";
-import { AddOnsManager } from "@/components/facility/add-ons/AddOnsManager";
+import { AddOnsSettingsLink } from "@/components/facility/add-ons/add-ons-settings-link";
 import {
   DollarSign,
   Clock,
@@ -426,12 +426,6 @@ export default function CustomServiceRatesPage() {
               {variants.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="addons">
-            Add-ons
-            <Badge variant="secondary" className="ml-2 text-[10px]">
-              {customAddOns.length}
-            </Badge>
-          </TabsTrigger>
         </TabsList>
 
         {/* ── Variants tab ── */}
@@ -556,12 +550,10 @@ export default function CustomServiceRatesPage() {
             </Card>
           )}
         </TabsContent>
-
-        {/* ── Add-ons tab ── */}
-        <TabsContent value="addons" className="mt-0 space-y-4">
-          {slug && <AddOnsManager serviceFilter={slug} />}
-        </TabsContent>
       </Tabs>
+
+      {/* Add-ons are one list for every service, set up in Settings. */}
+      <AddOnsSettingsLink />
 
       {/* Variant editor */}
       <VariantDialog
