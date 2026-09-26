@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Bed, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Bed, Copy, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/boarding-catalogue";
 import type { BoardingService } from "@/lib/api/mappers/boarding-service";
 
+import { BoardingRateCategoriesDialog } from "./boarding-rate-categories-dialog";
 import { BoardingServiceDialog } from "./boarding-service-dialog";
 import { lodgingLabels } from "@/lib/boarding/lodging-labels";
 
@@ -238,6 +239,22 @@ export function BoardingServiceList() {
 
   const [editing, setEditing] = useState<BoardingService | null>(null);
   const [open, setOpen] = useState(false);
+  const [managing, setManaging] = useState(false);
+
+  // How many rates each category holds, for the heading of its group and the
+  // categories dialog.
+  const rateCounts = new Map<string, number>();
+  for (const service of services ?? []) {
+    if (!service.categoryId) continue;
+    rateCounts.set(
+      service.categoryId,
+      (rateCounts.get(service.categoryId) ?? 0) + 1,
+    );
+  }
+  const rateCount = (n: number) =>
+    fill(isPluralOne(n, locale) ? "rateCountOne" : "rateCountOther", {
+      n: String(n),
+    });
 
   const grouped = useMemo(() => {
     const list = services ?? [];
@@ -318,15 +335,26 @@ export function BoardingServiceList() {
             {t("menuBlurb")}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          <Plus className="size-4" aria-hidden />
-          {t("addService")}
-        </Button>
+        {/* The categories beside the button that adds, as the Add-ons tab
+            has them: filing the menu no longer means opening a rate. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setManaging(true)}>
+            <FolderOpen className="size-4" aria-hidden />
+            {t("categoriesButton")}
+            <span className="text-(--ink-tertiary) tabular-nums">
+              {(categories ?? []).length}
+            </span>
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="size-4" aria-hidden />
+            {t("addService")}
+          </Button>
+        </div>
       </div>
 
       {grouped.length === 0 ? (
@@ -341,9 +369,16 @@ export function BoardingServiceList() {
       ) : (
         grouped.map((group) => (
           <div key={group.id} className="space-y-3">
-            <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
-              {group.name}
-            </p>
+            {/* The category's name over its rates, and how many: the
+                Add-ons tab's own heading ("Uncategorized · 1 add-on"). */}
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
+                {group.name}
+              </p>
+              <p className="text-[13.5px] text-(--ink-tertiary) tabular-nums">
+                {rateCount(group.items.length)}
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               {group.items.map((service) => (
                 <ServiceCard
@@ -381,6 +416,13 @@ export function BoardingServiceList() {
         onOpenChange={setOpen}
         service={editing}
         categories={categories ?? []}
+      />
+
+      <BoardingRateCategoriesDialog
+        open={managing}
+        onOpenChange={setManaging}
+        categories={categories ?? []}
+        rateCounts={rateCounts}
       />
     </div>
   );

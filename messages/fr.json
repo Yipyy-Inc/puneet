@@ -4329,7 +4329,21 @@
         "savedButNoDefaults": "Tarif enregistré, mais pas ses suppléments par défaut.",
         "includedTitle": "Inclus avec {service}",
         "includedLine": "{name} × {quantity}",
-        "includedHelp": "Ajoutés par le service selon la durée du séjour, et facturés sur leurs propres lignes."
+        "includedHelp": "Ajoutés par le service selon la durée du séjour, et facturés sur leurs propres lignes.",
+        "categoriesButton": "Catégories",
+        "categoriesTitle": "Catégories de tarifs",
+        "categoriesBlurb": "Regroupez vos tarifs. Un tarif sans catégorie est classé sous « {none} ».",
+        "noCategories": "Aucune catégorie pour l’instant.",
+        "newCategoryLabel": "Nouvelle catégorie",
+        "addCategory": "Ajouter la catégorie",
+        "categoryAdded": "Catégorie ajoutée",
+        "categoryRenamed": "Catégorie renommée",
+        "categoryRemoved": "Catégorie retirée",
+        "renameNamed": "Renommer {name}",
+        "removeNamed": "Retirer {name}",
+        "rateCountOne": "{n} tarif",
+        "rateCountOther": "{n} tarifs",
+        "done": "Terminé"
       }
     }
   },

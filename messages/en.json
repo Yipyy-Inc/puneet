@@ -4264,7 +4264,7 @@
         "edit": "Edit",
         "remove": "Remove",
         "copyOf": "{name} (copy)",
-        "ungrouped": "Ungrouped",
+        "ungrouped": "Uncategorized",
         "inactive": "Draft",
         "noServicesTitle": "No boarding rates yet",
         "noServicesBlurb": "Add one and it appears in the booking wizard. Until then a stay is priced by its room type.",
@@ -4329,7 +4329,21 @@
         "savedButNoDefaults": "Rate saved, but its default add-ons were not.",
         "includedTitle": "Comes with {service}",
         "includedLine": "{name} × {quantity}",
-        "includedHelp": "Added by the service for the length of the stay, and billed as their own lines."
+        "includedHelp": "Added by the service for the length of the stay, and billed as their own lines.",
+        "categoriesButton": "Categories",
+        "categoriesTitle": "Rate categories",
+        "categoriesBlurb": "Group your rates. A rate with no category is listed under {none}.",
+        "noCategories": "No categories yet.",
+        "newCategoryLabel": "New category",
+        "addCategory": "Add category",
+        "categoryAdded": "Category added",
+        "categoryRenamed": "Category renamed",
+        "categoryRemoved": "Category removed",
+        "renameNamed": "Rename {name}",
+        "removeNamed": "Remove {name}",
+        "rateCountOne": "{n} rate",
+        "rateCountOther": "{n} rates",
+        "done": "Done"
       }
     }
   },
