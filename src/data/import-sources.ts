@@ -1,19 +1,19 @@
 import type { ImportSource } from "@/types/import";
 
 // Source platforms admins can import from. Logos are represented as monogram
-// tiles (no third-party brand assets bundled). MoeGo, Gingr, PawPartner,
-// ProPetware, and Generic CSV have built-in column parsers; the rest are
-// mapped manually.
+// tiles (no third-party brand assets bundled). A grooming-software CSV export,
+// Gingr, PawPartner, ProPetware, and Generic CSV have built-in column parsers;
+// the rest are mapped manually.
 export const importSources: ImportSource[] = [
   {
-    id: "moego",
-    name: "MoeGo",
-    monogram: "MG",
+    id: "grooming-csv",
+    name: "Grooming software",
+    monogram: "GS",
     gradient: "from-indigo-500 to-blue-600",
     importableData: ["Customers", "Pets", "Appointments"],
-    exportGuideUrl: "#moego-export-guide",
+    exportGuideUrl: "#grooming-csv-export-guide",
     separateFiles: false,
-    parser: "moego",
+    parser: "grooming-csv",
   },
   {
     id: "gingr",

@@ -8,7 +8,7 @@ export interface ImportSample {
   content: string;
 }
 
-const MOEGO = `Customer Name,Email,Phone,Address,Pet Name,Pet Type,Breed,Weight,Grooming Notes,Service,Appointment Date,Groomer,Status,Price
+const GROOMING_CSV = `Customer Name,Email,Phone,Address,Pet Name,Pet Type,Breed,Weight,Grooming Notes,Service,Appointment Date,Groomer,Status,Price
 Sarah Mitchell,sarah.m@example.com,555-0101,12 Oak St,Bella,Dog,Poodle,18,Sensitive skin,Full Groom,2026-06-10,Tina,Completed,75
 James Carter,james.c@example.com,555-0102,8 Pine Ave,Max,Dog,Labrador,65,,Bath & Brush,2026-06-12,Tina,Completed,45
 Emily Stone,emily.stone@example.com,555-0103,5 Birch Rd,Coco,Cat,Persian,9,Matted fur,De-shed,2026-06-13,Raj,Completed,55
@@ -71,7 +71,10 @@ Vince Ola,vince.o@example.com,555-0309,Rex,Dog,Boxer,Daycare,2026-06-18,Kim,40
 Will Park,,555-0310,Buddy,Dog,Golden,Grooming,2026-06-19,Tina,60`;
 
 export const IMPORT_SAMPLES: Record<string, ImportSample> = {
-  moego: { fileName: "moego-export.csv", content: MOEGO },
+  "grooming-csv": {
+    fileName: "grooming-software-export.csv",
+    content: GROOMING_CSV,
+  },
   gingr: { fileName: "gingr-export.csv", content: GINGR },
   pawpartner: { fileName: "pawpartner-export.csv", content: PAWPARTNER },
   propetware: { fileName: "propetware-export.csv", content: PROPETWARE },

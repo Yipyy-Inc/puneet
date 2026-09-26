@@ -1,9 +1,10 @@
-// Built-in column parsers. MoeGo and Gingr are implemented first; the other
-// platforms fall back to manual mapping (their parsers land in Task 44).
+// Built-in column parsers. A grooming-software CSV export and Gingr are
+// implemented first; the other platforms fall back to manual mapping (their
+// parsers land in Task 44).
 //
 // Each map keys a source export column header (lower-cased) to a Yipyy field id.
 
-export const MOEGO_COLUMN_MAP: Record<string, string> = {
+export const GROOMING_CSV_COLUMN_MAP: Record<string, string> = {
   "customer name": "customer.name",
   email: "customer.email",
   phone: "customer.phone",
@@ -130,7 +131,7 @@ export const GENERIC_COLUMN_MAP: Record<string, string> = {
 };
 
 const PARSER_MAPS: Record<string, Record<string, string>> = {
-  moego: MOEGO_COLUMN_MAP,
+  "grooming-csv": GROOMING_CSV_COLUMN_MAP,
   gingr: GINGR_COLUMN_MAP,
   pawpartner: PAWPARTNER_COLUMN_MAP,
   propetware: PROPETWARE_COLUMN_MAP,

@@ -26,7 +26,7 @@ const SAMPLE_VALUES: Record<string, string> = {
   reply_preview: "Thanks for the details — we've shipped a fix on our end.",
   message_preview: "Hi, our online booking widget isn't loading for clients.",
   session_time: "2:14 PM ET",
-  import_source: "MoeGo",
+  import_source: "Gingr",
   records_imported: "1,284",
   records_skipped: "12",
 };

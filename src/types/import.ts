@@ -22,7 +22,7 @@ export interface ImportSource {
   separateFiles: boolean;
   /** Which built-in column parser auto-maps this source (null = manual). */
   parser:
-    | "moego"
+    | "grooming-csv"
     | "gingr"
     | "pawpartner"
     | "propetware"
