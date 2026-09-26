@@ -72,7 +72,7 @@ interface Props {
   onClose: () => void;
   /**
    * When creating, `naming` says how many units to generate and what to call
-   * them — MoéGo's quantity, prefix and starting number. Editing passes
+   * them — the reference's quantity, prefix and starting number. Editing passes
    * `{ count: 0 }`: the units already exist and are edited one at a time.
    */
   onSave: (cat: RoomCategory, naming: UnitNaming) => void;
@@ -92,7 +92,7 @@ export function CategoryFormDialog({
     blankCategory(facilityId),
   );
   const [unitCount, setUnitCount] = useState(1);
-  // MoéGo's Prefix and starting number. Empty and 1 reproduce its own
+  // The reference's Prefix and starting number. Empty and 1 reproduce its own
   // "1, 2, 3" example, which is the sensible default for a small facility.
   const [unitPrefix, setUnitPrefix] = useState("");
   const [unitStart, setUnitStart] = useState(1);
@@ -160,8 +160,9 @@ export function CategoryFormDialog({
               hint="Shown to clients when browsing room categories during booking"
             />
 
-            {/* MoéGo asks the space type before the capacity, because the
-                capacity means a different thing depending on the answer. */}
+            {/* The reference asks the space type before the capacity,
+                because the capacity means a different thing depending on
+                the answer. */}
             <SpaceTypeField
               spaceType={form.spaceType ?? "room"}
               maxPetsPerArea={form.maxPetsPerArea}

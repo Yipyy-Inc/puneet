@@ -346,10 +346,10 @@ test.describe("the daycare menu", () => {
 // ============================================================================
 // AUTO-ROLLOVER: the dog stayed late, so the BILL moved.
 //
-// MoéGo's own example — "this service will turn into a Full Day service if a
-// pet stays 30 minutes past the max duration of 4 hours" — is the feature that
-// stops a facility losing money on an overstay. What has to be proved is that
-// the MONEY changed, not that a label did.
+// The reference's own example — "this service will turn into a Full Day service
+// if a pet stays 30 minutes past the max duration of 4 hours" — is the feature
+// that stops a facility losing money on an overstay. What has to be proved is
+// that the MONEY changed, not that a label did.
 //
 // ── WHY IT REACHES PAST THE API FOR ONE FIELD ─────────────────────────────
 //
@@ -572,7 +572,7 @@ test.describe("the menu a customer is offered", () => {
     ).toBeUndefined();
 
     // The colour is "internal only" on our own setup screen, because it is on
-    // MoéGo's. It was authored above as #123456 and must not come back.
+    // the reference's. It was authored above as #123456 and must not come back.
     expect(live?.color, "the calendar colour does not reach a customer").toBe(
       null,
     );

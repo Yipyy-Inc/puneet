@@ -23,14 +23,15 @@ import { DaycareServiceList } from "./_components/daycare-service-list";
 // through a legacy `type` field the editor had stopped writing.
 //
 // The menu is `daycare_services` now (20260924120000), and the booking picks
-// from it. The sections below are MoéGo's, in MoéGo's order, because that is
-// what was asked for.
+// from it. The sections below are the reference's, in the reference's order,
+// because that is what was asked for.
 //
 // ── THE PRICING RULES ARE NOT HERE, DELIBERATELY ──────────────────────────
 //
 // Multi-pet and multi-night discounts, custom fees and late pick-up are
-// facility-wide and apply across services — MoéGo's own guide puts them in a
-// separate step for the same reason. The card at the bottom is the way over.
+// facility-wide and apply across services — the reference's own guide puts them
+// in a separate step for the same reason. The card at the bottom is the way
+// over.
 // ============================================================================
 
 export default function DaycareRatesPage() {

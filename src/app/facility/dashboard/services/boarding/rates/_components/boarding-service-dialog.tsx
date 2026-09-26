@@ -50,16 +50,16 @@ import type {
 //
 // ── THE TWO FIELDS THAT ONLY BOARDING HAS ─────────────────────────────────
 //
-// UNIT. MoéGo, verbatim, because it is the whole reason the column exists:
-// "Monday to Wednesday is 2 nights or 3 days." Which one a facility charges is
-// theirs to say, and the price means nothing without it — so the unit sits
-// beside the number rather than in a settings page somewhere else.
+// UNIT. The reference, verbatim, because it is the whole reason the column
+// exists: "Monday to Wednesday is 2 nights or 3 days." Which one a facility
+// charges is theirs to say, and the price means nothing without it — so the
+// unit sits beside the number rather than in a settings page somewhere else.
 //
-// LODGING TYPES. MoéGo: "By default all lodging types are selected. Toggle off
-// All Lodging Types to limit." EMPTY MEANS EVERY TYPE, the convention every
-// eligibility array in this schema uses, so switching every box off is the
-// same as leaving them all on — said out loud on the screen because a reader
-// cannot be expected to infer it.
+// LODGING TYPES. The reference: "By default all lodging types are selected.
+// Toggle off All Lodging Types to limit." EMPTY MEANS EVERY TYPE, the
+// convention every eligibility array in this schema uses, so switching every
+// box off is the same as leaving them all on — said out loud on the screen
+// because a reader cannot be expected to infer it.
 //
 // THEY ARE KEYED BY `rowId`, NEVER `id`. `lodging_type_ids` is a `uuid[]`;
 // `RoomCategory.id` is the category's `legacy_id` (`cat-suite`). Both are
@@ -372,8 +372,8 @@ export function BoardingServiceDialog({
                   }}
                 />
                 <div className="space-y-2">
-                  {/* Internal only — MoéGo is explicit that the colour is for
-                      the calendar and never shown to a client.
+                  {/* Internal only — the reference is explicit that the colour
+                      is for the calendar and never shown to a client.
 
                       THE LABEL IS THE PICKER'S, not a sibling of it. A
                       `<Label>` here rendered "Colour (internal only)" directly

@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
-// SPACE TYPE — the question MoéGo asks about every lodging type, and the one
-// everything else about capacity follows from.
+// SPACE TYPE — the question the reference asks about every lodging type, and
+// the one everything else about capacity follows from.
 //
 // Its own words, which are the copy below almost verbatim because they say it
 // better than a paraphrase would:
@@ -21,9 +21,9 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 //
 // ── ONE NUMBER FIELD, TWO MEANINGS, BECAUSE THAT IS WHAT IT IS ────────────
 //
-// MoéGo shows a single "Max # of pets" whose LABEL changes with the space
-// type, and so does this: for a room it is "Max # of Pets (same family) per
-// room" and writes `defaultCapacity`; for an area it is "Max # of pets per
+// The reference shows a single "Max # of pets" whose LABEL changes with the
+// space type, and so does this: for a room it is "Max # of Pets (same family)
+// per room" and writes `defaultCapacity`; for an area it is "Max # of pets per
 // area" and writes `maxPetsPerArea`. Two columns, because the database refuses
 // a room that carries an area's maximum — one meaning per stored value.
 //

@@ -19,7 +19,7 @@
 --     deleting both moved services, and this failed every push after. The
 --     skipped facilities are counted in the detail, so the gap stays visible.
 -- T1  A service cannot roll over into ITSELF. The check-out would never settle.
--- T2  A max stay duration under half an hour is refused. MoéGo's floor.
+-- T2  A max stay duration under half an hour is refused. The reference's floor.
 -- T3  ONE facility-wide price per service, enforced by a PARTIAL unique index.
 --     A plain unique(service_id, location_id) would admit any number of them,
 --     because Postgres treats every null as distinct from every other null.
@@ -139,7 +139,7 @@ begin
   perform pg_temp.t(
     'T2 a max stay duration under 30 minutes is refused',
     v_ok,
-    'MoéGo''s floor is 30 minutes, in half-hour steps');
+    'The reference''s floor is 30 minutes, in half-hour steps');
 
   -- ── T3 one facility-wide price, and only one ─────────────────────────────
   insert into public.daycare_service_location_prices (service_id, facility_id, price)

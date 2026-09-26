@@ -45,8 +45,8 @@ import {
  * authored. A facility with a $20 multi-pet discount, a $6 shared-suite
  * discount and a $10 loyalty credit was given $20 and silently lost $16.
  *
- * The setting this implements is MoéGo's "Only apply the rule with the best
- * discount", and on its own page that means the two DISCOUNT RULES. So the
+ * The setting this implements is the reference's "Only apply the rule with the
+ * best discount", and on its own page that means the two DISCOUNT RULES. So the
  * set is named, not inferred from a sign.
  *
  * Typed against the `source` union rather than `string`, so adding a source

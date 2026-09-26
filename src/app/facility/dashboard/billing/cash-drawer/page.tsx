@@ -20,8 +20,8 @@ export default function DailyRegisterPage() {
 
   return (
     <div className="flex-1 space-y-5 p-4 pt-6">
-      {/* Page header — distinct from MoeGo: name is "Daily Register" and the
-          status pill carries currency, not the title bar. */}
+      {/* Page header — distinct from the reference: name is "Daily Register"
+          and the status pill carries currency, not the title bar. */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/facility/dashboard/payments">

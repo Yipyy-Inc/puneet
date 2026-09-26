@@ -476,10 +476,10 @@ function BoardingRoomSelectionStep({
   const { categories: allCategories, rooms: allRooms } = useRooms();
   const boardingCategories = React.useMemo(
     () =>
-      // THE SERVICE NARROWS THE BUILDING. MoéGo: "By default all lodging types
-      // are selected. Toggle off All Lodging Types to limit." Empty means every
-      // type, so an unrestricted service filters nothing — which is also what a
-      // facility with no menu at all gets.
+      // THE SERVICE NARROWS THE BUILDING. The reference: "By default all
+      // lodging types are selected. Toggle off All Lodging Types to limit."
+      // Empty means every type, so an unrestricted service filters nothing —
+      // which is also what a facility with no menu at all gets.
       //
       // The comparison lives in `lodgingTypesServing` because it has two
       // plausible wrong sides (app id vs uuid) and inline code cannot be tested.
@@ -611,10 +611,10 @@ function BoardingRoomSelectionStep({
 
   return (
     <div className="space-y-5">
-      {/* WHICH SERVICE, then which kennel — MoéGo's own order, and the order
-          the money now follows. Nothing used to be chosen here at all: the
-          kennel class WAS the rate, so a facility could not offer two priced
-          services in one class.
+      {/* WHICH SERVICE, then which kennel — the reference's own order, and
+          the order the money now follows. Nothing used to be chosen here at
+          all: the kennel class WAS the rate, so a facility could not offer
+          two priced services in one class.
 
           ── IT SITS ABOVE THE STEP HEADER, AND THAT IS DELIBERATE ──────────
 

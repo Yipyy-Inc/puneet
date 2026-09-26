@@ -8,7 +8,7 @@ import {
 } from "@/lib/boarding/lodging-occupancy";
 
 // ============================================================================
-// How full a lodging type is, counted MoéGo's way.
+// How full a lodging type is, counted the reference's way.
 //
 // Pure arithmetic, no browser, no database — but it is the arithmetic three
 // screens draw and one of them decides whether a booking may be taken, so the

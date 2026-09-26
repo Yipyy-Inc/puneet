@@ -21,8 +21,8 @@ import { appliesToLocation, appliesToService } from "@/lib/policies/time-fee";
 //
 // `automaticServiceCharges` answers the narrower question the SERVER can ask
 // at booking creation: which fees depend on nothing but the service. That is
-// MoéGo's own set — "auto-apply at checkout" and "by care type" — and it
-// matters because the richer triggers (`new_customer`, `customer_segment`,
+// the reference's own set — "auto-apply at checkout" and "by care type" — and
+// it matters because the richer triggers (`new_customer`, `customer_segment`,
 // `addon_purchase`) need context the create path does not have. Those are
 // applied later, at the till, where the context exists.
 // ============================================================================
@@ -85,7 +85,10 @@ export function automaticServiceCharges(
   );
 }
 
-/** The fees a member of staff can choose from by hand. MoéGo's default mode. */
+/**
+ * The fees a member of staff can choose from by hand. The reference's default
+ * mode.
+ */
 export function manualServiceCharges(
   fees: CustomFee[] | undefined,
   serviceId: string,
@@ -102,7 +105,7 @@ export function manualServiceCharges(
 
 /**
  * Every active fee a member of staff could put on THIS booking, whatever its
- * trigger — what MoéGo's "Add service charges" picker offers.
+ * trigger — what the reference's "Add service charges" picker offers.
  *
  * Wider than `manualServiceCharges` on purpose. An automatic fee is offered
  * too, because the picker's job is to show the facility's whole list and mark

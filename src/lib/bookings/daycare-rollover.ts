@@ -10,10 +10,10 @@ import {
 // ============================================================================
 // THE DOG STAYED LATE, SO THE SERVICE CHANGED.
 //
-// MoéGo's auto-rollover, in its own words: "This service will turn into a Full
-// Day service if a pet stays 30 minutes past the max duration of 4 hours." It
-// is the feature that stops a facility losing money on an overstay, so it has
-// to move the BILL and not just a label.
+// The reference's auto-rollover, in its own words: "This service will turn into
+// a Full Day service if a pet stays 30 minutes past the max duration of 4
+// hours." It is the feature that stops a facility losing money on an overstay,
+// so it has to move the BILL and not just a label.
 //
 // ── IT MEASURES THE REAL STAY, NOT THE BOOKED ONE ─────────────────────────
 //

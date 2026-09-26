@@ -4,8 +4,8 @@ import { z } from "zod";
 // LODGING SETTINGS — the ones that belong to the lodgings themselves, not to
 // the boarding module.
 //
-// MoéGo keeps these at Settings > Lodgings, beside "Manage lodging type" and
-// "Add lodging", and this domain is that page's own row.
+// The reference keeps these at Settings > Lodgings, beside "Manage lodging
+// type" and "Add lodging", and this domain is that page's own row.
 //
 // ── WHY NOT `boarding_config` ─────────────────────────────────────────────
 //
@@ -25,7 +25,7 @@ import { z } from "zod";
 // ============================================================================
 
 /**
- * MoéGo's "Checkout cut-off time".
+ * The reference's "Checkout cut-off time".
  *
  * > "Boarding appointments that check out at or after the cut-off time →
  * >  Count toward that night's boarding capacity" — and those that check out
@@ -60,9 +60,9 @@ export type LodgingConfig = z.infer<typeof lodgingConfigSchema>;
 /**
  * Off, with no time.
  *
- * MoéGo ships the cut-off disabled and so do we: enabling it makes kennels
- * UNAVAILABLE that were sellable the day before, and that is a decision a
- * facility makes, not one a default makes for them.
+ * The reference ships the cut-off disabled and so do we: enabling it makes
+ * kennels UNAVAILABLE that were sellable the day before, and that is a decision
+ * a facility makes, not one a default makes for them.
  */
 export const DEFAULT_LODGING_CONFIG: LodgingConfig = {
   checkoutCutOff: { enabled: false },

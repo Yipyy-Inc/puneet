@@ -16,7 +16,7 @@
 -- C2  A check-out AT OR AFTER the cut-off holds the kennel, and the next
 --     guest is refused. This is the phase.
 -- C3  The boundary is AT, not after: a 14:00 cut-off and a 14:00 check-out
---     holds the night. MoéGo's own wording.
+--     holds the night. The reference's own wording.
 -- C4  It is idempotent. The trigger fires on every update, and a range already
 --     extended to midnight must not creep another day each time.
 -- C5  A REAL check-out time counts, not only the booked one — "applies to both
@@ -195,7 +195,7 @@ begin
 
   perform pg_temp.t(3,
     'the boundary is AT the cut-off, not after it',
-    not v_exact, '14:00 out, 14:00 cut-off — MoeGo says at or after');
+    not v_exact, '14:00 out, 14:00 cut-off — the reference says at or after');
 end $$;
 
 -- ── C4 idempotent ─────────────────────────────────────────────────────────
@@ -239,8 +239,8 @@ begin
   select upper(occupies) into v_before
     from public.boarding_stays where booking_id = v_booking;
 
-  -- They actually left at 16:30. MoeGo: "applies to both real check-out times
-  -- and scheduled end times."
+  -- They actually left at 16:30. The reference: "applies to both real check-out
+  -- times and scheduled end times."
   update public.boarding_stays
      set checked_in_at = ('2028-06-01 15:00'::timestamp at time zone 'America/Toronto'),
          checked_out_at = ('2028-06-05 16:30'::timestamp at time zone 'America/Toronto')

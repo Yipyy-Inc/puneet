@@ -9,10 +9,10 @@ import type {
 
 // ── WHAT THESE PIN ────────────────────────────────────────────────────────
 //
-// The two discount rules MoéGo's pricing page describes — "Multiple Pets" and
-// "Multiple Nights/Days" — plus the two stacking modes. All of it was already
-// built when this file was written on 2026-09-23, and NONE of it had a single
-// test: `multiPetDiscounts` and `discountStacking` appeared in
+// The two discount rules the reference's pricing page describes — "Multiple
+// Pets" and "Multiple Nights/Days" — plus the two stacking modes. All of it was
+// already built when this file was written on 2026-09-23, and NONE of it had a
+// single test: `multiPetDiscounts` and `discountStacking` appeared in
 // `custom-fees.test.ts` and `time-fee.test.ts` only as `[]` scaffolding, set
 // empty so something else could be measured.
 //
@@ -314,8 +314,8 @@ describe("how discounts combine", () => {
     // adjustment as a rival discount rule and keeps only the largest. A
     // custom fee authored with `adjustmentKind: "discount"` is negative and
     // is not a discount RULE at all — it is a facility's own line, chosen
-    // deliberately, and MoéGo's setting is scoped to the two rules on its
-    // own page.
+    // deliberately, and the reference's setting is scoped to the two rules on
+    // its own page.
     //
     // A facility with a $20 multi-pet discount and a $10 "loyalty" custom
     // fee gets $20 today. Both should apply: $30.

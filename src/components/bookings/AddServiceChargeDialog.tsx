@@ -24,17 +24,17 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 // "ADD SERVICE CHARGES" — the facility's own fees, put on a bill by hand.
 //
-// MoéGo's default for a custom fee is no auto-apply at all: somebody chooses
-// it at the till. We offered that mode in the editor, persisted it, and then
-// had nowhere to choose it from — so `autoApply: "none"` meant "never".
+// The reference's default for a custom fee is no auto-apply at all: somebody
+// chooses it at the till. We offered that mode in the editor, persisted it, and
+// then had nowhere to choose it from — so `autoApply: "none"` meant "never".
 //
 // ── IT SHOWS THE WHOLE LIST, NOT THE ADDABLE PART OF IT ──────────────────
 //
 // Automatic fees appear here too, marked as already on the bill. That is
-// MoéGo's "each fee can only be added once per appointment" made VISIBLE,
-// before the 409 rather than after it: a cleaning fee the create path already
-// wrote is shown as added and cannot be chosen twice. Hiding those rows would
-// leave staff hunting for a fee that is sitting on the invoice.
+// the reference's "each fee can only be added once per appointment" made
+// VISIBLE, before the 409 rather than after it: a cleaning fee the create path
+// already wrote is shown as added and cannot be chosen twice. Hiding those rows
+// would leave staff hunting for a fee that is sitting on the invoice.
 //
 // ── THE FIGURE HERE IS THE FIGURE THAT IS WRITTEN ────────────────────────
 //

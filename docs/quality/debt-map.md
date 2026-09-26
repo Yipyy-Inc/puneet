@@ -20340,7 +20340,7 @@ shrinks the debris and not the floor.
 
 ## 2026-09-22 — Two schema fields nobody read, and a surcharge that charged twice
 
-`peakSurchargeSchema` gained its "MoéGo parity fields" in a single pass —
+`peakSurchargeSchema` gained its reference-parity fields in a single pass —
 `dateMode`, `dateRanges`, `repeatPattern`, `surchargeType`, `scope`,
 `chargePerLodging`. Writing a Zod field is not implementing it, and the gap
 sat there unmeasured until this change went looking.
@@ -20372,8 +20372,8 @@ money bug, and nothing recorded that it was load-bearing.
 
 ### And overlapping rules charged the sum
 
-MoéGo's documented rule is "if multiple Peak Date rules overlap on the same
-date, the system will automatically apply the highest surcharge". The loop
+The reference's documented rule is "if multiple Peak Date rules overlap on the
+same date, the system will automatically apply the highest surcharge". The loop
 pushed one adjustment per matching rule, so a guest inside two peak windows
 paid both. The defaults ship `Summer Peak` (20%) and `Holiday Season` (25%)
 with no overlap and `Holiday rush` INACTIVE — activate that third one and
@@ -20396,9 +20396,9 @@ the rule looks configured on screen. Three of the six parity fields decided
 nothing, and the only reason that was survivable was an unrelated omission in a
 dropdown.
 
-**`surchargeType` defaults to `"percentage"` and must keep doing so.** MoéGo
-has no percentage surcharge at all, which makes `"flat"` look like the better
-default. It is not: rules stored before the field existed carry a
+**`surchargeType` defaults to `"percentage"` and must keep doing so.** The
+reference has no percentage surcharge at all, which makes `"flat"` look like
+the better default. It is not: rules stored before the field existed carry a
 `surchargePercent` and no `surchargeType`, so reading those as flat turns
 `surchargePercent: 20` from a fifth of the night into twenty dollars, on live
 rules, with nothing on screen changing.
@@ -20628,10 +20628,10 @@ goes green — it is done when somebody has seen the screen.
 A custom fee used to be folded into `bookings.total_cost`, indistinguishable
 from the base price: invisible on an invoice, invisible to every report, with
 no record of which rule charged it. It is a `booking_line_items` row now, with
-`fee_id` naming the rule and `unique (booking_id, fee_id)` making MoéGo's "once
-per appointment" a database fact rather than a discipline three call sites have
-to remember. `total_cost` went back to being the SERVICE's price, which is what
-20260806820000's Decision 3 always said it was.
+`fee_id` naming the rule and `unique (booking_id, fee_id)` making the
+reference's "once per appointment" a database fact rather than a discipline
+three call sites have to remember. `total_cost` went back to being the
+SERVICE's price, which is what 20260806820000's Decision 3 always said it was.
 
 **This did not, by itself, clear the 2026-09-11 "still open" above.** That
 entry is about `grooming_service_charges`, a SECOND and entirely separate fee
@@ -20876,9 +20876,9 @@ RLS costs more every week.
 
 ## 2026-09-23 — a discount was subtracted twice, and a green gate pinned it
 
-The client asked for MoéGo's **discount pricing** page. Unlike the service-charge
-page, everything it describes was already built: "Multiple Pets" with
-`per_pet` / `additional_pet` and `sameLodging`, "Multiple Nights/Days" with
+The client asked for the reference's **discount pricing** page. Unlike the
+service-charge page, everything it describes was already built: "Multiple Pets"
+with `per_pet` / `additional_pet` and `sameLodging`, "Multiple Nights/Days" with
 three modes, both stacking options, and a Preview calculator. The work was an
 audit, and the audit found a money bug bigger than the feature.
 
@@ -21004,7 +21004,8 @@ enforces one layer down: a teardown may not assume the test worked.
   `applyDynamicPricingRules`, and disagrees with it: a different
   `additional_pet` tier model, flat discounts multiplied by nights, and
   multi-night rules ignored entirely despite the panel having a nights input.
-  MoéGo names this button; ours can quote a price the till will not honour.
+  The reference names this button; ours can quote a price the till will not
+  honour.
 - **The customer's own booking flow never prices a discount.**
   `applyDynamicPricingRules` has two call sites, `BookingModal` and
   `GroomingBookingFlow`. A customer booking two pets online is quoted the
@@ -21012,13 +21013,13 @@ enforces one layer down: a teardown may not assume the test worked.
   customer-submitted price so staff re-price it — but the QUOTE is not.
 - **`bookings` has no `discount_reason` column.** Three call sites read it
   (`BookingPaymentBreakdown`, `print-invoice`, `use-save-booking-edit`) and it
-  survives only inside `details`. Estimates have a real column. MoéGo names the
-  rule that discounted a bill; ours reaches the invoice anonymous.
-- **`apply_all_sequence` is additive, not compounding.** MoéGo's label says "in
-  sequence"; our own copy says "Combine every matching discount", which is what
-  the code does. Additive is order-independent — the property the custom-fee
-  work deliberately protected. Left alone on purpose: changing it reprices
-  every facility on that mode.
+  survives only inside `details`. Estimates have a real column. The reference
+  names the rule that discounted a bill; ours reaches the invoice anonymous.
+- **`apply_all_sequence` is additive, not compounding.** The reference's label
+  says "in sequence"; our own copy says "Combine every matching discount", which
+  is what the code does. Additive is order-independent — the property the
+  custom-fee work deliberately protected. Left alone on purpose: changing it
+  reprices every facility on that mode.
 - **A package pass may reduce the bill twice.** At booking time it is folded
   into `discount`; at payment `payments.package_pass_applied` reduces
   `amount_charged` again. Not chased here — passes are not on the discount
@@ -21036,8 +21037,8 @@ enforces one layer down: a teardown may not assume the test worked.
 
 ## 2026-09-23 — the daycare menu nobody was ever offered, and the three fields that decided nothing
 
-The client read MoéGo's **Set up daycare service** page and said ours was
-"missing a lot of things". He was right, but not in the way the phrase
+The client read the reference's **Set up daycare service** page and said ours
+was "missing a lot of things". He was right, but not in the way the phrase
 suggests. We already stored a list of named daycare rate cards with prices,
 and the facility could edit them at Services → Daycare → Rates. **Nobody was
 ever asked to choose one.**
@@ -21063,8 +21064,8 @@ nothing.
 - **`sizePricing`** — small/medium/large/giant prices. **All 6 services carried
   a non-empty one, across 3 facilities**, and no pricing code ever read it. A
   Great Dane and a Chihuahua cost the same. Replaced by weight ELIGIBILITY,
-  which is what MoéGo has; the column is kept and still unread, so the number
-  above is recoverable rather than a claim in a commit message.
+  which is what the reference has; the column is kept and still unread, so the
+  number above is recoverable rather than a claim in a commit message.
 - **`allowedSectionIds` and `includedAddOnIds`** — looked up by a legacy `type`
   field the current editor never wrote. `EMPTY_RATE` had no `type` key, so
   every rate made in that UI had `type === undefined`, and the room restriction
@@ -21111,7 +21112,7 @@ the same change again and belongs in its own commit with its own tests.
   read the modal does not do yet.
 - **`sizePricing` is preserved and still unread.** Deliberate: dropping it
   would destroy the only record of what three facilities had configured.
-- **MoéGo fields we still do not have:** per-service deposit rules, and the
+- **Reference fields we still do not have:** per-service deposit rules, and the
   "duplicate service" action (sort, categories, images and per-branch pricing
   all shipped).
 - **`daycare_rates` remains a registered settings domain**, unread after the

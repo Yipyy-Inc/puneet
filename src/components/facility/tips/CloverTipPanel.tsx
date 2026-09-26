@@ -24,7 +24,7 @@ import type { TipConfig } from "@/types/facility";
 // nagging about a change that has already taken effect.
 //
 // It is also where this beats the product the brief was measured against:
-// MoeGo's own help page says Smart Reader devices "require separate
+// The reference's own help page says Smart Reader devices "require separate
 // configuration due to hardware constraints" — the duplicate configuration the
 // specification was trying to solve. Yipyy does not have it.
 //

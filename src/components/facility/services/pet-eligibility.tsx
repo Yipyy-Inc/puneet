@@ -13,7 +13,7 @@ import { useTagCatalogue } from "@/lib/api/tags";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
-// MoéGo's "Pet Details": who a service is for.
+// The reference's "Pet Details": who a service is for.
 //
 // ── SHARED, BECAUSE IT IS ONE IDEA ────────────────────────────────────────
 //
@@ -34,8 +34,8 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // shipped a dialog full of raw keys.
 //
 // Three questions, each with the same shape — an "everyone" choice and a
-// "customise" choice — because that is how MoéGo asks them and it is the
-// honest way to express the rule underneath:
+// "customise" choice — because that is how the reference asks them and it is
+// the honest way to express the rule underneath:
 //
 //   EMPTY MEANS NO RESTRICTION. `daycare_services` stores every one of these
 //   as a `text[] not null default '{}'`, and an empty array reads as "any
@@ -45,11 +45,11 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 //
 // ── PET CODES ARE OUR TAGS ────────────────────────────────────────────────
 //
-// MoéGo calls them Pet Codes; we already have a tag catalogue, and inventing
-// a second vocabulary for the same idea would leave a facility maintaining
-// both. BLOCKED BEATS ELIGIBLE, stated on the screen rather than left to be
-// discovered: a pet carrying a blocked tag cannot book the service even if it
-// also carries an eligible one.
+// The reference calls them Pet Codes; we already have a tag catalogue, and
+// inventing a second vocabulary for the same idea would leave a facility
+// maintaining both. BLOCKED BEATS ELIGIBLE, stated on the screen rather than
+// left to be discovered: a pet carrying a blocked tag cannot book the service
+// even if it also carries an eligible one.
 // ============================================================================
 
 interface Props {

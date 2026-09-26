@@ -3,14 +3,15 @@ import { describe, expect, it } from "bun:test";
 import { generateUnits } from "@/lib/api/lodging-units";
 
 // ============================================================================
-// Naming the units of a lodging type, against MoéGo's own worked examples.
+// Naming the units of a lodging type, against the reference's own worked
+// examples.
 //
 // This is pure arithmetic over strings with no database and no browser, which
 // is what tests/unit/ is for. The e2e proves a unit created here can be booked
 // into; this proves it is called the right thing.
 // ============================================================================
 
-describe("MoéGo's own examples", () => {
+describe("The reference's own examples", () => {
   it('gives bare numbers with no prefix — "1, 2, 3"', () => {
     const units = generateUnits({ count: 3 }, "cat-vip");
     expect(units.map((u) => u.name)).toEqual(["1", "2", "3"]);
@@ -36,7 +37,7 @@ describe("MoéGo's own examples", () => {
 
 describe("padding is derived from the run, not asked for", () => {
   it("does not pad a run that never needs it", () => {
-    // Three units are "1, 2, 3" and not "01, 02, 03" — MoéGo's example.
+    // Three units are "1, 2, 3" and not "01, 02, 03" — the reference's example.
     expect(generateUnits({ count: 3 }, "c").map((u) => u.name)).toEqual([
       "1",
       "2",

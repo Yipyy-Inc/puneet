@@ -663,8 +663,8 @@ function isDue(workflow: WorkflowRow, zone: string): boolean {
       Date.UTC(asUtc.getUTCFullYear(), asUtc.getUTCMonth() + 1, 0),
     ).getUTCDate();
     // "Monthly on the 31st" in a month that has no 31st runs on its last day,
-    // rather than being skipped — the behaviour MoeGo documents, and the one
-    // people expect when they pick the end of the month.
+    // rather than being skipped — the behaviour the reference documents, and
+    // the one people expect when they pick the end of the month.
     return dayOfMonth === Math.min(wanted, lastOfMonth);
   }
 

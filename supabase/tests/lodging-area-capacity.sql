@@ -13,12 +13,12 @@
 -- A1  It counts PETS, not stays. One stay of five pets fills a five-pet area,
 --     even though it is a single row — which is the difference from a room.
 -- A2  The CHECK-OUT DAY IS FREE. An area at its maximum accepts a stay
---     starting the day the others leave. MoéGo says pets checking out that
---     date are not counted, and the half-open range already says it.
+--     starting the day the others leave. The reference says pets checking out
+--     that date are not counted, and the half-open range already says it.
 -- A3  A recorded override still gets in, the same hatch a room has.
 -- A4  A cancelled stay frees its pets.
--- A5  `lodging_occupancy` answers X of Y in MoéGo's shape for both kinds, and
---     anon can call neither it nor the counting function.
+-- A5  `lodging_occupancy` answers X of Y in the reference's shape for both
+--     kinds, and anon can call neither it nor the counting function.
 --
 -- ── WHICH OF THESE ACTUALLY PROVE THE TRIGGER ─────────────────────────────
 --
@@ -211,8 +211,8 @@ begin
   perform pg_temp.stay('lac-yard-1', '2027-08-01', '2027-08-05', 6, 0);
 
   begin
-    -- They leave on the 5th; these arrive on the 5th. MoeGo: "pets scheduled
-    -- to check out on that date are not counted toward occupancy."
+    -- They leave on the 5th; these arrive on the 5th. The reference: "pets
+    -- scheduled to check out on that date are not counted toward occupancy."
     perform pg_temp.stay('lac-yard-1', '2027-08-05', '2027-08-08', 4, 6);
     v_ok := true;
   exception when others then

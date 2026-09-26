@@ -83,8 +83,8 @@ export interface BoardingPricing {
   /**
    * Summed over the DISTINCT rooms the stay occupies.
    *
-   * Per NIGHT or per DAY according to `unit` — MoéGo lets a facility charge
-   * either, and "Monday to Wednesday is 2 nights or 3 days".
+   * Per NIGHT or per DAY according to `unit` — the reference lets a facility
+   * charge either, and "Monday to Wednesday is 2 nights or 3 days".
    */
   perUnit: number;
   /** Which quantity `perUnit` is multiplied by. `night` unless a service says. */

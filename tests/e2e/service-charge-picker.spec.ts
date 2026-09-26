@@ -3,12 +3,12 @@ import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
-// "ADD SERVICE CHARGES" — MoéGo's picker, and the once-per-appointment rule
-// made VISIBLE.
+// "ADD SERVICE CHARGES" — the reference's picker, and the once-per-appointment
+// rule made VISIBLE.
 //
-// `autoApply: "none"` is MoéGo's DEFAULT for a custom fee: somebody chooses it
-// at the till. We offered that mode in the editor, persisted it, and then had
-// nowhere to choose it from — so the default meant "never".
+// `autoApply: "none"` is the reference's DEFAULT for a custom fee: somebody
+// chooses it at the till. We offered that mode in the editor, persisted it, and
+// then had nowhere to choose it from — so the default meant "never".
 //
 // What this proves:
 //

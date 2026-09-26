@@ -140,9 +140,9 @@ export async function PATCH(
 
     // ── THE STAY RAN PAST WHAT IT PAID FOR ──────────────────────────────
     //
-    // MoéGo's auto-rollover: a pet still here past the service's ceiling
-    // plus its grace becomes the next service up, and the BILL moves with
-    // it. Best effort and never throws — a check-out that succeeded must
+    // The reference's auto-rollover: a pet still here past the service's
+    // ceiling plus its grace becomes the next service up, and the BILL moves
+    // with it. Best effort and never throws — a check-out that succeeded must
     // not be undone because a re-price failed.
     const rollover = await applyDaycareRollover(bookingId);
     if (rollover.rolled) {

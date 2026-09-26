@@ -35,7 +35,7 @@ export interface DaycarePetFacts {
   breed?: string | null;
   /** Weight in pounds, if the record has one. */
   weightLb?: number | null;
-  /** Tag ids on the pet — MoéGo's "pet codes". */
+  /** Tag ids on the pet — the reference's "pet codes". */
   petTags?: string[];
 }
 
@@ -74,7 +74,8 @@ function same(a: string, b: string): boolean {
  * not refused by a weight rule: the facility would be told the service is
  * unavailable for a reason nobody can see, and the honest answer to "is this
  * 40 lb dog allowed" is not "no" when nobody recorded the weight. Staff can
- * still pick it; MoéGo's rule is about eligibility, not about data entry.
+ * still pick it; the reference's rule is about eligibility, not about data
+ * entry.
  *
  * BLOCKED BEATS ELIGIBLE, and it is checked first. A pet carrying a blocked
  * tag is out even if it also carries an eligible one — the whole point of a
@@ -237,9 +238,10 @@ export function legacyServiceForHours(
 /**
  * Has the stay run past what this service covers, and into another one?
  *
- * MoéGo's auto-rollover. Both `maxDurationHours` and `rolloverAfterMinutes`
- * must be set — a ceiling with no rollover is just a ceiling — and the target
- * is never this service, which the table refuses outright.
+ * The reference's auto-rollover. Both `maxDurationHours` and
+ * `rolloverAfterMinutes` must be set — a ceiling with no rollover is just a
+ * ceiling — and the target is never this service, which the table refuses
+ * outright.
  */
 export function rolloverTarget(
   service: DaycareService,

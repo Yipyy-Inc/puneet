@@ -46,13 +46,14 @@ import { PetEligibility } from "@/components/facility/services/pet-eligibility";
 import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
 
 // ============================================================================
-// One daycare service, in MoéGo's own seven sections and MoéGo's own order.
+// One daycare service, in the reference's own seven sections and the
+// reference's own order.
 //
 // ── THE TWO THINGS THAT ARE NOT OBVIOUS ───────────────────────────────────
 //
 // MAX STAY DURATION is where the price stops covering the stay. Null is NO
-// ceiling and is different from 0, which the table refuses outright — MoéGo's
-// floor is thirty minutes in half-hour steps, and so is ours.
+// ceiling and is different from 0, which the table refuses outright — the
+// reference's floor is thirty minutes in half-hour steps, and so is ours.
 //
 // AUTO ROLLOVER is what happens past that ceiling: the booking BECOMES another
 // service and is re-priced. That is why the target cannot be this service —

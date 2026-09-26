@@ -35,8 +35,9 @@ export interface OccupancyKennel {
    *
    * `petName` above is the first pet of the first stay, which is all a room
    * square needs. An AREA holds several stays at once and is counted in PETS
-   * (MoeGo: "an area remains available until the number of assigned pets
-   * reaches the maximum limit"), so the count cannot be derived from one row.
+   * (the reference: "an area remains available until the number of assigned
+   * pets reaches the maximum limit"), so the count cannot be derived from one
+   * row.
    */
   petCount?: number;
   /**

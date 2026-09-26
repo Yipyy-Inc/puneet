@@ -45,7 +45,7 @@ export interface BoardingPetFacts {
   breed?: string | null;
   /** Weight in pounds, if the record has one. */
   weightLb?: number | null;
-  /** Tag ids on the pet — MoéGo's "pet codes". */
+  /** Tag ids on the pet — the reference's "pet codes". */
   petTags?: string[];
 }
 
@@ -176,8 +176,8 @@ export function isBoardingServiceOfferedAt(
 /**
  * May this service be booked into this lodging type?
  *
- * MoéGo: "By default all lodging types are selected. Toggle off All Lodging
- * Types to limit." EMPTY MEANS EVERY TYPE.
+ * The reference: "By default all lodging types are selected. Toggle off All
+ * Lodging Types to limit." EMPTY MEANS EVERY TYPE.
  *
  * Asking about NO type is a yes: the wizard picks the service before the
  * kennel, so at that moment nothing has been chosen to contradict.
@@ -328,9 +328,9 @@ export function resolveBoardingService(
 /**
  * How many units a stay is charged for.
  *
- * MoéGo, verbatim, because it is the whole reason `unit` exists: "Monday to
- * Wednesday is 2 nights or 3 days". Per night counts the nights slept; per day
- * counts the calendar days touched, which is one more.
+ * The reference, verbatim, because it is the whole reason `unit` exists:
+ * "Monday to Wednesday is 2 nights or 3 days". Per night counts the nights
+ * slept; per day counts the calendar days touched, which is one more.
  *
  * A same-day stay is ONE of either — never zero. That matches what
  * `boardingPricing` has always done with `Math.max(nights, 1)`, and a zero

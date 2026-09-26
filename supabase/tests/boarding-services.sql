@@ -23,7 +23,8 @@
 --     caller naming another facility is overwritten, not trusted.
 -- S6  THE PERMISSION SPLIT: the service is `manage_services` and the price is
 --     `manage_RATES`. Creating a menu and pricing it are different jobs.
--- S7  A default add-on is billed per MoéGo's four schedules and no others.
+-- S7  A default add-on is billed per the reference's four schedules and no
+--     others.
 -- S8  No policy is open to anon, and RLS is on for all four tables.
 -- ============================================================================
 
@@ -236,7 +237,7 @@ begin
     (service_id, facility_id, addon_id, applies_on, quantity_per_day, min_nights)
   values (v_svc, v_fac, 'addon-nail-trim', 'last_day', 1, 3);
 
-  -- MoeGo's four schedules and no others.
+  -- The reference's four schedules and no others.
   begin
     insert into public.boarding_service_default_addons
       (service_id, facility_id, addon_id, applies_on)
@@ -256,7 +257,7 @@ begin
   end;
 
   perform pg_temp.t(7,
-    'a default add-on takes one of MoeGo four schedules, and is attached once',
+    'a default add-on takes one of the four schedules, and is attached once',
     v_ok and v_dup,
     format('bad schedule refused=%s duplicate refused=%s', v_ok, v_dup));
 end $$;

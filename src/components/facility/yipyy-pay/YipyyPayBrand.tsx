@@ -11,7 +11,7 @@ import { useSettingsText } from "@/lib/settings/use-settings-text";
 // the notice on the step that hands the facility over, and the screen they land
 // on coming back. That is a product decision, not a styling one:
 // the facility buys Yipyy Pay, and the processor behind it is an attribution,
-// the way MoeGo shows "Powered by Stripe" at setup and nowhere else.
+// the way the reference shows "Powered by Stripe" at setup and nowhere else.
 //
 // One component makes the rule visible and countable. Four hand-rolled badges
 // would drift into five, and the fifth is the one that turns an attribution

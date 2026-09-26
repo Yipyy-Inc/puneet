@@ -1,8 +1,8 @@
 // ============================================================================
-// NAMING THE UNITS OF A LODGING TYPE, THE WAY MoéGo NAMES THEM.
+// NAMING THE UNITS OF A LODGING TYPE, THE WAY THE REFERENCE NAMES THEM.
 //
-// MoéGo's "Add lodging" offers two ways in, and this is the second — the bulk
-// one:
+// The reference's "Add lodging" offers two ways in, and this is the second —
+// the bulk one:
 //
 //   "Input total unit quantity: number of unit you have under this lodging
 //    type. Prefix: Refers to the initial part of the unit name, such as 'Room'
@@ -23,21 +23,25 @@
 // for them and they renamed every unit afterwards.
 //
 // So the prefix is now theirs, the first number is theirs, and NEITHER is
-// required: leaving both alone reproduces MoéGo's "1, 2, 3".
+// required: leaving both alone reproduces the reference's "1, 2, 3".
 //
 // ── PADDING IS DERIVED, NOT ASKED FOR ─────────────────────────────────────
 //
-// MoéGo writes "Room001" in its own prose and "Room 101" in its example, which
-// are different paddings — because the padding is a consequence of the numbers,
-// not a separate question. A run that reaches 3 needs no padding; one that
-// reaches 116 needs three digits so the list sorts. So it is taken from the
-// LAST number in the run, and every unit in one run is padded alike.
+// The reference writes "Room001" in its own prose and "Room 101" in its
+// example, which are different paddings — because the padding is a consequence
+// of the numbers, not a separate question. A run that reaches 3 needs no
+// padding; one that reaches 116 needs three digits so the list sorts. So it is
+// taken from the LAST number in the run, and every unit in one run is padded
+// alike.
 // ============================================================================
 
 export interface UnitNaming {
   /** How many units to make. */
   count: number;
-  /** MoéGo's Prefix. Empty or absent gives bare numbers, as MoéGo's does. */
+  /**
+   * The reference's Prefix. Empty or absent gives bare numbers, as the
+   * reference's does.
+   */
   prefix?: string;
   /** The first number. Absent means 1. */
   start?: number;

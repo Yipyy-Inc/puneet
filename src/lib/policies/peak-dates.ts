@@ -26,7 +26,8 @@ import { appliesToService } from "@/lib/policies/time-fee";
 // ── TWO FIELDS WERE DECLARED AND NEVER IMPLEMENTED ────────────────────────
 //
 // `repeatPattern` and `chargePerLodging` have been in `peakSurchargeSchema`
-// since the MoéGo parity pass, and until now NOTHING read either of them.
+// since the parity pass against the reference, and until now NOTHING read
+// either of them.
 //
 // `repeatPattern` was the more dangerous of the two. A rule with
 // `dateMode: "repeat"` fell through to the plain start/end span, so "surcharge

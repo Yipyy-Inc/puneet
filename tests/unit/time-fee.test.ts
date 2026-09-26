@@ -581,11 +581,12 @@ describe("the facility's timezone, not the browser's", () => {
 });
 
 describe("stacking, when the facility opts in", () => {
-  // MoéGo's default is one fee per pickup and stacking is an opt-in their
-  // support has to switch on, because the whole point of the default is that
-  // "this keeps invoices predictable and prevents accidental overcharging".
-  // So the interesting assertions are that the SAME booking costs different
-  // amounts with the flag on and off, and that off is the default.
+  // The reference's default is one fee per pickup and stacking is an opt-in
+  // their support has to switch on, because the whole point of the default is
+  // that "this keeps invoices predictable and prevents accidental
+  // overcharging". So the interesting assertions are that the SAME booking
+  // costs different amounts with the flag on and off, and that off is the
+  // default.
   const two = [
     fee({ id: "six", customTime: "18:00", feeType: "flat", amount: 10 }),
     fee({ id: "eight", customTime: "20:00", feeType: "flat", amount: 25 }),

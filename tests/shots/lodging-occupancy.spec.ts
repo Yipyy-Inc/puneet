@@ -7,7 +7,7 @@ import { ACCOUNTS, signIn } from "../e2e/_auth";
 //
 // Phase 7 changed two numbers on this screen and nothing else:
 //
-//   · the per-date column, from a bare "60%" to MoéGo's "3/5 (60%)";
+//   · the per-date column, from a bare "60%" to the reference's "3/5 (60%)";
 //   · the per-type header, which now counts an AREA in PETS rather than in
 //     rooms and says so.
 //
@@ -32,7 +32,7 @@ import { ACCOUNTS, signIn } from "../e2e/_auth";
 
 const OUT = "C:/tmp/pwv/shots";
 
-/** MoéGo's format, and the whole reason this spec exists. */
+/** The reference's format, and the whole reason this spec exists. */
 const X_OF_Y = /\d+\/\d+\s*\(\d+%\)/;
 
 async function openLodgingView(page: Page) {

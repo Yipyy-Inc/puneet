@@ -279,9 +279,9 @@ test.describe("a facility's service charges", () => {
   });
 
   test("an exempt fee is owed but not taxed", async ({ page }) => {
-    // MoéGo configures tax per fee. Ours is a boolean rather than a rate —
-    // the facility's own tax settings decide the rate, and a second one with
-    // no name or registration number is worse than none.
+    // The reference configures tax per fee. Ours is a boolean rather than a
+    // rate — the facility's own tax settings decide the rate, and a second one
+    // with no name or registration number is worse than none.
     //
     // The pair of numbers is the whole point: the customer still owes the
     // fee, and the government still does not get tax on it.

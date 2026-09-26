@@ -351,7 +351,7 @@ export interface MembershipPlan {
   isActive: boolean;
   subscriberCount: number;
   createdAt: string;
-  // MoeGo-workflow extensions
+  // Extensions for the reference's workflow
   billingCycle: MembershipBillingCycle;
   weeklyBillingDay?: WeeklyBillingDay;
   weeklyBillingTime?: string; // "HH:mm"

@@ -1,7 +1,7 @@
 import type { RoomCategory } from "@/types/rooms";
 
 // ============================================================================
-// HOW FULL A LODGING TYPE IS — counted the way MoéGo counts it.
+// HOW FULL A LODGING TYPE IS — counted the way the reference counts it.
 //
 // ── WHY THIS EXISTS, AND WHAT WAS WRONG WITHOUT IT ────────────────────────
 //
@@ -17,7 +17,7 @@ import type { RoomCategory } from "@/types/rooms";
 // that is stored, enforced and editable, and decides nothing where anyone can
 // see it.
 //
-// ── MoéGo'S OWN TWO SENTENCES ─────────────────────────────────────────────
+// ── THE REFERENCE'S OWN TWO SENTENCES ────────────────────────────────────────
 //
 // ROOM / KENNEL: "Capacity is based on individual rooms. Once a pet (or pet
 // family) is assigned to a lodging, it is considered fully occupied."

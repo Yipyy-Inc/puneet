@@ -742,8 +742,8 @@ export const SETTING_DOMAINS = {
   },
   // ── THE LODGINGS THEMSELVES ────────────────────────────────────────────
   //
-  // MoeGo keeps the checkout cut-off at Settings > Lodgings, beside "Manage
-  // lodging type", and so does this. NOT on boarding_config: that is
+  // The reference keeps the checkout cut-off at Settings > Lodgings, beside
+  // "Manage lodging type", and so does this. NOT on boarding_config: that is
   // moduleConfigSchema, which daycare and grooming share, so a boarding-only
   // field there would appear on three modules and be read by one.
   lodging_config: {

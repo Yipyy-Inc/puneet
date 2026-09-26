@@ -305,9 +305,10 @@ export function KennelCalendarView({
 
   // ── Per-day occupancy across the visible roster (excludes blocked rooms) ─
   //
-  // X / Y (%), which is MoéGo's format and replaces a bare percentage: "60%"
-  // does not tell a receptionist whether three of five or thirty of fifty are
-  // free, and the two are different conversations with somebody on the phone.
+  // X / Y (%), which is the reference's format and replaces a bare percentage:
+  // "60%" does not tell a receptionist whether three of five or thirty of fifty
+  // are free, and the two are different conversations with somebody on the
+  // phone.
   //
   // COUNTED IN SPACES, deliberately, even where a type is an area. This column
   // spans every lodging type on screen at once, and adding pet places to
@@ -335,11 +336,11 @@ export function KennelCalendarView({
   // ── Per-category occupancy across the visible range ─────────────────────
   //
   // COUNTED THE WAY THE TYPE IS COUNTED. A room type is counted in rooms; an
-  // AREA is counted in pets, because MoéGo's area "remains available until the
-  // number of assigned pets reaches the maximum limit". Until this used
-  // `lodgingOccupancy`, a yard with room for twelve dogs read 100% the moment
-  // one arrived — `space_type` was stored, enforced by a trigger and editable
-  // on the setup screen, and decided nothing anybody could see.
+  // AREA is counted in pets, because the reference's area "remains available
+  // until the number of assigned pets reaches the maximum limit". Until this
+  // used `lodgingOccupancy`, a yard with room for twelve dogs read 100% the
+  // moment one arrived — `space_type` was stored, enforced by a trigger and
+  // editable on the setup screen, and decided nothing anybody could see.
   const categoryOccupancy = useMemo(() => {
     const map = new Map<string, LodgingOccupancy>();
     const rangeStart = toLocalISODate(dates[0]);
@@ -851,9 +852,9 @@ export function KennelCalendarView({
                               : "text-emerald-600",
                         )}
                       >
-                        {/* MoéGo's own format. A bare percentage cannot tell a
-                            receptionist whether three of five or thirty of
-                            fifty are free, and those are different
+                        {/* The reference's own format. A bare percentage
+                            cannot tell a receptionist whether three of five
+                            or thirty of fifty are free, and those are different
                             conversations with somebody on the phone. */}
                         <span className="tabular-nums">
                           {occupancy?.used ?? 0}/{occupancy?.capacity ?? 0}

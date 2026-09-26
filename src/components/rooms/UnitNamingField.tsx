@@ -10,9 +10,9 @@ import { useStaffText } from "@/lib/staff/use-staff-text";
 // ============================================================================
 // ADD LODGING — how many units, called what.
 //
-// MoéGo: "Input total unit quantity… Prefix: Refers to the initial part of the
-// unit name, such as 'Room' in 'Room001', and includes the starting number for
-// auto-generated room codes (e.g., Room 101, Room 102, etc.)."
+// The reference: "Input total unit quantity… Prefix: Refers to the initial part
+// of the unit name, such as 'Room' in 'Room001', and includes the starting
+// number for auto-generated room codes (e.g., Room 101, Room 102, etc.)."
 //
 // ── WHAT THIS REPLACES ────────────────────────────────────────────────────
 //

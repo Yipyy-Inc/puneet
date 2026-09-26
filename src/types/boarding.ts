@@ -288,7 +288,7 @@ export const peakSurchargeSchema = z
     endDate: z.string(),
     surchargePercent: z.number(),
     isActive: z.boolean(),
-    // MoéGo parity fields
+    // Fields for parity with the reference
     dateMode: z.enum(["specific", "repeat", "holiday"]).optional(),
     dateRanges: z.array(peakDateRangeSchema).optional(),
     repeatPattern: peakRepeatPatternSchema.optional(),

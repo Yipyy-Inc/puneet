@@ -62,7 +62,7 @@ export interface RoomCategory {
   sortOrder: number;
   rules: RoomRule[];
   /**
-   * MoeGo Space type: how this lodging type counts capacity.
+   * The reference's Space type: how this lodging type counts capacity.
    *
    * `room` — "Capacity is based on individual rooms. Once a pet (or pet
    * family) is assigned to a lodging, it is considered fully occupied. (Only
@@ -76,7 +76,8 @@ export interface RoomCategory {
    */
   spaceType?: "room" | "area";
   /**
-   * MoeGo "Max # of pets per area" — pets at once, regardless of family.
+   * The reference's "Max # of pets per area" — pets at once, regardless of
+   * family.
    *
    * Only for an area, and REQUIRED for one: the database refuses an area
    * without it and a room that carries one (room_categories_area_max_pets),
@@ -84,7 +85,7 @@ export interface RoomCategory {
    */
   maxPetsPerArea?: number;
   /**
-   * Pets per unit. For a room type this is MoeGo's "Max # of Pets (same
+   * Pets per unit. For a room type this is the reference's "Max # of Pets (same
    * family) per room"; an area counts with `maxPetsPerArea` instead.
    */
   defaultCapacity: number;

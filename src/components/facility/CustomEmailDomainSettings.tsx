@@ -27,11 +27,11 @@ import {
 //
 // ── AND THE DNS RECORDS NAMED A COMPETITOR ────────────────────────────────
 //
-// The three records it told a facility to paste into their own DNS zone were
-// `moego._domainkey.…`, `v=spf1 include:spf.moego.pet ~all` and a CNAME to
-// `mail.moego.pet`. MoeGo is a competing pet-services product. Anybody who
-// followed those instructions would have pointed their SPF and DKIM at another
-// company's mail infrastructure.
+// The three records it told a facility to paste into their own DNS zone — a
+// DKIM key, an SPF include and a CNAME — all named the mail domain of a
+// competing pet-services product. Anybody who followed those instructions
+// would have pointed their SPF and DKIM at another company's mail
+// infrastructure.
 //
 // ── WHY THIS IS THE RIGHT ANSWER AND NOT A REGRESSION ────────────────────
 //

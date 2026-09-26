@@ -258,8 +258,8 @@ describe("auto rollover", () => {
       rolloverAfterMinutes: 30,
       rolloverToServiceId: "row-full",
     });
-    // MoéGo's own example: a 4-hour service with 30 minutes of grace becomes
-    // Full Day at 4 h 30, so 4 h 29 is still a half day.
+    // The reference's own example: a 4-hour service with 30 minutes of grace
+    // becomes Full Day at 4 h 30, so 4 h 29 is still a half day.
     expect(rolloverTarget(half, [half, full], 4)).toBeNull();
     expect(rolloverTarget(half, [half, full], 4.5)).toBeNull();
     expect(rolloverTarget(half, [half, full], 4.51)?.id).toBe("full");

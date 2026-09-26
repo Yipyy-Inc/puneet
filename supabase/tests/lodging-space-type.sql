@@ -202,7 +202,7 @@ begin
 
   begin
     -- Half-open [): the day one guest leaves is the day the next may arrive.
-    -- MoeGo says the same thing as "pets checking out that date are not
+    -- The reference says the same thing as "pets checking out that date are not
     -- counted toward occupancy".
     perform pg_temp.stay('lst-room-1', '2027-03-05', '2027-03-08');
     v_adjacent := true;

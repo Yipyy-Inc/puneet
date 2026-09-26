@@ -9,8 +9,8 @@ import type { PeakSurcharge } from "@/types/boarding";
 
 // ── WHAT THESE PIN ────────────────────────────────────────────────────────
 //
-// Three rules MoéGo's peak-dates pricing states and this product did not
-// implement, each of which decides money:
+// Three rules the reference's peak-dates pricing states and this product did
+// not implement, each of which decides money:
 //
 //   1. Overlapping rules charge the HIGHEST on a date, not the sum. The old
 //      evaluator pushed an adjustment per matching rule, so a guest inside two
@@ -102,7 +102,8 @@ describe("the arithmetic that must not have moved", () => {
   });
 
   test("several date ranges in one rule all charge", () => {
-    // MoéGo: "the surcharge will be applied for all included date ranges".
+    // The reference: "the surcharge will be applied for all included date
+    // ranges".
     const charges = resolvePeakDateCharges(
       [
         rule({
@@ -154,8 +155,8 @@ describe("the arithmetic that must not have moved", () => {
 });
 
 describe("two rules over the same night", () => {
-  // MoéGo: "If multiple Peak Date rules overlap on the same date, the system
-  // will automatically apply the highest surcharge." The old evaluator
+  // The reference: "If multiple Peak Date rules overlap on the same date, the
+  // system will automatically apply the highest surcharge." The old evaluator
   // charged both, every time.
   test("the dearer one wins, and the cheaper adds nothing", () => {
     const cheap = rule({ id: "cheap", name: "Cheap", surchargeAmount: 10 });
@@ -301,8 +302,8 @@ describe("repeat dates", () => {
 });
 
 describe("charge per lodging", () => {
-  // MoéGo offers it under "For first pet" only: it widens the charge from one
-  // per booking to one per lodging.
+  // The reference offers it under "For first pet" only: it widens the charge
+  // from one per booking to one per lodging.
   test("first pet only, per lodging, charges once for each room", () => {
     const charges = resolvePeakDateCharges(
       [rule({ scope: "first_pet_only", chargePerLodging: true })],

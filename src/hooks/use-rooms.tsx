@@ -64,7 +64,10 @@ interface RoomsContextValue {
   // Category CRUD
   addCategory: (
     category: RoomCategory,
-    /** MoéGo's quantity, prefix and starting number for the first units. */
+    /**
+     * The reference's quantity, prefix and starting number for the first
+     * units.
+     */
     naming?: UnitNaming,
   ) => Promise<RoomWrite>;
   updateCategory: (category: RoomCategory) => Promise<RoomWrite>;

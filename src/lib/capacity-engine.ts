@@ -345,11 +345,11 @@ export function getBoardingCategoryAvailability(
 
       // ── AN AREA IS COUNTED IN PETS, NOT IN UNITS ────────────────────────
       //
-      // MoéGo: "An area remains available until the number of assigned pets
-      // reaches the maximum limit." So a yard is not full because somebody is
-      // in it — it is full at `maxPetsPerArea` PER UNIT, which is exactly how
-      // `private.boarding_area_within_capacity` enforces it. And a ROOM is
-      // full once any family is in it. `unitHasRoomFor` holds both rules.
+      // The reference: "An area remains available until the number of assigned
+      // pets reaches the maximum limit." So a yard is not full because somebody
+      // is in it — it is full at `maxPetsPerArea` PER UNIT, which is exactly
+      // how `private.boarding_area_within_capacity` enforces it. And a ROOM
+      // is full once any family is in it. `unitHasRoomFor` holds both rules.
       const availableUnits = activeUnits.filter((unit) =>
         unitHasRoomFor({ unit, category: cat, startDate, endDate, bookings }),
       ).length;

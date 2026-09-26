@@ -597,7 +597,7 @@
             ><b>Baseline</b>puneet-blue.vercel.app ·
             /marketing/reputation-booster</span
           >
-          <span><b>Benchmark</b>MoeGo Review Booster</span>
+          <span><b>Benchmark</b>The reference's review booster</span>
         </div>
       </header>
 
@@ -608,7 +608,7 @@
           <a href="#s2"><span>02</span> &nbsp;Current-state audit</a>
           <a href="#s3"><span>03</span> &nbsp;Feasibility &amp; compliance</a>
           <a href="#s4"><span>04</span> &nbsp;Config conflicts</a>
-          <a href="#s5"><span>05</span> &nbsp;MoeGo read</a>
+          <a href="#s5"><span>05</span> &nbsp;Reading the reference</a>
           <a href="#s6"><span>06</span> &nbsp;Target workflow</a>
           <a href="#s7"><span>07</span> &nbsp;Guardrail ladder</a>
           <a href="#s8"><span>08</span> &nbsp;Capture surfaces</a>
@@ -660,11 +660,12 @@
             </ol>
 
             <p>
-              v2 fixes those, then adds the one thing MoeGo does far better:
-              <strong>capture at the moment of peak engagement</strong>. MoeGo's
-              flagship customer generates 90%+ of their 1,300 reviews from a
-              Review Booster embedded in the grooming report, not from a
-              standalone SMS. Yipyy has no equivalent surface.
+              v2 fixes those, then adds the one thing the reference does far
+              better:
+              <strong>capture at the moment of peak engagement</strong>. The
+              reference's flagship customer generates 90%+ of their 1,300
+              reviews from a Review Booster embedded in the grooming report, not
+              from a standalone SMS. Yipyy has no equivalent surface.
             </p>
 
             <div class="box good">
@@ -684,7 +685,7 @@
               compliance risk &nbsp;·&nbsp;
               <span class="id id-x">X-nn</span> configuration or UX
               contradiction &nbsp;·&nbsp;
-              <span class="id id-g">G-nn</span> capability gap vs MoeGo
+              <span class="id id-g">G-nn</span> capability gap vs the reference
             </p>
             <p>
               Every ID recurs in the phase plan (§16) and the QA matrix (§17),
@@ -1379,10 +1380,11 @@
           <!-- ================= 05 ================= -->
           <section id="s5">
             <h2>
-              <span class="num">05</span>Reading MoeGo — take, beat, avoid
+              <span class="num">05</span>Reading the reference — take, beat,
+              avoid
             </h2>
 
-            <h4>Take — capabilities MoeGo has that Yipyy lacks</h4>
+            <h4>Take — capabilities the reference has that Yipyy lacks</h4>
             <div class="tw">
               <table>
                 <thead>
@@ -1399,8 +1401,8 @@
                       <strong
                         >Review request embedded in the report card.</strong
                       >
-                      MoeGo puts the rating widget inside the grooming report
-                      the client is already opening.
+                      The reference puts the rating widget inside the grooming
+                      report the client is already opening.
                     </td>
                     <td>
                       Their published case study attributes 90%+ of 1,300+
@@ -1479,31 +1481,32 @@
               </table>
             </div>
 
-            <h4>Beat — where MoeGo is weak</h4>
+            <h4>Beat — where the reference is weak</h4>
             <ul>
               <li>
-                <strong>Fragile rating detection.</strong> MoeGo's inline rating
-                only works if the client replies directly, within 24 hours, with
-                no other message in between. Yipyy should use a 72-hour window,
-                keep an open rating expectation on the conversation that
-                survives interleaved messages, accept digits, words, emoji and
-                star counts, and ask once for confirmation when ambiguous.
+                <strong>Fragile rating detection.</strong> The reference's
+                inline rating only works if the client replies directly, within
+                24 hours, with no other message in between. Yipyy should use a
+                72-hour window, keep an open rating expectation on the
+                conversation that survives interleaved messages, accept digits,
+                words, emoji and star counts, and ask once for confirmation when
+                ambiguous.
               </li>
               <li>
-                <strong>Report card review booster is SMS-only</strong> in MoeGo
-                — explicitly unsupported on email report cards. Yipyy's embed
-                should work on both.
+                <strong>Report card review booster is SMS-only</strong> in the
+                reference — explicitly unsupported on email report cards.
+                Yipyy's embed should work on both.
               </li>
               <li>
-                <strong>MoeGo gates.</strong> "Send review link when rating = 5
-                / 4 and above / 3 and above" is exactly the pattern described in
-                <span class="id id-r">R-01</span>. Do not copy it. Open routing
-                is both safer and, in practice, higher-yield because the
-                eligible pool is larger.
+                <strong>The reference gates.</strong> "Send review link when
+                rating = 5 / 4 and above / 3 and above" is exactly the pattern
+                described in <span class="id id-r">R-01</span>. Do not copy it.
+                Open routing is both safer and, in practice, higher-yield
+                because the eligible pool is larger.
               </li>
               <li>
-                <strong>No recovery workflow.</strong> MoeGo sends a "sorry to
-                hear that" reply and stops. Yipyy's escalation ledger,
+                <strong>No recovery workflow.</strong> The reference sends a
+                "sorry to hear that" reply and stops. Yipyy's escalation ledger,
                 per-service routing and protection rules are already ahead —
                 finish them with SLAs and a resolution loop.
               </li>
@@ -2455,8 +2458,8 @@
               <figcaption>
                 <b>Fig 3.</b> Quiet hours is the only check that reschedules
                 instead of suppressing. Every suppression writes a row — this is
-                what makes the new <b>Suppressions</b> view possible, and MoeGo
-                has no equivalent.
+                what makes the new <b>Suppressions</b> view possible, and the
+                reference has no equivalent.
               </figcaption>
             </figure>
 
@@ -2707,7 +2710,7 @@
               <li>
                 Open a <code>rating_expectation</code> on the conversation with
                 a <strong>72-hour</strong> TTL. It survives interleaved messages
-                — this is where MoeGo breaks.
+                — this is where the reference breaks.
               </li>
               <li>
                 Accept: digits <code>1–5</code>, words in the client's locale
@@ -3267,9 +3270,9 @@
               <span class="num">11</span>Escalation &amp; service recovery
             </h2>
             <p class="lede">
-              This is Yipyy's strongest differentiator against MoeGo, which does
-              nothing beyond an automated apology reply. Finishing it means
-              adding time pressure and a closing loop.
+              This is Yipyy's strongest differentiator against the reference,
+              which does nothing beyond an automated apology reply. Finishing it
+              means adding time pressure and a closing loop.
             </p>
 
             <figure>
@@ -4332,7 +4335,7 @@
                     <td><strong>Report card</strong></td>
                     <td>
                       New embed: stars → tags → comment → routing. Works on SMS
-                      and email. Beats MoeGo, which supports SMS only.
+                      and email. Beats the reference, which supports SMS only.
                     </td>
                     <td class="m">G-01 G-02</td>
                   </tr>
@@ -4382,7 +4385,7 @@
               </div>
               <div class="ph">
                 <div class="k">P1 · CAPTURE</div>
-                <div class="t">Close the MoeGo gap</div>
+                <div class="t">Close the gap with the reference</div>
                 <p>
                   Visit aggregate and dedupe, report-card embed on SMS and
                   email, tag catalog, inline SMS 1–5 parser, manual send, source
@@ -4598,7 +4601,7 @@
                     </td>
                     <td>
                       Rating captured — the interleaved message does not break
-                      detection (MoeGo fails this)
+                      detection (the reference fails this)
                     </td>
                   </tr>
                   <tr>
@@ -4613,8 +4616,8 @@
                     <td class="m">G-01</td>
                     <td>Report card delivered by email</td>
                     <td>
-                      Rating widget renders and submits (MoeGo supports SMS
-                      only)
+                      Rating widget renders and submits (the reference supports
+                      SMS only)
                     </td>
                   </tr>
                   <tr>

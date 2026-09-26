@@ -7,8 +7,8 @@
 //
 // ── WHAT IS DIFFERENT FROM DAYCARE, AND WHY ───────────────────────────────
 //
-// `unit`. A boarding service is priced per NIGHT or per DAY, and MoéGo is
-// explicit that the two are different numbers for the same stay: "Monday to
+// `unit`. A boarding service is priced per NIGHT or per DAY, and the reference
+// is explicit that the two are different numbers for the same stay: "Monday to
 // Wednesday is 2 nights or 3 days". Which one a facility charges is theirs to
 // say, so the unit travels with the price and `stayUnits` below is the only
 // place that turns a date range into a quantity.
@@ -32,7 +32,9 @@ import {
 export type BoardingServiceUpdate =
   Database["public"]["Tables"]["boarding_services"]["Update"];
 
-/** Per night, or per day. MoéGo asks the facility which, and means it. */
+/**
+ * Per night, or per day. The reference asks the facility which, and means it.
+ */
 export type BoardingPriceUnit =
   Database["public"]["Enums"]["boarding_price_unit"];
 

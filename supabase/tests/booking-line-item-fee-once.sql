@@ -16,7 +16,7 @@
 --     revenue stops being billable. NULLs are distinct in Postgres; this
 --     proves it rather than trusting it.
 -- F1  The same fee twice on one booking is refused (23505). That refusal IS
---     MoéGo's "each fee can only be added once per appointment".
+--     the reference's "each fee can only be added once per appointment".
 -- F2  The same fee on a DIFFERENT booking is fine — the rule is per booking,
 --     not per facility.
 -- F3  Two DIFFERENT fees on one booking are fine.

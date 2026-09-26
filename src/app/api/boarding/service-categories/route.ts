@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/facility-context";
 
 // ============================================================================
-// How a facility groups its boarding menu (MoéGo's "Category").
+// How a facility groups its boarding menu (the reference's "Category").
 //
 // Presentation, never eligibility or price: a category decides where a service
 // sits on the list and nothing else. A service whose category is deleted keeps

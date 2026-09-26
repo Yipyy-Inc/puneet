@@ -13,7 +13,7 @@ interface Props {
 
 /**
  * Single ordered list (smallest face value → largest). Deliberately not split
- * into Coins / Bills sub-sections to differentiate from the MoeGo layout.
+ * into Coins / Bills sub-sections to differentiate from the reference's layout.
  */
 export function DenominationInput({
   denominations,

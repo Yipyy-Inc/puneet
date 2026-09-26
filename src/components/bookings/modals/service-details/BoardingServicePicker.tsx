@@ -164,7 +164,7 @@ export function BoardingServicePicker({
                   <span className="block text-[15px] font-bold tabular-nums">
                     {money(service.price)}
                   </span>
-                  {/* The unit is half of the price. MoéGo: "Monday to
+                  {/* The unit is half of the price. The reference: "Monday to
                       Wednesday is 2 nights or 3 days", and which one a
                       facility charges is theirs to say — so it is never
                       implied, it is written beside the number. */}

@@ -52,7 +52,7 @@ function service(over: Partial<BoardingService> = {}): BoardingService {
   };
 }
 
-describe("stayUnits — MoéGo's own example", () => {
+describe("stayUnits — the reference's own example", () => {
   // "Monday to Wednesday is 2 nights or 3 days." This is the whole reason the
   // `unit` column exists, so it is the first thing asserted.
   test("Monday to Wednesday is 2 nights", () => {

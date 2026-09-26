@@ -25,9 +25,11 @@ export const dynamic = "force-dynamic";
 
 interface CategoryInput extends Partial<RoomCategory> {
   unitCount?: number;
-  /** MoéGo's Prefix — "Room" in "Room 101". Absent gives bare numbers. */
+  /**
+   * The reference's Prefix — "Room" in "Room 101". Absent gives bare numbers.
+   */
   unitPrefix?: string;
-  /** MoéGo's starting number. Absent means 1. */
+  /** The reference's starting number. Absent means 1. */
   unitStart?: number;
 }
 
@@ -109,8 +111,8 @@ export async function POST(request: NextRequest) {
       color: input.color ?? "slate",
       sort_order: (count ?? 0) + 1,
       default_capacity: input.defaultCapacity ?? 1,
-      // MoéGo's Space type. Absent is a room, which is what every category in
-      // the product was before 20260924180000.
+      // The reference's Space type. Absent is a room, which is what every
+      // category in the product was before 20260924180000.
       space_type: input.spaceType ?? "room",
       max_pets_per_area:
         input.spaceType === "area" ? (input.maxPetsPerArea ?? null) : null,
@@ -138,9 +140,9 @@ export async function POST(request: NextRequest) {
   const unitCount = input.unitCount ?? 0;
 
   if (unitCount > 0) {
-    // Named the way MoéGo names them — the facility's own prefix and starting
-    // number, not the category's name and a counter that always began at one.
-    // See lib/api/lodging-units.ts and its unit tests.
+    // Named the way the reference names them — the facility's own prefix and
+    // starting number, not the category's name and a counter that always began
+    // at one. See lib/api/lodging-units.ts and its unit tests.
     const units = generateUnits(
       {
         count: unitCount,

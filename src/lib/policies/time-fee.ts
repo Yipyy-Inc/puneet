@@ -408,9 +408,9 @@ function evaluate(fee: LatePickupFee, input: TimeFeeInput): Candidate | null {
  * actually crossed. It is OFF by default and has to be turned on deliberately,
  * which is not timidity: one pickup at 19:30 against rules at 18:00 and 19:00
  * costs one fee normally and TWO with this on, and the facility is the only
- * party who can say which they meant. MoéGo gates the same switch behind
- * contacting their support, for the same reason — their words, "this keeps
- * invoices predictable and prevents accidental overcharging".
+ * party who can say which they meant. The reference gates the same switch
+ * behind contacting their support, for the same reason — their words, "this
+ * keeps invoices predictable and prevents accidental overcharging".
  *
  * Order is kept deterministic so an invoice reads the same twice: early
  * drop-offs first, each group by the baseline crossed.
