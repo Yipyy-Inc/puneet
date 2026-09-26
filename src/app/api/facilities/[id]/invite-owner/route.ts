@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -73,7 +74,11 @@ async function requirePlatformAdmin() {
 }
 
 /** Send or re-send. Re-sending refreshes the expiry rather than adding a grant. */
-export async function POST(
+export async function POST(...args: Parameters<typeof handlePOST>) {
+  return forgettingIdentities(() => handlePOST(...args));
+}
+
+async function handlePOST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -291,7 +296,11 @@ export async function GET(
  * would not move that access one inch. It would leave the real owner signed in
  * and the record naming somebody else: a correction that corrects nothing.
  */
-export async function PATCH(
+export async function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return forgettingIdentities(() => handlePATCH(...args));
+}
+
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -332,7 +341,11 @@ export async function PATCH(
 }
 
 /** Withdraw an invitation sent to the wrong address. */
-export async function DELETE(
+export async function DELETE(...args: Parameters<typeof handleDELETE>) {
+  return forgettingIdentities(() => handleDELETE(...args));
+}
+
+async function handleDELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {

@@ -6,6 +6,11 @@ import { cookies, headers } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { DEFAULT_TIMEZONE } from "@/lib/time/facility-time";
+import {
+  IDENTITY_TTL_MS,
+  identityCache,
+  registerIdentityCache,
+} from "@/lib/auth/identity-cache";
 
 // ============================================================================
 // Which facility this request is about.
@@ -139,21 +144,70 @@ export const getFacilityContext = cache(async function getFacilityContext(
    */
   preferFacilityId?: string,
 ): Promise<FacilityContext | null> {
+  const viewer = await getViewer().catch(() => null);
+  const memberIds = [
+    ...new Set((viewer?.memberships ?? []).map((m) => m.facilityId)),
+  ];
+
+  // Everything the answer depends on is read HERE, before the cache, and goes
+  // into its key — so a remembered answer is always one this caller, on this
+  // hostname, with this switcher cookie and this branch, would have been given.
+  const slug = memberIds.length ? await facilitySlugFromRequest() : "";
+  const requestedLocationId =
+    (await headers()).get("x-yipyy-location-id") ?? "";
+
+  return contexts.get(
+    [
+      viewer?.userId ?? "anonymous",
+      memberIds.join(","),
+      preferFacilityId ?? "",
+      slug,
+      requestedLocationId,
+    ].join("|"),
+    () =>
+      readFacilityContext(
+        memberIds,
+        preferFacilityId,
+        slug,
+        requestedLocationId,
+      ),
+    (context) => context !== null,
+  );
+});
+
+/** A caller's facility context, remembered for a few seconds (identity-cache.ts). */
+const contexts = registerIdentityCache(
+  identityCache<FacilityContext | null>(IDENTITY_TTL_MS),
+);
+
+/** The facility's own row and its locations, in one read. */
+const FACILITY_WITH_LOCATIONS =
+  "id, timezone, name, legacy_id, slug, locations ( id, is_primary )";
+
+async function readFacilityContext(
+  memberIds: string[],
+  preferFacilityId: string | undefined,
+  slug: string,
+  requestedLocationId: string,
+): Promise<FacilityContext | null> {
   const supabase = await createServerClient();
 
-  const viewer = await getViewer().catch(() => null);
-  const memberFacilityIds = new Set(
-    (viewer?.memberships ?? []).map((m) => m.facilityId),
-  );
-
-  const memberIds = [...memberFacilityIds];
-
   const facility = memberIds.length
-    ? await chooseAmongMemberships(supabase, memberIds, preferFacilityId)
+    ? chooseAmongMemberships(
+        (
+          await supabase
+            .from("facilities")
+            .select(FACILITY_WITH_LOCATIONS)
+            .in("id", memberIds)
+        ).data ?? [],
+        memberIds,
+        preferFacilityId,
+        slug,
+      )
     : (
         await supabase
           .from("facilities")
-          .select("id, timezone, name, legacy_id, slug")
+          .select(FACILITY_WITH_LOCATIONS)
           .eq("legacy_id", DEMO_FACILITY_LEGACY_ID)
           .maybeSingle()
       ).data;
@@ -161,17 +215,16 @@ export const getFacilityContext = cache(async function getFacilityContext(
   if (!facility) return null;
 
   const legacyRef = Number(facility.legacy_id);
-  const locationId = await resolveLocationId(supabase, facility.id);
 
   return {
     facilityId: facility.id,
-    locationId,
+    locationId: chooseLocation(facility.locations ?? [], requestedLocationId),
     timeZone: facility.timezone ?? DEFAULT_TIMEZONE,
     name: facility.name,
     slug: facility.slug ?? "",
     legacyRef: Number.isFinite(legacyRef) ? legacyRef : null,
   };
-});
+}
 
 /**
  * Which of this facility's own locations a write should land on.
@@ -183,33 +236,17 @@ export const getFacilityContext = cache(async function getFacilityContext(
  * trusted blindly: it must name a location belonging to THIS facility, or it
  * is ignored exactly like an absent header — the same "naming something you
  * are not a member of buys a refusal, not access" posture `preferFacilityId`
- * already has above.
+ * already has above. The facility's locations arrive with its row, so this
+ * no longer asks the database twice.
  */
-async function resolveLocationId(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
-  facilityId: string,
-): Promise<string | null> {
-  const requestHeaders = await headers();
-  const requestedLocationId = requestHeaders.get("x-yipyy-location-id");
-
-  if (requestedLocationId) {
-    const { data: requested } = await supabase
-      .from("locations")
-      .select("id")
-      .eq("id", requestedLocationId)
-      .eq("facility_id", facilityId)
-      .maybeSingle();
-    if (requested) return requested.id;
-  }
-
-  const { data: primary } = await supabase
-    .from("locations")
-    .select("id")
-    .eq("facility_id", facilityId)
-    .eq("is_primary", true)
-    .maybeSingle();
-
-  return primary?.id ?? null;
+function chooseLocation(
+  locations: { id: string; is_primary: boolean | null }[],
+  requestedLocationId: string,
+): string | null {
+  const requested = requestedLocationId
+    ? locations.find((l) => l.id === requestedLocationId)
+    : undefined;
+  return requested?.id ?? locations.find((l) => l.is_primary)?.id ?? null;
 }
 
 type FacilityRow = {
@@ -218,6 +255,7 @@ type FacilityRow = {
   name: string;
   legacy_id: string | null;
   slug: string | null;
+  locations?: { id: string; is_primary: boolean | null }[] | null;
 };
 
 /**
@@ -329,23 +367,16 @@ export async function myFacilities(
 /**
  * Pick one of the caller's own facilities: asked-for, then hostname, then first.
  *
- * One query for all of them rather than one per candidate — a person with a
- * single membership pays exactly what they paid before.
+ * Given every one of them, read in one query rather than one per candidate —
+ * a person with a single membership pays exactly what they paid before.
  */
-async function chooseAmongMemberships(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
+function chooseAmongMemberships(
+  mine: FacilityRow[],
   memberIds: string[],
   preferFacilityId: string | undefined,
-): Promise<FacilityRow | null> {
-  const { data } = await supabase
-    .from("facilities")
-    .select("id, timezone, name, legacy_id, slug")
-    .in("id", memberIds);
-
-  const mine = data ?? [];
+  slug: string,
+): FacilityRow | null {
   if (mine.length === 0) return null;
-
-  const slug = await facilitySlugFromRequest();
 
   return (
     mine.find((f) => f.id === preferFacilityId) ??

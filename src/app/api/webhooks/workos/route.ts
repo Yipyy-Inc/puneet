@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { WorkOS } from "@workos-inc/node";
 import type { NextRequest } from "next/server";
 
@@ -42,7 +43,11 @@ function fullName(data: {
   return name === "" ? null : name;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(...args: Parameters<typeof handlePOST>) {
+  return forgettingIdentities(() => handlePOST(...args));
+}
+
+async function handlePOST(request: NextRequest) {
   const secret = process.env.WORKOS_WEBHOOK_SECRET;
   const apiKey = process.env.WORKOS_API_KEY;
 

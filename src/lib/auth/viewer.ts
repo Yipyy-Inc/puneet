@@ -9,6 +9,11 @@ import type {
   FacilityStaffRole,
 } from "@/types/facility-staff";
 import { createWorkosServerClient } from "@/lib/supabase/workos-server";
+import {
+  IDENTITY_TTL_MS,
+  identityCache,
+  registerIdentityCache,
+} from "@/lib/auth/identity-cache";
 
 // ============================================================================
 // Who is asking — the one place a Server Component should ask.
@@ -105,15 +110,19 @@ const ANONYMOUS: Viewer = {
   memberships: [],
 };
 
+/** One person's session, remembered for a few seconds — see identity-cache.ts. */
+const viewers = registerIdentityCache(
+  identityCache<{ viewer: Viewer; hasProfile: boolean }>(IDENTITY_TTL_MS),
+);
+
 async function viewerFromSession(): Promise<Viewer | null> {
   // WorkOS owns the subject. `user.id` here is the token's `sub` — the same
-  // value RLS reads as auth.jwt()->>'sub', which is what makes the two queries
+  // value RLS reads as auth.jwt()->>'sub', which is what makes the query
   // below return this person's rows and nobody else's. Verified against the live
   // environment before the swap: sub === user.id, and the token resolves in
   // Postgres as `authenticated` rather than `anon`.
-  const { user } = await withAuth();
+  const { user, sessionId } = await withAuth();
   if (!user) return null;
-  const userId = user.id;
 
   let supabase: ReturnType<typeof createWorkosServerClient>;
   try {
@@ -125,21 +134,45 @@ async function viewerFromSession(): Promise<Viewer | null> {
     return null;
   }
 
-  // Both reads go through RLS as the caller, not around it. `profiles_read`
-  // admits your own row and `memberships_read` your own memberships, so a
-  // tampered id returns nothing rather than someone else's tenancy.
-  const [profile, memberships] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("email, full_name, is_platform_admin")
-      .eq("id", userId)
-      .maybeSingle(),
-    supabase
-      .from("facility_memberships")
-      .select("id, facility_id, role, access_level")
-      .eq("profile_id", userId)
-      .eq("is_active", true),
-  ]);
+  // The session is part of the key, so a new sign-in — a different person,
+  // or the same one after a role change — always reads afresh. An answer
+  // without a profile row is never kept: the sign-up webhook is on its way.
+  const { viewer } = await viewers.get(
+    `${user.id}|${sessionId ?? ""}`,
+    () => readViewer(supabase, user),
+    (read) => read.hasProfile,
+  );
+  return viewer;
+}
+
+async function readViewer(
+  supabase: ReturnType<typeof createWorkosServerClient>,
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  },
+): Promise<{ viewer: Viewer; hasProfile: boolean }> {
+  const userId = user.id;
+
+  // ONE read, the memberships embedded in the profile: they hang off it by
+  // `facility_memberships.profile_id`, and a membership cannot exist without
+  // the profile it references. Still through RLS as the caller, not around
+  // it — `profiles_read` admits your own row and `memberships_read` your own
+  // memberships, so a tampered id returns nothing rather than someone else's
+  // tenancy.
+  const { data: row } = await supabase
+    .from("profiles")
+    .select(
+      "email, full_name, is_platform_admin, facility_memberships ( id, facility_id, role, access_level, is_active )",
+    )
+    .eq("id", userId)
+    .maybeSingle();
+  const profile = { data: row };
+  const memberships = {
+    data: (row?.facility_memberships ?? []).filter((m) => m.is_active),
+  };
 
   // A signed-in user with no profile row yet is a real state, not an error: the
   // sync webhook is asynchronous, so the first request after sign-up can arrive
@@ -151,7 +184,7 @@ async function viewerFromSession(): Promise<Viewer | null> {
   // do: it read the email only from `profiles`, so during that window the viewer
   // had a session and a null email. Now the profile wins when it exists and the
   // token answers when it does not.
-  return {
+  const viewer: Viewer = {
     source: "session",
     userId,
     email: profile.data?.email ?? user.email ?? null,
@@ -172,6 +205,7 @@ async function viewerFromSession(): Promise<Viewer | null> {
       accessLevel: (m.access_level ?? "staff") as FacilityAccessLevel,
     })),
   };
+  return { viewer, hasProfile: Boolean(profile.data) };
 }
 
 /**
@@ -201,6 +235,17 @@ async function viewerFromSession(): Promise<Viewer | null> {
  * the same promise, and the next request starts clean. So this cannot serve one
  * person's identity to another — the cache lives and dies with the request, and
  * there is no key to get wrong.
+ *
+ * ── AND ACROSS REQUESTS, FOR A FEW SECONDS (2026-09-26) ───────────────────
+ *
+ * Once per request was not enough. A page load is ~37 requests, and each
+ * still paid the whole chain: measured over one day, the four identity reads
+ * were 73% of 1,040,161 API requests, and log ingestion stood at 16.8 of
+ * 20 GB. So the profile and its memberships are ONE read now, and a
+ * session's answer is kept for `IDENTITY_TTL_MS` behind a key of the person
+ * AND the session (identity-cache.ts). Data access is untouched — RLS judges
+ * every query as the caller — and the app's own identity writes call
+ * `forgetIdentities()`; what can lag, by seconds, is only a portal gate.
  */
 export const getViewer = cache(async function getViewer(): Promise<Viewer> {
   return (await viewerFromSession()) ?? ANONYMOUS;

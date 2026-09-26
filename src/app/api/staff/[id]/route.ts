@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -32,7 +33,11 @@ import type { StaffProfile } from "@/types/facility-staff";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(
+export async function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return forgettingIdentities(() => handlePATCH(...args));
+}
+
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {

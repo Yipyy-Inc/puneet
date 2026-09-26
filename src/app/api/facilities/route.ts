@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -133,7 +134,11 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(...args: Parameters<typeof handlePOST>) {
+  return forgettingIdentities(() => handlePOST(...args));
+}
+
+async function handlePOST(request: NextRequest) {
   const viewer = await getViewer().catch(() => null);
   if (!viewer || viewer.source !== "session") {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });

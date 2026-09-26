@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -58,7 +59,11 @@ export async function GET() {
   return NextResponse.json(data.map(responder.toResponse));
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(...args: Parameters<typeof handlePOST>) {
+  return forgettingIdentities(() => handlePOST(...args));
+}
+
+async function handlePOST(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });

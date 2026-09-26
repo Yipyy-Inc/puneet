@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -66,7 +67,11 @@ export async function GET() {
   return NextResponse.json(rowToBusinessProfile(data as Tables<"facilities">));
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return forgettingIdentities(() => handlePATCH(...args));
+}
+
+async function handlePATCH(request: NextRequest) {
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });

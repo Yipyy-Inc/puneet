@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { getWorkOS } from "@workos-inc/authkit-nextjs";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -57,7 +58,11 @@ interface SetupBody {
   password: string;
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(...args: Parameters<typeof handlePOST>) {
+  return forgettingIdentities(() => handlePOST(...args));
+}
+
+async function handlePOST(req: NextRequest) {
   if (!hasServiceRoleKey()) {
     return NextResponse.json(
       { error: "Account setup is not configured on this environment." },

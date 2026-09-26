@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -73,7 +74,11 @@ const StatusInput = z.object({
  * to the person it happens to. This route's own check is a clearer error, not
  * the boundary.
  */
-export async function PATCH(
+export async function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return forgettingIdentities(() => handlePATCH(...args));
+}
+
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {

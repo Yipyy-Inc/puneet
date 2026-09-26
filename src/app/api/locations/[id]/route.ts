@@ -1,3 +1,4 @@
+import { forgettingIdentities } from "@/lib/auth/identity-cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -33,7 +34,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(
+export async function PATCH(...args: Parameters<typeof handlePATCH>) {
+  return forgettingIdentities(() => handlePATCH(...args));
+}
+
+async function handlePATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -108,7 +113,11 @@ export async function PATCH(
   return NextResponse.json(rowToLocation(row, { [row.id]: count ?? 0 }));
 }
 
-export async function DELETE(
+export async function DELETE(...args: Parameters<typeof handleDELETE>) {
+  return forgettingIdentities(() => handleDELETE(...args));
+}
+
+async function handleDELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
