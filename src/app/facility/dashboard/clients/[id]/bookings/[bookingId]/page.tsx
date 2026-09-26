@@ -1352,6 +1352,9 @@ export default function ClientBookingDetailPage({
                   !isCancelled &&
                   !["completed", "declined", "no_show"].includes(booking.status)
                 }
+                // A request holds no kennel on purpose; a confirmed stay
+                // with none can be given one.
+                canFind={canEditBooking && booking.status === "confirmed"}
               />
             )}
 

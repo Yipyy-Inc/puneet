@@ -1,14 +1,15 @@
 "use client";
 
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { KennelRun } from "@/components/icons/yipyy-icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBookingStays } from "@/lib/api/boarding-rooms";
+import { useBookingStays, useFindKennel } from "@/lib/api/boarding-rooms";
 import { pgTimestamp } from "@/lib/boarding/stay-segments";
 import { todayIso } from "@/lib/care-log-scheduler";
 import { formatCalendarDayLong } from "@/lib/i18n/format";
@@ -25,6 +26,10 @@ const MoveKennelDialog = dynamic(() =>
 // so a boarding booking said nothing about its kennel at all. This reads the
 // stays themselves: one while the guest keeps one kennel, one per kennel once
 // they move part-way — each with the nights it covers — and offers the move.
+//
+// A confirmed stay with NO kennel is offered "Find a kennel": the choice
+// confirmation makes, run again for when one has come free since. It said
+// "No kennel yet" and stopped, and no board could place it either.
 // ============================================================================
 
 export function BookingKennelsCard({
@@ -33,6 +38,7 @@ export function BookingKennelsCard({
   startDate,
   endDate,
   canMove,
+  canFind = false,
 }: {
   bookingRef: number;
   petName: string;
@@ -41,10 +47,25 @@ export function BookingKennelsCard({
   endDate: string;
   /** Staff who may change a booking; a closed booking offers no move. */
   canMove: boolean;
+  /** A confirmed stay: one with no kennel may be given one. */
+  canFind?: boolean;
 }) {
   const { t, fill, locale } = useStaffText("kennelMoves");
   const { data: stays, isPending, error } = useBookingStays(bookingRef);
   const [moving, setMoving] = useState(false);
+  const find = useFindKennel();
+
+  const findKennel = () =>
+    find.mutate(bookingRef, {
+      onSuccess: (kennel) =>
+        kennel
+          ? toast.success(fill("foundKennel", { pet: petName, kennel }))
+          : toast.error(fill("noFreeKennel", { pet: petName })),
+      onError: (err) =>
+        toast.error(fill("findFailed", { pet: petName }), {
+          description: err.message,
+        }),
+    });
 
   // A stay's first night is where its range begins; the last stay runs to
   // check-out, whatever a late check-out cut-off extends its range to.
@@ -71,7 +92,24 @@ export function BookingKennelsCard({
             {t("loadFailed")}
           </p>
         ) : stays.length === 0 ? (
-          <p className="text-ink-tertiary">{t("none")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-ink-tertiary">{t("none")}</p>
+            {canFind ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={findKennel}
+                disabled={find.isPending}
+              >
+                {find.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <KennelRun className="size-4" aria-hidden />
+                )}
+                {fill("findButton", { pet: petName })}
+              </Button>
+            ) : null}
+          </div>
         ) : (
           <ol className="space-y-3">
             {stays.map((stay, index) => (

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getViewer } from "@/lib/auth/viewer";
 import { holds, myPermissions } from "@/lib/auth/permissions";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/api/mappers/booking";
 import { writeFailure } from "@/lib/api/write-failure";
 import { requireForms } from "@/lib/forms/require-forms";
+import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm";
 import {
   OPEN_REQUEST_STATUSES,
   approvalRefusal,
@@ -221,6 +223,18 @@ export async function POST(
     undo.push({ ref: day.booking.id, row: back });
   }
 
+  // An approved boarding request is given a kennel of the kind it was priced
+  // for, under the approver's own session. It had none: a request drops its
+  // room so an unconfirmed booking cannot hold one. `kennel: null` says none
+  // was free, so the screen can send staff to the kennel board.
+  const kennels =
+    action === "approve"
+      ? await assignKennelsOnConfirm(
+          supabase as unknown as SupabaseClient,
+          days.map((day) => day.row.id),
+        )
+      : [];
+
   const messaged = await tellTheCustomer(supabase, action, {
     facilityId: context.facilityId,
     clientId: (current as unknown as { client_id: string }).client_id,
@@ -233,6 +247,7 @@ export async function POST(
     status: nextStatus,
     refs: days.map((day) => day.booking.id),
     messaged,
+    kennels,
   });
 }
 

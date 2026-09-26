@@ -1996,7 +1996,9 @@
         "serviceBoarding": "Pension",
         "serviceGrooming": "Toilettage",
         "serviceTraining": "Dressage",
-        "topbarLabel": "Demandes de réservation"
+        "topbarLabel": "Demandes de réservation",
+        "kennelPlaced": "{pet} est dans {kennel}.",
+        "kennelNoneFree": "Aucun chenil du type réservé n’est libre pour l’instant — utilisez « Trouver un chenil » dans la réservation de {pet}."
       },
       "incidentReport": {
         "recorded": "Incident enregistré : {title}",
@@ -2502,7 +2504,14 @@
         "refused_not_allowed": "Vous n’avez pas la permission de déplacer des pensionnaires ici.",
         "refused_no_room": "{room} n’existe plus.",
         "refused_closed": "La réservation de {guest} est close, donc il ne reste aucune nuit à déplacer.",
-        "refused_failed": "Le changement de chenil de {guest} a échoué. Réessayez."
+        "refused_failed": "Le changement de chenil de {guest} a échoué. Réessayez.",
+        "findButton": "Trouver un chenil pour {pet}",
+        "findButtonShort": "Trouver un chenil",
+        "foundKennel": "{pet} est dans {kennel}.",
+        "noFreeKennel": "Aucun chenil du tarif de {pet} n’est libre pour ces nuits. Modifiez la réservation pour changer son tarif ou ses dates.",
+        "findFailed": "Impossible de trouver un chenil pour {pet}.",
+        "refusedRateType": "Le tarif de {guest} réserve {types}. Activez la dérogation pour utiliser {room}.",
+        "overrideDefault": "Dérogation manuelle"
       },
       "roomsOrder": {
         "handle": "Déplacer {name} dans la liste",

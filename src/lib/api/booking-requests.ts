@@ -13,6 +13,12 @@ export interface RequestDecision {
   refs: number[];
   /** Whether the facility's own message for this decision went out. */
   messaged: "sent" | "queued" | "not_sent";
+  /**
+   * Each approved boarding booking that had no kennel, and the one it was
+   * given — `null` when none of its rate's room types was free, so staff
+   * place it on the kennel board.
+   */
+  kennels?: { ref: number; kennel: string | null }[];
 }
 
 /**

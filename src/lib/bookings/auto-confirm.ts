@@ -12,6 +12,7 @@ import {
   findApplicableDepositRule,
 } from "@/lib/settings/deposits";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { assignKennelsOnConfirm } from "@/lib/boarding/assign-kennel-on-confirm";
 
 // ============================================================================
 // A customer's booking confirmed on the spot, when the facility says so.
@@ -282,7 +283,15 @@ export async function autoConfirmCustomerBookings(
         // Belt and braces: only ever promote a row still sitting as a request,
         // so a race with staff deciding it cannot un-decide them.
         .eq("status", "request_submitted");
-      if (!error) confirmed += 1;
+      if (!error) {
+        confirmed += 1;
+        // A confirmed boarding stay is given a kennel of the kind it was
+        // priced for, as staff approval gives one — under the service role,
+        // since the customer's session can place a dog nowhere. No kennel
+        // free leaves it where confirmed requests always stood: on the
+        // kennel board, to be placed by hand. See assign-kennel-on-confirm.ts.
+        await assignKennelsOnConfirm(admin, [row.id], { serviceRole: true });
+      }
     }
     return confirmed;
   } catch {

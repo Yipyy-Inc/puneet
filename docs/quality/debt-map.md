@@ -21763,18 +21763,50 @@ section 3, which is how two types sharing a name can be told apart. `/menu`
 redirects. A room type's own price stays on Rooms, as the fallback for a
 booking that names no rate.
 
-**Still open, found on the way:**
+**Found on the way, and then fixed the same day:**
 
-1. **A customer's booking never gets a kennel.** The wizard picks one of the
+1. **A customer's booking never got a kennel.** The wizard picks one of the
    rate's room types to price the quote, and the request deliberately drops
    it (`use-customer-booking-request.ts`: an unconfirmed request holding a
-   kennel would block it for everyone). Nothing assigns one when the request
-   is confirmed, by staff or by auto-confirm; staff do it on the kennel board.
-2. **The kennel board does not know the rate.** `RoomAssignmentBoard`'s
-   `canDrop` checks eligibility, species, taken and capacity, never the
-   booking's `boardingServiceId`, so a Suites booking can go into a Condo
-   with no prompt.
-3. **The retired "Suites".** Its inactive $10 rate (no booking named it) was
+   kennel would block it for everyone). Nothing assigned one when the request
+   was confirmed. Now staff approval (`/api/bookings/[ref]/decision`, under
+   the approver's session) and auto-confirm (under the service role it
+   already promotes with) run `assignKennelsOnConfirm`: the rate's room
+   types that clients may book, whose rules admit every pet, a kennel that
+   holds the household, the first one free — through `assign_boarding_room`
+   for staff, and for auto-confirm a direct insert of the same row: **the
+   service role cannot call `assign_boarding_room`** ("permission denied for
+   schema private" — its override check names `private.has_permission`,
+   PL/pgSQL plans the whole condition, and the service role has no USAGE on
+   `private`), which left every auto-confirmed stay without a kennel until a
+   repeated e2e run caught it. The exclusion constraint judges both. None free leaves the booking
+   confirmed with no kennel, as before, and the approval's toast says so.
+2. **Nowhere could place a confirmed stay that had no kennel.** The kennel
+   board lists only guests already in a kennel ("a stay with no kennel is not
+   shown"), the check-in board's "Assign a kennel first" linked to that same
+   board, and the booking page said "No kennel yet" and stopped; only
+   re-opening the booking in the wizard reached a room. Both now offer "Find a
+   kennel" (`POST /api/boarding/stays/find`, staff only), the same choice as
+   confirmation over any of the rate's types.
+3. **The kennel board did not know the rate.** Its drop rule
+   (`dropRefusal`, was `canDrop`) now refuses a kennel of a type the guest's
+   rate does not book, unless the override is on, and says why — it used to
+   return `false` and ignore the drop without a word. The override's reason
+   box, which took text and sent it nowhere, is saved now.
+
+**Left as they are, deliberately:**
+
+- The rate rule on the kennel board is the SCREEN's, like its species and
+  capacity rules; the database judges only overlap. A caller of
+  `assign_boarding_room` can still place a guest in any type.
+- The board's override is `override_reason` on the stay, and the exclusion
+  constraint ignores a stay that carries one — so an override used to reach a
+  different room TYPE also lets that kennel be double-booked. It always did;
+  it is why "Find a kennel" never overrides.
+- The board's grid is one grid for every guest, so it cannot put a guest's
+  own room types first; the refusal says which types the rate books instead.
+
+4. **The retired "Suites".** Its inactive $10 rate (no booking named it) was
    removed on 2026-09-26 with the owner's approval. The room type itself was
    NOT: its kennels are switched off, not empty — two carry past stays, and
    deleting the type would take that history with it. First described here,

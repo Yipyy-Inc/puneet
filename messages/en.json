@@ -1996,7 +1996,9 @@
         "serviceBoarding": "Boarding",
         "serviceGrooming": "Grooming",
         "serviceTraining": "Training",
-        "topbarLabel": "Booking requests"
+        "topbarLabel": "Booking requests",
+        "kennelPlaced": "{pet} is in {kennel}.",
+        "kennelNoneFree": "No kennel of the booked type is free yet — use “Find a kennel” on {pet}'s booking."
       },
       "incidentReport": {
         "recorded": "Incident recorded: {title}",
@@ -2502,7 +2504,14 @@
         "refused_not_allowed": "You don't have permission to move guests here.",
         "refused_no_room": "{room} no longer exists.",
         "refused_closed": "The booking for {guest} is closed, so there is no night left to move.",
-        "refused_failed": "Moving {guest} did not work. Try again."
+        "refused_failed": "Moving {guest} did not work. Try again.",
+        "findButton": "Find a kennel for {pet}",
+        "findButtonShort": "Find a kennel",
+        "foundKennel": "{pet} is in {kennel}.",
+        "noFreeKennel": "No kennel of {pet}'s rate is free for these nights. Edit the booking to change its rate or dates.",
+        "findFailed": "Could not find a kennel for {pet}.",
+        "refusedRateType": "{guest}'s rate books {types}. Turn the override on to use {room}.",
+        "overrideDefault": "Manual override"
       },
       "roomsOrder": {
         "handle": "Move {name} in the list",

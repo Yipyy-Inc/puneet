@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { PetType } from "@/data/boarding-ops";
 import type { FacilityRoom, RoomCategory } from "@/types/rooms";
 import { admittedSpecies } from "@/lib/capacity-engine";
-import { sameSpecies } from "@/lib/settings/species";
+import { dropRefusal, type DropRefusal } from "@/lib/boarding/drop-refusal";
 import { GripVertical, X } from "lucide-react";
 
 /**
@@ -39,40 +39,16 @@ export interface AssignableOccupant {
   reason?: string;
   /** Shown under the name — the client, or the nights being stayed. */
   detail?: string;
+  /**
+   * The room types (category ids) this occupant's RATE books into; absent
+   * means any. A guest booked at "Suites" goes to a Suite unless staff turn
+   * the override on — the client asked that a rate know its room.
+   */
+  allowedCategoryIds?: readonly string[];
 }
 
 /** Kennel id → the occupant ids in it. */
 export type RoomAssignments = Record<string, number[]>;
-
-function canDrop({
-  category,
-  capacity,
-  pet,
-  assignedPetIds,
-  allowOverride,
-  takenByAnotherStay,
-}: {
-  category: RoomCategory | undefined;
-  capacity: number;
-  pet: AssignableOccupant;
-  assignedPetIds: number[];
-  allowOverride: boolean;
-  takenByAnotherStay: boolean;
-}) {
-  if (allowOverride) return true;
-  if (!pet.eligible) return false;
-  const admits = admittedSpecies(category?.rules ?? []);
-  if (admits && !admits.some((name) => sameSpecies(name, pet.petType))) {
-    return false;
-  }
-  // `assignedPetIds` only ever describes THIS booking, so this line was never
-  // a capacity rule — it could not see another guest. `takenByAnotherStay`
-  // comes from /api/boarding/rooms and is what the exclusion constraint on
-  // boarding_stays will judge, so the board and the save now agree.
-  if (takenByAnotherStay) return false;
-  if (assignedPetIds.length >= capacity) return false;
-  return true;
-}
 
 export function RoomAssignmentBoard({
   rooms,
@@ -84,6 +60,9 @@ export function RoomAssignmentBoard({
   onAssign,
   onUnassign,
   onToggleOverride,
+  onRefused,
+  overrideReason,
+  onOverrideReasonChange,
 }: {
   rooms: FacilityRoom[];
   categories: RoomCategory[];
@@ -95,6 +74,15 @@ export function RoomAssignmentBoard({
   onAssign: (occupantId: number, roomId: string) => void;
   onUnassign: (occupantId: number) => void;
   onToggleOverride: (checked: boolean) => void;
+  /** A drop refused, and why — for the caller to say. */
+  onRefused?: (occupantId: number, roomId: string, why: DropRefusal) => void;
+  /**
+   * The override's reason. The box took text and sent it nowhere — every
+   * override was saved as "Manual override" — so a caller that saves
+   * overrides reads it from here.
+   */
+  overrideReason?: string;
+  onOverrideReasonChange?: (reason: string) => void;
 }) {
   const takenIds = useMemo(() => new Set(occupiedRoomIds), [occupiedRoomIds]);
   const categoryById = useMemo(
@@ -238,16 +226,16 @@ export function RoomAssignmentBoard({
                     if (!Number.isFinite(petId)) return;
                     const pet = petById.get(petId);
                     if (!pet) return;
-                    if (
-                      !canDrop({
-                        category,
-                        capacity,
-                        pet,
-                        assignedPetIds: assigned,
-                        allowOverride,
-                        takenByAnotherStay: takenIds.has(room.id),
-                      })
-                    ) {
+                    const why = dropRefusal({
+                      category,
+                      capacity,
+                      pet,
+                      assignedPetIds: assigned,
+                      allowOverride,
+                      takenByAnotherStay: takenIds.has(room.id),
+                    });
+                    if (why) {
+                      onRefused?.(petId, room.id, why);
                       return;
                     }
                     onAssign(petId, room.id);
@@ -351,7 +339,18 @@ export function RoomAssignmentBoard({
             temporarily. Use this only with manager approval.
           </div>
           <div className="mt-2">
-            <Input placeholder="Override reason (optional)..." />
+            {/* Controlled when the caller keeps the reason; otherwise as it
+                was, for a caller that saves no override. */}
+            <Input
+              placeholder="Override reason (optional)..."
+              {...(onOverrideReasonChange
+                ? {
+                    value: overrideReason ?? "",
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                      onOverrideReasonChange(e.target.value),
+                  }
+                : {})}
+            />
           </div>
         </div>
       </CardContent>

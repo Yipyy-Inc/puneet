@@ -29,6 +29,7 @@ import {
 } from "@/lib/api/booking-requests";
 import { groupRequests, quotedTotal } from "@/lib/bookings/request-decision";
 import { useStaffText } from "@/lib/staff/use-staff-text";
+import { formatList } from "@/lib/i18n/format";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { useSaveBookingEdit } from "@/components/bookings/use-save-booking-edit";
 import { useCreateBookingFromModal } from "@/components/bookings/use-create-booking";
@@ -266,7 +267,7 @@ export default function OnlineBookingPage() {
   // Still the fixture's numeric id, for the unfinished-bookings tab below —
   // its own fixture, not yet converted (see the debt map).
   const facilityId = 11;
-  const { t, fill } = useStaffText("bookingRequests");
+  const { t, fill, locale } = useStaffText("bookingRequests");
   const { openBookingModal } = useBookingModal();
   const { profile } = useFacilityProfile();
   // Only the open requests and the waiting list: every other booking the
@@ -412,7 +413,23 @@ export default function OnlineBookingPage() {
           : decided.status === "waitlisted"
             ? t("customerNotMessaged")
             : t("customerNotMessagedOff");
-    toast.success(title, { description: heard });
+    // Where the dog sleeps, when approving gave a boarding stay its kennel —
+    // or that none of the booked type was free, which is staff's to settle
+    // on the kennel board. Nothing is said when nothing was placed.
+    const kennels = decided.kennels ?? [];
+    const placed = kennels.flatMap((k) => (k.kennel ? [k.kennel] : []));
+    const kennelLine =
+      kennels.length === 0
+        ? null
+        : placed.length < kennels.length
+          ? fill("kennelNoneFree", { pet })
+          : fill("kennelPlaced", {
+              pet,
+              kennel: formatList(placed, locale),
+            });
+    toast.success(title, {
+      description: kennelLine ? `${heard} ${kennelLine}` : heard,
+    });
   };
 
   // One click: every day, at the price the customer was quoted.

@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import {
   AlertTriangle,
   BedDouble,
   Home,
   LogIn,
+  Loader2,
   LogOut,
   PawPrint,
   Search,
@@ -28,6 +28,8 @@ import {
   useBoardingStayUpdate,
 } from "@/lib/api/boarding-attendance";
 import type { BoardingArrival } from "@/lib/api/mappers/boarding-arrival";
+import { useFindKennel } from "@/lib/api/boarding-rooms";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 
 // ============================================================================
 // The boarding arrivals board.
@@ -76,6 +78,8 @@ export function BoardingCheckInBoard() {
   const checkIn = useBoardingCheckIn();
   const updateStay = useBoardingStayUpdate();
   const revert = useBoardingRevert();
+  const find = useFindKennel();
+  const { fill } = useStaffText("kennelMoves");
 
   const [tab, setTab] = useState<BoardTab>("expected");
   const [query, setQuery] = useState("");
@@ -148,6 +152,21 @@ export function BoardingCheckInBoard() {
         onError,
       },
     );
+
+  // A guest expected today with no kennel. This linked to the kennel board,
+  // which lists only guests already in a kennel — a dead end. It runs the
+  // choice confirmation makes instead: a free kennel of the rate's type.
+  const doFindKennel = (guest: BoardingArrival) => {
+    const pet = guest.petNames.join(", ") || `#${guest.id}`;
+    find.mutate(Number(guest.id), {
+      onSuccess: (kennel) =>
+        kennel
+          ? toast.success(fill("foundKennel", { pet, kennel }))
+          : toast.error(fill("noFreeKennel", { pet })),
+      onError: (err) =>
+        toast.error(fill("findFailed", { pet }), { description: err.message }),
+    });
+  };
 
   const doRevert = (guest: BoardingArrival) =>
     revert.mutate(Number(guest.id), {
@@ -303,6 +322,8 @@ export function BoardingCheckInBoard() {
                     )
                   }
                   onRevert={() => doRevert(guest)}
+                  onFindKennel={() => doFindKennel(guest)}
+                  finding={find.isPending}
                 />
               ))}
             </div>
@@ -320,6 +341,8 @@ interface GuestCardProps {
   onCheckOut: () => void;
   onReopen: () => void;
   onRevert: () => void;
+  onFindKennel: () => void;
+  finding: boolean;
 }
 
 function GuestCard({
@@ -329,7 +352,10 @@ function GuestCard({
   onCheckOut,
   onReopen,
   onRevert,
+  onFindKennel,
+  finding,
 }: GuestCardProps) {
+  const { t } = useStaffText("kennelMoves");
   const names = guest.petNames.length > 0 ? guest.petNames.join(", ") : "Guest";
 
   return (
@@ -381,12 +407,20 @@ function GuestCard({
             <LogIn className="size-4" /> Check In
           </Button>
         ) : (
-          // Not a disabled button with no explanation: the reason is fixable
-          // and the fix is one screen away.
-          <Button size="sm" variant="outline" asChild>
-            <Link href="/facility/dashboard/services/boarding/ops?tab=kennels">
-              <BedDouble className="size-4" /> Assign a kennel first
-            </Link>
+          // Not a disabled button with no explanation: the reason is fixable,
+          // and fixed here — a free kennel of the guest's rate.
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy || finding}
+            onClick={onFindKennel}
+          >
+            {finding ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <BedDouble className="size-4" aria-hidden />
+            )}{" "}
+            {t("findButtonShort")}
           </Button>
         ))}
 

@@ -176,6 +176,38 @@ export function useAssignBoardingRoom() {
   });
 }
 
+/**
+ * Find a kennel for a confirmed stay that has none — the same choice
+ * confirmation makes (`POST /api/boarding/stays/find`). Resolves to the
+ * kennel's name, or `null` when none of the rate's room types is free for
+ * those nights: an answer to say, not an error.
+ */
+export function useFindKennel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (bookingRef: number): Promise<string | null> => {
+      const response = await fetch("/api/boarding/stays/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingRef }),
+      });
+      const parsed = (await response.json().catch(() => null)) as {
+        kennel?: string | null;
+        error?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(parsed?.error ?? "Could not find a kennel.");
+      }
+      return parsed?.kennel ?? null;
+    },
+    onSuccess: () => {
+      // The booking's own kennels (`useBookingStays`) sit under this key too.
+      void queryClient.invalidateQueries({ queryKey: boardingRoomKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
+
 /** Why a move was refused, as `POST /api/boarding/stays/move` names it. */
 export class BoardingMoveError extends Error {
   constructor(

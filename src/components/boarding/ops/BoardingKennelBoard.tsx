@@ -14,7 +14,9 @@ import {
   useBoardingRooms,
   useMoveBoardingStay,
 } from "@/lib/api/boarding-rooms";
+import { useBoardingServices } from "@/lib/api/boarding-catalogue";
 import type { RoomOccupancy } from "@/lib/api/mappers/boarding";
+import { formatList } from "@/lib/i18n/format";
 import { pgTimestamp } from "@/lib/boarding/stay-segments";
 import { todayIso } from "@/lib/care-log-scheduler";
 import { useStaffText } from "@/lib/staff/use-staff-text";
@@ -55,6 +57,15 @@ import {
 // judged against, so the two agree. They can still disagree for the length of
 // a drag, and when they do the exclusion constraint refuses and this shows the
 // 409 rather than pretending the move happened.
+//
+// ── A GUEST GOES TO A KENNEL OF THEIR RATE'S TYPE ─────────────────────────
+//
+// A stay booked at "Suites" could be dragged into a Condo with no word, and
+// the client asked that a rate know which room the dog goes into. Each guest
+// carries the room types of the rate it was booked at (`rateId` on the
+// occupancy read); another type is refused, and said, unless the override is
+// on — the same override that already lets staff past capacity and pet-type
+// rules, now saved with the reason typed into its box.
 // ============================================================================
 
 /** Today, as the half-open instant pair the occupancy read expects. */
@@ -71,8 +82,13 @@ export function BoardingKennelBoard() {
   const { data, isLoading, error } = useBoardingRooms();
   const assign = useAssignBoardingRoom();
   const moveStay = useMoveBoardingStay();
-  const { fill } = useStaffText("kennelMoves");
+  const { t, fill, locale } = useStaffText("kennelMoves");
   const [allowOverride, setAllowOverride] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const { data: rates } = useBoardingServices();
+  // What an override is saved as: the reason typed, or "Manual override" in
+  // the staff member's own language, which is what it always said in English.
+  const override = overrideReason.trim() || t("overrideDefault");
 
   const occupied = useMemo(() => data?.occupied ?? [], [data]);
 
@@ -93,10 +109,30 @@ export function BoardingKennelBoard() {
     return byRef;
   }, [occupied]);
 
+  // A rate's room types, as the board's category ids. The rate names them by
+  // uuid (`rowId`); the board keys categories by their app id.
+  const typesOfRate = useMemo(() => {
+    const byUuid = new Map(
+      (data?.categories ?? []).flatMap((c) =>
+        c.rowId ? [[c.rowId, c.id] as const] : [],
+      ),
+    );
+    return new Map(
+      (rates ?? []).map((rate) => [
+        rate.rowId,
+        rate.lodgingTypeIds.flatMap((uuid) => {
+          const id = byUuid.get(uuid);
+          return id ? [id] : [];
+        }),
+      ]),
+    );
+  }, [data, rates]);
+
   const occupants = useMemo<AssignableOccupant[]>(
     () =>
       [...tonight.values()].map((stay) => {
         const pets = stay.petNames.length > 0 ? stay.petNames : ["Guest"];
+        const allowed = stay.rateId ? typesOfRate.get(stay.rateId) : undefined;
         return {
           id: stay.bookingRef,
           name: pets.join(", "),
@@ -108,9 +144,12 @@ export function BoardingKennelBoard() {
           detail: [stay.clientName, `#${stay.bookingRef}`]
             .filter(Boolean)
             .join(" · "),
+          // Empty when the rate names every type, or none is known: any kennel.
+          allowedCategoryIds:
+            allowed && allowed.length > 0 ? allowed : undefined,
         };
       }),
-    [tonight],
+    [tonight, typesOfRate],
   );
 
   const assignments = useMemo<RoomAssignments>(() => {
@@ -151,7 +190,7 @@ export function BoardingKennelBoard() {
           bookingRef,
           from: todayIso(),
           roomId,
-          ...(allowOverride ? { overrideReason: "Manual override" } : {}),
+          ...(allowOverride ? { overrideReason: override } : {}),
         },
         {
           onSuccess: () =>
@@ -171,9 +210,7 @@ export function BoardingKennelBoard() {
       {
         bookingRef,
         roomId,
-        ...(allowOverride && roomId
-          ? { overrideReason: "Manual override" }
-          : {}),
+        ...(allowOverride && roomId ? { overrideReason: override } : {}),
       },
       {
         onSuccess: () =>
@@ -246,6 +283,25 @@ export function BoardingKennelBoard() {
         onToggleOverride={setAllowOverride}
         onAssign={(bookingRef, roomId) => move(bookingRef, roomId)}
         onUnassign={(bookingRef) => move(bookingRef, null)}
+        overrideReason={overrideReason}
+        onOverrideReasonChange={setOverrideReason}
+        onRefused={(bookingRef, roomId, why) => {
+          // Only the rate's refusal is new, and said; the others were silent
+          // before and the kennel's own card already shows why (taken, full,
+          // the pets it admits).
+          if (why !== "rate") return;
+          const guest = occupants.find((o) => o.id === bookingRef);
+          const types = (guest?.allowedCategoryIds ?? []).map(
+            (id) => data?.categories.find((c) => c.id === id)?.name ?? id,
+          );
+          toast.error(
+            fill("refusedRateType", {
+              guest: guest?.name ?? `#${bookingRef}`,
+              types: formatList(types, locale),
+              room: data?.rooms.find((r) => r.id === roomId)?.name ?? roomId,
+            }),
+          );
+        }}
       />
 
       <p className="text-muted-foreground text-xs">

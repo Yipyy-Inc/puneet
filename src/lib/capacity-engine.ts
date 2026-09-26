@@ -56,7 +56,10 @@ export function admittedSpecies(rules: RoomRule[]): string[] | null {
 }
 
 /** Returns true when the pet satisfies every enabled rule in the array. */
-export function petMatchesRules(pet: Pet, rules: RoomRule[]): boolean {
+export function petMatchesRules(
+  pet: Pick<Pet, "type" | "weight">,
+  rules: RoomRule[],
+): boolean {
   const species = admittedSpecies(rules);
   if (species && !species.some((name) => sameSpecies(name, pet.type ?? ""))) {
     return false;

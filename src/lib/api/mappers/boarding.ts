@@ -67,6 +67,8 @@ export interface BoardingStayRow {
   bookings: {
     ref: number;
     status: string;
+    /** `details.boardingServiceId`: the rate the stay was booked at. */
+    rateId: string | null;
     clients: { name: string } | null;
     booking_pets: { pets: { name: string; species: string } | null }[] | null;
   } | null;
@@ -75,7 +77,7 @@ export interface BoardingStayRow {
 /** The joins `rowToOccupancy` needs. Kept beside it so the two agree. */
 export const BOARDING_STAY_SELECT = `
   booking_id, room_id, occupies, override_reason,
-  bookings ( ref, status, clients ( name ), booking_pets ( pets ( name, species ) ) )
+  bookings ( ref, status, rateId:details->>boardingServiceId, clients ( name ), booking_pets ( pets ( name, species ) ) )
 ` as const;
 
 /**
@@ -177,6 +179,12 @@ export interface RoomOccupancy {
   /** Drives the board's pet-type rules when a guest is dragged elsewhere. */
   petType: string;
   status: string;
+  /**
+   * The rate the stay was booked at (a `boarding_services` uuid), or null
+   * for a stay booked with none. Its room types are where the kennel board
+   * lets the guest be moved without an override.
+   */
+  rateId: string | null;
 }
 
 /**
@@ -217,6 +225,7 @@ export function rowToOccupancy(
     // move the constraint would then have to refuse.
     petType: pets[0]?.species ?? "dog",
     status: row.bookings?.status ?? "",
+    rateId: row.bookings?.rateId ?? null,
   };
 }
 

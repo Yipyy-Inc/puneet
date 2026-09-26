@@ -621,6 +621,18 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     made.push(booking.id);
     expect(booking.status).toBe("confirmed");
     expect(booking.totalCost).toBe(NIGHT + 2 * WALK);
+
+    // And it is in a kennel. A customer's booking arrives with none — a
+    // request must not hold one — and confirming it now gives one of its
+    // rate's types (every type here), as staff approval does (2026-09-26).
+    await signIn(page, ACCOUNTS.owner);
+    const stays = await page.request.get(
+      `/api/boarding/stays?bookingRef=${booking.id}`,
+    );
+    expect(stays.ok(), await stays.text()).toBe(true);
+    expect(((await stays.json()) as { stays: unknown[] }).stays).toHaveLength(
+      1,
+    );
   });
 
   test("B2 the default taken off: still a request", async ({ page }) => {

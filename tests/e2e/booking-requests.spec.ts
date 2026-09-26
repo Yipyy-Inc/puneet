@@ -250,3 +250,242 @@ test.describe("the facility decides a customer's request whole", () => {
     }
   });
 });
+
+// ============================================================================
+// AN APPROVED BOARDING REQUEST IS GIVEN A KENNEL OF ITS RATE'S TYPE
+// (2026-09-26).
+//
+// A request drops its room on purpose, so an unconfirmed booking holds no
+// kennel; approving it gave none back, and the dog waited on the kennel board
+// for somebody to place it. Approval now places it, in a kennel of one of the
+// rate's room types that admits the pet (src/lib/boarding/kennel-on-confirm.ts).
+//
+// Buddy is a 25 lb dog. Condominium takes up to 60 lb; Private Care Suite
+// takes 80 lb and up.
+//
+// K1  A rate limited to Condominium: approved, Buddy is in a Condominium, and
+//     the answer names the kennel.
+// K2  A rate limited to Private Care: no kennel of it admits Buddy. Approved
+//     all the same — the booking is confirmed with no kennel, as every
+//     approval used to leave it — and the answer says none was found. "Find
+//     a kennel" asks again and says the same.
+// K3  A confirmed stay saved with no kennel: "Find a kennel" (POST
+//     /api/boarding/stays/find) places it in a kennel of its rate's type —
+//     the button on the booking page and the check-in board, where "Assign a
+//     kennel first" linked to a board that never shows a guest with none.
+// K4  A customer cannot use it.
+//
+// The two rates are made for the run and removed after it; the bookings go
+// with the rest of this file's in the afterAll above.
+// ============================================================================
+
+const KENNEL_MARKER = `${MARKER} kennel`;
+const RATE_NIGHT = 60;
+
+interface RoomsPayload {
+  categories: { id: string; rowId?: string; name: string }[];
+  rooms: { id: string; categoryId: string; name: string }[];
+}
+
+interface Decided {
+  status: string;
+  kennels?: { ref: number; kennel: string | null }[];
+}
+
+async function findKennel(page: Page, bookingRef: number) {
+  return page.request.post("/api/boarding/stays/find", {
+    data: { bookingRef },
+  });
+}
+
+async function staysOf(page: Page, ref: number) {
+  const res = await page.request.get(`/api/boarding/stays?bookingRef=${ref}`);
+  expect(res.ok(), await res.text()).toBe(true);
+  return (
+    (await res.json()) as {
+      stays: { roomId: string | null; roomName: string | null }[];
+    }
+  ).stays;
+}
+
+/** This run's rates, removed. Never a throw inside a teardown. */
+async function removeKennelRates(page: Page) {
+  const res = await page.request.get("/api/boarding/services");
+  if (!res.ok()) return;
+  const body: unknown = await res.json().catch(() => null);
+  if (!Array.isArray(body)) return;
+  for (const rate of body as { id: string; name: string }[]) {
+    if (rate.name.includes(KENNEL_MARKER)) {
+      await page.request.delete(`/api/boarding/services/${rate.id}`);
+    }
+  }
+}
+
+test.describe("an approved boarding request is placed in a kennel of its rate's type", () => {
+  const rates = { condo: "", privateCare: "" };
+  let rooms: RoomsPayload = { categories: [], rooms: [] };
+
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      const res = await page.request.get("/api/rooms");
+      expect(res.ok(), await res.text()).toBe(true);
+      rooms = (await res.json()) as RoomsPayload;
+      await removeKennelRates(page);
+
+      for (const [key, legacy] of [
+        ["condo", "cat-condo"],
+        ["privateCare", "cat-private-care"],
+      ] as const) {
+        const type = rooms.categories.find((c) => c.id === legacy);
+        expect(type?.rowId, `the demo facility has ${legacy}`).toBeTruthy();
+        const created = await page.request.post("/api/boarding/services", {
+          data: {
+            name: `${KENNEL_MARKER} ${legacy}`,
+            price: RATE_NIGHT,
+            unit: "night",
+            lodgingTypeIds: [type!.rowId],
+            isActive: true,
+          },
+        });
+        expect(created.status(), await created.text()).toBe(201);
+        rates[key] = (
+          (await created.json()) as { service: { rowId: string } }
+        ).service.rowId;
+      }
+    } finally {
+      await page.close();
+    }
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    try {
+      await signIn(page, ACCOUNTS.owner);
+      await removeKennelRates(page);
+    } finally {
+      await page.close();
+    }
+  });
+
+  /** Two nights, far ahead, the rate named — as the customer's form sends it. */
+  async function boardingRequest(
+    page: Page,
+    rateRowId: string,
+    startIn: number,
+  ): Promise<number> {
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        facilityId: 0,
+        service: "boarding",
+        startDate: isoDaysAhead(startIn),
+        endDate: isoDaysAhead(startIn + 2),
+        checkInTime: "14:00",
+        checkOutTime: "11:00",
+        status: "request_submitted",
+        basePrice: 2 * RATE_NIGHT,
+        discount: 0,
+        totalCost: 2 * RATE_NIGHT,
+        specialRequests: KENNEL_MARKER,
+        boardingServiceId: rateRowId,
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const ref = ((await res.json()) as BookingPayload).id;
+    made.push(ref);
+    return ref;
+  }
+
+  test("K1 a rate limited to Condominium: approved, Buddy is in a Condominium", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const ref = await boardingRequest(page, rates.condo, 481);
+
+    await signIn(page, ACCOUNTS.owner);
+    // A request holds no kennel.
+    expect(await staysOf(page, ref)).toEqual([]);
+
+    const res = await decide(page, ref, { action: "approve", atQuote: true });
+    expect(res.status(), await res.text()).toBe(200);
+    const decided = (await res.json()) as Decided;
+    expect(decided.status).toBe("confirmed");
+
+    const stays = await staysOf(page, ref);
+    expect(stays).toHaveLength(1);
+    const kennel = rooms.rooms.find((r) => r.id === stays[0]!.roomId);
+    expect(kennel?.categoryId).toBe("cat-condo");
+    expect(decided.kennels).toEqual([{ ref, kennel: kennel!.name }]);
+  });
+
+  test("K2 no kennel of the rate's type admits Buddy: confirmed with none, and said so", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const ref = await boardingRequest(page, rates.privateCare, 491);
+
+    await signIn(page, ACCOUNTS.owner);
+    const res = await decide(page, ref, { action: "approve", atQuote: true });
+    expect(res.status(), await res.text()).toBe(200);
+    const decided = (await res.json()) as Decided;
+    expect(decided.status).toBe("confirmed");
+    expect(decided.kennels).toEqual([{ ref, kennel: null }]);
+    expect(await staysOf(page, ref)).toEqual([]);
+
+    // "Find a kennel" asks the same question again, and gets the same answer.
+    const found = await findKennel(page, ref);
+    expect(found.status(), await found.text()).toBe(200);
+    expect(await found.json()).toEqual({ kennel: null });
+  });
+
+  test("K3 a confirmed stay with no kennel: Find a kennel places it in its rate's type", async ({
+    page,
+  }) => {
+    await signIn(page, ACCOUNTS.owner);
+    // Staff may save a stay with no kennel, to be placed later.
+    const res = await page.request.post("/api/bookings", {
+      data: {
+        clientId: ALICE.client,
+        petId: ALICE.pet,
+        facilityId: 0,
+        service: "boarding",
+        startDate: isoDaysAhead(501),
+        endDate: isoDaysAhead(503),
+        checkInTime: "14:00",
+        checkOutTime: "11:00",
+        status: "confirmed",
+        basePrice: 2 * RATE_NIGHT,
+        discount: 0,
+        totalCost: 2 * RATE_NIGHT,
+        specialRequests: KENNEL_MARKER,
+        boardingServiceId: rates.condo,
+      },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    const ref = ((await res.json()) as BookingPayload).id;
+    made.push(ref);
+    expect(await staysOf(page, ref)).toEqual([]);
+
+    const found = await findKennel(page, ref);
+    expect(found.status(), await found.text()).toBe(200);
+    const { kennel } = (await found.json()) as { kennel: string | null };
+
+    const stays = await staysOf(page, ref);
+    expect(stays).toHaveLength(1);
+    const placed = rooms.rooms.find((r) => r.id === stays[0]!.roomId);
+    expect(placed?.categoryId).toBe("cat-condo");
+    expect(kennel).toBe(placed!.name);
+
+    // In a kennel now: there is nothing left to find.
+    expect((await findKennel(page, ref)).status()).toBe(409);
+  });
+
+  test("K4 a customer cannot use Find a kennel", async ({ page }) => {
+    await signIn(page, ACCOUNTS.customer);
+    const res = await findKennel(page, made[made.length - 1]!);
+    expect(res.status()).toBe(403);
+  });
+});
