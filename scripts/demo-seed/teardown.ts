@@ -500,7 +500,7 @@ try {
       `${SEED_PREFIX}-task-%`,
     );
     await byLegacy(
-      "grooming_add_ons",
+      "service_add_ons",
       "legacy_id like $2",
       `${SEED_PREFIX}-addon-%`,
     );

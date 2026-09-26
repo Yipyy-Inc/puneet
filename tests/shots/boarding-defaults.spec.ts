@@ -3,7 +3,6 @@ import { mkdirSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
 import { ACCOUNTS, signIn } from "../e2e/_auth";
-import { withoutTestItems } from "../e2e/_settings-snapshot";
 
 // ============================================================================
 // PHOTOGRAPH THE BOARDING MENU WHERE A CUSTOMER NOW MEETS IT, AND A SERVICE'S
@@ -76,55 +75,23 @@ test("the boarding menu for customers, and default add-ons for facilities", asyn
     .single();
   const facilityId = (pet as unknown as { clients: { facility_id: string } })
     .clients.facility_id;
-  const { data: stored } = await db
-    .from("facility_settings")
-    .select("value")
-    .eq("facility_id", facilityId)
-    .eq("domain", "service_addons")
-    .maybeSingle();
-  const had = Boolean(stored);
-  const kept = withoutTestItems(stored?.value ?? null) as {
-    addOns?: unknown[];
-    categories?: unknown[];
-  } | null;
-  const withWalk = {
-    ...(kept ?? {}),
-    categories: kept?.categories ?? [],
-    addOns: [
-      ...(kept?.addOns ?? []),
-      {
-        id: ADD_ON,
-        name: "Walk",
-        description: "Twenty minutes around the block",
-        pricingType: "per_day",
-        price: 7,
-        petScope: "per_pet",
-        applicableServices: ["boarding"],
-        requiresScheduling: false,
-        generatesTask: false,
-        isActive: true,
-        // All three are required by `serviceAddOnSchema`, and a stored value
-        // that fails it makes the settings layer drop the WHOLE domain: the
-        // booking form then sees no add-ons at all.
-        sortOrder: 99,
-        createdAt: "2026-09-25T00:00:00.000Z",
-        updatedAt: "2026-09-25T00:00:00.000Z",
-      },
-    ],
-  };
-  if (had) {
-    await db
-      .from("facility_settings")
-      .update({ value: withWalk })
+  // One walk in the one add-ons list (20260926230000), under the id the
+  // service's default names; swept first and deleted again at the end.
+  const removeWalk = () =>
+    db
+      .from("service_add_ons")
+      .delete()
       .eq("facility_id", facilityId)
-      .eq("domain", "service_addons");
-  } else {
-    await db.from("facility_settings").insert({
-      facility_id: facilityId,
-      domain: "service_addons",
-      value: withWalk,
-    });
-  }
+      .eq("legacy_id", ADD_ON);
+  await removeWalk();
+  await db.from("service_add_ons").insert({
+    facility_id: facilityId,
+    legacy_id: ADD_ON,
+    name: "Walk",
+    description: "Twenty minutes around the block",
+    price: 7,
+    is_active: true,
+  });
 
   await signIn(page, ACCOUNTS.owner);
   await removeServices(page);
@@ -204,18 +171,6 @@ test("the boarding menu for customers, and default add-ons for facilities", asyn
     }
   } finally {
     await removeServices(page);
-    if (had) {
-      await db
-        .from("facility_settings")
-        .update({ value: kept })
-        .eq("facility_id", facilityId)
-        .eq("domain", "service_addons");
-    } else {
-      await db
-        .from("facility_settings")
-        .delete()
-        .eq("facility_id", facilityId)
-        .eq("domain", "service_addons");
-    }
+    await removeWalk();
   }
 });

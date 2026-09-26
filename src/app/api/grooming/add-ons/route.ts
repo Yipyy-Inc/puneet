@@ -7,7 +7,9 @@ import {
 } from "@/lib/api/facility-context";
 
 // ============================================================================
-// The facility's grooming add-ons, from `grooming_add_ons`.
+// The facility's grooming add-ons, from `grooming_add_ons` — since 2026-09-26
+// a view over the one add-ons list (20260926230000): every add-on that applies
+// to grooming, deleted ones left out.
 //
 // Both grooming booking screens offered `GROOMING_ADD_ONS` from
 // `@/data/grooming-add-ons` — eight invented extras at invented prices. The
@@ -49,11 +51,19 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const options: GroomingAddOnOption[] = (data ?? []).map((row) => ({
-    id: row.legacy_id ?? row.id,
-    name: row.name,
-    price: Number(row.price),
-    duration: row.duration_min ?? 0,
-  }));
+  // A view's columns are all nullable to the type generator, though these
+  // never are: the view selects them straight from `service_add_ons`.
+  const options: GroomingAddOnOption[] = (data ?? []).flatMap((row) =>
+    row.id && row.name
+      ? [
+          {
+            id: row.legacy_id ?? row.id,
+            name: row.name,
+            price: Number(row.price),
+            duration: row.duration_min ?? 0,
+          },
+        ]
+      : [],
+  );
   return NextResponse.json(options);
 }

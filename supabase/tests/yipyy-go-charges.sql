@@ -9,14 +9,16 @@
 -- ── WHAT THIS FILE IS ABOUT ────────────────────────────────────────────────
 --
 -- C1  An add-on is priced from the catalogue, whatever the request says.
--- C2  The catalogue's maximum caps the quantity; per-day pricing counts the
---     nights; a percentage add-on is a share of the booking.
--- C3  An inactive, size-priced, other-service or unknown add-on is refused.
+-- C2  The quantity asked is charged, up to ten, and a boarding add-on is not
+--     multiplied by the nights: since the one add-ons list (20260926230000) an
+--     add-on has one price, and the booking says how many.
+-- C3  An inactive, deleted, other-location, other-service or unknown add-on is
+--     refused.
 -- C4  The medication fee counts doses; as-needed medication and "no
 --     medications" add nothing.
 -- C5  Sending the same form again leaves the bill as it was.
 -- C6  A line staff removed is not put back.
--- C7  An add-on charged per booking, asked for on two dogs, is one line.
+-- C7  An add-on belongs to the pet: asked for on two dogs, it is a line each.
 -- C8  When the facility approves add-ons, they reach the bill on approval.
 -- C9  A pledged tip lands despite the booking trigger, and an owner still
 --     cannot write the tip directly.
@@ -119,37 +121,35 @@ insert into public.facility_settings (facility_id, domain, value) values
          jsonb_build_object('id', 'p15', 'label', '15%', 'type', 'percentage', 'value', 15),
          jsonb_build_object('id', 'f5', 'label', '$5', 'type', 'fixed', 'value', 5)
        ))
-   )),
-  ('00000000-0000-0000-0000-0000001f6020', 'service_addons', jsonb_build_object(
-     'categories', '[]'::jsonb,
-     'addOns', jsonb_build_array(
-       jsonb_build_object('id', 'walk', 'name', 'Walk', 'description', '', 'pricingType', 'per_item',
-         'price', 10, 'maxQuantity', 3, 'petScope', 'per_pet', 'isActive', true, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('daycare', 'boarding'), 'locationIds', '[]'::jsonb,
-         'generatesTask', false, 'sortOrder', 1),
-       jsonb_build_object('id', 'bag', 'name', 'Treat bag', 'description', '', 'pricingType', 'flat',
-         'price', 4, 'petScope', 'per_booking', 'isActive', true, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('daycare'), 'generatesTask', false, 'sortOrder', 2),
-       jsonb_build_object('id', 'nightly', 'name', 'Nightly treat', 'description', '', 'pricingType', 'per_day',
-         'price', 2, 'petScope', 'per_pet', 'isActive', true, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('boarding'), 'generatesTask', false, 'sortOrder', 3),
-       jsonb_build_object('id', 'pool', 'name', 'Pool', 'description', '', 'pricingType', 'per_item',
-         'price', 8, 'petScope', 'per_pet', 'isActive', false, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('daycare'), 'generatesTask', false, 'sortOrder', 4),
-       jsonb_build_object('id', 'spa', 'name', 'Spa', 'description', '', 'pricingType', 'flat',
-         'price', 20, 'petScope', 'per_pet', 'isActive', true, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('daycare'), 'generatesTask', false, 'sortOrder', 5,
-         'sizePricing', jsonb_build_array(jsonb_build_object('size', 'large', 'priceModifier', 5, 'modifierType', 'flat'))),
-       jsonb_build_object('id', 'premium', 'name', 'Premium', 'description', '', 'pricingType', 'percentage_of_booking',
-         'price', 10, 'petScope', 'per_booking', 'isActive', true, 'requiresScheduling', false,
-         'applicableServices', jsonb_build_array('daycare'), 'generatesTask', false, 'sortOrder', 6)
-     )
    ))
 on conflict (facility_id, domain) do update set value = excluded.value;
 
-insert into public.grooming_add_ons (id, facility_id, name, description, price, is_active, display_order) values
-  ('00000000-0000-0000-0000-0000001f60a0', '00000000-0000-0000-0000-0000001f6020', 'Nail polish', '', 12, true, 1),
-  ('00000000-0000-0000-0000-0000001f60a1', '00000000-0000-0000-0000-0000001f6020', 'Teeth', '', 9, false, 2);
+-- The one add-ons list (20260926230000). A service ref names a service; these
+-- bookings carry no service id, so the uuids only have to be well formed.
+insert into public.locations (id, facility_id, name, is_primary, timezone) values
+  ('00000000-0000-0000-0000-0000001f60e0', '00000000-0000-0000-0000-0000001f6020', 'Uptown', false, 'America/Toronto');
+
+insert into public.service_add_ons
+  (id, facility_id, legacy_id, name, price, is_active, archived_at, location_ids,
+   applies_to_all_services, service_refs, display_order)
+values
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'walk', 'Walk', 10, true, null, '{}',
+   false, array['daycare:00000000-0000-0000-0000-0000001f60d1', 'boarding:00000000-0000-0000-0000-0000001f60b1'], 1),
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'bag', 'Treat bag', 4, true, null, '{}',
+   false, array['daycare:00000000-0000-0000-0000-0000001f60d1'], 2),
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'late', 'Late checkout', 2, true, null, '{}',
+   false, array['boarding:00000000-0000-0000-0000-0000001f60b1'], 3),
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'pool', 'Pool', 8, false, null, '{}',
+   false, array['daycare:00000000-0000-0000-0000-0000001f60d1'], 4),
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'gone', 'Spa', 20, true, now(), '{}',
+   false, array['daycare:00000000-0000-0000-0000-0000001f60d1'], 5),
+  (gen_random_uuid(), '00000000-0000-0000-0000-0000001f6020', 'uptown', 'Uptown swim', 6, true, null,
+   array['00000000-0000-0000-0000-0000001f60e0'::uuid],
+   false, array['daycare:00000000-0000-0000-0000-0000001f60d1'], 6),
+  ('00000000-0000-0000-0000-0000001f60a0', '00000000-0000-0000-0000-0000001f6020', null, 'Nail polish', 12, true, null, '{}',
+   false, array['grooming:00000000-0000-0000-0000-0000001f60c1'], 7),
+  ('00000000-0000-0000-0000-0000001f60a1', '00000000-0000-0000-0000-0000001f6020', null, 'Teeth', 9, false, null, '{}',
+   false, array['grooming:00000000-0000-0000-0000-0000001f60c1'], 8);
 
 -- Times fixed at 14:00 UTC (10:00 in Toronto) so a day never straddles midnight.
 insert into public.bookings
@@ -204,39 +204,36 @@ exception when others then
   reset role; perform pg_temp.t('C1  catalogue price', false, sqlerrm);
 end $$;
 
--- ── C2  cap, nights, percentage ─────────────────────────────────────────────
+-- ── C2  the quantity asked, up to ten — and not multiplied by the nights ────
 do $$
-declare v_walk record; v_premium record; v_nightly record;
+declare v_walk record; v_late record;
 begin
   perform pg_temp.as_user('00000000-0000-0000-0000-0000001f6003');
   set local role authenticated;
   perform public.submit_yipyy_go_form(
     '00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6050',
     '{"noMedications": true}'::jsonb,
-    '[{"addOnId": "walk", "quantity": 9}, {"addOnId": "premium"}]'::jsonb);
+    '[{"addOnId": "walk", "quantity": 12}]'::jsonb);
   perform public.submit_yipyy_go_form(
     '00000000-0000-0000-0000-0000001f6091', '00000000-0000-0000-0000-0000001f6050',
     '{"noMedications": true}'::jsonb,
-    '[{"addOnId": "nightly", "quantity": 1}]'::jsonb);
+    '[{"addOnId": "late", "quantity": 2}]'::jsonb);
   reset role;
   perform pg_temp.as_nobody();
   select * into v_walk from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:%:walk');
-  select * into v_premium from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:%:premium');
-  select * into v_nightly from pg_temp.line('00000000-0000-0000-0000-0000001f6091', 'yipyy-go:addon:%:nightly');
-  perform pg_temp.t('C2  walks cap at 3; nightly treats count 3 nights; premium is 10% of $40',
-    v_walk.quantity = 3 and v_walk.lines = 1
-      and v_nightly.unit_price = 2 and v_nightly.quantity = 3
-      and v_premium.unit_price = 4 and v_premium.quantity = 1,
-    format('walk qty=%s; nightly %s x %s; premium %s x %s',
-      v_walk.quantity, v_nightly.unit_price, v_nightly.quantity, v_premium.unit_price, v_premium.quantity));
+  select * into v_late from pg_temp.line('00000000-0000-0000-0000-0000001f6091', 'yipyy-go:addon:%:late');
+  perform pg_temp.t('C2  twelve walks are charged as ten; two late checkouts on a three-night stay are two',
+    v_walk.quantity = 10 and v_walk.lines = 1
+      and v_late.unit_price = 2 and v_late.quantity = 2,
+    format('walk qty=%s; late %s x %s', v_walk.quantity, v_late.unit_price, v_late.quantity));
 exception when others then
-  reset role; perform pg_temp.t('C2  pricing types', false, sqlerrm);
+  reset role; perform pg_temp.t('C2  quantity', false, sqlerrm);
 end $$;
 
 -- ── C3  what is not offered is refused ──────────────────────────────────────
 do $$
 declare
-  v_inactive boolean := false; v_sized boolean := false;
+  v_inactive boolean := false; v_archived boolean := false; v_other_location boolean := false;
   v_other_service boolean := false; v_unknown boolean := false;
 begin
   perform pg_temp.as_user('00000000-0000-0000-0000-0000001f6003');
@@ -248,12 +245,17 @@ begin
   end;
   begin
     perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6051',
-      '{}'::jsonb, '[{"addOnId": "spa"}]'::jsonb);
-  exception when invalid_parameter_value then v_sized := true;
+      '{}'::jsonb, '[{"addOnId": "gone"}]'::jsonb);
+  exception when invalid_parameter_value then v_archived := true;
   end;
   begin
     perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6051',
-      '{}'::jsonb, '[{"addOnId": "nightly"}]'::jsonb);
+      '{}'::jsonb, '[{"addOnId": "uptown"}]'::jsonb);
+  exception when invalid_parameter_value then v_other_location := true;
+  end;
+  begin
+    perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6051',
+      '{}'::jsonb, '[{"addOnId": "late"}]'::jsonb);
   exception when invalid_parameter_value then v_other_service := true;
   end;
   begin
@@ -262,9 +264,10 @@ begin
   exception when invalid_parameter_value then v_unknown := true;
   end;
   reset role;
-  perform pg_temp.t('C3  inactive, size-priced, other-service and unknown add-ons are refused',
-    v_inactive and v_sized and v_other_service and v_unknown,
-    format('inactive=%s sized=%s other service=%s unknown=%s', v_inactive, v_sized, v_other_service, v_unknown));
+  perform pg_temp.t('C3  inactive, deleted, other-location, other-service and unknown add-ons are refused',
+    v_inactive and v_archived and v_other_location and v_other_service and v_unknown,
+    format('inactive=%s deleted=%s other location=%s other service=%s unknown=%s',
+      v_inactive, v_archived, v_other_location, v_other_service, v_unknown));
 exception when others then
   reset role; perform pg_temp.t('C3  not offered', false, sqlerrm);
 end $$;
@@ -282,7 +285,7 @@ begin
   -- Rex boarding: as-needed only → no doses.
   perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6091', '00000000-0000-0000-0000-0000001f6050',
     '{"medications": [{"id": "m2", "name": "Trazodone", "dosage": "50mg", "frequency": "prn", "times": []}]}'::jsonb,
-    '[{"addOnId": "nightly", "quantity": 1}]'::jsonb);
+    '[{"addOnId": "late", "quantity": 1}]'::jsonb);
   reset role;
   perform pg_temp.as_nobody();
   select * into v_milo from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:medfee:%');
@@ -311,7 +314,7 @@ begin
   perform pg_temp.as_user('00000000-0000-0000-0000-0000001f6003');
   set local role authenticated;
   perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6050',
-    '{"noMedications": true}'::jsonb, '[{"addOnId": "walk", "quantity": 9}, {"addOnId": "premium"}]'::jsonb);
+    '{"noMedications": true}'::jsonb, '[{"addOnId": "walk", "quantity": 12}]'::jsonb);
   reset role;
   perform pg_temp.as_nobody();
   select amount_due into v_due_after from public.bookings where id = '00000000-0000-0000-0000-0000001f6090';
@@ -329,24 +332,24 @@ declare v_after record; v_charge_line uuid; v_charge_rows int;
 begin
   perform pg_temp.as_nobody();
   delete from public.booking_line_items
-   where booking_id = '00000000-0000-0000-0000-0000001f6090' and source_id like 'yipyy-go:addon:%:premium';
+   where booking_id = '00000000-0000-0000-0000-0000001f6090' and source_id like 'yipyy-go:addon:%:walk';
   perform pg_temp.as_user('00000000-0000-0000-0000-0000001f6003');
   set local role authenticated;
   perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6050',
-    '{"noMedications": true}'::jsonb, '[{"addOnId": "walk", "quantity": 9}, {"addOnId": "premium"}]'::jsonb);
+    '{"noMedications": true}'::jsonb, '[{"addOnId": "walk", "quantity": 12}]'::jsonb);
   reset role;
   perform pg_temp.as_nobody();
-  select * into v_after from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:%:premium');
+  select * into v_after from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:%:walk');
   select count(*), max(line_item_id::text)::uuid into v_charge_rows, v_charge_line
-    from public.yipyy_go_charges where charge_key like 'addon:%:premium';
-  perform pg_temp.t('C6  staff removed the premium line; sending the form again does not put it back',
+    from public.yipyy_go_charges where charge_key like 'addon:%:walk';
+  perform pg_temp.t('C6  staff removed the walk line; sending the form again does not put it back',
     v_after.lines = 0 and v_charge_rows = 1 and v_charge_line is null,
     format('lines=%s charge rows=%s charge line=%s', v_after.lines, v_charge_rows, coalesce(v_charge_line::text, '<null>')));
 exception when others then
   reset role; perform pg_temp.t('C6  removed stays removed', false, sqlerrm);
 end $$;
 
--- ── C7  a per-booking add-on is one line ────────────────────────────────────
+-- ── C7  an add-on belongs to the pet ────────────────────────────────────────
 do $$
 declare v_bag record;
 begin
@@ -354,18 +357,18 @@ begin
   set local role authenticated;
   perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6050',
     '{"noMedications": true}'::jsonb,
-    '[{"addOnId": "walk", "quantity": 9}, {"addOnId": "premium"}, {"addOnId": "bag"}]'::jsonb);
+    '[{"addOnId": "walk", "quantity": 12}, {"addOnId": "bag"}]'::jsonb);
   perform public.submit_yipyy_go_form('00000000-0000-0000-0000-0000001f6090', '00000000-0000-0000-0000-0000001f6051',
     '{"medications": [{"id": "m1", "name": "Apoquel", "dosage": "1 tab", "frequency": "twice_daily", "times": []}]}'::jsonb,
     '[{"addOnId": "bag"}]'::jsonb);
   reset role;
   perform pg_temp.as_nobody();
-  select * into v_bag from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:00000000-0000-0000-0000-0000001f6090:bag');
-  perform pg_temp.t('C7  a treat bag asked for on both dogs is one $4 line',
-    v_bag.lines = 1 and v_bag.unit_price = 4 and v_bag.quantity = 1,
+  select * into v_bag from pg_temp.line('00000000-0000-0000-0000-0000001f6090', 'yipyy-go:addon:%:bag');
+  perform pg_temp.t('C7  a treat bag asked for on both dogs is a $4 line for each',
+    v_bag.lines = 2 and v_bag.unit_price = 4 and v_bag.quantity = 1,
     format('lines=%s unit=%s qty=%s', v_bag.lines, v_bag.unit_price, v_bag.quantity));
 exception when others then
-  reset role; perform pg_temp.t('C7  per booking', false, sqlerrm);
+  reset role; perform pg_temp.t('C7  per pet', false, sqlerrm);
 end $$;
 
 -- ── C8  staff approval puts add-ons on the bill ─────────────────────────────
@@ -497,7 +500,7 @@ end $$;
 
 -- ── C13  what the owner is offered ──────────────────────────────────────────
 do $$
-declare v_offer jsonb; v_ids text; v_premium numeric; v_stranger boolean := false;
+declare v_offer jsonb; v_ids text; v_walk numeric; v_stranger boolean := false;
 begin
   perform pg_temp.as_user('00000000-0000-0000-0000-0000001f6003');
   set local role authenticated;
@@ -510,13 +513,13 @@ begin
   exception when insufficient_privilege then v_stranger := true;
   end;
   reset role;
-  select string_agg(o ->> 'id', ',' order by o ->> 'id'), max((o ->> 'unitPrice')::numeric) filter (where o ->> 'id' = 'premium')
-    into v_ids, v_premium
+  select string_agg(o ->> 'id', ',' order by o ->> 'id'), max((o ->> 'unitPrice')::numeric) filter (where o ->> 'id' = 'walk')
+    into v_ids, v_walk
     from jsonb_array_elements(v_offer) o;
-  perform pg_temp.t('C13 daycare offers bag, premium and walk — premium at $4 — and a stranger is refused',
-    v_ids = 'bag,premium,walk' and v_premium = 4 and v_stranger
+  perform pg_temp.t('C13 daycare offers the bag and the walk — the walk at $10 — and a stranger is refused',
+    v_ids = 'bag,walk' and v_walk = 10 and v_stranger
       and not (v_offer::text like '%"price"%') and not (v_offer::text like '%taxable%'),
-    format('ids=%s premium=%s stranger refused=%s', v_ids, v_premium, v_stranger));
+    format('ids=%s walk=%s stranger refused=%s', v_ids, v_walk, v_stranger));
 exception when others then
   reset role; perform pg_temp.t('C13 offer', false, sqlerrm);
 end $$;

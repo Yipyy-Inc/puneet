@@ -2,7 +2,6 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { ACCOUNTS, signIn } from "./_auth";
 import { cancelBookingsMarked } from "./_sweep";
-import { withoutTestItems } from "./_settings-snapshot";
 
 // ============================================================================
 // A FACILITY DECIDES WHICH SERVICES NEED ITS APPROVAL.
@@ -459,7 +458,8 @@ test.describe("a facility decides which services need its approval", () => {
 
 const BOARD_MARKER = `${MARKER} boarding`;
 const BOARD_SERVICE = `${MARKER} Stay with walks`;
-const WALK_ID = "e2e-auto-confirm-walk";
+/** The walk add-on's id, from the one add-ons list — set in beforeAll. */
+let walkId = "";
 /** The service's nightly price, and one walk. */
 const NIGHT = 50;
 const WALK = 7;
@@ -467,6 +467,23 @@ const WALK = 7;
 interface MenuService {
   id: string;
   name: string;
+}
+
+/**
+ * Delete (archive) every add-on this file made. Asked of the API, not
+ * remembered, so a run that died before its afterAll is cleaned by the next;
+ * never a throw inside a teardown.
+ */
+async function archiveMarkedAddOns(page: Page): Promise<void> {
+  const res = await page.request.get("/api/add-ons");
+  if (!res.ok()) return;
+  const body: unknown = await res.json().catch(() => null);
+  if (!Array.isArray(body)) return;
+  for (const addOn of body as { id: string; name: string }[]) {
+    if (addOn.name.includes(MARKER)) {
+      await page.request.delete(`/api/add-ons/${addOn.id}`);
+    }
+  }
 }
 
 /** The staff menu, or nothing — never a throw inside a teardown. */
@@ -479,52 +496,20 @@ async function boardingMenu(page: Page): Promise<MenuService[]> {
 
 test.describe("boarding confirms with the add-ons its service attaches", () => {
   let serviceRowId = "";
-  let priorAddOns: Record<string, unknown> | null = null;
 
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
     try {
       await signIn(page, ACCOUNTS.owner);
 
-      // The facility's add-ons stay; one walk joins them for the run. The
-      // copy is cleaned of anything a crashed run left, or it would be put
-      // back forever (`_settings-snapshot.ts`).
-      const res = await page.request.get("/api/facility/settings");
-      expect(res.ok(), await res.text()).toBe(true);
-      const all = (await res.json()) as Record<string, { value?: unknown }>;
-      const current = (withoutTestItems(all.service_addons?.value ?? {}) ??
-        {}) as { addOns?: unknown[]; categories?: unknown[] };
-      priorAddOns = current as Record<string, unknown>;
-      const put = await page.request.patch("/api/facility/settings", {
-        data: {
-          domain: "service_addons",
-          value: {
-            ...current,
-            categories: current.categories ?? [],
-            addOns: [
-              ...(current.addOns ?? []),
-              {
-                id: WALK_ID,
-                name: `${MARKER} Walk`,
-                description: "",
-                pricingType: "per_day",
-                price: WALK,
-                petScope: "per_pet",
-                applicableServices: ["boarding"],
-                requiresScheduling: false,
-                generatesTask: false,
-                isActive: true,
-                // Required by the schema: one stored add-on without them
-                // drops the whole catalogue from every reader.
-                sortOrder: 99,
-                createdAt: "2026-09-25T00:00:00.000Z",
-                updatedAt: "2026-09-25T00:00:00.000Z",
-              },
-            ],
-          },
-        },
+      // The facility's add-ons stay; one walk joins the one add-ons list
+      // for the run. Anything a crashed run left is archived first.
+      await archiveMarkedAddOns(page);
+      const put = await page.request.post("/api/add-ons", {
+        data: { name: `${MARKER} Walk`, price: WALK },
       });
-      expect(put.ok(), await put.text()).toBe(true);
+      expect(put.status(), await put.text()).toBe(201);
+      walkId = ((await put.json()) as { addOn: { id: string } }).addOn.id;
 
       for (const s of await boardingMenu(page)) {
         if (s.name.includes(MARKER)) {
@@ -540,7 +525,7 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
           isActive: true,
           defaultAddOns: [
             {
-              addOnId: WALK_ID,
+              addOnId: walkId,
               appliesOn: "every_day",
               quantityPerDay: 1,
               minNights: null,
@@ -563,11 +548,7 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     try {
       await signIn(page, ACCOUNTS.owner);
       await setAutoConfirm(page, {}).catch(() => undefined);
-      if (priorAddOns !== null) {
-        await page.request.patch("/api/facility/settings", {
-          data: { domain: "service_addons", value: priorAddOns },
-        });
-      }
+      await archiveMarkedAddOns(page);
       for (const s of await boardingMenu(page)) {
         if (s.name.includes(MARKER)) {
           await page.request.delete(`/api/boarding/services/${s.id}`);
@@ -605,13 +586,13 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     });
 
   // Every day of a one-night stay is two days: two walks.
-  const twoWalks = [{ serviceId: WALK_ID, quantity: 2, petId: ALICE.pet }];
+  const twoWalks = () => [{ serviceId: walkId, quantity: 2, petId: ALICE.pet }];
 
   test("B1 the stay and its default add-on, quoted right: confirmed", async ({
     page,
   }) => {
     await signIn(page, ACCOUNTS.customer);
-    const res = await book(page, NIGHT + 2 * WALK, twoWalks);
+    const res = await book(page, NIGHT + 2 * WALK, twoWalks());
     expect(res.ok(), await res.text()).toBe(true);
     const booking = (await res.json()) as {
       id: number;
@@ -648,7 +629,7 @@ test.describe("boarding confirms with the add-ons its service attaches", () => {
     page,
   }) => {
     await signIn(page, ACCOUNTS.customer);
-    const res = await book(page, NIGHT + 2 * WALK - 5, twoWalks);
+    const res = await book(page, NIGHT + 2 * WALK - 5, twoWalks());
     expect(res.ok(), await res.text()).toBe(true);
     const booking = (await res.json()) as { id: number; status: string };
     made.push(booking.id);

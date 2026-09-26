@@ -364,14 +364,17 @@ try {
     }
     for (const [i, a] of GROOMING_ADD_ONS.entries()) {
       const [exists] = await tx`
-        select 1 from public.grooming_add_ons
+        select 1 from public.service_add_ons
          where facility_id = ${DEMO_FACILITY_ID} and legacy_id = ${a.legacyId}`;
       if (exists) continue;
       await tx`
-        insert into public.grooming_add_ons
-          (facility_id, legacy_id, name, price, duration_min, is_active, display_order)
+        insert into public.service_add_ons
+          (facility_id, legacy_id, name, price, duration_min, is_active, display_order,
+           applies_to_all_services, service_refs)
         values
-          (${DEMO_FACILITY_ID}, ${a.legacyId}, ${a.name}, ${a.price}, ${a.duration}, true, ${i + 1})`;
+          (${DEMO_FACILITY_ID}, ${a.legacyId}, ${a.name}, ${a.price}, ${a.duration}, true, ${i + 1},
+           false, array(select 'grooming:' || s.id::text from public.grooming_services s
+                         where s.facility_id = ${DEMO_FACILITY_ID}))`;
       count("grooming add-ons");
     }
 

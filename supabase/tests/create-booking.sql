@@ -108,7 +108,7 @@ values
   ('00000000-0000-0000-0000-000000190020',
    '00000000-0000-0000-0000-000000190060', 'medium', 80, 105);
 
-insert into public.grooming_add_ons
+insert into public.service_add_ons
   (id, facility_id, legacy_id, name, price, duration_min)
 values
   ('00000000-0000-0000-0000-000000190070', '00000000-0000-0000-0000-000000190020',
@@ -405,7 +405,7 @@ insert into public.grooming_services
 values
   ('00000000-0000-0000-0000-000000190061', '00000000-0000-0000-0000-000000190020',
    'App Bath', 40, 45);
-insert into public.grooming_add_ons
+insert into public.service_add_ons
   (id, facility_id, name, price, duration_min)
 values
   ('00000000-0000-0000-0000-000000190071', '00000000-0000-0000-0000-000000190020',

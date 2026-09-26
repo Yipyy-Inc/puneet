@@ -94,7 +94,7 @@ values
   ('00000000-0000-0000-0000-0000000f0052', '00000000-0000-0000-0000-0000000f0021',
    'groom-pkg-001', 'Rival Full Groom', 75, 90, true);
 
-insert into public.grooming_add_ons
+insert into public.service_add_ons
   (id, facility_id, legacy_id, name, price, duration_min)
 values
   ('00000000-0000-0000-0000-0000000f0060', '00000000-0000-0000-0000-0000000f0020',
@@ -307,6 +307,10 @@ exception when others then
 end $$;
 
 -- ── T8: view_services alone writes nothing ──────────────────────────────────
+-- Into service_add_ons, where `authenticated` HOLDS the insert grant, so the
+-- refusal is the write policy's. grooming_add_ons became a view on 2026-09-26
+-- with select only, and an insert there would be refused by the missing grant
+-- whatever the policy said.
 do $$
 declare ok boolean;
 begin
@@ -317,7 +321,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000000f0002', 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
-    insert into public.grooming_add_ons (facility_id, name, price, duration_min)
+    insert into public.service_add_ons (facility_id, name, price, duration_min)
     values ('00000000-0000-0000-0000-0000000f0020', 'Sneaky', 0, 0);
     ok := false;
   exception when insufficient_privilege then ok := true; end;

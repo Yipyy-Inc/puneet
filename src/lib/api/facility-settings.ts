@@ -1,6 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useAddOnCategories,
+  useAddOns,
+  useCustomerAddOns,
+} from "@/lib/api/add-ons";
+import {
+  toLegacyAddOnCategory,
+  toLegacyServiceAddOn,
+} from "@/lib/add-ons/legacy-shape";
+import type {
+  AddOn as NewAddOn,
+  AddOnCategory as NewAddOnCategory,
+} from "@/types/add-on";
 import type { FacilityDailyCareConfig } from "@/types/boarding";
 import type { CareTaskFeedback } from "@/lib/settings/care-task-feedback";
 
@@ -729,18 +743,56 @@ export function useIncidentReporting(): {
 export function useServiceAddOns(): {
   addOns: ServiceAddOn[];
   categories: AddOnCategory[];
-  /** False means no row: this facility sells no extras, not "we cannot tell". */
+  /** False means no add-ons: this facility sells no extras, not "we cannot tell". */
   configured: boolean;
   isPending: boolean;
 } {
-  const { settings, isPending } = useFacilitySettings();
+  // The one add-ons list (20260926230000) replaced the `service_addons` JSON.
+  // Staff read their facility's list, a pet owner the live ones of their own
+  // facility; both come back in the old shape (lib/add-ons/legacy-shape.ts) so
+  // the screens that read this move without being edited in the same change.
+  const audience = useSettingsAudience();
+  const staffAddOns = useAddOns({ enabled: audience === "staff" });
+  const staffCategories = useAddOnCategories({ enabled: audience === "staff" });
+  const customer = useCustomerAddOns({ enabled: audience === "customer" });
+
+  const addOns =
+    audience === "customer"
+      ? (customer.data?.addOns ?? NO_ADD_ONS)
+      : (staffAddOns.data ?? NO_ADD_ONS);
+  const categories =
+    audience === "customer"
+      ? (customer.data?.categories ?? NO_ADD_ON_CATEGORIES)
+      : (staffCategories.data ?? NO_ADD_ON_CATEGORIES);
+  const isPending =
+    audience === "customer"
+      ? customer.isPending
+      : staffAddOns.isPending || staffCategories.isPending;
+
+  // Memoised on the query data, which is stable between fetches: several
+  // booking screens run effects on this list, and a new array every render
+  // would run them every render.
+  const legacyAddOns = useMemo(
+    () => addOns.map((addOn) => toLegacyServiceAddOn(addOn, categories)),
+    [addOns, categories],
+  );
+  const legacyCategories = useMemo(
+    () => categories.map(toLegacyAddOnCategory),
+    [categories],
+  );
+
   return {
-    addOns: settings.service_addons.value.addOns,
-    categories: settings.service_addons.value.categories,
-    configured: settings.service_addons.configured,
+    addOns: legacyAddOns,
+    categories: legacyCategories,
+    configured: addOns.length > 0,
     isPending,
   };
 }
+
+// Stable empties: a `?? []` in a hook's return is a new array every render,
+// and an effect that depends on it loops (check:query-default-loops).
+const NO_ADD_ONS: NewAddOn[] = [];
+const NO_ADD_ON_CATEGORIES: NewAddOnCategory[] = [];
 
 /**
  * This facility's Yipyy Go setup: which services ask a customer for a

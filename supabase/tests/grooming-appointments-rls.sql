@@ -95,7 +95,7 @@ insert into public.grooming_services (id, facility_id, legacy_id, name, base_pri
   ('00000000-0000-0000-0000-00000000a050', '00000000-0000-0000-0000-00000000a020',
    'p1', 'Full Groom', 80, 90);
 
-insert into public.grooming_add_ons (id, facility_id, legacy_id, name, price, duration_min) values
+insert into public.service_add_ons (id, facility_id, legacy_id, name, price, duration_min) values
   ('00000000-0000-0000-0000-00000000a060', '00000000-0000-0000-0000-00000000a020',
    'ao1', 'Teeth Brushing', 12, 10),
   ('00000000-0000-0000-0000-00000000a061', '00000000-0000-0000-0000-00000000a020',

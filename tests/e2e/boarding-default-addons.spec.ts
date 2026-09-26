@@ -2,7 +2,6 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { ACCOUNTS, signIn } from "./_auth";
-import { withoutTestItems } from "./_settings-snapshot";
 import { cancelBookingsMarked } from "./_sweep";
 
 // ============================================================================
@@ -24,9 +23,9 @@ import { cancelBookingsMarked } from "./_sweep";
 //
 // ── IT WRITES, AND PUTS BACK ──────────────────────────────────────────────
 //
-// One add-on in the facility's catalogue (the settings are read first and
-// restored, cleaned of anything a crashed run left — `_settings-snapshot.ts`),
-// one boarding service, and one booking, cancelled by its marker.
+// One add-on in the one add-ons list, under its own legacy id and deleted
+// again (swept at the start too, in case a run died before its end), one
+// boarding service, and one booking, cancelled by its marker.
 // ============================================================================
 
 const MARKER = "[e2e boarding-defaults]";
@@ -52,7 +51,6 @@ function admin() {
 
 let facilityId = "";
 let serviceId = "";
-let catalogue: { had: boolean; value: unknown } | null = null;
 
 interface Rule {
   addOnId: string;
@@ -87,6 +85,16 @@ async function menu(page: Page): Promise<Service[]> {
   return Array.isArray(body) ? (body as Service[]) : [];
 }
 
+/** Hard-deletes this file's walk — never a throw inside a teardown. */
+async function removeAddOn() {
+  if (!facilityId) return;
+  await admin()
+    .from("service_add_ons")
+    .delete()
+    .eq("facility_id", facilityId)
+    .eq("legacy_id", ADD_ON);
+}
+
 async function removeServices(page: Page) {
   for (const s of await menu(page)) {
     if (s.name.includes(MARKER)) {
@@ -106,55 +114,18 @@ test.beforeAll(async ({ browser }) => {
   facilityId = (pet as unknown as { clients: { facility_id: string } }).clients
     .facility_id;
 
-  const { data } = await db
-    .from("facility_settings")
-    .select("value")
-    .eq("facility_id", facilityId)
-    .eq("domain", "service_addons")
-    .maybeSingle();
-  catalogue = {
-    had: Boolean(data),
-    value: withoutTestItems(data?.value ?? null),
-  };
-
-  const existing = (catalogue.value ?? {}) as {
-    addOns?: unknown[];
-    categories?: unknown[];
-  };
-  const value = {
-    ...existing,
-    categories: existing.categories ?? [],
-    addOns: [
-      ...(existing.addOns ?? []),
-      {
-        id: ADD_ON,
-        name: ADD_ON_NAME,
-        description: "Twenty minutes around the block",
-        pricingType: "per_day",
-        price: 7,
-        petScope: "per_pet",
-        applicableServices: ["boarding"],
-        requiresScheduling: false,
-        generatesTask: false,
-        isActive: true,
-        // All three are required by `serviceAddOnSchema`, and a stored value
-        // that fails it makes the settings layer drop the WHOLE domain: the
-        // booking form then sees no add-ons at all.
-        sortOrder: 99,
-        createdAt: "2026-09-25T00:00:00.000Z",
-        updatedAt: "2026-09-25T00:00:00.000Z",
-      },
-    ],
-  };
-  const { error: writeError } = catalogue.had
-    ? await db
-        .from("facility_settings")
-        .update({ value })
-        .eq("facility_id", facilityId)
-        .eq("domain", "service_addons")
-    : await db
-        .from("facility_settings")
-        .insert({ facility_id: facilityId, domain: "service_addons", value });
+  // One walk joins the one add-ons list (20260926230000) for the run, under
+  // the id bookings name it by. Swept first, in case a run died before its
+  // afterAll; the facility's own add-ons are never touched.
+  await removeAddOn();
+  const { error: writeError } = await db.from("service_add_ons").insert({
+    facility_id: facilityId,
+    legacy_id: ADD_ON,
+    name: ADD_ON_NAME,
+    description: "Twenty minutes around the block",
+    price: 7,
+    is_active: true,
+  });
   expect(writeError?.message ?? null).toBeNull();
 
   const page = await browser.newPage();
@@ -177,22 +148,7 @@ test.afterAll(async ({ browser }) => {
     // Inside the finally: a backstop placed after the try is skipped by
     // exactly the failure it exists for.
     await cancelBookingsMarked(browser, MARKER, "after");
-    if (catalogue && facilityId) {
-      const db = admin();
-      if (catalogue.had) {
-        await db
-          .from("facility_settings")
-          .update({ value: catalogue.value })
-          .eq("facility_id", facilityId)
-          .eq("domain", "service_addons");
-      } else {
-        await db
-          .from("facility_settings")
-          .delete()
-          .eq("facility_id", facilityId)
-          .eq("domain", "service_addons");
-      }
-    }
+    await removeAddOn();
   }
 });
 

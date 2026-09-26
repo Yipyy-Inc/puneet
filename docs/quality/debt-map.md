@@ -154,11 +154,15 @@ Found while wiring the grooming catalogue to Postgres. All four exist today:
 
 **Do instead:** when migrating a grooming screen, check which of the four it reads before assuming. New code uses `grooming_add_ons` via the API. Do **not** fold `ServiceAddOn` into it. Do not add a fifth.
 
+**Superseded 2026-09-26 — both were folded into ONE table, on purpose.** The client asked for add-ons to work exactly as the reference product's article describes: one add-ons list for every service, at Settings › Services › Add-ons, with categories the facility sorts, locations, price / tax / duration with an override per location, a staff requirement, "all services (including future ones)" or chosen services, and pet type & breed / weight / coat limits. That is neither of the two catalogues above, so 20260926230000 made `public.service_add_ons` (+ `service_add_on_categories`, `service_add_on_location_overrides`) and moved both into it: the JSON's 3 add-ons under their old ids as `legacy_id`, `grooming_add_ons`' 10 under their OWN uuids, so the appointment and default-add-on foreign keys re-pointed without a rewrite. `grooming_add_ons` is now a VIEW over the one table with the same columns, so `create_booking` and `/api/grooming/add-ons` read it unchanged; the `service_addons` JSON is left in place and unread. **The rule now: one add-on list, one table, and every reader resolves an id by `legacy_id` OR `id::text`** — ids written before the move are strings. `useServiceAddOns()` still hands the old `ServiceAddOn` shape to the ~30 booking screens (`src/lib/add-ons/legacy-shape.ts`) until each is rewritten to the new rules, and then it goes.
+
 ### 🟡 The grooming rates screen writes to the query cache, not to anything
 
 [grooming-rates.tsx:441](../../src/components/facility/grooming/grooming-rates.tsx#L441) deletes a service with `queryClient.setQueryData(...)` and reports success. Service charges live in `useState(INITIAL_SERVICE_CHARGES)`. Both vanish on reload — the same failure just fixed in the onboarding/offboarding template editors, where the toast was the only thing that happened.
 
 **Do instead:** the services half is migrated (real CRUD through `/api/grooming/services`). The **service charges** tab and the **add-ons** tab are still cache/`useState` only — treat their success toasts as unproven until they move.
+
+(2026-09-26: out of date on both counts. The add-ons tab is GONE — every Rates page's Add-ons tab was removed when add-ons became one list managed only in Settings › Services › Add-ons — and the service charges persist to the `grooming_service_charges` setting.)
 
 ---
 

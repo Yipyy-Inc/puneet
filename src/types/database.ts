@@ -4099,56 +4099,6 @@ export type Database = {
           },
         ];
       };
-      grooming_add_ons: {
-        Row: {
-          created_at: string;
-          description: string;
-          display_order: number;
-          duration_min: number;
-          facility_id: string;
-          id: string;
-          is_active: boolean;
-          legacy_id: string | null;
-          name: string;
-          price: number;
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          description?: string;
-          display_order?: number;
-          duration_min?: number;
-          facility_id: string;
-          id?: string;
-          is_active?: boolean;
-          legacy_id?: string | null;
-          name: string;
-          price?: number;
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          description?: string;
-          display_order?: number;
-          duration_min?: number;
-          facility_id?: string;
-          id?: string;
-          is_active?: boolean;
-          legacy_id?: string | null;
-          name?: string;
-          price?: number;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "grooming_add_ons_facility_id_fkey";
-            columns: ["facility_id"];
-            isOneToOne: false;
-            referencedRelation: "facilities";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       grooming_alert_notes: {
         Row: {
           applies_to_future: boolean;
@@ -4236,7 +4186,7 @@ export type Database = {
             foreignKeyName: "grooming_appointment_add_ons_add_on_id_fkey";
             columns: ["add_on_id"];
             isOneToOne: false;
-            referencedRelation: "grooming_add_ons";
+            referencedRelation: "service_add_ons";
             referencedColumns: ["id"];
           },
           {
@@ -4678,7 +4628,7 @@ export type Database = {
             foreignKeyName: "grooming_service_default_add_ons_add_on_id_fkey";
             columns: ["add_on_id"];
             isOneToOne: false;
-            referencedRelation: "grooming_add_ons";
+            referencedRelation: "service_add_ons";
             referencedColumns: ["id"];
           },
           {
@@ -10151,6 +10101,195 @@ export type Database = {
           },
         ];
       };
+      service_add_on_categories: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_add_on_categories_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      service_add_on_location_overrides: {
+        Row: {
+          add_on_id: string;
+          created_at: string;
+          duration_min: number | null;
+          facility_id: string;
+          id: string;
+          location_id: string;
+          price: number | null;
+          taxable: boolean | null;
+          updated_at: string;
+        };
+        Insert: {
+          add_on_id: string;
+          created_at?: string;
+          duration_min?: number | null;
+          facility_id: string;
+          id?: string;
+          location_id: string;
+          price?: number | null;
+          taxable?: boolean | null;
+          updated_at?: string;
+        };
+        Update: {
+          add_on_id?: string;
+          created_at?: string;
+          duration_min?: number | null;
+          facility_id?: string;
+          id?: string;
+          location_id?: string;
+          price?: number | null;
+          taxable?: boolean | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_add_on_location_overrides_add_on_id_fkey";
+            columns: ["add_on_id"];
+            isOneToOne: false;
+            referencedRelation: "service_add_ons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "service_add_on_location_overrides_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "service_add_on_location_overrides_location_id_fkey";
+            columns: ["location_id"];
+            isOneToOne: false;
+            referencedRelation: "locations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      service_add_ons: {
+        Row: {
+          applies_to_all_services: boolean;
+          archived_at: string | null;
+          category_id: string | null;
+          color_code: string | null;
+          created_at: string;
+          description: string;
+          display_order: number;
+          duration_min: number;
+          eligible_breeds: string[];
+          eligible_coat_types: string[];
+          eligible_species: string[];
+          eligible_weight_tiers: string[];
+          facility_id: string;
+          id: string;
+          image_url: string | null;
+          is_active: boolean;
+          legacy_id: string | null;
+          location_ids: string[];
+          name: string;
+          price: number;
+          requires_staff: boolean;
+          service_refs: string[];
+          taxable: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          applies_to_all_services?: boolean;
+          archived_at?: string | null;
+          category_id?: string | null;
+          color_code?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min?: number;
+          eligible_breeds?: string[];
+          eligible_coat_types?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id: string;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          name: string;
+          price?: number;
+          requires_staff?: boolean;
+          service_refs?: string[];
+          taxable?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          applies_to_all_services?: boolean;
+          archived_at?: string | null;
+          category_id?: string | null;
+          color_code?: string | null;
+          created_at?: string;
+          description?: string;
+          display_order?: number;
+          duration_min?: number;
+          eligible_breeds?: string[];
+          eligible_coat_types?: string[];
+          eligible_species?: string[];
+          eligible_weight_tiers?: string[];
+          facility_id?: string;
+          id?: string;
+          image_url?: string | null;
+          is_active?: boolean;
+          legacy_id?: string | null;
+          location_ids?: string[];
+          name?: string;
+          price?: number;
+          requires_staff?: boolean;
+          service_refs?: string[];
+          taxable?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_add_ons_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "service_add_on_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "service_add_ons_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       shift_swap_requests: {
         Row: {
           created_at: string;
@@ -13409,6 +13548,22 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      grooming_add_ons: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          display_order: number | null;
+          duration_min: number | null;
+          facility_id: string | null;
+          id: string | null;
+          is_active: boolean | null;
+          legacy_id: string | null;
+          name: string | null;
+          price: number | null;
+          updated_at: string | null;
+        };
+        Relationships: [];
       };
       grooming_stylist_stats: {
         Row: {

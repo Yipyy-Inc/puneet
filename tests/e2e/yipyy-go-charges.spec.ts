@@ -178,7 +178,6 @@ test.beforeAll(async () => {
     .facility_id;
 
   await remember("yipyy_go_config");
-  await remember("service_addons");
 
   const config = structuredClone(defaultYipyyGoConfig);
   config.enabled = true;
@@ -219,33 +218,34 @@ test.beforeAll(async () => {
   };
   await put("yipyy_go_config", config);
 
-  // The facility's own add-ons stay; this one joins them for the run.
-  const existing = (saved.service_addons.value ?? {}) as {
-    addOns?: unknown[];
-    categories?: unknown[];
-  };
-  await put("service_addons", {
-    ...existing,
-    categories: existing.categories ?? [],
-    addOns: [
-      ...(existing.addOns ?? []),
-      {
-        id: ADD_ON,
-        name: `${MARKER} Extra play`,
-        description: "Thirty more minutes outside",
-        pricingType: "per_day",
-        price: 7.5,
-        maxQuantity: 3,
-        petScope: "per_pet",
-        applicableServices: ["daycare"],
-        requiresScheduling: false,
-        generatesTask: false,
-        isActive: true,
-      },
-    ],
+  // The facility's own add-ons stay; this one joins the one add-ons list
+  // (20260926230000) for the run, for the facility's daycare services — and
+  // is swept first, in case an earlier run died before its afterAll.
+  await db
+    .from("service_add_ons")
+    .delete()
+    .eq("facility_id", facilityId)
+    .eq("legacy_id", ADD_ON);
+  const { data: daycare } = await db
+    .from("daycare_services")
+    .select("id")
+    .eq("facility_id", facilityId);
+  const daycareRefs = ((daycare ?? []) as { id: string }[]).map(
+    (service) => `daycare:${service.id}`,
+  );
+  const { error: addOnError } = await db.from("service_add_ons").insert({
+    facility_id: facilityId,
+    legacy_id: ADD_ON,
+    name: `${MARKER} Extra play`,
+    description: "Thirty more minutes outside",
+    price: 7.5,
+    is_active: true,
+    applies_to_all_services: daycareRefs.length === 0,
+    service_refs: daycareRefs,
   });
+  expect(addOnError?.message ?? null).toBeNull();
 
-  // One facility-local day, so a per-day add-on counts once.
+  // One facility-local day.
   const start = new Date(Date.now() + 6 * 86_400_000);
   start.setUTCHours(13, 0, 0, 0);
   const end = new Date(start.getTime() + 9 * 3_600_000);
@@ -278,7 +278,11 @@ test.afterAll(async () => {
   const db = admin();
   if (bookingId) await db.from("bookings").delete().eq("id", bookingId);
   await db.from("bookings").delete().eq("special_requests", MARKER);
-  await restore("service_addons");
+  await db
+    .from("service_add_ons")
+    .delete()
+    .eq("facility_id", facilityId)
+    .eq("legacy_id", ADD_ON);
   await restore("yipyy_go_config");
 });
 

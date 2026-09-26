@@ -19,7 +19,13 @@ import {
   defaultAddOnLines,
   type BoardingDefaultAddOn,
 } from "@/lib/pricing/boarding-default-addons";
-import { serviceAddOnsConfigSchema } from "@/lib/settings/addons";
+import { toLegacyServiceAddOn } from "@/lib/add-ons/legacy-shape";
+import {
+  ADD_ON_SELECT,
+  rowToAddOn,
+  type AddOnRow,
+} from "@/lib/api/mappers/add-on";
+import type { ServiceAddOn } from "@/types/facility";
 
 // ============================================================================
 // What a customer's booking costs, decided by the SERVER.
@@ -403,6 +409,24 @@ async function priceBoarding(input: PriceRequest): Promise<ServerQuote> {
 }
 
 /**
+ * The facility's live add-ons — active, not deleted — in the booking screens'
+ * shape. An unreadable list is no list: both sides then price no add-ons, and
+ * a booking that carries one disagrees and stays a request.
+ */
+async function liveAddOns(facilityId: string): Promise<ServiceAddOn[]> {
+  const { data, error } = await createAdminClient()
+    .from("service_add_ons")
+    .select(ADD_ON_SELECT)
+    .eq("facility_id", facilityId)
+    .eq("is_active", true)
+    .is("archived_at", null);
+  if (error || !data) return [];
+  return (data as unknown as AddOnRow[]).map((row) =>
+    toLegacyServiceAddOn(rowToAddOn(row), []),
+  );
+}
+
+/**
  * The stay's price plus its add-ons, as the wizard adds them.
  *
  * Until 2026-09-25 the server priced boarding's BASE only, so any add-on on a
@@ -423,14 +447,10 @@ async function withAddOns(
   if (lines.length === 0 && defaults.length === 0) {
     return { ok: true, basePrice: base, total: base };
   }
-  // A stored value that no longer parses is no catalogue at all — exactly
-  // what `settingsFromRows` hands the wizard, so both sides price nothing.
-  const parsed = serviceAddOnsConfigSchema.safeParse(
-    await settingValue(input.facilityId, "service_addons"),
-  );
-  const catalogue = parsed.success
-    ? parsed.data.addOns.filter((addOn) => addOn.isActive)
-    : [];
+  // The one add-ons list (20260926230000), read in the SAME shape the wizard
+  // reads it through `useServiceAddOns()` — one conversion, so the ids both
+  // sides key on and the prices both sides add cannot drift apart.
+  const catalogue = await liveAddOns(input.facilityId);
   const required = defaultAddOnLines({
     defaults,
     nights,
