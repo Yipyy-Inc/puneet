@@ -21656,3 +21656,61 @@ again, and `list_migrations` no longer describes the database.
 effect of a feature**, so it has not been done. Until it is, use the
 `apply_migration` route for every new migration, as PROJECT-STATE.md says, and
 never `db push`.
+
+## 2026-09-26 — The suites were the log bill, and the identity chain was most of each request
+
+The client sent the project's usage page at 01:00: log ingestion **16.8 of
+20 GB** on the Pro plan, and the API gateway taking ~82,000 requests an hour.
+Read from the edge logs, grouped by caller, the day before was:
+
+| Caller                                  | API requests | Share |
+| --------------------------------------- | -----------: | ----: |
+| This machine — local e2e suites         |      637,366 |   61% |
+| GitHub's runners — CI e2e               |     ~394,000 |   38% |
+| The production VPS — every real visitor |       ~8,300 |  0.8% |
+
+Nothing was looping: this machine's traffic fell to zero the minute its suite
+ended. The suites WERE the traffic, as they were the egress bill on 2026-09-17.
+
+### What each request cost
+
+`profiles`, `facility_memberships`, `facilities` and `locations` — the answer to
+"who is this, and which facility are they in" — were **73%** of the day. The
+2026-09-17 fix made that chain run once per REQUEST (`cache()`), but a page
+load is ~37 requests, and each still paid four reads. For the e2e owner alone
+it was ~127,000 of each, the same answer every time.
+
+So, `a6bb46d4`:
+
+- **One read where there were two, twice.** The memberships come embedded in
+  the profile, and the locations in the facility — still as the caller, still
+  through RLS.
+- **Kept for ten seconds per session** (`src/lib/auth/identity-cache.ts`), the
+  in-flight answer shared, so a page load's requests make one read between
+  them. The key holds everything the answer depends on: the person and the
+  session, and for a facility the hostname, the switcher cookie and the branch
+  header. A failure is never kept, nor a profile the sign-up webhook has not
+  written yet. The app's own writes to memberships, profiles, facilities and
+  locations forget everything (`forgettingIdentities`, 17 handlers).
+- **What can lag is routing, by at most ten seconds.** Row-level security
+  still judges every query as the caller, so a revoked membership loses its
+  rows at once; a portal gate may send them to the old portal for a moment.
+
+**Measured on one spec before and after** (`settings-portal`, 6 tests, 9 page
+loads, the same server otherwise): **688 API requests → about 100**, and the
+identity reads **529 → 13**. The spec passed both times, and ran faster.
+
+### And how often the suites run
+
+Three full local runs in a day (~200,000 requests each) were this machine's
+637,366. AGENTS.md and CLAUDE.md said to run the whole suite by hand before any
+push touching bookings, boarding, the calendar or identity; they say the gate
+and the specs for what changed now, and the whole suite only when asked. CI's
+full run is weekly (Mondays 03:00 UTC) instead of nightly. CI itself was
+disabled for the night of the 26th, with the owner's approval, so the 03:00
+run could not start before this landed.
+
+**The shape to remember:** when a usage number jumps, group the edge logs by
+`request.cf.asOrganization` and `x_client_info` before reading any code — a
+test run and a real user look nothing alike there, and the answer took one
+query.
