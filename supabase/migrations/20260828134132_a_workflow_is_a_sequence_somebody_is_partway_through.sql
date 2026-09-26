@@ -67,9 +67,9 @@ create table if not exists public.workflows (
   send_at_local time,
 
   -- Do not write to the same client from this workflow more often than this.
-  -- MoeGo's own documentation warns that a daily filter re-sends to the same
-  -- people every day and leaves the operator to notice; this is the thing that
-  -- actually stops it.
+  -- The reference's own documentation warns that a daily filter re-sends to the
+  -- same people every day and leaves the operator to notice; this is the thing
+  -- that actually stops it.
   min_days_between_sends smallint not null default 30
     check (min_days_between_sends >= 0),
 

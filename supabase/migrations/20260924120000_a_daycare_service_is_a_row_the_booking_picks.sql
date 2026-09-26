@@ -37,8 +37,8 @@
 --
 -- Those numbers are COPIED INTO `size_pricing` here rather than dropped. The
 -- decision on 2026-09-23 was to price by service and restrict by weight, the
--- way MoéGo does, so nothing reads this column — but deleting money somebody
--- entered, to implement a screen they have not seen yet, is not this
+-- way the reference does, so nothing reads this column — but deleting money
+-- somebody entered, to implement a screen they have not seen yet, is not this
 -- migration's call to make. It is one jsonb column and it costs nothing.
 -- ============================================================================
 
@@ -58,7 +58,8 @@ create index if not exists daycare_service_categories_facility_idx
   on public.daycare_service_categories (facility_id, display_order);
 
 comment on table public.daycare_service_categories is
-  'How a facility groups its daycare services on the menu. MoéGo calls this Category; it is presentation, never eligibility or price.';
+  'How a facility groups its daycare services on the menu. The reference calls '
+  'this Category; it is presentation, never eligibility or price.';
 
 -- ── Services ────────────────────────────────────────────────────────────────
 
@@ -77,8 +78,8 @@ create table if not exists public.daycare_services (
   description text not null default '',
   image_url   text,
 
-  -- Internal only. MoéGo is explicit that the colour code is for the calendar
-  -- and is never shown to a client.
+  -- Internal only. The reference is explicit that the colour code is for the
+  -- calendar and is never shown to a client.
   color       text,
 
   -- The facility-wide price. A branch's own row in
@@ -90,12 +91,12 @@ create table if not exists public.daycare_services (
   -- that is the more expensive mistake to find later.
   taxable     boolean not null default true,
 
-  -- MoéGo's "Max stay duration": minimum 30 minutes, half-hour steps. Null is
-  -- genuinely distinct from 0 here — null is "no ceiling", and a service with
-  -- no ceiling covers any stay.
+  -- The reference's "Max stay duration": minimum 30 minutes, half-hour steps.
+  -- Null is genuinely distinct from 0 here — null is "no ceiling", and a
+  -- service with no ceiling covers any stay.
   max_duration_hours numeric(5,2) check (max_duration_hours >= 0.5),
 
-  -- MoéGo's auto-rollover. Both null = off. A service becomes
+  -- The reference's auto-rollover. Both null = off. A service becomes
   -- `rollover_to_service_id` once the pet is still here
   -- `rollover_after_minutes` past `max_duration_hours`.
   rollover_after_minutes  integer check (rollover_after_minutes >= 0),
@@ -109,7 +110,7 @@ create table if not exists public.daycare_services (
   eligible_breeds       text[] not null default '{}',
   eligible_weight_tiers text[] not null default '{}',
 
-  -- MoéGo's "Pet Code(s)". Ours are pet TAGS. Blocked beats eligible.
+  -- The reference's "Pet Code(s)". Ours are pet TAGS. Blocked beats eligible.
   eligible_pet_tags text[] not null default '{}',
   blocked_pet_tags  text[] not null default '{}',
 
@@ -121,8 +122,9 @@ create table if not exists public.daycare_services (
   -- Which branches offer it at all. Empty = every branch.
   location_ids uuid[] not null default '{}',
 
-  -- MoéGo asks these as two separate questions, because they are: one stops
-  -- STAFF booking the service, the other stops a CUSTOMER booking it online.
+  -- The reference asks these as two separate questions, because they are: one
+  -- stops STAFF booking the service, the other stops a CUSTOMER booking it
+  -- online.
   requires_evaluation        boolean not null default false,
   requires_evaluation_online boolean not null default false,
 
@@ -153,7 +155,8 @@ comment on table public.daycare_services is
 comment on column public.daycare_services.size_pricing is
   'Carried over from the daycare_rates setting on 2026-09-23 and read by NOTHING. Four of six rates had one set and no pricing code had ever charged it. Kept so the money a facility typed in is not deleted by a migration; the shipped model prices by service and restricts by weight.';
 comment on column public.daycare_services.max_duration_hours is
-  'MoéGo''s "Max stay duration". Null is NO ceiling, which is different from 0 — a service with no ceiling covers any stay.';
+  'The reference''s "Max stay duration". Null is NO ceiling, which is different '
+  'from 0 — a service with no ceiling covers any stay.';
 
 -- ── The price a branch pays ─────────────────────────────────────────────────
 

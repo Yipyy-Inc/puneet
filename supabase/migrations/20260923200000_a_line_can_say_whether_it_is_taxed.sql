@@ -8,8 +8,8 @@
 -- or a bag of food — supplies of their own, taxed like anything else sold over
 -- a counter.
 --
--- A service charge broke it. MoéGo lets a facility configure tax per fee, and
--- there are real fees that are not a supply: a late-payment charge, an
+-- A service charge broke it. The reference lets a facility configure tax per
+-- fee, and there are real fees that are not a supply: a late-payment charge, an
 -- administrative penalty, a no-show fee in a jurisdiction that treats it as
 -- liquidated damages rather than a sale. "Extras always are" cannot express
 -- any of them, and the facility's only recourse was to fold the fee into the

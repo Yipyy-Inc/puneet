@@ -3,9 +3,10 @@
 --
 -- ── WHY THIS EXISTS AT ALL ────────────────────────────────────────────────
 --
--- MoéGo's service-charge page ends with "not included in staff commission
--- calculations". This product could not honour that rule or break it, because
--- it had no commission engine: `staff.details -> 'payroll'` has stored
+-- The reference's service-charge page ends with "not included in staff
+-- commission calculations". This product could not honour that rule or break
+-- it, because it had no commission engine: `staff.details -> 'payroll'` has
+-- stored
 -- `generalServiceCommission`, `hourlyRate`, `tipsRate` and per-module
 -- `overrides` since 20260801150000, a screen edits them behind `view_payroll`,
 -- and NOTHING has ever computed a figure from them. A rate nobody applies is a

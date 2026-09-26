@@ -1,9 +1,9 @@
 -- ============================================================================
 -- A CUSTOMER PICKS THE DAYCARE SERVICE THEY ARE OFFERED — AND ONLY THAT ONE.
 --
--- Phase 6 of the MoéGo daycare work. Phases 1-5 gave the facility a menu, gave
--- the booking a choice, and made a late check-out move the bill. All of it was
--- the STAFF side. A customer booking online still reached the menu through
+-- Phase 6 of the reference's daycare work. Phases 1-5 gave the facility a menu,
+-- gave the booking a choice, and made a late check-out move the bill. All of it
+-- was the STAFF side. A customer booking online still reached the menu through
 -- `/api/daycare/services`, the staff route, and that has three problems.
 --
 -- ── 1. THE STAFF ROUTE SCOPES BY MEMBERSHIP, AND A CUSTOMER HAS NONE ──────
@@ -22,7 +22,7 @@
 -- `daycare_services` carries things that are the facility's own working notes:
 --
 --   * `color` — the calendar's colour code. Our own setup screen labels it
---     "internal only", because MoéGo's does.
+--     "internal only", because the reference's does.
 --   * `blocked_pet_tags` and `eligible_pet_tags` — the facility's behavioural
 --     classification of animals. "This service excludes pets tagged Bites" is
 --     a sentence no customer should be able to read, about their own dog or
@@ -40,12 +40,12 @@
 --
 -- ── 3. `requires_evaluation_online` WAS READ BY NOTHING ───────────────────
 --
--- MoéGo asks for the evaluation twice, as two separate questions, because they
--- are: one stops STAFF booking a service, the other stops a CUSTOMER booking it
--- online. We stored both from Phase 1, the setup screen has written both since
--- Phase 3 — and nothing anywhere read the second one. A facility could tick
--- "requires an evaluation before online booking" and the customer booked it
--- anyway.
+-- The reference asks for the evaluation twice, as two separate questions,
+-- because they are: one stops STAFF booking a service, the other stops a
+-- CUSTOMER booking it online. We stored both from Phase 1, the setup screen has
+-- written both since Phase 3 — and nothing anywhere read the second one. A
+-- facility could tick "requires an evaluation before online booking" and the
+-- customer booked it anyway.
 --
 -- That is the same defect as `size_pricing`, and a filter in the picker would
 -- not have fixed it: a customer who can POST can POST anything. So the refusal
@@ -55,8 +55,8 @@
 --
 -- STAFF ARE NOT GATED BY IT. `requires_evaluation_online` is about the online
 -- channel, so the check asks `create_bookings` first: somebody standing at the
--- desk with the dog in front of them is not booking online, and MoéGo draws the
--- line in exactly the same place.
+-- desk with the dog in front of them is not booking online, and the reference
+-- draws the line in exactly the same place.
 --
 -- SQL P0-P9 in daycare-customer-services.sql.
 -- ============================================================================

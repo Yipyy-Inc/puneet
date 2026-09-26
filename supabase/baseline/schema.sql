@@ -146,7 +146,7 @@ CREATE TYPE "public"."lodging_space_type" AS ENUM (
 ALTER TYPE "public"."lodging_space_type" OWNER TO "postgres";
 
 
-COMMENT ON TYPE "public"."lodging_space_type" IS 'How a lodging type counts capacity. room = one family per unit, counted in units (MoeGo Room/Kennel). area = counted in pets, overlap expected.';
+COMMENT ON TYPE "public"."lodging_space_type" IS 'How a lodging type counts capacity. room = one family per unit, counted in units (the reference''s Room/Kennel). area = counted in pets, overlap expected.';
 
 
 
@@ -254,7 +254,7 @@ $$;
 ALTER FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") IS 'Pets already in an area unit over a range — MoeGo area occupancy. Counts pets, not stays; ignores released stays; and because occupies is half-open, a pet checking out on a date is not counted on that date.';
+COMMENT ON FUNCTION "private"."area_pets_in_use"("p_room_id" "uuid", "p_range" "tstzrange", "p_exclude_booking" "uuid") IS 'Pets already in an area unit over a range — area occupancy as the reference counts it. Counts pets, not stays; ignores released stays; and because occupies is half-open, a pet checking out on a date is not counted on that date.';
 
 
 
@@ -11702,7 +11702,7 @@ $$;
 ALTER FUNCTION "public"."lodging_occupancy"("p_room_id" "uuid", "p_on" "date") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."lodging_occupancy"("p_room_id" "uuid", "p_on" "date") IS 'X of Y for one lodging unit on one date, MoeGo style: a room is 0 or 1 of 1, an area is pets of max_pets_per_area. A pet checking out that date is not counted, because occupies is half-open.';
+COMMENT ON FUNCTION "public"."lodging_occupancy"("p_room_id" "uuid", "p_on" "date") IS 'X of Y for one lodging unit on one date, in the reference''s format: a room is 0 or 1 of 1, an area is pets of max_pets_per_area. A pet checking out that date is not counted, because occupies is half-open.';
 
 
 
@@ -18307,7 +18307,7 @@ CREATE TABLE IF NOT EXISTS "public"."boarding_service_categories" (
 ALTER TABLE "public"."boarding_service_categories" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."boarding_service_categories" IS 'MoeGo "Edit Category" on the boarding service menu — a heading services are grouped under, not a kennel class.';
+COMMENT ON TABLE "public"."boarding_service_categories" IS 'The reference''s "Edit Category" on the boarding service menu — a heading services are grouped under, not a kennel class.';
 
 
 
@@ -18330,7 +18330,7 @@ CREATE TABLE IF NOT EXISTS "public"."boarding_service_default_addons" (
 ALTER TABLE "public"."boarding_service_default_addons" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."boarding_service_default_addons" IS 'MoeGo BETA default add-ons: attached once a length-of-stay condition is met, and billed SEPARATELY from the base price.';
+COMMENT ON TABLE "public"."boarding_service_default_addons" IS 'The reference''s BETA default add-ons: attached once a length-of-stay condition is met, and billed SEPARATELY from the base price.';
 
 
 
@@ -18389,7 +18389,7 @@ COMMENT ON TABLE "public"."boarding_services" IS 'The boarding menu: what a clie
 
 
 
-COMMENT ON COLUMN "public"."boarding_services"."unit" IS 'MoeGo "Unit" — per night (the gap between dates) or per day (the dates themselves). Monday to Wednesday is 2 nights or 3 days.';
+COMMENT ON COLUMN "public"."boarding_services"."unit" IS 'The reference''s "Unit" — per night (the gap between dates) or per day (the dates themselves). Monday to Wednesday is 2 nights or 3 days.';
 
 
 
@@ -19311,7 +19311,7 @@ CREATE TABLE IF NOT EXISTS "public"."daycare_service_categories" (
 ALTER TABLE "public"."daycare_service_categories" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."daycare_service_categories" IS 'How a facility groups its daycare services on the menu. MoéGo calls this Category; it is presentation, never eligibility or price.';
+COMMENT ON TABLE "public"."daycare_service_categories" IS 'How a facility groups its daycare services on the menu. The reference calls this Category; it is presentation, never eligibility or price.';
 
 
 
@@ -19377,7 +19377,7 @@ COMMENT ON TABLE "public"."daycare_services" IS 'What a facility SELLS as daycar
 
 
 
-COMMENT ON COLUMN "public"."daycare_services"."max_duration_hours" IS 'MoéGo''s "Max stay duration". Null is NO ceiling, which is different from 0 — a service with no ceiling covers any stay.';
+COMMENT ON COLUMN "public"."daycare_services"."max_duration_hours" IS 'The reference''s "Max stay duration". Null is NO ceiling, which is different from 0 — a service with no ceiling covers any stay.';
 
 
 
@@ -22456,7 +22456,7 @@ CREATE TABLE IF NOT EXISTS "public"."room_categories" (
 ALTER TABLE "public"."room_categories" OWNER TO "postgres";
 
 
-COMMENT ON COLUMN "public"."room_categories"."default_capacity" IS 'MoeGo "Max # of Pets (same family) per room" — the pets one FAMILY may put in one unit. Not a limit on unrelated bookings: the exclusion constraint already allows only one live stay per room.';
+COMMENT ON COLUMN "public"."room_categories"."default_capacity" IS 'The reference''s "Max # of Pets (same family) per room" — the pets one FAMILY may put in one unit. Not a limit on unrelated bookings: the exclusion constraint already allows only one live stay per room.';
 
 
 
@@ -22468,11 +22468,11 @@ COMMENT ON COLUMN "public"."room_categories"."taxable" IS 'Whether a boarding st
 
 
 
-COMMENT ON COLUMN "public"."room_categories"."space_type" IS 'MoeGo Space type. Every row existing before 20260924180000 is a room, which is what boarding_stay_no_double_booking has always assumed.';
+COMMENT ON COLUMN "public"."room_categories"."space_type" IS 'The reference''s Space type. Every row existing before 20260924180000 is a room, which is what boarding_stay_no_double_booking has always assumed.';
 
 
 
-COMMENT ON COLUMN "public"."room_categories"."max_pets_per_area" IS 'MoeGo "Max # of pets per area" — pets in the area at once, regardless of family. Null for a room type, and required for an area.';
+COMMENT ON COLUMN "public"."room_categories"."max_pets_per_area" IS 'The reference''s "Max # of pets per area" — pets in the area at once, regardless of family. Null for a room type, and required for an area.';
 
 
 

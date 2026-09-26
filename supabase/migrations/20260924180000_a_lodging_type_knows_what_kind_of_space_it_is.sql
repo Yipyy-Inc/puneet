@@ -1,9 +1,9 @@
 -- ============================================================================
 -- A LODGING TYPE KNOWS WHAT KIND OF SPACE IT IS.
 --
--- Phase 1 of the MoéGo lodging work. MoéGo asks one question about every
--- lodging type that we have never asked, and everything else about capacity
--- follows from the answer:
+-- Phase 1 of the reference's lodging work. The reference asks one question
+-- about every lodging type that we have never asked, and everything else about
+-- capacity follows from the answer:
 --
 --   Room / Kennel — "Capacity is based on individual rooms. Once a pet (or pet
 --                    family) is assigned to a lodging, it is considered fully
@@ -15,10 +15,10 @@
 -- ── WE ALREADY IMPLEMENT ROOM/KENNEL, EXACTLY ─────────────────────────────
 --
 -- `boarding_stay_no_double_booking` (20260806600000) is an exclusion
--- constraint: one live stay per room per overlapping range. That IS MoéGo's
--- Room/Kennel rule, and `override_reason` is already MoéGo's "turn off Only
--- show applicable lodging" escape hatch — recorded with a reason rather than
--- silently allowed.
+-- constraint: one live stay per room per overlapping range. That IS the
+-- reference's Room/Kennel rule, and `override_reason` is already the
+-- reference's "turn off Only show applicable lodging" escape hatch — recorded
+-- with a reason rather than silently allowed.
 --
 -- So this migration does not change how a room behaves. It names the behaviour
 -- and makes room for the other kind.
@@ -52,7 +52,8 @@ end $$;
 
 comment on type public.lodging_space_type is
   'How a lodging type counts capacity. room = one family per unit, counted in '
-  'units (MoeGo Room/Kennel). area = counted in pets, overlap expected.';
+  'units (the reference''s Room/Kennel). area = counted in pets, overlap '
+  'expected.';
 
 -- ── The lodging type ───────────────────────────────────────────────────────
 
@@ -61,17 +62,17 @@ alter table public.room_categories
   add column if not exists max_pets_per_area integer;
 
 comment on column public.room_categories.space_type is
-  'MoeGo Space type. Every row existing before 20260924180000 is a room, which '
-  'is what boarding_stay_no_double_booking has always assumed.';
+  'The reference''s Space type. Every row existing before 20260924180000 is a '
+  'room, which is what boarding_stay_no_double_booking has always assumed.';
 
 comment on column public.room_categories.default_capacity is
-  'MoeGo "Max # of Pets (same family) per room" — the pets one FAMILY may put '
-  'in one unit. Not a limit on unrelated bookings: the exclusion constraint '
-  'already allows only one live stay per room.';
+  'The reference''s "Max # of Pets (same family) per room" — the pets one '
+  'FAMILY may put in one unit. Not a limit on unrelated bookings: the '
+  'exclusion constraint already allows only one live stay per room.';
 
 comment on column public.room_categories.max_pets_per_area is
-  'MoeGo "Max # of pets per area" — pets in the area at once, regardless of '
-  'family. Null for a room type, and required for an area.';
+  'The reference''s "Max # of pets per area" — pets in the area at once, '
+  'regardless of family. Null for a room type, and required for an area.';
 
 -- Exactly one meaning per row: an area carries its maximum, a room does not
 -- carry a stale one. A number that is stored and ignored is the defect this

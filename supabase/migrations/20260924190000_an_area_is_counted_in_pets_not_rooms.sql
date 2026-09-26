@@ -1,11 +1,11 @@
 -- ============================================================================
 -- AN AREA IS COUNTED IN PETS, NOT IN ROOMS.
 --
--- Phase 2 of the MoéGo lodging work. Phase 1 (20260924180000) gave a lodging
--- type a `space_type` and stopped the exclusion constraint applying to areas —
--- which left an area with NO limit at all. This gives it its own.
+-- Phase 2 of the reference's lodging work. Phase 1 (20260924180000) gave a
+-- lodging type a `space_type` and stopped the exclusion constraint applying to
+-- areas — which left an area with NO limit at all. This gives it its own.
 --
--- MoéGo, on the two kinds:
+-- The reference, on the two kinds:
 --
 --   Room / Kennel — "Based on the number of rooms. Each room is either occupied
 --                    or available — regardless of how many pets are inside it."
@@ -32,26 +32,26 @@
 --
 -- ── THE CHECK-OUT DAY IS FREE, AND IT IS FREE FOR AREAS TOO ───────────────
 --
--- MoéGo: "For both space types, boarding pets that are scheduled to check out
--- on that date are not counted toward occupancy."
+-- The reference: "For both space types, boarding pets that are scheduled to
+-- check out on that date are not counted toward occupancy."
 --
 -- `occupies` is a half-open `[)` range and this counts with `&&`, so a stay
 -- ending on the 5th does not overlap one starting on the 5th. The rule is
 -- already ours and this inherits it rather than re-implementing it.
 --
--- ── ONE DELIBERATE DEVIATION FROM MoéGo, STATED ───────────────────────────
+-- ── ONE DELIBERATE DEVIATION FROM THE REFERENCE, STATED ───────────────────
 --
--- MoéGo says of the area maximum: "An alert will be triggered by the system
--- when the specified criteria are met." An ALERT. This REFUSES instead, unless
--- the stay carries an `override_reason`.
+-- The reference says of the area maximum: "An alert will be triggered by the
+-- system when the specified criteria are met." An ALERT. This REFUSES instead,
+-- unless the stay carries an `override_reason`.
 --
 -- Two reasons. Our rooms have always refused-with-override, and an area that
 -- merely warned would make one half of the same screen weaker than the other.
--- And MoéGo's own capacity guide describes the room case as exactly this —
--- "MoeGo marks a full unit and stops recommending it — but the filter can be
--- toggled off to override this" — which is a refusal with an escape hatch
--- wearing different words. `override_booking_capacity` is that hatch, and it
--- records WHO decided and WHY, which an alert does not.
+-- And the reference's own capacity guide describes the room case as exactly
+-- this — "The reference marks a full unit and stops recommending it — but the
+-- filter can be toggled off to override this" — which is a refusal with an
+-- escape hatch wearing different words. `override_booking_capacity` is that
+-- hatch, and it records WHO decided and WHY, which an alert does not.
 --
 -- SQL A0-A5 in lodging-area-capacity.sql.
 -- ============================================================================
@@ -86,9 +86,10 @@ as $fn$
 $fn$;
 
 comment on function private.area_pets_in_use(uuid, tstzrange, uuid) is
-  'Pets already in an area unit over a range — MoeGo area occupancy. Counts '
-  'pets, not stays; ignores released stays; and because occupies is half-open, '
-  'a pet checking out on a date is not counted on that date.';
+  'Pets already in an area unit over a range — area occupancy as the reference '
+  'counts it. Counts pets, not stays; ignores released stays; and because '
+  'occupies is half-open, a pet checking out on a date is not counted on that '
+  'date.';
 
 revoke all on function private.area_pets_in_use(uuid, tstzrange, uuid) from public;
 revoke all on function private.area_pets_in_use(uuid, tstzrange, uuid) from anon;
@@ -173,10 +174,10 @@ create constraint trigger boarding_stays_area_within_capacity
 
 -- ── What a screen asks ─────────────────────────────────────────────────────
 --
--- The occupancy a board draws, for ONE unit on ONE date, in MoéGo's own shape:
--- X of Y. A room answers in units (0 or 1 of 1); an area answers in pets.
--- Public because every board needs it and RLS on the underlying tables still
--- decides what the caller may see.
+-- The occupancy a board draws, for ONE unit on ONE date, in the reference's own
+-- shape: X of Y. A room answers in units (0 or 1 of 1); an area answers in
+-- pets. Public because every board needs it and RLS on the underlying tables
+-- still decides what the caller may see.
 create or replace function public.lodging_occupancy(
   p_room_id uuid,
   p_on date
@@ -224,9 +225,9 @@ as $fn$
 $fn$;
 
 comment on function public.lodging_occupancy(uuid, date) is
-  'X of Y for one lodging unit on one date, MoeGo style: a room is 0 or 1 of 1, '
-  'an area is pets of max_pets_per_area. A pet checking out that date is not '
-  'counted, because occupies is half-open.';
+  'X of Y for one lodging unit on one date, in the reference''s format: a room '
+  'is 0 or 1 of 1, an area is pets of max_pets_per_area. A pet checking out '
+  'that date is not counted, because occupies is half-open.';
 
 revoke all on function public.lodging_occupancy(uuid, date) from public;
 revoke all on function public.lodging_occupancy(uuid, date) from anon;

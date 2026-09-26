@@ -15,9 +15,9 @@
 --
 -- ── THE CONSTRAINT IS THE FEATURE ────────────────────────────────────────
 --
--- MoéGo's rule is "each fee can only be added once per appointment". Three
--- separate passes will want to apply a fee — booking create, checkout open,
--- and a member of staff adding one by hand — and any two of them running
+-- The reference's rule is "each fee can only be added once per appointment".
+-- Three separate passes will want to apply a fee — booking create, checkout
+-- open, and a member of staff adding one by hand — and any two of them running
 -- against the same booking is a double charge.
 --
 -- `unique (booking_id, fee_id)` makes that a database fact rather than a
@@ -42,10 +42,11 @@
 --
 -- ── A NOTE FOR WHOEVER BUILDS COMMISSION ─────────────────────────────────
 --
--- MoéGo excludes service charges from staff commission. This product has no
--- commission engine at all — `PayrollConfig.generalServiceCommission` stores
--- a percentage that nothing computes, and `api/payroll` is purely time-based.
--- So there is nothing to exclude from yet. When there is, the exclusion is
+-- The reference excludes service charges from staff commission. This product
+-- has no commission engine at all — `PayrollConfig.generalServiceCommission`
+-- stores a percentage that nothing computes, and `api/payroll` is purely
+-- time-based. So there is nothing to exclude from yet. When there is, the
+-- exclusion is
 -- `where fee_id is null`, and this comment is why that line exists.
 -- ============================================================================
 

@@ -16,8 +16,8 @@
 -- cannot disagree, because they are the same function.
 --
 -- The second is a plain array matched against the booking behind the event,
--- exactly as `automation_rules.service_types` already is. MoeGo scopes its
--- conditions to the chosen action, and care type only means anything on a
+-- exactly as `automation_rules.service_types` already is. The reference scopes
+-- its conditions to the chosen action, and care type only means anything on a
 -- booking trigger — which is why this is a narrow column rather than a general
 -- condition engine nobody asked for.
 --

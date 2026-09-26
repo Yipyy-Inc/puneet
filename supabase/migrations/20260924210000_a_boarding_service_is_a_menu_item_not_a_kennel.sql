@@ -2,12 +2,12 @@
 -- A BOARDING SERVICE IS A MENU ITEM. A LODGING TYPE IS A ROOM. THEY ARE NOT
 -- THE SAME ROW.
 --
--- Phase 5 of the MoéGo lodging work, and the structural one. MoéGo's boarding
--- setup is two steps, and its own overview says so: "Set Up Boarding Services —
--- create your boarding service menu, set pricing, define pet eligibility" and
--- then "Set Up Lodging — define your lodging types, add individual room units".
--- A service names the lodging types it may be booked into; a lodging type holds
--- rooms. Two objects, one pointing at the other.
+-- Phase 5 of the reference's lodging work, and the structural one. The
+-- reference's boarding setup is two steps, and its own overview says so: "Set
+-- Up Boarding Services — create your boarding service menu, set pricing, define
+-- pet eligibility" and then "Set Up Lodging — define your lodging types, add
+-- individual room units". A service names the lodging types it may be booked
+-- into; a lodging type holds rooms. Two objects, one pointing at the other.
 --
 -- ── OURS HAS ALWAYS BEEN ONE ROW ──────────────────────────────────────────
 --
@@ -49,9 +49,10 @@
 
 -- ── Per night, or per day ──────────────────────────────────────────────────
 --
--- MoéGo: "Unit — Charged per night or per day (affects calculation)." A night
--- is the gap between two dates and a day is a date, so a Monday-to-Wednesday
--- stay is 2 nights or 3 days. Which one a facility charges is theirs to say.
+-- The reference: "Unit — Charged per night or per day (affects calculation)." A
+-- night is the gap between two dates and a day is a date, so a
+-- Monday-to-Wednesday stay is 2 nights or 3 days. Which one a facility charges
+-- is theirs to say.
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'boarding_price_unit') then
@@ -75,7 +76,8 @@ create index if not exists boarding_service_categories_facility_idx
   on public.boarding_service_categories (facility_id);
 
 comment on table public.boarding_service_categories is
-  'MoeGo "Edit Category" on the boarding service menu — a heading services are grouped under, not a kennel class.';
+  'The reference''s "Edit Category" on the boarding service menu — a heading '
+  'services are grouped under, not a kennel class.';
 
 -- ── Services ────────────────────────────────────────────────────────────────
 
@@ -94,8 +96,8 @@ create table if not exists public.boarding_services (
   description text not null default '',
   image_url   text,
 
-  -- Internal only. MoeGo is explicit that the colour code is for the calendar
-  -- and never shown to a client.
+  -- Internal only. The reference is explicit that the colour code is for the
+  -- calendar and never shown to a client.
   color       text,
 
   -- The facility-wide price. A branch's own row in
@@ -108,8 +110,9 @@ create table if not exists public.boarding_services (
   -- find later.
   taxable boolean not null default true,
 
-  -- WHICH LODGING TYPES THIS SERVICE MAY BE BOOKED INTO. MoeGo: "By default all
-  -- lodging types are selected. Toggle off All Lodging Types to limit."
+  -- WHICH LODGING TYPES THIS SERVICE MAY BE BOOKED INTO. The reference: "By
+  -- default all lodging types are selected. Toggle off All Lodging Types to
+  -- limit."
   --
   -- EMPTY MEANS EVERY TYPE, which is the convention this schema already uses
   -- for eligibility arrays (grooming_services, 20260805100000): "no restriction"
@@ -129,15 +132,15 @@ create table if not exists public.boarding_services (
   eligible_breeds       text[] not null default '{}',
   eligible_weight_tiers text[] not null default '{}',
 
-  -- MoeGo "Pet Code(s)". Ours are pet TAGS. Blocked beats eligible.
+  -- The reference's "Pet Code(s)". Ours are pet TAGS. Blocked beats eligible.
   eligible_pet_tags text[] not null default '{}',
   blocked_pet_tags  text[] not null default '{}',
 
   -- Which branches offer it at all. Empty = every branch.
   location_ids uuid[] not null default '{}',
 
-  -- Two questions, because MoeGo asks two: one stops STAFF booking the service,
-  -- the other stops a CUSTOMER booking it online.
+  -- Two questions, because the reference asks two: one stops STAFF booking the
+  -- service, the other stops a CUSTOMER booking it online.
   requires_evaluation        boolean not null default false,
   requires_evaluation_online boolean not null default false,
 
@@ -159,7 +162,8 @@ comment on table public.boarding_services is
   'The boarding menu: what a client books and what it costs. Separate from room_categories, which is the ROOM. A service names the lodging types it may be booked into; empty means all of them.';
 
 comment on column public.boarding_services.unit is
-  'MoeGo "Unit" — per night (the gap between dates) or per day (the dates themselves). Monday to Wednesday is 2 nights or 3 days.';
+  'The reference''s "Unit" — per night (the gap between dates) or per day (the '
+  'dates themselves). Monday to Wednesday is 2 nights or 3 days.';
 
 comment on column public.boarding_services.lodging_type_ids is
   'room_categories this service may be booked into. Empty = every type. Not an FK: Postgres cannot reference array elements, so a deleted type leaves a dead id the app must filter rather than trust.';
@@ -201,7 +205,7 @@ comment on table public.boarding_service_location_prices is
 
 -- ── What comes with the stay ────────────────────────────────────────────────
 --
--- MoéGo's "(BETA) Default Service(s)/Add-On(s)": an add-on attached
+-- The reference's "(BETA) Default Service(s)/Add-On(s)": an add-on attached
 -- automatically once a length-of-stay condition is met. Its own words on the
 -- money: "Default items are enforced once the length-of-stay condition is met.
 -- These items are billed separately and not included in the base boarding
@@ -220,7 +224,7 @@ create table if not exists public.boarding_service_default_addons (
   -- because that registry is a JSON blob keyed by string, not a table.
   addon_id text not null,
 
-  -- MoéGo's four choices, in its own order.
+  -- The reference's four choices, in its own order.
   applies_on text not null default 'every_day'
     check (applies_on in ('every_day', 'except_checkout', 'except_checkin', 'last_day')),
 
@@ -240,7 +244,8 @@ create index if not exists boarding_default_addon_facility_idx
   on public.boarding_service_default_addons (facility_id);
 
 comment on table public.boarding_service_default_addons is
-  'MoeGo BETA default add-ons: attached once a length-of-stay condition is met, and billed SEPARATELY from the base price.';
+  'The reference''s BETA default add-ons: attached once a length-of-stay '
+  'condition is met, and billed SEPARATELY from the base price.';
 
 -- ── The facility of a child row is derived, never supplied ──────────────────
 --

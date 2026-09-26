@@ -1,10 +1,10 @@
 -- ============================================================================
 -- A LATE CHECK-OUT HOLDS THE KENNEL FOR THAT NIGHT.
 --
--- Phase 3 of the MoéGo lodging work — the checkout cut-off time, from
+-- Phase 3 of the reference's lodging work — the checkout cut-off time, from
 -- Settings > Lodgings > Manage checkout cut-off time.
 --
--- MoéGo:
+-- The reference:
 --   "Boarding appointments that check out at or after the cut-off time →
 --    Count toward that night's boarding capacity"
 --   "...check out before the cut-off time → Do not count toward that night's
@@ -123,8 +123,8 @@ begin
 
   v_local := v_checkout at time zone v_tz;
 
-  -- AT or AFTER. MoeGo's wording, and the boundary matters: a cut-off of 14:00
-  -- with a 14:00 check-out holds the night.
+  -- AT or AFTER. The reference's wording, and the boundary matters: a cut-off
+  -- of 14:00 with a 14:00 check-out holds the night.
   if v_local::time >= v_cut then
     v_extended := ((date_trunc('day', v_local) + interval '1 day') at time zone v_tz);
     -- Extend only.
