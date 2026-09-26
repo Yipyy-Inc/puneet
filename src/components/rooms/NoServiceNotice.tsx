@@ -25,7 +25,7 @@ export function NoServiceNotice() {
       <span className="min-w-0">
         {t("notice")}{" "}
         <Link
-          href={href("/facility/dashboard/services/boarding/menu")}
+          href={href("/facility/dashboard/services/boarding/rates")}
           className="text-primary font-semibold underline-offset-4 hover:underline"
         >
           {t("link")}

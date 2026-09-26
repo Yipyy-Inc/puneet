@@ -34,7 +34,7 @@ import { ACCOUNTS, signIn } from "../e2e/_auth";
 const OUT = "C:/tmp/pwv/shots";
 
 const MENUS = [
-  { slug: "boarding", path: "/facility/dashboard/services/boarding/menu" },
+  { slug: "boarding", path: "/facility/dashboard/services/boarding/rates" },
   { slug: "daycare", path: "/facility/dashboard/services/daycare/rates" },
 ] as const;
 

@@ -18,6 +18,7 @@ import {
   formatTime,
   formatTimeOfDay,
   formatList,
+  isPluralOne,
   formatWeight,
   formatWeightFromLb,
 } from "@/lib/i18n/format";
@@ -442,5 +443,21 @@ describe("formatCalendarDayLong", () => {
   test("anything but a calendar day is the em dash", () => {
     expect(formatCalendarDayLong("2026-10", "en")).toBe("—");
     expect(formatCalendarDayLong("", "fr")).toBe("—");
+  });
+});
+
+// The singular in each language. Zero is where they part: "0 kennels" in
+// English, "0 chenil" in French — so `count === 1` is wrong in French.
+describe("isPluralOne", () => {
+  test("English: only one is singular", () => {
+    expect(isPluralOne(0, "en")).toBe(false);
+    expect(isPluralOne(1, "en")).toBe(true);
+    expect(isPluralOne(2, "en")).toBe(false);
+  });
+
+  test("French: zero and one are singular", () => {
+    expect(isPluralOne(0, "fr")).toBe(true);
+    expect(isPluralOne(1, "fr")).toBe(true);
+    expect(isPluralOne(2, "fr")).toBe(false);
   });
 });

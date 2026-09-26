@@ -21744,3 +21744,39 @@ run could not start before this landed.
 `request.cf.asOrganization` and `x_client_info` before reading any code — a
 test run and a real user look nothing alike there, and the answer took one
 query.
+
+## 2026-09-26 — Menu and Rates were one thing; a rate now says which room type it books
+
+The client made a room type "Suites" with its kennels on Rooms, then a rate
+"Suites, $90" on Rates, and found nothing tying the two together. Measured in
+production: Doggieville Mtl held **two room types named "Suites"**, both made
+on 2026-08-07 with 11 kennels each: the $90 one live, the $10 one retired (all
+11 switched off on 2026-09-22, two with past stays). The Rates tab edited
+`room_categories.default_base_price`, so every "rate" it created was a new
+ROOM TYPE, linked to nothing. The link the client asked for already existed, on the Menu tab:
+each `boarding_services` row names the lodging types it books into.
+
+So Menu and Rates are one tab now, **Rates**, showing the menu (the client
+preferred its cards). Each card names its room types with their kennels
+("Suites · 11 kennels", not "1 lodging type(s)"), and so does the editor's
+section 3, which is how two types sharing a name can be told apart. `/menu`
+redirects. A room type's own price stays on Rooms, as the fallback for a
+booking that names no rate.
+
+**Still open, found on the way:**
+
+1. **A customer's booking never gets a kennel.** The wizard picks one of the
+   rate's room types to price the quote, and the request deliberately drops
+   it (`use-customer-booking-request.ts`: an unconfirmed request holding a
+   kennel would block it for everyone). Nothing assigns one when the request
+   is confirmed, by staff or by auto-confirm; staff do it on the kennel board.
+2. **The kennel board does not know the rate.** `RoomAssignmentBoard`'s
+   `canDrop` checks eligibility, species, taken and capacity, never the
+   booking's `boardingServiceId`, so a Suites booking can go into a Condo
+   with no prompt.
+3. **The retired "Suites".** Its inactive $10 rate (no booking named it) was
+   removed on 2026-09-26 with the owner's approval. The room type itself was
+   NOT: its kennels are switched off, not empty — two carry past stays, and
+   deleting the type would take that history with it. First described here,
+   wrongly, as an empty duplicate made by the old Rates tab; the kennel
+   history is what said otherwise.

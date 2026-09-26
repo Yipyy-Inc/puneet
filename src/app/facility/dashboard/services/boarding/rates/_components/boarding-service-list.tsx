@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import { useLocationContext } from "@/hooks/use-location-context";
+import { useRooms } from "@/hooks/use-rooms";
+import { isPluralOne } from "@/lib/i18n/format";
 import { BRAND_COLOR_PALETTE } from "@/lib/operations-calendar";
 import {
   useBoardingServiceCategories,
@@ -20,9 +22,11 @@ import {
 import type { BoardingService } from "@/lib/api/mappers/boarding-service";
 
 import { BoardingServiceDialog } from "./boarding-service-dialog";
+import { lodgingLabels } from "@/lib/boarding/lodging-labels";
 
 // ============================================================================
-// The boarding menu, grouped the way the facility grouped it.
+// The boarding rates — the menu — grouped the way the facility grouped it.
+// Rendered on the Rates tab since 2026-09-26, when Menu and Rates merged.
 //
 // ── THIS IS THE MENU, NOT THE BUILDING ────────────────────────────────────
 //
@@ -81,12 +85,15 @@ function swatchHex(color: string | null): string | null {
 
 function ServiceCard({
   service,
+  lodging,
   branchCount,
   onEdit,
   onDuplicate,
   onDelete,
 }: {
   service: BoardingService;
+  /** The room types it books into, named — see `lodgingLabels`. */
+  lodging: string[];
   branchCount: number;
   onEdit: () => void;
   onDuplicate: () => void;
@@ -142,15 +149,36 @@ function ServiceCard({
           {!service.isActive ? (
             <Badge variant="outline">{t("inactive")}</Badge>
           ) : null}
-          <Badge variant="outline" className="gap-1">
-            <Bed className="size-3" aria-hidden />
-            {service.lodgingTypeIds.length === 0
-              ? t("allLodgingTypes")
-              : t("lodgingTypeCount").replace(
-                  "{n}",
-                  String(service.lodgingTypeIds.length),
-                )}
-          </Badge>
+          {/* Which room types a stay at this rate goes into, BY NAME — the
+              client's own question ("which room will the dog go into?").
+              "1 lodging type(s)" answered how many, not which. The count
+              stays only for ids that name nothing this facility has (a
+              deleted type, or the rooms still loading). */}
+          {service.lodgingTypeIds.length === 0 ? (
+            <Badge variant="outline" className="gap-1">
+              <Bed className="size-3" aria-hidden />
+              {t("allLodgingTypes")}
+            </Badge>
+          ) : lodging.length > 0 ? (
+            lodging.map((label, index) => (
+              <Badge
+                key={`${index}-${label}`}
+                variant="outline"
+                className="gap-1"
+              >
+                <Bed className="size-3" aria-hidden />
+                {label}
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="outline" className="gap-1">
+              <Bed className="size-3" aria-hidden />
+              {t("lodgingTypeCount").replace(
+                "{n}",
+                String(service.lodgingTypeIds.length),
+              )}
+            </Badge>
+          )}
           {restrictions > 0 ? (
             <Badge variant="outline">
               {t("restrictionCount").replace("{n}", String(restrictions))}
@@ -193,10 +221,18 @@ function ServiceCard({
 }
 
 export function BoardingServiceList() {
-  const { t } = useStaffText("boardingServices");
+  const { t, fill, locale } = useStaffText("boardingServices");
   const { isMultiLocation } = useLocationContext();
   const { data: services, isPending } = useBoardingServices();
   const { data: categories } = useBoardingServiceCategories();
+  const { categories: roomCategories, rooms } = useRooms();
+  const lodgingById = new Map(
+    lodgingLabels(roomCategories, rooms, (n) =>
+      fill(isPluralOne(n, locale) ? "kennelsOne" : "kennelsOther", {
+        n: String(n),
+      }),
+    ).map((option) => [option.id, option.label]),
+  );
   const save = useSaveBoardingService();
   const remove = useDeleteBoardingService();
 
@@ -313,6 +349,10 @@ export function BoardingServiceList() {
                 <ServiceCard
                   key={service.id}
                   service={service}
+                  lodging={service.lodgingTypeIds.flatMap((id) => {
+                    const label = lodgingById.get(id);
+                    return label ? [label] : [];
+                  })}
                   branchCount={
                     isMultiLocation
                       ? service.locationPricing.filter(

@@ -25,6 +25,8 @@ import { ServiceTaxToggle } from "@/components/facility/pricing/service-tax-togg
 import { PetEligibility } from "@/components/facility/services/pet-eligibility";
 import type { BoardingDefaultAddOn } from "@/lib/pricing/boarding-default-addons";
 import { BoardingDefaultAddOnsField } from "./boarding-default-addons-field";
+import { lodgingLabels } from "@/lib/boarding/lodging-labels";
+import { isPluralOne } from "@/lib/i18n/format";
 import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { useRooms } from "@/hooks/use-rooms";
@@ -167,8 +169,8 @@ export function BoardingServiceDialog({
   service: BoardingService | null;
   categories: BoardingServiceCategory[];
 }) {
-  const { t } = useStaffText("boardingServices");
-  const { categories: roomCategories } = useRooms();
+  const { t, fill, locale } = useStaffText("boardingServices");
+  const { categories: roomCategories, rooms } = useRooms();
   const { locations, isMultiLocation } = useLocationContext();
   const save = useSaveBoardingService();
   const saveCategory = useSaveBoardingServiceCategory();
@@ -197,10 +199,13 @@ export function BoardingServiceDialog({
   const patch = (next: Partial<BoardingServiceDraft>) =>
     setDraft((prev) => ({ ...prev, ...next }));
 
-  // Boarding classes only, and only ones carrying a uuid — see the header.
-  const lodgingOptions = roomCategories
-    .filter((c) => c.service === "boarding" && c.rowId)
-    .map((c) => ({ id: c.rowId as string, label: c.name }));
+  // Boarding classes only, and only ones carrying a uuid — see the header —
+  // each with its kennel count, so two types sharing a name can be told apart.
+  const lodgingOptions = lodgingLabels(roomCategories, rooms, (n) =>
+    fill(isPluralOne(n, locale) ? "kennelsOne" : "kennelsOther", {
+      n: String(n),
+    }),
+  );
 
   const priceValue = Number(draft.price);
   const valid = draft.name.trim().length > 0 && Number.isFinite(priceValue);

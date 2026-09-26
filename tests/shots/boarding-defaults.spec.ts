@@ -159,7 +159,7 @@ test("the boarding menu for customers, and default add-ons for facilities", asyn
       if (lang === "fr") await french(page);
       for (const width of [1440, 599]) {
         await page.setViewportSize({ width, height: 1400 });
-        await page.goto("/facility/dashboard/services/boarding/menu");
+        await page.goto("/facility/dashboard/services/boarding/rates");
         await page
           .locator('[data-slot="card"]', { hasText: SERVICE_NAME })
           .getByRole("button", { name: /^(edit|modifier)$/i })

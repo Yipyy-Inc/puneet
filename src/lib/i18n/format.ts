@@ -353,6 +353,17 @@ export function formatTimeOfDay(value: string, locale: AppLocale): string {
 }
 
 /**
+ * Whether `count` takes the singular form — `1 kennel` · `0 chenil`.
+ *
+ * The two locales disagree at zero: English says "0 kennels", French says
+ * "0 chenil". `count === 1` gets French wrong, so the rule comes from
+ * `Intl.PluralRules` with the pinned tag rather than from a guess.
+ */
+export function isPluralOne(count: number, locale: AppLocale): boolean {
+  return new Intl.PluralRules(TAG[locale]).select(count) === "one";
+}
+
+/**
  * `Buddy, Whiskers and Max` · `Buddy, Whiskers et Max` — a list of names.
  *
  * The customer dashboard joined a household's pets with ` & `, which is an
