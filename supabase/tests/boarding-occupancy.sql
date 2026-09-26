@@ -34,6 +34,11 @@
 --    `RoomAssignmentBoard` already honours it, so the constraint carries an
 --    escape hatch rather than pretending the capability does not exist. A
 --    receptionist cannot use it; an owner can, and the reason is recorded.
+--
+-- 7. A GUEST CAN MOVE KENNELS PART-WAY (S1–S3, M1–M10). A booking holds its
+--    stays as a sequence: each kennel is judged on its own nights (M2), the
+--    one left behind is free from the move (M3), presence stays on the first
+--    stay (M4), and the database keeps the sequence tiling the booking (M8).
 -- ============================================================================
 
 begin;
@@ -492,6 +497,381 @@ begin
     not v_allowed, format('allowed=%s', v_allowed));
 exception when others then
   reset role; perform pg_temp.t('A4  anon execute', false, sqlerrm);
+end $$;
+
+-- ── S1–S3: a stay has a key of its own; a booking one kennel a night ─────
+--
+-- The first step of split lodging. S2 is the one that matters: the key moved,
+-- and what it used to guarantee — never two kennels for one booking on the
+-- same night — must still hold, now as an exclusion over the booking's
+-- stays. S1 without S2 would pass on a table that had simply lost it.
+do $$
+declare v_cols text[];
+begin
+  select array_agg(a.attname::text order by a.attname) into v_cols
+    from pg_constraint c
+    join pg_attribute a
+      on a.attrelid = c.conrelid and a.attnum = any (c.conkey)
+   where c.conrelid = 'public.boarding_stays'::regclass and c.contype = 'p';
+
+  perform pg_temp.t('S1  a stay is keyed by its own id, not by its booking',
+    v_cols = array['id'], format('primary key=%s', v_cols));
+end $$;
+
+do $$
+declare v_ref bigint; v_booking uuid; v_raised text; v_stays integer;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  select booking_ref into v_ref from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', '2027-04-01', '2027-04-03'),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
+  perform public.assign_boarding_room(v_ref, 'BD-01');
+  reset role;
+
+  select id into v_booking from public.bookings where ref = v_ref;
+  begin
+    -- Its own place in the sequence, so the only rule it can break is the
+    -- one being asked about: two kennels on the same night.
+    insert into public.boarding_stays
+      (booking_id, facility_id, room_id, occupies, segment_order)
+    select s.booking_id, s.facility_id, r.id, s.occupies, 2
+      from public.boarding_stays s
+      join public.facility_rooms r
+        on r.facility_id = s.facility_id and r.legacy_id = 'BD-02'
+     where s.booking_id = v_booking;
+    v_raised := 'nothing';
+  exception when others then v_raised := sqlstate;
+  end;
+  select count(*) into v_stays from public.boarding_stays where booking_id = v_booking;
+
+  perform pg_temp.t('S2  a booking cannot hold two kennels on the same night',
+    v_raised = '23P01' and v_stays = 1,
+    format('raised=%s stays=%s', v_raised, v_stays));
+exception when others then
+  reset role; perform pg_temp.t('S2  one stay per booking', false, sqlerrm);
+end $$;
+
+do $$
+declare v_ref bigint; v_order integer; v_id uuid;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  select booking_ref into v_ref from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', '2027-05-01', '2027-05-03'),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
+  perform public.assign_boarding_room(v_ref, 'BD-01');
+  reset role;
+
+  select s.segment_order, s.id into v_order, v_id
+    from public.boarding_stays s
+    join public.bookings b on b.id = s.booking_id
+   where b.ref = v_ref;
+
+  perform pg_temp.t('S3  a placed stay is the first of its booking, with its own id',
+    v_order = 1 and v_id is not null,
+    format('segment_order=%s id=%s', v_order, v_id));
+exception when others then
+  reset role; perform pg_temp.t('S3  first segment', false, sqlerrm);
+end $$;
+
+-- ── M1–M9: a booking moves kennels part-way (split lodging) ────────────────
+--
+-- Times are explicit: the facility keeps America/Toronto, so 18:00Z is 14:00
+-- on a June day and 15:00Z is 11:00. Six nights, 1–6 June 2027; the move is
+-- on the 4th, at the booking's own check-in time.
+--
+-- M2 is the money rule for the NEW kennel, M3 the positive control for the
+-- old one: a split that let either kennel be double-sold, or held the old one
+-- after the move, would pass everything else here.
+
+create or replace function pg_temp.book(p_from text, p_to text, p_room text)
+returns bigint language plpgsql as $$
+declare v_ref bigint;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  select booking_ref into v_ref from public.create_booking(
+    pg_temp.stay('00000000-0000-0000-0000-0000001b0040', p_from, p_to),
+    array['00000000-0000-0000-0000-0000001b0050']::uuid[], null, null);
+  if p_room is not null then
+    perform public.assign_boarding_room(v_ref, p_room);
+  end if;
+  reset role;
+  return v_ref;
+end $$;
+
+create or replace function pg_temp.segments(p_ref bigint)
+returns text language sql as $$
+  select coalesce(string_agg(
+           format('%s:%s[%s,%s)', s.segment_order, r.legacy_id,
+                  to_char(lower(s.occupies) at time zone 'UTC', 'MM-DD HH24'),
+                  to_char(upper(s.occupies) at time zone 'UTC', 'MM-DD HH24')),
+           ' ' order by s.segment_order), '')
+    from public.boarding_stays s
+    join public.bookings b on b.id = s.booking_id
+    join public.facility_rooms r on r.id = s.room_id
+   where b.ref = p_ref;
+$$;
+
+-- M1: the move cuts the stay at the booking's check-in time, and both halves
+-- tile it.
+do $$
+declare v_ref bigint; v_order integer;
+begin
+  v_ref := pg_temp.book('2027-06-01 18:00+00', '2027-06-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  v_order := public.split_boarding_stay(v_ref, '2027-06-04', 'BD-02');
+  reset role;
+  set constraints public.boarding_stays_tile_their_booking immediate;
+
+  perform pg_temp.t('M1  a move on the 4th puts nights 4–6 in the other kennel',
+    v_order = 2
+      and pg_temp.segments(v_ref) = '1:BD-01[06-01 18,06-04 18) 2:BD-02[06-04 18,06-07 15)',
+    format('returned=%s segments=%s', v_order, pg_temp.segments(v_ref)));
+  set constraints public.boarding_stays_tile_their_booking deferred;
+exception when others then
+  reset role; perform pg_temp.t('M1  split', false, sqlerrm);
+end $$;
+
+-- M2: the new kennel is judged on its own nights, and a refused move leaves
+-- the stay whole.
+do $$
+declare v_a bigint; v_raised text;
+begin
+  perform pg_temp.book('2027-07-05 18:00+00', '2027-07-06 15:00+00', 'BD-02');
+  v_a := pg_temp.book('2027-07-01 18:00+00', '2027-07-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  begin
+    perform public.split_boarding_stay(v_a, '2027-07-04', 'BD-02');
+    v_raised := 'nothing';
+  exception when others then v_raised := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.t('M2  a move into a taken kennel is refused, and the stay stays whole',
+    v_raised = '23P01' and pg_temp.segments(v_a) = '1:BD-01[07-01 18,07-07 15)',
+    format('raised=%s segments=%s', v_raised, pg_temp.segments(v_a)));
+exception when others then
+  reset role; perform pg_temp.t('M2  taken kennel', false, sqlerrm);
+end $$;
+
+-- M3: from the move on, the old kennel is free.
+do $$
+declare v_a bigint; v_b bigint; v_room text;
+begin
+  v_a := pg_temp.book('2027-08-01 18:00+00', '2027-08-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_a, '2027-08-04', 'BD-02');
+  reset role;
+  v_b := pg_temp.book('2027-08-04 18:00+00', '2027-08-06 15:00+00', 'BD-01');
+  select r.legacy_id into v_room
+    from public.boarding_stays s
+    join public.bookings b on b.id = s.booking_id
+    join public.facility_rooms r on r.id = s.room_id
+   where b.ref = v_b;
+
+  perform pg_temp.t('M3  another guest can take the first kennel from the move',
+    v_room = 'BD-01', format('placed in %s', v_room));
+exception when others then
+  reset role; perform pg_temp.t('M3  old kennel free', false, sqlerrm);
+end $$;
+
+-- M4: arrival and departure are the booking's, on its first stay.
+do $$
+declare v_ref bigint; v_in text; v_out text; v_status text; v_rows integer; v_presence text;
+begin
+  v_ref := pg_temp.book('2027-09-01 18:00+00', '2027-09-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2027-09-04', 'BD-02');
+  perform public.record_boarding_arrival(v_ref, 'check_in');
+  perform public.record_boarding_arrival(v_ref, 'check_out');
+  reset role;
+
+  select string_agg(format('%s:%s', s.segment_order, (s.checked_in_at is not null)), ' ' order by s.segment_order),
+         string_agg(format('%s:%s', s.segment_order, (s.checked_out_at is not null)), ' ' order by s.segment_order)
+    into v_in, v_out
+    from public.boarding_stays s join public.bookings b on b.id = s.booking_id
+   where b.ref = v_ref;
+  select b.status::text into v_status from public.bookings b where b.ref = v_ref;
+  select count(*), max(p.presence) into v_rows, v_presence
+    from public.booking_presence p join public.bookings b on b.id = p.booking_id
+   where b.ref = v_ref;
+
+  perform pg_temp.t('M4  arrival and departure land on the first stay, once',
+    v_in = '1:t 2:f' and v_out = '1:t 2:f'
+      and v_status = 'completed' and v_rows = 1 and v_presence = 'departed',
+    format('in=%s out=%s status=%s presence rows=%s %s', v_in, v_out, v_status, v_rows, v_presence));
+exception when others then
+  reset role; perform pg_temp.t('M4  presence', false, sqlerrm);
+end $$;
+
+-- M5: new dates move the outer bounds; the move stays where staff put it,
+-- and dates that would leave a kennel with no night are refused.
+do $$
+declare v_ref bigint; v_after text; v_raised text;
+begin
+  v_ref := pg_temp.book('2027-10-01 18:00+00', '2027-10-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2027-10-04', 'BD-02');
+  update public.bookings set end_at = '2027-10-08 15:00+00' where ref = v_ref;
+  v_after := pg_temp.segments(v_ref);
+  begin
+    update public.bookings set end_at = '2027-10-04 15:00+00' where ref = v_ref;
+    v_raised := 'nothing';
+  exception when others then v_raised := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.t('M5  a longer stay keeps its move; one ending before it is refused',
+    v_after = '1:BD-01[10-01 18,10-04 18) 2:BD-02[10-04 18,10-08 15)'
+      and v_raised = '22023',
+    format('after=%s shortened=%s', v_after, v_raised));
+exception when others then
+  reset role; perform pg_temp.t('M5  dates', false, sqlerrm);
+end $$;
+
+-- M6: one kennel for the whole booking undoes the move — and keeps the
+-- arrival that segment 1 carries.
+do $$
+declare v_ref bigint; v_after text; v_in boolean;
+begin
+  v_ref := pg_temp.book('2027-11-01 18:00+00', '2027-11-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2027-11-04', 'BD-02');
+  perform public.record_boarding_arrival(v_ref, 'check_in');
+  perform public.assign_boarding_room(v_ref, 'BD-02');
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+  select s.checked_in_at is not null into v_in
+    from public.boarding_stays s join public.bookings b on b.id = s.booking_id
+   where b.ref = v_ref;
+
+  perform pg_temp.t('M6  assigning one kennel merges the stay and keeps the arrival',
+    v_after = '1:BD-02[11-01 18,11-07 15)' and v_in,
+    format('after=%s arrived=%s', v_after, v_in));
+exception when others then
+  reset role; perform pg_temp.t('M6  merge', false, sqlerrm);
+end $$;
+
+-- M7: the cut-off holds the LAST kennel's night, never the one left at a
+-- move. 10:00 cut-off, 11:00 departure: the last stay runs to midnight.
+do $$
+declare v_ref bigint; v_after text; v_saved jsonb;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  v_saved := public.save_checkout_cut_off('00000000-0000-0000-0000-0000001b0020', true, '10:00');
+  reset role;
+  v_ref := pg_temp.book('2027-12-01 19:00+00', '2027-12-07 16:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2027-12-04', 'BD-02');
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  -- December: Toronto is UTC-5, so 14:00 is 19:00Z and local midnight 05:00Z.
+  perform pg_temp.t('M7  the cut-off holds the last kennel only',
+    v_after = '1:BD-01[12-01 19,12-04 19) 2:BD-02[12-04 19,12-08 05)',
+    format('after=%s', v_after));
+
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.save_checkout_cut_off('00000000-0000-0000-0000-0000001b0020', false, null);
+  reset role;
+exception when others then
+  reset role; perform pg_temp.t('M7  cut-off', false, sqlerrm);
+end $$;
+
+-- M8: the sequence is the database's to keep — an overlap is refused at
+-- once, a gap at commit.
+do $$
+declare v_ref bigint; v_booking uuid; v_overlap text; v_gap text;
+begin
+  v_ref := pg_temp.book('2028-01-01 19:00+00', '2028-01-07 16:00+00', 'BD-01');
+  select id into v_booking from public.bookings where ref = v_ref;
+  begin
+    insert into public.boarding_stays (booking_id, facility_id, room_id, occupies, segment_order)
+    values (v_booking, '00000000-0000-0000-0000-0000001b0020',
+            '00000000-0000-0000-0000-0000001b0061',
+            tstzrange('2028-01-03 19:00+00', '2028-01-05 19:00+00', '[)'), 2);
+    v_overlap := 'nothing';
+  exception when others then v_overlap := sqlstate;
+  end;
+  begin
+    update public.boarding_stays
+       set occupies = tstzrange('2028-01-01 19:00+00', '2028-01-03 19:00+00', '[)')
+     where booking_id = v_booking;
+    insert into public.boarding_stays (booking_id, facility_id, room_id, occupies, segment_order)
+    values (v_booking, '00000000-0000-0000-0000-0000001b0020',
+            '00000000-0000-0000-0000-0000001b0061',
+            tstzrange('2028-01-04 19:00+00', '2028-01-07 16:00+00', '[)'), 2);
+    set constraints public.boarding_stays_tile_their_booking immediate;
+    v_gap := 'nothing';
+  exception when others then v_gap := sqlstate;
+  end;
+  set constraints public.boarding_stays_tile_their_booking deferred;
+
+  perform pg_temp.t('M8  overlapping or gapped stays are refused',
+    v_overlap = '23P01' and v_gap = '23514',
+    format('overlap=%s gap=%s', v_overlap, v_gap));
+exception when others then
+  perform pg_temp.t('M8  tiling', false, sqlerrm);
+end $$;
+
+-- M10: from the first night, the move is the whole stay's kennel — one stay,
+-- still starting at the arrival, nothing split.
+do $$
+declare v_ref bigint; v_order integer; v_after text;
+begin
+  v_ref := pg_temp.book('2028-03-01 19:00+00', '2028-03-07 16:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  v_order := public.split_boarding_stay(v_ref, '2028-03-01', 'BD-02');
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  perform pg_temp.t('M10 a move from the first night moves the whole stay',
+    v_order = 1 and v_after = '1:BD-02[03-01 19,03-07 16)',
+    format('returned=%s segments=%s', v_order, v_after));
+exception when others then
+  reset role; perform pg_temp.t('M10 first night', false, sqlerrm);
+end $$;
+
+-- M9: reception may move a guest, not overbook one; anon may not call it.
+do $$
+declare v_ref bigint; v_moved integer; v_override text; v_anon boolean;
+begin
+  v_ref := pg_temp.book('2028-02-01 19:00+00', '2028-02-07 16:00+00', 'BD-01');
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-0000001b0002', 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  v_moved := public.split_boarding_stay(v_ref, '2028-02-04', 'BD-02');
+  begin
+    perform public.split_boarding_stay(v_ref, '2028-02-05', 'BD-01', 'squeeze them in');
+    v_override := 'nothing';
+  exception when others then v_override := sqlstate;
+  end;
+  reset role;
+
+  set local role anon;
+  begin
+    perform public.split_boarding_stay(v_ref, '2028-02-05', 'BD-01');
+    v_anon := true;
+  exception when others then v_anon := false;
+  end;
+  reset role;
+
+  perform pg_temp.t('M9  reception can move a guest but not overbook; anon cannot call it',
+    v_moved = 2 and v_override = '42501' and not v_anon,
+    format('moved=%s override=%s anon=%s', v_moved, v_override, v_anon));
+exception when others then
+  reset role; perform pg_temp.t('M9  permissions', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

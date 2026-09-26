@@ -495,10 +495,12 @@ export type Database = {
           checked_out_at: string | null;
           created_at: string;
           facility_id: string;
+          id: string;
           occupies: unknown;
           override_reason: string | null;
           released_at: string | null;
           room_id: string;
+          segment_order: number;
           space_type: Database["public"]["Enums"]["lodging_space_type"];
           status: string | null;
           updated_at: string;
@@ -509,10 +511,12 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           facility_id: string;
+          id?: string;
           occupies: unknown;
           override_reason?: string | null;
           released_at?: string | null;
           room_id: string;
+          segment_order?: number;
           status?: string | null;
           updated_at?: string;
         };
@@ -522,10 +526,12 @@ export type Database = {
           checked_out_at?: string | null;
           created_at?: string;
           facility_id?: string;
+          id?: string;
           occupies?: unknown;
           override_reason?: string | null;
           released_at?: string | null;
           room_id?: string;
+          segment_order?: number;
           status?: string | null;
           updated_at?: string;
         };
@@ -533,21 +539,21 @@ export type Database = {
           {
             foreignKeyName: "boarding_stays_booking_id_fkey";
             columns: ["booking_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "booking_presence";
             referencedColumns: ["booking_id"];
           },
           {
             foreignKeyName: "boarding_stays_booking_id_fkey";
             columns: ["booking_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "booking_yipyy_go";
             referencedColumns: ["booking_id"];
           },
           {
             foreignKeyName: "boarding_stays_booking_id_fkey";
             columns: ["booking_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "bookings";
             referencedColumns: ["id"];
           },
@@ -15306,6 +15312,15 @@ export type Database = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      split_boarding_stay: {
+        Args: {
+          p_booking_ref: number;
+          p_from: string;
+          p_override_reason?: string;
+          p_room_id: string;
+        };
+        Returns: number;
       };
       status_page_maintenance: {
         Args: never;
