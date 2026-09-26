@@ -21687,6 +21687,10 @@ effect of a feature**, so it has not been done. Until it is, use the
 `apply_migration` route for every new migration, as PROJECT-STATE.md says, and
 never `db push`.
 
+> **2026-09-26: one of the 26 was never applied at all** — the `service-images`
+> bucket. "Nothing is wrong that the suite can see" was true; the suite could
+> not see it. See "The one unrecorded migration that was not there", below.
+
 ## 2026-09-26 — The suites were the log bill, and the identity chain was most of each request
 
 The client sent the project's usage page at 01:00: log ingestion **16.8 of
@@ -21812,3 +21816,65 @@ booking that names no rate.
    deleting the type would take that history with it. First described here,
    wrongly, as an empty duplicate made by the old Rates tab; the kennel
    history is what said otherwise.
+
+## 2026-09-26 — The one unrecorded migration that was not there
+
+**Client feedback:** uploading a picture on a room category answered "Bucket
+not found". It had since the upload shipped on 2026-09-25 (`ead7370a`), on
+every screen that uses `useImageUpload` — room categories, grooming and
+boarding services — with every gate green.
+
+**Cause.** `20260924240000_a_service_picture_is_uploaded_not_pasted.sql` ended
+with `comment on table storage.buckets`. That table belongs to
+`supabase_storage_admin` and `postgres` is not a member of that role, locally
+or on the hosted project, so the statement fails with **"must be owner of
+table buckets"** and the transaction takes the bucket insert and all four
+policies down with it. It could not have been applied as written. Reproduced
+on the local copy before anything changed; the file now carries a note where
+the statement was. **Nothing in `storage` or `auth` is ours to COMMENT or
+ALTER.**
+
+**Measured, because the entry above said the schema was fine.** Every
+migration file since 2026-08-22 that production's ledger does not name — 39,
+the 26 above plus 13 from late August — was checked by the OBJECTS it creates
+(tables, columns, functions, policies, triggers, indexes, buckets), not by the
+ledger. 38 are present. One is not: this one. So the record gap above hid
+exactly one real gap, and it was client-visible.
+
+**Why nothing noticed, in order of how much it matters:**
+
+1. **Nothing asserted the bucket.** No SQL test and no spec touched
+   `service-images`. `supabase/tests/service-images.sql` does now: S0 is the
+   bucket, S1–S7 the policies, with a control that loosens the write policy
+   and watches S2–S4 go red. Because CI's `sql` job copies production before
+   it runs, S0 fails the deploy for as long as production lacks the bucket.
+2. **A forgotten migration becomes invisible within a day.** `db:local:pull`
+   sets the baseline to production's highest recorded version, and
+   `db:local:reset` applies only files NEWER than it. This file's hand-picked
+   version (`20260924240000` — not even a real time) sorted below production's
+   `20260925164457` the next day, so from then on every local and CI run
+   skipped it and the copies mirrored production's absence exactly.
+3. **Since 2026-09-26, "tested in CI" no longer means "in production".** The
+   `sql` and `e2e` jobs apply a push's new migrations to their own copy, so a
+   migration nobody applies to production passes CI and the code that needs
+   it deploys anyway. Before the local stack, the SQL suite ran against
+   production and would have failed. Nothing replaced that check.
+
+**Fixed:** the statement removed; applied with `apply_migration` (recorded as
+`20260926194342`, the file renamed to match); the Storage API now answers
+"Object not found" for the bucket where it answered "Bucket not found"; the
+client's own account (`admin@yipyy.com`, an owner of Doggieville Mtl) was run
+through the exact insert the app makes, rolled back, and admitted.
+
+**Not fixed — the gate this wants, and why it needs a decision.** The precise
+guard for (2) and (3) is a check in the `sql` job, after the pull: every file
+in `supabase/migrations/` must be named in production's ledger, by version or
+by name. A migration pushed before it was applied would then fail the job and
+hold the deploy — "apply at push time" becomes a gate instead of a habit. It
+cannot land as-is: the 38 unrecorded-but-present files would fail it on day
+one. Either the ledger is backfilled (the decision the entry above left for
+the maintainer, and the honest fix) or they go on a frozen list that can only
+shrink. Also worth knowing: a platform **superadmin** can upload into any
+facility's folder, because `private.platform_may` passes every permission for
+that role — by design (`20260919195116`), the same for logos, and not
+something this bucket introduced.

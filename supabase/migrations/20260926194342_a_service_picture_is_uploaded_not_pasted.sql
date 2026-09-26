@@ -94,8 +94,19 @@ create policy service_images_object_delete on storage.objects
     )
   );
 
-comment on table storage.buckets is
-  'Storage buckets. `service-images` (20260924240000) is public on purpose: '
-  'menu pictures are drawn on the customer booking wizard, including the '
-  'signed-out token routes. Its write side is scoped by the first path '
-  'segment, which is the facility id.';
+-- ── NO `comment on table storage.buckets`, AND THAT IS THE BUG THIS FIXED ─
+--
+-- This file used to end with one, restating the header above as a table
+-- comment. `storage.buckets` belongs to supabase_storage_admin, `postgres` is
+-- not a member of that role — locally or on the hosted project — so the
+-- statement fails with "must be owner of table buckets" and takes the whole
+-- migration down with it, bucket insert included.
+--
+-- So this never reached production. The upload code shipped on 2026-09-25 and
+-- every picture a facility tried to put on a room category or a service
+-- answered "Bucket not found" until client feedback on 2026-09-26. Reproduced
+-- on the local copy before it was changed; supabase/tests/service-images.sql
+-- asserts the bucket now, so its absence is a red test rather than a customer.
+--
+-- The rationale lives in the header, where a migration's rationale belongs.
+-- Nothing in `storage` is ours to COMMENT or ALTER.

@@ -6,6 +6,7 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('grooming-photos', 'grooming-photos', false, 10485760, array['image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('merchant-applications', 'merchant-applications', false, 10485760, array['application/pdf','image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('report-card-photos', 'report-card-photos', false, 10485760, array['image/png','image/jpeg','image/heic','image/webp']::text[]) on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('service-images', 'service-images', true, 5242880, array['image/png','image/jpeg','image/webp']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('staff-documents', 'staff-documents', false, 10485760, array['application/pdf','image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values ('yipyy-go-photos', 'yipyy-go-photos', false, 10485760, array['image/png','image/jpeg','image/heic']::text[]) on conflict (id) do nothing;
 
@@ -54,6 +55,16 @@ create policy "report_card_object_read" on storage.objects as permissive for sel
   WHERE private.has_permission(f.id, 'view_pet_records'::text))) OR ((storage.foldername(name))[2] IN ( SELECT (c.id)::text AS id
    FROM public.report_cards c
   WHERE (c.client_id IN ( SELECT private.own_client_ids() AS own_client_ids)))))));
+create policy "service_images_object_delete" on storage.objects as permissive for delete to "authenticated" using (((bucket_id = 'service-images'::text) AND ((storage.foldername(name))[1] IN ( SELECT (f.id)::text AS id
+   FROM public.facilities f
+  WHERE private.has_permission(f.id, 'manage_services'::text)))));
+create policy "service_images_object_read" on storage.objects as permissive for select to "anon", "authenticated" using ((bucket_id = 'service-images'::text));
+create policy "service_images_object_update" on storage.objects as permissive for update to "authenticated" using (((bucket_id = 'service-images'::text) AND ((storage.foldername(name))[1] IN ( SELECT (f.id)::text AS id
+   FROM public.facilities f
+  WHERE private.has_permission(f.id, 'manage_services'::text)))));
+create policy "service_images_object_write" on storage.objects as permissive for insert to "authenticated" with check (((bucket_id = 'service-images'::text) AND ((storage.foldername(name))[1] IN ( SELECT (f.id)::text AS id
+   FROM public.facilities f
+  WHERE private.has_permission(f.id, 'manage_services'::text)))));
 create policy "staff_documents_object_delete" on storage.objects as permissive for delete to "authenticated" using (((bucket_id = 'staff-documents'::text) AND ((storage.foldername(name))[1] IN ( SELECT (f.id)::text AS id
    FROM public.facilities f
   WHERE private.has_permission(f.id, 'manage_staff'::text)))));

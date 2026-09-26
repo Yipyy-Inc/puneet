@@ -26,7 +26,7 @@ import { useImageUpload } from "@/hooks/use-image-upload";
 // say which rule was broken, because "nothing happened" is the least useful
 // thing an interface can do.
 //
-// The bytes go to `service-images` now (20260924240000), keyed by facility
+// The bytes go to `service-images` now (20260926194342), keyed by facility
 // id, and the caller gets back a real public URL.
 //
 // ── THE NAME IS HISTORICAL ────────────────────────────────────────────────

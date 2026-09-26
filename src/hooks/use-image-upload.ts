@@ -40,7 +40,7 @@ import { useWorkosSupabaseClient } from "@/lib/supabase/workos-client";
 // ── THE PATH IS THE TENANCY BOUNDARY ──────────────────────────────────────
 //
 // The first folder segment is the facility id and the storage policies key on
-// exactly that (20260924240000). Not tidiness: a path that does not begin with
+// exactly that (20260926194342). Not tidiness: a path that does not begin with
 // a facility the caller may manage services for is refused by Postgres, not by
 // the browser.
 // ============================================================================

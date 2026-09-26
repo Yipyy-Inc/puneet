@@ -268,7 +268,7 @@ jobs:
   # storage policies and rows, read ONCE with `db:local:pull` (one pg_dump) —
   # then applies every migration file newer than production's recorded
   # version, so a migration in this push that production has not had yet is
-  # tested here first. The 149 files then run against that copy: no Supabase
+  # tested here first. The SQL files then run against that copy: no Supabase
   # API requests and no log ingestion, where a run used to open 149
   # connections to production. scripts/local-db.ts says why it is a copy and
   # not a replay of supabase/migrations (the files stop replaying at file 30).
