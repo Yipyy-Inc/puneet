@@ -47,9 +47,7 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(
-    (data as unknown as AddOnRow[]).map(rowToAddOn),
-  );
+  return NextResponse.json((data as unknown as AddOnRow[]).map(rowToAddOn));
 }
 
 export async function POST(request: NextRequest) {

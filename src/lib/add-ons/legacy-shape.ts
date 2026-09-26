@@ -1,8 +1,4 @@
-import type {
-  AddOn,
-  AddOnCategory,
-  AddOnWeightTier,
-} from "@/types/add-on";
+import type { AddOn, AddOnCategory, AddOnWeightTier } from "@/types/add-on";
 import type {
   AddOnCategory as LegacyAddOnCategory,
   ServiceAddOn,
@@ -105,7 +101,9 @@ export function toLegacyServiceAddOn(
           types: addOn.eligibleSpecies.length
             ? addOn.eligibleSpecies
             : undefined,
-          breeds: addOn.eligibleBreeds.length ? addOn.eligibleBreeds : undefined,
+          breeds: addOn.eligibleBreeds.length
+            ? addOn.eligibleBreeds
+            : undefined,
           coatTypes: addOn.eligibleCoatTypes.length
             ? addOn.eligibleCoatTypes
             : undefined,

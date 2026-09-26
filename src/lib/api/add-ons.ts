@@ -2,11 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type {
-  AddOn,
-  AddOnCategory,
-  AddOnInput,
-} from "@/types/add-on";
+import type { AddOn, AddOnCategory, AddOnInput } from "@/types/add-on";
 
 // ============================================================================
 // The one add-ons list, from Postgres (20260926223644).

@@ -13,7 +13,12 @@ import { z } from "zod";
 // ============================================================================
 
 /** The size tiers a weight range is chosen from (<=15, <=35, <=70 lb, above). */
-export const ADD_ON_WEIGHT_TIERS = ["small", "medium", "large", "giant"] as const;
+export const ADD_ON_WEIGHT_TIERS = [
+  "small",
+  "medium",
+  "large",
+  "giant",
+] as const;
 export type AddOnWeightTier = (typeof ADD_ON_WEIGHT_TIERS)[number];
 
 /** The coat types a pet record can hold — `pets.coat_type`'s check, exactly. */
