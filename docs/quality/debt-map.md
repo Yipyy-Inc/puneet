@@ -21593,33 +21593,45 @@ can book (`9b9425c4`), and the size-tier picker (`cc8889d9`).
    booking form then offers no add-ons at all, with nothing said.
    `yipyy-go-charges` writes an add-on without them; it passes only because
    it reads the catalogue through SQL.
-3. **Split lodging (Phase 8) has begun, and it is bigger than it reads.**
-   Its first step is `cedc26a1`: the arrivals mapper and `/api/daily-care`
-   read the embedded stay through `embeddedStay`, which takes one stay or a
-   list, so the table's key can move without any deployed reader going
-   empty. The key itself has not moved yet — that migration keeps
-   `booking_id` unique, and applies only once those readers are live.
-   `boarding_stays` is keyed by `booking_id`; it carries FIVE
-   triggers (space type, cut-off, live-booking guard, the presence mirror,
-   the deferred area capacity) and `bookings` a sixth that rewrites stays.
-   Surveyed 2026-09-25, the places that break silently with a second stay:
-   `sync_boarding_stay`, `save_checkout_cut_off` and `assign_boarding_room`
-   each rebuild `occupies` from the booking's WHOLE range (the last also
-   collapses every segment into one room); `record_boarding_arrival` does an
-   `update … returning … into` that raises `too_many_rows`; the presence
-   mirror completes the booking at the first segment's check-out and the
-   live-booking guard then refuses the second's check-in; `booking_presence`
-   fans out into duplicate rows; the arrivals mapper and `/api/daily-care`
-   read the embedded stay as ONE object, and went empty when it became an
-   array (fixed first, above); the tax lookup is `.maybeSingle()`; and both
-   price paths multiply
-   rooms by ALL nights, which over-prices sequential segments. The area
-   trigger excludes by booking, not by stay. `boarding-occupancy.sql` is the
-   regression suite (K2 and L0 are the money rule). One small correction on
-   the way: the BEFORE triggers fire in name order — cut-off, live-booking
-   guard, space type — not space type first as 20260924200000's comment
-   says; harmless today, and worth knowing before a per-segment `occupies`
-   trigger.
+3. ~~**Split lodging (Phase 8).**~~ **Built in `a4910067` (the
+   database) and `360a471b` (the screens)**, after `cedc26a1` made the
+   two stay readers take a list. A booking holds its stays as a sequence —
+   nights 1–3 in Suite 4, nights 4–6 in Condo 12 — and each break the
+   2026-09-25 survey found has its answer:
+   - `sync_boarding_stay`, `save_checkout_cut_off` and
+     `assign_boarding_room` rebuilt `occupies` from the booking's whole
+     range. New dates now move the outer ends only, and are refused when a
+     kennel would lose every night; the cut-off re-derives last stays only;
+     and assigning one kennel merges a split, which is also how a move is
+     undone.
+   - `record_boarding_arrival` raised `too_many_rows`, and the presence
+     mirror would have completed a booking at its first kennel's check-out.
+     Arrival AND departure are the booking's now, stamped on the FIRST stay
+     only, so the mirror, the live-booking guard and `booking_presence` read
+     one row as they always did. (The plan put the departure on the last
+     stay; one row for presence needs no change to the rule that a stay's
+     departure follows its own arrival.)
+   - The cut-off holds the stay that ends where the booking ends, reading
+     the departure from the first: a transfer is not a check-out.
+   - The arrivals board and `/api/daily-care` take presence from the first
+     stay and the kennel from the one slept in that night
+     (`src/lib/boarding/stay-segments.ts`); the on-site list filters a second
+     embed, because a filtered embed also drops the rows that fail it.
+   - Tax follows the first kennel; the server prices one lodging a night and
+     leaves a class-priced stay that moves to staff (`split_stay`).
+   - The database keeps the sequence itself: an exclusion constraint over a
+     booking's stays, and a deferred trigger that they tile it in order.
+     `boarding-occupancy.sql` S1–S3 and M1–M10 hold it, with K2 and L0 still
+     the money rule; both migrations were dry-run in a rolled-back
+     transaction against every related SQL file before they were applied.
+
+   The BEFORE triggers fire in name order — cut-off, live-booking guard,
+   space type — not space type first as 20260924200000's comment says.
+   **Still open:** an early check-out before a planned move is refused
+   ("change the move first"), and the early check-out flow does not offer
+   the undo; the staff wizard books one kennel and a split is made after, on
+   the kennels board, the lodging calendar or the booking page.
+
 4. **The Rooms page still asks for a price the service now owns.** "Base Price
    ($/night)" on a room type feeds only the pre-cutover path: bookings made
    before the menu, and a facility with no menu at all.
