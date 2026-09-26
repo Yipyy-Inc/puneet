@@ -35,7 +35,7 @@
 --    escape hatch rather than pretending the capability does not exist. A
 --    receptionist cannot use it; an owner can, and the reason is recorded.
 --
--- 7. A GUEST CAN MOVE KENNELS PART-WAY (S1–S3, M1–M10). A booking holds its
+-- 7. A GUEST CAN MOVE KENNELS PART-WAY (S1–S3, M1–M15, C1–C2). A booking holds its
 --    stays as a sequence: each kennel is judged on its own nights (M2), the
 --    one left behind is free from the move (M3), presence stays on the first
 --    stay (M4), and the database keeps the sequence tiling the booking (M8).
@@ -711,9 +711,11 @@ exception when others then
 end $$;
 
 -- M5: new dates move the outer bounds; the move stays where staff put it,
--- and dates that would leave a kennel with no night are refused.
+-- and a stay shortened to before the move lets go of the kennel it never
+-- reaches (it was refused until 20260926140000 — that refusal is what blocked
+-- every early check-out before a planned move).
 do $$
-declare v_ref bigint; v_after text; v_raised text;
+declare v_ref bigint; v_after text; v_short text;
 begin
   v_ref := pg_temp.book('2027-10-01 18:00+00', '2027-10-07 15:00+00', 'BD-01');
   perform pg_temp.as_owner();
@@ -721,17 +723,14 @@ begin
   perform public.split_boarding_stay(v_ref, '2027-10-04', 'BD-02');
   update public.bookings set end_at = '2027-10-08 15:00+00' where ref = v_ref;
   v_after := pg_temp.segments(v_ref);
-  begin
-    update public.bookings set end_at = '2027-10-04 15:00+00' where ref = v_ref;
-    v_raised := 'nothing';
-  exception when others then v_raised := sqlstate;
-  end;
+  update public.bookings set end_at = '2027-10-04 15:00+00' where ref = v_ref;
+  v_short := pg_temp.segments(v_ref);
   reset role;
 
-  perform pg_temp.t('M5  a longer stay keeps its move; one ending before it is refused',
+  perform pg_temp.t('M5  a longer stay keeps its move; one ending before it drops the kennel',
     v_after = '1:BD-01[10-01 18,10-04 18) 2:BD-02[10-04 18,10-08 15)'
-      and v_raised = '22023',
-    format('after=%s shortened=%s', v_after, v_raised));
+      and v_short = '1:BD-01[10-01 18,10-04 15)',
+    format('after=%s shortened=%s', v_after, v_short));
 exception when others then
   reset role; perform pg_temp.t('M5  dates', false, sqlerrm);
 end $$;
@@ -872,6 +871,179 @@ begin
     format('moved=%s override=%s anon=%s', v_moved, v_override, v_anon));
 exception when others then
   reset role; perform pg_temp.t('M9  permissions', false, sqlerrm);
+end $$;
+
+-- ── M11–M15: dates on a stay that moves kennels ────────────────────────────
+--
+-- M11 is the early check-out that 20260926100052 refused: the guest leaves
+-- before the move, and the kennel booked for later lets go. M15 is its
+-- guard — a guest who has arrived keeps the kennel that carries the arrival.
+
+-- M11: leaving before the move keeps the first kennel and drops the other.
+do $$
+declare v_ref bigint; v_after text; v_status text;
+begin
+  v_ref := pg_temp.book('2028-04-01 18:00+00', '2028-04-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2028-04-04', 'BD-02');
+  perform public.record_boarding_arrival(v_ref, 'check_in');
+  update public.bookings set end_at = '2028-04-03 15:00+00' where ref = v_ref;
+  perform public.record_boarding_arrival(v_ref, 'check_out');
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+  select status::text into v_status from public.bookings where ref = v_ref;
+
+  perform pg_temp.t('M11 an early check-out before the move lets the later kennel go',
+    v_after = '1:BD-01[04-01 18,04-03 15)' and v_status = 'completed',
+    format('after=%s status=%s', v_after, v_status));
+exception when others then
+  reset role; perform pg_temp.t('M11 early check-out', false, sqlerrm);
+end $$;
+
+-- M12: shortened into the last kennel, the move stays.
+do $$
+declare v_ref bigint; v_after text;
+begin
+  v_ref := pg_temp.book('2028-05-01 18:00+00', '2028-05-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2028-05-04', 'BD-02');
+  update public.bookings set end_at = '2028-05-06 15:00+00' where ref = v_ref;
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  perform pg_temp.t('M12 a shorter stay that still reaches the move keeps it',
+    v_after = '1:BD-01[05-01 18,05-04 18) 2:BD-02[05-04 18,05-06 15)',
+    format('after=%s', v_after));
+exception when others then
+  reset role; perform pg_temp.t('M12 shortened', false, sqlerrm);
+end $$;
+
+-- M13: a stay moved whole keeps which nights go where.
+do $$
+declare v_ref bigint; v_after text;
+begin
+  v_ref := pg_temp.book('2028-06-01 18:00+00', '2028-06-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2028-06-04', 'BD-02');
+  update public.bookings
+     set start_at = '2028-06-08 18:00+00', end_at = '2028-06-14 15:00+00'
+   where ref = v_ref;
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  perform pg_temp.t('M13 a rescheduled stay moves every kennel with it',
+    v_after = '1:BD-01[06-08 18,06-11 18) 2:BD-02[06-11 18,06-14 15)',
+    format('after=%s', v_after));
+exception when others then
+  reset role; perform pg_temp.t('M13 rescheduled', false, sqlerrm);
+end $$;
+
+-- M14: a later arrival, before anyone arrived, drops the first kennel.
+do $$
+declare v_ref bigint; v_after text;
+begin
+  v_ref := pg_temp.book('2028-07-01 18:00+00', '2028-07-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2028-07-04', 'BD-02');
+  update public.bookings set start_at = '2028-07-05 18:00+00' where ref = v_ref;
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  perform pg_temp.t('M14 arriving after the move leaves only the later kennel',
+    v_after = '1:BD-02[07-05 18,07-07 15)', format('after=%s', v_after));
+exception when others then
+  reset role; perform pg_temp.t('M14 later arrival', false, sqlerrm);
+end $$;
+
+-- M15: …but not once the guest has arrived.
+do $$
+declare v_ref bigint; v_raised text;
+begin
+  v_ref := pg_temp.book('2028-08-01 18:00+00', '2028-08-07 15:00+00', 'BD-01');
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  perform public.split_boarding_stay(v_ref, '2028-08-04', 'BD-02');
+  perform public.record_boarding_arrival(v_ref, 'check_in');
+  begin
+    update public.bookings set start_at = '2028-08-05 18:00+00' where ref = v_ref;
+    v_raised := 'nothing';
+  exception when others then v_raised := sqlstate;
+  end;
+  reset role;
+
+  perform pg_temp.t('M15 the kennel that carries the arrival is never dropped',
+    v_raised = '22023', format('raised=%s', v_raised));
+exception when others then
+  reset role; perform pg_temp.t('M15 arrived', false, sqlerrm);
+end $$;
+
+-- ── C1–C2: a booking made with its kennel changes ──────────────────────────
+--
+-- C2 is the all-or-nothing half: a kennel taken on the later nights refuses
+-- the booking itself, as a taken first kennel always has.
+
+-- C1: the booking and its move land together.
+do $$
+declare v_ref bigint; v_after text;
+begin
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  select booking_ref into v_ref from public.create_bookings(jsonb_build_array(
+    jsonb_build_object(
+      'booking', pg_temp.stay('00000000-0000-0000-0000-0000001b0040',
+                              '2028-09-01 18:00+00', '2028-09-07 15:00+00'),
+      'petIds', jsonb_build_array('00000000-0000-0000-0000-0000001b0050'),
+      'grooming', null,
+      'boarding', jsonb_build_object(
+        'roomId', 'BD-01',
+        'moves', jsonb_build_array(
+          jsonb_build_object('from', '2028-09-04', 'roomId', 'BD-02'))))));
+  reset role;
+  v_after := pg_temp.segments(v_ref);
+
+  perform pg_temp.t('C1 a booking is made with its kennel change',
+    v_after = '1:BD-01[09-01 18,09-04 18) 2:BD-02[09-04 18,09-07 15)',
+    format('after=%s', v_after));
+exception when others then
+  reset role; perform pg_temp.t('C1 made with a move', false, sqlerrm);
+end $$;
+
+-- C2: a taken kennel on the later nights refuses the whole booking.
+do $$
+declare v_before integer; v_after integer; v_raised text;
+begin
+  perform pg_temp.book('2028-10-05 18:00+00', '2028-10-06 15:00+00', 'BD-02');
+  select count(*) into v_before from public.bookings
+   where client_id = '00000000-0000-0000-0000-0000001b0040';
+  perform pg_temp.as_owner();
+  set local role authenticated;
+  begin
+    perform public.create_bookings(jsonb_build_array(
+      jsonb_build_object(
+        'booking', pg_temp.stay('00000000-0000-0000-0000-0000001b0040',
+                                '2028-10-01 18:00+00', '2028-10-07 15:00+00'),
+        'petIds', jsonb_build_array('00000000-0000-0000-0000-0000001b0050'),
+        'grooming', null,
+        'boarding', jsonb_build_object(
+          'roomId', 'BD-01',
+          'moves', jsonb_build_array(
+            jsonb_build_object('from', '2028-10-04', 'roomId', 'BD-02'))))));
+    v_raised := 'nothing';
+  exception when others then v_raised := sqlstate;
+  end;
+  reset role;
+  select count(*) into v_after from public.bookings
+   where client_id = '00000000-0000-0000-0000-0000001b0040';
+
+  perform pg_temp.t('C2 a taken kennel for the later nights refuses the booking',
+    v_raised = '23P01' and v_after = v_before,
+    format('raised=%s bookings before=%s after=%s', v_raised, v_before, v_after));
+exception when others then
+  reset role; perform pg_temp.t('C2 all or nothing', false, sqlerrm);
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────
