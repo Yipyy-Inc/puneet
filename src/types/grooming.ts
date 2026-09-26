@@ -932,6 +932,11 @@ export type DefaultAddOnRule = z.infer<typeof defaultAddOnRuleSchema>;
 export const groomingPackageSchema = z.object({
   id: z.string(),
   name: z.string(),
+  /**
+   * The heading it is listed under on the Rates page
+   * (`grooming_service_categories`, 20260926190000). Null: uncategorised.
+   */
+  categoryId: z.string().nullable().optional(),
   description: z.string(),
   basePrice: z.number(),
   duration: z.number(),

@@ -204,6 +204,11 @@ const SAME_IN_BOTH = new Set([
   "staff.boardingServices.servicesTab", // Services / Services
   "staff.boardingServices.description", // Description / Description
   "staff.boardingServices.restrictionCount", // {n} restriction(s) — same in both
+  // The category counts (2026-09-26): "service" is the French word too.
+  "staff.daycareServices.serviceCountOne", // {n} service / {n} service
+  "staff.daycareServices.serviceCountOther", // {n} services / {n} services
+  "staff.groomingServices.serviceCountOne", // {n} service / {n} service
+  "staff.groomingServices.serviceCountOther", // {n} services / {n} services
   "staff.daycareServices.image", // Image / Image
   "staff.daycareServices.imagePlaceholder", // https://… — not a word
   // The hour SYMBOL, which French keeps: "14 h 30" is the correct form and

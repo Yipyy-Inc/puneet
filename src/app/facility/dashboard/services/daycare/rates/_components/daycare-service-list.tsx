@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Clock, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Clock, Copy, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,15 @@ import {
   useDaycareServices,
   useDeleteDaycareService,
   useSaveDaycareService,
+  useDeleteDaycareServiceCategory,
+  useRenameDaycareServiceCategory,
+  useSaveDaycareServiceCategory,
 } from "@/lib/api/daycare-catalogue";
+import { isPluralOne } from "@/lib/i18n/format";
+import {
+  ServiceCategoriesDialog,
+  serviceCategoriesText,
+} from "@/components/facility/services/service-categories-dialog";
 import type { DaycareService } from "@/lib/api/mappers/daycare-service";
 
 import { DaycareServiceDialog } from "./daycare-service-dialog";
@@ -147,15 +155,34 @@ function ServiceCard({
 }
 
 export function DaycareServiceList() {
-  const { t } = useStaffText("daycareServices");
+  const { t, fill, locale } = useStaffText("daycareServices");
   const { isMultiLocation } = useLocationContext();
   const { data: services, isPending } = useDaycareServices();
   const { data: categories } = useDaycareServiceCategories();
   const save = useSaveDaycareService();
   const remove = useDeleteDaycareService();
+  const saveCategory = useSaveDaycareServiceCategory();
+  const renameCategory = useRenameDaycareServiceCategory();
+  const removeCategory = useDeleteDaycareServiceCategory();
 
   const [editing, setEditing] = useState<DaycareService | null>(null);
   const [open, setOpen] = useState(false);
+  const [managing, setManaging] = useState(false);
+
+  // How many services each category holds, for the heading of its group and
+  // the categories dialog.
+  const serviceCounts = new Map<string, number>();
+  for (const service of services ?? []) {
+    if (!service.categoryId) continue;
+    serviceCounts.set(
+      service.categoryId,
+      (serviceCounts.get(service.categoryId) ?? 0) + 1,
+    );
+  }
+  const serviceCount = (n: number) =>
+    fill(isPluralOne(n, locale) ? "serviceCountOne" : "serviceCountOther", {
+      n: String(n),
+    });
 
   const grouped = useMemo(() => {
     const list = services ?? [];
@@ -239,15 +266,26 @@ export function DaycareServiceList() {
             {t("menuBlurb")}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          <Plus className="size-4" aria-hidden />
-          {t("addService")}
-        </Button>
+        {/* The categories beside the button that adds, as the Add-ons tab
+            has them (see ServiceCategoriesDialog). */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setManaging(true)}>
+            <FolderOpen className="size-4" aria-hidden />
+            {t("categoriesButton")}
+            <span className="text-(--ink-tertiary) tabular-nums">
+              {(categories ?? []).length}
+            </span>
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="size-4" aria-hidden />
+            {t("addService")}
+          </Button>
+        </div>
       </div>
 
       {grouped.length === 0 ? (
@@ -262,9 +300,14 @@ export function DaycareServiceList() {
       ) : (
         grouped.map((group) => (
           <div key={group.id} className="space-y-3">
-            <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
-              {group.name}
-            </p>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
+                {group.name}
+              </p>
+              <p className="text-[13.5px] text-(--ink-tertiary) tabular-nums">
+                {serviceCount(group.items.length)}
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               {group.items.map((service) => (
                 <ServiceCard
@@ -299,6 +342,19 @@ export function DaycareServiceList() {
         service={editing}
         categories={categories ?? []}
         siblings={services ?? []}
+      />
+
+      <ServiceCategoriesDialog
+        open={managing}
+        onOpenChange={setManaging}
+        categories={categories ?? []}
+        counts={serviceCounts}
+        onCreate={(name, displayOrder) =>
+          saveCategory.mutateAsync({ name, displayOrder })
+        }
+        onRename={(id, name) => renameCategory.mutateAsync({ id, name })}
+        onRemove={(id) => removeCategory.mutateAsync(id)}
+        text={serviceCategoriesText(t, fill, serviceCount)}
       />
     </div>
   );

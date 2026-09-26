@@ -44,7 +44,7 @@ export const SERVICE_SELECT = `
   includes, is_active, is_popular, taxable,
   eligible_pet_sizes, eligible_coat_types, eligible_breeds,
   required_skill_level, min_booking_notice_hours, max_per_day,
-  display_order, color, image_url, created_at,
+  display_order, color, image_url, created_at, category_id,
   grooming_service_size_prices ( size_label, price, duration_min, location_id )
 ` as const;
 
@@ -60,6 +60,7 @@ export interface SizePriceRow {
 export interface ServiceRow {
   id: string;
   legacy_id: string | null;
+  category_id: string | null;
   name: string;
   description: string;
   base_price: number;
@@ -187,6 +188,7 @@ export function rowToService(
   return {
     id: appId(row),
     name: row.name,
+    categoryId: row.category_id ?? null,
     description: row.description,
     basePrice: Number(row.base_price),
     duration: row.duration_min,
@@ -232,6 +234,7 @@ export function serviceToRow(
 ): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   if (input.name !== undefined) row.name = input.name;
+  if (input.categoryId !== undefined) row.category_id = input.categoryId;
   if (input.description !== undefined) row.description = input.description;
   if (input.basePrice !== undefined) row.base_price = input.basePrice;
   if (input.duration !== undefined) row.duration_min = input.duration;

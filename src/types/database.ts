@@ -4755,8 +4755,44 @@ export type Database = {
           },
         ];
       };
+      grooming_service_categories: {
+        Row: {
+          created_at: string;
+          display_order: number;
+          facility_id: string;
+          id: string;
+          name: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_order?: number;
+          facility_id: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_order?: number;
+          facility_id?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grooming_service_categories_facility_id_fkey";
+            columns: ["facility_id"];
+            isOneToOne: false;
+            referencedRelation: "facilities";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       grooming_services: {
         Row: {
+          category_id: string | null;
           base_price: number;
           coat_adjustment_mode: string;
           coat_adjustments: Json;
@@ -4784,6 +4820,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          category_id?: string | null;
           base_price?: number;
           coat_adjustment_mode?: string;
           coat_adjustments?: Json;
@@ -4811,6 +4848,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          category_id?: string | null;
           base_price?: number;
           coat_adjustment_mode?: string;
           coat_adjustments?: Json;
@@ -4838,6 +4876,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "grooming_services_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "grooming_service_categories";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "grooming_services_facility_id_fkey";
             columns: ["facility_id"];

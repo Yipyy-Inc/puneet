@@ -30,6 +30,10 @@
 -- C4  A rename onto a name the facility already uses is refused, so the
 --     unique (facility_id, name) index still means something after an UPDATE
 --     and not only after an INSERT.
+-- C5  GROOMING (2026-09-26, 20260926190000): a member holding
+--     manage_services can make a grooming category; an offboarded one
+--     cannot. The table is new, so its write policy is read back rather than
+--     believed. C3 covers grooming's `on delete set null` with the others.
 --
 -- ── WHY THE ACTORS ARE NOT PLATFORM ADMINS ────────────────────────────────
 --
@@ -81,7 +85,7 @@ reset role;
 -- ── The two actors, and the rows they will act on ─────────────────────────
 
 do $$
-declare v_fac uuid; v_dcat uuid; v_bcat uuid;
+declare v_fac uuid; v_dcat uuid; v_bcat uuid; v_gcat uuid;
 begin
   select id into v_fac from public.facilities where slug = 'chi-pets-scc';
 
@@ -118,6 +122,13 @@ begin
   insert into public.boarding_services
     (facility_id, legacy_id, name, category_id, price, unit)
   values (v_fac, 'scc-bd', 'SCC Boarding night', v_bcat, 80, 'night');
+
+  insert into public.grooming_service_categories (facility_id, name)
+  values (v_fac, 'SCC Cuts') returning id into v_gcat;
+
+  insert into public.grooming_services
+    (facility_id, legacy_id, name, category_id, duration_min)
+  values (v_fac, 'scc-gr', 'SCC Groom', v_gcat, 60);
 end $$;
 
 -- ── C0 a member with manage_services renames a category ───────────────────
@@ -192,21 +203,25 @@ end $$;
 
 do $$
 declare
-  v_fac uuid; v_dcat uuid; v_bcat uuid;
-  v_dsvc uuid; v_bsvc uuid;
-  v_dstill boolean; v_bstill boolean;
-  v_dcatid uuid; v_bcatid uuid;
+  v_fac uuid; v_dcat uuid; v_bcat uuid; v_gcat uuid;
+  v_dsvc uuid; v_bsvc uuid; v_gsvc uuid;
+  v_dstill boolean; v_bstill boolean; v_gstill boolean;
+  v_dcatid uuid; v_bcatid uuid; v_gcatid uuid;
 begin
   select id into v_fac from public.facilities where slug = 'chi-pets-scc';
   select id into v_dcat from public.daycare_service_categories
    where facility_id = v_fac and name = 'SCC Half days (fixed)';
   select id into v_bcat from public.boarding_service_categories
    where facility_id = v_fac and name = 'SCC Suites';
+  select id into v_gcat from public.grooming_service_categories
+   where facility_id = v_fac and name = 'SCC Cuts';
 
   select id into v_dsvc from public.daycare_services
    where facility_id = v_fac and legacy_id = 'scc-dc';
   select id into v_bsvc from public.boarding_services
    where facility_id = v_fac and legacy_id = 'scc-bd';
+  select id into v_gsvc from public.grooming_services
+   where facility_id = v_fac and legacy_id = 'scc-gr';
 
   perform set_config('request.jwt.claims',
     json_build_object('sub','user_sccKeeps000000000000000000000','role','authenticated')::text, true);
@@ -214,6 +229,7 @@ begin
 
   delete from public.daycare_service_categories  where id = v_dcat;
   delete from public.boarding_service_categories where id = v_bcat;
+  delete from public.grooming_service_categories where id = v_gcat;
 
   execute 'reset role';
 
@@ -221,16 +237,20 @@ begin
   select exists (select 1 from public.boarding_services where id = v_bsvc) into v_bstill;
   select category_id into v_dcatid from public.daycare_services  where id = v_dsvc;
   select category_id into v_bcatid from public.boarding_services where id = v_bsvc;
+  select exists (select 1 from public.grooming_services where id = v_gsvc) into v_gstill;
+  select category_id into v_gcatid from public.grooming_services where id = v_gsvc;
 
   -- THE SENTENCE THE DIALOG PRINTS. "Its services stay on the menu and move to
   -- <ungrouped>" is true only because both FKs are `on delete set null`; make
   -- either one `cascade` and a facility tidying its headings deletes its menu.
   perform pg_temp.t(3,
-    'removing a category leaves its services on the menu, ungrouped — daycare AND boarding',
-    v_dstill and v_bstill and v_dcatid is null and v_bcatid is null,
-    format('daycare kept=%s category=%s | boarding kept=%s category=%s',
+    'removing a category leaves its services on the menu, ungrouped — daycare, boarding AND grooming',
+    v_dstill and v_bstill and v_gstill
+      and v_dcatid is null and v_bcatid is null and v_gcatid is null,
+    format('daycare kept=%s category=%s | boarding kept=%s category=%s | grooming kept=%s category=%s',
            v_dstill, coalesce(v_dcatid::text, 'null'),
-           v_bstill, coalesce(v_bcatid::text, 'null')));
+           v_bstill, coalesce(v_bcatid::text, 'null'),
+           v_gstill, coalesce(v_gcatid::text, 'null')));
 end $$;
 
 -- ── C4 a rename cannot collide ────────────────────────────────────────────
@@ -260,6 +280,40 @@ begin
   perform pg_temp.t(4,
     'renaming a category onto a name the facility already uses is refused',
     v_blocked, case when v_blocked then 'refused' else 'ACCEPTED — the name is now a duplicate' end);
+end $$;
+
+-- ── C5 grooming categories: manage_services writes, a leaver cannot ───────
+
+do $$
+declare v_fac uuid; v_made integer; v_refused boolean := false;
+begin
+  select id into v_fac from public.facilities where slug = 'chi-pets-scc';
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub','user_sccKeeps000000000000000000000','role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.grooming_service_categories (facility_id, name)
+  values (v_fac, 'SCC Baths');
+  get diagnostics v_made = row_count;
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub','user_sccGone0000000000000000000000','role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  -- An INSERT refused by RLS raises, unlike an UPDATE: nothing is invisible
+  -- to a row that is not there yet.
+  begin
+    insert into public.grooming_service_categories (facility_id, name)
+    values (v_fac, 'SCC By a leaver');
+  exception when insufficient_privilege then
+    v_refused := true;
+  end;
+  execute 'reset role';
+
+  perform pg_temp.t(5,
+    'a grooming category is made with manage_services, and refused to an offboarded member',
+    v_made = 1 and v_refused,
+    format('made=%s leaver refused=%s', v_made, v_refused));
 end $$;
 
 -- ── Report ──────────────────────────────────────────────────────────────────

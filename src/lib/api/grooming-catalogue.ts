@@ -201,3 +201,73 @@ export function useDeleteGroomingService() {
     },
   });
 }
+
+// ── Categories ────────────────────────────────────────────────────────────
+//
+// The headings the Rates page groups services under (20260926190000) — the
+// twin of boarding's and daycare's. Presentation only: a category decides
+// where a service is listed, never what it costs or who may book it.
+
+const CATEGORIES = "/api/grooming/service-categories";
+
+export interface GroomingServiceCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
+}
+
+export function useGroomingServiceCategories() {
+  return useQuery({
+    queryKey: [...groomingCatalogueKeys.all, "categories"] as const,
+    queryFn: () => json<GroomingServiceCategory[]>(CATEGORIES),
+  });
+}
+
+export function useSaveGroomingServiceCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; displayOrder?: number }) =>
+      json<GroomingServiceCategory>(CATEGORIES, {
+        method: "POST",
+        body: input,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: groomingCatalogueKeys.all,
+      });
+    },
+  });
+}
+
+export function useRenameGroomingServiceCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      json<GroomingServiceCategory>(`${CATEGORIES}/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { name },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: groomingCatalogueKeys.all,
+      });
+    },
+  });
+}
+
+export function useDeleteGroomingServiceCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      json<{ removed: number }>(`${CATEGORIES}/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    // The services it grouped are `on delete set null`, but the SERVICES
+    // query still holds their old `categoryId` — so the whole catalogue.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: groomingCatalogueKeys.all,
+      });
+    },
+  });
+}

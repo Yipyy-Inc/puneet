@@ -17,11 +17,17 @@ import {
   useBoardingServiceCategories,
   useBoardingServices,
   useDeleteBoardingService,
+  useDeleteBoardingServiceCategory,
+  useRenameBoardingServiceCategory,
   useSaveBoardingService,
+  useSaveBoardingServiceCategory,
 } from "@/lib/api/boarding-catalogue";
+import {
+  ServiceCategoriesDialog,
+  serviceCategoriesText,
+} from "@/components/facility/services/service-categories-dialog";
 import type { BoardingService } from "@/lib/api/mappers/boarding-service";
 
-import { BoardingRateCategoriesDialog } from "./boarding-rate-categories-dialog";
 import { BoardingServiceDialog } from "./boarding-service-dialog";
 import { lodgingLabels } from "@/lib/boarding/lodging-labels";
 
@@ -236,6 +242,9 @@ export function BoardingServiceList() {
   );
   const save = useSaveBoardingService();
   const remove = useDeleteBoardingService();
+  const saveCategory = useSaveBoardingServiceCategory();
+  const renameCategory = useRenameBoardingServiceCategory();
+  const removeCategory = useDeleteBoardingServiceCategory();
 
   const [editing, setEditing] = useState<BoardingService | null>(null);
   const [open, setOpen] = useState(false);
@@ -418,11 +427,17 @@ export function BoardingServiceList() {
         categories={categories ?? []}
       />
 
-      <BoardingRateCategoriesDialog
+      <ServiceCategoriesDialog
         open={managing}
         onOpenChange={setManaging}
         categories={categories ?? []}
-        rateCounts={rateCounts}
+        counts={rateCounts}
+        onCreate={(name, displayOrder) =>
+          saveCategory.mutateAsync({ name, displayOrder })
+        }
+        onRename={(id, name) => renameCategory.mutateAsync({ id, name })}
+        onRemove={(id) => removeCategory.mutateAsync(id)}
+        text={serviceCategoriesText(t, fill, rateCount)}
       />
     </div>
   );

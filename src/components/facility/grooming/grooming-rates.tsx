@@ -4,8 +4,17 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   useDeleteGroomingService,
+  useDeleteGroomingServiceCategory,
+  useGroomingServiceCategories,
   useGroomingServices,
+  useRenameGroomingServiceCategory,
+  useSaveGroomingServiceCategory,
+  type GroomingServiceCategory,
 } from "@/lib/api/grooming-catalogue";
+import {
+  ServiceCategoriesDialog,
+  serviceCategoriesText,
+} from "@/components/facility/services/service-categories-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +50,7 @@ import {
   Check,
   Star,
   Scissors,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { GroomingPackage } from "@/types/grooming";
@@ -52,7 +62,7 @@ import {
 } from "@/lib/api/facility-settings";
 import type { ServiceCharge } from "@/lib/settings/grooming-service-charges";
 import { isImported } from "@/lib/pricing/import-grooming-charges";
-import { formatMoney } from "@/lib/i18n/format";
+import { formatMoney, isPluralOne } from "@/lib/i18n/format";
 import { useStaffText } from "@/lib/staff/use-staff-text";
 import type { CustomFee } from "@/types/boarding";
 import { addOnsForService } from "@/lib/settings/addons";
@@ -200,6 +210,9 @@ function ServiceCard({
 // Main component
 // ─────────────────────────────────────────────────────────────────────────
 
+/** Stable while categories load: `= []` would be a new array every render. */
+const NO_CATEGORIES: GroomingServiceCategory[] = [];
+
 export function GroomingRates() {
   // Which branch's prices are showing. Facility-wide (the default) unless a
   // multi-location facility picks one -- see `effectiveSizePricing` for what
@@ -217,6 +230,54 @@ export function GroomingRates() {
   // Section 3B / Table 4 — pricing mutations require grooming_edit_pricing
   // (all-access fallback keeps them for admin outside the RBAC provider).
   const canEditPricing = usePermission("grooming_edit_pricing");
+
+  // ── Categories (20260926190000) ─────────────────────────────────────
+  //
+  // The client asked for a Categories button here like the ones on
+  // boarding's and daycare's Rates pages, and for the services grouped
+  // under their category. Presentation only: a category decides where a
+  // service is listed, never its price.
+  const { data: categories = NO_CATEGORIES } = useGroomingServiceCategories();
+  const saveCategory = useSaveGroomingServiceCategory();
+  const renameCategory = useRenameGroomingServiceCategory();
+  const removeCategory = useDeleteGroomingServiceCategory();
+  const [managingCategories, setManagingCategories] = useState(false);
+  const {
+    t: catText,
+    fill: catFill,
+    locale: catLocale,
+  } = useStaffText("groomingServices");
+  const serviceCount = (n: number) =>
+    catFill(
+      isPluralOne(n, catLocale) ? "serviceCountOne" : "serviceCountOther",
+      {
+        n: String(n),
+      },
+    );
+  const servicesPerCategory = new Map<string, number>();
+  for (const service of services) {
+    if (!service.categoryId) continue;
+    servicesPerCategory.set(
+      service.categoryId,
+      (servicesPerCategory.get(service.categoryId) ?? 0) + 1,
+    );
+  }
+  // Each category's services under its name, then those in none — the same
+  // order as boarding's and daycare's pages.
+  const serviceGroups = [
+    ...categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      items: services.filter((s) => s.categoryId === c.id),
+    })),
+    {
+      id: "__uncategorized__",
+      name: catText("ungrouped"),
+      items: services.filter(
+        (s) => !s.categoryId || !categories.some((c) => c.id === s.categoryId),
+      ),
+    },
+  ].filter((group) => group.items.length > 0);
 
   // Services
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
@@ -424,7 +485,7 @@ export function GroomingRates() {
               </Select>
             </div>
           )}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
               Each service has size-based pricing (S/M/L/XL) and an optional
               duration.
@@ -439,10 +500,23 @@ export function GroomingRates() {
               )}
             </p>
             {canEditPricing && (
-              <Button size="sm" onClick={handleServiceNew}>
-                <Plus className="mr-1.5 size-4" />
-                New Service
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setManagingCategories(true)}
+                >
+                  <FolderOpen className="mr-1.5 size-4" aria-hidden />
+                  {catText("categoriesButton")}
+                  <span className="text-(--ink-tertiary) tabular-nums">
+                    {categories.length}
+                  </span>
+                </Button>
+                <Button size="sm" onClick={handleServiceNew}>
+                  <Plus className="mr-1.5 size-4" />
+                  New Service
+                </Button>
+              </div>
             )}
           </div>
           {services.length === 0 ? (
@@ -462,18 +536,42 @@ export function GroomingRates() {
               )}
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {services.map((pkg) => (
-                <ServiceCard
-                  key={pkg.id}
-                  pkg={pkg}
-                  onEdit={handleServiceEdit}
-                  onDelete={handleServiceDelete}
-                  canEdit={canEditPricing}
-                />
-              ))}
-            </div>
+            serviceGroups.map((group) => (
+              <div key={group.id} className="space-y-3">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <p className="text-[12px] font-bold tracking-[0.06em] text-(--ink-tertiary) uppercase">
+                    {group.name}
+                  </p>
+                  <p className="text-[13.5px] text-(--ink-tertiary) tabular-nums">
+                    {serviceCount(group.items.length)}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {group.items.map((pkg) => (
+                    <ServiceCard
+                      key={pkg.id}
+                      pkg={pkg}
+                      onEdit={handleServiceEdit}
+                      onDelete={handleServiceDelete}
+                      canEdit={canEditPricing}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
           )}
+          <ServiceCategoriesDialog
+            open={managingCategories}
+            onOpenChange={setManagingCategories}
+            categories={categories}
+            counts={servicesPerCategory}
+            onCreate={(name, displayOrder) =>
+              saveCategory.mutateAsync({ name, displayOrder })
+            }
+            onRename={(id, name) => renameCategory.mutateAsync({ id, name })}
+            onRemove={(id) => removeCategory.mutateAsync(id)}
+            text={serviceCategoriesText(catText, catFill, serviceCount)}
+          />
         </TabsContent>
 
         {/* ── Add-ons tab ── */}

@@ -35,7 +35,15 @@ import {
   groomingQueries,
   findAffectedUpcomingAppointments,
 } from "@/lib/api/grooming";
-import { useSaveGroomingService } from "@/lib/api/grooming-catalogue";
+import {
+  useDeleteGroomingServiceCategory,
+  useGroomingServiceCategories,
+  useRenameGroomingServiceCategory,
+  useSaveGroomingService,
+  useSaveGroomingServiceCategory,
+} from "@/lib/api/grooming-catalogue";
+import { ServiceCategoryField } from "@/components/facility/services/service-category-field";
+import { useStaffText } from "@/lib/staff/use-staff-text";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown,
@@ -507,6 +515,14 @@ export function ServiceDialog({
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
   const { mutate: saveService, isPending: saving } = useSaveGroomingService();
+  // The heading it is listed under on the Rates page (20260926190000). The
+  // field makes, renames and removes categories too, as boarding's and
+  // daycare's editors do; the page's Categories button is the other door.
+  const { t: catText } = useStaffText("groomingServices");
+  const { data: categories = NO_ITEMS } = useGroomingServiceCategories();
+  const saveCategory = useSaveGroomingServiceCategory();
+  const renameCategory = useRenameGroomingServiceCategory();
+  const removeCategory = useDeleteGroomingServiceCategory();
   const { data: stylistsData = [] } = useQuery(groomingQueries.stylists());
   const { data: appointmentsData = [] } = useQuery(
     groomingQueries.appointments(),
@@ -527,6 +543,7 @@ export function ServiceDialog({
   // ── Form state ──
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [duration, setDuration] = useState(60);
   const [isActive, setIsActive] = useState(true);
   // Absent means taxed — see lib/payments/service-tax.ts.
@@ -610,6 +627,7 @@ export function ServiceDialog({
     if (editingPackage) {
       setName(editingPackage.name);
       setDescription(editingPackage.description);
+      setCategoryId(editingPackage.categoryId ?? null);
       setDuration(editingPackage.duration);
       setIsActive(editingPackage.isActive);
       setTaxable(editingPackage.taxable !== false);
@@ -655,6 +673,7 @@ export function ServiceDialog({
     } else {
       setName("");
       setDescription("");
+      setCategoryId(null);
       setDuration(60);
       setIsActive(true);
       setTaxable(true);
@@ -762,6 +781,7 @@ export function ServiceDialog({
     const next: GroomingPackage = {
       id: editingPackage?.id ?? `gp-${Date.now()}`,
       name: name.trim(),
+      categoryId,
       description: description.trim(),
       basePrice,
       duration,
@@ -976,6 +996,70 @@ export function ServiceDialog({
                   rows={2}
                 />
               </div>
+              <ServiceCategoryField
+                value={categoryId}
+                onChange={setCategoryId}
+                categories={categories}
+                onCreate={async (categoryName) => {
+                  try {
+                    return await saveCategory.mutateAsync({
+                      name: categoryName,
+                      displayOrder: categories.length + 1,
+                    });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : catText("couldNotSaveCategory"),
+                    );
+                    return null;
+                  }
+                }}
+                onRename={async (id, categoryName) => {
+                  try {
+                    return await renameCategory.mutateAsync({
+                      id,
+                      name: categoryName,
+                    });
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : catText("couldNotSaveCategory"),
+                    );
+                    return null;
+                  }
+                }}
+                onDelete={async (id) => {
+                  try {
+                    await removeCategory.mutateAsync(id);
+                    // The service being edited loses a heading that no
+                    // longer exists, as the database does to every other.
+                    if (categoryId === id) setCategoryId(null);
+                    return true;
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : catText("couldNotRemoveCategory"),
+                    );
+                    return false;
+                  }
+                }}
+                text={{
+                  label: catText("category"),
+                  none: catText("ungrouped"),
+                  newCategory: catText("newCategory"),
+                  namePlaceholder: catText("categoryNamePlaceholder"),
+                  save: catText("saveCategory"),
+                  cancel: catText("cancel"),
+                  rename: catText("renameCategory"),
+                  remove: catText("remove"),
+                  removeTitle: catText("removeCategoryTitle"),
+                  removeBody: catText("removeCategoryBody"),
+                  actions: catText("categoryActions"),
+                }}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Duration (minutes)</Label>
