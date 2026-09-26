@@ -100,6 +100,12 @@ locally. A test that leaves rows behind is a bug in the shared environment, not
 a mess on your machine. Every verification script in this project cleans up in
 `finally` and asserts the remaining count is zero.
 
+**Unless you run it against the local one, which you should.** Since
+2026-09-26 Supabase also runs in Docker on the development machine, built from
+production's schema and a git-ignored copy of its rows. `bun run local <cmd>`
+points any command at it; AGENTS.md has the sequence. CI still uses the shared
+database until its jobs move over.
+
 **Whether you can sign in locally depends on which WorkOS environment
 `.env.local` carries, so CHECK — do not assume either answer.**
 

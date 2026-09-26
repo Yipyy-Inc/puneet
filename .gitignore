@@ -80,3 +80,6 @@ e2e-server.log
 # redirects BOTH streams, so ignoring only one leaves an untracked file behind
 # after every local run.
 e2e-server.err
+
+# Production data copied for the local database (bun run db:local:pull). Never commit.
+supabase/baseline/data.local.sql

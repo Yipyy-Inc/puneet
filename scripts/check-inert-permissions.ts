@@ -222,6 +222,10 @@ function walk(dir: string, out: string[] = []): string[] {
       continue;
     }
     const path = join(dir, entry);
+    // A dump of production for the local database (scripts/local-db.ts), not
+    // source: it names every key production's functions name, so reading it
+    // would count every gate twice and "wire" keys by their comments.
+    if (path === join("supabase", "baseline")) continue;
     if (statSync(path).isDirectory()) walk(path, out);
     else if (/\.(ts|tsx|sql)$/.test(path)) out.push(path);
   }

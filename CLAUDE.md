@@ -367,7 +367,9 @@ still absolute for **new** code: white, or a solid.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
     `bun run test:e2e:gate` and the specs for what you touched, by hand,
-    before you push — not the whole suite unless it is asked for: on
+    before you push, against the LOCAL database (`bun run local …`, see
+    AGENTS.md; production's schema in Docker since 2026-09-26, so a run
+    costs no Supabase usage) — not the whole suite unless it is asked for: on
     2026-09-26 the suites were 99% of a day's Supabase requests and log
     ingestion reached 16.8 of 20 GB (AGENTS.md). CI itself runs only
     the 40-spec gate on a push (the authorisation boundary and money) and
