@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, signIn } from "./_auth";
 
 // ============================================================================
-// THE GROOMING MENU'S CATEGORIES, OVER HTTP (2026-09-26, 20260926190000).
+// THE GROOMING MENU'S CATEGORIES, OVER HTTP (2026-09-26, 20260926181007).
 //
 // Grooming's services had no category at all until the client asked for the
 // Categories button boarding's and daycare's Rates pages have. The table and

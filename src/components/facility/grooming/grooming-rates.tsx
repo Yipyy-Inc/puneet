@@ -231,7 +231,7 @@ export function GroomingRates() {
   // (all-access fallback keeps them for admin outside the RBAC provider).
   const canEditPricing = usePermission("grooming_edit_pricing");
 
-  // ── Categories (20260926190000) ─────────────────────────────────────
+  // ── Categories (20260926181007) ─────────────────────────────────────
   //
   // The client asked for a Categories button here like the ones on
   // boarding's and daycare's Rates pages, and for the services grouped

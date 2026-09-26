@@ -10,7 +10,7 @@ import {
 
 // ============================================================================
 // How a facility groups its grooming menu — the twin of boarding's and
-// daycare's category routes (2026-09-26, 20260926190000).
+// daycare's category routes (2026-09-26, 20260926181007).
 //
 // Presentation, never eligibility or price: a category decides where a service
 // sits on the Rates page and nothing else. A service whose category is deleted

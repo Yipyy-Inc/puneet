@@ -9,7 +9,7 @@ import { writeFailure } from "@/lib/api/write-failure";
 // boarding's and daycare's (2026-09-26).
 //
 // `grooming_service_categories_write` is `for all` under `manage_services`
-// (20260926190000), so UPDATE and DELETE are the database's to judge.
+// (20260926181007), so UPDATE and DELETE are the database's to judge.
 //
 // ── DELETING A CATEGORY DOES NOT DELETE ITS SERVICES ──────────────────────
 //

@@ -934,7 +934,7 @@ export const groomingPackageSchema = z.object({
   name: z.string(),
   /**
    * The heading it is listed under on the Rates page
-   * (`grooming_service_categories`, 20260926190000). Null: uncategorised.
+   * (`grooming_service_categories`, 20260926181007). Null: uncategorised.
    */
   categoryId: z.string().nullable().optional(),
   description: z.string(),

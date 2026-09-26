@@ -515,7 +515,7 @@ export function ServiceDialog({
 }: ServiceDialogProps) {
   const isEditing = !!editingPackage;
   const { mutate: saveService, isPending: saving } = useSaveGroomingService();
-  // The heading it is listed under on the Rates page (20260926190000). The
+  // The heading it is listed under on the Rates page (20260926181007). The
   // field makes, renames and removes categories too, as boarding's and
   // daycare's editors do; the page's Categories button is the other door.
   const { t: catText } = useStaffText("groomingServices");

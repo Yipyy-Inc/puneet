@@ -30,7 +30,7 @@
 -- C4  A rename onto a name the facility already uses is refused, so the
 --     unique (facility_id, name) index still means something after an UPDATE
 --     and not only after an INSERT.
--- C5  GROOMING (2026-09-26, 20260926190000): a member holding
+-- C5  GROOMING (2026-09-26, 20260926181007): a member holding
 --     manage_services can make a grooming category; an offboarded one
 --     cannot. The table is new, so its write policy is read back rather than
 --     believed. C3 covers grooming's `on delete set null` with the others.

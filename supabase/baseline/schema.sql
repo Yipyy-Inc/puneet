@@ -20247,6 +20247,23 @@ COMMENT ON COLUMN "public"."grooming_price_adjustments"."customer_notified" IS '
 
 
 
+CREATE TABLE IF NOT EXISTS "public"."grooming_service_categories" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "facility_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "display_order" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."grooming_service_categories" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."grooming_service_categories" IS 'A heading grooming services are grouped under on the Rates page — the twin of boarding_service_categories and daycare_service_categories.';
+
+
+
 CREATE TABLE IF NOT EXISTS "public"."grooming_service_default_add_ons" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "service_id" "uuid" NOT NULL,
@@ -20311,6 +20328,7 @@ CREATE TABLE IF NOT EXISTS "public"."grooming_services" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "taxable" boolean DEFAULT true NOT NULL,
+    "category_id" "uuid",
     CONSTRAINT "grooming_services_base_price_check" CHECK (("base_price" >= (0)::numeric)),
     CONSTRAINT "grooming_services_coat_adjustment_mode_check" CHECK (("coat_adjustment_mode" = ANY (ARRAY['flat'::"text", 'percent'::"text"]))),
     CONSTRAINT "grooming_services_duration_min_check" CHECK (("duration_min" > 0)),
@@ -24009,6 +24027,16 @@ ALTER TABLE ONLY "public"."grooming_price_adjustments"
 
 
 
+ALTER TABLE ONLY "public"."grooming_service_categories"
+    ADD CONSTRAINT "grooming_service_categories_name_key" UNIQUE ("facility_id", "name");
+
+
+
+ALTER TABLE ONLY "public"."grooming_service_categories"
+    ADD CONSTRAINT "grooming_service_categories_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."grooming_service_default_add_ons"
     ADD CONSTRAINT "grooming_service_default_add_ons_pkey" PRIMARY KEY ("id");
 
@@ -25353,6 +25381,10 @@ CREATE INDEX "grooming_price_adjustments_booking_idx" ON "public"."grooming_pric
 
 
 
+CREATE INDEX "grooming_service_categories_facility_idx" ON "public"."grooming_service_categories" USING "btree" ("facility_id");
+
+
+
 CREATE INDEX "grooming_service_default_add_ons_service_idx" ON "public"."grooming_service_default_add_ons" USING "btree" ("service_id");
 
 
@@ -25362,6 +25394,10 @@ CREATE INDEX "grooming_service_size_prices_service_idx" ON "public"."grooming_se
 
 
 CREATE INDEX "grooming_services_active_idx" ON "public"."grooming_services" USING "btree" ("facility_id", "display_order") WHERE "is_active";
+
+
+
+CREATE INDEX "grooming_services_category_idx" ON "public"."grooming_services" USING "btree" ("category_id");
 
 
 
@@ -28010,6 +28046,11 @@ ALTER TABLE ONLY "public"."grooming_price_adjustments"
 
 
 
+ALTER TABLE ONLY "public"."grooming_service_categories"
+    ADD CONSTRAINT "grooming_service_categories_facility_id_fkey" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."grooming_service_default_add_ons"
     ADD CONSTRAINT "grooming_service_default_add_ons_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "public"."grooming_add_ons"("id") ON DELETE CASCADE;
 
@@ -28037,6 +28078,11 @@ ALTER TABLE ONLY "public"."grooming_service_size_prices"
 
 ALTER TABLE ONLY "public"."grooming_service_size_prices"
     ADD CONSTRAINT "grooming_service_size_prices_service_id_fkey" FOREIGN KEY ("service_id") REFERENCES "public"."grooming_services"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."grooming_services"
+    ADD CONSTRAINT "grooming_services_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "public"."grooming_service_categories"("id") ON DELETE SET NULL;
 
 
 
@@ -30512,6 +30558,17 @@ CREATE POLICY "grooming_price_adjustments_read" ON "public"."grooming_price_adju
 
 
 CREATE POLICY "grooming_price_adjustments_update" ON "public"."grooming_price_adjustments" FOR UPDATE TO "authenticated" USING ("private"."has_permission"("facility_id", 'edit_bookings'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'edit_bookings'::"text"));
+
+
+
+ALTER TABLE "public"."grooming_service_categories" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "grooming_service_categories_read" ON "public"."grooming_service_categories" FOR SELECT TO "authenticated" USING (("private"."is_platform_admin"() OR "private"."has_permission"("facility_id", 'view_services'::"text") OR ("facility_id" IN ( SELECT "private"."client_facility_ids"() AS "client_facility_ids"))));
+
+
+
+CREATE POLICY "grooming_service_categories_write" ON "public"."grooming_service_categories" TO "authenticated" USING ("private"."has_permission"("facility_id", 'manage_services'::"text")) WITH CHECK ("private"."has_permission"("facility_id", 'manage_services'::"text"));
 
 
 
@@ -35034,6 +35091,12 @@ GRANT ALL ON TABLE "public"."grooming_photos" TO "service_role";
 GRANT ALL ON TABLE "public"."grooming_price_adjustments" TO "anon";
 GRANT ALL ON TABLE "public"."grooming_price_adjustments" TO "authenticated";
 GRANT ALL ON TABLE "public"."grooming_price_adjustments" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."grooming_service_categories" TO "anon";
+GRANT ALL ON TABLE "public"."grooming_service_categories" TO "authenticated";
+GRANT ALL ON TABLE "public"."grooming_service_categories" TO "service_role";
 
 
 

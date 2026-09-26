@@ -204,7 +204,7 @@ export function useDeleteGroomingService() {
 
 // ── Categories ────────────────────────────────────────────────────────────
 //
-// The headings the Rates page groups services under (20260926190000) — the
+// The headings the Rates page groups services under (20260926181007) — the
 // twin of boarding's and daycare's. Presentation only: a category decides
 // where a service is listed, never what it costs or who may book it.
 
