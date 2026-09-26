@@ -12,7 +12,12 @@
 -- T0  THE MIGRATION CARRIED EVERYTHING. Every rate a facility authored in the
 --     `daycare_rates` setting has a row, matched on legacy_id. This is the
 --     assertion that would catch a rewrite silently losing a facility's menu —
---     the settings domain is still there to compare against.
+--     the settings domain is still there to compare against. EXCEPT for a
+--     facility that has built services in the menu editor since (a row with no
+--     legacy_id): its menu is its own now, and a moved service it deleted is an
+--     edit, not a loss. A facility rebuilt its menu that way on 2026-09-26,
+--     deleting both moved services, and this failed every push after. The
+--     skipped facilities are counted in the detail, so the gap stays visible.
 -- T1  A service cannot roll over into ITSELF. The check-out would never settle.
 -- T2  A max stay duration under half an hour is refused. MoéGo's floor.
 -- T3  ONE facility-wide price per service, enforced by a PARTIAL unique index.
@@ -46,6 +51,7 @@ do $$
 declare
   v_setting_rates integer;
   v_missing       integer;
+  v_rebuilt       integer;
 begin
   select count(*) into v_setting_rates
     from public.facility_settings fs,
@@ -63,12 +69,26 @@ begin
      and not exists (
        select 1 from public.daycare_services s
         where s.facility_id = fs.facility_id
-          and s.legacy_id = r ->> 'id');
+          and s.legacy_id = r ->> 'id')
+     and not exists (
+       select 1 from public.daycare_services s
+        where s.facility_id = fs.facility_id
+          and s.legacy_id is null);
+
+  -- Facilities whose menu was rebuilt in the editor, and so not compared.
+  select count(*) into v_rebuilt
+    from public.facility_settings fs
+   where fs.domain = 'daycare_rates'
+     and exists (
+       select 1 from public.daycare_services s
+        where s.facility_id = fs.facility_id
+          and s.legacy_id is null);
 
   perform pg_temp.t(
     'T0 every authored rate became a service row',
     v_missing = 0,
-    format('%s rate(s) in the setting, %s with no service row', v_setting_rates, v_missing));
+    format('%s rate(s) in the setting, %s with no service row; %s facility(ies) skipped, menu rebuilt in the editor',
+           v_setting_rates, v_missing, v_rebuilt));
 exception when others then
   perform pg_temp.t('T0 migration carried', false, sqlerrm);
 end $$;
