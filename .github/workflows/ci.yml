@@ -9,15 +9,19 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  # ── THE NIGHTLY, 03:00 UTC ─────────────────────────────────────────────
+  # ── THE WEEKLY, MONDAY 03:00 UTC ───────────────────────────────────────
   #
-  # The full suite, every night. Paused 2026-09-17 → 18 when the org went 302%
-  # over Supabase's 5 GB free egress quota: measured by `x_client_info`, the
-  # suite was ~99.5% of the database traffic (GitHub runners ~562,000 requests
-  # a day, production ~3,300). Restored on the Pro plan (250 GB). It gates
-  # nothing — e2e is not in `image`'s `needs:` — it reports on what deployed.
+  # The full suite, once a week. It ran every night until 2026-09-26. Paused
+  # 2026-09-17 → 18 when the org went 302% over Supabase's 5 GB free egress
+  # quota: measured by `x_client_info`, the suite was ~99.5% of the database
+  # traffic (GitHub runners ~562,000 requests a day, production ~3,300).
+  # Restored on the Pro plan (250 GB) — and on 2026-09-26 it was the LOG quota:
+  # 16.8 of 20 GB, with the suites 99% of 1,040,161 API requests in a day and
+  # production ~8,300. The identity chain was cut ~85% per page that day; the
+  # run went weekly as well. It gates nothing — e2e is not in `image`'s
+  # `needs:` — it reports on what deployed.
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * 1"
   # And on demand, for the push you want the whole suite to see before it lands.
   workflow_dispatch:
 
@@ -392,8 +396,8 @@ jobs:
   #
   # So this job now runs the 40 specs that guard the two things worth blocking
   # a push over: the authorisation boundary, and money. The other 107 still run,
-  # nightly and on demand, in this same job below — the coverage is not
-  # dropped, it is rescheduled. (Paused 2026-09-17 → 18 for egress; see `on:`.)
+  # weekly and on demand, in this same job below — the coverage is not
+  # dropped, it is rescheduled. (Nightly until 2026-09-26; see `on:`.)
   # ── WHAT CHANGED, SO A MARKDOWN COMMIT DOES NOT COST A SUITE RUN ────────
   #
   # Every push ran the 40-spec gate, whatever it touched. A one-line fix to a
@@ -628,9 +632,9 @@ jobs:
         # money, the two things worth blocking a push over, in minutes rather
         # than three quarters of an hour.
         #
-        # A manual workflow_dispatch runs all 147. So does the nightly. The
+        # A manual workflow_dispatch runs all 147. So does the weekly run. The
         # coverage is not dropped, it is rescheduled — and `bun run test:e2e:ci`
-        # is still the command to run by hand before anything that matters.
+        # is the command to run by hand when the whole suite is asked for.
         #
         # A second job would have meant duplicating ~100 lines of preflight,
         # server build and purge, and the two would have drifted.
@@ -639,7 +643,7 @@ jobs:
             echo "Full suite (147 specs)."
             bun run test:e2e:ci
           else
-            echo "Gate (40 specs: access & money). The full suite runs nightly."
+            echo "Gate (40 specs: access & money). The full suite runs weekly, and on demand."
             bun run test:e2e:gate
           fi
 

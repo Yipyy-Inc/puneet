@@ -366,14 +366,16 @@ still absolute for **new** code: white, or a solid.
     second, because the previous colour is still running.
   - Touching auth, a portal gate, a permission or an identity — or bookings,
     boarding, daycare, rooms, the care log, the calendar or the roster? Run
-    `bun run test:e2e:ci` locally too — the whole suite, by hand, before you
-    push. CI itself runs only the 40-spec gate on a push (the authorisation
-    boundary and money) and the full suite NIGHTLY and on demand (paused
-    2026-09-17 → 18 for egress, see AGENTS.md) — because 147 specs is ~45
-    minutes and GitHub holds one pending run per branch: with two people
-    pushing, every queued run was cancelled by the next push and nothing
-    finished. `bun run check:doc-counts` derives both numbers from package.json
-    and fails if either drifts.
+    `bun run test:e2e:gate` and the specs for what you touched, by hand,
+    before you push — not the whole suite unless it is asked for: on
+    2026-09-26 the suites were 99% of a day's Supabase requests and log
+    ingestion reached 16.8 of 20 GB (AGENTS.md). CI itself runs only
+    the 40-spec gate on a push (the authorisation boundary and money) and
+    the full suite WEEKLY and on demand (nightly until 2026-09-26) —
+    because 147 specs is ~45 minutes and GitHub holds one pending run per
+    branch: with two people pushing, every queued run was cancelled by the
+    next push and nothing finished. `bun run check:doc-counts` derives both
+    numbers from package.json and fails if either drifts.
     CI still runs it, but only after the deploy is live — and the e2e job is
     not in `image`'s `needs:`, so it reports rather than gates.
 - Use the `DataTable` component for all tables — additions to DataTable must not break existing implementations
